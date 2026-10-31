@@ -1,0 +1,13 @@
+[Unit]
+Description=Mission Control runner: schedules and runs missions (vault missions/*/MISSION.md), state for the app
+After=docker.service
+[Service]
+Type=simple
+Restart=always
+RestartSec=10
+Environment=DOCKER_HOST=unix:///run/user/1000/docker.sock
+Environment=PYTHONUNBUFFERED=1
+WorkingDirectory=/home/owner/ai-stack
+ExecStart=/usr/local/bin/sops exec-env secrets/secrets.enc.yaml "sops exec-env secrets/agent-keys.enc.yaml \"python3 ops/missions.py\""
+[Install]
+WantedBy=default.target

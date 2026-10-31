@@ -1,0 +1,8 @@
+[Unit]
+Description=Crew: the Librarian: every wiki and the search index tidied, journals folded, long-term facts -> suggestions (weekly, Wednesday)
+[Timer]
+OnCalendar=Wed *-*-* 04:30
+Persistent=true
+RandomizedDelaySec=10min
+[Install]
+WantedBy=timers.target

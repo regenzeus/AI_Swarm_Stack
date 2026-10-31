@@ -1,0 +1,8 @@
+[Unit]
+Description=Weekly restore drill of the newest backup (changes nothing)
+[Timer]
+OnCalendar=Sun 05:30
+Persistent=true
+RandomizedDelaySec=5min
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,8 @@
+[Unit]
+Description=Crew: health doctor (every 6 hours; new health alerts also start it, at most every 30 minutes)
+[Timer]
+OnBootSec=20min
+OnUnitActiveSec=6h
+RandomizedDelaySec=5min
+[Install]
+WantedBy=timers.target

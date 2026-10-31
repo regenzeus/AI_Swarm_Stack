@@ -1,0 +1,156 @@
+# The crew: housekeeping agents, the self-review and its proposals, the health doctor, the AI phone's standing work,
+# the inbox digest.
+area: Crew
+prefix: CRW
+items:
+  - id: CRW-01
+    title: Crew jobs are agents
+    statement: Each crew job shall appear as an agent with its schedule, last and next run, last result and health,
+      taken from its systemd unit.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-07, SN-08]
+    sources: [images/mission-control/guide/18-crew.md]
+    verify: {method: test, by: [tests/test_crew.py::test_systemd_state_becomes_crew_cards]}
+    trace: [ops/crew.py]
+  - id: CRW-02
+    title: Crew schedules are editable in the app
+    statement: The owner shall be able to set a crew job's schedule (a preset, an interval or an OnCalendar time),
+      switch it off or on, and run it now from its Settings, applied as a systemd drop-in.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-02, SN-07]
+    sources: [DEC-05]
+    verify: {method: test, by: [tests/test_crew.py::test_text_times_and_intervals, tests/test_crew.py::test_crew_actions_are_validated]}
+  - id: CRW-03
+    title: The weekly self-review
+    statement: Once a week the self-review shall collect the stack's signals (failed runs other than usage-limit
+      pauses, failed jobs, error events, failed or rolled-back builds, red CI, open review items, newer versions)
+      and turn them into ideas in the swarm's Ledger with one model call, and make no model call when there are no
+      signals.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-08]
+    sources: [docs/MISSION-CONTROL.md]
+    verify: {method: test, by: [tests/test_improve.py::test_scan_turns_signals_into_ideas_and_refines_a_known_one, tests/test_improve.py::test_no_signals_no_model_call, tests/test_improve.py::test_when_a_self_review_is_due]}
+    trace: [ops/improve.py, ops/swarm_client.py]
+  - id: CRW-04
+    title: The owner decides every idea
+    statement: Build it shall turn an idea into an ordinary build assignment (review and tap-to-deploy still
+      apply) and move the idea to active with its build linked, and Dismiss shall decline it with an optional
+      reason that the proposing agent gets as a lesson and later reviews see.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-08, SN-05]
+    sources: [DEC-19]
+    verify: {method: test, by: [tests/test_improve.py::test_accept_creates_a_build_and_dismiss_becomes_a_lesson]}
+  - id: CRW-05
+    title: What an open idea covers is refined, not proposed again
+    statement: When a new idea is for health issues or a detector kind that an open idea already covers, the
+      Ledger shall add the sighting as evidence to that idea instead of creating another, and a detector fix shall
+      never cover every failure of an agent.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-02, SN-17]
+    sources: ["owner 2026-10-29: 23 proposals, a third duplicates"]
+    verify: {method: test, by: [tests/test_improve.py::test_no_caps_and_a_known_problem_is_refined_not_copied, tests/test_improve.py::test_a_detector_fix_never_covers_every_failure]}
+    trace: [ops/improve.py, ops/crew.py, ops/doctor.py]
+  - id: CRW-06
+    title: A cap on open proposals per agent
+    statement: Each proposing agent shall keep at most its cap of open proposals (doctor 6, maintainability 2, tests 1,
+      self-review 5).
+    type: functional
+    priority: could
+    status: deprecated
+    superseded_by: SWM-08
+    reason: The owner rejected caps on 2026-10-29 (DEC-10); the code still enforces them until the swarm lifecycle
+      replaces them (FND-12).
+    parents: [SN-02]
+    sources: [DEC-10]
+    verify: {method: test, by: [tests/test_improve.py::test_no_caps_and_a_known_problem_is_refined_not_copied]}
+    findings: [FND-12]
+  - id: CRW-07
+    title: The maintainability review
+    statement: Every Monday the maintainability review shall read the code read-only with Claude Code and propose at
+      most 2 changes, only where code changed often lately, caused a recent bug or where docs now mislead.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-08, SN-15]
+    sources: [images/mission-control/guide/18-crew.md]
+    verify: {method: inspection, by: [ops/crew.py, ops/systemd/crew-maintainability.timer]}
+  - id: CRW-08
+    title: The test agent
+    statement: Every Tuesday the test agent shall run the suite three times, report flaky, failing and slow tests and
+      untested functions, and propose tests only for recently changed code, without a model.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-08, SN-15]
+    sources: [images/mission-control/guide/18-crew.md]
+    verify: {method: test, by: [tests/test_crew.py::test_test_agent_finds_flaky_failing_and_slow, tests/test_crew.py::test_untested_functions]}
+    findings: [FND-28]
+  - id: CRW-09
+    title: The health doctor diagnoses, sceptically
+    statement: Every 6 hours, and within 30 minutes of a new alert (at most once per 30 minutes), the health doctor shall
+      gather redacted evidence for each open health issue and have Claude Code classify it as expected, noise,
+      external or real with cause, fix and confidence.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-08, SN-07]
+    sources: [images/mission-control/guide/18-crew.md]
+    verify: {method: test, by: [tests/test_doctor.py::test_open_issues_come_from_the_board_one_per_issue, tests/test_doctor.py::test_event_lines_keep_errors_when_they_do_not_fit, tests/test_doctor.py::test_a_new_alert_calls_the_doctor_at_most_every_30_minutes, tests/test_doctor.py::test_the_doctor_is_a_crew_agent_with_its_units]}
+    trace: [ops/doctor.py]
+  - id: CRW-10
+    title: The doctor proposes, never acts
+    statement: The health doctor shall turn real faults into fix proposals and noise or expected issues into detector
+      proposals, change no code or setting, acknowledge nothing by itself, and wait for the next run when the Claude
+      limit is reached.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05, SN-08]
+    sources: [images/mission-control/guide/18-crew.md]
+    verify: {method: test, by: [tests/test_doctor.py::test_diagnoses_become_findings_and_proposals, tests/test_doctor.py::test_doctor_waits_for_a_usage_limit_without_failing]}
+  - id: CRW-11
+    title: Phone cleanup steps
+    statement: Every Sunday the phone cleanup shall turn the AI phone's storage facts into one step per item; each step
+      shall run on the phone only after the owner's Approve in the app (never from the AI phone), exactly once, with
+      the phone's checks, and report the space it freed; a dismissed step shall not be proposed again.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-11, SN-05]
+    sources: [images/mission-control/guide/18-crew.md]
+    verify: {method: test, by: [tests/test_phone_agents.py::test_cleanup_facts_become_one_step_per_item, tests/test_phone_agents.py::test_approve_writes_exactly_one_step_and_results_come_back, tests/test_phone_agents.py::test_a_dismissed_step_stays_dismissed, tests/test_phone_agents.py::test_the_phone_runs_an_approved_step_once_with_its_checks, tests/test_phone_agents.py::test_approve_all_hands_over_every_open_step_shown_and_the_phone_runs_one_at_a_time, tests/test_phone_agents.py::test_approve_all_is_refused_from_the_ai_phone_and_the_phone_runs_steps_in_turn]}
+    trace: [ops/phone_agents.py, images/phone/phone.py]
+  - id: CRW-12
+    title: The phone check fails only on real faults
+    statement: Every Monday the phone check shall fail only when the AI phone is not connected, its battery is low while
+      unplugged, or its storage is nearly full; an old security patch shall be a note.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-18, SN-07]
+    sources: [images/mission-control/guide/18-crew.md, DEC-08]
+    verify: {method: test, by: [tests/test_phone_agents.py::test_phone_check_fails_only_on_real_faults]}
+    trace: [ops/phone_agents.py]
+    findings: [FND-01]
+  - id: CRW-13
+    title: The inbox digest only reads
+    statement: While the owner grants Gmail read, the inbox digest shall file newsletters worth keeping for his topics
+      into the vault inbox each morning, never look at bank, security or code mails, never organise or delete mail,
+      and do nothing (saying so) without the grant.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-10, SN-05]
+    sources: [images/mission-control/guide/18-crew.md]
+    verify: {method: test, by: [tests/test_phone_agents.py::test_inbox_digest_does_nothing_without_the_grant, tests/test_phone_agents.py::test_inbox_digest_files_the_picks_and_skips_protected]}
+    trace: [ops/inbox.py]

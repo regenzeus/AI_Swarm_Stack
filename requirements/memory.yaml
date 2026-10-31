@@ -1,0 +1,202 @@
+# Memory: the stack's memory systems as one system (the owner's request of 2026-10-30, DEC-31). Kinds follow CoALA
+# (episodic: what happened, semantic: what is true, procedural: how to act), plus the team's shared work and the search
+# over them. Part 1 makes it visible (MEM-01, MEM-02, MEM-07, MEM-09, MEM-10), part 2 coherent (MEM-03 to MEM-06), part 3
+# small and curated (MEM-08, MEM-12: the Librarian); part 4 tests its prompts (MEM-11).
+area: Memory
+prefix: MEM
+items:
+  - id: MEM-01
+    title: Every memory is in one inventory
+    statement: The stack shall keep one inventory of every memory store (vault notes, vault wiki, agent wikis, journals,
+      mission notes, long-term memory, the Ledger, skills, run records and the search index), refreshed every hour without
+      delaying the runner's state, with one snapshot a day for 120 days.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-10, SN-07]
+    sources: [DEC-31]
+    verify: {method: test, by: [tests/test_memory.py::test_every_memory_store_is_declared_with_its_kind_writers_readers_limit_and_curator,
+      tests/test_memory.py::test_a_store_that_cannot_be_measured_says_why_and_the_runner_never_waits]}
+    trace: [ops/memory.py, ops/missions.py]
+  - id: MEM-02
+    title: Each memory has one kind and one home
+    statement: Each memory store shall be declared with its kind (episodic, semantic, procedural, shared work or search),
+      what it holds, who writes it, who reads it, its limit and its curator.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-10, SN-16]
+    sources: [DEC-31]
+    verify: {method: test, by: [tests/test_memory.py::test_every_memory_store_is_declared_with_its_kind_writers_readers_limit_and_curator]}
+    trace: [ops/memory.py]
+  - id: MEM-03
+    title: One writer per wiki
+    statement: Each wiki shall be a Ledger artifact owned by its one writer (the curator for the vault wiki, the desk for a
+      briefing's topic wiki, the mission card for a mission's), and another agent's contribution shall reach it as a help on
+      that artifact (SWM-109) that the writer's next compile folds in, naming the helper, and marks as folded. The
+      Librarian's tidy (MEM-08) is the one other change to a wiki, and it adds no facts (DEC-32).
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-10, SN-17]
+    sources: [DEC-31, DEC-32]
+    verify: {method: test, by: [tests/test_memory_coherent.py::test_one_writer_per_wiki_folds_in_the_help_other_agents_gave_it]}
+    trace: [ops/swarm_client.py, ops/mission_extras.py, ops/wikis.py]
+  - id: MEM-04
+    title: Each agent reads the wikis its card names
+    statement: Each agent's card shall name the wikis it reads (by default its own, the vault wiki and wikis on related
+      subjects), a run's start shall search only those and its own wiki first of all, and a wiki built from the owner's mail
+      shall reach only its own mission.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-10, SN-05]
+    sources: [DEC-31]
+    findings: [FND-45]
+    verify: {method: test, by: [tests/test_memory_coherent.py::test_a_run_reads_the_wikis_its_card_names_its_own_first_and_never_a_private_one]}
+    trace: [ops/journal.py, ops/registry.py, config/agents.yaml, ops/missions.py]
+  - id: MEM-05
+    title: One opening per run
+    statement: Every run's opening shall be assembled in one place in a fixed order within one budget (card instructions,
+      the owner's messages, its own state, its knowledge, the owner's facts, the team), with the swarm's pack fetched once by
+      the runner and the agent told not to call swarm_context again, and a mission's working state shall be a section of its
+      journal that each run replaces, not a second file.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-10, SN-13]
+    sources: [DEC-31]
+    findings: [FND-42]
+    verify: {method: test, by: [tests/test_memory_coherent.py::test_a_run_s_opening_has_one_order_one_budget_and_the_swarm_pack_once, tests/test_memory_coherent.py::test_a_mission_s_working_state_lives_in_its_journal]}
+    trace: [ops/journal.py, ops/swarm_client.py, ops/missions.py]
+  - id: MEM-06
+    title: Personal facts in long-term memory, world knowledge in the wikis
+    statement: Long-term memory (Hindsight) shall hold the owner's own facts (preferences, decisions, people), the wikis
+      shall hold sourced knowledge of the world, and an agent's journal entry shall not be copied into long-term memory.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-10, SN-04]
+    sources: [DEC-31]
+    findings: [FND-42]
+    verify: {method: test, by: [tests/test_journal.py::test_entries_stay_out_of_long_term_memory_and_the_opening_recalls_the_owner_s_facts]}
+    trace: [ops/journal.py]
+  - id: MEM-07
+    title: Memory is observable
+    statement: The Stack page shall show every memory store with its kind, what it holds, who writes and reads it, its size,
+      its growth over 7 days, how full it is against its limit, who curates it and when that last ran, and its problems.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-07, SN-13]
+    sources: [DEC-31]
+    verify: {method: test, by: [tests/test_memory.py::test_the_inventory_measures_each_store_names_its_problems_and_reads_growth_from_daily_snapshots,
+      tests/test_memory.py::test_the_app_draws_the_map_the_access_and_the_memory_section]}
+    trace: [ops/memory.py, images/mission-control/web/static/app.js]
+  - id: MEM-08
+    title: Every memory has a limit and a curator
+    statement: Every memory store shall have a limit and a curator, or a stated rule that keeps it small. The Librarian (the
+      memory curator's weekly pass) shall lint every agent wiki, merge duplicate pages keeping every link of both (a merge
+      that would lose or add one is refused), mark contradictions only with sources already on the pages, write the hub
+      pages of the subjects two or more wikis share in the vault wiki, and run qmd cleanup on the search index, changing on
+      its own only what the vault's history restores (one commit per pass, of exactly the files it wrote) and leaving forgetting to the owner (KNW-08). A
+      store over its limit for 8 days shall raise an alert on its curator's health item.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-13, SN-09]
+    sources: [DEC-31, DEC-32]
+    findings: [FND-43, FND-44]
+    verify: {method: test, by: [tests/test_memory.py::test_the_inventory_measures_each_store_names_its_problems_and_reads_growth_from_daily_snapshots,
+      tests/test_librarian.py::test_the_librarian_merges_marks_and_lints_every_agent_wiki_and_changes_only_what_the_vault_restores,
+      tests/test_librarian.py::test_a_merge_that_would_lose_a_link_is_refused_and_a_page_changed_meanwhile_is_left,
+      tests/test_librarian.py::test_what_a_pass_wrote_before_a_step_failed_is_still_in_its_commit_and_nothing_else_is,
+      tests/test_librarian.py::test_a_pair_judged_two_subjects_is_not_asked_again_until_one_of_its_pages_changes,
+      tests/test_librarian.py::test_the_search_index_cleanup_is_measured_before_and_after,
+      tests/test_librarian.py::test_a_memory_over_its_limit_for_eight_days_alerts_its_curator]}
+    trace: [ops/memory.py, ops/librarian.py, ops/crew.py, ops/vault_check.py, images/mission-control/web/static/app.js]
+  - id: MEM-09
+    title: The wikis' map
+    statement: The Wiki tab shall open with a map of every wiki of the vault and of a mission that is not archived (one bubble
+      per wiki, sized by its pages, its name below, above or beside it where it covers no other name or bubble) and a line
+      between two wikis for the subjects both have (a page with the same title or alias), each subject named in full on a
+      tap; an archived mission's wiki shall stay readable in a fold below the list.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-10, SN-07]
+    sources: [DEC-31]
+    findings: [FND-61]
+    verify: {method: test, by: [tests/test_memory.py::test_the_wiki_map_has_every_wiki_and_the_subjects_they_share,
+      tests/test_memory.py::test_an_archived_mission_s_wiki_is_listed_last_and_left_off_the_map,
+      tests/test_memory.py::test_the_map_s_names_cover_no_other_name_or_bubble_and_stay_in_the_box,
+      tests/test_memory.py::test_the_app_draws_the_map_the_access_and_the_memory_section,
+      tests/test_librarian.py::test_the_librarian_and_the_map_share_one_rule_for_a_subject]}
+    trace: [images/mission-control/server.py, images/mission-control/web/static/app.js, ops/librarian.py]
+  - id: MEM-10
+    title: Who reads and writes which wiki
+    statement: The Wiki tab shall show for each wiki which agents read it and wrote it in the last 7 days, counted in runs,
+      from the run record (a run's start brief, its vault searches, its file reads and writes, and every page a result
+      compiles into a wiki).
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-07, SN-10]
+    sources: [DEC-31]
+    verify: {method: test, by: [tests/test_memory.py::test_who_read_and_wrote_which_wiki_comes_from_the_run_record,
+      tests/test_memory.py::test_the_app_draws_the_map_the_access_and_the_memory_section]}
+    trace: [images/mission-control/runrecord.py, ops/mission_extras.py, images/mission-control/web/static/app.js]
+  - id: MEM-11
+    title: Prompts are versioned files on the agent cards
+    statement: Every agent prompt of ops/ and the Hermes configure scripts shall live in prompts/<owner>.md, one file per
+      agent named by its card's prompts field (or by a service, or shared.md for templates more than one card uses). Each prompt
+      shall carry a version (the sha of its text) that every send records in the run's record, with the file's version in
+      mission and crew manifests and in the card hash. A prompt shall change only after a replay passed, which runs its last
+      cases with the last approved text and the new one on the agent's own model and needs valid answers as often and a
+      judge that prefers the old answer no more often. The
+      build gate (ops/check.sh) shall refuse a prompt text with neither its first-record baseline nor a passed replay.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-08, SN-16]
+    sources: [DEC-31, DEC-33]
+    verify: {method: test, by: [tests/test_prompts.py::test_no_agent_prompt_is_left_in_ops_or_a_configure_script,
+      tests/test_prompts.py::test_every_prompt_loads_from_its_file_with_its_version_and_keeps_it_through_format,
+      tests/test_prompts.py::test_a_send_records_the_ref_and_a_live_call_keeps_its_case,
+      tests/test_prompts.py::test_the_build_gate_refuses_a_changed_prompt_until_its_replay_passed,
+      tests/test_prompts.py::test_a_replay_the_judge_prefers_the_old_text_on_fails_and_the_gate_stays_shut,
+      tests/test_prompts.py::test_the_deploy_hands_each_configure_script_its_soul_text_from_the_prompts_file,
+      tests/test_registry.py::test_a_card_names_its_own_prompts_file_and_every_prompts_file_has_an_owner]}
+    trace: [ops/prompts.py, prompts/AGENTS.md, ops/registry.py, ops/deploy.py, ops/check.sh, ops/missions.py, config/hermes/configure.sh]
+  - id: MEM-13
+    title: The desk's and the scout's prompts are files too
+    statement: The Topic Desk's prompts (images/desk/desk.py), the research scout's brief and the research privacy check
+      (images/research/server.py) shall live in prompts/desk.md, prompts/scout.md and prompts/guard.md under the same
+      replay gate as every other prompt. Their containers shall read prompts/ through a read-only mount, log each
+      prompt's version, and the desk shall hand its calls back as replay cases; a research call whose prompt file cannot
+      be read shall be refused.
+    type: functional
+    priority: could
+    status: implemented
+    parents: [SN-08, SN-16]
+    sources: [DEC-33]
+    findings: [FND-46]
+    verify: {method: test, by: [tests/test_prompts.py::test_no_agent_prompt_is_left_in_ops_or_a_configure_script,
+      tests/test_deploy.py::test_every_image_has_a_tag_the_deploy_rebuilds_also_one_run_from_an_ops_script,
+      tests/test_prompts.py::test_the_desk_and_the_scout_read_their_prompts_from_the_mount_and_the_desk_hands_back_its_cases]}
+    trace: [images/desk/desk.py, images/research/server.py, ops/desk.sh, ops/deploy.py, ops/mission_extras.py, compose/apps.yaml, prompts/desk.md, prompts/scout.md, prompts/guard.md]
+  - id: MEM-12
+    title: A changed fact is superseded, not overwritten
+    statement: When a compile changes a fact on an agent wiki's page, the old fact shall be kept under "Superseded" with the
+      date it stopped holding, and a line once under Superseded shall never be dropped; a page whose Contradictions section
+      remains shall stay contested; and the Librarian shall mark an agent wiki's page not confirmed for 90 days as stale
+      (a later compile that confirms it clears the mark). Long-term facts are never overwritten by an agent; the owner
+      retires them (KNW-08).
+    type: functional
+    priority: could
+    status: implemented
+    parents: [SN-10, SN-09]
+    sources: [DEC-31, DEC-32]
+    verify: {method: test, by: [tests/test_librarian.py::test_a_compile_keeps_superseded_lines_and_a_contested_page_and_skips_merged_stubs,
+      tests/test_librarian.py::test_the_librarian_merges_marks_and_lints_every_agent_wiki_and_changes_only_what_the_vault_restores]}
+    trace: [ops/mission_extras.py, ops/librarian.py]

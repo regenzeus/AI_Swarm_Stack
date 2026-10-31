@@ -1,0 +1,331 @@
+{
+ "builder/BUILD": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from ops/builds.py PROMPT",
+   "sha": "08b4efa4db66"
+  }
+ ],
+ "builder/REVIEW": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from ops/builds.py REVIEW_PROMPT",
+   "sha": "1dd55a78c393"
+  }
+ ],
+ "builder/SOUL": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from config/hermes/configure-builder.sh",
+   "sha": "4b36328ff5b2"
+  }
+ ],
+ "coach/DRAFT": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from ops/coach.py DRAFT",
+   "sha": "0f89cf3a91b2"
+  }
+ ],
+ "curator/GATEKEEPER": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved from ops/memory_review.py judge() (its f-string fills became {known}, {entry})",
+   "sha": "55a979d13a26"
+  }
+ ],
+ "curator/INGEST": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved from ops/vault-ingest.sh (shell fills became {time}, {rel})",
+   "sha": "12ed1d61fb6f"
+  }
+ ],
+ "curator/LINT": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved from ops/vault-lint.sh (shell fills became {time}, {check})",
+   "sha": "ac51db9bb7c4"
+  }
+ ],
+ "desk/ALERT": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved from images/desk/desk.py alert() (its f-string became fills)",
+   "sha": "2cdcb573b1f9"
+  }
+ ],
+ "desk/BRIEFING": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved from images/desk/desk.py write() (its f-string became fills)",
+   "sha": "43bf468a2201"
+  }
+ ],
+ "desk/TOPIC_DRAFT": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from ops/missions.py DRAFT",
+   "sha": "8af9d9c4ab1e"
+  }
+ ],
+ "desk/TRIAGE": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved from images/desk/desk.py triage() (its f-string became fills)",
+   "sha": "50d612c61a4c"
+  }
+ ],
+ "doctor/QUESTION": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from ops/doctor.py QUESTION",
+   "sha": "e9314a21d3ac"
+  }
+ ],
+ "eval/JUDGE": [
+  {
+   "at": "2026-10-30",
+   "baseline": "new with the prompt files (MEM-11): the replay judge",
+   "sha": "785973863f90"
+  }
+ ],
+ "eval/REPLAY": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from ops/evals.py REPLAY",
+   "sha": "2d3dcb4f0e10"
+  }
+ ],
+ "guard/PRIVATE": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved from images/research/server.py GUARD (the question became the fill {question})",
+   "sha": "c09f4e008e6d"
+  }
+ ],
+ "inbox/PICK": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from ops/inbox.py PICK",
+   "sha": "395283c4a8a4"
+  }
+ ],
+ "journal/ENTRY": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from ops/journal.py ENTRY_PROMPT",
+   "sha": "ed291d059983"
+  }
+ ],
+ "journal/FOLD": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from ops/journal.py FOLD_PROMPT",
+   "sha": "6f985a87313e"
+  }
+ ],
+ "main/BUY": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from ops/shopping.py BUY_PROMPT",
+   "sha": "9724e42cea68"
+  }
+ ],
+ "main/CLAUDE_RULE": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from config/hermes/configure.sh (claude rule)",
+   "sha": "be10d2e6597e"
+  }
+ ],
+ "main/LANGUAGE_RULE": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from config/hermes/configure.sh (language rule)",
+   "sha": "e465c0ef72d1"
+  }
+ ],
+ "main/MISSIONS_RULE": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from config/hermes/configure.sh (missions rule)",
+   "sha": "0f7e973496be"
+  }
+ ],
+ "main/PHONE_RULE": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from config/hermes/configure.sh (phone rule)",
+   "sha": "f9d94279e314"
+  }
+ ],
+ "main/SHOPPING_RULE": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from config/hermes/configure.sh (shopping rule)",
+   "sha": "79e32e73f18f"
+  }
+ ],
+ "main/SPOKEN": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from ops/house.py SPOKEN",
+   "sha": "8f2b4e115533"
+  }
+ ],
+ "main/WEB_RULE": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from config/hermes/configure.sh (web rule)",
+   "sha": "512917852615"
+  }
+ ],
+ "maintainability/REVIEW": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from ops/crew.py MAINT_PROMPT",
+   "sha": "f324883e303f"
+  }
+ ],
+ "memory/FACTS": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from ops/crew.py MEMORY_PROMPT",
+   "sha": "08ca86ca85ca"
+  }
+ ],
+ "memory/WIKI_JUDGE": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from ops/librarian.py JUDGE",
+   "sha": "7963836e7f96"
+  }
+ ],
+ "mission/DEEP_PLAN": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from ops/mission_extras.py PLAN",
+   "sha": "440c6660153d"
+  }
+ ],
+ "mission/DEEP_STEP": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from ops/mission_extras.py STEP",
+   "sha": "7044ec1366a5"
+  }
+ ],
+ "mission/DEEP_SYNTH": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from ops/mission_extras.py SYNTH",
+   "sha": "83c3555ee7f0"
+  }
+ ],
+ "mission/SHOPPING": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from ops/shopping.py PROMPT",
+   "sha": "f1d61fc1e38f"
+  }
+ ],
+ "mission/SOUL": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from config/hermes/configure-mission.sh",
+   "sha": "d9ddb66e8602"
+  }
+ ],
+ "mission/TASK": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from ops/missions.py TASK_PROMPT",
+   "sha": "832c47553cfe"
+  }
+ ],
+ "mission/TRACK": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from ops/shopping.py TRACK_PROMPT",
+   "sha": "2463f7d1949c"
+  }
+ ],
+ "mission/WIKI": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from ops/mission_extras.py WIKI",
+   "sha": "fd40d616cda8"
+  }
+ ],
+ "opencode/MAP_FILES": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from ops/ua_enrich.py FILES",
+   "sha": "04c2f381a42c"
+  }
+ ],
+ "opencode/MAP_LAYERS": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from ops/ua_enrich.py LAYERS",
+   "sha": "52be74c3f78e"
+  }
+ ],
+ "planner/PLAN": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from ops/planner.py PROMPT",
+   "sha": "97175d5416b1"
+  }
+ ],
+ "scout/BRIEF": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from images/research/server.py BRIEF",
+   "sha": "68dbd43cfcda"
+  }
+ ],
+ "self-review/REVIEW": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from ops/improve.py PROMPT",
+   "sha": "371262b9b865"
+  }
+ ],
+ "shared/ANSWER": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from ops/crew.py ANSWER_PROMPT",
+   "sha": "04256c2bbe20"
+  }
+ ],
+ "shared/ANSWER_RULE": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from ops/swarm_client.py ANSWER_RULE",
+   "sha": "4549dee2bcfb"
+  }
+ ],
+ "shared/CLAUDE_TASK": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from ops/claude_tasks.py PROMPT",
+   "sha": "7af68c51c337"
+  }
+ ],
+ "shared/WAKE": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from ops/swarm_client.py WAKE_PROMPT",
+   "sha": "409c2f9f141e"
+  }
+ ],
+ "wikis/SUMMARY": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from ops/wikis.py SUMMARY",
+   "sha": "855fecff5fbf"
+  }
+ ]
+}

@@ -1,0 +1,550 @@
+"""The agent runtime's record: one event stream for every agent in the stack (design v2, docs/OBSERVABILITY.md).
+
+Sources send events here, nothing else stores them:
+  - the Hermes plugin (config/hermes/plugins/aistack-runtime): every Hermes profile, straight over mcnet;
+  - Claude Code hooks in the builder sandbox, the AI phone and the mail connector: they spool JSONL files that the
+    runner forwards (ops/runtime.py), because those containers can't reach Mission Control;
+  - the runner itself: mission runs, builds, Claude tasks and Crew jobs (start, stage, end).
+One event: {run, ref?, agent, source, ts, kind, title?, detail?, tokens?, ms?, status?, data?}. `kind` is the format
+the timelines already use (obs_core): run | llm | call | result | error | say | think | mcp | conn | stage | end.
+`ref` ties a run to what it belongs to (mission-run:15, build:7, chat:abc, claude-task:3): a run view shows the run
+and every run that refers to it, merged by time.
+
+Stored in SQLite next to the app's other data. Full events are kept 90 days, a run's summary for good. A run without
+an event for STALL_S is closed as "stalled" by the watchdog: every run ends exactly once (done | failed | stopped |
+stalled | limit).
+"""
+import json
+import os
+import re
+import sqlite3
+import threading
+import time
+from pathlib import Path
+
+import obs_core as O
+
+DB = Path(os.environ.get("RUNTIME_DB", "/missions/app/runtime.db"))
+STALL_S = 20 * 60              # a phone approval waits up to 15 min, a research call up to 10: longer means stuck
+WAIT_S = 3 * 3600             # a run parked on a declared wait (the Windows disk scan) is not stuck until this long
+KEEP_EVENTS_S = 90 * 86400
+END_STATES = ("done", "failed", "stopped", "stalled", "limit")
+MAX_DETAIL = 20000
+
+# The OpenTelemetry GenAI names (semantic conventions, still in development: mapped here only)
+OTEL = {"run": "invoke_agent", "llm": "chat", "call": "execute_tool", "result": "execute_tool", "error": "execute_tool",
+        "mcp": "execute_tool", "say": "chat", "think": "chat", "stage": "invoke_workflow", "end": "invoke_agent"}
+
+_lock = threading.Lock()
+_db = None
+
+
+def db():
+    global _db
+    if _db is None:
+        DB.parent.mkdir(parents=True, exist_ok=True)
+        c = sqlite3.connect(DB, check_same_thread=False, timeout=10)
+        c.row_factory = sqlite3.Row
+        c.execute("pragma journal_mode=wal")
+        c.executescript("""
+          create table if not exists runs (run text primary key, ref text, agent text, source text, title text,
+            started real, last real, ended real, end_state text, manifest text, drift text, box text, summary text);
+          create table if not exists events (id integer primary key, run text, ts real, kind text, title text,
+            detail text, data text);
+          create index if not exists ev_run on events(run, id);
+          create index if not exists runs_ref on runs(ref);
+          create index if not exists runs_open on runs(ended);
+        """)
+        _db = c
+    return _db
+
+
+CHAT_TITLE = None              # set by server.py: chat id → its title
+AGENT_NAME = {"main": "Hermes", "mission": "Hermes (mission)", "scout": "Scout", "curator": "Curator", "builder": "Builder (ChatGPT)",
+              "claude-builder": "Claude Code (build)", "claude-task": "Claude Code", "claude-review": "Claude Code (review)",
+              "claude-maintainability": "Claude Code (crew review)", "ai-phone": "AI phone", "mail": "Gmail"}
+
+
+def name_of(r, c=None):
+    """A run's name for people: "Chat · <chat title>", "Mission · RAM upgrade · run 18", "Build #8: …", "Claude task #4: …"."""
+    run, ref, title, agent = r["run"], r["ref"] or "", (r["title"] or "").strip(), r["agent"] or ""
+    who = AGENT_NAME.get(agent, agent)
+    if ref.startswith("chat:"):
+        ct = None
+        try:
+            ct = CHAT_TITLE(ref[5:]) if CHAT_TITLE else None
+        except Exception:
+            pass
+        return f"Chat · {ct or title or 'Hermes'}"
+    if ref and c is not None:
+        p = c.execute("select * from runs where run=?", (ref,)).fetchone()
+        if p:
+            return f"{who} · in {name_of(p, c)}"
+    if run.startswith(("phone:", "mail:")):
+        t = time.strftime("%d %b %H:%M", time.localtime(r["started"]))
+        return f"{who} · session from {t}"
+    if run.startswith(("hermes:", "claude:")):
+        return f"{who} · {title}" if title else f"{who} · session {run.split(':')[2][:8]}"
+    return title or run
+
+
+def otel_name(e):
+    """The span name an OTel GenAI exporter would use for this event."""
+    op = OTEL.get(e.get("kind"), "execute_tool")
+    return f"{op} {e.get('title')}" if op == "execute_tool" and e.get("title") else op
+
+
+def _clip(v):
+    s = v if isinstance(v, str) else json.dumps(v, ensure_ascii=False, default=str)
+    return s[:MAX_DETAIL]
+
+
+def ingest(batch):
+    """Store a batch of events; open runs on first sight, close them on their end event. → number stored."""
+    n, closed = 0, []
+    with _lock:
+        c = db()
+        for e in batch if isinstance(batch, list) else [batch]:
+            run = str(e.get("run") or "")[:120]  # cap: id
+            kind = str(e.get("kind") or "")[:20]
+            if not run or not kind:
+                continue
+            ts = float(e.get("ts") or time.time())
+            row = c.execute("select ended, end_state, manifest from runs where run=?", (run,)).fetchone()
+            if not row:
+                c.execute("insert into runs (run, ref, agent, source, title, started, last) values (?,?,?,?,?,?,?)",
+                          (run, e.get("ref") or _infer_ref(c, e.get("agent")), e.get("agent"), e.get("source"), (e.get("run_title") or "")[:1000], ts, ts))  # cap: id
+            elif row["ended"] and row["end_state"] == "stalled" and e.get("source") != "watchdog":
+                if kind == "end":                         # the watchdog only guessed: the source's own end replaces "stalled"
+                    c.execute("update runs set ended=null, end_state=null where run=?", (run,))
+            elif row["ended"]:
+                continue                                  # a closed run stays closed: late events and a second end are dropped
+            if e.get("ref"):
+                c.execute("update runs set ref=coalesce(ref, ?) where run=?", (e["ref"], run))
+            if e.get("run_title"):
+                c.execute("update runs set title=coalesce(nullif(title,''), ?) where run=?", (e["run_title"][:1000], run))  # cap: id
+            if kind == "run" and e.get("data", {}).get("manifest"):
+                man = e["data"]["manifest"]
+                c.execute("update runs set manifest=?, box=? where run=?", (json.dumps(man), json.dumps(e["data"].get("box")) if e["data"].get("box") else None, run))
+                c.execute("update runs set drift=? where run=?", (json.dumps(drift(c, run, e.get("agent"), man)), run))
+            data = {k: e[k] for k in ("tokens", "ms", "status") if e.get(k) is not None}
+            data.update(e.get("data") or {})
+            c.execute("insert into events (run, ts, kind, title, detail, data) values (?,?,?,?,?,?)",
+                      (run, ts, kind, (e.get("title") or "")[:200], _clip(e.get("detail") or ""), json.dumps(data, default=str)))  # cap: preview
+            c.execute("update runs set last=max(last, ?) where run=?", (ts, run))
+            ref = c.execute("select ref from runs where run=?", (run,)).fetchone()["ref"]
+            for _ in range(3):                            # the parents (mission run, build) are alive while their agents work
+                if not ref:
+                    break
+                c.execute("update runs set last=max(last, ?) where run=? and ended is null", (ts, ref))
+                up = c.execute("select ref from runs where run=?", (ref,)).fetchone()
+                ref = up["ref"] if up else None
+            if kind == "end":
+                state = e.get("status") if e.get("status") in END_STATES else "done"
+                c.execute("update runs set ended=?, end_state=? where run=? and ended is null", (ts, state, run))
+                closed.append(run)
+            n += 1
+        c.commit()
+    for r in closed:
+        summarise(r)
+        trace(r)
+    return n
+
+
+def tokens_by_agent(days=30):
+    """{agent id: tokens of its runs in `days`, with the runs that refer to them (a crew job's Claude task)}."""
+    c = db()
+    since = time.time() - days * 86400
+    out = {}
+    for r in c.execute("select r.agent, coalesce(p.agent, r.agent) owner, e.data from events e join runs r on r.run=e.run "
+                       "left join runs p on p.run=r.ref where e.kind='llm' and e.ts>?", (since,)):
+        try:
+            t = json.loads(r["data"] or "{}").get("tokens") or {}
+        except ValueError:
+            continue
+        who = str(r["owner"] or "").removeprefix("crew:")
+        out[who] = out.get(who, 0) + int(t.get("in", 0)) + int(t.get("out", 0))
+    return out
+
+
+def trace(run):
+    """A Claude Code run (outside the gateway, so LiteLLM never traced it) goes to Phoenix as one trace (otlp.py, SWM-79)."""
+    try:
+        import otlp
+        c = db()
+        r = c.execute("select * from runs where run=?", (run,)).fetchone()
+        if not r or r["source"] != "claude":
+            return False
+        evs = []
+        for e in c.execute("select ts, kind, title, detail, data from events where run=? order by id", (run,)):
+            d = json.loads(e["data"] or "{}")
+            evs.append({"ts": e["ts"], "kind": e["kind"], "title": e["title"], "detail": e["detail"], "tokens": d.get("tokens"), "status": d.get("status")})
+        otlp.export_later(otlp.spans_of(run, r["agent"] or "claude", evs, r["title"] or "", r["ref"]))
+        return True
+    except Exception:
+        return False
+
+
+def _infer_ref(c, agent):
+    """`hermes -z` runs inside Hermes' resident process, so AISTACK_REF from `docker exec` doesn't reach the plugin.
+    Missions run one at a time, so a mission-profile run belongs to the live mission run, and a scout run (research)
+    to the live mission agent, else the live mission run, else the live chat turn that asked for it."""
+    order = {"mission": ("mission-run:%",), "scout": ("hermes:mission:%", "mission-run:%", "hermes:main:%")}.get(agent or "")
+    for pat in order or ():
+        r = c.execute("select run from runs where ended is null and run like ? order by last desc limit 1", (pat,)).fetchone()
+        if r:
+            return r["run"]
+    return None
+
+
+def drift(c, run, agent, man):
+    """What changed against the previous run of the same agent: model, tool count, connected tool servers."""
+    prev = c.execute("select manifest from runs where agent=? and run<>? and manifest is not null order by started desc limit 1",
+                     (agent, run)).fetchone()
+    if not prev:
+        return []
+    p, out = json.loads(prev["manifest"]), []
+    if p.get("model") and man.get("model") and p["model"] != man["model"]:
+        out.append(f"model {p['model']} → {man['model']}")
+    if p.get("tool_count") and man.get("tool_count") is not None and man["tool_count"] < p["tool_count"]:
+        out.append(f"{p['tool_count'] - man['tool_count']} fewer tools than last time ({man['tool_count']})")
+    if p.get("card") and man.get("card") and p["card"] != man["card"]:      # SWM-25: config/agents.yaml changed for it
+        out.append(f"agent card changed ({p['card']} → {man['card']})")
+    lost = sorted(set(p.get("mcp") or []) - set(man.get("mcp") or []))
+    if lost:
+        out.append("tool servers not connected: " + ", ".join(lost))
+    return out
+
+
+def events_of(run, after=0, with_children=True):
+    c = db()
+    runs, todo = [run], [run] if with_children else []
+    while todo and len(runs) < 200:                       # the agents inside, and theirs (a mission's agent → its scouts)
+        kids = [r["run"] for r in c.execute(f"select run from runs where ref in ({','.join('?' * len(todo))})", todo)]
+        todo = [k for k in kids if k not in runs]
+        runs += todo
+    q = f"select e.*, r.agent from events e join runs r on r.run=e.run where e.run in ({','.join('?' * len(runs))}) and e.id>? order by e.ts, e.id"
+    out = []
+    for r in c.execute(q, (*runs, after)):
+        d = json.loads(r["data"] or "{}")
+        out.append({"id": r["id"], "run": r["run"], "agent": r["agent"], "ts": r["ts"], "kind": r["kind"], "title": r["title"],
+                    "detail": r["detail"], **{k: d.pop(k) for k in ("tokens", "ms", "status") if k in d}, "data": d})
+    return out
+
+
+def view(run):
+    """Everything the two panes show: the run, its events, what it touched, problems, stats."""
+    c = db()
+    r = c.execute("select * from runs where run=?", (run,)).fetchone() \
+        or c.execute("select * from runs where run like ? order by started desc limit 1", (run + ":%",)).fetchone() \
+        or c.execute("select * from runs where ref=? order by started desc limit 1", (run,)).fetchone()   # chat:<id>: its last turn
+    if not r:
+        return None
+    run = r["run"]
+    ev = events_of(run)
+    t0 = r["started"]
+    for e in ev:
+        e["t"] = round(e["ts"] - t0, 1)
+    children = [dict(x) for x in c.execute("select run, agent, started, ended, end_state, title from runs where ref=? order by started", (run,))]
+    man = json.loads(r["manifest"]) if r["manifest"] else None
+    live = r["ended"] is None
+    return {"run": run, "ref": r["ref"], "agent": r["agent"], "source": r["source"], "title": r["title"], "name": name_of(r, c),
+            "started": r["started"], "ended": r["ended"], "end_state": r["end_state"], "live": live,
+            "seconds": round((r["ended"] or time.time()) - r["started"]), "manifest": man,
+            "drift": json.loads(r["drift"]) if r["drift"] else [], "box": json.loads(r["box"]) if r["box"] else None,
+            "children": children, "touches": touches(ev), "problems": [p for p in O.problems(ev, finished=not live, final_status=r["end_state"]) if p["kind"] != "no-end"],   # every run here has an explicit end state
+            "stats": O.stats_of(ev, (r["ended"] or time.time()) - r["started"]), "events": ev[-1500:]}  # cap: list
+
+
+CONN = ("mail_", "phone_", "browser_", "research", "fetch", "web_search", "claude_task")
+
+
+def touches(ev):
+    """The left pane: the shared ledger (read and changed files, pages, searches, refused, cut off) plus connections used."""
+    led = O.ledger(ev)
+    conns = {}
+    for e in ev:
+        if e.get("kind") == "call":
+            t = O.base(e.get("title"))
+            if t.startswith(CONN) or any(k in t for k in CONN):
+                conns[t] = conns.get(t, 0) + 1
+    return {**led, "connections": [{"tool": k, "calls": v} for k, v in sorted(conns.items(), key=lambda x: -x[1])]}
+
+
+def summarise(run):
+    """A finished run's summary, kept for good (events go after 90 days)."""
+    v = view(run)
+    if not v:
+        return
+    k = v["stats"]
+    summ = {"seconds": v["seconds"], "end_state": v["end_state"], "model_calls": k["model"]["calls"],
+            "tool_calls": sum(t["calls"] for t in k["tools"]), "cache_pct": k["model"]["cache_pct"],
+            "tokens_in": sum((e.get("tokens") or {}).get("in", 0) for e in v["events"] if e["kind"] == "llm"),
+            "problems": [p["kind"] for p in v["problems"]], "files_changed": sum(1 for f in v["touches"]["files"] if f["modified"]),
+            "files_read": sum(1 for f in v["touches"]["files"] if f["read"])}
+    with _lock:
+        db().execute("update runs set summary=? where run=?", (json.dumps(summ), run))
+        db().commit()
+
+
+def runs(live=None, agent=None, ref=None, limit=60):
+    c = db()
+    where, args = ["1=1"], []
+    if live is not None:
+        where.append("ended is null" if live else "ended is not null")
+    if agent:
+        where.append("agent=?"); args.append(agent)
+    if ref:
+        where.append("ref=?"); args.append(ref)
+    else:
+        where.append("(ref is null or ref not in (select run from runs where ended is null))" if live else "1=1")
+    rows = c.execute(f"select * from runs where {' and '.join(where)} order by coalesce(ended, last) desc limit ?", (*args, limit)).fetchall()
+    return [{"run": r["run"], "ref": r["ref"], "agent": r["agent"], "source": r["source"], "title": r["title"], "name": name_of(r, c),
+             "started": r["started"], "last": r["last"], "ended": r["ended"], "end_state": r["end_state"],
+             "summary": json.loads(r["summary"]) if r["summary"] else None, "drift": json.loads(r["drift"]) if r["drift"] else []} for r in rows]
+
+
+def live_now(limit=30):
+    """SWM-97: the runs going on now (top-level: a mission's scouts count under it), with their tokens so far."""
+    out = []
+    for r in runs(live=True, limit=limit):
+        ev = events_of(r["run"])
+        t = [e.get("tokens") or {} for e in ev if e["kind"] == "llm"]
+        out.append({k: r[k] for k in ("run", "ref", "agent", "name", "title", "started", "last")}
+                   | {"tokens": sum(int(x.get("in") or 0) + int(x.get("out") or 0) for x in t), "calls": len(t), "steps": len(ev)})
+    return out
+
+
+# ---------- the swarm as it works: timeline, who starts whom, what they ask each other (SWM-103 to SWM-105) ----------
+def lane_of(agent):
+    """A run's agent -> the swarm agent it belongs to (its card id where it has one): crew:doctor -> doctor, a mission
+    run and its Hermes profile -> mission, claude-coach -> coach, an experiment's replays -> evals."""
+    a = str(agent or "?")
+    if a.startswith("crew:"):
+        return a[5:]
+    if a.startswith("mission:"):
+        return "mission"
+    if a.startswith("claude-eval-"):
+        return "evals"
+    if a.startswith("claude-"):
+        return {"task": "claude", "review": "reviewers"}.get(a[7:], a[7:])
+    return {"ai-phone": "phone", "mail": "gmail"}.get(a, a)
+
+
+def _window(c, since):
+    rows = c.execute("select * from runs where coalesce(ended, last, started) >= ? or ended is null order by started", (since,)).fetchall()
+    refs = sorted({r["ref"] for r in rows if r["ref"]})
+    parents = {r["run"]: r for r in c.execute(f"select * from runs where run in ({','.join('?' * len(refs))})", refs)} if refs else {}
+    return rows, parents
+
+
+def timeline(hours=24, now=None):
+    """Every run in the window, as a bar of its agent's lane: when, how it ended, what started it, its model calls."""
+    c, now = db(), now or time.time()
+    since = now - float(hours) * 3600
+    rows, parents = _window(c, since)
+    stats = {r["run"]: (r["n"], r["t"] or 0) for r in c.execute(
+        "select run, count(*) n, sum(coalesce(json_extract(data, '$.tokens.in'), 0) + coalesce(json_extract(data, '$.tokens.out'), 0)) t "
+        "from events where kind='llm' and ts>=? group by run", (since - 86400,))}
+    out = []
+    for r in rows:
+        p = parents.get(r["ref"])
+        n, t = stats.get(r["run"], (0, 0))
+        ref = r["ref"] or ""
+        by = (lane_of(p["agent"]) if p else "you" if ref.startswith("chat:") else lane_of(ref) if ref.count(":") == 1 and ref.startswith("crew:")
+              else "hermes" if ref == "chat" else None)           # "chat": Hermes' claude tool (the assistant or a mission's agent)
+        out.append({"run": r["run"], "lane": lane_of(r["agent"]), "agent": r["agent"], "name": name_of(r, c), "started": r["started"],
+                    "ended": r["ended"], "last": r["last"], "state": r["end_state"] or ("running" if r["ended"] is None else "done"),
+                    "parent": p["run"] if p else None, "by": by, "calls": n, "tokens": t})   # by: crew:doctor queued a Claude task
+    return {"since": since, "now": now, "runs": out}
+
+
+def interactions(hours=168, now=None):
+    """Who starts whom (a run started inside another agent's run), counted per pair, with the pairs working right now."""
+    tl = timeline(hours, now)
+    edges, nodes = {}, {}
+    for r in tl["runs"]:
+        n = nodes.setdefault(r["lane"], {"id": r["lane"], "runs": 0, "live": 0, "failed": 0, "last": 0})
+        n["runs"] += 1
+        n["live"] += r["state"] == "running"
+        n["failed"] += r["state"] in ("failed", "stalled")
+        n["last"] = max(n["last"], r["last"] or r["started"])
+        if r["by"] and r["by"] != r["lane"]:
+            e = edges.setdefault((r["by"], r["lane"]), {"from": r["by"], "to": r["lane"], "kind": "starts", "n": 0, "live": 0, "last": 0})
+            e["n"] += 1
+            e["live"] += r["state"] == "running"
+            e["last"] = max(e["last"], r["started"])
+    if any(e["from"] == "you" for e in edges.values()):
+        nodes.setdefault("you", {"id": "you", "runs": 0, "live": 0, "failed": 0, "last": 0})
+    return {"since": tl["since"], "now": tl["now"], "nodes": sorted(nodes.values(), key=lambda x: -x["runs"]),
+            "edges": sorted(edges.values(), key=lambda x: -x["n"])}
+
+
+def delegations(hours=168, pair=None, now=None):
+    """What agents ask each other through their tools (a mission asks the scout, a crew job asks Claude): each
+    delegated run as an exchange, its question (the run's title, or the call that started it) and its answer (its
+    last words), whole. pair "a+b" keeps the exchanges between two agents. -> newest last."""
+    c = db()
+    out = []
+    for r in timeline(hours, now)["runs"]:
+        if not r["by"] or r["by"] in ("you", r["lane"]):
+            continue
+        if pair and set(pair.split("+")) != {r["by"], r["lane"]}:
+            continue
+        ask = ""
+        call = c.execute("select detail from events where run=? and kind='call' and ts<=? and ts>=? order by ts desc limit 1",
+                         (r["parent"], r["started"] + 2, r["started"] - 30)).fetchone() if r["parent"] else None   # the call that started it, as sent
+        if not call:                                      # a queued task carries its question on its start (claude_tasks.py)
+            call = c.execute("select detail from events where run=? and kind='run' and detail<>'' order by id limit 1", (r["run"],)).fetchone()
+        if call and call["detail"]:
+            try:
+                d = json.loads(call["detail"])
+                ask = next((str(d[k]) for k in ("question", "prompt", "task", "query", "text", "goal") if isinstance(d, dict) and d.get(k)), "")
+            except ValueError:
+                ask = call["detail"]
+        if not ask:
+            row = c.execute("select title from runs where run=?", (r["run"],)).fetchone()
+            ask = (row["title"] or "").strip() if row else ""
+        say = c.execute("select e.detail from events e where (e.run=? or e.run in (select run from runs where ref=?)) and e.kind='say' "
+                        "order by e.ts desc limit 1", (r["run"], r["run"])).fetchone()     # its last words, or its own agent's (a task's Claude run)
+        answer = (say["detail"] if say else "") or ("(still working)" if r["state"] == "running" else f"(no answer: {r['state']})")
+        out.append({"run": r["run"], "from": r["by"], "to": r["lane"], "ts": r["started"], "ended": r["ended"], "state": r["state"],
+                    "ask": ask, "answer": answer})
+    return out
+
+
+def open_problems(hours=24):
+    """Problems of runs that ended in the last hours, for the health board and the once-per-issue alerts."""
+    since = time.time() - hours * 3600
+    out = []
+    for r in db().execute("select * from runs where ended > ?", (since,)):
+        s = json.loads(r["summary"]) if r["summary"] else {}
+        issues = [{"kind": p, "text": p.replace("-", " ")} for p in sorted(set(s.get("problems") or []))]
+        if r["end_state"] in ("stalled", "limit", "failed"):
+            issues.append({"kind": r["end_state"], "text": {"stalled": "stopped answering and was closed",
+                                                             "limit": "stopped by a usage limit", "failed": "failed"}[r["end_state"]]})
+        issues += [{"kind": "drift", "text": d} for d in json.loads(r["drift"] or "[]") if "fewer tools" in d or "not connected" in d]
+        if issues:
+            out.append({"name": r["agent"] or r["run"], "label": name_of(r, db()), "kind": "agent", "run": r["run"], "issues": issues})
+    return out
+
+
+def _issues_of(r):
+    s = json.loads(r["summary"]) if r["summary"] else {}
+    issues = [{"kind": p, "text": p.replace("-", " ")} for p in sorted(set(s.get("problems") or []))]
+    if r["end_state"] in ("stalled", "limit", "failed"):
+        issues.append({"kind": r["end_state"], "text": {"stalled": "stopped answering and was closed",
+                                                         "limit": "stopped by a usage limit", "failed": "failed"}[r["end_state"]]})
+    issues += [{"kind": "drift", "text": d} for d in json.loads(r["drift"] or "[]") if "fewer tools" in d or "not connected" in d]
+    return issues
+
+
+def agent_issues(hours=48):
+    """Problems per owning agent, for the health board: a chat session, a scout run or a Claude review counts for the run
+    that started it (its ref chain, up to the root run), and a kind of problem counts only until a later finished root
+    run of the agent is free of it, so an issue clears itself with the next run that does not have it, whatever notes
+    that run has. → [{agent, root, issues: [{kind, text, run, at}]}], agent = the root run's agent."""
+    c = db()
+    rows = c.execute("select * from runs where coalesce(ended, last) > ? order by coalesce(ended, last)", (time.time() - hours * 3600,)).fetchall()
+    parent = {}
+    def root(r):
+        run, seen = r["run"], set()
+        while run not in seen and len(seen) < 8:
+            seen.add(run)
+            if run not in parent:
+                x = c.execute("select ref from runs where run=?", (run,)).fetchone()
+                parent[run] = x["ref"] if x and x["ref"] and c.execute("select 1 from runs where run=?", (x["ref"],)).fetchone() else None
+            if not parent[run]:
+                return run
+            run = parent[run]
+        return run
+    roots = {}                                       # root run -> {agent, at, issues}
+    for r in rows:
+        rt = root(r)
+        g = roots.get(rt)
+        if not g:
+            top = c.execute("select agent, ended, last from runs where run=?", (rt,)).fetchone()
+            g = roots[rt] = {"agent": (top["agent"] if top else None) or r["agent"] or rt, "at": (top["ended"] or top["last"]) if top else r["last"],
+                             "open": bool(top and top["ended"] is None), "issues": []}
+        g["issues"] += [{**i, "run": r["run"], "at": r["ended"] or r["last"]} for i in _issues_of(r)]
+    out = {}
+    for rt, g in sorted(roots.items(), key=lambda x: x[1]["at"] or 0):
+        a = out.setdefault(g["agent"], {"agent": g["agent"], "root": rt, "issues": {}})
+        if not g["open"]:                            # a finished run without a kind of problem: that kind is over (FND-64:
+            kinds = {i["kind"] for i in g["issues"]}  # a note on every run no longer keeps an old stall open)
+            a["issues"] = {k: v for k, v in a["issues"].items() if k in kinds}
+        if not g["issues"]:
+            continue
+        for i in g["issues"]:
+            a["issues"][i["kind"]] = i                # the newest occurrence of each kind
+        a["root"] = rt
+    return [{**a, "issues": list(a["issues"].values())} for a in out.values() if a["issues"]]
+
+
+def watchdog_once(now=None):
+    """Close runs that went silent: one guaranteed end for every run."""
+    now = now or time.time()
+    rows = db().execute("select run, manifest, last from runs where ended is null and last < ?", (now - STALL_S,)).fetchall()
+    c = db()
+    waiting = []
+    for r in rows:                                   # parked on a declared wait (missions.park): give it up to WAIT_S
+        e = c.execute("select kind, title from events where run=? order by id desc limit 1", (r["run"],)).fetchone()
+        if e and e["kind"] == "wait" and not e["title"].endswith((": ready", ": timed out")) and r["last"] > now - WAIT_S:
+            waiting.append(r["run"])
+    rows = [r for r in rows if r["run"] not in waiting]
+    stale = [r["run"] for r in rows]
+    for r in rows:
+        idle = json.loads(r["manifest"] or "{}").get("idle_end")     # a phone or mail session simply went quiet: it ended then
+        ingest([{"run": r["run"], "kind": "end", "source": "watchdog", "status": "done" if idle else "stalled", "ts": r["last"] + 1 if idle else now,
+                 "title": "session ended" if idle else "closed by the watchdog",
+                 "detail": f"no activity for {STALL_S // 60} minutes" if idle else f"no event for {STALL_S // 60} minutes"}])
+    return stale
+
+
+def prune(now=None):
+    """Drop full events older than 90 days; run summaries stay."""
+    with _lock:
+        c = db()
+        n = c.execute("delete from events where ts < ?", ((now or time.time()) - KEEP_EVENTS_S,)).rowcount
+        c.commit()
+    return n
+
+
+# ---------------------------------------------------------------- who reads and writes which wiki (MEM-10)
+WIKI_REFS = [(re.compile(r"qmd://vault-wiki/"), lambda m: "wiki"),
+             (re.compile(r"(?:qmd://)?(?<![\w.-])(missions|topics)/([a-z0-9][a-z0-9-]*)/wiki/"), lambda m: f"{m.group(1)}/{m.group(2)}/wiki"),
+             (re.compile(r"(?<![\w/.-])wiki/[a-z0-9]"), lambda m: "wiki")]
+WIKI_WRITES = ("write_file", "patch", "edit_file")
+
+
+def wiki_roots_in(text):
+    """The wiki roots a call's arguments or a result names (vault wiki: "wiki"; an agent's: missions|topics/<slug>/wiki)."""
+    out = set()
+    for rx, root in WIKI_REFS:
+        out |= {root(m) for m in rx.finditer(text or "")}
+    return out
+
+
+def who_of(agent):
+    """The agent as the access map names it: a mission by its own id, everyone else by its lane."""
+    a = agent or ""
+    return a if a.startswith("mission:") else lane_of(a)
+
+
+def wiki_access(hours=168, now=None):
+    """MEM-10: which agent read or wrote which wiki in the window, from the run record: a run's start brief (wiki_search),
+    its vault searches and reads (qmd), its file reads and writes. -> [{agent, root, reads, writes, last}], counted in runs."""
+    c, now = db(), now or time.time()
+    acc = {}
+    for e in c.execute("select e.run, e.ts, e.kind, e.title, e.detail, case when r.agent='mission' and p.agent like 'mission:%' then p.agent "
+                       "else r.agent end as agent from events e join runs r on r.run=e.run left join runs p on p.run=r.ref where e.ts>=? "
+                       "and e.kind in ('call', 'result') and (e.title in ('wiki_search', 'read_file', 'write_file', 'patch', 'edit_file') "
+                       "or e.title like '%qmd%')", (now - float(hours) * 3600,)):
+        write = e["kind"] == "call" and e["title"] in WIKI_WRITES
+        for root in wiki_roots_in(e["detail"]):
+            a = acc.setdefault((who_of(e["agent"]), root), {"reads": set(), "writes": set(), "last": 0})
+            a["writes" if write else "reads"].add(e["run"])
+            a["last"] = max(a["last"], e["ts"])
+    return sorted(({"agent": k[0], "root": k[1], "reads": len(v["reads"]), "writes": len(v["writes"]), "last": v["last"]}
+                   for k, v in acc.items()), key=lambda x: (x["root"], -x["reads"] - x["writes"]))
+

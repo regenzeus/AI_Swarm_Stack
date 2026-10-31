@@ -1,0 +1,6 @@
+[Unit]
+Description=Rebuild code graphs for repos whose HEAD moved
+[Service]
+Type=oneshot
+Environment=DOCKER_HOST=unix:///run/user/1000/docker.sock
+ExecStart=/home/owner/ai-stack/ops/graphify-sync.sh

@@ -1,0 +1,6 @@
+[Unit]
+Description=Run the stack readiness check 2 minutes after boot
+[Timer]
+OnBootSec=2min
+[Install]
+WantedBy=timers.target

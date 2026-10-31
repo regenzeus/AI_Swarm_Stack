@@ -1,0 +1,236 @@
+# Quality and process: how the repo is changed, checked and documented, including these requirements themselves.
+area: Quality and process
+prefix: QA
+items:
+  - id: QA-01
+    title: One check script for everyone
+    statement: CI, the builder and make check shall run the same ops/check.sh, and a check shall exist only there.
+    type: process
+    priority: must
+    status: implemented
+    parents: [SN-15]
+    sources: [AGENTS.md, .forgejo/workflows/AGENTS.md]
+    verify: {method: inspection, by: [ops/check.sh, .forgejo/workflows/ci.yml]}
+  - id: QA-02
+    title: Every directory explains itself
+    statement: Every directory with files shall have an AGENTS.md (the vault template a README.md) listed in the root
+      map, and CLAUDE.md shall import the root AGENTS.md.
+    type: process
+    priority: must
+    status: implemented
+    parents: [SN-15]
+    sources: [AGENTS.md]
+    verify: {method: test, by: [tests/test_repo_docs.py::test_every_directory_has_a_guide, tests/test_repo_docs.py::test_root_map_links_every_guide, tests/test_repo_docs.py::test_claude_entry_point_imports_agents_md]}
+  - id: QA-03
+    title: Scripts are executable and clean
+    statement: Every shell script shall be executable in git and pass shellcheck at error level.
+    type: process
+    priority: must
+    status: implemented
+    parents: [SN-15]
+    sources: [ops/AGENTS.md]
+    verify: {method: test, by: [tests/test_repo_docs.py::test_every_shell_script_is_executable]}
+  - id: QA-04
+    title: Unit tests fake everything external
+    statement: The unit tests shall use no Docker, gateway, Hermes, vault, network or secrets, write only under a
+      temporary directory and never sleep, and the whole suite shall finish within 120 seconds in the CI image.
+    type: process
+    priority: must
+    status: implemented
+    parents: [SN-15]
+    sources: [tests/AGENTS.md]
+    verify: {method: inspection, by: [tests/AGENTS.md, tests/conftest.py]}
+    findings: [FND-15, FND-27]
+  - id: QA-05
+    title: New behaviour has a test
+    statement: Every change that adds or changes behaviour shall add or change a unit test in the file for its module.
+    type: process
+    priority: must
+    status: implemented
+    parents: [SN-15]
+    sources: [AGENTS.md]
+    verify: {method: inspection, by: [AGENTS.md]}
+  - id: QA-06
+    title: Docs change with the code
+    statement: A change shall update, in the same commit, the AGENTS.md of the directories whose structure or rules
+      changed, the guide when users see it, docs/ when architecture or security changed, and README.md when the
+      component list changed.
+    type: process
+    priority: must
+    status: implemented
+    parents: [SN-15, SN-16]
+    sources: [AGENTS.md]
+    verify: {method: inspection, by: [README.md, compose/AGENTS.md, tests/AGENTS.md, config/litellm/AGENTS.md]}
+    findings: [FND-09, FND-15, FND-16]
+  - id: QA-07
+    title: Model behaviour changes are gated
+    statement: Before a change to prompts, profiles, models or the curator ships, the frozen benchmark's gate subset
+      shall be run and shall not score worse.
+    type: process
+    priority: must
+    status: implemented
+    parents: [SN-15, SN-08]
+    sources: [eval/AGENTS.md]
+    verify: {method: inspection, by: [eval/bench.py, eval/AGENTS.md]}
+  - id: QA-08
+    title: Requirements are checked on every change
+    statement: The checks shall refuse the requirements when a record misses a required field, has an unknown status,
+      type, priority or verification method, duplicates an id, points at a parent, source, finding, file or test that
+      does not exist, uses a vague word in its statement, or when a stakeholder need is refined by no requirement.
+    type: process
+    priority: must
+    status: implemented
+    parents: [SN-16]
+    sources: [DEC-14, requirements/README.md]
+    verify: {method: test, by: [tests/test_requirements.py::test_the_repo_requirements_pass_the_checker, tests/test_requirements.py::test_missing_fields_and_unknown_values_are_refused, tests/test_requirements.py::test_dangling_references_are_refused, tests/test_requirements.py::test_vague_statements_are_refused, tests/test_requirements.py::test_vague_words_are_known, tests/test_requirements.py::test_status_needs_its_evidence]}
+    trace: [ops/req.py, ops/check.sh]
+  - id: QA-09
+    title: Every test is claimed by a requirement
+    statement: The checks shall refuse a unit test that no requirement claims in its verification, and
+      requirements/unmapped-tests.txt shall only shrink.
+    type: process
+    priority: must
+    status: implemented
+    parents: [SN-16]
+    sources: [DEC-14]
+    verify: {method: test, by: [tests/test_requirements.py::test_an_unclaimed_test_is_refused_and_the_baseline_only_shrinks]}
+    trace: [ops/req.py]
+  - id: QA-10
+    title: The readable rendering is never stale
+    statement: requirements/REQUIREMENTS.md shall be generated from the YAML files, and the checks shall refuse it when it
+      differs from a fresh rendering.
+    type: process
+    priority: must
+    status: implemented
+    parents: [SN-16]
+    sources: [DEC-14]
+    verify: {method: test, by: [tests/test_requirements.py::test_the_rendering_is_current_and_complete]}
+    trace: [ops/req.py, requirements/REQUIREMENTS.md]
+  - id: QA-11
+    title: Changes name their requirements
+    statement: A commit that adds or changes behaviour shall update its requirement records in the same commit and name
+      their ids in the commit body ("Requirements:").
+    type: process
+    priority: must
+    status: implemented
+    parents: [SN-16]
+    sources: [DEC-14]
+    verify: {method: inspection, by: [AGENTS.md, requirements/AGENTS.md]}
+  - id: QA-12
+    title: Contradictions are written down
+    statement: When a contradiction or incoherence between parts of the stack is found, it shall be recorded as a finding
+      with evidence and a recommendation, and linked from every requirement it affects, before or instead of being
+      resolved silently.
+    type: process
+    priority: must
+    status: implemented
+    parents: [SN-16]
+    sources: [DEC-14]
+    verify: {method: test, by: [tests/test_requirements.py::test_status_needs_its_evidence]}
+    trace: [requirements/findings.yaml]
+  - id: QA-13
+    title: What the docs say is checked
+    statement: The checks shall compare the guide's and the AGENTS files' lists that mirror the configuration (tool
+      servers, services, test files, engines) with the configuration itself.
+    type: process
+    priority: should
+    status: proposed
+    parents: [SN-16, SN-15]
+    sources: [DEC-14]
+    rationale: The coverage tests check that a feature is mentioned, not that what is said about it is true; most findings
+      of 2026-10-29 are this kind of drift.
+    findings: [FND-09, FND-15, FND-16]
+  - id: QA-14
+    title: The stack checks itself against its requirements
+    statement: Every week an agent shall check the code against these requirements with the spec pipeline (link and
+      judge, spec/), report requirements it finds contradicted, and propose a finding or a fix for each.
+    type: process
+    priority: could
+    status: proposed
+    trace: [spec/ingest.py, spec/extract.py, spec/link.py, spec/judge.py, spec/pilot/]
+    parents: [SN-16, SN-14]
+    sources: [spec/README.md]
+    rationale: The spec pilot already links requirements to code and judges them (contradicted reliable on MQTT); its own
+      requirements are the obvious next corpus.
+  - id: QA-15
+    title: Planned requirements say how they will be accepted
+    statement: The checks shall refuse a planned requirement without an acceptance criterion, and a requirement whose
+      phase is not one of its area's phases.
+    type: process
+    priority: must
+    status: implemented
+    parents: [SN-16]
+    sources: [DEC-21, requirements/README.md]
+    rationale: ISO/IEC/IEEE 29148 asks that every requirement be verifiable; for a requirement not built yet, the
+      acceptance criterion is that verification, written before the code (acceptance-test-driven development).
+    verify: {method: test, by: [tests/test_requirements.py::test_planned_needs_acceptance_and_a_known_phase,
+        tests/test_requirements.py::test_groups_and_phases_are_rendered]}
+    trace: [ops/req.py]
+  - id: QA-16
+    title: Every text cap names its reason
+    statement: Every place in the code that cuts text (a slice of 40 or more, a textcap cut or tail, an ellipsis or
+      line clamp) shall name its reason on its line (prompt, untrusted, api, id, parse, store, preview or list), and the
+      checks shall fail on one that does not.
+    type: process
+    priority: must
+    status: implemented
+    parents: [SN-15, SN-06]
+    sources: [DEC-27, AGENTS.md]
+    findings: [FND-38]
+    verify: {method: test, by: [tests/test_truncation.py::test_every_cap_names_its_reason_and_an_unexplained_one_fails_the_check,
+      tests/test_truncation.py::test_the_image_copies_of_textcap_are_the_same_file]}
+    trace: [ops/truncation.py, ops/check.sh, images/mission-control/textcap.py, images/swarm/textcap.py]
+  - id: QA-17
+    title: A failure is not dropped without a trace
+    statement: A broad catch (except Exception, or bare except) that drops what it caught shall not be added; the checks
+      shall count these and fail when there are more than the recorded number (67 on 2026-10-30), and a catch around a
+      write or an owner-facing event shall log what failed.
+    type: process
+    priority: should
+    status: implemented
+    parents: [SN-13, SN-07]
+    sources: [docs/REVIEW-2026-10-30.md]
+    findings: [FND-68]
+    verify: {method: test, by: [tests/test_recoverable.py::test_broad_catches_that_drop_the_error_can_only_become_fewer]}
+    trace: [images/mission-control/server.py, ops/builds.py]
+  - id: QA-18
+    title: Every source file is traced
+    statement: Every source file under ops, images, config, compose, nas, converters, smoke and spec shall be named by a
+      requirement (a trace, a source, a verify path or its text; a named directory covers what is under it, and an
+      image's Dockerfile and configuration go with its code) or be listed in requirements/untraced-files.txt with its
+      reason; the checks shall fail on a file that is neither, and on a listed file that is traced or gone.
+    type: process
+    priority: should
+    status: implemented
+    parents: [SN-15]
+    sources: [docs/REVIEW-2026-10-30.md]
+    findings: [FND-69]
+    verify: {method: test, by: [tests/test_requirements.py::test_every_source_file_is_traced_or_listed_with_a_reason]}
+    trace: [ops/req.py, requirements/untraced-files.txt]
+  - id: QA-19
+    title: The API reference is drawn from the code
+    statement: Every HTTP route of Mission Control and of the run record's ingest shall have a handler docstring that
+      says what it does, and docs/API.md shall list every route with its methods and every MCP tool the app offers,
+      drawn from the code by ops/api_doc.py; the tests shall fail on a route without a docstring and on a stale file.
+    type: process
+    priority: should
+    status: implemented
+    parents: [SN-15]
+    sources: [docs/REVIEW-2026-10-30.md]
+    findings: [FND-72]
+    verify: {method: test, by: [tests/test_docs.py::test_the_api_reference_is_drawn_from_the_code_and_every_route_says_what_it_does]}
+    trace: [ops/api_doc.py, docs/API.md, images/mission-control/server.py]
+  - id: QA-20
+    title: What the documents name exists
+    statement: Every file path, make target, app screen and relative link that a Markdown document in the repository
+      names shall exist, and docs/README.md shall list every document under docs/ as current guidance or a record; the
+      tests shall fail on one that does not.
+    type: process
+    priority: should
+    status: implemented
+    parents: [SN-15]
+    sources: [docs/REVIEW-2026-10-30.md]
+    findings: [FND-71]
+    verify: {method: test, by: [tests/test_docs.py::test_every_path_make_target_screen_and_link_a_document_names_exists,
+      tests/test_docs.py::test_the_readme_and_the_index_point_at_what_is_current]}
+    trace: [README.md, docs/README.md]

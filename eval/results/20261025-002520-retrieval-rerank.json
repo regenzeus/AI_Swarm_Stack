@@ -1,0 +1,972 @@
+{
+ "vault-raw": {
+  "summary": {
+   "bm25": {
+    "recall": 0.625,
+    "ndcg": 0.625,
+    "mrr": 0.625,
+    "secs": 0.331
+   },
+   "vector": {
+    "recall": 1.0,
+    "ndcg": 0.799,
+    "mrr": 0.729,
+    "secs": 14.846
+   },
+   "hybrid": {
+    "recall": 1.0,
+    "ndcg": 0.873,
+    "mrr": 0.833,
+    "secs": 3.627
+   },
+   "rerank": {
+    "recall": 1.0,
+    "ndcg": 0.908,
+    "mrr": 0.875,
+    "secs": 70.371
+   }
+  },
+  "queries": {
+   "bm25": [
+    {
+     "id": "r-ssd",
+     "recall": 1.0,
+     "ndcg": 1.0,
+     "mrr": 1.0,
+     "secs": 0.64,
+     "top": [
+      "articles/synology-dsm-tips-clip.md"
+     ]
+    },
+    {
+     "id": "r-embed",
+     "recall": 1.0,
+     "ndcg": 1.0,
+     "mrr": 1.0,
+     "secs": 0.33,
+     "top": [
+      "articles/colleague-qmd-notes.md"
+     ]
+    },
+    {
+     "id": "r-port",
+     "recall": 0.0,
+     "ndcg": 0.0,
+     "mrr": 0.0,
+     "secs": 0.26,
+     "top": []
+    },
+    {
+     "id": "r-federation",
+     "recall": 0.0,
+     "ndcg": 0.0,
+     "mrr": 0.0,
+     "secs": 0.25,
+     "top": []
+    },
+    {
+     "id": "r-age",
+     "recall": 1.0,
+     "ndcg": 1.0,
+     "mrr": 1.0,
+     "secs": 0.29,
+     "top": [
+      "articles/sops-readme.md"
+     ]
+    },
+    {
+     "id": "r-virtualkeys",
+     "recall": 1.0,
+     "ndcg": 1.0,
+     "mrr": 1.0,
+     "secs": 0.29,
+     "top": [
+      "articles/litellm-readme.md"
+     ]
+    },
+    {
+     "id": "r-wiki-idea",
+     "recall": 1.0,
+     "ndcg": 1.0,
+     "mrr": 1.0,
+     "secs": 0.31,
+     "top": [
+      "articles/karpathy-llm-wiki.md",
+      "articles/graphify-readme.md"
+     ]
+    },
+    {
+     "id": "r-de-telegram",
+     "recall": 0.0,
+     "ndcg": 0.0,
+     "mrr": 0.0,
+     "secs": 0.28,
+     "top": []
+    }
+   ],
+   "vector": [
+    {
+     "id": "r-ssd",
+     "recall": 1.0,
+     "ndcg": 1.0,
+     "mrr": 1.0,
+     "secs": 15.54,
+     "top": [
+      "articles/synology-dsm-tips-clip.md",
+      "articles/qmd-readme.md",
+      "articles/open-webui-readme.md"
+     ]
+    },
+    {
+     "id": "r-embed",
+     "recall": 1.0,
+     "ndcg": 0.6309297535714575,
+     "mrr": 0.5,
+     "secs": 15.39,
+     "top": [
+      "articles/litellm-readme.md",
+      "articles/colleague-qmd-notes.md",
+      "articles/open-webui-readme.md"
+     ]
+    },
+    {
+     "id": "r-port",
+     "recall": 1.0,
+     "ndcg": 0.6309297535714575,
+     "mrr": 0.5,
+     "secs": 13.33,
+     "top": [
+      "articles/forgejo-readme.md",
+      "articles/my-stack-setup.md",
+      "articles/open-webui-readme.md"
+     ]
+    },
+    {
+     "id": "r-federation",
+     "recall": 1.0,
+     "ndcg": 1.0,
+     "mrr": 1.0,
+     "secs": 13.84,
+     "top": [
+      "articles/forgejo-readme.md",
+      "articles/graphify-readme.md",
+      "articles/hermes-agent-readme.md"
+     ]
+    },
+    {
+     "id": "r-age",
+     "recall": 1.0,
+     "ndcg": 1.0,
+     "mrr": 1.0,
+     "secs": 15.87,
+     "top": [
+      "articles/sops-readme.md",
+      "articles/graphify-readme.md",
+      "articles/litellm-readme.md"
+     ]
+    },
+    {
+     "id": "r-virtualkeys",
+     "recall": 1.0,
+     "ndcg": 0.5,
+     "mrr": 0.3333333333333333,
+     "secs": 14.76,
+     "top": [
+      "articles/hermes-agent-readme.md",
+      "articles/my-stack-setup.md",
+      "articles/litellm-readme.md"
+     ]
+    },
+    {
+     "id": "r-wiki-idea",
+     "recall": 1.0,
+     "ndcg": 1.0,
+     "mrr": 1.0,
+     "secs": 15.74,
+     "top": [
+      "articles/karpathy-llm-wiki.md",
+      "articles/open-webui-readme.md",
+      "articles/litellm-readme.md"
+     ]
+    },
+    {
+     "id": "r-de-telegram",
+     "recall": 1.0,
+     "ndcg": 0.6309297535714575,
+     "mrr": 0.5,
+     "secs": 14.3,
+     "top": [
+      "articles/hermes-agent-readme.md",
+      "articles/my-stack-setup.md",
+      "articles/open-webui-readme.md"
+     ]
+    }
+   ],
+   "hybrid": [
+    {
+     "id": "r-ssd",
+     "recall": 1.0,
+     "ndcg": 1.0,
+     "mrr": 1.0,
+     "secs": 2.93,
+     "top": [
+      "articles/synology-dsm-tips-clip.md",
+      "articles/qmd-readme.md",
+      "articles/open-webui-readme.md"
+     ]
+    },
+    {
+     "id": "r-embed",
+     "recall": 1.0,
+     "ndcg": 1.0,
+     "mrr": 1.0,
+     "secs": 2.82,
+     "top": [
+      "articles/colleague-qmd-notes.md",
+      "articles/litellm-readme.md",
+      "articles/open-webui-readme.md"
+     ]
+    },
+    {
+     "id": "r-port",
+     "recall": 1.0,
+     "ndcg": 0.3562071871080222,
+     "mrr": 0.16666666666666666,
+     "secs": 4.07,
+     "top": [
+      "articles/graphify-readme.md",
+      "articles/hermes-agent-readme.md",
+      "articles/qmd-readme.md"
+     ]
+    },
+    {
+     "id": "r-federation",
+     "recall": 1.0,
+     "ndcg": 1.0,
+     "mrr": 1.0,
+     "secs": 4.17,
+     "top": [
+      "articles/forgejo-readme.md",
+      "articles/karpathy-llm-wiki.md",
+      "articles/graphify-readme.md"
+     ]
+    },
+    {
+     "id": "r-age",
+     "recall": 1.0,
+     "ndcg": 1.0,
+     "mrr": 1.0,
+     "secs": 3.32,
+     "top": [
+      "articles/sops-readme.md",
+      "articles/litellm-readme.md",
+      "articles/hermes-agent-readme.md"
+     ]
+    },
+    {
+     "id": "r-virtualkeys",
+     "recall": 1.0,
+     "ndcg": 1.0,
+     "mrr": 1.0,
+     "secs": 3.41,
+     "top": [
+      "articles/litellm-readme.md",
+      "articles/hermes-agent-readme.md",
+      "articles/my-stack-setup.md"
+     ]
+    },
+    {
+     "id": "r-wiki-idea",
+     "recall": 1.0,
+     "ndcg": 1.0,
+     "mrr": 1.0,
+     "secs": 4.25,
+     "top": [
+      "articles/karpathy-llm-wiki.md",
+      "articles/graphify-readme.md",
+      "articles/open-webui-readme.md"
+     ]
+    },
+    {
+     "id": "r-de-telegram",
+     "recall": 1.0,
+     "ndcg": 0.6309297535714575,
+     "mrr": 0.5,
+     "secs": 4.05,
+     "top": [
+      "articles/hermes-agent-readme.md",
+      "articles/my-stack-setup.md",
+      "articles/open-webui-readme.md"
+     ]
+    }
+   ],
+   "rerank": [
+    {
+     "id": "r-ssd",
+     "recall": 1.0,
+     "ndcg": 1.0,
+     "mrr": 1.0,
+     "secs": 73.84,
+     "top": [
+      "articles/synology-dsm-tips-clip.md",
+      "articles/qmd-readme.md",
+      "articles/open-webui-readme.md"
+     ]
+    },
+    {
+     "id": "r-embed",
+     "recall": 1.0,
+     "ndcg": 1.0,
+     "mrr": 1.0,
+     "secs": 63.5,
+     "top": [
+      "articles/colleague-qmd-notes.md",
+      "articles/litellm-readme.md",
+      "articles/open-webui-readme.md"
+     ]
+    },
+    {
+     "id": "r-port",
+     "recall": 1.0,
+     "ndcg": 0.6309297535714575,
+     "mrr": 0.5,
+     "secs": 70.94,
+     "top": [
+      "articles/graphify-readme.md",
+      "articles/my-stack-setup.md",
+      "articles/hermes-agent-readme.md"
+     ]
+    },
+    {
+     "id": "r-federation",
+     "recall": 1.0,
+     "ndcg": 1.0,
+     "mrr": 1.0,
+     "secs": 76.51,
+     "top": [
+      "articles/forgejo-readme.md",
+      "articles/karpathy-llm-wiki.md",
+      "articles/graphify-readme.md"
+     ]
+    },
+    {
+     "id": "r-age",
+     "recall": 1.0,
+     "ndcg": 1.0,
+     "mrr": 1.0,
+     "secs": 64.14,
+     "top": [
+      "articles/sops-readme.md",
+      "articles/litellm-readme.md",
+      "articles/hermes-agent-readme.md"
+     ]
+    },
+    {
+     "id": "r-virtualkeys",
+     "recall": 1.0,
+     "ndcg": 1.0,
+     "mrr": 1.0,
+     "secs": 67.79,
+     "top": [
+      "articles/litellm-readme.md",
+      "articles/hermes-agent-readme.md",
+      "articles/my-stack-setup.md"
+     ]
+    },
+    {
+     "id": "r-wiki-idea",
+     "recall": 1.0,
+     "ndcg": 1.0,
+     "mrr": 1.0,
+     "secs": 68.16,
+     "top": [
+      "articles/karpathy-llm-wiki.md",
+      "articles/graphify-readme.md",
+      "articles/open-webui-readme.md"
+     ]
+    },
+    {
+     "id": "r-de-telegram",
+     "recall": 1.0,
+     "ndcg": 0.6309297535714575,
+     "mrr": 0.5,
+     "secs": 78.09,
+     "top": [
+      "articles/hermes-agent-readme.md",
+      "articles/my-stack-setup.md",
+      "articles/open-webui-readme.md"
+     ]
+    }
+   ]
+  }
+ },
+ "vault-wiki": {
+  "summary": {
+   "bm25": {
+    "recall": 0.208,
+    "ndcg": 0.211,
+    "mrr": 0.25,
+    "secs": 0.312
+   },
+   "vector": {
+    "recall": 0.917,
+    "ndcg": 0.815,
+    "mrr": 0.792,
+    "secs": 15.304
+   },
+   "hybrid": {
+    "recall": 0.917,
+    "ndcg": 0.751,
+    "mrr": 0.711,
+    "secs": 4.897
+   },
+   "rerank": {
+    "recall": 1.0,
+    "ndcg": 0.853,
+    "mrr": 0.819,
+    "secs": 99.487
+   }
+  },
+  "queries": {
+   "bm25": [
+    {
+     "id": "w-llmwiki",
+     "recall": 0.0,
+     "ndcg": 0.0,
+     "mrr": 0.0,
+     "secs": 0.3,
+     "top": []
+    },
+    {
+     "id": "w-gateway",
+     "recall": 0.0,
+     "ndcg": 0.0,
+     "mrr": 0.0,
+     "secs": 0.27,
+     "top": []
+    },
+    {
+     "id": "w-secrets",
+     "recall": 0.5,
+     "ndcg": 0.6131471927654584,
+     "mrr": 1.0,
+     "secs": 0.33,
+     "top": [
+      "concepts/encrypted-configuration-management.md"
+     ]
+    },
+    {
+     "id": "w-codegraph",
+     "recall": 0.0,
+     "ndcg": 0.0,
+     "mrr": 0.0,
+     "secs": 0.34,
+     "top": []
+    },
+    {
+     "id": "w-forge",
+     "recall": 1.0,
+     "ndcg": 0.9197207891481876,
+     "mrr": 1.0,
+     "secs": 0.31,
+     "top": [
+      "sources/forgejo-readme.md",
+      "concepts/self-hosted-git-forge.md",
+      "entities/forgejo.md"
+     ]
+    },
+    {
+     "id": "w-qmd-conflict",
+     "recall": 0.0,
+     "ndcg": 0.0,
+     "mrr": 0.0,
+     "secs": 0.3,
+     "top": []
+    },
+    {
+     "id": "w-nas",
+     "recall": 1.0,
+     "ndcg": 1.0,
+     "mrr": 1.0,
+     "secs": 0.33,
+     "top": [
+      "concepts/nas-performance-tuning.md",
+      "sources/synology-dsm-tips-clip.md"
+     ]
+    },
+    {
+     "id": "w-phone",
+     "recall": 0.0,
+     "ndcg": 0.0,
+     "mrr": 0.0,
+     "secs": 0.31,
+     "top": []
+    },
+    {
+     "id": "w-chatui",
+     "recall": 0.0,
+     "ndcg": 0.0,
+     "mrr": 0.0,
+     "secs": 0.28,
+     "top": [
+      "concepts/personal-ai-stack-architecture.md"
+     ]
+    },
+    {
+     "id": "w-skills",
+     "recall": 0.0,
+     "ndcg": 0.0,
+     "mrr": 0.0,
+     "secs": 0.29,
+     "top": []
+    },
+    {
+     "id": "w-de-search",
+     "recall": 0.0,
+     "ndcg": 0.0,
+     "mrr": 0.0,
+     "secs": 0.32,
+     "top": []
+    },
+    {
+     "id": "w-de-stack",
+     "recall": 0.0,
+     "ndcg": 0.0,
+     "mrr": 0.0,
+     "secs": 0.37,
+     "top": []
+    }
+   ],
+   "vector": [
+    {
+     "id": "w-llmwiki",
+     "recall": 1.0,
+     "ndcg": 1.0,
+     "mrr": 1.0,
+     "secs": 3.58,
+     "top": [
+      "concepts/llm-maintained-wiki.md",
+      "sources/karpathy-llm-wiki.md",
+      "entities/andrej-karpathy.md"
+     ]
+    },
+    {
+     "id": "w-gateway",
+     "recall": 1.0,
+     "ndcg": 0.6240505200038379,
+     "mrr": 0.5,
+     "secs": 12.75,
+     "top": [
+      "sources/litellm-readme.md",
+      "concepts/llm-gateway.md",
+      "concepts/personal-ai-stack-architecture.md"
+     ]
+    },
+    {
+     "id": "w-secrets",
+     "recall": 1.0,
+     "ndcg": 0.9197207891481876,
+     "mrr": 1.0,
+     "secs": 12.6,
+     "top": [
+      "concepts/encrypted-configuration-management.md",
+      "sources/sops-readme.md",
+      "entities/sops.md"
+     ]
+    },
+    {
+     "id": "w-codegraph",
+     "recall": 1.0,
+     "ndcg": 0.6934264036172708,
+     "mrr": 0.5,
+     "secs": 13.77,
+     "top": [
+      "sources/graphify-readme.md",
+      "concepts/knowledge-graph-codebase-indexing.md",
+      "entities/graphify.md"
+     ]
+    },
+    {
+     "id": "w-forge",
+     "recall": 1.0,
+     "ndcg": 1.0,
+     "mrr": 1.0,
+     "secs": 13.05,
+     "top": [
+      "sources/forgejo-readme.md",
+      "entities/forgejo.md",
+      "concepts/self-hosted-git-forge.md"
+     ]
+    },
+    {
+     "id": "w-qmd-conflict",
+     "recall": 1.0,
+     "ndcg": 1.0,
+     "mrr": 1.0,
+     "secs": 14.12,
+     "top": [
+      "sources/colleague-qmd-notes.md",
+      "entities/qmd.md",
+      "sources/qmd-readme.md"
+     ]
+    },
+    {
+     "id": "w-nas",
+     "recall": 1.0,
+     "ndcg": 1.0,
+     "mrr": 1.0,
+     "secs": 12.11,
+     "top": [
+      "concepts/nas-performance-tuning.md",
+      "sources/synology-dsm-tips-clip.md",
+      "entities/synology-dsm.md"
+     ]
+    },
+    {
+     "id": "w-phone",
+     "recall": 1.0,
+     "ndcg": 0.9674679834891693,
+     "mrr": 1.0,
+     "secs": 13.59,
+     "top": [
+      "entities/tailscale.md",
+      "concepts/personal-ai-stack-architecture.md",
+      "projects/personal-ai-stack.md"
+     ]
+    },
+    {
+     "id": "w-chatui",
+     "recall": 1.0,
+     "ndcg": 0.8772153153380493,
+     "mrr": 1.0,
+     "secs": 14.37,
+     "top": [
+      "concepts/self-hosted-ai-workspace.md",
+      "sources/open-webui-readme.md",
+      "projects/personal-ai-stack.md"
+     ]
+    },
+    {
+     "id": "w-skills",
+     "recall": 0.0,
+     "ndcg": 0.0,
+     "mrr": 0.0,
+     "secs": 2.6,
+     "top": []
+    },
+    {
+     "id": "w-de-search",
+     "recall": 1.0,
+     "ndcg": 0.6934264036172708,
+     "mrr": 0.5,
+     "secs": 15.84,
+     "top": [
+      "sources/qmd-readme.md",
+      "entities/qmd.md",
+      "concepts/local-hybrid-document-search.md"
+     ]
+    },
+    {
+     "id": "w-de-stack",
+     "recall": 1.0,
+     "ndcg": 1.0,
+     "mrr": 1.0,
+     "secs": 55.27,
+     "top": [
+      "projects/personal-ai-stack.md",
+      "concepts/personal-ai-stack-architecture.md",
+      "sources/my-stack-setup.md"
+     ]
+    }
+   ],
+   "hybrid": [
+    {
+     "id": "w-llmwiki",
+     "recall": 1.0,
+     "ndcg": 1.0,
+     "mrr": 1.0,
+     "secs": 3.67,
+     "top": [
+      "concepts/llm-maintained-wiki.md",
+      "sources/karpathy-llm-wiki.md",
+      "entities/andrej-karpathy.md"
+     ]
+    },
+    {
+     "id": "w-gateway",
+     "recall": 1.0,
+     "ndcg": 0.4415801103577823,
+     "mrr": 0.2,
+     "secs": 3.75,
+     "top": [
+      "sources/litellm-readme.md",
+      "concepts/personal-ai-stack-architecture.md",
+      "entities/tailscale.md"
+     ]
+    },
+    {
+     "id": "w-secrets",
+     "recall": 1.0,
+     "ndcg": 0.9197207891481876,
+     "mrr": 1.0,
+     "secs": 2.72,
+     "top": [
+      "concepts/encrypted-configuration-management.md",
+      "sources/sops-readme.md",
+      "entities/sops.md"
+     ]
+    },
+    {
+     "id": "w-codegraph",
+     "recall": 1.0,
+     "ndcg": 0.5249810332008933,
+     "mrr": 0.3333333333333333,
+     "secs": 3.92,
+     "top": [
+      "sources/graphify-readme.md",
+      "concepts/agent-learning-loop.md",
+      "concepts/knowledge-graph-codebase-indexing.md"
+     ]
+    },
+    {
+     "id": "w-forge",
+     "recall": 1.0,
+     "ndcg": 1.0,
+     "mrr": 1.0,
+     "secs": 3.69,
+     "top": [
+      "sources/forgejo-readme.md",
+      "entities/forgejo.md",
+      "concepts/self-hosted-git-forge.md"
+     ]
+    },
+    {
+     "id": "w-qmd-conflict",
+     "recall": 1.0,
+     "ndcg": 0.6509209298071326,
+     "mrr": 0.5,
+     "secs": 4.06,
+     "top": [
+      "concepts/local-hybrid-document-search.md",
+      "sources/colleague-qmd-notes.md",
+      "concepts/self-hosted-ai-workspace.md"
+     ]
+    },
+    {
+     "id": "w-nas",
+     "recall": 1.0,
+     "ndcg": 1.0,
+     "mrr": 1.0,
+     "secs": 3.58,
+     "top": [
+      "concepts/nas-performance-tuning.md",
+      "sources/synology-dsm-tips-clip.md",
+      "entities/synology-dsm.md"
+     ]
+    },
+    {
+     "id": "w-phone",
+     "recall": 1.0,
+     "ndcg": 0.9060254355346823,
+     "mrr": 1.0,
+     "secs": 3.92,
+     "top": [
+      "entities/tailscale.md",
+      "projects/personal-ai-stack.md",
+      "concepts/personal-ai-stack-architecture.md"
+     ]
+    },
+    {
+     "id": "w-chatui",
+     "recall": 1.0,
+     "ndcg": 0.6509209298071326,
+     "mrr": 0.5,
+     "secs": 4.18,
+     "top": [
+      "concepts/personal-ai-stack-architecture.md",
+      "concepts/self-hosted-ai-workspace.md",
+      "sources/open-webui-readme.md"
+     ]
+    },
+    {
+     "id": "w-skills",
+     "recall": 0.0,
+     "ndcg": 0.0,
+     "mrr": 0.0,
+     "secs": 12.45,
+     "top": []
+    },
+    {
+     "id": "w-de-search",
+     "recall": 1.0,
+     "ndcg": 0.9197207891481876,
+     "mrr": 1.0,
+     "secs": 3.91,
+     "top": [
+      "entities/qmd.md",
+      "sources/qmd-readme.md",
+      "concepts/local-hybrid-document-search.md"
+     ]
+    },
+    {
+     "id": "w-de-stack",
+     "recall": 1.0,
+     "ndcg": 1.0,
+     "mrr": 1.0,
+     "secs": 8.92,
+     "top": [
+      "projects/personal-ai-stack.md",
+      "sources/my-stack-setup.md",
+      "concepts/personal-ai-stack-architecture.md"
+     ]
+    }
+   ],
+   "rerank": [
+    {
+     "id": "w-llmwiki",
+     "recall": 1.0,
+     "ndcg": 1.0,
+     "mrr": 1.0,
+     "secs": 99.04,
+     "top": [
+      "concepts/llm-maintained-wiki.md",
+      "sources/karpathy-llm-wiki.md",
+      "projects/llm-wiki-vault.md"
+     ]
+    },
+    {
+     "id": "w-gateway",
+     "recall": 1.0,
+     "ndcg": 0.5249810332008933,
+     "mrr": 0.3333333333333333,
+     "secs": 113.41,
+     "top": [
+      "sources/litellm-readme.md",
+      "concepts/personal-ai-stack-architecture.md",
+      "concepts/llm-gateway.md"
+     ]
+    },
+    {
+     "id": "w-secrets",
+     "recall": 1.0,
+     "ndcg": 0.9197207891481876,
+     "mrr": 1.0,
+     "secs": 81.03,
+     "top": [
+      "concepts/encrypted-configuration-management.md",
+      "sources/sops-readme.md",
+      "entities/sops.md"
+     ]
+    },
+    {
+     "id": "w-codegraph",
+     "recall": 1.0,
+     "ndcg": 0.6052602440527057,
+     "mrr": 0.5,
+     "secs": 99.8,
+     "top": [
+      "sources/graphify-readme.md",
+      "concepts/knowledge-graph-codebase-indexing.md",
+      "concepts/agent-learning-loop.md"
+     ]
+    },
+    {
+     "id": "w-forge",
+     "recall": 1.0,
+     "ndcg": 1.0,
+     "mrr": 1.0,
+     "secs": 95.86,
+     "top": [
+      "sources/forgejo-readme.md",
+      "entities/forgejo.md",
+      "sources/my-stack-setup.md"
+     ]
+    },
+    {
+     "id": "w-qmd-conflict",
+     "recall": 1.0,
+     "ndcg": 0.6934264036172708,
+     "mrr": 0.5,
+     "secs": 116.21,
+     "top": [
+      "concepts/local-hybrid-document-search.md",
+      "sources/colleague-qmd-notes.md",
+      "entities/qmd.md"
+     ]
+    },
+    {
+     "id": "w-nas",
+     "recall": 1.0,
+     "ndcg": 1.0,
+     "mrr": 1.0,
+     "secs": 110.19,
+     "top": [
+      "concepts/nas-performance-tuning.md",
+      "sources/synology-dsm-tips-clip.md",
+      "entities/synology-dsm.md"
+     ]
+    },
+    {
+     "id": "w-phone",
+     "recall": 1.0,
+     "ndcg": 0.9060254355346823,
+     "mrr": 1.0,
+     "secs": 93.59,
+     "top": [
+      "entities/tailscale.md",
+      "projects/personal-ai-stack.md",
+      "concepts/personal-ai-stack-architecture.md"
+     ]
+    },
+    {
+     "id": "w-chatui",
+     "recall": 1.0,
+     "ndcg": 0.6934264036172708,
+     "mrr": 0.5,
+     "secs": 91.59,
+     "top": [
+      "concepts/personal-ai-stack-architecture.md",
+      "concepts/self-hosted-ai-workspace.md",
+      "entities/open-webui.md"
+     ]
+    },
+    {
+     "id": "w-skills",
+     "recall": 1.0,
+     "ndcg": 1.0,
+     "mrr": 1.0,
+     "secs": 95.76,
+     "top": [
+      "concepts/agent-learning-loop.md",
+      "entities/hermes-agent.md",
+      "sources/hermes-agent-readme.md"
+     ]
+    },
+    {
+     "id": "w-de-search",
+     "recall": 1.0,
+     "ndcg": 0.9197207891481876,
+     "mrr": 1.0,
+     "secs": 98.19,
+     "top": [
+      "entities/qmd.md",
+      "sources/qmd-readme.md",
+      "concepts/local-hybrid-document-search.md"
+     ]
+    },
+    {
+     "id": "w-de-stack",
+     "recall": 1.0,
+     "ndcg": 0.9674679834891693,
+     "mrr": 1.0,
+     "secs": 99.17,
+     "top": [
+      "projects/personal-ai-stack.md",
+      "sources/my-stack-setup.md",
+      "entities/tailscale.md"
+     ]
+    }
+   ]
+  }
+ }
+}

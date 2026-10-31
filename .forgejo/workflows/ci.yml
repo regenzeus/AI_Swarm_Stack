@@ -1,0 +1,18 @@
+# CI for ai-stack: every check in ops/check.sh (static checks, docs coverage, unit tests; all fakes, no services).
+# Runs on the wsl-ci runner (no Docker socket, no secrets). The builder and `make check` run the same script.
+name: ci
+on: [push]
+jobs:
+  check:
+    runs-on: host
+    steps:
+      - uses: actions/checkout@v4
+      - name: test dependencies (throwaway venv)
+        run: |
+          python -m venv /tmp/venv-$GITHUB_RUN_ID
+          /tmp/venv-$GITHUB_RUN_ID/bin/pip install -q --disable-pip-version-check -r tests/requirements.txt
+      - name: all checks (ops/check.sh)
+        run: PYTEST=/tmp/venv-$GITHUB_RUN_ID/bin/pytest bash ops/check.sh
+      - name: clean up
+        if: always()
+        run: rm -rf /tmp/venv-$GITHUB_RUN_ID

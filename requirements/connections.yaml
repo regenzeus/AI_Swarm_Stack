@@ -1,0 +1,67 @@
+# Connections: the owner's apps for agents, Gmail first. Scopes granted for a time, Trash only, a log.
+area: Connections
+prefix: CNX
+items:
+  - id: CNX-01
+    title: Nothing without a grant
+    statement: Every mail tool shall refuse when the owner has not granted its scope, and tell the agent to ask him.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05, SN-11]
+    sources: [images/mail/AGENTS.md]
+    verify: {method: test, by: [tests/test_mail.py::test_nothing_without_a_grant]}
+    trace: [images/mail/mail.py]
+  - id: CNX-02
+    title: Grants by scope and time
+    statement: The owner shall grant read, organize and trash separately for 1 hour, 8 hours or until revoked, revoke
+      takes effect at once, and grants shall be refused from the AI phone.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-11, SN-02]
+    sources: [images/mission-control/guide/18-connections.md]
+    verify: {method: test, by: [tests/test_server.py::test_connection_grants_and_the_ai_phone]}
+  - id: CNX-03
+    title: Trash only, first batch asks, undo
+    statement: The mail connector shall move mail only to Trash, never expunge, never archive or trash protected mail
+      (bank, payment, security, password reset, verification codes), wait for the owner's OK on the first Trash batch
+      of each grant, and keep an undo record per batch.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05, SN-09]
+    sources: [images/mail/AGENTS.md]
+    verify: {method: test, by: [tests/test_mail.py::test_trash_asks_first_keeps_bank_mail_and_can_be_undone]}
+  - id: CNX-04
+    title: No sending
+    statement: The mail connector shall have no tool that sends, forwards, or changes filters or settings.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05]
+    sources: [images/mail/AGENTS.md]
+    verify: {method: test, by: [tests/test_mail.py::test_mail_tools_cannot_send]}
+  - id: CNX-05
+    title: The connector is sealed
+    statement: The mail connector's firewall shall allow only IMAPS to Gmail, and the app password shall never be logged
+      or returned.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05, CST-06]
+    sources: [images/mail/AGENTS.md]
+    verify: {method: inspection, by: [images/mail/entrypoint.sh, images/mail/mail.py]}
+  - id: CNX-06
+    title: A first-Trash approval survives a restart
+    statement: If the mail connector restarts while a first-Trash approval waits, then the card shall not be left
+      unanswerable; it shall be dropped and asked again, or kept answerable.
+    type: functional
+    priority: must
+    status: violated
+    parents: [SN-13]
+    sources: ["same pattern as the AI phone's orphaned cards, fixed 2026-10-29"]
+    gap: images/mail/mail.py waits for its decision in a process loop over pending/ and decisions/ with no sweep of
+      cards left by a restart (FND-14).
+    verify: {method: analysis, by: [images/mail/mail.py]}
+    findings: [FND-14]

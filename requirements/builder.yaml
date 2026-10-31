@@ -1,0 +1,257 @@
+# The builder and the Code tab: assignments, engines, checks, review, approve, deploy, repositories, code maps.
+area: Builder
+prefix: BLD
+items:
+  - id: BLD-01
+    title: Assignments get their own branch
+    statement: When a build is assigned, the runner shall validate it and work on a branch named builder/<id>-<slug> in
+      the repository's workbench clone.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-08, SN-14]
+    sources: [docs/MISSION-CONTROL.md]
+    verify: {method: test, by: [tests/test_builds.py::test_assign_validates_and_names_the_branch]}
+    trace: [ops/builds.py]
+  - id: BLD-02
+    title: Approve needs review, checks and CI
+    statement: The runner shall deploy an approved build only when it is in review, its sandbox checks passed and its
+      CI is green; approving while CI still runs shall deploy it the moment CI passes, and not if CI fails.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05, CST-07]
+    sources: [DEC-03]
+    verify: {method: test, by: [tests/test_builds.py::test_approve_requires_review_checks_and_green_ci, tests/test_builds.py::test_approve_while_ci_runs_deploys_when_it_passes, tests/test_builds.py::test_approve_all_takes_only_what_is_ready]}
+    findings: [FND-07]
+  - id: BLD-03
+    title: Approve merges, deploys or rolls back
+    statement: When the owner approves a build, the runner shall merge it with --no-ff into the default branch, push,
+      deploy, and roll back on a failed deploy.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-08, SN-13]
+    sources: [docs/MISSION-CONTROL.md]
+    verify: {method: test, by: [tests/test_builds.py::test_approved_build_merges_deploys_or_rolls_back]}
+  - id: BLD-04
+    title: Change requests carry feedback
+    statement: The runner shall send a build back only with written feedback, and the builder shall continue on the
+      same branch.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-08]
+    sources: [images/mission-control/guide/10-builder.md]
+    verify: {method: test, by: [tests/test_builds.py::test_revise_needs_feedback]}
+  - id: BLD-05
+    title: Builds check against today's main
+    statement: Before the checks, the runner shall merge today's main into the build branch and set aside uncommitted
+      leftovers, so that the review shows only the build's own change.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-08]
+    sources: ["incident 2026-10-28: an old branch showed 45 files"]
+    verify: {method: test, by: [tests/test_builds.py::test_an_old_build_branch_gets_todays_main, tests/test_builds.py::test_uncommitted_builder_leftovers_are_set_aside]}
+  - id: BLD-06
+    title: A looping builder is stopped
+    statement: If the builder makes 6 tool calls in a row with empty arguments, then the runner shall stop the build and
+      say why.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-13, SN-03]
+    sources: ["incident 2026-10-28: empty tool arguments loop"]
+    verify: {method: test, by: [tests/test_builds.py::test_empty_tool_call_streak]}
+  - id: BLD-07
+    title: Sensitive files are flagged
+    statement: The review shall flag changes to sensitive files (security settings, deploy and build code, AGENTS.md,
+      CLAUDE.md, SOUL text).
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-05]
+    sources: [ops/AGENTS.md]
+    verify: {method: test, by: [tests/test_builds.py::test_review_flags_sensitive_files]}
+  - id: BLD-08
+    title: Two engines
+    statement: Each build shall run on one of two engines, Hermes on the ChatGPT subscription or Claude Code on the
+      Claude subscription, Claude Code by default when it is connected; an unknown engine shall be refused, and a build
+      may move to the other engine except while that would lose unfinished work.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-08, CST-02]
+    sources: [DEC-16]
+    verify: {method: test, by: [tests/test_builds.py::test_engine_is_validated, tests/test_builds.py::test_switch_engine_allowed_and_refused, tests/test_builds.py::test_claude_stream_becomes_steps_and_result]}
+    findings: [FND-06]
+  - id: BLD-09
+    title: A usage limit pauses a build
+    statement: When an engine reaches its usage limit, the build shall wait until the reported reset and resume with its
+      unfinished work.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-13]
+    sources: [images/mission-control/guide/10-builder.md]
+    verify: {method: test, by: [tests/test_builds.py::test_claude_usage_limit_gives_the_reset_time]}
+  - id: BLD-10
+    title: The other engine reviews
+    statement: Before a build reaches the owner, the other engine shall review its assignment, diff and checks and give
+      a verdict (fine to deploy, improve first, do not deploy) with findings; if that reviewer is at its limit, the
+      builder's own engine shall review, marked less independent.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-05, SN-08]
+    sources: [DEC-04]
+    verify: {method: test, by: [tests/test_builds.py::test_the_other_engine_reviews, tests/test_builds.py::test_review_verdicts_are_normalised, tests/test_builds.py::test_a_rate_limited_reviewer_hands_over_to_the_other_engine]}
+  - id: BLD-11
+    title: Code tools for both engines
+    statement: Both engines shall get Serena's language-server tools and the code graph, read-only.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-14]
+    sources: [images/builder/AGENTS.md]
+    verify: {method: test, by: [tests/test_builds.py::test_both_engines_get_serena, tests/test_builds.py::test_both_engines_get_the_code_graph_read_only]}
+  - id: BLD-12
+    title: Builds survive a runner restart
+    statement: When the runner restarts during a build, the build shall resume; an interrupted deploy shall be marked
+      failed, not repeated.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-13]
+    sources: [docs/DOGFOOD.md]
+    verify: {method: test, by: [tests/test_builds.py::test_builds_cut_off_by_a_runner_restart_are_resumed]}
+  - id: BLD-13
+    title: The Forgejo token goes only to the runner
+    statement: When the owner pastes a Forgejo token, the runner shall check it against Forgejo and store it
+      encrypted, and the token shall never reach Hermes or any model.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05, CST-06]
+    sources: [images/mission-control/guide/11-code.md]
+    verify: {method: test, by: [tests/test_builds.py::test_forgejo_connect_checks_then_stores_encrypted, tests/test_server.py::test_forgejo_token_goes_to_the_runner_only]}
+  - id: BLD-14
+    title: Honest token counts
+    statement: Builds on both engines shall count all input tokens including cached ones, and show the cached share.
+    type: quality
+    priority: should
+    status: implemented
+    parents: [SN-07]
+    sources: [docs/TOKENS.md]
+    verify: {method: test, by: [tests/test_tokens.py::test_claude_builds_count_cache_reads_like_chatgpt_builds]}
+  - id: BLD-15
+    title: Repositories and their graphs
+    statement: The Code tab shall list every repository with its graph, code map and digest, reduce the graph to the 200
+      most-connected nodes for drawing, prefer the code map's digest for the overview, and show a node's source (inside
+      the repository only) with what it calls and what uses it.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-14]
+    sources: [images/mission-control/guide/11-code.md]
+    verify: {method: test, by: [tests/test_repos.py::test_repo_info_from_graph_and_code_map, tests/test_repos.py::test_graph_is_reduced_for_drawing, tests/test_repos.py::test_overview_prefers_the_code_map_digest, tests/test_repos.py::test_node_details_have_source_links_and_code_map, tests/test_app_routes.py::test_the_interactive_code_map_is_inside_the_repo_page,
+      tests/test_repos.py::test_a_code_graph_the_update_cannot_read_is_built_anew_and_a_failure_is_logged_once_per_commit]}
+    trace: [ops/repos.py, ops/graphify-sync.sh]
+    findings: [FND-50]
+  - id: BLD-23
+    title: Every repository's code map, shown clean
+    statement: The repo page shall show the interactive code map of every repository that has one, switching the
+      viewer to it when it shows another, without the viewer's minimap; and a code map shall raise none of the viewer's
+      warnings of the stack's own making (the code graph's cache counted as changed files, the viewer's corrections to
+      the graph).
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-14]
+    sources: [images/mission-control/guide/11-code.md]
+    findings: [FND-48]
+    verify: {method: test, by: [tests/test_repos.py::test_every_repo_with_a_code_map_shows_it_clean_and_without_the_minimap]}
+    trace: [images/mission-control/web/static/app.js, ops/graphify-sync.sh, ops/understand.sh, ops/ua_fix.mjs, images/opencode/Dockerfile]
+  - id: BLD-16
+    title: Removing a repository
+    statement: Removing a repository shall delete only the stack's copy (clone, graph, code map, workbench), never the
+      Forgejo repository, and ai-stack itself shall not be removable.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05]
+    sources: [images/mission-control/guide/11-code.md]
+    verify: {method: test, by: [tests/test_repos.py::test_remove_takes_the_repo_out_but_never_ai_stack]}
+  - id: BLD-17
+    title: Code maps explain every file
+    statement: Where Understand Anything left placeholder explanations, the enrichment shall explain each file, function
+      and layer from the code itself, in symbol excerpts for big files, and resume where it stopped after a usage limit.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-14]
+    sources: [images/mission-control/guide/11-code.md]
+    verify: {method: test, by: [tests/test_ua_enrich.py::test_fallback_graph_gets_real_explanations_and_useful_layers, tests/test_ua_enrich.py::test_a_usage_limit_stops_and_a_second_run_resumes, tests/test_ua_enrich.py::test_other_fallback_wordings_count_as_placeholders_and_real_text_does_not, tests/test_ua_enrich.py::test_a_big_file_is_explained_in_parts_that_each_show_their_symbols, tests/test_ua_enrich.py::test_layer_answers_keyed_by_name_are_used, tests/test_ua_enrich.py::test_big_files_are_cut_to_symbol_excerpts, tests/test_ua_enrich.py::test_understand_runs_the_enrichment_and_ignores_graphify_output]}
+    trace: [ops/ua_enrich.py]
+  - id: BLD-18
+    title: Studied code is never run
+    statement: Analysing a third-party repository shall only read it, in a sandbox without internet access or keys.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05, SN-14]
+    sources: [images/mission-control/guide/11-code.md]
+    verify: {method: inspection, by: [ops/understand.sh]}
+  - id: BLD-19
+    title: Graphs stay current
+    statement: When a repository's HEAD changes, its code graph shall be rebuilt within 2 minutes, without model calls.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-14]
+    sources: [images/graphify/AGENTS.md]
+    verify: {method: inspection, by: [ops/graphify-sync.sh, ops/systemd/graphify-sync.timer]}
+  - id: BLD-20
+    title: Supervised sessions land like builds
+    statement: When an owner-supervised coding session (Claude Code outside the builder) lands a change on main, ops/land.sh
+      shall run the checks on the exact commit first and stop on any failure, take the land and deploy locks, restart
+      the runner when the deploy asks for it, and record the deploy with its source and the owner's approval.
+    type: process
+    priority: should
+    status: implemented
+    parents: [CST-07, SN-07]
+    sources: [docs/DOGFOOD.md]
+    rationale: Most changes so far were landed by such sessions (flock ~/.aistack-land.lock, ops/deploy.py) without the
+      builder's review, CI first or a record in Mission Control (FND-04).
+    findings: [FND-04]
+    verify: {method: test, by: [tests/test_deploy.py::test_a_deploy_is_recorded_with_its_source, tests/test_deploy.py::test_the_landing_script_checks_before_it_merges]}
+    trace: [ops/land.sh, ops/deploy.py]
+  - id: BLD-21
+    title: A clash only in generated files is not a conflict
+    statement: When a merge into or from a build branch clashes only in files drawn from other files
+      (requirements/REQUIREMENTS.md), the runner shall draw them again from the merged sources and complete the merge;
+      any other clash shall still stop it.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-08]
+    sources: ["incident 2026-10-29: build #9 and four session commits both changed requirements; only REQUIREMENTS.md clashed"]
+    rationale: Builds and sessions run side by side, and most of them update requirements, so the rendered file clashes nearly
+      every time two land on the same day.
+    verify: {method: test, by: [tests/test_builds.py::test_a_clash_only_in_the_generated_requirements_is_drawn_again]}
+    trace: [ops/builds.py]
+  - id: BLD-22
+    title: Builds run side by side in their own clones
+    statement: The runner shall run up to BUILD_SLOTS builds at once (2 on the 16 GB PC), each in its own clone of the repo
+      (/srv/ai/workbench/<repo>.<slot>) and only while it holds the lease on its files, with at most one ChatGPT build at a
+      time, and a build cut off by a usage limit shall resume in the clone it started in.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-08]
+    sources: [DEC-25]
+    rationale: A ChatGPT build's tokens are counted by its key's time window, so two at once would count each other's calls.
+    verify: {method: test, by: [tests/test_swarm_phase4.py::test_builds_run_together_only_when_their_files_do_not_overlap]}
+    trace: [ops/builds.py]
+

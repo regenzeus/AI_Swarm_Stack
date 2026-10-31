@@ -1,0 +1,165 @@
+# Constraints: limits no requirement and no change may break. They come from the hardware, the owner's hard rules
+# and the money rule. A change that would need to break one is a decision for the owner first (decisions.yaml).
+area: Constraints
+prefix: CST
+items:
+  - id: CST-01
+    title: One PC, one NAS
+    statement: The stack shall run on one Windows 10 Pro PC (i7-7700K, 16 GB RAM) inside WSL2 (Ubuntu-24.04, capped
+      at 10 GB) with rootless Docker, plus a Synology DS923+ NAS (4 GB RAM) for git, CI, backups and Home Assistant.
+    type: constraint
+    priority: must
+    status: implemented
+    trace: [nas/forgejo/compose.yaml]
+    parents: [SN-01]
+    sources: [README.md]
+    rationale: This is the hardware there is; 32 GB RAM is recommended but not bought.
+    verify: {method: inspection, by: [README.md, compose/core.yaml, compose/apps.yaml]}
+  - id: CST-02
+    title: Subscription models only
+    statement: The gateway shall serve only subscription models (the ChatGPT subscription through LiteLLM), and
+      Claude Code shall run only on the owner's Claude subscription; no paid per-token model shall be configured.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-03]
+    sources: [DEC-01, DEC-16, config/litellm/AGENTS.md]
+    verify: {method: test, by: [tests/test_keys_policy.py::test_every_key_holds_only_subscription_models, tests/test_keys_policy.py::test_models_are_served_by_the_gateway]}
+    trace: [config/litellm/config.yaml, ops/keys.sh, config/litellm/chatgpt-models.yaml]
+    findings: [FND-05]
+  - id: CST-03
+    title: No admin rights needed
+    statement: Every operation of the stack shall work without Windows administrator rights and without sudo in
+      WSL; root in WSL is used only by the documented bootstrap and disk-heal steps.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-02, SN-13]
+    sources: [ops/windows/AGENTS.md, "owner: find no-admin routes"]
+    verify: {method: inspection, by: [ops/windows/AGENTS.md, ops/bootstrap-wsl-1-root.sh]}
+  - id: CST-04
+    title: Nothing public
+    statement: No service shall be reachable from the internet; PC services shall bind 127.0.0.1 and be reached
+      only through tailscale serve, NAS services only on the home LAN, and no router port forward shall exist.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-04, SN-05]
+    sources: [docs/SECURITY.md, AGENTS.md]
+    verify: {method: inspection, by: [.semgrep.yml, compose/AGENTS.md]}
+    trace: [compose/apps.yaml, compose/core.yaml, nas/homeassistant/compose.yaml]
+  - id: CST-05
+    title: NAS hard rules
+    statement: No agent and no automated job shall delete NAS data or Docker volumes, change RAID/SHR or storage
+      pools, touch unrelated shares, or weaken NAS security; NAS changes shall be applied only host-side by
+      documented make targets or by the owner.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05, SN-09]
+    sources: [docs/SECURITY.md, nas/AGENTS.md]
+    verify: {method: inspection, by: [nas/AGENTS.md, ops/deploy-ha.sh, ops/deploy-testrepo.sh]}
+  - id: CST-06
+    title: Secrets encrypted, never read by agents
+    statement: Secrets shall exist only sops+age-encrypted in git and decrypted into a process environment per
+      command; no agent shall read secrets/, a .env file or an *.enc.yaml file, and no secret shall be printed,
+      logged or committed in plain text.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-04, SN-05]
+    sources: [secrets/AGENTS.md, docs/SECURITY.md]
+    verify: {method: test, by: [tests/test_keys_policy.py::test_deploy_never_prints_a_key, tests/test_server.py::test_forgejo_token_goes_to_the_runner_only]}
+    trace: [.semgrep.yml, Makefile]
+  - id: CST-07
+    title: No deploy without the owner
+    statement: No change shall be deployed to the running stack without the owner's explicit approval.
+    type: constraint
+    priority: must
+    status: partial
+    parents: [SN-05, SN-08]
+    sources: [docs/SECURITY.md, AGENTS.md, DEC-03]
+    gap: Builds need the owner's tap, but interactive Claude Code sessions land and deploy directly under a chat
+      approval, outside the builder's review and before CI has run (FND-04).
+    verify: {method: test, by: [tests/test_builds.py::test_approve_requires_review_checks_and_green_ci, tests/test_server.py::test_hermes_can_review_and_request_changes_but_never_approve]}
+    findings: [FND-04]
+  - id: CST-08
+    title: Pinned versions, monthly upgrades
+    statement: Every image and package shall be pinned to an exact version or digest, and upgrades shall happen only
+      through UPGRADE.md, one component at a time.
+    type: constraint
+    priority: must
+    status: partial
+    parents: [SN-13, SN-15]
+    sources: [AGENTS.md, UPGRADE.md]
+    gap: Every image is pinned and the health board compares the running images with their tags and the lock file
+      (PLT-20), but it only notices drift and does not prevent it. On 2026-10-30 five containers ran other builds than
+      their tags (FND-67); they were recreated on their tagged builds on 2026-10-31.
+    findings: [FND-67]
+    verify: {method: inspection, by: [versions.env, versions.lock, UPGRADE.md]}
+  - id: CST-09
+    title: English
+    statement: Code, comments, UI text, docs, reports, wikis, Telegram messages and commit messages shall be in
+      English.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-12]
+    sources: [DEC-02, AGENTS.md]
+    verify: {method: test, by: [tests/test_desk.py::test_every_briefing_is_english_even_for_a_topic_once_marked_german]}
+    trace: [AGENTS.md, config/hermes/configure.sh, images/desk/desk.py]
+    findings: [FND-21]
+  - id: CST-10
+    title: No bot-detection evasion, no ToS bypass
+    statement: No part of the stack shall evade bot detection or CAPTCHAs, or automate a provider's web interface
+      against its terms (no ChatGPT-web bridge).
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05]
+    sources: [DEC-12, images/browser/AGENTS.md]
+    verify: {method: inspection, by: [images/browser/AGENTS.md, images/pricewatch/AGENTS.md]}
+  - id: CST-11
+    title: No credentials or payment data typed by agents
+    statement: No agent shall type a password, a payment card, a bank or account number, or a one-time code, and no
+      agent shall execute a financial trade or transfer; a purchase shall happen only as the owner-approved final tap
+      of SHP requirements.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05]
+    sources: [docs/SHOPPING.md, images/phone/AGENTS.md]
+    verify: {method: test, by: [tests/test_phone.py::test_secret_fields_and_card_numbers_are_never_typed, tests/test_phone.py::test_final_check_passes_only_the_approved_order]}
+  - id: CST-12
+    title: Not the main phone
+    statement: The AI phone service shall drive only the old test phone (ai-phone), never the owner's main phone.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05, SN-11]
+    sources: [DEC-17, images/phone/AGENTS.md]
+    verify: {method: inspection, by: [images/phone/entrypoint.sh, compose/apps.yaml]}
+  - id: CST-13
+    title: The benchmark stays frozen
+    statement: eval/bench-v1.yaml shall never change; a new benchmark is a new file with its own frozen hash.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-15]
+    sources: [eval/AGENTS.md]
+    verify: {method: inspection, by: [ops/check.sh, eval/FROZEN.sha256]}
+  - id: CST-14
+    title: Memory budget
+    statement: The services in WSL together shall stay within the 10 GB WSL cap, each with a mem_limit, and the
+      Windows host shall keep at least 1 GB free while the stack, one build and one Claude session run.
+    type: constraint
+    priority: should
+    status: violated
+    parents: [SN-13]
+    sources: [docs/REVIEW-2026-10-27.md, docs/DOGFOOD.md]
+    gap: The Windows host drops to about 0.45 GB free with Claude sessions and builds running, and wsl.exe then
+      times out; nothing budgets memory across services (FND-18). Since 2026-10-30 the health board notes full swap
+      and alerts when RAM is short too (This PC), so the limit is seen before reads fail.
+    verify: {method: test, by: [tests/test_recoverable.py::test_full_swap_is_a_note_and_an_alert_when_ram_is_short_too]}
+    trace: [compose/AGENTS.md, ops/windows/host-probe.ps1, ops/crew.py]
+    findings: [FND-18]

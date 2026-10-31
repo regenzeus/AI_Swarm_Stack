@@ -1,0 +1,86 @@
+# Semgrep rules for ai-stack (offline, run by ops/check.sh: CI, the builder, make check). They encode this repo's
+# own invariants (AGENTS.md, docs/SECURITY.md) plus common dangerous patterns. A finding fails the checks; a justified
+# exception gets an inline `# nosemgrep: <rule-id>` with the reason on the same line.
+rules:
+  # ---------- stack invariants ----------
+  - id: port-not-on-loopback
+    message: Ports are published on 127.0.0.1 only (outside access is tailscale serve). Write "127.0.0.1:<host>:<container>".
+    severity: ERROR
+    languages: [generic]
+    paths: { include: ["compose/*.yaml", "nas/**/*.yaml"] }
+    pattern-regex: '(?m)^\s*ports:\s*\[\s*"(?!127\.0\.0\.1:)[^"]*"'
+  - id: docker-socket-mounted
+    message: No container gets the Docker socket (docs/SECURITY.md). The host runner is the only one that drives Docker.
+    severity: ERROR
+    languages: [generic]
+    paths: { include: ["compose/*.yaml", "images/**/Dockerfile", "ops/*.sh"] }
+    pattern-regex: '/var/run/docker\.sock|/run/user/\d+/docker\.sock:'
+  - id: privileged-container
+    message: No privileged containers.
+    severity: ERROR
+    languages: [generic]
+    paths: { include: ["compose/*.yaml"] }
+    pattern-regex: '(?m)^\s*privileged:\s*true'
+  - id: secret-in-source
+    message: Looks like a real credential in the repo. Secrets live only in sops-encrypted files (secrets/*.enc.yaml).
+    severity: ERROR
+    languages: [generic]
+    paths: { exclude: ["secrets/", "*.enc.yaml", ".semgrep.yml", "tests/"] }
+    pattern-regex: '(sk-ant-(?:api|oat)\d*-[A-Za-z0-9_-]{20,}|sk-[A-Za-z0-9]{32,}|ghp_[A-Za-z0-9]{30,}|AKIA[0-9A-Z]{16}|-----BEGIN (?:RSA |OPENSSH |EC )?PRIVATE KEY-----|xox[baprs]-[A-Za-z0-9-]{20,})'
+  # ---------- python ----------
+  - id: subprocess-shell-true
+    message: subprocess with shell=True runs a shell on the string; pass a list of arguments instead.
+    severity: ERROR
+    languages: [python]
+    pattern: subprocess.$F(..., shell=True, ...)
+  - id: os-system
+    message: os.system runs a shell; use subprocess.run with a list of arguments.
+    severity: ERROR
+    languages: [python]
+    pattern: os.system(...)
+  - id: python-eval-exec
+    message: eval/exec on data is code execution.
+    severity: ERROR
+    languages: [python]
+    pattern-either: [{ pattern: eval(...) }, { pattern: exec(...) }]
+  - id: yaml-unsafe-load
+    message: yaml.load without SafeLoader can construct arbitrary objects; use yaml.safe_load.
+    severity: ERROR
+    languages: [python]
+    patterns:
+      - pattern: yaml.load(...)
+      - pattern-not: yaml.load(..., Loader=yaml.SafeLoader, ...)
+  - id: pickle-load
+    message: pickle on untrusted data is code execution.
+    severity: ERROR
+    languages: [python]
+    pattern-either: [{ pattern: pickle.load(...) }, { pattern: pickle.loads(...) }]
+  - id: tls-verify-off
+    message: TLS verification switched off.
+    severity: ERROR
+    languages: [python]
+    pattern-either: [{ pattern: "$X(..., verify=False, ...)" }, { pattern: ssl._create_unverified_context(...) }]
+  - id: tempfile-mktemp
+    message: tempfile.mktemp is racy; use NamedTemporaryFile or mkstemp.
+    severity: ERROR
+    languages: [python]
+    pattern: tempfile.mktemp(...)
+  # ---------- javascript (the app) ----------
+  - id: js-eval
+    message: eval / new Function / document.write in the app.
+    severity: ERROR
+    languages: [javascript]
+    pattern-either: [{ pattern: eval(...) }, { pattern: new Function(...) }, { pattern: document.write(...) }]
+  # ---------- shell ----------
+  - id: curl-pipe-shell
+    message: Piping a download into a shell runs unpinned, unreviewed code.
+    severity: ERROR
+    languages: [generic]
+    paths: { include: ["*.sh", "Makefile", "Dockerfile"] }
+    pattern-regex: '(?m)^[^#\n]*\b(curl|wget)\s[^|\n]*\|\s*(sudo\s+)?(ba|z)?sh\b'
+  - id: chmod-777-outside-workbench
+    message: World-writable permissions; only the shared builder workbench may use them (ops/builds.py).
+    severity: ERROR
+    languages: [generic]
+    paths: { include: ["*.sh", "Dockerfile"] }
+    pattern-regex: 'chmod\s+(-R\s+)?(0?777|a\+rwx)'

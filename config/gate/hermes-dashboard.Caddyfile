@@ -1,0 +1,17 @@
+# Tailnet gate for the Hermes dashboard (compose service gate-hermes-dashboard, in the dashboard's network namespace).
+# tailscale serve (https://<pc>.ts.net:8448 -> 127.0.0.1:9119) adds Tailscale-User-Login for your own devices; anything
+# without it is refused. The dashboard itself listens on 127.0.0.1 only, so its own password gate stays off: your
+# Tailscale login is the only sign-in. Host and Origin are rewritten to the loopback address the dashboard expects.
+{
+	admin off
+	auto_https off
+}
+
+:9120 {
+	@anon not header Tailscale-User-Login *
+	respond @anon "Only reachable through Tailscale: open it from Mission Control (Stack -> Apps)." 403
+	reverse_proxy 127.0.0.1:9119 {
+		header_up Host 127.0.0.1:9119
+		header_up Origin http://127.0.0.1:9119
+	}
+}

@@ -1,0 +1,1934 @@
+# The agent swarm: what it shall do before a line of it is written (DEC-15, DEC-21).
+# Design: "AI Stack Agent Swarm: Design" (claude.ai artifact 18fPjMRbQnxSVikesY8w6M). Nothing here is built yet.
+# planned = asked for by the owner or following from an approved need or constraint; proposed = a design choice
+# that waits for his word. Every planned requirement carries its acceptance criterion and its rollout phase.
+# Practice drawn on: A2A v1.0 (cards, messages, task states), MCP 2026-07-28 (stateless tools), OWASP Top 10 for
+# Agentic Applications 2026 (ASI01-ASI10), the MAST multi-agent failure taxonomy, OpenTelemetry GenAI conventions,
+# blackboard and event-sourcing patterns, Kanban (rank and limit work in progress), eval-driven development.
+area: Agent swarm
+prefix: SWM
+phases: {0: Proof of the risky parts, 1: 'Ledger, registry and run contract', 2: 'Checker, scorecards and autonomy rules',
+  3: Board and Chatroom, 4: 'Parallel work, wider review and the harness adapters', 5: 'Improvement loop: replay sets, the
+    evaluation gate, the Coach'}
+items:
+- id: SWM-01
+  group: Registry and identity
+  phase: 1
+  title: Every agent described in one place
+  statement: Every agent shall be described once, as an agent card in config/agents.yaml, and its crew unit and timer, its
+    gateway key with MCP grants, its Hermes profile settings, its Board contact and wake rules and its row on the Agents
+    page shall be generated from that card.
+  type: functional
+  priority: must
+  status: partial
+  parents: [SN-17, SN-15]
+  sources: [DEC-15, 'design: AI Stack Agent Swarm (claude.ai artifact 18fPjMRbQnxSVikesY8w6M)']
+  rationale: Today an agent is wired in up to five places (crew.py, keys.sh, Hermes config, systemd units, the app), which
+    is how the shared vk-mission key (FND-03) happened unnoticed.
+  acceptance: 'Test: a sample agents.yaml generates every derived file; the checks fail when a unit, key grant or profile
+    in the repo differs from what the file generates.'
+  verify:
+    method: test
+    by: ['tests/test_registry.py::test_the_repo_cards_pass_the_registry_check', 'tests/test_registry.py::test_a_shared_key_and_extra_grants_are_refused']
+  trace: [config/agents.yaml, ops/registry.py]
+  gap: The cards exist and the checks fail on drift from keys and units; the units, Hermes profiles and the Agents page
+    are not generated from them yet.
+- id: SWM-22
+  group: Registry and identity
+  phase: 1
+  title: A card states the agent's job
+  statement: An agent card shall name the agent's id, purpose, responsibilities, owned artifact kinds with a definition
+    of done for each, harness, model, key, schedule, roles, rooms, contact policy, wake policy, budgets, tools and autonomy,
+    and the checks shall refuse a card that misses one or names an unknown harness, model, tool, role or room.
+  type: interface
+  priority: must
+  status: implemented
+  parents: [SN-17, SN-15]
+  sources: [DEC-15, 'MAST failure taxonomy (Cemri et al., arXiv 2503.13657)', 'A2A protocol v1.0 (Linux Foundation, 2026)']
+  rationale: Specification failures (unclear role, unclear task, no termination condition) are the largest of MAST's three
+    failure categories; the card makes each agent's job explicit. The fields map onto an A2A AgentCard (name, description,
+    skills) plus the stack's own.
+  acceptance: 'Test: a card missing each field in turn, and a card naming an unknown value of each kind, are refused with
+    the field named.'
+  verify:
+    method: test
+    by: ['tests/test_registry.py::test_a_card_missing_a_field_or_naming_unknown_values_is_refused']
+  trace: [config/agents.yaml, ops/registry.py]
+- id: SWM-23
+  group: Registry and identity
+  phase: 1
+  title: One identity per agent
+  statement: Each agent shall have its own gateway key and its own swarm token, no key or token shall be listed by two cards,
+    and the Swarm service shall take the actor of every event and the sender of every message from the token of the call,
+    never from its arguments.
+  type: functional
+  priority: must
+  status: implemented
+  parents: [SN-05, SN-07, SEC-07]
+  sources: [DEC-15, OWASP Top 10 for Agentic Applications 2026 ASI03 identity and privilege abuse]
+  rationale: 'Phase 0 (docs/SWARM-PHASE0.md): the gateway''s per-user BYOK credentials carry each agent''s own token to
+    an MCP server; a key needs a LiteLLM user for it, so phase 1 gives every agent one.'
+  verify:
+    method: test
+    by: ['tests/test_swarm_service.py::test_identity_comes_only_from_the_stored_credential', 'tests/test_registry.py::test_a_shared_key_and_extra_grants_are_refused',
+      'tests/test_swarm_phase4.py::test_no_agent_config_or_environment_holds_a_swarm_token']
+  trace: [images/swarm/swarm.py, ops/registry.py, ops/swarm_setup.py]
+  findings: [FND-03]
+- id: SWM-24
+  group: Registry and identity
+  phase: 1
+  title: Least privilege from the card
+  statement: Each agent's gateway key shall grant exactly the MCP servers and swarm tools its card lists, and the checks
+    shall refuse a key grant that no card lists.
+  type: constraint
+  priority: must
+  status: implemented
+  parents: [SN-05, SEC-07]
+  sources: [DEC-15, OWASP Top 10 for Agentic Applications 2026 ASI02 tool misuse]
+  acceptance: 'Test: the key grants generated from a sample card equal its tool list; an extra grant in ops/keys.sh fails
+    the checks.'
+  verify:
+    method: test
+    by: ['tests/test_registry.py::test_a_shared_key_and_extra_grants_are_refused', 'tests/test_registry.py::test_the_repo_cards_pass_the_registry_check']
+  trace: [ops/registry.py]
+- id: SWM-89
+  group: Registry and identity
+  phase: 1
+  title: Swarm tokens stay in the gateway
+  statement: Each agent's swarm token shall be stored only as the agent's per-user credential in the gateway, never in an
+    agent's environment, configuration or prompt, and the Swarm service shall take a caller's identity only from that stored
+    credential and refuse a call that carries a client-supplied credential header.
+  type: constraint
+  priority: must
+  status: implemented
+  parents: [SN-05, SWM-23]
+  sources: [DEC-15, docs/SWARM-PHASE0.md]
+  rationale: Phase 0 found that a credential header sent by the client replaces the stored one, so an agent that knew another
+    agent's token could act as that agent; agents therefore never see tokens.
+  verify:
+    method: test
+    by: ['tests/test_swarm_service.py::test_identity_comes_only_from_the_stored_credential', 'tests/test_swarm_phase4.py::test_no_agent_config_or_environment_holds_a_swarm_token']
+  trace: [images/swarm/swarm.py, ops/swarm_setup.py, ops/update-keys.py]
+  findings: [FND-32]
+- id: SWM-25
+  group: Registry and identity
+  phase: 1
+  title: Each run names the card it ran with
+  statement: Every agent run shall record the content hash of the card it ran with in its run manifest, so that the run
+    view names what changed in the card since the agent's previous run.
+  type: functional
+  priority: must
+  status: implemented
+  parents: [SN-07, OBS-08]
+  sources: [DEC-15, DEC-05]
+  acceptance: 'Test: two runs with different cards show the changed fields in the second run''s drift line.'
+  verify:
+    method: test
+    by: ['tests/test_registry.py::test_the_card_hash_changes_with_any_field', 'tests/test_registry.py::test_a_run_names_its_card_and_the_next_run_shows_a_change']
+  trace: [ops/registry.py, ops/crew.py, ops/missions.py, images/mission-control/runrecord.py]
+- id: SWM-26
+  group: Registry and identity
+  phase: 1
+  title: Pause any agent, a role or the whole swarm
+  statement: When the owner pauses an agent, a role or the whole swarm in Mission Control, the Swarm service shall refuse
+    the paused agents' swarm tool calls and the runner shall start none of their runs within 60 seconds, until the owner
+    resumes them.
+  type: functional
+  priority: must
+  status: implemented
+  parents: [SN-05, SN-11]
+  sources: [DEC-15, OWASP Top 10 for Agentic Applications 2026 ASI10 rogue agents]
+  acceptance: 'Test: after a pause, a swarm tool call from the agent is refused and a due timer run is skipped with the
+    reason paused; demonstration on the phone.'
+  verify:
+    method: test
+    by: ['tests/test_swarm_ledger.py::test_paused_agents_are_refused', 'tests/test_swarm_client.py::test_the_owner_pauses_and_resumes_agents_from_the_app',
+      'tests/test_runner.py::test_a_paused_agents_runs_are_skipped']
+  trace: [images/swarm/ledger.py, ops/swarm_client.py, ops/missions.py, ops/crew.py, ops/improve.py, images/mission-control/web/static/app.js]
+- id: SWM-27
+  group: Registry and identity
+  phase: 4
+  title: Agent cards in the A2A format
+  statement: The Registry shall serve each card as an A2A v1.0 AgentCard document, on the Docker network only.
+  type: interface
+  priority: could
+  status: implemented
+  parents: [SN-17, CST-04]
+  sources: [DEC-15, 'A2A protocol v1.0 (Linux Foundation, 2026)', DEC-25]
+  verify:
+    method: test
+    by: ['tests/test_swarm_phase4.py::test_each_card_is_an_a2a_agent_card_on_the_internal_network']
+  trace: [images/swarm/ledger.py, images/swarm/swarm.py]
+- id: SWM-02
+  group: Harnesses and models
+  phase: 4
+  title: Different harnesses and models
+  statement: An agent shall run on any of the harnesses Hermes profile, Claude Code, OpenCode, Python job or script without
+    a model, with any model the gateway serves or the Claude subscription, when only its card changes.
+  type: functional
+  priority: must
+  status: planned
+  parents: [SN-17, CST-02]
+  sources: [DEC-15, DEC-16]
+  acceptance: 'Test: changing a sample card''s harness changes only the generated unit and adapter; the adapter conformance
+    suite (SWM-28) passes for each harness.'
+- id: SWM-28
+  group: Harnesses and models
+  phase: 4
+  title: One adapter contract, tested for every harness
+  statement: Each harness adapter shall give its agent the swarm tools, run the start and finish steps of the run contract
+    and start the agent when it is woken, and one conformance test suite shall run against every adapter.
+  type: interface
+  priority: must
+  status: partial
+  parents: [SN-17, SN-15]
+  sources: [DEC-15, 'design: AI Stack Agent Swarm (claude.ai artifact 18fPjMRbQnxSVikesY8w6M)']
+  verify:
+    method: test
+    by: ['tests/test_swarm_phase4.py::test_a_wake_waits_out_the_usage_limit_and_a_hermes_agent_gets_one_turn', 'tests/test_swarm_phase4.py::test_a_woken_crew_agent_answers_its_requests_with_its_model',
+      'tests/test_swarm_phase4.py::test_a_finish_is_checked_first_and_a_run_without_one_is_a_health_note']
+  gap: The Hermes adapter (one turn through the running Hermes, ending with swarm_finish), the Claude Code crew (answers
+    from its model, start and finish recorded by crew.py) and script agents (declined at once) are covered; OpenCode has
+    no adapter yet.
+  trace: [ops/swarm_client.py, ops/crew.py]
+- id: SWM-29
+  group: Harnesses and models
+  phase: 1
+  title: Subscription and local models only
+  statement: A card shall name only a model the gateway serves under CST-02, the owner's Claude subscription or a local
+    Ollama model, and the checks shall refuse any other.
+  type: constraint
+  priority: must
+  status: implemented
+  parents: [CST-02, SN-03]
+  sources: [DEC-01, DEC-16]
+  acceptance: 'Test: a card naming a paid API model is refused.'
+  verify:
+    method: test
+    by: ['tests/test_registry.py::test_paid_models_are_refused']
+  trace: [ops/registry.py]
+- id: SWM-03
+  group: Ledger
+  phase: 1
+  title: One artifact model with a lasting identity
+  statement: Every agent-produced artifact (idea, finding, report, wiki page, purchase, build, agent change, requirement)
+    shall be one Ledger record with a kind, an identity key unique per kind, versions, an evidence log, links, watchers
+    and references to outside records.
+  type: functional
+  priority: must
+  status: implemented
+  parents: [SN-17, SN-16]
+  sources: [DEC-15, DEC-10, 'design: AI Stack Agent Swarm (claude.ai artifact 18fPjMRbQnxSVikesY8w6M)']
+  acceptance: 'Test: an artifact of each kind is created, versioned, linked and watched through the same tools.'
+  verify:
+    method: test
+    by: ['tests/test_swarm_ledger.py::test_history_is_append_only_and_rebuilds_the_state', 'tests/test_swarm_ledger.py::test_kinds_are_data_not_code']
+  trace: [images/swarm/ledger.py]
+  findings: [FND-24]
+  rationale: Builds and purchases keep their own stores, where the owner's approvals and money rules live (SWM-69); the
+    Ledger links them to their ideas by ref (build:<id>).
+- id: SWM-30
+  group: Ledger
+  phase: 1
+  title: History is append-only
+  statement: Every Ledger change shall be stored as an append-only event with actor, run id, time, sequence number, reason
+    and evidence, the current state of an artifact shall be derived from its events, and no event shall be changed or deleted.
+  type: quality
+  priority: must
+  status: implemented
+  parents: [SN-07, SN-09]
+  sources: [DEC-15, event sourcing]
+  rationale: Audit, replay for the improvement loop (SWM-82) and restart safety (SWM-19) all need the full history, not
+    the latest row.
+  acceptance: 'Test: replaying an artifact''s events rebuilds its stored state; the database refuses an update or delete
+    of an event (trigger).'
+  verify:
+    method: test
+    by: ['tests/test_swarm_ledger.py::test_history_is_append_only_and_rebuilds_the_state']
+  trace: [images/swarm/ledger.py]
+- id: SWM-31
+  group: Ledger
+  phase: 1
+  title: Retried writes take effect once
+  statement: Every Ledger write shall carry an idempotency key, and a write repeated with the same key shall return the
+    first result and change nothing.
+  type: quality
+  priority: must
+  status: implemented
+  parents: [SN-13]
+  sources: [DEC-15, Hermes Kanban idempotency keys]
+  acceptance: 'Test: the same upsert sent twice leaves one version and one event.'
+  verify:
+    method: test
+    by: ['tests/test_swarm_ledger.py::test_retried_writes_take_effect_once']
+  trace: [images/swarm/ledger.py]
+- id: SWM-32
+  group: Ledger
+  phase: 1
+  title: No lost updates between agents
+  statement: A Ledger update shall name the version it was based on, and the Swarm service shall refuse an update based
+    on an older version with the current version, so that the agent can merge and retry.
+  type: quality
+  priority: must
+  status: implemented
+  parents: [SN-17]
+  sources: [DEC-15, optimistic concurrency control]
+  acceptance: 'Test: two agents update the same artifact from version 3; the second is refused and receives version 4.'
+  verify:
+    method: test
+    by: ['tests/test_swarm_ledger.py::test_a_stale_update_is_refused_with_the_current_version']
+  trace: [images/swarm/ledger.py]
+- id: SWM-33
+  group: Ledger
+  phase: 1
+  title: Look up before writing
+  statement: When an agent creates an artifact whose key already exists, the Ledger shall apply it as an update of the existing
+    artifact; when the TF-IDF cosine similarity of a new artifact's text to an open artifact of the same kind reaches the
+    calibrated threshold (0.20 on the owner's triage of 2026-10-29), the Ledger shall refuse the create unless the agent
+    links it as different with a reason.
+  type: functional
+  priority: must
+  status: implemented
+  parents: [SN-17, SN-02]
+  sources: [DEC-10, DEC-15]
+  rationale: 7 of 26 ideas on 2026-10-29 were reworded duplicates that title matching missed. Phase 0 measured TF-IDF (AUC
+    0.992, 7 of 7 nearest neighbours right) as good as embeddings (0.993, 7 of 7) on that triage, at no memory cost; the
+    threshold catches every known duplicate and is recalibrated on the Ledger's own merges.
+  acceptance: 'Test: a reworded idea with the same key updates the existing one; a reworded idea with a new key above the
+    threshold is refused with the similar artifact named; the calibration set catches all 17 known pairs.'
+  verify:
+    method: test
+    by: ['tests/test_swarm_ledger.py::test_the_same_key_updates_and_a_similar_new_one_is_refused', 'tests/test_swarm_client.py::test_the_migration_report_names_what_the_guard_would_have_refused']
+  trace: [images/swarm/ledger.py]
+  findings: [FND-26]
+- id: SWM-09
+  group: Ledger
+  phase: 1
+  title: Agents see each other's artifacts
+  statement: Every agent shall be able to search, read, link and watch every other agent's artifacts, within the information-flow
+    rules of SWM-67.
+  type: functional
+  priority: must
+  status: implemented
+  parents: [SN-17]
+  sources: [DEC-15]
+  findings: [FND-22]
+  verify:
+    method: test
+    by: ['tests/test_swarm_ledger.py::test_private_artifacts_never_reach_an_agent_with_a_way_out', 'tests/test_swarm_phase4.py::test_the_builders_prompt_lists_the_finding_the_doctor_linked_to_its_idea']
+  trace: [images/swarm/ledger.py, images/swarm/swarm.py, ops/builds.py]
+- id: SWM-34
+  group: Ledger
+  phase: 1
+  title: Watchers hear of every change
+  statement: When a watched artifact changes, the Swarm service shall put the change into each watcher's next context pack,
+    and into the owner's Chatroom feed when he watches it.
+  type: functional
+  priority: must
+  status: implemented
+  parents: [SN-17]
+  sources: [DEC-15]
+  acceptance: 'Test: an agent watching an artifact finds its new version in its next context pack, once.'
+  verify:
+    method: test
+    by: ['tests/test_swarm_ledger.py::test_watchers_see_changes_once']
+  trace: [images/swarm/ledger.py]
+- id: SWM-35
+  group: Ledger
+  phase: 1
+  title: One store per artifact
+  statement: When a kind moves into the Ledger, its existing records shall be migrated with their history in one step, and
+    in the same phase the old writer shall be removed, so that no artifact is written in two stores.
+  type: constraint
+  priority: must
+  status: implemented
+  parents: [SN-16, SN-09]
+  sources: [DEC-15, DEC-10]
+  acceptance: 'Inspection: after phase 1, nothing writes the proposals table or the crew finding files; a test migrates
+    a copy of missions.sqlite and finds every proposal with its decisions.'
+  verify:
+    method: test
+    by: ['tests/test_improve.py::test_accept_creates_a_build_and_dismiss_becomes_a_lesson', 'tests/test_swarm_client.py::test_the_migration_imports_ideas_and_the_owners_decisions',
+      'tests/test_swarm_client.py::test_the_migration_imports_ideas_and_the_owners_decisions', 'tests/test_swarm_ledger.py::test_the_migration_import_is_for_the_system_only']
+  trace: [ops/crew.py, ops/doctor.py, ops/improve.py, ops/swarm_client.py]
+  findings: [FND-24, FND-12]
+- id: SWM-36
+  group: Ledger
+  phase: 1
+  title: Nothing is lost from the record
+  statement: Ledger events and Board messages shall be kept for at least 365 days and included in the nightly backup, and
+    none shall be deleted before then.
+  type: quality
+  priority: must
+  status: partial
+  parents: [SN-09]
+  sources: [DEC-15]
+  acceptance: 'Inspection: the swarm database lies under /srv/ai and is in the backup set; the restore rehearsal restores
+    it.'
+  verify:
+    method: test
+    by: ['tests/test_swarm_service.py::test_the_snapshot_is_a_consistent_copy']
+  trace: [images/swarm/swarm.py, ops/backup.sh]
+  gap: The hourly snapshot lies under /srv/ai and goes into the nightly backup; the restore rehearsal does not check it
+    yet.
+- id: SWM-04
+  group: Lifecycle
+  phase: 1
+  title: The generic lifecycle
+  statement: Every artifact shall move through draft, open, ready, active, checking and done, with the side states blocked,
+    snoozed, declined, merged and gone, and every state other than merged shall be able to return to open with a reason.
+  type: functional
+  priority: must
+  status: implemented
+  parents: [SN-17]
+  sources: [DEC-10, DEC-15]
+  rationale: 'Merged keeps its pointer to the target; reopening means reopening the target. The owner may also mark an artifact
+    gone: "already done by hand" is gone, not declined (2026-10-29).'
+  acceptance: 'Test: every allowed transition succeeds and every other is refused (SWM-37).'
+  verify:
+    method: test
+    by: ['tests/test_swarm_ledger.py::test_every_transition_follows_the_table', 'tests/test_swarm_ledger.py::test_merging_moves_the_evidence_to_the_target']
+  trace: [images/swarm/ledger.py]
+- id: SWM-37
+  group: Lifecycle
+  phase: 1
+  title: Transitions are data, refusals are explained
+  statement: The allowed transitions shall be one table of state, next state and actor class in the Swarm service, and every
+    refused transition shall return the rule that refused it.
+  type: quality
+  priority: must
+  status: implemented
+  parents: [SN-17, SN-15]
+  sources: [DEC-15]
+  acceptance: 'Test: one test per row of the table, and one refused move per actor class with its reason.'
+  verify:
+    method: test
+    by: ['tests/test_swarm_ledger.py::test_every_transition_follows_the_table']
+  trace: [images/swarm/ledger.py]
+- id: SWM-06
+  group: Lifecycle
+  phase: 1
+  title: Who may move which state
+  statement: Agents shall be able to create, refine, link, merge, block, reopen and mark gone; only the owner, or an autonomy
+    rule he enabled (SWM-42), shall move an artifact to active, decline or snooze it; only the Checker shall move it to
+    done.
+  type: constraint
+  priority: must
+  status: implemented
+  parents: [SN-05, SN-02]
+  sources: [DEC-15, DEC-19]
+  acceptance: 'Test: an agent''s move to active, declined, snoozed or done is refused; the owner''s and the Checker''s succeed.'
+  verify:
+    method: test
+    by: ['tests/test_swarm_ledger.py::test_agents_cannot_approve_decline_snooze_or_finish', 'tests/test_swarm_ledger.py::test_every_transition_follows_the_table']
+  trace: [images/swarm/ledger.py]
+- id: SWM-38
+  group: Lifecycle
+  phase: 1
+  title: A definition of ready per kind
+  statement: The Swarm service shall refuse an agent's move of an artifact to ready unless it meets its kind's definition
+    of ready; for an idea that is a problem statement, at least two evidence entries or one health alert, a plan naming
+    files and a test, a success check (SWM-44) and a confidence of medium or high.
+  type: functional
+  priority: must
+  status: implemented
+  parents: [SN-02, SN-08]
+  sources: [DEC-15, 'design: AI Stack Agent Swarm (claude.ai artifact 18fPjMRbQnxSVikesY8w6M)']
+  acceptance: 'Test: an idea missing each part in turn cannot become ready; a complete one can.'
+  verify:
+    method: test
+    by: ['tests/test_swarm_ledger.py::test_definition_of_ready_for_an_idea']
+  trace: [images/swarm/ledger.py]
+  rationale: The definition gates an agent's claim; the owner's Build it is his own judgement (DEC-22).
+- id: SWM-05
+  group: Lifecycle
+  phase: 1
+  title: Agents refine and reopen over many runs
+  statement: Before writing, an agent shall look up the artifact by key and similarity and update, merge or reopen it with
+    new evidence and a new plan version instead of creating a copy.
+  type: functional
+  priority: must
+  status: implemented
+  parents: [SN-17, SN-02]
+  sources: [DEC-10]
+  acceptance: 'Test: three doctor runs on the same issue leave one artifact with three evidence entries and plan version
+    3.'
+  verify:
+    method: test
+    by: ['tests/test_improve.py::test_no_caps_and_a_known_problem_is_refined_not_copied', 'tests/test_improve.py::test_scan_turns_signals_into_ideas_and_refines_a_known_one',
+      'tests/test_swarm_ledger.py::test_the_same_key_updates_and_a_similar_new_one_is_refused']
+  trace: [images/swarm/ledger.py, ops/crew.py, ops/improve.py, ops/swarm_client.py]
+- id: SWM-39
+  group: Lifecycle
+  phase: 1
+  title: A declined artifact returns only with news
+  statement: If an agent reopens a declined artifact, then the Swarm service shall require evidence dated after the decline
+    and show the artifact to the owner as reopened with that evidence.
+  type: functional
+  priority: must
+  status: implemented
+  parents: [SN-02, SN-18]
+  sources: [DEC-10, DEC-15]
+  acceptance: 'Test: a reopen of a declined idea without newer evidence is refused; with newer evidence it shows on Home
+    with the reason.'
+  verify:
+    method: test
+    by: ['tests/test_improve.py::test_no_caps_and_a_known_problem_is_refined_not_copied', 'tests/test_swarm_ledger.py::test_a_declined_artifact_returns_only_with_newer_evidence']
+  trace: [images/swarm/ledger.py]
+  rationale: 'A near-copy of a declined idea is compared too: it becomes a sighting on the declined idea, which stays declined,
+    so what the owner said no to is not proposed again in new words (2026-10-29: the test agent''s #30 restated #11).'
+- id: SWM-08
+  group: Lifecycle
+  phase: 1
+  title: Ranking instead of caps
+  statement: Open and ready artifacts shall be ranked by priority = impact x confidence x (1 + log2(1 + recurrences in 30
+    days)) / effort, with the owner's pins on top, and the backlog shall not be capped.
+  type: functional
+  priority: must
+  status: implemented
+  parents: [SN-02, SN-17]
+  sources: [DEC-10]
+  acceptance: 'Test: the ranking of a sample backlog matches the formula; a pinned artifact ranks first; creating the 50th
+    open idea succeeds.'
+  verify:
+    method: test
+    by: ['tests/test_improve.py::test_no_caps_and_a_known_problem_is_refined_not_copied', 'tests/test_swarm_ledger.py::test_ranking_follows_the_formula_and_pins_come_first']
+  trace: [images/mission-control/web/static/app.js, images/swarm/ledger.py, ops/swarm_client.py]
+  findings: [FND-12]
+  rationale: 'A recurrence is a reopen, a health alert as evidence, or a duplicate merged into the artifact: on 2026-10-29
+    five ideas were merged into one, which the old flat list could not show.'
+- id: SWM-40
+  group: Lifecycle
+  phase: 2
+  title: Limit work in progress, not the backlog
+  statement: The Swarm service shall refuse to move an artifact to active while its kind's work-in-progress limit is reached
+    (start value for builds 2), and the refused artifact shall stay ready at its rank.
+  type: functional
+  priority: must
+  status: implemented
+  parents: [SN-02, SN-03]
+  sources: [DEC-10, Kanban WIP limits]
+  acceptance: 'Test: a third build cannot become active while two are; it becomes active when one leaves.'
+  verify:
+    method: test
+    by: ['tests/test_checker.py::test_only_two_ideas_are_built_at_once']
+  trace: [images/swarm/ledger.py]
+- id: SWM-41
+  group: Lifecycle
+  phase: 1
+  title: Kinds extend the lifecycle, never fork it
+  statement: A kind shall add only steps inside a state and fields of its own, and adding a kind shall be a Registry change
+    that needs no change to the lifecycle code.
+  type: constraint
+  priority: must
+  status: implemented
+  parents: [SN-15, SN-17]
+  sources: [DEC-15]
+  acceptance: 'Test: a new kind declared only in configuration can be created, moved and checked.'
+  verify:
+    method: test
+    by: ['tests/test_swarm_ledger.py::test_kinds_are_data_not_code']
+  trace: [images/swarm/ledger.py]
+- id: SWM-42
+  group: Lifecycle
+  phase: 2
+  title: Autonomy rules are the owner's, and off by default
+  statement: An autonomy rule that lets an artifact move to active without the owner's tap shall exist only when the owner
+    enabled it for one kind with its conditions, recorded as a decision, and no rule shall cover money, passwords, phone
+    settings, deletion, NAS changes or deploys outside the builder's tap-to-deploy path.
+  type: constraint
+  priority: must
+  status: implemented
+  parents: [SN-02, SN-05, CST-07]
+  sources: [DEC-19, DEC-15]
+  rationale: DEC-19 says everything that ships needs the owner's approval; whether small upkeep fixes may ship by themselves
+    is an open question to him, so the default is off.
+  acceptance: 'Test: with no rule enabled every move to active needs the owner; a rule for kind idea never applies to a
+    purchase; a rule naming a forbidden action is refused.'
+  verify:
+    method: test
+    by: ['tests/test_checker.py::test_an_enabled_rule_starts_what_it_covers_and_withdrawing_it_holds_the_rest']
+  trace: [images/mission-control/web/static/app.js, images/swarm/ledger.py, ops/checker.py]
+- id: SWM-43
+  group: Lifecycle
+  phase: 2
+  title: Autonomy can be withdrawn at once
+  statement: When the owner withdraws an autonomy rule, the Swarm service shall move the artifacts that became active under
+    it and have not shipped to blocked, waiting for the owner.
+  type: functional
+  priority: must
+  status: implemented
+  parents: [SN-02, SN-05]
+  sources: [DEC-19]
+  acceptance: 'Test: withdrawing a rule blocks its unshipped active artifacts and leaves shipped ones in checking.'
+  verify:
+    method: test
+    by: ['tests/test_checker.py::test_an_enabled_rule_starts_what_it_covers_and_withdrawing_it_holds_the_rest']
+  trace: [images/swarm/ledger.py]
+- id: SWM-07
+  group: Verification
+  phase: 2
+  title: Success checks decide done
+  statement: Every actionable artifact shall carry a machine-checkable success check, and after it ships the Checker (code,
+    no model) shall move it to done when the check holds for its window or back to open when it fails.
+  type: functional
+  priority: must
+  status: implemented
+  parents: [SN-08, SN-17]
+  sources: [DEC-15]
+  acceptance: 'Test: a deployed fix whose issue stays away for its window becomes done; one whose issue returns is reopened
+    with the new evidence.'
+  verify:
+    method: test
+    by: ['tests/test_checker.py::test_the_checker_proves_reopens_and_catches_a_regression']
+  trace: [ops/checker.py, ops/swarm_client.py]
+- id: SWM-44
+  group: Verification
+  phase: 2
+  title: A typed catalogue of checks
+  statement: A success check shall be one of health_issue_absent, log_count, test_passes, metric, ci_green, smoke_ok or
+    owner_confirms, with typed parameters, and owner_confirms shall be accepted only when the artifact states why no other
+    type can check it.
+  type: interface
+  priority: must
+  status: implemented
+  parents: [SN-08, SN-02]
+  sources: [DEC-15, 'design: AI Stack Agent Swarm (claude.ai artifact 18fPjMRbQnxSVikesY8w6M)']
+  acceptance: 'Test: each type passes and fails on fixtures; owner_confirms without a reason is refused.'
+  verify:
+    method: test
+    by: ['tests/test_checker.py::test_a_check_must_be_complete_and_name_what_exists', 'tests/test_checker.py::test_each_check_type_passes_fails_or_waits',
+      'tests/test_checker.py::test_the_facts_read_as_empty_where_the_stack_is_not', 'tests/test_checker.py::test_the_owner_confirms_or_reopens_a_shipped_idea',
+      'tests/test_checker.py::test_a_log_count_can_read_a_host_units_journal', 'tests/test_checker.py::test_a_log_count_waits_its_days_not_one_day']
+  trace: [images/swarm/ledger.py, ops/checker.py]
+- id: SWM-45
+  group: Verification
+  phase: 2
+  title: A check must be runnable before it counts
+  statement: Before an artifact becomes active, the runner shall check that its success check names a test, container, metric
+    or issue that exists, and refuse Build it or an autonomy rule's start otherwise.
+  type: functional
+  priority: must
+  status: implemented
+  parents: [SN-08]
+  sources: [DEC-15]
+  acceptance: 'Test: an idea whose check names a missing test node cannot become ready.'
+  verify:
+    method: test
+    by: ['tests/test_checker.py::test_a_check_must_be_complete_and_name_what_exists', 'tests/test_checker.py::test_an_enabled_rule_starts_what_it_covers_and_withdrawing_it_holds_the_rest']
+  trace: [ops/checker.py, ops/swarm_client.py]
+  rationale: The swarm service cannot see the host's tests and containers; the runner can, so it checks there.
+- id: SWM-46
+  group: Verification
+  phase: 2
+  title: No agent certifies its own work
+  statement: The agent that owns or carried out an artifact shall not decide that it is done; done shall follow only from
+    the Checker's run of the success check.
+  type: constraint
+  priority: must
+  status: implemented
+  parents: [SN-08, SN-05]
+  sources: [DEC-15, 'MAST failure taxonomy (Cemri et al., arXiv 2503.13657) (task verification failures)']
+  rationale: Missing or incorrect verification is one of MAST's three failure categories; independent, ground-truth verification
+    is the remedy.
+  acceptance: 'Test: a transition to done from any agent token, including the owner agent''s, is refused.'
+  verify:
+    method: test
+    by: ['tests/test_swarm_ledger.py::test_agents_cannot_approve_decline_snooze_or_finish', 'tests/test_swarm_ledger.py::test_every_transition_follows_the_table']
+  trace: [images/swarm/ledger.py]
+- id: SWM-47
+  group: Verification
+  phase: 2
+  title: Regressions reopen and climb
+  statement: When the success check of an artifact that is done fails within 30 days, the Checker shall reopen it, add the
+    failure as evidence and count a recurrence.
+  type: functional
+  priority: must
+  status: implemented
+  parents: [SN-08, SN-13]
+  sources: [DEC-10, DEC-15]
+  acceptance: 'Test: a done artifact whose issue returns on day 12 is open again with recurrence 1 and a higher rank.'
+  verify:
+    method: test
+    by: ['tests/test_checker.py::test_the_checker_proves_reopens_and_catches_a_regression']
+  trace: [ops/checker.py]
+- id: SWM-10
+  group: Board
+  phase: 3
+  title: Agents talk directly, to groups and to all
+  statement: An agent shall be able to message chosen agents directly, multicast to every agent with a role, post to a room
+    (room:all reaches every agent) and discuss an artifact in its thread.
+  type: functional
+  priority: must
+  status: implemented
+  parents: [SN-17]
+  sources: [DEC-15]
+  acceptance: 'Test: one message per address type reaches exactly the agents it names.'
+  findings: [FND-22]
+  verify:
+    method: test
+    by: ['tests/test_swarm_board.py::test_each_address_reaches_exactly_its_agents']
+  trace: [images/swarm/ledger.py, images/swarm/swarm.py]
+- id: SWM-48
+  group: Board
+  phase: 3
+  title: Messages in the A2A shape
+  statement: A Board message shall carry messageId, sender, recipients, contextId (its thread), replyTo, parts (text, data
+    or an artifact reference), act, priority, expiry, hop count and a schema version, in the A2A v1.0 Message and Part structure.
+  type: interface
+  priority: must
+  status: implemented
+  parents: [SN-17]
+  sources: [DEC-15, 'A2A protocol v1.0 (Linux Foundation, 2026)']
+  acceptance: 'Test: every stored message validates against the schema; a message without contextId or act is refused.'
+  verify:
+    method: test
+    by: ['tests/test_swarm_board.py::test_each_address_reaches_exactly_its_agents']
+  trace: [images/swarm/ledger.py]
+- id: SWM-49
+  group: Board
+  phase: 3
+  title: Five acts with fixed meanings
+  statement: A message's act shall be inform, request, propose, handoff or ack; a request shall become a tracked request
+    (SWM-12), a propose shall become a Ledger operation only when the artifact's owner agent accepts it, and a handoff shall
+    make the receiver the artifact's owner.
+  type: functional
+  priority: must
+  status: implemented
+  parents: [SN-17]
+  sources: [DEC-15, FIPA ACL speech acts, DEC-25]
+  verify:
+    method: test
+    by: ['tests/test_swarm_board.py::test_handoff_gives_the_artifact_to_the_receiver', 'tests/test_swarm_phase4.py::test_a_proposal_is_applied_only_when_the_artifacts_owner_accepts']
+  trace: [images/swarm/ledger.py]
+- id: SWM-12
+  group: Board
+  phase: 3
+  title: Requests are never lost
+  statement: A request between agents shall be tracked in the A2A task states submitted, working, input-required, completed,
+    failed, rejected or canceled until it ends, and shall appear in the sender's and the receiver's context pack until then.
+  type: functional
+  priority: must
+  status: implemented
+  parents: [SN-17, SN-13]
+  sources: [DEC-15, 'A2A protocol v1.0 (Linux Foundation, 2026)']
+  rationale: A2A v1.0 has no expired state; an expired request is canceled with the reason expired (SWM-50).
+  acceptance: 'Test: an open request is in both context packs on every run until it is completed; it survives a restart.'
+  verify:
+    method: test
+    by: ['tests/test_swarm_board.py::test_a_request_is_tracked_until_it_ends_and_expires_with_a_reason']
+  trace: [images/swarm/ledger.py]
+- id: SWM-50
+  group: Board
+  phase: 3
+  title: Every request and thread ends
+  statement: Every request shall carry an expiry (default 24 hours, at most 7 days), and when it expires the Board shall
+    cancel it with the reason expired and tell the sender in its next context pack.
+  type: functional
+  priority: must
+  status: implemented
+  parents: [SN-17, SN-18]
+  sources: [DEC-15, 'MAST failure taxonomy (Cemri et al., arXiv 2503.13657) (termination failures)']
+  acceptance: 'Test: a request with a 1-hour expiry is canceled after an hour and appears as expired in the sender''s pack.'
+  verify:
+    method: test
+    by: ['tests/test_swarm_board.py::test_a_request_is_tracked_until_it_ends_and_expires_with_a_reason']
+  trace: [images/swarm/ledger.py, ops/checker.py]
+- id: SWM-51
+  group: Board
+  phase: 3
+  title: Contact policies are enforced
+  statement: The Board shall deliver a message only to recipients its sender's card may message, and shall refuse any other
+    with the policy that refused it.
+  type: constraint
+  priority: must
+  status: implemented
+  parents: [SN-05, SN-17]
+  sources: [DEC-15, MCP Agent Mail contact policies]
+  acceptance: 'Test: a scout message to the builder is refused when the scout''s card does not list it.'
+  verify:
+    method: test
+    by: ['tests/test_swarm_board.py::test_contact_policy_and_private_content']
+  trace: [images/swarm/ledger.py]
+- id: SWM-52
+  group: Board
+  phase: 3
+  title: Delivery once, in order
+  statement: The Board shall deliver each message to each recipient at least once, keep only one copy per messageId, order
+    each thread by sequence number and record when each recipient read it.
+  type: quality
+  priority: must
+  status: implemented
+  parents: [SN-13, SN-17]
+  sources: [DEC-15]
+  acceptance: 'Test: a message sent twice with the same messageId is stored once; a thread reads back in send order; a read
+    receipt is stored when the recipient''s context pack includes it.'
+  verify:
+    method: test
+    by: ['tests/test_swarm_board.py::test_the_owner_comes_first_and_agent_claims_are_marked']
+  trace: [images/swarm/ledger.py]
+- id: SWM-14
+  group: Board
+  phase: 3
+  title: Code guards against loops and floods
+  statement: The Board shall stop a reply chain between agents after 4 hops without an owner message or an artifact change,
+    refuse more than 20 messages an hour per agent and per room and more than 50 a day per thread, refuse a message near-identical
+    to one in the same thread within 24 hours, and accept in room:all only informs that reference an artifact.
+  type: constraint
+  priority: must
+  status: implemented
+  parents: [SN-18, SN-03]
+  sources: [DEC-15, OWASP Top 10 for Agentic Applications 2026 ASI08 cascading failures]
+  rationale: The numbers are start values for the owner to confirm (design decision 5).
+  acceptance: 'Test: one test per guard: the 5th hop, the 21st message, the duplicate and an unreferenced post to room:all
+    are refused with the guard named.'
+  verify:
+    method: test
+    by: ['tests/test_swarm_board.py::test_code_guards_loops_floods_repeats_and_room_all']
+  trace: [images/swarm/ledger.py]
+- id: SWM-13
+  group: Board
+  phase: 3
+  title: Agents are woken through the runner, within budgets
+  statement: When a message arrives for a scheduled agent, the Swarm service shall ask the runner, through its inbox, to
+    wake the agent according to the card's wake policy (never, digest, on_request, always) and daily wake budget, and the
+    runner shall start the run only if the agent's previous run has ended.
+  type: functional
+  priority: must
+  status: implemented
+  parents: [SN-17, SN-03, SEC-11]
+  sources: [DEC-15, DEC-25]
+  findings: [FND-23]
+  verify:
+    method: test
+    by: ['tests/test_swarm_board.py::test_a_request_wakes_an_on_request_agent_within_its_budget', 'tests/test_swarm_phase4.py::test_a_wake_waits_out_the_usage_limit_and_a_hermes_agent_gets_one_turn']
+  trace: [ops/swarm_client.py]
+- id: SWM-53
+  group: Board
+  phase: 3
+  title: Wakes wait out the usage limit
+  statement: While the subscription's usage limit is reached, the runner shall hold wakes and start them when the limit
+    lifts, and shall drop none.
+  type: functional
+  priority: must
+  status: implemented
+  parents: [SN-13, SN-03]
+  sources: [DEC-01, DEC-25]
+  verify:
+    method: test
+    by: ['tests/test_swarm_phase4.py::test_a_wake_waits_out_the_usage_limit_and_a_hermes_agent_gets_one_turn', 'tests/test_swarm_phase4.py::test_the_usage_limit_is_read_from_the_runners_real_state']
+  trace: [ops/swarm_client.py]
+  findings: [FND-31]
+- id: SWM-54
+  group: Board
+  phase: 3
+  title: The owner's messages come first
+  statement: An agent's context pack shall list unread messages from the owner before every other item.
+  type: functional
+  priority: must
+  status: implemented
+  parents: [SN-02, SN-17]
+  sources: [DEC-15, MCP Agent Mail overseer messages]
+  acceptance: 'Test: in a pack with 30 items the owner''s message is first.'
+  verify:
+    method: test
+    by: ['tests/test_swarm_board.py::test_the_app_door_only_reads_and_the_owner_posts_through_the_runner', 'tests/test_swarm_board.py::test_the_owner_comes_first_and_agent_claims_are_marked']
+  trace: [images/swarm/ledger.py, ops/swarm_client.py]
+- id: SWM-55
+  group: Board
+  phase: 3
+  title: Decisions live in the Ledger, not in chat
+  statement: Every owner message that approves, declines or sets a rule shall be linked to the Ledger event it caused, and
+    an agent message claiming a decision that has no Ledger event shall change nothing.
+  type: functional
+  priority: must
+  status: implemented
+  parents: [SN-02, SN-16]
+  sources: [DEC-15, 'design: AI Stack Agent Swarm (claude.ai artifact 18fPjMRbQnxSVikesY8w6M)']
+  rationale: 'No message changes an artifact''s state: approvals, declines and rules are the owner''s taps, each a Ledger
+    event.'
+  acceptance: 'Test: the owner''s decline in a thread creates the declined event and links it; an agent saying approved
+    does not move the artifact.'
+  verify:
+    method: test
+    by: ['tests/test_swarm_board.py::test_the_owner_comes_first_and_agent_claims_are_marked']
+  trace: [images/swarm/ledger.py]
+- id: SWM-56
+  group: Board
+  phase: 3
+  title: Rooms
+  statement: The Board shall start with the rooms all, health, code, research, house, shopping and ops; an agent may propose
+    a room and it shall exist only after the owner confirms it.
+  type: functional
+  priority: should
+  status: implemented
+  parents: [SN-17, SN-18]
+  sources: [DEC-15]
+  acceptance: 'Test: a post to an unconfirmed room is refused; after the owner confirms it, the post is accepted.'
+  verify:
+    method: test
+    by: ['tests/test_swarm_board.py::test_each_address_reaches_exactly_its_agents']
+  trace: [config/agents.yaml, images/swarm/ledger.py]
+  rationale: 'The rooms are listed in config/agents.yaml: a new room is a reviewed change the owner lands.'
+- id: SWM-11
+  group: Chatroom
+  phase: 3
+  title: The chatroom
+  statement: Mission Control shall show every room, direct-message thread, request and artifact thread live, and let the
+    owner post; only his messages shall approve, decline or set rules.
+  type: functional
+  priority: must
+  status: implemented
+  parents: [SN-17, SN-06, SN-05]
+  sources: [DEC-15]
+  acceptance: 'Demonstration: the owner reads a DM between two agents and posts in a room on his phone; test: an approval
+    posted by an agent token has no effect.'
+  verify:
+    method: test
+    by: ['tests/test_swarm_board.py::test_the_app_door_only_reads_and_the_owner_posts_through_the_runner']
+  trace: [images/mission-control/web/static/swarm.js, images/swarm/swarm.py, ops/swarm_client.py]
+- id: SWM-57
+  group: Chatroom
+  phase: 3
+  title: Live and phone-first
+  statement: The Chatroom page shall show a new message within 5 seconds of its arrival, work at a 375-pixel-wide viewport,
+    and filter by agent, room and act with full-text search.
+  type: quality
+  priority: must
+  status: implemented
+  parents: [SN-06, SN-07]
+  sources: [DEC-15, DEC-05]
+  acceptance: 'Test: a message posted through the API appears in the event stream within 5 seconds; demonstration in the
+    mobile viewport.'
+  verify:
+    method: test
+    by: ['tests/test_swarm_board.py::test_the_app_door_only_reads_and_the_owner_posts_through_the_runner']
+  trace: [images/mission-control/web/static/swarm.js]
+- id: SWM-58
+  group: Chatroom
+  phase: 3
+  title: The owner always sees who said it
+  statement: The Chatroom shall show each message's sender and the origin of its content (owner, agent or external source),
+    and shall mark agent text that claims an approval, an urgency or the owner's wish as an agent's claim.
+  type: constraint
+  priority: must
+  status: implemented
+  parents: [SN-05, SN-07]
+  sources: [DEC-15, OWASP Top 10 for Agentic Applications 2026 ASI09 human-agent trust exploitation]
+  acceptance: 'Test: a message whose text says ''the owner approved this'' renders with the agent-claim mark and its origin.'
+  verify:
+    method: test
+    by: ['tests/test_swarm_board.py::test_the_owner_comes_first_and_agent_claims_are_marked']
+  trace: [images/mission-control/web/static/swarm.js, images/swarm/ledger.py]
+- id: SWM-59
+  group: Chatroom
+  phase: 3
+  title: Notifications through the one policy
+  statement: The Board shall notify the owner of mentions and urgent requests only through the stack's single notification
+    path (OBS-16), once per item, and shall send no Telegram message of its own.
+  type: functional
+  priority: must
+  status: implemented
+  parents: [SN-18, OBS-16]
+  sources: [DEC-15, DEC-25]
+  findings: [FND-17]
+  verify:
+    method: test
+    by: ['tests/test_swarm_board.py::test_the_app_door_only_reads_and_the_owner_posts_through_the_runner', 'tests/test_swarm_phase4.py::test_a_mention_notifies_the_owner_once_through_the_shared_path']
+  trace: [ops/swarm_client.py]
+- id: SWM-90
+  group: Chatroom
+  phase: 3
+  title: Who works on what, and every idea's timeline
+  statement: Mission Control shall show, from the Ledger, which agents wrote to which artifacts and which agents messaged
+    each other in the last 30 days, the artifacts two or more agents work on, and for each artifact its events, evidence
+    and thread merged by time.
+  type: functional
+  priority: should
+  status: implemented
+  parents: [SN-17, SN-07]
+  sources: [DEC-15]
+  rationale: The owner asked to see which agents interact on the same artifacts and with each other (2026-10-29).
+  acceptance: 'Test: the graph names the shared artifact and the talking pair; demonstration on the Swarm page.'
+  verify:
+    method: test
+    by: ['tests/test_swarm_board.py::test_the_graph_shows_who_works_on_what_and_who_talks']
+  trace: [images/swarm/ledger.py, images/mission-control/web/static/swarm.js]
+  findings: [FND-30]
+- id: SWM-16
+  group: Run contract
+  phase: 1
+  title: One run contract for every harness
+  statement: Every agent run shall start with its context pack (owner messages, open requests, own and watched artifacts,
+    lessons, its journal) and end with validated Ledger operations, messages and a run summary, through the same MCP tools
+    on every harness.
+  type: functional
+  priority: must
+  status: partial
+  parents: [SN-17, SN-15]
+  sources: [DEC-15]
+  findings: [FND-19, FND-63]
+  gap: The Hermes adapter (one turn through the running Hermes, ending with swarm_finish), the Claude Code crew (answers
+    from its model, start and finish recorded by crew.py) and script agents (declined at once) are covered; OpenCode has
+    no adapter yet.
+  verify:
+    method: test
+    by: ['tests/test_improve.py::test_no_caps_and_a_known_problem_is_refined_not_copied', 'tests/test_swarm_ledger.py::test_the_context_pack_has_its_order_budget_and_lessons',
+      'tests/test_swarm_phase4.py::test_a_wake_waits_out_the_usage_limit_and_a_hermes_agent_gets_one_turn', 'tests/test_swarm_phase4.py::test_a_woken_crew_agent_answers_its_requests_with_its_model',
+      'tests/test_swarm_phase4.py::test_a_finish_is_checked_first_and_a_run_without_one_is_a_health_note']
+  trace: [ops/swarm_client.py, images/swarm/ledger.py, ops/crew.py]
+- id: SWM-60
+  group: Run contract
+  phase: 1
+  title: The context pack has a budget and an order
+  statement: The context pack shall hold at most 12,000 characters, in the order owner messages, open requests, own artifacts
+    by rank, watched changes, help received (SWM-109), lessons, journal, and shall record what it cut; the team roster and
+    its rule (SWM-108) come after it, outside the budget.
+  type: quality
+  priority: must
+  status: implemented
+  parents: [SN-17, SN-03]
+  sources: [DEC-15, MIS-18]
+  rationale: The journal block alone is capped at 6,000 characters (MIS-18); the pack keeps the run's prompt within the
+    subscription's limits and the agent's attention.
+  acceptance: 'Test: an oversized pack is cut from the end, stays within 12,000 characters and lists the cut items.'
+  verify:
+    method: test
+    by: ['tests/test_swarm_ledger.py::test_the_context_pack_has_its_order_budget_and_lessons']
+  trace: [images/swarm/ledger.py]
+- id: SWM-61
+  group: Run contract
+  phase: 1
+  title: Lessons from the owner's decisions
+  statement: The context pack shall include the owner's decisions and reasons on the agent's own artifacts from the last
+    90 days.
+  type: functional
+  priority: must
+  status: implemented
+  parents: [SN-08, SN-02]
+  sources: [DEC-15, DEC-10]
+  acceptance: 'Test: a decline reason given to the doctor''s idea is in the doctor''s next context pack.'
+  verify:
+    method: test
+    by: ['tests/test_improve.py::test_accept_creates_a_build_and_dismiss_becomes_a_lesson', 'tests/test_swarm_client.py::test_the_migration_imports_ideas_and_the_owners_decisions',
+      'tests/test_swarm_ledger.py::test_the_context_pack_has_its_order_budget_and_lessons']
+  trace: [images/swarm/ledger.py, ops/crew.py, ops/doctor.py, ops/improve.py, ops/swarm_client.py]
+- id: SWM-62
+  group: Run contract
+  phase: 1
+  title: A small tool surface
+  statement: The swarm shall offer agents at most 12 MCP tools, whose descriptions together hold at most 6,000 characters.
+  type: constraint
+  priority: must
+  status: implemented
+  parents: [SN-03, SN-17]
+  sources: [DEC-15, MCP Agent Mail's 45 tools as the counter-example]
+  acceptance: 'Test: the tool list served by the Swarm MCP server has at most 12 entries and 6,000 description characters.'
+  verify:
+    method: test
+    by: ['tests/test_swarm_board.py::test_the_board_tools_keep_the_surface_small', 'tests/test_swarm_service.py::test_the_tool_surface_is_small']
+  trace: [images/swarm/swarm.py]
+- id: SWM-63
+  group: Run contract
+  phase: 1
+  title: Stateless, short tool calls
+  statement: The swarm MCP tools shall keep no state in the MCP session and each shall return within 30 seconds; work that
+    waits longer shall be a tracked request (SWM-12), not a blocking call.
+  type: interface
+  priority: must
+  status: implemented
+  parents: [SN-13, SN-17]
+  sources: [DEC-15, 'MCP specification 2026-07-28 (stateless core, Tasks extension)']
+  rationale: MCP 2026-07-28 removed protocol sessions and moved long-running work to the Tasks extension; the mail tool's
+    960-second timeout shows what blocking calls cost.
+  acceptance: 'Test: every tool answers a fresh connection without prior calls; a test with a slow backend gets a request
+    id within 30 seconds.'
+  verify:
+    method: test
+    by: ['tests/test_swarm_board.py::test_a_request_is_tracked_until_it_ends_and_expires_with_a_reason', 'tests/test_swarm_board.py::test_the_board_tools_keep_the_surface_small',
+      'tests/test_swarm_service.py::test_the_tool_surface_is_small']
+  trace: [images/swarm/swarm.py]
+- id: SWM-64
+  group: Run contract
+  phase: 1
+  title: A run without a finish is visible
+  statement: The Swarm service shall validate a run's finish operations and refuse invalid ones with a reason the agent
+    can act on, and a run that ends without a finish shall raise a health note on its agent.
+  type: functional
+  priority: must
+  status: implemented
+  parents: [SN-07, SN-17]
+  sources: [DEC-15, OBS-07, DEC-25]
+  verify:
+    method: test
+    by: ['tests/test_swarm_phase4.py::test_a_finish_is_checked_first_and_a_run_without_one_is_a_health_note']
+  trace: [images/swarm/ledger.py, ops/crew.py]
+- id: SWM-21
+  group: Run contract
+  phase: 4
+  title: Multi-step Hermes work on Hermes Kanban
+  statement: Multi-step work shared by Hermes profiles shall run as Hermes Kanban task graphs keyed by the artifact's key,
+    with Kanban's events mirrored into the Ledger.
+  type: functional
+  priority: could
+  status: deprecated
+  parents: [SN-17]
+  sources: [DEC-15]
+  rationale: 'Phase 0: tasks are created idempotently from outside Hermes (the artifact key as idempotency key) and task_events
+    can be followed by id; the bridge reads them through the Hermes container (the host cannot read its volume) and keeps
+    the actor itself (Kanban records outside comments as ''default'').'
+  reason: 'Superseded by SWM-91 (DEC-25): the task graph lives in the Ledger, which already holds every artifact, its history
+    and the owner''s decisions; the builders are not Hermes profiles.'
+  verify:
+    method: test
+    by: ['tests/test_swarm_phase4.py::test_an_idea_split_into_three_tasks_offers_two_at_once_and_the_third_after_both']
+  trace: [images/swarm/ledger.py]
+- id: SWM-65
+  group: Memory
+  phase: 1
+  title: The journal is the notebook
+  statement: The swarm shall use each agent's journal (MIS-18, MIS-19) as the agent's memory between runs and shall add
+    no second per-agent memory store.
+  type: constraint
+  priority: must
+  status: implemented
+  parents: [SN-17, MIS-18]
+  sources: [DEC-15]
+  acceptance: 'Inspection: the context pack''s memory block comes from ops/journal.py; no swarm table or Hindsight bank
+    holds agent notes.'
+  findings: [FND-19]
+  verify:
+    method: inspection
+    by: [ops/journal.py, images/swarm/ledger.py]
+  trace: [ops/journal.py]
+  rationale: The Ledger holds artifacts, events and lessons only; agent notes stay in the journal (vault agents/<id>/MEMORY.md).
+- id: SWM-66
+  group: Memory
+  phase: 1
+  title: Memory cannot be poisoned through the swarm
+  statement: Journal entries, lessons and evidence derived from external content shall keep that origin, and a standing
+    note shall come only from the owner, the agent's own card or the memory curator, never from another agent's message.
+  type: constraint
+  priority: must
+  status: partial
+  parents: [SN-05, SN-10]
+  sources: [DEC-15, OWASP Top 10 for Agentic Applications 2026 ASI06 memory and context poisoning]
+  acceptance: 'Test: a standing note proposed in an agent message is refused; an evidence entry quoting a web page keeps
+    its external origin in the next pack.'
+  verify:
+    method: test
+    by: ['tests/test_swarm_ledger.py::test_external_content_stays_marked_as_untrusted']
+  trace: [images/swarm/ledger.py]
+  gap: External origin is kept and marked; standing notes still live only in the journal, which agents cannot write through
+    the swarm yet.
+- id: SWM-15
+  group: Safety and security
+  phase: 3
+  title: Messages are untrusted data
+  statement: The Board shall carry the origin of each message's content, redact secrets, and present agent messages to agents
+    as data, and an approval claimed in an agent message shall have no effect.
+  type: constraint
+  priority: must
+  status: implemented
+  parents: [SN-05]
+  sources: [DEC-15, 'OWASP Top 10 for Agentic Applications 2026 ASI01 agent goal hijack, ASI07 insecure inter-agent communication']
+  acceptance: 'Test: a message containing an instruction and an approval claim reaches the recipient wrapped as data and
+    moves nothing.'
+  findings: [FND-22]
+  verify:
+    method: test
+    by: ['tests/test_swarm_board.py::test_contact_policy_and_private_content', 'tests/test_swarm_board.py::test_the_owner_comes_first_and_agent_claims_are_marked']
+  trace: [images/swarm/ledger.py, ops/swarm_client.py]
+- id: SWM-67
+  group: Safety and security
+  phase: 1
+  title: Information-flow labels keep the trust boundaries
+  statement: Every message, evidence entry and artifact shall carry a sensitivity label (public, internal, private) and
+    an origin, content derived from labelled inputs shall carry the highest of their labels, and the Swarm service shall
+    refuse to deliver private content to an agent whose card holds a way out (web fetch, browser, AI phone, mail sending)
+    and deliver external content to an agent that holds private data only labelled as untrusted.
+  type: constraint
+  priority: must
+  status: implemented
+  parents: [SN-04, SN-05, SEC-04, SEC-05]
+  sources: [DEC-15, OWASP Top 10 for Agentic Applications 2026 ASI01, lethal trifecta (S. Willison)]
+  rationale: Without labels the Board would join every agent's private data, untrusted input and ways out into one system,
+    undoing the separation SEC-03 and SEC-04 build.
+  acceptance: 'Test: Hermes main''s message quoting a vault note is refused for the scout; the scout''s research note reaches
+    Hermes main wrapped as untrusted; a summary of a private artifact is private.'
+  verify:
+    method: test
+    by: ['tests/test_swarm_board.py::test_contact_policy_and_private_content', 'tests/test_swarm_ledger.py::test_private_artifacts_never_reach_an_agent_with_a_way_out']
+  trace: [images/swarm/ledger.py]
+  findings: [FND-22]
+- id: SWM-68
+  group: Safety and security
+  phase: 1
+  title: No secrets in the swarm
+  statement: The Swarm service shall run the stack's redaction on every write and refuse a message or artifact that still
+    contains a key, a token, a password or a payment card number.
+  type: constraint
+  priority: must
+  status: implemented
+  parents: [SN-05, CST-06]
+  sources: [DEC-15, SEC-16]
+  acceptance: 'Test: a message carrying a sample API key is refused; a log excerpt with a token is stored redacted.'
+  verify:
+    method: test
+    by: ['tests/test_swarm_ledger.py::test_secrets_are_redacted_and_card_numbers_refused']
+  trace: [images/swarm/ledger.py]
+- id: SWM-69
+  group: Safety and security
+  phase: 1
+  title: Standing approvals stay where they are
+  statement: No role, card, rule or message in the swarm shall change who approves money, purchases, passwords, phone settings,
+    deletions, NAS changes or deploys; those approvals shall stay with the services that ask the owner today.
+  type: constraint
+  priority: must
+  status: implemented
+  parents: [SN-05, CST-05, CST-07, CST-11]
+  sources: [DEC-15, DEC-03]
+  acceptance: 'Inspection: the swarm tools offer no action that bypasses the phone, mail, shopping or builder approvals;
+    test: an autonomy rule naming one is refused (SWM-42).'
+  verify:
+    method: test
+    by: ['tests/test_swarm_service.py::test_the_tool_surface_is_small']
+  trace: [images/swarm/swarm.py]
+  rationale: 'The swarm''s tools offer no approval: money, purchases, phone, mail, deletions and deploys keep their own
+    owner approvals in the phone, mail, shopping and builder services.'
+- id: SWM-70
+  group: Safety and security
+  phase: 5
+  title: No agent rewrites itself
+  statement: An agent shall not change its own card, prompt, tools or model; such a change shall exist only as an agent-change
+    artifact that passes the gate of SWM-18.
+  type: constraint
+  priority: must
+  status: implemented
+  parents: [SN-05, SN-08]
+  sources: [DEC-15, OWASP Top 10 for Agentic Applications 2026 ASI10 rogue agents, DEC-26]
+  acceptance: 'Test: a Ledger operation from an agent that writes, edits or moves an agent change about itself is refused;
+    the builder''s review blocks a build touching config/agents.yaml (or ops/keys.sh, a Hermes profile, the builder''s own
+    code) without a linked agent change whose experiment passed, and only the owner''s written override lifts the block.'
+  verify:
+    method: test
+    by: ['tests/test_swarm_phase5.py::test_no_agent_writes_or_moves_an_agent_change_about_itself', 'tests/test_swarm_phase5.py::test_a_build_that_changes_an_agent_is_blocked_without_a_passed_agent_change']
+  trace: [images/swarm/ledger.py, ops/builds.py]
+- id: SWM-71
+  group: Safety and security
+  phase: 2
+  title: A failing agent stops itself
+  statement: If an agent's runs fail 3 times in a row, or its messages trip the Board's guards 3 times within 24 hours,
+    then the Swarm service shall pause the agent (SWM-26) and raise one health alert.
+  type: functional
+  priority: must
+  status: implemented
+  parents: [SN-13, SN-18]
+  sources: [DEC-15, OWASP Top 10 for Agentic Applications 2026 ASI08 cascading failures]
+  verify:
+    method: test
+    by: ['tests/test_checker.py::test_a_failing_proposer_pauses_itself_once', 'tests/test_swarm_phase4.py::test_guard_trips_pause_an_agent_and_expired_requests_and_refused_wakes_are_signals']
+  trace: [ops/checker.py]
+- id: SWM-19
+  group: Reliability and resources
+  phase: 1
+  title: Waiting state survives restarts
+  statement: Everything that waits (an approval, a request, a blocked artifact, a wake) shall be stored with its resume
+    point, so that a restart of any agent or service resumes it.
+  type: quality
+  priority: must
+  status: partial
+  parents: [SN-13]
+  sources: [DEC-15]
+  acceptance: 'Test: the Swarm service restarted while a request is open resumes the request and delivers its answer.'
+  findings: [FND-14]
+  verify:
+    method: test
+    by: ['tests/test_swarm_client.py::test_writes_wait_in_the_outbox_while_the_service_is_down', 'tests/test_swarm_service.py::test_the_snapshot_is_a_consistent_copy']
+  trace: [images/swarm/ledger.py, ops/swarm_client.py]
+  gap: The Ledger and the runner's outbox survive restarts; the mail connector can still strand a Trash approval on a restart
+    (FND-14).
+- id: SWM-72
+  group: Reliability and resources
+  phase: 1
+  title: Agents work when the swarm is down
+  statement: If the Swarm service is unreachable, then an agent run shall do its own job, queue its finish operations locally
+    and the runner shall replay them in order within 5 minutes of the service's return, and no run shall fail only because
+    the swarm is down.
+  type: quality
+  priority: must
+  status: partial
+  parents: [SN-13]
+  sources: [DEC-15, OWASP Top 10 for Agentic Applications 2026 ASI08 cascading failures]
+  acceptance: 'Test: with the service stopped a crew run completes and its operations appear in the Ledger after the service
+    starts.'
+  verify:
+    method: test
+    by: ['tests/test_swarm_client.py::test_the_sync_survives_a_restarting_service', 'tests/test_swarm_client.py::test_writes_wait_in_the_outbox_while_the_service_is_down']
+  trace: [ops/swarm_client.py]
+  gap: The runner's writes wait in the outbox; agents that call through the gateway (later phases) have no outbox yet.
+- id: SWM-73
+  group: Reliability and resources
+  phase: 1
+  title: One writer, one database, backed up
+  statement: The Swarm service shall be the only writer of the swarm database (SQLite in WAL mode under /srv/ai), and the
+    restore rehearsal shall restore it.
+  type: constraint
+  priority: must
+  status: partial
+  parents: [SN-09, SN-13]
+  sources: [DEC-15, 'design: AI Stack Agent Swarm (claude.ai artifact 18fPjMRbQnxSVikesY8w6M)']
+  rationale: Design decision 2 (SQLite or a database on the stack's Postgres) waits for the owner.
+  acceptance: 'Inspection: no other process opens the database for writing; the rehearsal''s checklist includes it.'
+  verify:
+    method: test
+    by: ['tests/test_swarm_service.py::test_the_snapshot_is_a_consistent_copy']
+  trace: [images/swarm/swarm.py]
+  gap: One writer and SQLite WAL as proposed; the owner has not confirmed the storage choice (design decision 2).
+- id: SWM-74
+  group: Reliability and resources
+  phase: 0
+  title: The swarm fits the memory budget
+  statement: The Swarm service shall run with a mem_limit of 256 MB and load no embedding model, so that the swarm adds
+    at most 256 MB to the stack's resident memory.
+  type: constraint
+  priority: must
+  status: partial
+  parents: [CST-14, CST-01]
+  sources: [DEC-15]
+  rationale: Phase 0 measured 48 MB peak for a prototype at target size (2,000 artifacts, 100,000 events, 20,000 messages);
+    embeddings would have cost 1.2 GB peak for no better duplicate detection.
+  acceptance: 'Analysis: phase 0 measures the service''s p95 resident memory under a replayed week of runs and writes it
+    into the memory budget table.'
+  verify:
+    method: test
+    by: ['tests/test_swarm_service.py::test_the_tool_surface_is_small']
+  trace: [compose/apps.yaml, images/swarm/ledger.py]
+  gap: mem_limit 256 MB and no embedding model; the live service's p95 memory is measured after a week of use.
+  findings: [FND-18, FND-26]
+- id: SWM-75
+  group: Reliability and resources
+  phase: 1
+  title: Tool calls answer within half a second
+  statement: With 2,000 artifacts and 100,000 events, ledger_find, ledger_get and board_inbox shall answer within 500 ms
+    at the 95th percentile.
+  type: quality
+  priority: should
+  status: implemented
+  parents: [SN-17, CST-01]
+  sources: [DEC-15]
+  rationale: 'Phase 0''s prototype at that size: p95 5.1 ms (find), 3.2 ms (get), 3.7 ms (inbox).'
+  acceptance: 'Test: a benchmark on a generated database of that size stays within 500 ms p95.'
+  verify:
+    method: analysis
+    by: [docs/SWARM-PHASE0.md, ops/swarm-probes/proto.py]
+  trace: [images/swarm/ledger.py]
+- id: SWM-76
+  group: Reliability and resources
+  phase: 1
+  title: Schema changes are versioned and rehearsed
+  statement: Every change to the swarm database's schema shall be a numbered, forward-only migration, tested on a copy of
+    the live database before it deploys.
+  type: process
+  priority: must
+  status: implemented
+  parents: [SN-13, SN-09]
+  sources: [DEC-15]
+  acceptance: 'Test: migrations apply in order to an empty and to a sample database; the deploy runs them on a copy first.'
+  verify:
+    method: test
+    by: ['tests/test_swarm_ledger.py::test_schema_migrations_are_numbered_and_forward_only']
+  trace: [images/swarm/ledger.py]
+- id: SWM-77
+  group: Reliability and resources
+  phase: 1
+  title: No new way in
+  statement: 'The Swarm service shall publish no port: agents reach it through the gateway on an internal network, and the
+    host runner through a Unix socket in /srv/ai/swarm.'
+  type: constraint
+  priority: must
+  status: implemented
+  parents: [CST-04, SN-05]
+  sources: [DEC-15]
+  acceptance: 'Test: the compose service has no ports entry; the runner''s door refuses a caller without its token.'
+  verify:
+    method: test
+    by: ['tests/test_swarm_service.py::test_the_runner_acts_only_for_host_agents_and_relays_the_owner']
+  trace: [compose/apps.yaml]
+- id: SWM-78
+  group: Observability
+  phase: 1
+  title: Every change and message is on the timelines
+  statement: Every Ledger event shall appear as an activity event on the owner's timelines, and every write made for a run
+    shall appear in that run's view (OBS-05).
+  type: functional
+  priority: must
+  status: implemented
+  parents: [SN-07, OBS-05]
+  sources: [DEC-05, DEC-15]
+  acceptance: 'Test: an upsert and a message from a run show in that run''s view and on the activity feed.'
+  verify:
+    method: test
+    by: ['tests/test_home_work.py::test_the_swarm_and_session_deploys_are_on_the_home_timeline', 'tests/test_swarm_client.py::test_ledger_changes_reach_the_activity_feed_once']
+  trace: [images/mission-control/web/static/app.js, ops/swarm_client.py, ops/systemd/swarm-sync.timer]
+- id: SWM-79
+  group: Observability
+  phase: 1
+  title: Every run is a trace, whatever the harness
+  statement: 'Every agent run shall be a trace in Phoenix with an invoke_agent span, a chat span per model call and an execute_tool
+    span per tool call, carrying the agent, the run id and what it belongs to: gateway runs through LiteLLM''s tracing,
+    Claude Code runs exported from the runtime record when they end.'
+  type: interface
+  priority: must
+  status: implemented
+  parents: [SN-07, OBS-14]
+  sources: [DEC-05, OpenTelemetry GenAI semantic conventions (agent and tool spans)]
+  rationale: The GenAI conventions are still in development status; the span names follow them and the attribute names are
+    pinned in one place so a convention change is one edit.
+  acceptance: 'Test: a run on each harness yields one trace in Phoenix with the attributes set.'
+  findings: [FND-25]
+  verify:
+    method: test
+    by: ['tests/test_otlp.py::test_a_claude_run_becomes_one_trace_with_model_and_tool_spans', 'tests/test_otlp.py::test_only_claude_runs_are_traced_when_they_end',
+      'tests/test_otlp.py::test_the_protobuf_is_an_otlp_export_request']
+  trace: [images/mission-control/otlp.py, images/mission-control/runrecord.py]
+- id: SWM-80
+  group: Observability
+  phase: 2
+  title: The swarm's own failure signals
+  statement: The health board shall raise alerts for guard trips, expired requests, refused wakes, refused transitions above
+    10 a day per agent, Ledger write errors and Checker failures.
+  type: functional
+  priority: must
+  status: implemented
+  parents: [SN-07, SN-18]
+  sources: [DEC-05]
+  verify:
+    method: test
+    by: ['tests/test_checker.py::test_refused_writes_become_a_health_signal_and_scorecards_add_up', 'tests/test_swarm_phase4.py::test_guard_trips_pause_an_agent_and_expired_requests_and_refused_wakes_are_signals']
+  trace: [images/swarm/swarm.py, ops/checker.py, ops/swarm_client.py]
+- id: SWM-17
+  group: Observability
+  phase: 2
+  title: Scorecards per agent
+  statement: Every agent shall have a daily scorecard from the Ledger's history (accepted share, proven share, reopen rate,
+    duplicate attempts, decline reasons, request handling, cost, cost per proven artifact) on the Agents page.
+  type: functional
+  priority: should
+  status: implemented
+  parents: [SN-07, SN-17]
+  sources: [DEC-15, DEC-05]
+  findings: [FND-25]
+  verify:
+    method: test
+    by: ['tests/test_checker.py::test_refused_writes_become_a_health_signal_and_scorecards_add_up', 'tests/test_swarm_board.py::test_tokens_per_agent_include_the_claude_runs_under_a_crew_job',
+      'tests/test_swarm_phase4.py::test_request_handling_is_on_the_scorecard']
+  trace: [images/mission-control/runrecord.py, images/mission-control/web/static/app.js, images/mission-control/web/static/swarm.js,
+    images/swarm/ledger.py]
+- id: SWM-81
+  group: Observability
+  phase: 1
+  title: Cost per run on every harness
+  statement: Every run shall record its model calls with tokens and its duration in the runtime record, from the gateway's
+    records or, for Claude Code, from its transcript's usage, so that cost is known per run on every harness.
+  type: functional
+  priority: must
+  status: implemented
+  parents: [SN-07, SN-03, MIS-16]
+  sources: [DEC-15]
+  acceptance: 'Test: a Claude Code run''s recorded usage equals the usage in its JSON result.'
+  findings: [FND-25]
+  verify:
+    method: test
+    by: ['tests/test_runtime.py::test_the_claude_hook_turns_hooks_and_transcript_into_events']
+  trace: [config/hermes/claude-hooks/runtime_hook.py, images/mission-control/runrecord.py]
+  rationale: On the subscriptions the money cost is $0; the cost that matters is the usage limit, so tokens per model call
+    are the measure.
+- id: SWM-18
+  group: Improvement loop
+  phase: 5
+  title: Agent changes are evaluated before they ship
+  statement: A change to an agent's prompt, tools, model or harness shall run on a replay set of its past runs and ship
+    only when no score drops and its target score rises, then be watched for 14 days with a one-step revert.
+  type: process
+  priority: should
+  status: implemented
+  parents: [SN-08, SN-17]
+  sources: [DEC-15, QA-07, DEC-26]
+  acceptance: 'Test: an agent-change artifact without an experiment result cannot leave ready; one whose scores drop returns
+    to open with the results.'
+  verify:
+    method: test
+    by: ['tests/test_swarm_phase5.py::test_an_agent_change_leaves_ready_only_after_a_passed_experiment_and_a_drop_sends_it_back',
+      'tests/test_swarm_phase5.py::test_an_experiment_replays_both_arms_on_the_same_examples_and_ships_only_through_build_it',
+      'tests/test_swarm_phase5.py::test_a_ready_change_without_an_experiment_starts_one_and_an_agent_without_a_model_cannot_be_replayed',
+      'tests/test_swarm_phase5.py::test_a_shipped_agent_change_is_watched_and_a_drop_reopens_it_with_the_revert', 'tests/test_swarm_phase5.py::test_a_deployed_build_is_reverted_in_one_step_through_the_merge_queue']
+  trace: [images/swarm/ledger.py, ops/evals.py, ops/checker.py, ops/builds.py, ops/improve.py, images/mission-control/web/static/swarm.js]
+  findings: [FND-36, FND-37]
+- id: SWM-82
+  group: Improvement loop
+  phase: 5
+  title: Replay sets from real runs
+  statement: Every run shall store its inputs (context pack, offered tools, card version) with its outcome label (proven,
+    declined with reason, duplicate, failed) in a Phoenix dataset of its agent, on every harness.
+  type: functional
+  priority: should
+  status: partial
+  parents: [SN-08, SN-07]
+  sources: [DEC-15, Phoenix datasets and experiments, DEC-26]
+  acceptance: 'Test: a finished run adds one dataset example with its label; a later decline updates the label.'
+  findings: [FND-25, FND-39]
+  gap: OpenCode has no swarm adapter (SWM-28), so its runs are not recorded; every other harness's runs are (Hermes wakes,
+    Claude Code and script crew runs).
+  verify:
+    method: test
+    by: ['tests/test_swarm_phase5.py::test_a_finished_run_adds_one_replay_example_with_its_label_and_a_later_decline_updates_it',
+      'tests/test_swarm_phase5.py::test_the_replay_set_is_mirrored_to_phoenix_only_when_it_changed', 'tests/test_truncation.py::test_run_inputs_stay_valid_json_however_long_they_are']
+  trace: [images/swarm/ledger.py, ops/evals.py, ops/crew.py, ops/swarm_client.py]
+- id: SWM-83
+  group: Improvement loop
+  phase: 5
+  title: The Coach turns scorecards into agent changes
+  statement: Every month the Coach shall read every scorecard and open agent-change artifacts with evidence, a target score
+    and an experiment plan, and its own changes shall pass the same gate.
+  type: functional
+  priority: should
+  status: implemented
+  parents: [SN-08]
+  sources: [DEC-15, DEC-26]
+  acceptance: 'Test: a fixture scorecard with 40% declined ideas yields one agent-change artifact naming the target score.'
+  verify:
+    method: test
+    by: ['tests/test_swarm_phase5.py::test_a_scorecard_with_40_percent_declined_ideas_yields_one_agent_change_naming_its_target']
+  trace: [ops/coach.py, config/agents.yaml, ops/systemd/crew-coach.timer]
+  findings: [FND-34]
+- id: SWM-84
+  group: Improvement loop
+  phase: 5
+  title: Failures are classified
+  statement: Every failed or declined run shall be classified into the MAST categories (specification, inter-agent misalignment,
+    verification) and their failure modes, and the scorecard shall show the counts.
+  type: functional
+  priority: could
+  status: implemented
+  parents: [SN-08, SN-07]
+  sources: [DEC-15, 'MAST failure taxonomy (Cemri et al., arXiv 2503.13657)', DEC-26]
+  acceptance: 'Test: labelled fixture runs are classified with at least 80% agreement with their labels.'
+  verify:
+    method: test
+    by: ['tests/test_swarm_phase5.py::test_labelled_fixture_runs_are_classified_with_at_least_80_percent_agreement', 'tests/test_swarm_phase5.py::test_a_finished_run_adds_one_replay_example_with_its_label_and_a_later_decline_updates_it']
+  trace: [images/swarm/ledger.py, images/mission-control/web/static/swarm.js]
+- id: SWM-85
+  group: Rollout
+  phase: 0
+  title: Phases with gates
+  statement: The swarm shall be built in the phases 0 to 5, each shipped, tested and deployed on its own, and a phase shall
+    start only when the previous phase's gate is met and recorded in the design doc.
+  type: process
+  priority: must
+  status: planned
+  parents: [SN-15, SN-13]
+  sources: [DEC-15, DEC-21]
+  acceptance: 'Inspection: each phase''s gate result is in the design doc before the next phase''s first commit.'
+- id: SWM-86
+  group: Rollout
+  phase: 0
+  title: Prove the risky parts first
+  statement: Phase 0 shall prove that the gateway carries each agent's swarm token to an MCP server (per-user upstream credentials),
+    that a Hermes Kanban task can be created and followed from outside Hermes, and the swarm's memory need, or choose and
+    record the fallback for each.
+  type: process
+  priority: must
+  status: implemented
+  parents: [SN-17, CST-14]
+  sources: [DEC-15, 'design: AI Stack Agent Swarm (claude.ai artifact 18fPjMRbQnxSVikesY8w6M)']
+  acceptance: 'Demonstration: three recorded probes with their results in the design doc.'
+  verify:
+    method: demonstration
+    by: [docs/SWARM-PHASE0.md, ops/swarm-probes/identity.sh, ops/swarm-probes/kanban.sh, ops/swarm-probes/proto.py]
+  trace: [ops/swarm-probes/AGENTS.md]
+- id: SWM-87
+  group: Rollout
+  phase: 1
+  title: Shadow run before switch-over
+  statement: Before an old path is removed, the new path shall run beside it for 7 days, and the switch shall happen only
+    when every artifact the old path created in that week exists in the Ledger.
+  type: process
+  priority: must
+  status: deprecated
+  parents: [SN-13, SN-02]
+  sources: [DEC-15]
+  acceptance: 'Analysis: a comparison report of the shadow week, attached to the phase gate.'
+  verify:
+    method: test
+    by: ['tests/test_swarm_client.py::test_the_migration_report_names_what_the_guard_would_have_refused']
+  trace: [ops/swarm_client.py]
+  reason: The owner chose to switch over at once (DEC-22). The replay of 2026-10-29 had shown the duplicate guard catching
+    all six of his merges.
+- id: SWM-88
+  group: Rollout
+  phase: 1
+  title: Acceptance tests come with the code
+  statement: When a swarm requirement is implemented, its acceptance test shall be added in the same commit and its status
+    set to implemented with that test in verify.
+  type: process
+  priority: must
+  status: implemented
+  parents: [SN-16, SN-15]
+  sources: [DEC-14, DEC-21]
+  acceptance: 'Inspection: the checks refuse an implemented requirement without a test (QA-09); the commit names the ids
+    (QA-11).'
+  verify:
+    method: inspection
+    by: [AGENTS.md, requirements/AGENTS.md]
+  trace: [ops/req.py]
+- id: SWM-20
+  group: Rollout
+  phase: 5
+  title: Requirements live in the Ledger
+  statement: Requirements shall become Ledger artifacts of kind requirement, so that a violated requirement is an open artifact
+    agents can work on, and an agent's proposal shall name the requirements it serves.
+  type: functional
+  priority: should
+  status: implemented
+  parents: [SN-16, SN-17]
+  sources: [DEC-14, DEC-15, DEC-26]
+  acceptance: 'Test: a requirement file change creates or updates its Ledger artifact; a violated one is open.'
+  verify:
+    method: test
+    by: ['tests/test_swarm_phase5.py::test_a_requirement_file_change_creates_or_updates_its_artifact_and_a_violated_one_is_open']
+  trace: [images/swarm/ledger.py, ops/swarm_client.py]
+  findings: [FND-35]
+- id: SWM-91
+  group: Parallel work
+  phase: 4
+  title: Big work is split into a task graph
+  statement: When an accepted idea needs changes in more than one area, the planner agent shall split it into tasks with
+    dependencies (a Ledger artifact of kind task per piece, linked depends_on), and tasks without open dependencies shall
+    be offered to builders at the same time.
+  type: functional
+  priority: must
+  status: implemented
+  parents: [SN-08]
+  sources: [DEC-24, DEC-25]
+  verify:
+    method: test
+    by: ['tests/test_swarm_phase4.py::test_an_idea_split_into_three_tasks_offers_two_at_once_and_the_third_after_both',
+      'tests/test_swarm_phase4.py::test_the_planner_splits_only_across_areas_and_falls_back_to_one_task', 'tests/test_swarm_phase4.py::test_an_idea_with_tasks_is_shipped_only_when_every_task_is_merged']
+  trace: [ops/planner.py, ops/builds.py, images/swarm/ledger.py]
+  findings: [FND-36]
+- id: SWM-92
+  group: Parallel work
+  phase: 4
+  title: File leases keep parallel builders apart
+  statement: While a build works on a task, the Ledger shall hold a lease on the files and code-graph modules the task names;
+    a second task whose files overlap shall wait, and a lease shall end when its build ends or after 4 hours.
+  type: functional
+  priority: must
+  status: implemented
+  parents: [SN-08]
+  sources: [DEC-24, DEC-25]
+  verify:
+    method: test
+    by: ['tests/test_swarm_phase4.py::test_leases_keep_tasks_on_the_same_file_apart_and_a_stale_one_expires', 'tests/test_swarm_phase4.py::test_builds_run_together_only_when_their_files_do_not_overlap']
+  trace: [images/swarm/ledger.py, ops/builds.py]
+- id: SWM-93
+  group: Parallel work
+  phase: 4
+  title: A merge queue lands parallel work one at a time
+  statement: 'Approved builds shall land through one queue: each is merged onto the current main, checked on the combined
+    result, and deployed; a failure takes that build out of the queue and sends it back, and the rest continue.'
+  type: functional
+  priority: must
+  status: implemented
+  parents: [SN-08, SN-06]
+  sources: [DEC-24, DEC-25]
+  verify:
+    method: test
+    by: ['tests/test_swarm_phase4.py::test_three_approved_builds_land_in_order_and_a_failing_one_is_sent_back']
+  trace: [ops/builds.py]
+- id: SWM-94
+  group: Parallel work
+  phase: 4
+  title: Every build starts from the code graph
+  statement: 'Before a builder changes code, the runner shall give it the code graph''s view of the files it plans to touch:
+    callers and callees, the tests that cover them, and the requirements traced to them; the review shall show the same
+    blast radius.'
+  type: functional
+  priority: should
+  status: implemented
+  parents: [SN-08]
+  sources: [DEC-24, DEC-25]
+  verify:
+    method: test
+    by: ['tests/test_swarm_phase4.py::test_a_builds_context_pack_lists_callers_tests_and_requirements']
+  trace: [ops/codegraph.py, ops/builds.py]
+- id: SWM-95
+  group: Verification
+  phase: 4
+  title: Independent reviewers with different lenses
+  statement: 'Each build shall be reviewed by at least two reviewers that do not share its engine or its context: one checks
+    the change against the requirements it names, one looks for security and data-flow problems; any block shall stop the
+    deploy unless the owner overrides it with a written reason, and each verdict and override shall be evidence on the idea.'
+  type: functional
+  priority: should
+  status: implemented
+  parents: [SN-08, SN-06]
+  sources: [DEC-24, DEC-25]
+  verify:
+    method: test
+    by: ['tests/test_swarm_phase4.py::test_a_build_gets_two_lenses_and_one_block_stops_the_deploy']
+  trace: [ops/builds.py]
+- id: SWM-96
+  group: Verification
+  phase: 4
+  title: Every build names and proves its requirements
+  statement: A build shall name the requirement ids it implements or changes, and its checks shall fail when a named requirement
+    has no test that the build's change runs.
+  type: functional
+  priority: should
+  status: implemented
+  parents: [SN-08, SN-07]
+  sources: [DEC-24, DEC-25]
+  verify:
+    method: test
+    by: ['tests/test_swarm_phase4.py::test_a_build_naming_a_requirement_without_a_test_it_runs_fails_its_checks']
+  trace: [ops/req.py, ops/builds.py]
+- id: SWM-97
+  group: Chatroom
+  phase: 3
+  title: Who is working right now
+  statement: The Swarm page shall show which agents are running at this moment, on which artifact or task, since when, and
+    with how many tokens so far, from the runner's live runs.
+  type: functional
+  priority: should
+  status: implemented
+  parents: [SN-17]
+  sources: [DEC-24, DEC-25]
+  verify:
+    method: test
+    by: ['tests/test_swarm_phase4.py::test_a_running_crew_job_and_a_running_build_show_until_they_end']
+  trace: [images/mission-control/runrecord.py, images/mission-control/web/static/swarm.js]
+  findings: [FND-33]
+- id: SWM-98
+  group: Chatroom
+  phase: 3
+  title: Requests to the owner wait in Needs you
+  statement: A request an agent addresses to the owner shall appear in Needs you on Home with its thread, until the owner
+    answers or it expires.
+  type: functional
+  priority: should
+  status: implemented
+  parents: [SN-17]
+  sources: [DEC-24, DEC-25]
+  verify:
+    method: test
+    by: ['tests/test_swarm_phase4.py::test_an_agents_request_to_the_owner_waits_in_needs_you_until_he_answers']
+  trace: [ops/swarm_client.py, images/mission-control/web/static/app.js]
+- id: SWM-99
+  group: Observability
+  phase: 5
+  title: Flow metrics for the whole swarm
+  statement: Mission Control shall show, per week, how many ideas were proposed, accepted, proved and reopened, the median
+    time from proposal to proved, the work in progress, and the tokens per proved idea.
+  type: functional
+  priority: could
+  status: implemented
+  parents: [SN-17, SN-07]
+  sources: [DEC-24, DEC-25]
+  verify:
+    method: test
+    by: ['tests/test_swarm_phase4.py::test_a_week_of_ledger_events_yields_counts_lead_time_and_tokens_per_proved_idea',
+      'tests/test_swarm_phase5.py::test_the_swarm_tabs_that_read_the_state_draw_again_when_it_first_arrives']
+  trace: [images/swarm/ledger.py, ops/swarm_client.py]
+  findings: [FND-36]
+- id: SWM-100
+  group: Board
+  phase: 4
+  title: No request waits for an agent that never wakes
+  statement: When every agent receiving a request has the wake policy never, the runner shall answer the request at once
+    with the state rejected and the reason, naming that an agent with the needed role or the owner can answer instead.
+  type: functional
+  priority: should
+  status: implemented
+  parents: [SN-17, SN-18]
+  sources: [DEC-25]
+  verify:
+    method: test
+    by: ['tests/test_swarm_phase4.py::test_requests_to_agents_that_never_wake_are_answered_at_once']
+  trace: [ops/swarm_client.py]
+- id: SWM-101
+  group: Board
+  phase: 4
+  title: Woken agents answer with their own model
+  statement: When a host agent with a model is woken for requests, it shall answer each one with its own model in the request's
+    thread and set the request's state; a Hermes agent shall be woken through the Hermes adapter for one turn that reads
+    swarm_context and ends with swarm_finish.
+  type: functional
+  priority: should
+  status: implemented
+  parents: [SN-17]
+  sources: [DEC-25]
+  verify:
+    method: test
+    by: ['tests/test_swarm_phase4.py::test_a_woken_crew_agent_answers_its_requests_with_its_model', 'tests/test_swarm_phase4.py::test_a_wake_waits_out_the_usage_limit_and_a_hermes_agent_gets_one_turn']
+  trace: [ops/crew.py, ops/swarm_client.py]
+- id: SWM-102
+  group: Improvement loop
+  phase: 5
+  title: Standing instructions are the one way to tune an agent
+  statement: An agent's card may hold a short list of standing instructions; every harness shall give them to the agent
+    first (the context pack, a host agent's prompt, the replay prompt), and they shall change only through an agent change.
+  type: functional
+  priority: should
+  status: implemented
+  parents: [SN-08, SN-17]
+  sources: [DEC-26]
+  verify:
+    method: test
+    by: ['tests/test_swarm_phase5.py::test_standing_instructions_reach_every_harness_and_the_registry_checks_them', 'tests/test_swarm_phase5.py::test_a_finished_run_adds_one_replay_example_with_its_label_and_a_later_decline_updates_it',
+      'tests/test_deploy.py::test_a_card_change_restarts_the_swarm_service_so_the_agents_get_it']
+  trace: [images/swarm/ledger.py, ops/swarm_client.py, ops/evals.py, ops/registry.py]
+  findings: [FND-37]
+- id: SWM-103
+  group: Observability
+  phase: 5
+  title: A timeline of every agent's runs
+  statement: The Swarm page shall show, for a window of 6 hours to 7 days, one row per agent and one bar per run from the
+    runtime record, coloured by how it ended, with the run that started it and the runs it started one tap away.
+  type: functional
+  priority: should
+  status: implemented
+  parents: [SN-07, SN-17]
+  sources: &id001 [DEC-28]
+  verify:
+    method: test
+    by: ['tests/test_swarm_views.py::test_runs_are_drawn_in_the_lane_of_their_swarm_agent', 'tests/test_swarm_views.py::test_the_timeline_has_every_run_with_its_lane_its_end_and_what_started_it',
+      'tests/test_swarm_views.py::test_the_swarm_page_has_the_timeline_the_map_the_team_and_tool_calls_in_the_chatroom']
+  trace: [images/mission-control/runrecord.py, images/mission-control/web/static/swarm.js]
+  findings: [FND-40]
+- id: SWM-104
+  group: Observability
+  phase: 5
+  title: A map of who starts and messages whom
+  statement: The Swarm page shall show, for a chosen window, one row per connection between two agents or an agent and you,
+    in words, with both named and each one's role from its card, what the connection was (asked to research, chatted
+    with, asked Claude Code, wrote on the Board), how often, when last and how many are running now, and list the agents
+    that worked alone with their roles.
+  type: functional
+  priority: should
+  status: implemented
+  parents: [SN-07, SN-17]
+  sources: *id001
+  verify:
+    method: test
+    by: ['tests/test_swarm_views.py::test_the_map_counts_who_starts_whom_and_shows_what_runs_now', 'tests/test_swarm_views.py::test_the_swarm_page_has_the_timeline_the_map_the_team_and_tool_calls_in_the_chatroom',
+      'tests/test_swarm_views.py::test_the_map_says_in_words_who_did_what_to_whom_with_each_agent_s_role']
+  trace: [images/mission-control/runrecord.py, images/mission-control/web/static/swarm.js]
+  findings: [FND-40]
+- id: SWM-105
+  group: Board
+  phase: 5
+  title: Tool calls between agents in the Chatroom
+  statement: 'The Chatroom shall show what agents asked each other through their tools, each question as it was sent and
+    each answer whole (folded behind Show all when long), with its run''s log one tap away.'
+  type: functional
+  priority: should
+  status: implemented
+  parents: [SN-07, SN-17]
+  sources: *id001
+  verify:
+    method: test
+    by: ['tests/test_swarm_views.py::test_tool_calls_between_agents_are_exchanges_with_the_whole_question_and_answer', 'tests/test_swarm_views.py::test_the_swarm_page_has_the_timeline_the_map_the_team_and_tool_calls_in_the_chatroom']
+  trace: [images/mission-control/runrecord.py, images/mission-control/web/static/swarm.js]
+  findings: [FND-40]
+- id: SWM-106
+  group: Observability
+  phase: 5
+  title: A map of the team
+  statement: The Swarm page shall show every agent grouped by its job, with what it is for, how it runs and wakes, what
+    it can reach, whether it reads private data, takes in outside content or can send data out, and its last 7 days of runs.
+  type: functional
+  priority: should
+  status: implemented
+  parents: [SN-07, SN-17]
+  sources: *id001
+  verify:
+    method: test
+    by: ['tests/test_swarm_views.py::test_the_swarm_page_has_the_timeline_the_map_the_team_and_tool_calls_in_the_chatroom']
+  trace: [images/mission-control/web/static/swarm.js, images/swarm/swarm.py]
+  findings: [FND-40]
+- id: SWM-107
+  group: Board
+  phase: 5
+  title: The team room
+  statement: 'The Chatroom shall be one timeline of what the agents do together, drawn from their work so that no agent
+    has to post: tool calls between agents with their answers, work on another agent''s artifact marked as help, Board
+    messages, work on the shared artifacts, the owner''s decisions and messages, and runs no one asked for; filtered by type,
+    agent (two picked: only what passes between them), topic, time and text, with a burst of asks between the same two agents
+    folded into one line.'
+  type: functional
+  priority: should
+  status: implemented
+  parents: [SN-07, SN-17]
+  sources: [DEC-30]
+  rationale: 'The Board had 6 messages in total and only one step into another agent''s lane had ever happened, while a
+    mission asked the scout about 100 times a day through its tools: the teamwork is in the work, so the room is drawn from
+    it. Broadcast group chats (AutoGen) cost every agent every message; shared work (MetaGPT''s message pool, blackboard and
+    stigmergy designs) coordinates with less.'
+  verify:
+    method: test
+    by: ['tests/test_team_room.py::test_lines_mark_help_in_another_agent_s_lane_and_keep_every_text_whole', 'tests/test_team_room.py::test_the_ledger_feed_has_events_and_messages_but_not_the_requirements_mirror',
+      'tests/test_team_room.py::test_the_chatroom_is_the_team_room_with_its_filters']
+  trace: [images/mission-control/teamroom.py, images/swarm/ledger.py, images/swarm/swarm.py, images/mission-control/server.py, images/mission-control/web/static/swarm.js]
+- id: SWM-108
+  group: Run contract
+  phase: 5
+  title: Every agent knows the team
+  statement: 'Every agent''s start-of-run pack shall hold one line per agent of the swarm (its purpose, what it owns, how
+    much of its work is open, when it last wrote to the Ledger, which one is itself) and the lane rule: each agent is
+    responsible for its own lane first and for the team''s goals, and gets involved in another''s lane only with a clear,
+    valuable contribution its owner would not see or has missed. swarm_context with an agent''s id shall show that agent
+    up close (its card and open work) and what it did lately (runs with summaries, its settled work with the reasons, the
+    evidence it gave to others), as far as the asking agent may see it (SWM-67), without a new tool (the surface stays at
+    12). Reading is free; nothing makes an agent contribute.'
+  type: functional
+  priority: should
+  status: implemented
+  parents: [SN-17]
+  sources: [DEC-30]
+  rationale: 'Before this, an agent''s start pack held its own work, messages and lessons but nobody else: it could not
+    know who else works here or what they do (the swarm_context team flag was never used). Discovery by agent cards
+    follows A2A''s Agent Card; the pull tools keep the cost to the agents that need it.'
+  verify:
+    method: test
+    by: ['tests/test_team_roster.py::test_every_run_starts_knowing_the_team_and_the_lane_rule', 'tests/test_team_roster.py::test_team_who_shows_an_agent_s_card_and_open_work_but_not_what_the_asker_may_not_see',
+      'tests/test_team_roster.py::test_team_work_shows_runs_settled_work_and_help_given_to_others', 'tests/test_team_roster.py::test_host_agents_read_the_team_in_their_prompt_and_mcp_agents_have_the_tools']
+  trace: [images/swarm/ledger.py, images/swarm/swarm.py, ops/swarm_client.py]
+- id: SWM-109
+  group: Ledger
+  phase: 5
+  title: Lane discipline
+  statement: 'An agent''s own write to another agent''s artifact (evidence, a link from it, an update) shall be a help: it
+    shall say why the artifact''s owner would not see this (20 characters at least), shall be refused when it repeats what
+    the artifact already holds, and shall fit the agent''s daily budget (3 unless its card says otherwise). The helped
+    agent (in its next run) or the owner (in the Chatroom) shall judge it useful or not, the owner''s word over the agent''s;
+    without a verdict, the work moving on counts as useful and the work dropped as not useful. Each agent''s scorecard shall
+    count its helps, and the Coach shall propose an agent change towards quiet when at least half of 3 or more judged helps
+    were not useful. Nothing makes an agent help; writes by the system, the checker, the owner and the stack''s code for host
+    agents are no helps.'
+  type: functional
+  priority: should
+  status: implemented
+  parents: [SN-17, SN-05]
+  sources: [DEC-30]
+  rationale: 'The owner''s rule: each agent is responsible for its own lane first and for the team''s goals, and gets
+    involved in another''s only with a clear, valuable contribution its owner would not see or has missed. Broadcast
+    coordination costs every agent every message and the MAST study finds a third of multi-agent failures between agents;
+    so a step in is rare, reasoned, new and judged, and an agent whose steps do not help learns to stay out.'
+  verify:
+    method: test
+    by: ['tests/test_lane_discipline.py::test_a_step_into_another_lane_names_why_its_owner_would_not_see_it', 'tests/test_lane_discipline.py::test_each_agent_steps_in_only_a_few_times_a_day',
+      'tests/test_lane_discipline.py::test_the_helped_agent_or_the_owner_judges_and_the_work_s_fate_does_otherwise', 'tests/test_lane_discipline.py::test_the_coach_turns_unhelpful_steps_into_an_agent_change_for_quiet',
+      'tests/test_lane_discipline.py::test_the_room_shows_why_and_lets_the_owner_judge']
+  trace: [images/swarm/ledger.py, images/swarm/swarm.py, ops/coach.py, ops/swarm_client.py, images/mission-control/teamroom.py, images/mission-control/web/static/swarm.js]

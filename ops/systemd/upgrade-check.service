@@ -1,0 +1,7 @@
+[Unit]
+Description=Monthly check for newer releases of pinned components (changes nothing)
+[Service]
+Type=oneshot
+Environment=DOCKER_HOST=unix:///run/user/1000/docker.sock
+WorkingDirectory=/home/owner/ai-stack
+ExecStart=/usr/bin/python3 ops/upgrade_check.py --notify

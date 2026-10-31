@@ -1,0 +1,221 @@
+# Security: sign-in, the lethal-trifecta split, isolation, validation. docs/SECURITY.md describes the model; these are
+# the checkable statements. A change to a boundary updates SECURITY.md and the requirement here in the same commit.
+area: Security
+prefix: SEC
+items:
+  - id: SEC-01
+    title: Tailscale login is the only sign-in
+    statement: Mission Control shall refuse every /api request that lacks the Tailscale-User-Login header.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-06, SN-05]
+    sources: [docs/SECURITY.md, images/mission-control/AGENTS.md]
+    rationale: A local process could forge the header; that is an accepted risk (it could read the files directly).
+    verify: {method: test, by: [tests/test_server.py::test_api_needs_the_tailscale_identity]}
+    trace: [images/mission-control/server.py]
+  - id: SEC-02
+    title: Gates in front of apps with their own login
+    statement: The gates in front of the Hermes dashboard and the code map shall refuse every request without the
+      Tailscale-User-Login header.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-06, SN-05]
+    sources: [config/gate/AGENTS.md]
+    verify: {method: inspection, by: [config/gate/hermes-dashboard.Caddyfile, config/gate/codemap.Caddyfile, smoke/smoke.sh]}
+  - id: SEC-03
+    title: Only the scout reads the web
+    statement: Only the scout profile shall read web pages or web search results directly, and the scout shall have
+      no access to the vault, memory, mail or the AI phone.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05, SN-04]
+    sources: [docs/SECURITY.md, AGENTS.md]
+    verify: {method: test, by: [tests/test_tokens.py::test_agent_profiles_carry_only_what_they_use]}
+    trace: [config/hermes/configure-scout.sh, ops/keys.sh]
+  - id: SEC-04
+    title: No way out for an agent that holds private data
+    statement: An agent that holds private data and reads untrusted content shall have no tool that can send data to
+      a third party without the owner's approval of that action.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05, SN-04]
+    sources: [docs/SECURITY.md]
+    verify: {method: analysis, by: [tests/test_phone.py::test_typing_urls_and_apps_always_ask_even_in_a_time_window, ops/keys.sh, images/phone/phone.py, docs/SECURITY.md]}
+    findings: [FND-02, FND-22]
+  - id: SEC-05
+    title: Untrusted content stays labelled
+    statement: Web research results, mail content and page text shall reach an agent wrapped and labelled as
+      untrusted data.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-05]
+    sources: [docs/SECURITY.md]
+    verify: {method: test, by: [tests/test_mail.py::test_search_is_marked_untrusted_and_flags_protected]}
+    trace: [images/research/server.py, images/mail/mail.py]
+  - id: SEC-06
+    title: Isolated readers
+    statement: The page reader, the scout's browser and the price watch shall run behind an egress firewall that
+      blocks private, LAN and Tailscale ranges, and the desk shall refuse private and loopback URLs.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05, SN-04]
+    sources: [images/fetch/AGENTS.md, images/browser/AGENTS.md, images/pricewatch/AGENTS.md]
+    verify: {method: test, by: [tests/test_desk.py::test_public_url_refuses_private_targets]}
+    trace: [images/fetch/entrypoint.sh, images/browser/entrypoint.sh, images/pricewatch/entrypoint.sh, images/desk/desk.py]
+  - id: SEC-07
+    title: One key per agent
+    statement: Each agent shall call the gateway with its own virtual key, limited to its own models, daily budget and
+      MCP servers.
+    type: constraint
+    priority: must
+    status: partial
+    parents: [SN-05, SN-07]
+    sources: [AGENTS.md, docs/SECURITY.md]
+    gap: Every background job has its own key since 2026-10-29; mission runs of every type (task, shopping,
+      cleanup) still share vk-mission, so two runs at the same time mix in cost attribution. The swarm registry
+      gives every card its own key (SWM-23).
+    verify: {method: test, by: [tests/test_keys_policy.py::test_only_the_creation_script_writes_the_keys_table, tests/test_keys_policy.py::test_update_keys_only_reads_the_table, tests/test_keys_policy.py::test_background_jobs_use_their_own_keys]}
+    trace: [ops/keys.sh, ops/update-keys.py]
+    findings: [FND-03]
+  - id: SEC-08
+    title: The builder is sealed
+    statement: The builder container shall see only /work, hold no vault, secrets, SSH keys or Docker socket, reach
+      only the gateway and its package proxy, and be unable to push or deploy.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05, SN-08]
+    sources: [images/builder/AGENTS.md, DEC-03]
+    verify: {method: inspection, by: [compose/apps.yaml, images/builder/AGENTS.md]}
+  - id: SEC-09
+    title: Package proxies are allow-lists
+    statement: Sandboxes shall reach package registries only through the package proxy's allow-list, and the
+      builder's list shall add only api.anthropic.com.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05]
+    sources: [images/pkgproxy/AGENTS.md]
+    verify: {method: inspection, by: [images/pkgproxy/allow.txt, images/pkgproxy/allow-builder.txt]}
+  - id: SEC-10
+    title: The Claude token lives only per run
+    statement: The runner shall pass the Claude Code token into the builder only for the run that needs it, never as
+      part of the container's environment or files.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05, CST-06]
+    sources: [docs/SECURITY.md]
+    verify: {method: inspection, by: [ops/builds.py, ops/claude_tasks.py]}
+  - id: SEC-11
+    title: The runner validates every request
+    statement: The runner shall execute a request from the app or an MCP tool only after validating its action
+      against an allow-list and its fields (slugs, schedules, sizes, ids), and refuse anything else.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-05]
+    sources: [AGENTS.md, ops/AGENTS.md]
+    verify: {method: test, by: [tests/test_runner.py::test_create_and_unknown_actions_are_validated, tests/test_server.py::test_requests_go_to_the_inbox_and_unknown_actions_are_refused, tests/test_crew.py::test_crew_actions_are_validated, tests/test_improve.py::test_requests_are_validated, tests/test_repos.py::test_requests_are_validated, tests/test_claude_tasks.py::test_requests_are_validated]}
+    trace: [ops/missions.py]
+  - id: SEC-12
+    title: The app never executes
+    statement: Mission Control shall not start jobs itself; it shall hand every action to the runner through the inbox,
+      except the documented exceptions (chat with Hermes, the runtime ingest, the owner's answers to phone and mail
+      approvals and grants written to their shared folders, push subscriptions, the app's own error reports), which
+      AGENTS.md, docs/MISSION-CONTROL.md and docs/API.md shall list.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05]
+    sources: [AGENTS.md, docs/MISSION-CONTROL.md, docs/API.md]
+    verify: {method: test, by: [tests/test_docs.py::test_the_readme_and_the_index_point_at_what_is_current]}
+    trace: [images/mission-control/server.py, images/mail/AGENTS.md, images/phone/AGENTS.md]
+    findings: [FND-20]
+  - id: SEC-13
+    title: Paths stay inside their roots
+    statement: Paths taken from requests shall be resolved through the existing guards and refused when they leave
+      the vault, a wiki root or a repository.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-05]
+    sources: [images/mission-control/AGENTS.md]
+    verify: {method: test, by: [tests/test_server.py::test_vault_files_stay_inside_the_vault, tests/test_repos.py::test_source_snippets_stay_inside_the_repo]}
+    trace: [images/mission-control/server.py, ops/repos.py]
+  - id: SEC-14
+    title: E-mail only to the owner
+    statement: Every e-mail the stack sends shall go to the owner's own address (MAIL_TO) and to no one else.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05]
+    sources: [images/mission-control/guide/07-delivery.md]
+    verify: {method: inspection, by: [ops/mission_extras.py]}
+    trace: [ops/mission_extras.py]
+  - id: SEC-15
+    title: The repo's own security rules run on every change
+    statement: The checks shall run Semgrep with the repo's rules (no public ports, no Docker socket, no secrets in
+      code, dangerous patterns) and prove with fixtures that the rules still catch what they should.
+    type: quality
+    priority: must
+    status: implemented
+    parents: [SN-05, SN-15]
+    sources: [AGENTS.md]
+    verify: {method: inspection, by: [ops/check.sh, .semgrep.yml, ops/semgrep_selftest.py]}
+  - id: SEC-16
+    title: Evidence is redacted
+    statement: Logs, journals and records gathered as evidence for a Claude task or the health doctor shall have keys,
+      tokens and passwords blanked before any model sees them.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-05, CST-06]
+    sources: [ops/doctor.py]
+    verify: {method: test, by: [tests/test_doctor.py::test_evidence_is_redacted, tests/test_claude_tasks.py::test_evidence_for_reads_each_ref_and_redacts]}
+    trace: [ops/doctor.py, ops/claude_tasks.py]
+  - id: SEC-17
+    title: Personal exports never leak
+    statement: The export converters shall never print message contents and shall name output files from dates and
+      subjects, not addresses.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-04]
+    sources: [converters/AGENTS.md]
+    verify: {method: inspection, by: [converters/bulk_convert.py]}
+  - id: SEC-18
+    title: Providers that see data are named
+    statement: The guide and README shall name every provider that receives data (OpenAI through the ChatGPT
+      subscription, Anthropic through Claude Code) and what each one sees.
+    type: quality
+    priority: must
+    status: implemented
+    parents: [SN-04]
+    sources: [DEC-16]
+    verify: {method: inspection, by: [README.md, images/mission-control/guide/01-welcome.md, images/mission-control/guide/14-safety.md]}
+    findings: [FND-05]
+  - id: SEC-19
+    title: The public snapshot holds nothing personal
+    statement: make publish shall push the committed stack to the public GitHub repository only as a snapshot without
+      the private history, in which every identifier of the private map outside the repository is replaced and the
+      encrypted secrets are left out with an example naming their values, and only when a scan finds no identifier in
+      any case, e-mail address, LAN or Tailscale address, tailnet name, key or token outside the allowed placeholders,
+      and the snapshot's own tests pass.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-04]
+    sources: [docs/PUBLISHING.md]
+    findings: [FND-75]
+    verify: {method: test, by: [tests/test_publish.py::test_terms_are_replaced_as_whole_words_and_only_a_capitalised_sentence_start_is_capitalised,
+      tests/test_publish.py::test_the_scan_names_every_leftover_without_printing_the_term_and_lets_placeholders_pass,
+      tests/test_publish.py::test_the_snapshot_leaves_out_the_secrets_and_follows_the_public_text,
+      tests/test_publish.py::test_a_snapshot_with_a_leftover_runs_no_tests_and_pushes_nothing]}
+    trace: [ops/publish.py, ops/private-terms.sh, Makefile]

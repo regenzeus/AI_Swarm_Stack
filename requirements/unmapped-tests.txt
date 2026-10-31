@@ -1,0 +1,3 @@
+# Unit tests that no requirement claims yet (tests/<file>::<test>), one per line. This list may only shrink:
+# ops/req.py check fails on a test that is neither claimed nor listed here, and on a listed test that is now claimed
+# or no longer exists. Claim a test by adding it to a requirement's verify.by.

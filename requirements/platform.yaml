@@ -1,0 +1,261 @@
+# Platform: hosts, services, deploys, backups, recovery and upgrades.
+area: Platform
+prefix: PLT
+items:
+  - id: PLT-01
+    title: Every service has limits and rotated logs
+    statement: Every compose service shall have a mem_limit and the shared json-file logging block (10 MB, 3 files).
+    type: quality
+    priority: must
+    status: implemented
+    parents: [CST-01, CST-14]
+    sources: [compose/AGENTS.md]
+    verify: {method: inspection, by: [compose/core.yaml, compose/apps.yaml, ops/ci-compose-check.sh]}
+    trace: [compose/core.yaml, compose/apps.yaml]
+  - id: PLT-02
+    title: Least network per service
+    statement: Each compose service shall join only the networks it needs; internal networks shall be internal, and
+      only services that call a provider, a registry proxy or the web reader networks shall reach the internet.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05, CST-04]
+    sources: [compose/AGENTS.md]
+    verify: {method: inspection, by: [compose/apps.yaml, compose/core.yaml]}
+  - id: PLT-03
+    title: No Docker socket in containers
+    statement: No container shall mount the Docker socket, and no service shall run privileged.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05]
+    sources: [compose/AGENTS.md, AGENTS.md]
+    verify: {method: inspection, by: [.semgrep.yml, ops/semgrep_selftest.py, tests/semgrep]}
+  - id: PLT-04
+    title: Services come back by themselves
+    statement: When a service crashes, the PC reboots or WSL restarts, the stack shall restart its services and
+      timers without the owner's action.
+    type: quality
+    priority: must
+    status: implemented
+    parents: [SN-13]
+    sources: [images/mission-control/guide/12-stack-page.md]
+    verify: {method: inspection, by: [compose/apps.yaml, ops/systemd/missions.service, ops/windows/host-setup.ps1]}
+  - id: PLT-05
+    title: WSL never idles out
+    statement: The WSL VM shall not shut down while idle (idle timeouts off, a keep-alive task at logon).
+    type: quality
+    priority: must
+    status: implemented
+    parents: [SN-13]
+    sources: [ops/windows/AGENTS.md]
+    verify: {method: inspection, by: [ops/windows/host-setup.ps1]}
+  - id: PLT-06
+    title: Hermes sees its tools after a boot
+    statement: After a boot, the stack-ready job shall wait until the gateway lists every expected MCP tool for
+      vk-main and restart Hermes once if Hermes started before them.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-13]
+    sources: [ops/stack_ready.py]
+    verify: {method: inspection, by: [ops/stack_ready.py, ops/systemd/stack-ready.timer]}
+    trace: [ops/stack_ready.py]
+  - id: PLT-07
+    title: Self-healing WSL disk
+    statement: A Windows task shall check the WSL disk at logon and every 15 minutes and repair file-system errors
+      without administrator rights.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-13, CST-03]
+    sources: [ops/windows/AGENTS.md]
+    verify: {method: inspection, by: [ops/windows/disk-heal.ps1, ops/disk-state.sh]}
+    trace: [ops/windows/disk-heal.ps1]
+  - id: PLT-08
+    title: Deploy rebuilds what changed
+    statement: When a change is deployed, ops/deploy.py shall rebuild the changed images, recreate their services,
+      reconfigure the Hermes profiles, install changed units (enabling a timer it brings for the first time), restart the runner when one of its modules changed
+      and the swarm service when the agent cards changed,
+      and then run the health checks and the smoke test.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-08, SN-13]
+    sources: [docs/MISSION-CONTROL.md]
+    verify: {method: test, by: [tests/test_builds.py::test_approved_build_merges_deploys_or_rolls_back, tests/test_cleanup.py::test_deploy_restarts_the_runner_for_any_of_its_modules,
+      tests/test_deploy.py::test_a_new_timer_is_enabled_with_its_first_deploy_and_a_known_one_keeps_its_state,
+      tests/test_deploy.py::test_a_card_change_restarts_the_swarm_service_so_the_agents_get_it]}
+    findings: [FND-37]
+    trace: [ops/deploy.py]
+  - id: PLT-09
+    title: A failed deploy rolls back
+    statement: If the health checks or the smoke test fail after a deploy, then the stack shall revert the merge,
+      push the revert, and deploy the previous version.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-05, SN-13]
+    sources: [docs/MISSION-CONTROL.md, DEC-03]
+    verify: {method: test, by: [tests/test_builds.py::test_approved_build_merges_deploys_or_rolls_back]}
+    trace: [ops/builds.py, ops/deploy.py]
+  - id: PLT-10
+    title: One deploy at a time
+    statement: ops/deploy.py shall take an exclusive lock, so that two deploys never overlap, and a deploy that cannot
+      get it within 40 minutes shall give up without changing the stack.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-13]
+    sources: [docs/DOGFOOD.md]
+    verify: {method: test, by: [tests/test_deploy.py::test_a_second_deploy_waits_and_then_gives_up, tests/test_deploy.py::test_the_lock_is_held_across_processes]}
+    trace: [ops/deploy.py]
+    findings: [FND-04]
+  - id: PLT-11
+    title: The smoke test spends nothing
+    statement: The smoke test shall check every wiring boundary (gateway, key model grants and refusals, traces,
+      Forgejo reach, gates, no Windows drive auto-mount) using only the local smoke model, and exit non-zero on any
+      failure.
+    type: quality
+    priority: must
+    status: implemented
+    parents: [SN-03, SN-13]
+    sources: [smoke/AGENTS.md]
+    verify: {method: inspection, by: [smoke/smoke.sh]}
+    trace: [smoke/smoke.sh]
+  - id: PLT-12
+    title: Nightly encrypted backup
+    statement: Every night at 03:30 the backup job shall write an age-encrypted archive of the stack's data and
+      configuration to the NAS and keep the newest 14.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-09]
+    sources: [README.md]
+    verify: {method: inspection, by: [ops/backup.sh, ops/systemd/backup.timer]}
+    trace: [ops/backup.sh]
+  - id: PLT-13
+    title: An unreadable file does not stop the backup
+    statement: If a part of /srv/ai cannot be read by the backup user (the AI phone's ADB key), then the backup shall
+      skip it and still complete.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-09, SN-13]
+    sources: ["incident 2026-10-29: backup failed on /srv/ai/phone/home"]
+    verify: {method: inspection, by: [ops/backup.sh]}
+  - id: PLT-14
+    title: Off-site copy
+    statement: A Windows task shall copy the newest encrypted backup to OneDrive daily and at logon and keep the
+      newest 7 copies.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-09]
+    sources: [DEC-11]
+    verify: {method: inspection, by: [ops/windows/offsite-copy.ps1]}
+  - id: PLT-15
+    title: The backups are proven to restore
+    statement: Every week the restore drill shall restore the newest backup into a scratch location, compare it, and
+      change nothing in the running stack; when no drill has passed for 8 days, the health board shall raise an alert
+      on the Restore drill naming the newest backup that is unproven.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-09]
+    sources: [README.md]
+    findings: [FND-66]
+    verify: {method: test, by: [tests/test_recoverable.py::test_no_drill_for_eight_days_is_an_alert_and_a_recent_one_is_quiet]}
+    trace: [ops/restore.sh, ops/restore_check.py, ops/systemd/restore-drill.timer, ops/crew.py]
+  - id: PLT-16
+    title: Key copies off the PC
+    statement: The age key shall have copies on the NAS, on F:\AI-backup and in a separate OneDrive folder.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-09]
+    sources: [DEC-11, docs/SECURITY.md]
+    verify: {method: inspection, by: [docs/SECURITY.md]}
+  - id: PLT-17
+    title: A rehearsed move to a new PC
+    statement: NEW-MACHINE.md and the rehearsal shall bring up every service, port, scheduled task and Hermes profile
+      of the running stack on a new PC.
+    type: functional
+    priority: should
+    status: partial
+    parents: [SN-09]
+    sources: [NEW-MACHINE.md, docs/REVIEW-2026-10-27.md]
+    gap: The rehearsal misses parts added after 2026-10-27 (review item 8); the AI phone, Gmail, House and the crew
+      units were added since and are not checked by the rehearsal.
+    verify: {method: test, by: [tests/test_new_machine_docs.py::test_required_setup_topics, tests/test_new_machine_docs.py::test_rehearsal_checklist_keeps_manual_steps_isolated, tests/test_new_machine_docs.py::test_documented_builder_default_matches_configuration]}
+    trace: [NEW-MACHINE.md, ops/new-machine.sh, ops/windows/rehearse-new-pc.ps1, compose/rehearsal.yaml]
+  - id: PLT-18
+    title: Rootless Docker networking stays usable
+    statement: Rootless Docker shall run in classic network-namespace mode (the detach mode fails on the WSL 6.18
+      kernel), installed by the setup scripts as a systemd drop-in.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-13]
+    sources: ["incident 2026-10-29: containers lost the internet"]
+    verify: {method: inspection, by: [ops/systemd/docker-no-detach-netns.conf, ops/new-machine.sh]}
+  - id: PLT-19
+    title: Newer versions are reported, never applied
+    statement: Every month the upgrade check shall report pinned components that have newer releases and change
+      nothing.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-08, CST-08]
+    sources: [UPGRADE.md]
+    verify: {method: inspection, by: [ops/upgrade_check.py, ops/systemd/upgrade-check.timer]}
+  - id: PLT-20
+    title: The lock file matches what runs
+    statement: versions.lock shall record, per container, the image and digest that runs (marking a container that runs
+      another build than its tag names), and the health board shall note, every 10 minutes, a container on another
+      build than its tag and a running image that the lock file lacks.
+    type: quality
+    priority: should
+    status: implemented
+    parents: [CST-08]
+    sources: [docs/REVIEW-2026-10-27.md, docs/REVIEW-2026-10-30.md]
+    findings: [FND-67]
+    verify: {method: test, by: [tests/test_recoverable.py::test_a_container_on_another_build_than_its_tag_and_an_unlocked_image_are_named]}
+    trace: [versions.lock, Makefile, ops/crew.py]
+  - id: PLT-21
+    title: Growing files are pruned
+    statement: The stack shall prune event logs, run logs, build logs and diffs, chat uploads and shares older than
+      90 days (shares after 14 days), keeping run summaries for good.
+    type: quality
+    priority: should
+    status: partial
+    parents: [SN-13, CST-14]
+    sources: [docs/REVIEW-2026-10-27.md]
+    gap: The runtime record drops full events after 90 days and shares go after 14 days; events.jsonl, run and build
+      logs, chats and uploads are not pruned (review item 11).
+    verify: {method: test, by: [tests/test_runtime.py::test_touches_refusals_connections_and_retention]}
+    trace: [images/mission-control/runrecord.py, images/mission-control/server.py]
+  - id: PLT-22
+    title: Home Assistant deploys host-side
+    statement: make ha-deploy shall deploy or upgrade Home Assistant on the NAS from nas/homeassistant, seed its
+      configuration only when the NAS has none, and wait until it answers.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-11, CST-05]
+    sources: [DEC-07]
+    verify: {method: inspection, by: [ops/deploy-ha.sh, nas/homeassistant/compose.yaml]}
+    trace: [ops/deploy-ha.sh]
+  - id: PLT-23
+    title: No container is left cut off from the network it shares
+    statement: When a container that shares another container's network (network_mode service:) is left on the
+      network of a container that no longer runs, the health board shall raise an alert on This PC naming its service
+      and the command that recreates it, once until it is recreated.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-13]
+    sources: [docs/REVIEW-2026-10-30.md]
+    findings: [FND-74]
+    verify: {method: test, by: [tests/test_recoverable.py::test_a_container_cut_off_from_the_network_it_shares_is_an_alert_until_it_is_recreated]}
+    trace: [ops/crew.py]

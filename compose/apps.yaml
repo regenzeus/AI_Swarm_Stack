@@ -1,0 +1,457 @@
+# MVP 1: Hermes (main profile) and Open WebUI as its phone/desktop frontend.
+# Used together with core.yaml (see Makefile). Neither publishes beyond 127.0.0.1;
+# the phone reaches Open WebUI through `tailscale serve` on Windows.
+
+networks:
+  codeui: {}         # only the OpenCode port forwarder: publishes the web UI port
+  webonly: {}        # page reader (fetch) + LiteLLM only: internet, but no internal services
+  ui: {}             # Open WebUI only: lets Docker publish its port (internal networks cannot)
+  memnet:            # long-term memory: Hermes, LiteLLM, Hindsight and its database only
+    internal: true
+  pkg:               # OpenCode <-> package-registry proxy only
+    internal: true
+  bpkg:              # builder <-> its own registry proxy only (also lets the Claude Code engine reach api.anthropic.com)
+    internal: true
+  mcnet:             # Mission Control <-> LiteLLM (its MCP tools) and Hermes (chat) only
+    internal: true
+  phonemcp:          # the AI phone's MCP tools <-> LiteLLM only
+    internal: true
+  phonenet: {}       # the AI phone's route to its phone over Tailscale (its firewall allows that one IP only)
+  mailmcp:           # the Gmail connector's MCP tools <-> LiteLLM only
+    internal: true
+  swarmmcp:          # the Swarm service <-> LiteLLM (MCP tools) and Mission Control (its read-only door)
+    internal: true
+  mailnet: {}        # the Gmail connector's route to imap.gmail.com (its firewall allows IMAPS only)
+  pricenet: {}       # the price watch (changedetection.io) only: internet, its firewall rejects private ranges
+  mcui: {}           # Mission Control only: port publishing + Web Push to the phone's push service
+
+volumes:
+  hermes-home: {}       # HERMES_HOME: config, MEMORY.md/USER.md, sessions, skills
+  openwebui: {}
+  qmd-data: {}
+  opencode-cache: {}    # provider packages fetched once at first start
+  hindsight-pg: {}      # long-term memory (Hindsight bank: facts, entities, observations); backed up
+  ci-runner:            # Forgejo runner registration + job workdirs
+    name: aistack_ci-runner
+  hindsight-models:     # multilingual embedding + reranker models (rebuildable: ops/hindsight-models.sh)
+    name: aistack_hindsight-models
+  opencode-data: {}     # OpenCode sessions
+  builder-home: {}      # the builder's own Hermes home (config, sessions); no link to the main Hermes          # qmd index + downloaded search models (rebuildable)
+
+services:
+  hermes:
+    image: ${HERMES_IMAGE}
+    restart: unless-stopped
+    depends_on:
+      litellm: { condition: service_healthy }
+    command: ["hermes", "gateway", "run"]
+    environment:
+      LITELLM_API_KEY: ${VK_MAIN:?run via make}        # LiteLLM virtual key, budget-capped
+      LITELLM_CURATOR_KEY: ${VK_CURATOR:?run via make} # curator profile's own key
+      LITELLM_SCOUT_KEY: ${VK_SCOUT:?run via make}     # scout profile's own key (web research)
+      SCOUT_API_KEY: ${SCOUT_API_KEY:?run via make}     # scout's /p/scout/ API route key
+      HERMES_WRITE_SAFE_ROOT: /opt/data:/vault          # file tools may write only here
+      API_SERVER_ENABLED: "true"
+      API_SERVER_HOST: 0.0.0.0                          # container network only; published to 127.0.0.1
+      API_SERVER_PORT: "8642"
+      API_SERVER_KEY: ${API_SERVER_KEY:?run via make}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_ALLOWED_USERS: ${TELEGRAM_ALLOWED_USERS:-}
+      TELEGRAM_HOME_CHANNEL: ${TELEGRAM_ALLOWED_USERS:-}   # reminders and approvals go to your private chat
+    volumes:
+      - hermes-home:/opt/data
+      - ../config/hermes:/config:ro
+      - /srv/vault:/vault                # Obsidian vault (Windows C:/AI/vault); curator writes wiki/ and raw/
+    ports: ["127.0.0.1:8642:8642", "127.0.0.1:9119:9120"]   # 9119: the Hermes dashboard, through its gate (they share this network namespace)
+    networks: [backend, edge, memnet, mcnet]   # backend: LiteLLM; edge: Telegram bot API only (no web tools enabled); memnet: Hindsight; mcnet: Mission Control chat
+    mem_limit: 2g
+    logging: { driver: json-file, options: { max-size: "10m", max-file: "3" } }
+
+  openwebui:
+    image: ${OPENWEBUI_IMAGE}
+    restart: unless-stopped
+    depends_on: [hermes]
+    environment:
+      WEBUI_SECRET_KEY: ${WEBUI_SECRET_KEY:?run via make}
+      ENABLE_PERSISTENT_CONFIG: "false"          # settings below always win over the admin UI
+      OPENAI_API_BASE_URL: http://hermes:8642/v1
+      OPENAI_API_KEY: ${API_SERVER_KEY}
+      ENABLE_OLLAMA_API: "false"
+      ENABLE_SIGNUP: ${OPENWEBUI_SIGNUP:-false}  # true only while you create your account
+      # Single sign-in: tailscale serve adds your Tailscale login; Open WebUI signs you in as the account with that
+      # e-mail (yours: the same address). Local spoofing of the header is an accepted risk (docs/SECURITY.md).
+      WEBUI_AUTH_TRUSTED_EMAIL_HEADER: Tailscale-User-Login
+      # Pure frontend: no memories, no RAG, no tools, no background generation (each would call a model)
+      ENABLE_MEMORIES: "false"
+      USER_PERMISSIONS_FEATURES_MEMORIES: "false"
+      BYPASS_EMBEDDING_AND_RETRIEVAL: "true"
+      RAG_EMBEDDING_MODEL_AUTO_UPDATE: "false"
+      RAG_RERANKING_MODEL_AUTO_UPDATE: "false"
+      ENABLE_WEB_SEARCH: "false"
+      ENABLE_CODE_INTERPRETER: "false"
+      ENABLE_IMAGE_GENERATION: "false"
+      ENABLE_COMMUNITY_SHARING: "false"
+      ENABLE_TITLE_GENERATION: "false"
+      ENABLE_TAGS_GENERATION: "false"
+      ENABLE_FOLLOW_UP_GENERATION: "false"
+      ENABLE_SEARCH_QUERY_GENERATION: "false"
+      ENABLE_RETRIEVAL_QUERY_GENERATION: "false"
+      ENABLE_AUTOCOMPLETE_GENERATION: "false"
+      ENABLE_VERSION_UPDATE_CHECK: "false"
+      OFFLINE_MODE: "true"
+    volumes: [openwebui:/app/backend/data]
+    ports: ["127.0.0.1:3080:8080"]
+    networks: [backend, ui]         # backend: Hermes. ui: port publishing; offline mode, no web features
+    mem_limit: 1g
+    logging: { driver: json-file, options: { max-size: "10m", max-file: "3" } }
+
+  qmd:
+    # Local hybrid search + MCP over the vault. Its HTTP MCP endpoint has no auth: internal network only.
+    image: aistack/qmd:2.8.3
+    restart: unless-stopped
+    volumes:
+      - /srv/vault:/vault:ro
+      - /srv/ai/bulk:/bulk:ro            # converted mail + chats (search-only)
+      - /srv/ai/code-docs:/code-docs:ro  # Understand Anything digests of ~/code repos (ops/understand.sh)
+      - /srv/ai/specs:/specs:ro          # specifications, one page per section (spec/ingest.py)
+      - qmd-data:/data
+    networks: [backend]             # no internet: models are in qmd-data (connect edge only to re-download)
+    mem_limit: 3g
+    logging: { driver: json-file, options: { max-size: "10m", max-file: "3" } }
+
+  fetch:
+    # Scout's page reader (URL -> markdown). Isolated: on "webonly" it reaches the internet and LiteLLM,
+    # nothing else, so prompt-injected fetches cannot hit qmd, Phoenix or Hermes (SSRF).
+    image: aistack/fetch:2
+    restart: unless-stopped
+    environment:
+      SEC_CONTACT: ${SEC_CONTACT:-}   # SEC's fair-access policy wants a contact in the User-Agent; sent to sec.gov only
+    networks: [webonly]
+    cap_add: [NET_ADMIN]           # only to install its own egress firewall at start; dropped before serving
+    read_only: true
+    tmpfs: [/tmp]
+    mem_limit: 256m
+    logging: { driver: json-file, options: { max-size: "10m", max-file: "3" } }
+
+  browser:
+    # The scout's browser (images/browser): Playwright MCP (headless Chromium) behind a guard that only looks:
+    # open, look, click, search, back; no logins, carts, checkout or payment. Isolated like fetch: "webonly" +
+    # an egress firewall against private/LAN/Tailscale ranges. Granted to vk-scout only (no private data there).
+    image: aistack/browser:1
+    restart: unless-stopped
+    networks: [webonly]
+    cap_add: [NET_ADMIN]           # only to install its own egress firewall at start; dropped before serving
+    read_only: true
+    tmpfs: [/tmp, /home/browser]
+    shm_size: 256m                 # Chromium
+    mem_limit: 1g
+    logging: { driver: json-file, options: { max-size: "10m", max-file: "3" } }
+
+  pricewatch:
+    # The shopping agents' price watch (images/pricewatch): changedetection.io (Apache-2.0, pinned in versions.env)
+    # re-reads the offer pages of open purchase proposals. Sealed like the browser: its own network, an egress
+    # firewall against private/LAN/Tailscale ranges, no capabilities, no notifications configured (no Telegram or
+    # apprise): the runner reads its API on 127.0.0.1:8095 (ops/pricewatch.py) and reports. Plain HTTP fetcher.
+    image: aistack/pricewatch:0.60.8
+    restart: unless-stopped
+    environment:
+      FETCH_WORKERS: "2"
+      LOGGER_LEVEL: WARNING
+      DISABLE_VERSION_CHECK: "true"
+      HIDE_REFERER: "true"
+    volumes: ["/srv/ai/pricewatch:/datastore"]   # watches, history, its API key (read by the runner)
+    ports: ["127.0.0.1:8095:5000"]
+    networks: [pricenet]
+    cap_add: [NET_ADMIN]           # only to install its own egress firewall at start; dropped before serving
+    read_only: true
+    tmpfs: [/tmp]
+    mem_limit: 384m
+    logging: { driver: json-file, options: { max-size: "10m", max-file: "3" } }
+
+  research:
+    # MCP tool research(question): runs the scout profile as an agent via Hermes' /p/scout/ API route.
+    # Internal only; reached through the LiteLLM MCP gateway (vk-main). Returns answers labelled untrusted.
+    image: aistack/research:3
+    restart: unless-stopped
+    environment:
+      SCOUT_API_KEY: ${SCOUT_API_KEY:?run via make}
+      LITELLM_GUARD_KEY: ${VK_GUARD:?run via make}      # privacy check of outgoing questions (no tools)
+    volumes:
+      - /srv/ai/research-terms:/terms:ro              # private identifiers, ops/private-terms.sh
+      - ../prompts:/prompts:ro                        # its brief and the privacy check's prompt (MEM-13), read at each call
+    networks: [backend]
+    read_only: true
+    mem_limit: 256m
+    logging: { driver: json-file, options: { max-size: "10m", max-file: "3" } }
+
+  graphify:
+    # Code knowledge graph (merged across ~/code repos, kept current by ops/graphify-sync.sh) as MCP over HTTP.
+    image: aistack/graphify:0.9.85
+    restart: unless-stopped
+    command: ["python", "-m", "graphify.serve", "/code/.graphify/merged-graph.json", "--transport", "http", "--host", "0.0.0.0", "--port", "8000"]
+    volumes: ["/home/owner/code:/code:ro"]
+    networks: [backend]
+    read_only: true
+    tmpfs: [/tmp]
+    mem_limit: 1g
+    logging: { driver: json-file, options: { max-size: "10m", max-file: "3" } }
+
+  opencode:
+    # Coding agent. Internal network only: models via LiteLLM (vk-code), code graph via MCP, no internet.
+    # Shell commands need your approval in the UI; pushes and deploys are host-side commands.
+    image: aistack/opencode:1.19.4-ua1
+    restart: unless-stopped
+    command: ["opencode", "web", "--hostname", "0.0.0.0", "--port", "4096"]
+    environment:
+      LITELLM_API_KEY: ${VK_CODE:?run via make}
+      # Home = the code folder, so the web UI's folder picker shows your repos (and new folders persist).
+      HOME: /code
+      XDG_CONFIG_HOME: /root/.config
+      XDG_CACHE_HOME: /root/.cache
+      XDG_DATA_HOME: /root/.local/share
+      # npm/pip installs go through pkgproxy (npm + PyPI registries only); everything internal stays direct.
+      HTTP_PROXY: http://pkgproxy:8888
+      HTTPS_PROXY: http://pkgproxy:8888
+      NO_PROXY: litellm,graphify,localhost,127.0.0.1
+      # No OpenCode password: only your tailnet devices can reach it (tailscale serve) plus local processes.
+      # To add one back: OPENCODE_SERVER_PASSWORD: ${OPENCODE_SERVER_PASSWORD}   (user: opencode)
+    volumes:
+      - /home/owner/code:/code
+      - opencode-cache:/root/.cache/opencode
+      - opencode-data:/root/.local/share/opencode
+    networks: [backend, pkg]
+    mem_limit: 2g
+    logging: { driver: json-file, options: { max-size: "10m", max-file: "3" } }
+
+  hindsight:
+    # Long-term memory server (Hindsight, self-hosted "local external" mode). The hindsight plugin in Hermes
+    # stores every turn here; facts, entities and observations are extracted by gpt-sub-fast through LiteLLM
+    # (vk-hindsight, 2 calls at a time). Embeddings and reranker run locally in this container. Only Hermes and
+    # LiteLLM can reach it (memnet); no internet.
+    image: ghcr.io/vectorize-io/hindsight-api:1.1.0
+    restart: unless-stopped
+    depends_on: [hindsight-db]
+    environment:
+      HINDSIGHT_API_DATABASE_URL: postgresql://hindsight:${HINDSIGHT_DB_PASSWORD:?run via make}@hindsight-db:5432/hindsight
+      HINDSIGHT_API_LLM_PROVIDER: openai
+      HINDSIGHT_API_LLM_BASE_URL: http://litellm:4000/v1
+      HINDSIGHT_API_LLM_API_KEY: ${VK_HINDSIGHT:?run via make}
+      HINDSIGHT_API_LLM_MODEL: gpt-sub-fast
+      HINDSIGHT_API_LLM_MAX_CONCURRENT: "2"
+      HINDSIGHT_API_LLM_PROMPT_CACHE_ENABLED: "false"
+      HINDSIGHT_API_WORKER_ID: hindsight             # stable id, so queued jobs survive restarts
+      # What to keep, and what never to keep (the curated MEMORY.md/USER.md core keeps its approval gate).
+      HINDSIGHT_API_RETAIN_MISSION: >-
+        Remember what helps a personal assistant serve the owner over time: his projects, decisions, preferences,
+        plans, tools, people he works with and what was concluded. Never store passwords, API keys, tokens,
+        account or ID numbers, health or medical details, or financial details; skip test or benchmark questions.
+      HINDSIGHT_API_ENABLE_BANK_CONFIG_API: "false"  # config comes from here only, not from API clients
+      HINDSIGHT_API_ENABLE_DRY_RUN_EXTRACT: "false"
+      # German + English: multilingual models instead of the English-only defaults, downloaded once into
+      # hindsight-models (ops/hindsight-models.sh); offline at runtime.
+      HINDSIGHT_API_EMBEDDINGS_LOCAL_MODEL: sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+      HINDSIGHT_API_RERANKER_LOCAL_MODEL: cross-encoder/mmarco-mMiniLMv2-L12-H384-v1
+      HF_HOME: /models
+      HF_HUB_OFFLINE: "1"
+      TRANSFORMERS_OFFLINE: "1"
+    volumes: [hindsight-models:/models]
+    networks: [memnet]
+    mem_limit: 3g
+    logging: { driver: json-file, options: { max-size: "10m", max-file: "3" } }
+
+  hindsight-db:
+    image: pgvector/pgvector:pg17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: hindsight
+      POSTGRES_DB: hindsight
+      POSTGRES_PASSWORD: ${HINDSIGHT_DB_PASSWORD:?run via make}
+    volumes: [hindsight-pg:/var/lib/postgresql/data]
+    networks: [memnet]
+    mem_limit: 512m
+    logging: { driver: json-file, options: { max-size: "10m", max-file: "3" } }
+
+  ci-runner:
+    # Forgejo Actions runner (CI for ai-stack, TestRepo, ...). Jobs run inside this container: no Docker socket,
+    # no stack network, no secrets; registered once with a token from the NAS (see images/ci-runner).
+    image: aistack/ci-runner:13.2.0
+    restart: unless-stopped
+    volumes: [ci-runner:/data]
+    networks: [edge]
+    mem_limit: 1g
+    logging: { driver: json-file, options: { max-size: "10m", max-file: "3" } }
+
+  pkgproxy:
+    # Package registries for OpenCode (npm, PyPI) and nothing else: images/pkgproxy/allow.txt.
+    image: aistack/pkgproxy:1
+    restart: unless-stopped
+    networks: [pkg, edge]
+    read_only: true
+    tmpfs: [/tmp, /var/run/tinyproxy, /var/log/tinyproxy]
+    mem_limit: 64m
+    logging: { driver: json-file, options: { max-size: "10m", max-file: "3" } }
+
+  pkgproxy-builder:
+    # The builder's own proxy: the same registries plus api.anthropic.com for its Claude Code engine (images/pkgproxy/
+    # allow-builder.txt). Separate from pkgproxy so OpenCode does not gain that route.
+    image: aistack/pkgproxy:1
+    restart: unless-stopped
+    networks: [bpkg, edge]
+    read_only: true
+    tmpfs: [/tmp, /var/run/tinyproxy, /var/log/tinyproxy]
+    volumes: [../images/pkgproxy/allow-builder.txt:/etc/tinyproxy/allow.txt:ro]
+    mem_limit: 64m
+    logging: { driver: json-file, options: { max-size: "10m", max-file: "3" } }
+
+  opencode-port:
+    image: aistack/portfwd:1
+    restart: unless-stopped
+    environment: { LISTEN_PORT: "4096", TARGET: "opencode:4096" }
+    ports: ["127.0.0.1:4096:4096"]
+    networks: [backend, codeui]
+    read_only: true
+    mem_limit: 64m
+    logging: { driver: json-file, options: { max-size: "10m", max-file: "3" } }
+
+  mission-control:
+    # Mission Control: the app for phone and desktop (missions, live activity, costs, chat, approvals) on 8090,
+    # reached only through `tailscale serve` (https://<pc>.ts.net:8447; every API call needs Tailscale's identity
+    # header), and the mission MCP tools for Hermes on 8091 (mcnet: LiteLLM only). It starts nothing itself:
+    # requests go to /missions/inbox, where the host runner (ops/missions.py) validates and runs them.
+    image: aistack/mission-control:1
+    restart: unless-stopped
+    environment:
+      API_SERVER_KEY: ${API_SERVER_KEY:?run via make}   # chat with Hermes (main profile), as Open WebUI does
+      SWARM_APP_TOKEN: ${SWARM_APP_TOKEN:-}           # the Swarm page's read-only door (ops/swarm_setup.py)
+    volumes:
+      - /srv/ai/missions:/missions        # inbox (write), public state + run logs (read), app/ (push keys, devices)
+      - /srv/vault:/vault:ro              # reports and mission results, read-only
+      - /home/owner/code:/code:ro          # code graphs (graphify-out) and READMEs for the Code tab, read-only
+      - /srv/ai/code-docs:/code-docs:ro   # code map digests (Understand Anything), read-only
+      - /srv/ai/phone:/phone              # the AI phone: its state (read), the owner's decisions and Stop (write)
+      - /srv/ai/connections:/connections  # app connections: grants and decisions (write), status and log (read)
+    ports: ["127.0.0.1:8090:8090", "127.0.0.1:8093:8093"]   # 8093: the agent runtime's ingest (runner → spooled events)
+    networks: [mcnet, mcui, obs, swarmmcp]   # obs: Phoenix ("Open in Phoenix"); swarmmcp: the swarm's read-only door (Swarm page)
+    read_only: true
+    tmpfs: [/tmp]
+    mem_limit: 256m
+    logging: { driver: json-file, options: { max-size: "10m", max-file: "3" } }
+
+  phone:
+    # The AI phone (images/phone): Hermes' hands on the old test phone via ADB over Tailscale, as MCP tools through
+    # LiteLLM (vk-main). Every action waits for the owner's OK in Mission Control (Phone page, push); banking,
+    # payment, password and settings apps are blocked; Stop disconnects. Firewall: that phone's IP only.
+    image: aistack/phone:1
+    restart: unless-stopped
+    environment:
+      PHONE_HOST: ${PHONE_HOST:-100.64.0.10}   # ai-phone on the tailnet (the old phone; never the main phone)
+      TZ: Europe/Berlin
+    volumes:
+      - /srv/ai/phone:/phone              # state, approvals, log, screenshots, ADB pairing key (home/.android)
+    networks: [phonemcp, phonenet]
+    cap_add: [NET_ADMIN]                  # only to install its egress firewall at start; dropped before serving
+    read_only: true
+    tmpfs: [/tmp]
+    mem_limit: 192m
+    logging: { driver: json-file, options: { max-size: "10m", max-file: "3" } }
+
+  mail:
+    # The Gmail connector (images/mail): search, read, organize, move to Trash for the agents, as MCP tools through
+    # LiteLLM (vk-main, vk-mission), only while the owner has granted it (Stack → Connections). Never deletes for good,
+    # never sends. Firewall: IMAPS only. The app password comes from secrets (make email-setup).
+    image: aistack/mail:1
+    restart: unless-stopped
+    environment:
+      GMAIL_ADDRESS: ${GMAIL_ADDRESS:-}
+      GMAIL_APP_PASSWORD: ${GMAIL_APP_PASSWORD:-}
+      TZ: Europe/Berlin
+    volumes:
+      - /srv/ai/connections:/connections   # grants (written by Mission Control), log, approvals, undo batches
+    networks: [mailmcp, mailnet]
+    cap_add: [NET_ADMIN]                  # only to install its egress firewall at start; dropped before serving
+    read_only: true
+    tmpfs: [/tmp]
+    mem_limit: 128m
+    logging: { driver: json-file, options: { max-size: "10m", max-file: "3" } }
+
+  swarm:
+    # The agent swarm's Ledger (images/swarm, requirements/swarm.yaml): every agent-produced artifact with its history
+    # and lifecycle. MCP tools for agents on swarmmcp (through LiteLLM only), the host runner's API on the Unix socket
+    # /srv/ai/swarm/runner.sock. No port and no internet (SWM-77); tokens are stored here only as hashes (SWM-89).
+    image: aistack/swarm:1
+    restart: unless-stopped
+    volumes:
+      - /srv/ai/swarm:/data                             # swarm.db (WAL), hourly snapshot for the backup, tokens.json, runner.sock
+      - ../config/agents.yaml:/config/agents.yaml:ro    # the agent registry
+    networks: [swarmmcp]
+    read_only: true
+    tmpfs: [/tmp]
+    mem_limit: 256m                                     # SWM-74: phase 0 measured 48 MB at target size
+    logging: { driver: json-file, options: { max-size: "10m", max-file: "3" } }
+
+  hermes-dashboard:
+    # Hermes' own admin web UI (skills, cron jobs, logs, sessions, config, its terminal chat), on 127.0.0.1:9119 and
+    # through tailscale serve at https://<pc>.ts.net:8448. Same Hermes home as the gateway (it edits the same
+    # config). No password of its own: it listens on loopback only, and gate-hermes-dashboard (in its network
+    # namespace, config/gate) lets in only requests that carry your Tailscale login. Port 9119 on WSL -> the gate.
+    image: ${HERMES_IMAGE}
+    restart: unless-stopped
+    depends_on: [hermes]
+    # Shares Hermes' network namespace: its chat attaches to the gateway Hermes runs on 127.0.0.1 (a separate namespace
+    # made it reconnect forever). Ports are published on the hermes service.
+    network_mode: "service:hermes"
+    command: ["hermes", "dashboard", "--host", "127.0.0.1", "--port", "9119", "--no-open", "--skip-build"]
+    environment:
+      LITELLM_API_KEY: ${VK_MAIN:?run via make}        # its terminal chat runs the main profile, like the gateway
+      LITELLM_CURATOR_KEY: ${VK_CURATOR:?run via make}
+      LITELLM_SCOUT_KEY: ${VK_SCOUT:?run via make}
+      HERMES_WRITE_SAFE_ROOT: /opt/data:/vault
+    volumes:
+      - hermes-home:/opt/data
+      - ../config/hermes:/config:ro
+      - /srv/vault:/vault
+    mem_limit: 768m
+    logging: { driver: json-file, options: { max-size: "10m", max-file: "3" } }
+
+  gate-hermes-dashboard:
+    # Single sign-in: the tailnet gate in front of the Hermes dashboard (config/gate/hermes-dashboard.Caddyfile). It shares
+    # Hermes' network namespace with the dashboard, so the dashboard sees a loopback client and needs no password of its own.
+    image: ${GATE_IMAGE}
+    restart: unless-stopped
+    depends_on: [hermes-dashboard]
+    network_mode: "service:hermes"
+    read_only: true
+    tmpfs: [/data, /config]
+    volumes: [../config/gate/hermes-dashboard.Caddyfile:/etc/caddy/Caddyfile:ro]
+    mem_limit: 64m
+    logging: { driver: json-file, options: { max-size: "10m", max-file: "3" } }
+
+  builder:
+    # The builder sandbox (images/builder): Hermes with shell + file tools that act only inside this container, on
+    # /work = /srv/ai/workbench (clones of your repos). No vault, no secrets, no SSH keys, no Docker; networks: LiteLLM
+    # and its own proxy (npm, PyPI, and api.anthropic.com for the Claude Code engine, whose token the runner passes per build). It commits on a branch; ops/missions.py pushes it, Forgejo CI checks it, you approve
+    # in Mission Control (Build), then the runner merges and deploys with a smoke test and automatic rollback.
+    image: aistack/builder:1
+    restart: unless-stopped
+    command: ["sleep", "infinity"]
+    environment:
+      HERMES_HOME: /builder/home
+      HERMES_WRITE_SAFE_ROOT: /work:/builder:/tmp        # its file tools may write the workbench (default: only its home)
+      PATH: /opt/hermes/bin:/opt/tools/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin   # hermes; python/pip/pytest/ruff = tools venv
+      LITELLM_BUILDER_KEY: ${VK_BUILDER:?run via make}
+      HTTP_PROXY: http://pkgproxy-builder:8888
+      HTTPS_PROXY: http://pkgproxy-builder:8888
+      NO_PROXY: litellm,localhost,127.0.0.1
+      CLAUDE_CONFIG_DIR: /builder/claude                 # Claude Code engine: its state in the builder volume
+      RUNTIME_INGEST: ""                                 # runtime record: no route to Mission Control from the sandbox,
+      RUNTIME_SPOOL: /work/.runtime                      #   so the plugin and the Claude hooks spool here; the runner forwards
+      CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "1"      # no telemetry, error reports or update checks
+      DISABLE_AUTOUPDATER: "1"
+    volumes:
+      - /srv/ai/workbench:/work
+      - builder-home:/builder
+      - ../config/hermes:/config:ro
+    networks: [backend, bpkg]
+    mem_limit: 2g
+    cpus: 3
+    logging: { driver: json-file, options: { max-size: "10m", max-file: "3" } }

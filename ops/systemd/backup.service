@@ -1,0 +1,8 @@
+[Unit]
+Description=Nightly encrypted backup to the NAS
+[Service]
+Type=oneshot
+TimeoutStartSec=1h
+Environment=DOCKER_HOST=unix:///run/user/1000/docker.sock
+WorkingDirectory=/home/owner/ai-stack
+ExecStart=/bin/bash -c "ops/backup.sh || { ops/notify.sh \"Nightly backup failed, see: journalctl --user -u backup\"; exit 1; }"

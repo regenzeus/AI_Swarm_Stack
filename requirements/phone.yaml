@@ -1,0 +1,173 @@
+# The AI phone: Hermes' hands on the old test phone, with approvals, block list, Stop and the log.
+area: AI phone
+prefix: PHN
+items:
+  - id: PHN-01
+    title: Every changing action waits for the owner
+    statement: Before an action that changes something on the AI phone, the AI phone service shall wait up to 15 minutes
+      for the owner's answer and treat no answer as no; looking at the screen, going back and going home need no
+      approval.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05, SN-11]
+    sources: [images/phone/AGENTS.md, images/mission-control/guide/17-ai-phone.md]
+    verify: {method: test, by: [tests/test_phone.py::test_an_action_waits_for_the_owner]}
+    trace: [images/phone/phone.py]
+    findings: [FND-13]
+  - id: PHN-02
+    title: A time window the owner opens
+    statement: Where the owner opened a time window (minutes, or until he stops it), the AI phone service shall run
+      ordinary actions without asking until it ends, still logging each one; typing, opening a web address or an app,
+      spending money, settings and deletions shall ask each time (DEC-23).
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-02, SN-11]
+    sources: [images/mission-control/guide/17-ai-phone.md]
+    verify: {method: test, by: [tests/test_phone.py::test_typing_urls_and_apps_always_ask_even_in_a_time_window, tests/test_phone.py::test_allow_for_a_few_minutes, tests/test_phone.py::test_allowance_any_length_or_until_stopped]}
+    findings: [FND-02, FND-13]
+  - id: PHN-03
+    title: Money and destructive steps always ask
+    statement: An action that would buy, pay, order or subscribe, uninstall an app, delete files or trim caches, or
+      change a phone setting shall need its own approval every time, even inside a time window, and that approval shall
+      open no window.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05]
+    sources: [images/phone/AGENTS.md]
+    verify: {method: test, by: [tests/test_phone.py::test_money_buttons_always_ask_even_in_a_time_window, tests/test_cleanup.py::test_uninstall_always_asks_even_inside_the_time_window, tests/test_cleanup.py::test_delete_always_asks_and_never_blocked_or_everything, tests/test_phone.py::test_start_in_ai_mode_asks_for_each_setting]}
+  - id: PHN-04
+    title: Blocked apps are never touched
+    statement: The AI phone service shall check the block list (banking, investment, payment, wallet, password,
+      authenticator, Play Store, Settings) before and after every action and before any screen read, and go to the
+      home screen when a blocked app is in front.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05]
+    sources: [images/phone/AGENTS.md]
+    verify: {method: test, by: [tests/test_phone.py::test_block_list_covers_money_passwords_and_settings, tests/test_phone.py::test_blocked_app_and_stop_refuse_everything, tests/test_phone.py::test_url_block_list_and_done_summary]}
+  - id: PHN-05
+    title: Stop ends it at once
+    statement: When the owner presses Stop, the AI phone service shall disconnect, refuse every action and approval, and
+      end any time window until he switches it on again.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-05, SN-11]
+    sources: [images/mission-control/guide/17-ai-phone.md]
+    verify: {method: test, by: [tests/test_phone.py::test_blocked_app_and_stop_refuse_everything, tests/test_phone_agents.py::test_stop_refuses_approvals]}
+  - id: PHN-06
+    title: A secure lock is never entered
+    statement: If the AI phone has a PIN, pattern or password lock, then the AI phone service shall stop and never enter
+      it; a swipe lock may be dismissed.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05]
+    sources: [images/mission-control/guide/17-ai-phone.md]
+    verify: {method: test, by: [tests/test_phone.py::test_a_pin_locked_phone_is_never_unlocked]}
+  - id: PHN-07
+    title: The AI phone cannot approve itself
+    statement: Mission Control shall refuse approvals, time windows, grants, purchases and cleanup approvals that come
+      from the AI phone's own address; the AI phone may only press Stop.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05]
+    sources: [images/mission-control/guide/17-ai-phone.md]
+    verify: {method: test, by: [tests/test_server.py::test_the_ai_phone_cannot_approve_its_own_actions, tests/test_phone_agents.py::test_approvals_are_refused_from_the_ai_phone]}
+  - id: PHN-08
+    title: The phone service reaches one phone only
+    statement: The AI phone service's firewall shall allow traffic only to the AI phone's tailnet address, no internet
+      and no home network.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05, CST-12]
+    sources: [images/phone/AGENTS.md]
+    verify: {method: inspection, by: [images/phone/entrypoint.sh]}
+  - id: PHN-09
+    title: An offline phone is not scanned
+    statement: If the AI phone does not answer, then the AI phone service shall not scan its ports and shall retry with a
+      back-off of up to 10 minutes.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-13]
+    sources: ["incident 2026-10-29: 11,000 hanging connections exhausted rootless Docker's network"]
+    verify: {method: test, by: [tests/test_phone.py::test_an_offline_phone_is_not_port_scanned]}
+  - id: PHN-10
+    title: Reconnects after a restart
+    statement: When the AI phone service restarts, it shall reconnect to a paired phone within a minute without the
+      owner's action.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-13]
+    sources: [images/phone/phone.py]
+    verify: {method: test, by: [tests/test_phone_agents.py::test_a_paired_phone_reconnects_after_a_restart]}
+  - id: PHN-11
+    title: No approval card is left unanswerable
+    statement: If an approval card is left behind by a restart, then the AI phone service shall drop it, log why and ask
+      again where the work was mid-way (Starts in AI mode), and Mission Control shall tell the owner when an answer was
+      not taken.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-13, SN-02]
+    sources: ["owner 2026-10-29: Allow gave no feedback"]
+    verify: {method: test, by: [tests/test_phone.py::test_cards_left_by_a_restart_are_dropped_and_start_in_ai_mode_asks_again, tests/test_server.py::test_the_ai_phone_cannot_approve_its_own_actions]}
+  - id: PHN-12
+    title: The approval card answers at once
+    statement: When the owner taps Allow or Decline, the card shall change at once to what happens next and disappear
+      when the phone is done.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-02]
+    sources: ["owner 2026-10-29"]
+    verify: {method: inspection, by: [images/mission-control/web/static/app.js]}
+  - id: PHN-13
+    title: The screen sleeps
+    statement: The AI phone service shall let the screen sleep after 30 seconds and not keep it on while charging, and
+      wake it before each action.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-11]
+    sources: [DEC-08]
+    verify: {method: inspection, by: [images/phone/phone.py]}
+    findings: [FND-01]
+  - id: PHN-14
+    title: Starts in AI mode after a restart
+    statement: The AI phone shall come back to AI mode after a reboot (wireless debugging on through KeepADB, Tailscale
+      as always-on VPN, both exempt from battery saving), each setting applied only after the owner's Allow.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-13, SN-11]
+    sources: [DEC-13]
+    verify: {method: test, by: [tests/test_phone.py::test_start_in_ai_mode_asks_for_each_setting]}
+  - id: PHN-15
+    title: Deletes and uninstalls stay inside safe limits
+    statement: The AI phone service shall never uninstall blocked or system apps and shall delete only at allowed paths,
+      optionally only files older than a given age, showing files, size and dates in the approval.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05]
+    sources: [images/phone/AGENTS.md]
+    verify: {method: test, by: [tests/test_cleanup.py::test_uninstall_refuses_blocked_and_system_apps, tests/test_cleanup.py::test_old_personal_data_is_offered_for_deletion_by_age, tests/test_cleanup.py::test_delete_always_asks_and_never_blocked_or_everything]}
+  - id: PHN-16
+    title: Screenshots go to the owner
+    statement: Screenshots shall go to the owner's approval card and log; a model shall get one only when it asks with
+      phone_look(picture=true).
+    type: constraint
+    priority: should
+    status: implemented
+    parents: [SN-04]
+    sources: [images/phone/AGENTS.md]
+    verify: {method: inspection, by: [images/phone/phone.py]}

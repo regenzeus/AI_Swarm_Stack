@@ -1,0 +1,8 @@
+[Unit]
+Description=Crew: Inbox digest: newsletters worth keeping -> vault raw/_inbox, under the Gmail read grant (daily)
+[Timer]
+OnCalendar=*-*-* 07:15
+Persistent=true
+RandomizedDelaySec=10min
+[Install]
+WantedBy=timers.target

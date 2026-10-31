@@ -1,0 +1,7 @@
+[Unit]
+Description=Swarm: publish the Ledger's view for the app and copy its events into the activity feed (ops/swarm_client.py feed)
+[Service]
+Type=oneshot
+TimeoutStartSec=2min
+WorkingDirectory=/home/owner/ai-stack
+ExecStart=/usr/local/bin/sops exec-env secrets/agent-keys.enc.yaml "python3 ops/swarm_client.py feed"

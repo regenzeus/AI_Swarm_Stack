@@ -1,0 +1,933 @@
+# Findings: contradictions, incoherent parts and drift between the owner's decisions, the docs, the guide, the code
+# and these requirements. Found during the requirements engineering of 2026-10-29. Each has evidence (file:line or a
+# measured fact), the requirements it affects, a recommendation, and a status:
+#   open            not resolved; `decision: true` when it needs the owner
+#   fixed           resolved in the commit named in `resolved`
+#   accepted        the owner accepted it as a known risk (docs/SECURITY.md)
+area: Findings
+prefix: FND
+items:
+  - id: FND-01
+    severity: high
+    kind: contradiction
+    title: The phone check still expects the screen to stay awake
+    finding: Since DEC-08 the AI phone's screen sleeps after 30 s, but the phone check fails when the screen is not
+      awake ("the wake loop is not working"), so it raises a false alert every week; the guide still tells the owner to
+      switch on Stay awake and says the screen stays on while connected.
+    evidence: ["ops/phone_agents.py:266-268 (mWakefulness != Awake is a fault)", "ops/phone_agents.py:12-14 (docstring)", "images/mission-control/guide/17-ai-phone.md: 'The screen stays on while the AI phone is connected'", "images/mission-control/guide/18-crew.md: Phone check 'the screen-awake loop'", "images/phone/phone.py let_screen_sleep()"]
+    affects: [CRW-12, PHN-13, APP-14]
+    recommendation: Drop the awake check (report the screen state only), and correct the guide's phone and crew chapters.
+    status: fixed
+    resolved: feat/requirements, 2026-10-29 (docs and the phone check aligned with the requirements)
+  - id: FND-02
+    severity: high
+    kind: incoherence
+    title: Hermes main has a way out through the AI phone
+    finding: The security model keeps untrusted input, private data and a way out apart, and says Hermes' only way out is
+      e-mail to the owner. Hermes main holds the vault, memory and Gmail read, reads research results, mail bodies and
+      phone screens, and also has phone_url, phone_type and phone_open on an internet-connected phone. Inside a time
+      window the owner opened ("Until I stop it"), those run without asking, so injected text could make Hermes open a
+      URL carrying private data.
+    evidence: ["ops/keys.sh: vk-main grants qmd, research, mail, phone", "docs/SECURITY.md trifecta table and accepted risks (the phone is not mentioned)", "images/mission-control/guide/14-safety.md: Hermes 'Way out: only to you'", "images/phone/phone.py guard(): a time window covers phone_url and phone_type"]
+    affects: [SEC-04, PHN-02]
+    recommendation: Decide one of (a) phone_url, phone_type and phone_open always ask like money, (b) a time window does
+      not cover them after the session read mail or research results, (c) accept it as a known risk in SECURITY.md.
+      (a) is the safest and costs a tap per URL or text.
+    status: fixed
+    resolved: "feat/swarm-phase3, 2026-10-29 (DEC-23: typing, URLs and apps always ask; tests/test_phone.py)"
+    decision: true
+  - id: FND-03
+    severity: medium
+    kind: incoherence
+    title: One key, many agents
+    finding: '"One key per agent" is the least-privilege rule and the basis of cost per run, but vk-mission is used by
+      mission runs and by six background jobs. The inbox digest therefore holds the mission grants (qmd, research,
+      claude, mail), and a task run''s cost window includes journal entries, wiki summaries or the self-review that ran
+      at the same time.'
+    evidence: ["ops/inbox.py:44,108", "ops/improve.py:213", "ops/crew.py:799", "ops/journal.py:336,444", "ops/wikis.py:83", "ops/shopping.py:6", "docs/MISSION-CONTROL.md: 'a run's calls are exactly its key's calls in that window'"]
+    affects: [SEC-07, MIS-16, SWM-23]
+    recommendation: Give each background job its own key with only the grants it needs (vk-crew for model-only jobs,
+      vk-inbox with mail only), generated from config/agents.yaml once the swarm registry exists (SWM-01).
+    status: fixed
+    resolved: feat/swarm-phase0, 2026-10-29 (vk-review, vk-inbox, vk-memory, vk-journal, vk-wikis; a test keeps vk-mission to mission runs)
+  - id: FND-04
+    severity: medium
+    kind: contradiction
+    title: A second, undocumented delivery path
+    finding: The invariant says only the host runner merges and deploys, after the owner's tap, with review and green CI.
+      Most changes so far were landed by interactive Claude Code sessions instead, under a chat approval. They
+      fast-forward main from a worktree, push, and run ops/deploy.py directly, serialised only by a flock convention.
+      That path has no AI review, CI runs only after the deploy, and nothing records the deploy in Mission Control.
+      (ops/deploy.py holds its own lock since 2026-10-29, PLT-10.)
+    evidence: ["AGENTS.md: Architecture invariants", "docs/DOGFOOD.md: 'parallel sessions used ~/.aistack-land.lock by convention'", "ops/deploy.py: no flock until 2026-10-29", "git log: 9b1ef1d, 96b0912, a87f69e landed this way on 2026-10-29", "2026-10-29: 10607d9 landed by a session with a failing test (its script did not stop on the checks; 679a0ce fixed it)", "2026-10-29: a session deploy printed RESTART_RUNNER, nothing restarted the runner, and the owner's Pause ran on old code until a manual restart"]
+    affects: [CST-07, PLT-10, BLD-20]
+    recommendation: Make the path explicit (BLD-20), record every deploy as an activity
+      event with its source, and run ops/check.sh before landing (sessions already do, by habit only).
+    status: fixed
+    resolved: "feat/swarm-switch, 2026-10-29 (ops/land.sh: checks on the landing commit, both locks, runner restart, deploys recorded with their source, an activity event with the approval)"
+    decision: true
+  - id: FND-05
+    severity: medium
+    kind: contradiction
+    title: '"Everything goes to the ChatGPT subscription" is no longer true'
+    finding: README, the welcome and safety chapters say every model call goes through the ChatGPT subscription and only
+      that call leaves the house. Claude Code on the Claude subscription now builds by default, reviews ChatGPT builds,
+      runs the health doctor, the maintainability review and Claude tasks, and receives repository code and redacted
+      logs.
+    evidence: ["README.md line 4", "images/mission-control/guide/01-welcome.md 'It costs $0 to run'", "images/mission-control/guide/14-safety.md 'Your data stays home'", "ops/builds.py:82 (Claude by default)"]
+    affects: [SEC-18, CST-02]
+    recommendation: Say "your ChatGPT and Claude subscriptions" and list what Anthropic sees (repository code, redacted
+      evidence), in README.md, the guide's welcome, safety and technology chapters, and docs/SECURITY.md.
+    status: fixed
+    resolved: feat/requirements, 2026-10-29 (docs and the phone check aligned with the requirements)
+  - id: FND-06
+    severity: low
+    kind: drift
+    title: Which engine is the default
+    finding: The builder chapter's table and images/builder/AGENTS.md say ChatGPT · Hermes is the default engine, while
+      the same chapter and the code make Claude Code the default whenever it is connected.
+    evidence: ["images/mission-control/guide/10-builder.md table 'ChatGPT · Hermes (default)'", "images/builder/AGENTS.md 'Hermes on the ChatGPT subscription (default)'", "ops/builds.py:82"]
+    affects: [BLD-08, APP-14]
+    recommendation: Correct both texts.
+    status: fixed
+    resolved: feat/requirements, 2026-10-29 (docs and the phone check aligned with the requirements)
+  - id: FND-07
+    severity: low
+    kind: drift
+    title: Approve before CI is green
+    finding: The guide and the CI AGENTS.md say a build can be approved only when CI is green; the code lets the owner
+      approve while CI runs and deploys the moment it passes (and never if it fails). The safety property holds; the
+      text does not.
+    evidence: ["images/mission-control/guide/10-builder.md 'CI must be green ... before Approve is even possible'", ".forgejo/workflows/AGENTS.md 'a build can only be approved when its CI is green'", "ops/builds.py:159 approve_on_ci"]
+    affects: [BLD-02, APP-14]
+    recommendation: Say "deploys only once CI is green; you may approve while it runs".
+    status: fixed
+    resolved: feat/requirements, 2026-10-29 (docs and the phone check aligned with the requirements)
+  - id: FND-08
+    severity: low
+    kind: drift
+    title: Needs you, as the guide describes it
+    finding: The welcome chapter still lists improvement proposals and health alerts under Needs you, which DEC-09 moved
+      to Stack upkeep.
+    evidence: ["images/mission-control/guide/01-welcome.md:58"]
+    affects: [APP-06, APP-14]
+    recommendation: Correct the paragraph and add Stack upkeep.
+    status: fixed
+    resolved: feat/requirements, 2026-10-29 (docs and the phone check aligned with the requirements)
+  - id: FND-09
+    severity: low
+    kind: drift
+    title: Five of ten tool servers documented
+    finding: The rule says every MCP server gets a row in the guide's technology chapter; the chapter and
+      config/litellm/AGENTS.md list qmd, research, fetch, missions and graphify, while the gateway serves also claude,
+      mail, phone, house and browser. No test enforces the rule.
+    evidence: ["config/litellm/config.yaml mcp_servers (10)", "images/mission-control/guide/13-technology.md table (5)", "config/litellm/AGENTS.md"]
+    affects: [QA-06, APP-14, QA-13]
+    recommendation: Add the five rows, and a test that the table matches config.yaml (QA-13).
+    status: fixed
+    resolved: feat/requirements, 2026-10-29 (docs and the phone check aligned with the requirements)
+  - id: FND-10
+    severity: medium
+    kind: defect
+    title: The scout's web search package is not where the scout looks
+    finding: ddgs is installed into /opt/hermes/.venv, but the scout profile runs another interpreter and logs "ddgs
+      package is not installed" (540 times in 2 days), so web search takes a slower fallback. Found by the health
+      doctor (proposal 27).
+    evidence: ["images/hermes/Dockerfile:7", "config/hermes/configure-scout.sh:28", "docker logs aistack-hermes-1 --since 48h: 540 lines"]
+    affects: [RES-02]
+    recommendation: Build proposal 27 (install into the interpreter Hermes uses, or point the search backend at it).
+    status: fixed
+    resolved: "fix/scout-search, 2026-10-30. Cause: on 2026-10-28 Hermes made its own dependency environment
+      (/opt/data/installs/..., for the anthropic extra); a launch then uses only that environment and drops the image's
+      .venv, where the Dockerfile installs ddgs (searches had worked until then, the last ddgs result on 2026-10-27).
+      configure-scout.sh now installs Hermes' own ddgs extra into its environment (tests/test_scout_search.py)"
+  - id: FND-11
+    severity: low
+    kind: defect
+    title: One bad wiki page stops every summary
+    finding: A page with broken YAML front matter makes every wiki summary pass fail (30 journal errors in 3 days). Found
+      by the health doctor (proposal 23).
+    evidence: ["journalctl --user: 'mapping values are not allowed here' x30 in 3 days", "ops/missions.py split_front", "ops/wikis.py sweep"]
+    affects: [KNW-10]
+    recommendation: Build proposal 23.
+    status: fixed
+    resolved: builder/9, 2026-10-29 (split_front reads broken front matter as plain text; wikis skips and logs a bad page)
+  - id: FND-12
+    severity: medium
+    kind: contradiction
+    title: Caps the owner rejected are still in the code
+    finding: Per-agent caps on open proposals were added on 2026-10-29 and rejected by the owner the same day (DEC-10);
+      they stay in improve.py until the swarm lifecycle replaces them.
+    evidence: ["ops/improve.py CAPS", "DEC-10"]
+    affects: [CRW-06, SWM-08, SWM-35]
+    recommendation: Remove the caps when SWM-04/SWM-08 land (phase 1 of the swarm design), or earlier on the owner's word.
+    status: fixed
+    resolved: "feat/swarm-switch, 2026-10-29 (caps, title matching and stale closures removed; the Ledger ranks instead)"
+  - id: FND-13
+    severity: low
+    kind: drift
+    title: '"Every action waits for your OK"'
+    finding: The phone chapter's summary and the phone service's rules say every action waits for the owner, while time
+      windows let ordinary actions run without asking. The detail is in the chapter; the headline overstates it.
+    evidence: ["images/mission-control/guide/17-ai-phone.md summary", "images/phone/AGENTS.md Rules"]
+    affects: [PHN-01, PHN-02]
+    recommendation: '"Every action waits for your OK unless you let it work for a while; money, deletes and settings
+      always ask."'
+    status: fixed
+    resolved: feat/requirements, 2026-10-29 (docs and the phone check aligned with the requirements)
+  - id: FND-14
+    severity: medium
+    kind: defect
+    title: The mail connector can strand an approval like the phone did
+    finding: The first-Trash approval uses the same pending/decisions loop the AI phone used before its fix on 2026-10-29;
+      a restart of the mail container (every deploy that touches it) leaves the card unanswerable.
+    evidence: ["images/mail/mail.py:27-40,308 (pending/ and decisions/, no sweep)", "images/phone/phone.py sweep_orphans() (the phone's fix)"]
+    affects: [CNX-06, SWM-19]
+    recommendation: Port sweep_orphans() to the mail connector, or move both to the swarm's persistent waits (SWM-19).
+    status: open
+  - id: FND-15
+    severity: low
+    kind: drift
+    title: The test guide is out of date
+    finding: tests/AGENTS.md says the suite runs in a few seconds and lists 10 test files; there are 33 files and the suite
+      takes about 42 seconds in the builder.
+    evidence: ["tests/AGENTS.md", "ls tests/test_*.py: 33", "ops/check.sh run 2026-10-29: 357 passed in 41.9 s"]
+    affects: [QA-04, QA-06, QA-13]
+    recommendation: Update the table, or replace it with a pointer to requirements/REQUIREMENTS.md's test index.
+    status: fixed
+    resolved: feat/requirements, 2026-10-29 (docs and the phone check aligned with the requirements)
+  - id: FND-16
+    severity: low
+    kind: drift
+    title: Services missing from the component lists
+    finding: README.md's component table and compose/AGENTS.md's apps list miss the phone, mail, browser and pricewatch
+      services and pkgproxy-builder.
+    evidence: ["README.md Components", "compose/AGENTS.md", "docker ps: aistack-phone-1, aistack-mail-1, aistack-browser-1, aistack-pricewatch-1"]
+    affects: [QA-06, QA-13]
+    recommendation: Add them.
+    status: fixed
+    resolved: feat/requirements, 2026-10-29 (docs and the phone check aligned with the requirements)
+  - id: FND-17
+    severity: medium
+    kind: incoherence
+    title: Seven ways to send a Telegram message
+    finding: Only the health board applies once-per-issue; other jobs send Telegram messages through their own code, so
+      there is no single place for a notification policy (quiet hours, preferences, dedupe) that SN-18 needs. (The
+      maintainability proposal to route them through notify.sh was dismissed on 2026-10-29 as low value; seen from the
+      notification policy it is not.)
+    evidence: ["ops/memory_review.py:41", "ops/skills_sync.py:45", "ops/missions.py:107", "ops/mission_extras.py", "ops/notify.sh", "ops/vault-ingest.sh", "ops/vault-lint.sh"]
+    affects: [OBS-16, SWM-59]
+    recommendation: One notify function with the policy, used by every sender; reopen proposal 10 in that light.
+    status: open
+  - id: FND-18
+    severity: medium
+    kind: risk
+    title: Memory is the top risk and nothing budgets it
+    finding: The review named RAM the biggest operational risk; the host still drops to about 0.45 GB free with Claude
+      sessions and builds running, WSL calls time out, and each new service (and the swarm design's Ollama embeddings)
+      adds memory without a budget across services.
+    evidence: ["docs/SWARM-PHASE0.md: 6.1 GiB used, mem_limits add up to 23.8 GiB against the 10 GiB cap", "docs/REVIEW-2026-10-27.md Verdict", "docs/DOGFOOD.md item 7", "this session: repeated WSAETIMEDOUT at 0.47 GB free"]
+    affects: [CST-14, SWM-74]
+    recommendation: A memory budget table (service, limit, measured p95) checked against the 10 GB cap, and the 32 GB RAM
+      upgrade (about 70 EUR) as a shopping proposal.
+    status: open
+    decision: true
+  - id: FND-19
+    severity: low
+    kind: incoherence
+    title: The swarm design invents a second agent memory
+    finding: The swarm design gives each agent a Hindsight bank as its notebook, but each agent already has a journal
+      (vault agents/<id>/MEMORY.md) that is read at a run's start, written at its end and retained in Hindsight with the
+      agent's tag.
+    evidence: ["ops/journal.py", "design doc section 'How agents improve', notebooks"]
+    affects: [SWM-16, SWM-65]
+    recommendation: Use the journal as the swarm's notebook (SWM-16 says so) and correct the design doc.
+    status: fixed
+    resolved: feat/swarm-requirements, 2026-10-29 (the design doc uses the journal as the notebook; SWM-16, SWM-65)
+  - id: FND-20
+    severity: low
+    kind: drift
+    title: The app writes more than requests
+    finding: The invariant says the app only drops requests into the runner's inbox (chat excepted); it also writes the
+      owner's phone and mail decisions, phone control requests and mail grants straight into the services' shared
+      folders, which the services validate themselves.
+    evidence: ["images/mission-control/server.py api_phone_decide, api_phone_control", "images/mail/AGENTS.md 'grants.json (written by Mission Control)'", "AGENTS.md Architecture invariants"]
+    affects: [SEC-12]
+    recommendation: List these exceptions in AGENTS.md and docs/MISSION-CONTROL.md, each with who validates it.
+    status: fixed
+    resolved: "docs/review, 2026-10-30: both list the exceptions (the services validate what lands in their folders); docs/API.md marks each route"
+  - id: FND-21
+    severity: low
+    kind: contradiction
+    title: A German briefing in an English stack
+    finding: DEC-02 made everything English, but the topic asp-isotopes-aspi-unternehmens-news still has language de, and
+      the desk keeps its German clean-up code for it.
+    evidence: ["/srv/vault/topics/asp-isotopes-aspi-unternehmens-news/TOPIC.md: language de", "images/desk/desk.py:362 german()"]
+    affects: [MIS-12, CST-09]
+    recommendation: Archive or switch that topic to English, then remove german() and its test.
+    status: fixed
+    resolved: "fix/req-sync, 2026-10-30: the topic was archived; german(), the German prompts and price table are gone"
+    decision: true
+  - id: FND-22
+    severity: high
+    kind: incoherence
+    title: Agents talking to each other would cross the trust boundaries
+    finding: The security model keeps private data, untrusted content and ways out apart per agent (the scout reads
+      the web and holds nothing private; Hermes main holds private data and has no way out). The swarm design lets
+      every agent read every artifact and message every other agent. Private data could then travel from Hermes main
+      to an agent with a way out (the scout's fetch and browser, the AI phone), and web content could reach Hermes
+      main inside a message whose origin is an agent, not the web. The design's provenance tags say where content
+      came from, but nothing stops private content from leaving.
+    evidence: ["design doc, section 'Safety, security and cost guardrails' (provenance, no flow rule)",
+      "requirements SEC-03, SEC-04, SEC-05", "ops/keys.sh: vk-scout grants fetch and browser, vk-main grants mail and phone"]
+    affects: [SWM-09, SWM-10, SWM-15, SWM-67, SEC-04]
+    recommendation: Information-flow labels on every message, evidence entry and artifact, carried into whatever is
+      derived from them and enforced by the Swarm service when it delivers (SWM-67); room:all and artifact search
+      respect the labels.
+    status: open
+  - id: FND-23
+    severity: medium
+    kind: contradiction
+    title: The swarm would start jobs, which only the runner may do
+    finding: The design wakes an agent by starting its unit (systemctl --user start crew-<id>), a Kanban task or a
+      Claude task from the Swarm service. The invariant says only the runner (ops/missions.py on the host) runs jobs
+      and validates every request, and a container cannot start the host's systemd units anyway.
+    evidence: ["design doc, 'Delivery and waking' and the harness adapter table", "AGENTS.md: Architecture invariants",
+      "requirements SEC-11, SEC-12"]
+    affects: [SWM-13]
+    recommendation: A wake is a request in the runner's inbox; the runner checks it against the card's wake policy and
+      budget and starts the unit (SWM-13 says so).
+    status: open
+  - id: FND-24
+    severity: medium
+    kind: incoherence
+    title: A second store for the same artifacts
+    finding: Proposals, builds, Claude tasks and runs live in missions.sqlite, crew findings in crew JSON files and
+      purchase proposals as files. The design adds a Ledger with its own database and migrates them, but does not say
+      when the old stores and their writers stop. Two stores of the same thing drift apart, as the docs and the code
+      did (FND-05 to FND-09).
+    evidence: ["/srv/ai/missions/missions.sqlite tables builds, claude_tasks, proposals, runs",
+      "design doc, rollout phase 1 ('migrate in as artifacts')"]
+    affects: [SWM-03, SWM-35]
+    recommendation: Migrate one kind at a time in one step and remove its old writer in the same phase (SWM-35), after
+      a shadow week (SWM-87).
+    status: fixed
+    resolved: "feat/swarm-switch, 2026-10-29 (ideas live only in the Ledger; the proposals table is read-only history; builds and purchases keep their approval stores and are linked by ref)"
+  - id: FND-25
+    severity: medium
+    kind: incoherence
+    title: The Claude Code agents are invisible to the gateway's records
+    finding: The design takes cost from LiteLLM spend per key and replay sets from Phoenix traces, and MIS-16 takes cost
+      per run from the gateway's records. The builder, the health doctor, the maintainability review and Claude tasks
+      run Claude Code on the subscription outside the gateway, so neither LiteLLM nor Phoenix has their calls, and
+      their scorecards, replay sets and cost would be empty.
+    evidence: ["requirement CST-02 (Claude Code runs outside the gateway)", "requirement MIS-16 (partial)",
+      "design doc, 'Scorecards' (cost from LiteLLM spend per key)"]
+    affects: [SWM-17, SWM-79, SWM-81, SWM-82, MIS-16]
+    recommendation: The run contract records each run's inputs and usage itself (Claude Code's JSON result carries
+      usage), and Claude Code's OpenTelemetry export is pointed at Phoenix.
+    status: fixed
+    resolved: "feat/swarm-switch, 2026-10-29 (Claude Code runs go to Phoenix as traces from the runtime record, which already holds their tokens per model call)"
+  - id: FND-26
+    severity: low
+    kind: risk
+    title: A third embedding model
+    finding: The design's duplicate guard uses embeddings from Ollama, while qmd already keeps embedding models loaded
+      (738 MB resident on 2026-10-29) and Hindsight embeds for recall (1.2 GB). Loading another model adds memory to a
+      stack that already breaks its memory budget (CST-14).
+    evidence: ["docker stats 2026-10-29: aistack-qmd-1 738 MiB, aistack-hindsight-1 1.23 GiB, aistack-ollama-1 332 MiB",
+      "design doc, 'The contract every agent run follows' (Ollama embeddings)"]
+    affects: [SWM-33, SWM-74]
+    recommendation: Use an embedding model that is already resident, chosen and measured in phase 0 (SWM-74, SWM-86).
+    status: fixed
+    resolved: feat/swarm-phase0, 2026-10-29 (TF-IDF finds the duplicates as well as embeddings, so no model is loaded; docs/SWARM-PHASE0.md)
+  - id: FND-27
+    severity: low
+    kind: defect
+    title: A mail test fails under load
+    finding: tests/test_mail.py::test_trash_asks_first_keeps_bank_mail_and_can_be_undone failed once in the full suite on
+      2026-10-29 ("did not OK this Trash batch") and passed in three runs of its own file and in two further full runs.
+      Its OK arrives by timing, so a busy machine can miss it; QA-04 says tests never depend on time.
+    evidence: ["builder check log 2026-10-29, phase 1 branch: 1 failed, 403 passed; reruns 405 passed twice"]
+    affects: [QA-04]
+    recommendation: Make the test hand the owner's decision over deterministically (a fake clock or an event), not by timing.
+    status: fixed
+    resolved: "feat/swarm-switch, 2026-10-29 (the test answers as soon as the approval card exists; no time window to miss)"
+  - id: FND-28
+    severity: low
+    kind: defect
+    title: The test agent lists the same finding several times
+    finding: The Test agent's page shows "tests/test_phone.py::test_an_action_waits_for_the_owner takes 6.x s" three times
+      under Last findings, once per timing run, so one slow test looks like three findings.
+    evidence: ["Mission Control, Agents -> Test agent -> Payoff, 2026-10-29 18:19"]
+    affects: [CRW-08]
+    recommendation: Group the findings of one run by test (slowest time, how many of the three runs), as the Ledger's
+      identity key per finding would.
+    status: fixed
+    resolved: "dae7d13, 2026-10-28: parse_runs() keeps each test once with its slowest run (tests/test_crew.py); the status was found stale on 2026-10-30"
+  - id: FND-29
+    severity: medium
+    kind: defect
+    title: The price watch repeats a reached target as news
+    finding: "On 2026-10-29 the speaker's price stayed at 68.61 EUR, under the 69 EUR target. Every price reading
+      proposed again, each run said 'wait, sold out', and Telegram got ten messages (10:18 to 19:32). The 6-hour timer
+      lived only in the runner's memory, and every deploy restarted the runner, so a reading came right after each
+      restart."
+    evidence: ["missions.sqlite runs 30-39 of home-assistant-voice-speaker-one-to-try, all trigger 'price target reached', summary 68.61 EUR",
+      "ops/shopping.py tick(): _ticks in memory only; no memory of the price already alerted"]
+    affects: [SHP-04, MIS-04]
+    recommendation: Remember the check time and the alerted price on the proposal; a mission does not run again on an identical event within 6 hours.
+    status: fixed
+    resolved: "feat/swarm-phase3, 2026-10-29 (watched_at and alerted_total on the proposal; the runner's loop guard on identical events)"
+
+  - id: FND-30
+    title: The Swarm page opened blank
+    finding: "Right after phase 3 deployed, #/swarm showed only the header. swarm.js loaded after app.js, which draws the
+      first screen as it loads (vSwarm not defined), and vSwarm took a view argument render() never passes. The static
+      route tests read app.js only, so the checks were green."
+    evidence: ["browser console 2026-10-29: ReferenceError vSwarm is not defined; TypeError setting innerHTML of undefined (swarm.js:29)"]
+    severity: low
+    kind: defect
+    affects: [APP-02, SWM-90]
+    recommendation: Load view scripts before app.js, views take no arguments, and a test holds both.
+    status: fixed
+    resolved: "fix/swarm-page, 2026-10-29 (tests/test_app_routes.py::test_view_scripts_load_before_app_js_and_take_no_arguments)"
+  - id: FND-31
+    title: Every swarm sync failed at the wake step after the phase 4 deploy
+    finding: "The usage-limit check read state.json's builds as a dict ({builds: [...]}); the runner writes them as a list,
+      so wake() raised on every minute's swarm sync from the deploy until the fix. Publishing and the activity feed ran
+      before it and kept working; wakes and the owner's Board notifications did not. The unit tests passed a fake limit
+      function, so the real reader was never run."
+    evidence: ["journal swarm-sync.service 2026-10-30 01:00-01:03: AttributeError: 'list' object has no attribute 'get' (swarm_client.py limited)"]
+    severity: medium
+    kind: defect
+    affects: [SWM-53]
+    recommendation: Read the list (and tolerate the old shape), and test limited() on the runner's real state.json shape.
+    status: fixed
+    resolved: "swarm/phase4-gaps, 2026-10-30 (tests/test_swarm_phase4.py::test_the_usage_limit_is_read_from_the_runners_real_state)"
+  - id: FND-32
+    title: The deploy registered the swarm's server but gave no agent its identity
+    finding: "During the phase 4 deploy, ops/swarm_setup.py agents registered the swarm MCP server in LiteLLM right after
+      LiteLLM was recreated, and every agent's credential step was skipped; run again by hand a few minutes later, it gave
+      all four Hermes agents their identity. Until then the agents saw the swarm's tools but every call was refused as an
+      unknown caller."
+    evidence: ["/srv/ai/swarm/tokens.json had 0 agent hashes after the deploy; a manual run stored 4 (2026-10-30 ~01:00)"]
+    severity: low
+    kind: defect
+    affects: [SWM-89]
+    recommendation: Retry the identities that are missing a few times with a pause (the gateway loads a new server shortly
+      after it is registered).
+    status: fixed
+    resolved: "swarm/phase4-gaps, 2026-10-30 (ops/swarm_setup.py agents retries the missing identities 3 times, 10 s apart)"
+  - id: FND-33
+    title: The Swarm page's Now tab failed on a cold open
+    finding: "The Swarm page draws before the app's state has loaded (it is on the no-state list), and the new Now tab read
+      S.builds while S was still null: 'Cannot read properties of null (reading builds)' until the next redraw."
+    evidence: ["browser check 2026-10-30 ~01:12 on #/swarm?tab=now (phone viewport), right after the phase 4 deploy"]
+    severity: low
+    kind: defect
+    affects: [SWM-97]
+    recommendation: Read the state null-safely on the Swarm page (S?.builds, S?.swarm) and keep a test that holds it.
+    status: fixed
+    resolved: "swarm/phase4-ui, 2026-10-30 (tests/test_swarm_phase4.py::test_a_running_crew_job_and_a_running_build_show_until_they_end)"
+  - id: FND-34
+    title: The Coach's refused-writes trigger fired on the owner's declines
+    finding: "The Coach's third trigger (target valid) counted every FM-1.1 failure, and most FM-1.1 failures are the owner's
+      declines (low value, no real cost), not refused writes. On the live scorecards it would have opened an agent change for
+      the maintainability review whose target (valid answers) was already at its best, so its experiment could never pass."
+    evidence: ["live scorecards 2026-10-30 ~06:45 after the phase 5 deploy: maintainability 5 declined, all FM-1.1, no refused writes"]
+    severity: low
+    kind: defect
+    affects: [SWM-83]
+    recommendation: Count only failed runs whose own writes were refused (FM-1.1 with label failed) for that trigger.
+    status: fixed
+    resolved: "swarm/phase5-fix, 2026-10-30 (tests/test_swarm_phase5.py::test_a_scorecard_with_40_percent_declined_ideas_yields_one_agent_change_naming_its_target)"
+  - id: FND-35
+    title: The requirements sync counted unchanged requirements as created
+    finding: "The second sync after the phase 5 deploy reported created 346 when one requirement had changed: an unchanged
+      requirement's write is a replay of its first one (same idempotency key), and the replay's stored result says created.
+      The Ledger itself was right (347 artifacts, 347 keys); only the count shown on the Improve tab and in the sync log was wrong."
+    evidence: ["swarm-sync log 2026-10-30 06:47:22: requirements created 346, moved 0; Ledger: 347 requirement artifacts, 347 distinct keys"]
+    severity: low
+    kind: defect
+    affects: [SWM-20]
+    recommendation: Count created and updated from whether the write is new, not from its stored result.
+    status: fixed
+    resolved: "swarm/phase5-fix2, 2026-10-30 (tests/test_swarm_phase5.py::test_a_requirement_file_change_creates_or_updates_its_artifact_and_a_violated_one_is_open)"
+  - id: FND-36
+    title: The Swarm page's Tasks, Flow and Improve tabs stayed empty on a cold open
+    finding: "The Swarm page draws before the app's state arrives (it loads its own data), and the first state redraws only a
+      fixed list of pages, without the Swarm page. Tabs that read the state (Tasks, Flow, Improve, the Agents' scorecards)
+      showed 'nothing yet' until you switched tabs, although the state held two agent changes and seven scorecards."
+    evidence: ["browser check 2026-10-30 ~06:55 of #/swarm?tab=improve (phone viewport) after the phase 5 deploy: empty tab, S.swarm.changes had 2"]
+    severity: low
+    kind: defect
+    affects: [SWM-18, SWM-91, SWM-99]
+    recommendation: Redraw those tabs when the first state arrives.
+    status: fixed
+    resolved: "swarm/phase5-ui, 2026-10-30 (tests/test_swarm_phase5.py::test_the_swarm_tabs_that_read_the_state_draw_again_when_it_first_arrives)"
+  - id: FND-37
+    title: A deployed agent change did not reach its agent
+    finding: "Build #10 (agent change #380) deployed the maintainability review's new standing instructions, but the swarm
+      service still served the old card: it reads config/agents.yaml only when it starts, through a single-file bind mount
+      that keeps the file git replaced. The context pack, and so the agent's prompt, had no instructions until a restart."
+    evidence: ["2026-10-30 ~07:30 after build #10 deployed 649338a: the file in aistack-swarm-1 had 0 instructions, the repo's had 3; after docker restart aistack-swarm-1: 3, and lessons_text('maintainability') starts with them"]
+    severity: high
+    kind: defect
+    affects: [SWM-18, SWM-102, PLT-08]
+    recommendation: A deploy that changes config/agents.yaml restarts the swarm service.
+    status: fixed
+    resolved: "swarm/phase5-cards, 2026-10-30 (tests/test_deploy.py::test_a_card_change_restarts_the_swarm_service_so_the_agents_get_it); the live service was restarted by hand at ~07:31"
+  - id: FND-38
+    title: Text the owner reads or types was cut silently all over the stack
+    finding: "The truncation audit of 2026-10-30 found 556 text caps of 40 or more characters and 16 CSS ellipsis or
+      line clamps. About 230 cut what the owner reads or types, with no mark: log lines on the agent pages (300
+      characters, then one line), errors in events and Telegram (120 to 300), review findings (600), the build diff
+      (1,500 lines), tool results in run logs (3,000), the phone's approval cards (what will be typed or opened: 200),
+      mail Trash samples (sender 40, subject 60), and the owner's own input (build descriptions 8,000, Chatroom posts
+      4,000, reasons 300, mission goals 4,000, titles 100)."
+    evidence: ["owner's screenshot 2026-10-30 07:21 (Swarm sync, Latest run: every line ends in '…')", "python3 ops/truncation.py report"]
+    severity: high
+    kind: defect
+    affects: [APP-19, APP-20, QA-16]
+    recommendation: Show text whole, refuse over-long input, and require a named reason for every remaining cap.
+    status: fixed
+    resolved: "fix/no-truncation, 2026-10-30 (tests/test_truncation.py)"
+  - id: FND-39
+    title: A long run input became invalid JSON in the Ledger
+    finding: "ledger.py stored run inputs and outputs as json.dumps(...)[:40000] (and experiment details at 60,000):
+      a longer value became a cut JSON string, and the next replays() or experiment read would fail to parse it."
+    evidence: ["images/swarm/ledger.py run_start, finish, context (inputs), experiment (detail) before fix/no-truncation"]
+    severity: medium
+    kind: defect
+    affects: [SWM-82]
+    recommendation: Bound JSON so it still parses (textcap.bounded_json, marked as cut).
+    status: fixed
+    resolved: "fix/no-truncation, 2026-10-30 (tests/test_truncation.py::test_run_inputs_stay_valid_json_however_long_they_are)"
+  - id: FND-40
+    title: The swarm's views could not be reached on a phone
+    finding: "navHtml(bottom) left Swarm out of the phone's tab bar, and the only way in was a banner at the end of
+      Code's collapsed 'The stack suggests'. The owner, who uses the app on a phone, looked for the Timeline, Map,
+      Chatroom and Agents views built on 2026-10-30 and found the app 'looks the same'."
+    evidence: ["images/mission-control/web/static/app.js navHtml: NAV.filter(... k === 'swarm') before app/one-nav", "guide/19-swarm.md: 'on a phone, from Code → The stack suggests'", "owner, chat 2026-10-30"]
+    severity: high
+    kind: defect
+    affects: [APP-01, SWM-103, SWM-104, SWM-105, SWM-106]
+    recommendation: Put the swarm's views under the Agents tab, one row under its title, on every screen size.
+    status: fixed
+    resolved: "app/one-nav, 2026-10-30 (tests/test_app_layout.py::test_the_swarm_s_views_are_under_agents_on_every_screen)"
+  - id: FND-41
+    title: The chat's New chat button did nothing on a new chat
+    finding: "The chat header's + linked to #/chat. On a new chat the address is already #/chat, so no hashchange
+      fired and nothing happened; the attach button next to the message box was a second + with another job."
+    evidence: ["images/mission-control/web/static/app.js vChat before app/one-nav", "owner, chat 2026-10-30: 'the plus button is not responsive'"]
+    severity: medium
+    kind: defect
+    affects: [APP-01]
+    recommendation: New chat starts afresh even on #/chat and has its own icon; attaching is a paper clip.
+    status: fixed
+    resolved: "app/one-nav, 2026-10-30 (tests/test_app_layout.py::test_new_chat_starts_afresh_and_attaching_is_a_clip)"
+  - id: FND-42
+    title: A mission run reads and writes five overlapping memories
+    finding: "A mission run's opening holds its working notes (NOTES.md), its journal (standing notes and the last entries),
+      the top wiki matches of a search over every collection, a Hindsight recall and, through its tools, the swarm's pack,
+      with no order of authority; it then writes its notes, a report, a journal entry, its wiki and (through the journal)
+      Hindsight facts. The notes and the journal's standing notes say much the same; Hindsight copies every journal entry."
+    evidence: ["ops/missions.py TASK_PROMPT and file_task_result", "ops/journal.py brief() and the Hindsight retain", "the owner's review, chat 2026-10-30"]
+    severity: medium
+    kind: incoherence
+    affects: [MEM-05, MEM-06]
+    recommendation: One opening per run in a fixed order and budget; mission notes as journal standing notes; personal facts only in Hindsight.
+    status: fixed
+    resolved: "memory/coherent, 2026-10-30: one opening per run (ops/journal.py brief), the working state in the journal, no journal copies in Hindsight (tests/test_memory_coherent.py)"
+  - id: FND-43
+    title: The search index is 44 % orphaned
+    finding: "qmd status on 2026-10-30: 500 files, 1,723 embedded chunks and 750 orphaned chunks (44 %) of files that are gone;
+      nothing runs qmd cleanup."
+    evidence: ["docker exec aistack-qmd-1 qmd status, 2026-10-30", "ops/memory.py problems(qmd)"]
+    severity: medium
+    kind: defect
+    affects: [MEM-08]
+    recommendation: The Librarian runs qmd cleanup weekly and when the orphaned share is over 10 %.
+    status: fixed
+    resolved: "memory/librarian, 2026-10-30: the Librarian runs qmd cleanup at every weekly pass and reports the orphaned chunks
+      before and after (ops/librarian.py clean_index, tests/test_librarian.py)"
+  - id: FND-44
+    title: Nobody curates the agent wikis
+    finding: "The 7 agent wikis (89 pages) only grow: every result is compiled in, nothing merges duplicate pages or marks
+      contradictions (KNW-14 is proposed only). The vault wiki has its curator."
+    evidence: ["requirements/knowledge.yaml KNW-14 (proposed)", "ops/memory.py inventory: agent-wikis has no curator"]
+    severity: medium
+    kind: incoherence
+    affects: [MEM-08, KNW-14]
+    recommendation: The Librarian lints every wiki weekly (duplicates, contradictions, stale claims, orphans) and writes the hub pages of shared subjects in the vault wiki.
+    status: fixed
+    resolved: "memory/librarian, 2026-10-30: the Librarian lints every agent wiki weekly, merges duplicates, marks contradictions
+      and stale pages, and writes the hub pages (ops/librarian.py, tests/test_librarian.py)"
+  - id: FND-45
+    title: A run's wiki reading is not scoped
+    finding: "journal.wiki_matches searches every vault collection (vault wiki, topics, missions, raw notes) with the run's title
+      and takes the top 3, whoever's they are; the crew reads no wiki at all."
+    evidence: ["ops/journal.py wiki_matches"]
+    severity: low
+    kind: incoherence
+    affects: [MEM-04]
+    recommendation: Each card names the wikis its agent reads; the start brief searches those, its own wiki first.
+    status: fixed
+    resolved: "memory/coherent, 2026-10-30: wiki_scope from the card's memory.wikis, its own wiki first, private wikis only to their mission (tests/test_memory_coherent.py)"
+  - id: FND-46
+    title: The deploy never rebuilt the desk image
+    finding: "ops/deploy.py looks up an image's tag in the compose files, versions.env and the Makefile only. The desk image
+      (aistack/desk:1) is run by ops/desk.sh and the runner, so a change under images/desk/ never rebuilt it: the image
+      dated from 2026-10-27 20:06, without the desk changes of 75633e4 and 6be62bc (no silent truncation) and MEM-13."
+    evidence: ["docker image inspect aistack/desk:1: created 2026-10-27T20:06", "ops/deploy.py image_tag", "git log images/desk/desk.py"]
+    severity: medium
+    kind: defect
+    affects: [MEM-13]
+    recommendation: image_tag also reads the ops/ scripts that run an image; a test checks every image has a tag.
+    status: fixed
+    resolved: "memory/image-prompts, 2026-10-30: image_tag reads ops/*.sh and ops/*.py too; tests/test_deploy.py checks every
+      image under images/ has a tag the deploy rebuilds"
+  - id: FND-47
+    title: Every deploy re-sent an old alert and Hermes announced its restarts
+    finding: "On 2026-10-30 the owner got \"Claude worker: stopped answering and was closed\" five times (08:26, 10:52, 11:05,
+      11:46, 11:52), each about 4 s after a session deploy, for two health-doctor runs stalled the morning before, plus
+      \"Hermes is shutting down\" at each Hermes restart. A deploy restarts the app, the runner cannot read the run record
+      for one health check, the issue drops off the board, and notify() forgot an issue the moment it was absent."
+    evidence: ["public/events.jsonl: health events 4 s after deploy events", "images/mission-control/obs_core.py notify", "Hermes gateway/run_shutdown.py (gateway_restart_notification)"]
+    severity: medium
+    kind: defect
+    affects: [OBS-11]
+    recommendation: Forget an alert only after it has been off the board for hours; turn Hermes' restart notices off.
+    status: fixed
+    resolved: "fix/spam-codemap-map, 2026-10-30: notify() keeps an absent alert for 6 h (tests/test_observe.py); configure.sh
+      sets telegram.gateway_restart_notification false"
+  - id: FND-48
+    title: The code map showed only the repo opened last, with warnings of the stack's own making
+    finding: "One viewer shows one repository; only the last one opened (nanoGPT) showed its map, the others offered \"Show it
+      here\". Its banners said 20 working-tree files changed (all in graphify-out/, the code graph's cache, which git did
+      not ignore) and 22 auto-corrections (edges without a weight in nanoGPT's graph); its minimap covered a third of a
+      phone-sized view."
+    evidence: ["the viewer's /staleness.json: changedFiles all graphify-out/", "UA core validateGraph on nanoGPT: 22x missing weight", "the owner's screenshots, 2026-10-30"]
+    severity: low
+    kind: defect
+    affects: [BLD-23]
+    recommendation: Open the map on every repo page, ignore graphify-out/ in git, save the viewer's corrections into the graph, hide the minimap.
+    status: fixed
+    resolved: "fix/spam-codemap-map, 2026-10-30: BLD-23 (tests/test_repos.py)"
+  - id: FND-49
+    title: A deploy did not restart the runner for code it reaches indirectly
+    finding: "ops/deploy.py restarted the runner only when a module ops/missions.py imports by name changed. The alert fix of
+      FND-47 lives in images/mission-control/obs_core.py, which the runner loads through crew.py and ops/observe.py: after its
+      deploy the runner went on with the old notify() (its state file kept the old format)."
+    evidence: ["systemctl --user show missions: started 15:32, deploy 16:09", "public/../crew/health-notified.json still {key: number} after 16:11"]
+    severity: medium
+    kind: defect
+    affects: [OBS-11]
+    recommendation: Restart the runner for any ops/ Python module and for obs_core.py.
+    status: fixed
+    resolved: "fix/runner-restart, 2026-10-30: deploy.runner_changed (tests/test_deploy.py)"
+  - id: FND-50
+    title: A broken code graph failed silently every minute
+    finding: "ai-stack's graphify-out/graph.json was unreadable from 2026-10-30 06:39 (an invalid UTF-8 byte at 3,963,500,
+      likely a write cut short). graphify-sync.sh ran graphify update every minute, which failed reading it, with its
+      output thrown away: no new graph and no message for ten hours, and the repo page showed no code graph."
+    evidence: ["graphify update /code/ai-stack: UnicodeDecodeError at position 3963500", "graph.json dated 06:39, state head 040901e"]
+    severity: medium
+    kind: defect
+    affects: [BLD-15]
+    recommendation: Rebuild a graph the update cannot read, log a failure, and retry only at the next commit.
+    status: fixed
+    resolved: "fix/charts-touch-labels, 2026-10-30: graphify-sync.sh falls back to a full extract and logs a failure once per commit (tests/test_repos.py)"
+  - id: FND-51
+    title: A new briefing's button spun forever
+    finding: "On 2026-10-30 at 16:35 the owner's \"Start mission\" for a briefing spun on \"Drafting the brief, checking
+      sources…\" for many minutes. The request never reached the runner (no inbox file, no result, no mission; the next slow
+      requests at 16:42 went through the same queue), so it stalled on the way, and the app's fetch had no time limit."
+    evidence: ["/srv/ai/missions/public/results: nothing between 16:00 and 16:42", "app.js api(): fetch without a timeout", "the owner's screenshot, 16:35"]
+    severity: medium
+    kind: defect
+    affects: [APP-23]
+    recommendation: A time limit on every call, a clear message when a request gets no answer, retried checks.
+    status: fixed
+    resolved: "fix/app-timeouts, 2026-10-30: api() aborts after its limit, act() says what to do (tests/test_app_timeouts.py)"
+  - id: FND-52
+    title: Start mission threw before sending anything, since 28 October
+    finding: "The owner's second try at 17:17 spun as well. The app reported \"watch is not defined at f.onsubmit (app.js:1499)\":
+      commit 4063a90 (shopping missions, 2026-10-28) put the price-watch lines into the mission settings form's handler
+      instead of the New mission form's, so Start mission threw right after showing its spinner, for every type, and
+      the settings form read a type field it does not have. Missions created since came through chat."
+    evidence: ["mission-control log: client error watch is not defined at f.onsubmit (app.js:1499), #/new", "git blame: 4063a90"]
+    severity: high
+    kind: defect
+    affects: [APP-23]
+    recommendation: Move the lines back, test both forms by running them, and show an app error to the owner.
+    status: fixed
+    resolved: "fix/new-mission-form, 2026-10-30: both handlers fixed (tests/test_app_forms.py runs them); errors shown as a toast"
+  - id: FND-53
+    title: The app's errors lived only in the container's log
+    finding: The app reported each error to /api/clienterror, which only printed it; a container recreate (every deploy of
+      mission-control) wiped the history, nothing raised it, and the Start mission error of FND-52 went unseen for two days
+      until the owner hit it. At the review there was no record left of how often it had happened.
+    evidence: ["images/mission-control/server.py api_clienterror (log line only)", "docker logs aistack-mission-control-1 (history begins at the last recreate)"]
+    severity: high
+    kind: defect
+    affects: [APP-24]
+    recommendation: Keep the errors in the missions data and raise them as one alert on the health board.
+    status: fixed
+    resolved: "fix/ux-review, 2026-10-30: client-errors.jsonl (newest 500) and the app-error alert (ops/crew.py app_errors)"
+  - id: FND-54
+    title: No check catches a name the app's scripts never define
+    finding: The app's four scripts share one global scope and have no build step, so an undefined name (the watch of
+      FND-52) passes every test that only reads the code and fails only when the owner taps. A lint of the four scripts
+      joined in load order reports it at app.js:1499 on the code before the fix and nothing on the code after it.
+    evidence: ["python3 ops/app_lint.py on 4063a90 reports app.js:1499 no-undef 'watch'", "ops/check.sh had no step for the app's scripts"]
+    severity: high
+    kind: defect
+    affects: [APP-24]
+    recommendation: Lint the scripts for undefined names in every landing and image build, and keep a click-through harness.
+    status: fixed
+    resolved: "fix/ux-review, 2026-10-30: ops/app_lint.py in ops/check.sh, ESLint in the builder and CI images, ops/ui_crawl.js"
+  - id: FND-55
+    title: A mission's result sat below the run log and the health notes
+    finding: On a phone the latest result of a mission started 2443 px down its page, under notes such as "run make
+      probe-tools" and a 22-problem run log, each with an Acknowledge button that squeezed its text.
+    evidence: ["UX review 2026-10-30, #/mission/job-report-2 at 375 px", "app.js agentNow (run log before Latest result)"]
+    severity: medium
+    kind: incoherence
+    affects: [APP-25]
+    recommendation: Result first, notes folded under one line that says they need nothing from the owner.
+    status: fixed
+    resolved: "fix/ux-review, 2026-10-30: Latest result first unless live, notes in one fold, banners wrap on phones"
+  - id: FND-56
+    title: An agent's card showed a tool's raw name
+    finding: The RAM upgrade card on the Agents list read "mcp__webfetch__swarm_swarm_context", a note for the health
+      doctor, instead of the mission's result, because the card showed the first issue of any kind.
+    evidence: ["UX review 2026-10-30, #/agents at 375 px", "app.js agentCard (a.issues[0])"]
+    severity: medium
+    kind: defect
+    affects: [APP-25]
+    recommendation: Show the alert if there is one, else the result, and count the notes.
+    status: fixed
+    resolved: "fix/ux-review, 2026-10-30: agentCard shows the alert or the result and adds +N notes"
+  - id: FND-57
+    title: The stack's own work drowned the owner's results on Home
+    finding: "Session deploys and swarm proposals (\"Swarm: system proposed wiki #417\") filled Home's feed, so the
+      owner's briefings and shopping results were a scroll away on a phone."
+    evidence: ["UX review 2026-10-30, #/ at 375 px", "app.js feedHtml (homeFilter all by default)"]
+    severity: medium
+    kind: incoherence
+    affects: [APP-05, APP-25]
+    recommendation: Open the feed on the owner's results, shopping and errors; put the rest one chip away.
+    status: fixed
+    resolved: "fix/ux-review, 2026-10-30: the feed opens on For you; Everything and each category stay one chip away"
+  - id: FND-58
+    title: The chat's copy buttons said Copied when nothing was copied
+    finding: The only failure the click-through found in 279 taps over 70 screens. The chat's copy buttons ignored a
+      refused clipboard write ("Document is not focused") and showed Copied anyway.
+    evidence: ["ops/ui_crawl.js run 2026-10-30: one unhandled rejection, from the chat's copy", "app.js chat copy handlers"]
+    severity: low
+    kind: defect
+    affects: [APP-25]
+    recommendation: One copy helper that waits for the clipboard and says why when it fails.
+    status: fixed
+    resolved: "fix/ux-review, 2026-10-30: copyText() used by both copy buttons"
+  - id: FND-59
+    title: The Stack page counted a failed job without naming it
+    finding: The Stack header said "1 failed job" with no name or link; it was crew-phone-check, which the owner could
+      find only by opening the crew list.
+    evidence: ["UX review 2026-10-30, #/system", "systemctl --user --failed: crew-phone-check.service"]
+    severity: low
+    kind: defect
+    affects: [APP-25]
+    recommendation: Name each failed job and link it to its crew page.
+    status: fixed
+    resolved: "fix/ux-review, 2026-10-30: the header lists the failed jobs by name, each a link"
+  - id: FND-60
+    title: An empty briefing is delivered like a full one
+    finding: The first run of the job report found 0 items and was still sent by Telegram and e-mail, which tells the
+      owner nothing and trains him to ignore the channel.
+    evidence: ["UX review 2026-10-30, the job-report run of 2026-10-30 (0 items, delivered to Telegram and e-mail)", "ops/mission_extras.py delivers after every finished run"]
+    severity: medium
+    kind: defect
+    affects: [MIS-15]
+    recommendation: Deliver an empty run only in the app and say there, and in the next full delivery, that a run found nothing.
+    status: fixed
+    resolved: "fix/empty-and-wikimap, 2026-10-30: deliver(empty=True) keeps it in the app; the next kicker says nothing new on <days>"
+  - id: FND-61
+    title: The wiki maps overlap their names and still show archived wikis
+    finding: On the Wiki tab's map (How they connect) the names of neighbouring bubbles overlap, and the archived
+      briefing's wiki is still drawn, so Job report appears twice.
+    evidence: ["UX review 2026-10-30, #/wiki at 375 px", "server.py wiki_roots (archived missions included)"]
+    severity: low
+    kind: defect
+    affects: [MEM-09]
+    recommendation: Put each name where it covers no other name or bubble, and leave out wikis of archived missions.
+    status: fixed
+    resolved: "fix/empty-and-wikimap and fix/wikimap-room, 2026-10-30: wikiMapLabels picks below, above, right or left, and the
+      map grows until every name has a free place (live, 8 wikis at 375 px: none covered); archived wikis in a fold"
+  - id: FND-62
+    title: The health board's notes were mostly false alarms
+    finding: "28 of the board's 30 issues were notes, nearly all from two checks that misjudged valid calls. swarm_context
+      takes only optional arguments, so {} is a correct call, yet obs_core.problems() reported it as called without
+      arguments, and telemetry.py counted every {} call as arrived without arguments (gateway problem; run make
+      probe-tools). The partial-read note fired on every run that fetched a long page, even when the agent read on."
+    evidence: ["/api/state health on 2026-10-30 (30 items with issues)", "images/mission-control/obs_core.py:306", "ops/telemetry.py:182"]
+    severity: medium
+    kind: defect
+    affects: [OBS-07, OBS-10]
+    recommendation: Judge an empty call against the tool's own arguments (one list, checked against every tool), and count a cut-off only when nothing read on.
+    status: fixed
+    resolved: "fix/health-signals, 2026-10-30: obs_core.NO_ARGS and empty_call(), unfollowed_cuts(); telemetry uses empty_call"
+  - id: FND-63
+    title: Agents call swarm_context although their opening holds it
+    finding: Missions call swarm_context several times a run (once with the same arguments three times), although the
+      opening of every run already holds its answer and says not to call it.
+    evidence: ["health notes on 2026-10-30 (RAM upgrade, Job report, Home Assistant speaker)", "ops/journal.py:303"]
+    severity: low
+    kind: incoherence
+    affects: [SWM-16]
+    recommendation: Make a repeated swarm_context in the same run answer from the opening, or drop the tool from runs that get the opening.
+    status: open
+  - id: FND-64
+    title: An old stall stayed on the board behind every later run's note
+    finding: "Claude worker: stopped answering stayed open from 29 Oct 07:33 although the worker ran again; only a run
+      with no problem at all cleared older issues, and every later run had a note (FND-62), so none counted."
+    evidence: ["/api/state health, Claude worker", "images/mission-control/runrecord.py agent_issues"]
+    severity: medium
+    kind: defect
+    affects: [OBS-10]
+    recommendation: Clear each kind of issue with the next finished run that does not have it.
+    status: fixed
+    resolved: "fix/health-signals, 2026-10-30: agent_issues() clears per kind"
+  - id: FND-65
+    title: The phone check reported the owner's to-do as a crash
+    finding: "The AI phone's battery at 19 % and unplugged made the phone check raise, the unit stayed failed for a
+      week, and the alert said only failed 2 times in a row, not what to do."
+    evidence: ["journalctl --user -u crew-phone-check (28 Oct)", "images/mission-control/obs_core.py judge()"]
+    severity: medium
+    kind: defect
+    affects: [OBS-10]
+    recommendation: Put the last run's reason in the failing alert, and phrase the phone's faults as what to do.
+    status: fixed
+    resolved: "fix/health-signals, 2026-10-30: the failing alert carries the reason; the battery fault says plug the AI phone in"
+  - id: FND-66
+    title: No restore drill has checked a backup of today's size
+    finding: The last drill passed on 25 Oct against a 62 MB backup; since 29 Oct the backups are 772 MB (now including
+      ~/code and larger Hermes and qmd volumes), and the board did not say when the last drill had passed.
+    evidence: ["/srv/ai/state/backups.jsonl"]
+    severity: medium
+    kind: risk
+    affects: [PLT-15]
+    recommendation: An alert when no drill has passed for 8 days, and a drill now.
+    status: fixed
+    resolved: "fix/recoverable, 2026-10-30: drill-old alert on the Restore drill (ops/crew.py recovery_alarms); a drill was run on the 772 MB backup"
+  - id: FND-67
+    title: Running containers drifted from their image tags unnoticed
+    finding: Hermes, its dashboard, both package proxies and the OpenCode port ran images that no tag names any more,
+      while their tags point at other builds; versions.lock (27 Oct) lacked 9 of 25 running images, and nothing
+      compared them.
+    evidence: ["docker inspect .Image vs docker image inspect of .Config.Image (2026-10-30)", "versions.lock"]
+    severity: medium
+    kind: drift
+    affects: [PLT-20, CST-08]
+    recommendation: Note drift and unlocked images on the board; let make lock name each container and mark an untagged build.
+    status: fixed
+    resolved: "fix/recoverable, 2026-10-30: image_drift() on This PC; make lock per container; the owner approved the recreate and the five containers run their tagged builds since 2026-10-31"
+  - id: FND-68
+    title: Some failed writes vanished without a trace
+    finding: 69 broad excepts dropped what they caught. Most only tolerate a malformed file being read, but closing an
+      interrupted chat (server.py) and reading CI status for a waiting build (builds.py) failed silently, and nothing
+      told an intended best-effort catch from an accident.
+    evidence: ["AST scan of ops, images and config (2026-10-30)", "images/mission-control/server.py:2171", "ops/builds.py:1260"]
+    severity: medium
+    kind: defect
+    affects: [QA-17]
+    recommendation: Log the two, and count silent broad catches in the checks so they can only become fewer.
+    status: fixed
+    resolved: "fix/recoverable, 2026-10-30: both log; tests/test_recoverable.py caps them at 67"
+  - id: FND-69
+    title: Source files that no requirement traces
+    finding: 57 of 178 source files were named by no requirement, among them the Hermes runtime plugin that feeds the
+      run record (271 lines), ops/runtime.py, the shopping screen (shop.js), the LiteLLM cache-key patch, the curator's
+      configuration, the rehearsal compose file and the spec pipeline; nothing checked it.
+    evidence: ["the traceability scan of 2026-10-30 (docs/REVIEW-2026-10-30.md, R1)"]
+    severity: medium
+    kind: drift
+    affects: [QA-18]
+    recommendation: Trace what has a requirement, list the rest with a reason, and let the checker keep it so.
+    status: fixed
+    resolved: "fix/req-sync, 2026-10-30: ops/req.py check traces every source file; 12 requirements gained traces, 19 files are listed with reasons"
+  - id: FND-70
+    title: Gap notes that no longer said what is true
+    finding: OBS-16's gap named four Telegram senders that now go through notify.sh and missed three that send their
+      own; CST-09 stayed partial for a German topic that had been archived; FND-28 stayed open although fixed two days
+      earlier.
+    evidence: ["grep of Telegram senders (2026-10-30)", "state.json: asp-isotopes-aspi-unternehmens-news archived", "dae7d13"]
+    severity: low
+    kind: drift
+    affects: [OBS-16]
+    recommendation: Re-check every partial, violated and open item in each review, as this one did.
+    status: fixed
+    resolved: "fix/req-sync, 2026-10-30: the three corrected; the review's sweep 2 re-checked all 37"
+  - id: FND-71
+    title: The README described the stack of 27 October, and nothing kept the docs honest
+    finding: "The README linked the 27 Oct review for status, listed only static checks for CI, and named neither the
+      crew, the swarm, the AI phone, Gmail, House nor the requirements. No index said which documents are current and
+      which are records (three were linked from nowhere); AGENTS.md's check list missed the app lint; DOGFOOD.md named
+      a make target that does not exist; the crew chapter missed Coach and Token probe. A scan of 101 documents found
+      no broken path, so the gap was missing coverage, not broken links."
+    evidence: ["README.md (61e3bf1) lines 14, 74-77, 111", "link counts per document", "docs/DOGFOOD.md:14"]
+    severity: medium
+    kind: drift
+    affects: [QA-20]
+    recommendation: Rewrite the README, add docs/README.md, and make the reference scan a test.
+    status: fixed
+    resolved: "docs/review, 2026-10-30: README rewritten, docs/README.md, tests/test_docs.py checks every path, make target, screen and link"
+  - id: FND-72
+    title: The app's HTTP API was not documented
+    finding: Mission Control serves 75 routes in two apps and offers 28 MCP tools; no document listed them, and 42
+      handlers had no docstring.
+    evidence: ["images/mission-control/server.py routes", "grep -c /api/ docs/*.md (8 mentions)"]
+    severity: medium
+    kind: drift
+    affects: [QA-19]
+    recommendation: Give every handler a docstring and draw docs/API.md from the code, kept current by a test.
+    status: fixed
+    resolved: "docs/review, 2026-10-30: 42 docstrings, ops/api_doc.py, tests/test_docs.py"
+  - id: FND-73
+    title: Long pages without a way across, and identifiers where names belong
+    finding: "At 375 px the Stack page ran 19 screens (17 sections, nothing to jump with) and Home 13 (a feed of 40);
+      the greeting said owner, the start of the e-mail address; Scheduled jobs listed unit names such as
+      crew-checker; a Code link without a repository said No repository called ."
+    evidence: ["review 2026-10-30, sweep 4 (#/system, #/, #/repo at 375 px)"]
+    severity: low
+    kind: defect
+    affects: [APP-26]
+    recommendation: Section links on the Stack page, a feed of 12, a display name or none, job names, a redirect to the list.
+    status: fixed
+    resolved: "fix/ux-polish, 2026-10-30: all five"
+  - id: FND-74
+    title: Recreating Hermes alone cut the dashboard's gate off its network
+    finding: "On 2026-10-31 Hermes was recreated with --no-deps. gate-hermes-dashboard, which shares Hermes's network,
+      stayed on the removed container's network and answered nothing (HTTP 000) until the deploy's smoke test found
+      it; the health board had no check for it."
+    evidence: ["docker inspect .HostConfig.NetworkMode of aistack-gate-hermes-dashboard-1 (container:ccecfd17..., removed)", "smoke/smoke.sh: dashboard gate, HTTP 000"]
+    severity: medium
+    kind: defect
+    affects: [PLT-23]
+    recommendation: Alert on This PC when a container shares the network of a container that no longer runs.
+    status: fixed
+    resolved: "ops/orphan-network, 2026-10-31: cut_networks() on This PC; the gate was recreated the same morning"
+  - id: FND-75
+    title: The owner's identifiers were written into a tracked script
+    finding: ops/private-terms.sh listed the owner's name, e-mail handle, PC hostname, tailnet name, NAS user and LAN
+      range inside the repository, and 140 tracked files named the owner, the owner's paths or addresses. A public copy
+      would have carried all of them, and nothing checked for them.
+    evidence: ["ops/private-terms.sh (until 2026-10-31)", "python3 ops/publish.py check: 140 of 464 files rewritten"]
+    severity: medium
+    kind: defect
+    affects: [SEC-19]
+    recommendation: Keep the identifiers in a private file outside the repository; publish only a rewritten, scanned and tested snapshot.
+    status: fixed
+    resolved: "feat/publish, 2026-10-31: ops/publish.py; ops/private-terms.sh reads /srv/ai/private/research-terms.txt"

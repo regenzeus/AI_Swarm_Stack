@@ -1,0 +1,334 @@
+# The agent registry (swarm design, requirements SWM-01, SWM-22 to SWM-24, SWM-29): one card per agent.
+# Checked by ops/registry.py in ops/check.sh: every field present and known, every key used by exactly one card or
+# one service, every key's models and MCP grants in ops/keys.sh equal to its card, every job's systemd unit present.
+# A card change is a reviewed commit like any other; each run records the card's hash (SWM-25).
+version: 1
+
+harnesses: [hermes, claude-code, opencode, python, script]
+models: [gpt-sub, gpt-sub-fast, claude-subscription, none]       # CST-02: subscriptions only (ollama:<name> also allowed)
+kinds: [idea, finding, report, wiki, purchase, build, agent_change, requirement, task]
+roles: [assistant, research, knowledge, missions, code, reviewers, health, tests, memory, mail, phone, briefings]
+rooms: [all, health, code, research, house, shopping, ops]
+wake: [never, digest, on_request, always]
+
+# keys that belong to a service, not an agent (no card, no swarm identity)
+services:
+  vk-hindsight: Hindsight's fact extraction (compose hindsight)
+  vk-ui: Open WebUI's own model calls
+  vk-spec: the requirements-checker pilot (spec/)
+  vk-spec-cheap: the requirements-checker pilot's experiment key (subscription only)
+  vk-guard: the research privacy check (images/research)
+  vk-smoke: the deploy smoke test
+  vk-journal: agent journals, written by the runner for every agent (ops/journal.py)
+  vk-wikis: wiki summaries for the Wiki tab (ops/wikis.py)
+  vk-eval: replays of agents' past runs for agent-change experiments (ops/evals.py, SWM-18)
+
+agents:
+  - id: main
+    purpose: The owner's assistant in chat and Telegram.
+    responsibilities: [answer the owner, act through the tools he grants, hand questions about code to Claude tasks]
+    owns: {}
+    harness: hermes
+    model: gpt-sub
+    key: vk-main
+    prompts: prompts/main.md           # MEM-11: its prompts, each change replay-tested
+    jobs: []
+    schedule: always
+    roles: [assistant]
+    rooms: [all]
+    contact: ["*"]
+    wake: never                       # takes requests from the owner only; agents' requests to it are declined (SEC)
+    budgets: {wakes_per_day: 0, messages_per_hour: 20}
+    tools: [qmd, research, graphify, missions, phone, claude, mail, house, swarm]
+    autonomy: {}
+  - id: scout
+    purpose: The only agent that reads the web; research behind the research tool.
+    responsibilities: [search and read the web, return sourced notes, hold no private data]
+    owns: {report: the question is answered with reachable sources}
+    harness: hermes
+    model: gpt-sub-fast
+    key: vk-scout
+    prompts: prompts/scout.md           # MEM-11: its prompts, each change replay-tested
+    jobs: []
+    schedule: on demand
+    roles: [research]
+    rooms: [all, research]
+    contact: ["*"]
+    wake: on_request
+    budgets: {wakes_per_day: 6, messages_per_hour: 20}
+    tools: [fetch, browser, swarm]
+    autonomy: {}
+  - id: curator
+    purpose: Keeps the vault wiki and long-term memory tidy.
+    responsibilities: [merge duplicate wiki pages, mark contradictions, review long-term memory]
+    owns: {wiki: links valid and younger than its refresh age}
+    harness: hermes
+    model: gpt-sub-fast
+    key: vk-curator
+    prompts: prompts/curator.md           # MEM-11: its prompts, each change replay-tested
+    jobs: [curate, memory-review]
+    schedule: weekly
+    roles: [knowledge, memory]
+    rooms: [all]
+    contact: ["*"]
+    wake: digest
+    budgets: {wakes_per_day: 2, messages_per_hour: 10}
+    tools: [qmd, swarm]
+    autonomy: {}
+  - id: mission
+    purpose: Runs the owner's missions (tasks, shopping, cleanup analyses).
+    responsibilities: [carry out a mission's goal, report with sources, ask before anything that changes the world]
+    owns: {report: the mission's result is delivered, purchase: the order is delivered}
+    harness: hermes
+    model: gpt-sub
+    key: vk-mission
+    prompts: prompts/mission.md           # MEM-11: its prompts, each change replay-tested
+    jobs: [missions]
+    schedule: per mission
+    roles: [missions]
+    rooms: [all, shopping]
+    contact: ["*"]
+    wake: on_request
+    budgets: {wakes_per_day: 6, messages_per_hour: 20}
+    memory: {wikis: [own, vault, related]}  # MEM-04: what its runs read, its own wiki first
+    tools: [qmd, research, claude, mail, swarm]
+    autonomy: {}
+  - id: desk
+    purpose: Writes the Topic Desk briefings.
+    responsibilities: [brief the owner on his topics with sources]
+    owns: {report: delivered with reachable sources}
+    harness: python
+    model: gpt-sub
+    key: vk-desk
+    prompts: prompts/desk.md           # MEM-11: its prompts, each change replay-tested
+    jobs: [desk]
+    schedule: per topic
+    roles: [briefings]
+    rooms: [all, research]
+    contact: ["*"]
+    wake: never
+    budgets: {wakes_per_day: 0, messages_per_hour: 5}
+    memory: {wikis: [own, vault, related]}  # MEM-04: what its runs read, its own wiki first
+    tools: []
+    autonomy: {}
+  - id: builder
+    purpose: Codes the owner's approved changes in the sandbox.
+    responsibilities: [implement an approved idea on a branch, pass the checks, never push or deploy]
+    owns: {build: CI green and the smoke test passes}
+    harness: claude-code
+    model: claude-subscription
+    key: vk-builder
+    prompts: prompts/builder.md           # MEM-11: its prompts, each change replay-tested
+    jobs: []
+    schedule: on demand
+    roles: [code]
+    rooms: [all, code]
+    contact: ["*"]
+    wake: on_request
+    budgets: {wakes_per_day: 6, messages_per_hour: 20}
+    tools: [graphify]
+    autonomy: {}
+  - id: planner
+    purpose: Splits an approved idea into tasks with dependencies, so parallel builders can take them.
+    responsibilities: [split an idea whose files span areas into the fewest tasks, give each task its files, order tasks that share a file]
+    owns: {task: its build is merged}
+    harness: claude-code
+    model: claude-subscription
+    key: none
+    prompts: prompts/planner.md           # MEM-11: its prompts, each change replay-tested
+    jobs: []
+    schedule: on Build it (inside the build worker)
+    roles: [code]
+    rooms: [all, code]
+    contact: ["*"]
+    wake: never
+    budgets: {wakes_per_day: 0, messages_per_hour: 10}
+    tools: []
+    autonomy: {}
+  - id: opencode
+    purpose: The spare coding agent and the code map's enrichment.
+    responsibilities: [answer code questions, enrich the code map]
+    owns: {}
+    harness: opencode
+    model: gpt-sub
+    key: vk-code
+    prompts: prompts/opencode.md           # MEM-11: its prompts, each change replay-tested
+    jobs: []
+    schedule: on demand
+    roles: [code]
+    rooms: [all, code]
+    contact: ["*"]
+    wake: never
+    budgets: {wakes_per_day: 0, messages_per_hour: 10}
+    tools: [graphify]
+    autonomy: {}
+  - id: doctor
+    purpose: The Health doctor; turns open health issues into findings and fixes.
+    responsibilities: [diagnose open health issues from redacted evidence, propose fixes and detector changes, change nothing]
+    owns: {finding: resolved when its idea is done, idea: its health issue stays away for 7 days}
+    harness: claude-code
+    model: claude-subscription
+    key: none
+    prompts: prompts/doctor.md           # MEM-11: its prompts, each change replay-tested
+    jobs: [crew-doctor]
+    schedule: every 6 h
+    roles: [health, reviewers]
+    rooms: [all, health]
+    contact: ["*"]
+    wake: on_request
+    budgets: {wakes_per_day: 6, messages_per_hour: 20}
+    tools: []
+    autonomy: {}
+  - id: maintainability
+    purpose: The weekly maintainability review of recently changed code.
+    responsibilities: [find code that really costs, propose at most a few changes with evidence]
+    owns: {idea: the named check passes and the code is simpler}
+    harness: claude-code
+    model: claude-subscription
+    key: none
+    prompts: prompts/maintainability.md           # MEM-11: its prompts, each change replay-tested
+    jobs: [crew-maintainability]
+    schedule: weekly
+    roles: [code, reviewers]
+    rooms: [all, code]
+    contact: ["*"]
+    wake: digest
+    budgets: {wakes_per_day: 1, messages_per_hour: 10}
+    tools: []
+    autonomy: {}
+    instructions:
+      - "Propose a change only if you can cite a concrete cost from the last 90 days: a bug, a failed or reverted change, an incident, or a file edited 3+ times for the same reason (name the commits or files). Without that, report nothing."
+      - "Do not propose refactors, deduplication or cleanups of code that works and rarely changes: if the duplication or awkwardness has not caused a defect or repeated edits, leave it alone."
+      - "State in each idea what breaks or costs time today if it is not done; if the honest answer is 'nothing yet', drop the idea. Prefer sending zero ideas over a weak one."
+  - id: tests
+    purpose: The test agent; finds untested and flaky code that changed.
+    responsibilities: [propose one test for churned, untested code]
+    owns: {idea: the named test exists and passes in CI}
+    harness: script
+    model: none
+    key: none
+    jobs: [crew-tests]
+    schedule: weekly
+    roles: [tests]
+    rooms: [all, code]
+    contact: ["*"]
+    wake: never
+    budgets: {wakes_per_day: 0, messages_per_hour: 5}
+    tools: []
+    autonomy: {}
+  - id: self-review
+    purpose: The weekly self-review; turns the stack's signals into improvement ideas.
+    responsibilities: [read the week's signals and reviews, propose small concrete improvements]
+    owns: {idea: its signal stays away for 14 days}
+    harness: python
+    model: gpt-sub
+    key: vk-review
+    prompts: prompts/self-review.md           # MEM-11: its prompts, each change replay-tested
+    jobs: []
+    schedule: weekly (runner thread)
+    roles: [reviewers]
+    rooms: [all, ops]
+    contact: ["*"]
+    wake: never
+    budgets: {wakes_per_day: 0, messages_per_hour: 5}
+    tools: []
+    autonomy: {}
+  - id: memory
+    purpose: The Librarian, the memory curator; keeps every memory under its limit and tidy.
+    responsibilities: [keep each agent's journal short and true, tidy every agent wiki and add no facts, write the hub pages, clean the search index, leave forgetting to the owner]
+    owns: {}
+    harness: python
+    model: gpt-sub-fast
+    key: vk-memory
+    prompts: prompts/memory.md           # MEM-11: its prompts, each change replay-tested
+    jobs: [crew-memory]
+    schedule: weekly
+    roles: [memory]
+    rooms: [all]
+    contact: ["*"]
+    wake: never
+    budgets: {wakes_per_day: 0, messages_per_hour: 5}
+    tools: []
+    autonomy: {}
+  - id: inbox
+    purpose: The Inbox digest; files newsletters worth keeping into the vault.
+    responsibilities: [read mail under the owner's read grant, file the picks, never organise or trash]
+    owns: {}
+    harness: python
+    model: gpt-sub-fast
+    key: vk-inbox
+    prompts: prompts/inbox.md           # MEM-11: its prompts, each change replay-tested
+    jobs: [crew-inbox]
+    schedule: daily
+    roles: [mail]
+    rooms: [all]
+    contact: ["*"]
+    wake: never
+    budgets: {wakes_per_day: 0, messages_per_hour: 5}
+    tools: [mail]
+    autonomy: {}
+  - id: phone-check
+    purpose: Checks the AI phone's battery, storage, patch level and connection.
+    responsibilities: [report real faults only]
+    owns: {}
+    harness: script
+    model: none
+    key: none
+    jobs: [crew-phone-check]
+    schedule: weekly
+    roles: [phone, health]
+    rooms: [all, health]
+    contact: ["*"]
+    wake: never
+    budgets: {wakes_per_day: 0, messages_per_hour: 5}
+    tools: []
+    autonomy: {}
+  - id: phone-cleanup
+    purpose: Turns the AI phone's cleanup analysis into steps the owner approves.
+    responsibilities: [propose cleanup steps, run only what the owner approved]
+    owns: {}
+    harness: script
+    model: none
+    key: none
+    jobs: [crew-phone-cleanup]
+    schedule: weekly
+    roles: [phone]
+    rooms: [all]
+    contact: ["*"]
+    wake: never
+    budgets: {wakes_per_day: 0, messages_per_hour: 5}
+    tools: []
+    autonomy: {}
+  - id: coach
+    purpose: Turns the agents' scorecards into agent changes, each replayed on the agent's past runs before it may ship.
+    responsibilities: [read every scorecard monthly, open an agent change only for a real problem with its evidence and target score, never change itself]
+    owns: {agent_change: its experiment passes and its target score holds for 14 days}
+    harness: claude-code
+    model: claude-subscription
+    key: none
+    prompts: prompts/coach.md           # MEM-11: its prompts, each change replay-tested
+    jobs: [crew-coach]
+    schedule: monthly
+    roles: [reviewers]
+    rooms: [all, ops]
+    contact: ["*"]
+    wake: never
+    budgets: {wakes_per_day: 0, messages_per_hour: 5}
+    tools: []
+    autonomy: {}
+  - id: checker
+    purpose: Decides from ground truth whether a shipped idea worked; applies the owner's autonomy rules.
+    responsibilities: [run each shipped idea's success check, mark it proved or reopen it, start what a rule allows, pause a failing agent]
+    owns: {}
+    harness: script
+    model: none
+    key: none
+    jobs: [crew-checker]
+    schedule: hourly
+    roles: [health]
+    rooms: [all, health]
+    contact: ["*"]
+    wake: never
+    budgets: {wakes_per_day: 0, messages_per_hour: 5}
+    tools: []
+    autonomy: {}

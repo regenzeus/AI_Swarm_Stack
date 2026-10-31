@@ -1,0 +1,25 @@
+# Home Assistant on the Synology DS923+: the hub between the AI stack and the flat (Alexa/Echo, lights, Tapo plugs,
+# later the Schneider shutters). Deployed by `make ha-deploy` to /volume1/docker/homeassistant/compose.yaml.
+# LAN only (port 8123 on the NAS, no router forward). Host networking so it can discover devices (mDNS, Tapo broadcast).
+name: homeassistant
+
+services:
+  homeassistant:
+    # 2026.10.4 pinned by digest (ops/upgrade-check.sh reports newer releases; upgrades go through `make ha-deploy`).
+    image: ghcr.io/home-assistant/home-assistant:2026.10.4@sha256:23f4dfbb69ce76315dbc4de7915504f1c2dcecd7ca2648113a493a385972e133
+    container_name: homeassistant
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      TZ: Europe/Berlin
+    volumes:
+      - /volume1/docker/homeassistant/config:/config
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://127.0.0.1:8123/manifest.json"]
+      interval: 60s
+      timeout: 10s
+      start_period: 120s
+      retries: 3
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 1g

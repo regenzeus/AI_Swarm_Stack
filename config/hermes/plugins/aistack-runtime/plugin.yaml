@@ -1,0 +1,12 @@
+name: aistack-runtime
+version: 1.0.0
+description: "AI stack runtime record: every model call, tool call, result and run end of this Hermes profile, sent to Mission Control's live run view (docs/OBSERVABILITY.md). Observer only: never blocks, changes or slows a call."
+author: "AI stack"
+provides_hooks:
+  - pre_llm_call
+  - post_api_request
+  - api_request_error
+  - pre_tool_call
+  - post_tool_call
+  - on_session_end
+  - subagent_start

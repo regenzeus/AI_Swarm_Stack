@@ -1,0 +1,18 @@
+#!/bin/sh
+# Serena MCP server for the builder (images/builder/Dockerfile). The repo in the working directory is its project:
+# builds run in /work/<repo>. Its language servers were downloaded into /opt/serena-home at image build.
+export HOME=/opt/serena-home PATH=/opt/serena/bin:$PATH
+export SERENA_USAGE_REPORTING=false                   # no usage ping home
+# Without a project file Serena guesses ONE language and ignores the other files ("path is ignored"):
+# declare every language the repo has. .serena/ is git-excluded in each workbench clone (ops/builds.py).
+if [ ! -f .serena/project.yml ] && git rev-parse --git-dir >/dev/null 2>&1; then
+  langs=""
+  git ls-files '*.py' | grep -q . && langs="$langs --language python"
+  git ls-files '*.js' '*.mjs' '*.cjs' '*.jsx' '*.ts' '*.tsx' | grep -q . && langs="$langs --language typescript"
+  git ls-files '*.sh' | grep -q . && langs="$langs --language bash"
+  # shellcheck disable=SC2086  # one word per flag
+  [ -n "$langs" ] && serena project create $langs . >/dev/null 2>&1
+fi
+# one tool per operation (the default is a single Python REPL tool, which the models use worse)
+exec serena start-mcp-server --project-from-cwd --agent-interface tools --enable-web-dashboard false \
+  --open-web-dashboard false --enable-gui-log-window false "$@"
