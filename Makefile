@@ -7,7 +7,7 @@ COMPOSE := docker compose --env-file versions.env -f compose/core.yaml -f compos
 # Run a compose command with secrets in its environment: $(call dc,<args>)
 dc = sops exec-env $(SECRETS) 'sops exec-env $(KEYS) "$(COMPOSE) $(1)"'
 
-.PHONY: up down ps logs restart keys secrets-edit smoke claude-connect probe-tools req check lock pull-smoke-model chatgpt-login ingest-exports bench bench-gate retrieval curate vault-check skill-approve skills-restore-from-git backup restore-drill restore understand understand-dashboard upgrade-check digest forget hindsight-models desk email-setup wiki-rebuild ua-enrich publish-check publish
+.PHONY: up down ps logs restart keys secrets-edit smoke claude-connect probe-tools req check lock pull-smoke-model chatgpt-login ingest-exports bench bench-gate retrieval curate vault-check skill-approve skills-restore-from-git backup restore-drill restore understand understand-dashboard upgrade-check digest forget hindsight-models desk email-setup wiki-rebuild ua-enrich publish-check publish tasks-gate conductor-gate
 
 up:               ## start core services
 	$(call dc,up -d $(UP_SERVICES))
@@ -132,6 +132,12 @@ email-setup:      ## one-time: Gmail app password for report e-mails (asks you; 
 
 wiki-rebuild:     ## compile a mission's LLM wiki from all its results: make wiki-rebuild MISSION=slug
 	$(call SECRETS_ALL,python3 ops/wiki_rebuild.py $(MISSION))
+
+tasks-gate:      ## phase 1's gate: eval/tasks-v1.yaml's 20 one-sentence tasks through the intake (starts nothing)
+	sops exec-env $(SECRETS) 'sops exec-env $(KEYS) "python3 ops/tasks.py gate"'
+
+conductor-gate:  ## phase 2's gate: a five-step task on three harnesses, the runner restarted during it (uses the subscriptions)
+	sops exec-env $(SECRETS) 'sops exec-env $(KEYS) "python3 ops/conductor.py gate"'
 
 publish-check:    ## build the public snapshot, scan it and run its tests; pushes nothing (docs/PUBLISHING.md)
 	python3 ops/publish.py check

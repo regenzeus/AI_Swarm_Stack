@@ -2,13 +2,14 @@
   desk.py --topic /topic --state /state --out /out [--date YYYY-MM-DD] [--dry]     desk.py --check < sources.json
 /topic holds TOPIC.md (the brief) and reports/ (earlier briefings, read-only). /state keeps seen.sqlite (what was
 already reported). /out receives <date>.md (the report) and <date>.telegram.txt (the short version).
-Steps: collect (feeds, Google News, GDELT) -> keep new items of the last 36 h -> group duplicates into events ->
+Steps: collect (feeds, Google News, GDELT) -> keep new items of the brief's window (window_hours: 36 h for a daily
+briefing, a week for a weekly one) -> group duplicates into events ->
 triage against the key questions (gpt-sub-fast) -> read the chosen articles (trafilatura, private addresses refused)
 -> prices (Yahoo chart data; deterministic, never written by the model) -> write the report (gpt-sub, in the brief's
 language, citing only numbered sources) -> check citations.
 Runs on the "webonly" network: internet and LiteLLM only. Env: LITELLM_URL, VK_DESK.
 """
-import argparse, datetime as dt, hashlib, html, ipaddress, json, os, re, socket, sqlite3, sys, time, urllib.parse, urllib.request
+import argparse, base64, datetime as dt, hashlib, html, ipaddress, json, os, re, socket, sqlite3, sys, time, urllib.parse, urllib.request
 from pathlib import Path
 
 import feedparser
@@ -17,6 +18,17 @@ import yaml
 
 UA = "Mozilla/5.0 (X11; Linux x86_64) ai-stack-desk/1.0 (personal research)"
 NOW = dt.datetime.now(dt.timezone.utc)
+WINDOW_H = 36                                    # the brief's window_hours: what counts as recent (set by main)
+
+
+def gnews_url(q, hours=36):
+    """A Google News search in the query's own language (Chinese, German, else English), over the window unless the
+    query names its own (when:7d)."""
+    lang = (("zh-CN", "CN", "CN:zh-Hans") if re.search(r"[一-鿿]", q) else
+            ("de", "DE", "DE:de") if re.search(r"[äöüß]|\bUran\b", q) else ("en-US", "US", "US:en"))
+    if "when:" not in q:
+        q += f" when:{max(1, hours // 24)}d"
+    return f"https://news.google.com/rss/search?q={urllib.parse.quote(q)}&hl={lang[0]}&gl={lang[1]}&ceid={lang[2]}"
 
 
 def log(*a):
@@ -51,13 +63,13 @@ def public_url(url):
         return False
 
 
-def get(url, timeout=25):
+def get(url, timeout=25, headers=None):
     if not public_url(url):
         raise ValueError(f"refused non-public url {url}")
     host = urllib.parse.urlparse(url).hostname or ""
     # SEC EDGAR requires a contact in the User-Agent (its fair-access policy); only sent to sec.gov.
     ua = os.environ.get("SEC_CONTACT", UA) if host == "sec.gov" or host.endswith(".sec.gov") else UA
-    req = urllib.request.Request(url, headers={"User-Agent": ua})
+    req = urllib.request.Request(url, headers={"User-Agent": ua, **(headers or {})})
     with urllib.request.urlopen(req, timeout=timeout) as r:
         return r.read()
 
@@ -176,7 +188,7 @@ def from_sec(tickers):
             desc = r.get("primaryDocDescription", [""] * 99)[i] or r["form"][i]
             url = f"https://www.sec.gov/Archives/edgar/data/{c['cik_str']}/{acc}/{r['primaryDocument'][i]}"
             summary = f"SEC filing, form {r['form'][i]}"
-            if p and (NOW - p).total_seconds() < 36 * 3600:  # recent: read it, so triage sees what it is about
+            if p and (NOW - p).total_seconds() < WINDOW_H * 3600:  # recent: read it, so triage sees what it is about
                 try:
                     text = ""
                     if r["form"][i] in ("6-K", "8-K"):       # the cover page is boilerplate; the news is in exhibit 99.x
@@ -200,16 +212,53 @@ def from_sec(tickers):
     return out
 
 
+# ---------- job openings: the federal job board (Bundesagentur für Arbeit), for a job-hunt brief (MIS-21) ----------
+JOBS_API = "https://rest.arbeitsagentur.de/jobboerse/jobsuche-service"
+JOBS_KEY = {"X-API-Key": "jobboerse-jobsuche"}         # the board's public key, the one its own website sends
+JOB_PAGE = "https://www.arbeitsagentur.de/jobsuche/jobdetail/"
+
+
+def from_jobs(searches):
+    """Openings for each {what, where, radius_km} of the brief. They carry no publication time on purpose: an opening is
+    news until it has been reported once (seen.sqlite), however long ago it was posted."""
+    out = []
+    for s in searches[:10]:                              # cap: list (the brief's searches)
+        if not isinstance(s, dict) or not s.get("what"):
+            continue
+        q = {"was": s["what"], "angebotsart": 1, "veroeffentlichtseit": 30, "size": 50}
+        if s.get("where"):
+            q |= {"wo": s["where"], "umkreis": int(s.get("radius_km") or 50)}
+        try:
+            d = json.loads(get(f"{JOBS_API}/pc/v6/jobs?{urllib.parse.urlencode(q)}", headers=JOBS_KEY))
+        except Exception as e:
+            log(f"jobs {s['what']} failed: {e}")
+            continue
+        for j in d.get("ergebnisliste") or []:
+            a = ((j.get("stellenlokationen") or [{}])[0] or {}).get("adresse") or {}
+            where = " ".join(x for x in (a.get("plz"), a.get("ort")) if x)
+            title = " ".join((j.get("stellenangebotsTitel") or "").split())
+            out.append({"title": f"{title} · {j.get('firma', '')} · {where}", "url": JOB_PAGE + j.get("referenznummer", ""),
+                        "source": "Bundesagentur für Arbeit", "published": None, "via": "jobs", "refnr": j.get("referenznummer", ""),
+                        "summary": f"{j.get('hauptberuf', '')}; {'full' if j.get('arbeitszeitVollzeit') else 'part'} time; "
+                                   f"{(j.get('vertragsdauer') or '').lower()}; {j.get('entfernung', '?')} km away; posted "
+                                   f"{(j.get('veroeffentlichungszeitraum') or {}).get('von', '?')}"})
+        time.sleep(1)
+    return out
+
+
+def job_text(refnr):
+    """The employer's full ad of one opening."""
+    d = json.loads(get(f"{JOBS_API}/pc/v4/jobdetails/{base64.b64encode(refnr.encode()).decode()}", headers=JOBS_KEY))
+    return d.get("stellenangebotsBeschreibung") or ""
+
+
 def collect(b):
     src = b.get("sources", {})
-    items = from_sec(src.get("filings", []))
+    items = from_sec(src.get("filings", [])) + from_jobs(src.get("jobs", []))
     for u in src.get("feeds", []):
         items += from_feed(u, "feed")
     for q in src.get("search", []):
-        lang = ("de", "DE", "DE:de") if re.search(r"[äöüß]|\bUran\b", q) else ("en-US", "US", "US:en")
-        u = (f"https://news.google.com/rss/search?q={urllib.parse.quote(q + ' when:1d')}"
-             f"&hl={lang[0]}&gl={lang[1]}&ceid={lang[2]}")
-        items += from_feed(u, "gnews")
+        items += from_feed(gnews_url(q, WINDOW_H), "gnews")
         time.sleep(1)
     for q in src.get("gdelt", []):
         time.sleep(6)                                        # GDELT allows one request per 5 seconds
@@ -231,7 +280,7 @@ def events(items, db):
     fresh, keys = [], set()
     for it in items:
         k = key(it)
-        recent = it["published"] is None or (NOW - it["published"]).total_seconds() < 36 * 3600
+        recent = it["published"] is None or (NOW - it["published"]).total_seconds() < WINDOW_H * 3600
         if k in seen or k in keys or not recent or not it["title"]:
             continue
         keys.add(k)
@@ -240,8 +289,8 @@ def events(items, db):
     groups = []
     for it in sorted(fresh, key=lambda x: x["via"] != "feed"):   # direct feeds first: real article links
         w = words(it["title"])
-        for g in groups:
-            if len(w & g["words"]) / max(len(w | g["words"]), 1) >= 0.5:
+        for g in groups if it["via"] != "jobs" else ():         # two openings are two events however alike their titles
+            if g["items"][0]["via"] != "jobs" and len(w & g["words"]) / max(len(w | g["words"]), 1) >= 0.5:
                 g["items"].append(it)
                 break
         else:
@@ -317,7 +366,7 @@ def read(group):
         if "news.google.com" in it["url"]:
             continue
         try:
-            text = doc_text(get(it["url"]))
+            text = job_text(it["refnr"]) if it.get("via") == "jobs" else doc_text(get(it["url"]))   # a job page is a script app
             if len(text) > 300:
                 return text[:3500]  # cap: prompt
         except Exception as e:
@@ -355,7 +404,8 @@ def price_table(rows):
     for r in rows:
         label = r["name"] + (" (spot proxy)" if r["proxy"] == "spot" else "")
         lines.append(f"| {label} · {r['symbol']} | {r['last']:,.2f} {r['currency']} | {r['day']:+.1f} % | {r['month']:+.1f} % |")
-    return "\n".join(lines) + "\n\n_No free official spot price: the Sprott trust and the ETF are proxies. Closing prices, source Yahoo Finance._"
+    note = "No free official spot price: the rows marked spot proxy stand in for it. " if any(r["proxy"] == "spot" for r in rows) else ""
+    return "\n".join(lines) + f"\n\n_{note}Closing prices, source Yahoo Finance._"
 
 
 # ---------- write ----------
@@ -382,7 +432,9 @@ def write(b, chosen, rows, prev, date):
     sections = [s for s in b["report"]["sections"] if s not in ("Prices", "Headline", "In 60 seconds")]
     text, ref, fills = prompt("BRIEFING", topic=b["topic"], mission=b["mission"], questions=json.dumps(b["key_questions"], ensure_ascii=False),
                               notes=b["notes"], previous=prev or "(none, this is the first briefing)", events="\n\n".join(blocks),
-                              language="English", style="",                # every briefing is English (DEC-02, FND-21)
+                              language="English",                          # every briefing is English (DEC-02, FND-21)
+                              style="" if WINDOW_H <= 36 else f"This briefing covers the last {round(WINDOW_H / 24)} days, not one day; "
+                                    "the previous briefing is the last one, not yesterday's. ",
                               source_titles=json.dumps({n: it["title"] for n, it in enumerate(sources, 1)}, ensure_ascii=False),
                               sections=", ".join(json.dumps(s, ensure_ascii=False) + ": markdown" for s in sections),
                               titles="")
@@ -405,7 +457,8 @@ def write(b, chosen, rows, prev, date):
 # ---------- Mission Control: event watching, alerts, e-mail ----------
 def watch(spec):
     """--watch: current filings, prices and news for event triggers (no model calls, no seen-state: the runner diffs).
-    stdin {"sec": [tickers], "prices": [symbols], "news": [queries]} -> stdout {"sec": {t: [filing]}, "prices": {...}, "news": {...}}"""
+    stdin {"sec": [tickers], "prices": [symbols], "news": [queries], "feeds": [urls], "github": ["owner/repo"]}
+    -> stdout {"sec": {t: [filing]}, "prices": {...}, "news": {...}, "feeds": {...}, "github": {...}}"""
     out = {"sec": {}, "prices": {}, "news": {}}
     if spec.get("sec") and os.environ.get("SEC_CONTACT"):
         try:
@@ -444,10 +497,26 @@ def watch(spec):
             log(f"watch: price {sym} failed ({str(e)})")
         time.sleep(0.3)
     for q in spec.get("news", [])[:20]:
-        u = f"https://news.google.com/rss/search?q={urllib.parse.quote(q + ' when:1d')}&hl=en-US&gl=US&ceid=US:en"
+        u = gnews_url(q, 24)
         out["news"][q] = [{"id": key(it), "title": it["title"], "url": it["url"], "source": it["source"],
                            "published": it["published"].isoformat() if it["published"] else None} for it in from_feed(u, "gnews")[:15]]
         time.sleep(1)
+    out["feeds"], out["github"] = {}, {}               # the event bus (ops/events.py, TSK-10): feeds and GitHub activity
+    for u in spec.get("feeds", [])[:20]:
+        out["feeds"][u] = [{"id": key(it), "title": it["title"], "url": it["url"], "source": it["source"],
+                            "published": it["published"].isoformat() if it["published"] else None} for it in from_feed(u, "feed")[:20]]
+    for r in spec.get("github", [])[:10]:
+        if not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", r):
+            continue
+        try:                                            # public activity, no token: 60 calls an hour are plenty for a few repos
+            evs = json.loads(get(f"https://api.github.com/repos/{r}/events?per_page=30"))
+        except Exception as e:
+            log(f"watch: github {r} failed ({str(e)})")
+            continue
+        out["github"][r] = [{"id": e["id"], "url": f"https://github.com/{r}", "published": e.get("created_at"),
+                             "title": f"{e['type'].removesuffix('Event')} by {e.get('actor', {}).get('login', '?')}"
+                                      + (f": {e['payload'].get('action')}" if isinstance(e.get("payload"), dict) and e["payload"].get("action") else "")}
+                            for e in evs if isinstance(e, dict) and e.get("id")]
     print(json.dumps(out))
 
 
@@ -490,28 +559,32 @@ def alert(spec):
     print(json.dumps(r, ensure_ascii=False))
 
 
-MAIL = """<!doctype html><html><body style="margin:0;padding:0;background:#eef1f6">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#eef1f6;padding:24px 0"><tr><td align="center">
-<table role="presentation" width="640" cellpadding="0" cellspacing="0" style="max-width:640px;width:100%;background:#ffffff;border-radius:16px;overflow:hidden;font-family:-apple-system,Segoe UI,Inter,Helvetica,Arial,sans-serif;color:#0f1626">
-<tr><td style="background:linear-gradient(135deg,#0f766e,#6d28d9);background-color:#0f766e;padding:26px 30px;color:#ffffff">
-<div style="font-size:12px;letter-spacing:.12em;text-transform:uppercase;opacity:.85">{kicker}</div>
-<div style="font-size:24px;font-weight:700;line-height:1.25;margin-top:8px">{headline}</div></td></tr>
-<tr><td style="padding:8px 30px 26px;font-size:15px;line-height:1.65" class="body">{body}</td></tr>
-<tr><td style="padding:18px 30px;background:#f6f7fb;font-size:12px;color:#5a6478">{footer}</td></tr>
+# FND-79: fluid width and a viewport, so phone mail apps don't treat it as a desktop page and blow its text up
+MAIL = """<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="x-apple-disable-message-reformatting"><meta name="color-scheme" content="light dark"><title>{headline}</title></head>
+<body style="margin:0;padding:0;background:#eef1f6;-webkit-text-size-adjust:100%;text-size-adjust:100%">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#eef1f6;padding:16px 0"><tr><td align="center" style="padding:0 8px">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:640px;width:100%;background:#ffffff;border-radius:12px;overflow:hidden;font-family:-apple-system,Segoe UI,Inter,Helvetica,Arial,sans-serif;color:#0f1626">
+<tr><td style="background-color:#0f766e;padding:18px 20px;color:#ffffff">
+<div style="font-size:12px;line-height:1.4;letter-spacing:.06em;text-transform:uppercase;opacity:.85">{kicker}</div>
+<div style="font-size:18px;font-weight:700;line-height:1.35;margin-top:6px">{headline}</div></td></tr>
+<tr><td style="padding:4px 20px 20px;font-size:15px;line-height:1.6;word-break:break-word" class="body">{body}</td></tr>
+<tr><td style="padding:14px 20px;background:#f6f7fb;font-size:12px;line-height:1.5;color:#5a6478">{footer}</td></tr>
 </table></td></tr></table></body></html>"""
 
 
 def email(spec):
     """--email: a designed HTML e-mail of a report (no model call). stdin {"markdown", "kicker", "url"} -> stdout {"html", "text"}."""
     import markdown as mdlib
-    text = re.sub(r"^---\n.*?\n---\n", "", spec["markdown"], flags=re.S)
+    text = re.sub(r"^---\n.*?\n---\n", "", spec["markdown"], flags=re.S).lstrip()   # FND-79: a blank line hid the headline
     m = re.match(r"#\s+(.+)\n", text)
     headline = m.group(1) if m else spec.get("kicker", "")
     body = mdlib.markdown(text[m.end():] if m else text, extensions=["tables", "sane_lists"])
-    styles = {"h2": "font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:#0f766e;margin:26px 0 8px",
-              "table": "width:100%;border-collapse:collapse;font-size:13px;margin:8px 0",
-              "th": "text-align:left;padding:6px 8px;border-bottom:2px solid #e3e7ef;color:#5a6478;font-weight:600",
-              "td": "padding:6px 8px;border-bottom:1px solid #eef1f6", "a": "color:#0f766e",
+    styles = {"h1": "font-size:18px;line-height:1.35;margin:16px 0 8px", "h3": "font-size:15px;line-height:1.4;margin:18px 0 6px",
+              "h2": "font-size:13px;line-height:1.4;letter-spacing:.06em;text-transform:uppercase;color:#0f766e;margin:24px 0 8px",
+              "table": "width:100%;border-collapse:collapse;font-size:12px;margin:8px 0",
+              "th": "text-align:left;padding:5px 4px;border-bottom:2px solid #e3e7ef;color:#5a6478;font-weight:600",
+              "td": "padding:5px 4px;border-bottom:1px solid #eef1f6", "a": "color:#0f766e;word-break:break-all",
               "li": "margin:5px 0", "p": "margin:10px 0", "em": "color:#5a6478"}
     for tag, st in styles.items():
         body = re.sub(rf"<{tag}(?=[ >])", f'<{tag} style="{st}"', body)
@@ -570,11 +643,13 @@ def main():
         CASE_FILE = Path(a.out) / "prompt-cases.jsonl"
         CASE_FILE.write_text("")                 # this run's cases only; ops/desk.sh keeps them after the run
     b = brief(a.topic)
+    global WINDOW_H
+    WINDOW_H = int(b.get("window_hours") or 36)
     db = sqlite3.connect(Path(a.state) / "seen.sqlite")
     db.execute("create table if not exists seen (id text primary key, first_seen text, title text)")
     items = collect(b)
     fresh, groups = events(items, db)
-    log(f"{len(items)} items collected, {len(fresh)} new in 36 h, {len(groups)} events")
+    log(f"{len(items)} items collected, {len(fresh)} new in {WINDOW_H} h, {len(groups)} events")
     if a.dry:
         for g in groups[:40]:  # cap: list
             log(f"  {len(g['items'])}x {g['items'][0]['source'][:20]:20} {g['items'][0]['title']}")

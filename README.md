@@ -17,6 +17,7 @@ screen with examples you can try.
 | | |
 |---|---|
 | **What the stack shall do** (the source of truth for behaviour) | [requirements/](requirements/README.md), rendered in [REQUIREMENTS.md](requirements/REQUIREMENTS.md) |
+| Where the swarm goes next | [docs/SWARM-ROADMAP.md](docs/SWARM-ROADMAP.md), its requirements in [requirements/tasks.yaml](requirements/tasks.yaml) |
 | Status, findings and what is next | [the review of 30 October 2026](docs/REVIEW-2026-10-30.md), and the open findings in [requirements/findings.yaml](requirements/findings.yaml) |
 | Every other document, current and historical | [docs/README.md](docs/README.md) |
 | Mission Control: how the app and the runner talk | [docs/MISSION-CONTROL.md](docs/MISSION-CONTROL.md), its HTTP API in [docs/API.md](docs/API.md) |

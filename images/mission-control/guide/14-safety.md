@@ -46,8 +46,10 @@ No paid model is configured anywhere in the gateway, and every agent's key only 
 a bug can't spend money. The dashboard shows the total ever paid, which is still a fraction of a cent from early
 tests.
 
-When the subscription's usage limit is reached, chat answers with an error, and missions and builds **wait** and
-retry automatically.
+When the subscription's usage limit is reached, missions and builds **wait** and retry automatically. In the app's
+chat your message is kept: the chat says when the limit resets (or that it tries every 15 minutes when ChatGPT gives no
+time), answers by itself afterwards, and you get a notification when the answer is there. *Try now* sends it at once.
+On Telegram, Hermes answers the limit itself.
 
 ## Recoverable
 

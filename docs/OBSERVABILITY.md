@@ -108,6 +108,10 @@ Claude tasks, the chat header and the AI phone page link to it.
 **Problems** of finished runs (`GET :8093/problems`: the deterministic checks above, plus stalled, limit, failed,
 and lost tools) join the Agent health board as one item per agent and go out once per issue like the others.
 
+**Notifications** go out through one path, `ops/notify.py` (OBS-16): the owner's preferences per kind of message and
+channel, quiet hours (only approvals then; Telegram messages wait and go out as one), once per key, and a log of every
+decision (`/srv/ai/state/notifications.jsonl`, shown under Stack → Notifications). Nothing else talks to Telegram.
+
 **This PC** (an engine item on the same board, from `ops/crew.py`) watches the machine: full swap (an alert
 when RAM is short too, CST-14), containers on another build than their tag or missing from `versions.lock` (PLT-20),
 and an alert when a container is cut off from the network it shares, because the container it shares was

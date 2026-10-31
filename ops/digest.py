@@ -116,4 +116,5 @@ except Exception:
 msg = "\n".join(lines)
 print(msg)
 if "--print" not in sys.argv:
-    subprocess.run([str(OPS / "notify.sh"), msg], capture_output=True)
+    import notify as N                            # the one notification path (OBS-16)
+    N.send(msg, "result")

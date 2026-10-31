@@ -11,5 +11,7 @@ RUN apt-get update -qq && apt-get install -y -qq --no-install-recommends iptable
  && useradd -r -u 10001 fetch
 COPY entrypoint.sh /entrypoint.sh
 COPY fetch_pdf.py /app/fetch_pdf.py
-EXPOSE 8000
+# The federal job board's search (jobs.py, MCP on 8001): same network, firewall and user as the page reader
+COPY jobs.py /app/jobs.py
+EXPOSE 8000 8001
 ENTRYPOINT ["sh", "/entrypoint.sh"]

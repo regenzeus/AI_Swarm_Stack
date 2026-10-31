@@ -41,3 +41,22 @@ def test_every_shell_script_is_executable():
     """systemd units, make and the runner start scripts directly; a lost executable bit fails silently (203/EXEC)."""
     scripts = [p for p in ROOT.rglob("*.sh") if not SKIP_PARTS & set(p.parts)]
     assert scripts and not [str(p.relative_to(ROOT)) for p in scripts if not os.access(p, os.X_OK)]
+
+
+def test_every_make_recipe_calls_a_file_that_exists():
+    """FND-81: a commit removed the first space of 99 Makefile lines (`python3ops/...`, `sopsexec-env`, `$(calldc,`) and
+    nothing ran the targets. A recipe's command, its function calls and the repo file it runs are checked without
+    running the target."""
+    import re
+    bad = []
+    for n, line in enumerate((ROOT / "Makefile").read_text().splitlines(), 1):
+        if re.search(r"\$\(call[A-Za-z_]", line) or re.match(r"\t(?:@)?(sops|docker|python3|bash)(exec|network|compose|ops|eval|smoke)", line):
+            bad.append(f"Makefile:{n}: {line.strip()[:60]}")
+        m = re.match(r"\t(?:@)?(python3|bash|sh)(\S*)\s+(\S+)", line)
+        if not m:
+            continue
+        if m.group(2):                                               # python3ops/x.py: the space is gone
+            bad.append(f"Makefile:{n}: {m.group(1)}{m.group(2)}")
+        elif re.match(r"(ops|eval|spec|tests|images)/\S+\.(py|sh)$", m.group(3)) and not (ROOT / m.group(3)).exists():
+            bad.append(f"Makefile:{n}: {m.group(3)} does not exist")
+    assert not bad, bad

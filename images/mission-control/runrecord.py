@@ -188,8 +188,13 @@ def trace(run):
 def _infer_ref(c, agent):
     """`hermes -z` runs inside Hermes' resident process, so AISTACK_REF from `docker exec` doesn't reach the plugin.
     Missions run one at a time, so a mission-profile run belongs to the live mission run, and a scout run (research)
-    to the live mission agent, else the live mission run, else the live chat turn that asked for it."""
-    order = {"mission": ("mission-run:%",), "scout": ("hermes:mission:%", "mission-run:%", "hermes:main:%")}.get(agent or "")
+    to the live mission agent, else the live mission run, else the live chat turn that asked for it.
+    A live Conductor step of the same agent comes first: the step started the run, so its tokens count to the task."""
+    r = c.execute("select run from runs where ended is null and run like 'task:%:step:%' and agent=? order by last desc limit 1",
+                  (agent or "",)).fetchone()
+    if r:
+        return r["run"]
+    order ={"mission": ("mission-run:%",), "scout": ("hermes:mission:%", "mission-run:%", "hermes:main:%")}.get(agent or "")
     for pat in order or ():
         r = c.execute("select run from runs where ended is null and run like ? order by last desc limit 1", (pat,)).fetchone()
         if r:

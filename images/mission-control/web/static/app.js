@@ -78,7 +78,7 @@ const dt = (iso) => iso ? new Date(iso).toLocaleString("en-GB", { weekday: "shor
 const greet = () => { const h = new Date().getHours(); return h < 5 ? "Good night" : h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening"; };
 const STATUS = { active: "Active", paused: "Paused", archived: "Archived", ok: "Done", failed: "Failed", running: "Running", queued: "Queued", skipped: "Skipped", waiting: "Waiting for ChatGPT" };
 const typeIcon = (t) => (t === "briefing" ? ic.news : t === "shopping" ? ic.coin : t === "cleanup" ? ic.trash : ic.rocket);
-const typeName = (t) => (t === "briefing" ? "Daily briefing" : t === "shopping" ? "Shopping" : t === "cleanup" ? "Cleanup analysis" : "Long-term task");
+const typeName = (t) => (t === "briefing" ? "Briefing" : t === "shopping" ? "Shopping" : t === "cleanup" ? "Cleanup analysis" : "Long-term task");
 const TRIG = { schedule: "scheduled", manual: "on demand", event: "event", restart: "restarted after a deploy" };
 
 function md(text, wl) {
@@ -217,7 +217,7 @@ function render(force = false) {
   const y = window.scrollY;
   if (force) { document.body.classList.add("anim"); clearTimeout(render.anim); render.anim = setTimeout(() => document.body.classList.remove("anim"), 600); }
   const open = force ? [] : [...view.querySelectorAll("details[open][id], details[open][data-keep]")].map((d) => d.id || d.dataset.keep);
-  const fn = { home: vHome, missions: vMissions, mission: vMission, new: vNew, chat: vChat, system: vSystem, read: vRead, wiki: vWiki, build: vBuild, repo: vRepo, guide: vGuide, share: vShare, phone: vPhone, house: vHouse, crew: vCrew, live: vLive, swarm: vSwarm }[route.name] || vHome;
+  const fn = { tasks: vTasks, home: vHome, missions: vMissions, mission: vMission, new: vNew, chat: vChat, system: vSystem, read: vRead, wiki: vWiki, build: vBuild, repo: vRepo, guide: vGuide, share: vShare, phone: vPhone, house: vHouse, crew: vCrew, live: vLive, swarm: vSwarm }[route.name] || vHome;
   fn();
   for (const k of open) {                          // a live redraw keeps what you opened open
     const d = view.querySelector(`details#${CSS.escape(k)}`) || view.querySelector(`details[data-keep="${CSS.escape(k)}"]`);
@@ -383,6 +383,207 @@ document.addEventListener("click", async (e) => {                     // the dev
   toast(r.error || (body.do === "stop" ? "AI phone stopped" : body.minutes === 0 ? "It asks again for every action" : body.minutes < 0 ? "Works without asking until you stop it" : `Works without asking for ${body.minutes} minutes`), !!r.error);
 });
 
+// ---------- Tasks (TSK-01 to TSK-04): give a task in a sentence, or with its details set; every task on one board ----------
+const TGROUPS = [["Waiting on you", ["needs_answer", "waiting_approval", "waiting_owner"]], ["Running", ["intake", "planning", "planned", "running", "after"]],
+  ["Scheduled", ["scheduled"]], ["Done", ["done", "failed", "cancelled"]]];
+const TSTATUS = { intake: "being planned", planning: "being planned", planned: "starting", needs_answer: "has a question", waiting_approval: "waits for your OK",
+  waiting_owner: "waits for your review", running: "running", after: "waits for another task", scheduled: "scheduled", done: "done", failed: "failed", cancelled: "cancelled" };
+const TKINDS = { coding: "Coding", code_question: "Question about code", research: "Research", analysis: "Analysis", watching: "Watching", briefing: "Briefing", shopping: "Shopping", errand: "Errand" };
+const TDOOR = { mission: (r) => [`#/mission/${encodeURIComponent(r)}`, "Open the mission"], build: (r) => [`#/build/${r}`, `Open build #${r}`],
+  claude: (r) => [`#/live/claude-task:${r}`, `Open Claude task #${r}`], chat: (r) => [`#/chat?c=${r}`, "Open the chat"] };
+const openTasks = () => (S?.tasks || []).filter((t) => !["done", "failed", "cancelled"].includes(t.status)).length;
+const rhythmText = (r, after) => r?.type === "schedule" ? r.schedule : r?.type === "event" ? `on ${(r.triggers || []).map((x) => x.type === "news" ? `news on “${x.query}”` : x.type === "price_move" ? `a ${x.pct} % move of ${x.symbol}` : `SEC filings of ${(x.tickers || []).join(", ")}`).join(", ")}`
+  : r?.type === "after" || after ? `after task #${r?.task || after}` : "once";
+let taskOpen = null;
+// FND-77: a scheduled task says what its last run did and when the next one comes, so "scheduled" never reads as "waiting";
+// the date in English like the rest of the app (DEC-02), in the browser's time zone
+const nextText = (iso) => new Date(iso).toLocaleString("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+const tstat = (t) => t.door !== "mission" || !["scheduled", "running"].includes(t.status) ? TSTATUS[t.status] || t.status
+  : [t.last_run ? (t.last_run.ended ? `ran ${rel(t.last_run.ended)}` : "running now") : "first run starting", t.next_run ? `next ${nextText(t.next_run)}` : ""].filter(Boolean).join(" · ");
+function lastRunHtml(t) {
+  const r = t.last_run;
+  if (!r) return "";
+  return `<div class="tlabel">${r.ended ? "Last run" : "Running now"}</div><p class="${r.status === "ok" || !r.ended ? "" : "err-t"}">${esc(r.summary || (r.ended ? r.status : "started " + rel(r.started)))}</p>
+    <div class="row" style="gap:8px">${r.output ? `<a class="btn sm primary" href="#/read?path=${encodeURIComponent(r.output)}&m=${encodeURIComponent(t.ref)}">${ic.doc}Read it</a>` : ""}<a class="btn sm ghost" href="#/live/${encodeURIComponent(`mission-run:${r.id}`)}">${ic.pulse}How it ran</a></div>`;
+}
+
+// TSK-05 to TSK-08: a Conductor task's steps, each with its agent, harness, state and what it waits for
+const SSTATE = { pending: "waits", running: "running", waiting: "waits for its agent", done: "done", failed: "failed", cancelled: "cancelled" };
+function taskStepsHtml(t) {
+  return `<div class="tlabel">Steps</div><ol class="tplan">${t.steps.map((s) => `<li><b>${esc(s.title)}</b> <span class="agent">${esc(s.agent)}</span> <span class="tiny faint">${esc(s.harness)}</span>
+    <div class="sub ${s.status === "failed" ? "err-t" : s.status === "done" ? "" : "warn-t"}">${esc(SSTATE[s.status] || s.status)}${s.after?.length ? ` · after step ${s.after.join(", ")}` : ""}${s.waiting_for ? ` · ${esc(s.waiting_for)}` : ""}${s.attempts > 1 ? ` · attempt ${s.attempts}` : ""}</div>
+    ${s.error && s.status !== "done" ? `<div class="faint">${esc(s.error)}</div>` : ""}${s.output ? `<details class="tiny"><summary>Its result</summary><div class="md">${md(s.output)}</div></details>` : ""}</li>`).join("")}</ol>`;
+}
+
+function taskCard(t) {
+  const [href, label] = t.door && t.ref && TDOOR[t.door] ? TDOOR[t.door](t.ref) : [null, ""];
+  const bad = ["failed", "cancelled"].includes(t.status), wait = ["needs_answer", "waiting_approval", "waiting_owner"].includes(t.status);
+  return `<details class="card tcard" id="task-${t.id}" data-keep="task-${t.id}"${taskOpen === t.id || t.status === "needs_answer" ? " open" : ""}>
+    <summary><div class="row" style="gap:10px;align-items:flex-start"><div class="ic ${bad ? "err" : wait ? "warn" : t.status === "done" ? "ok" : ""}">${ic.target}</div>
+      <div class="grow" style="min-width:0"><div class="ttl">${esc(t.title)}</div><div class="sub">#${t.id} · ${esc(tstat(t))}${t.kind ? ` · ${esc(TKINDS[t.kind] || t.kind)}` : ""} · ${esc(rhythmText(t.rhythm, t.after))} · ${rel(t.created)}</div></div></div></summary>
+    <div class="tbody small">
+      ${t.goal && t.goal !== t.title ? `<p>${esc(t.goal)}</p>` : ""}
+      ${t.text !== t.goal ? `<p class="faint">You wrote: “${esc(t.text)}”</p>` : ""}
+      ${t.error ? `<div class="banner" style="padding:8px 12px">${ic.alert}<span>${esc(t.error)}</span></div>` : ""}
+      ${lastRunHtml(t)}
+      ${t.judgement?.points?.length ? `<div class="tlabel">Done when · judged: ${esc(t.verdict)}</div><ul class="tjudge">${t.judgement.points.map((p) => `<li class="${p.met ? "" : "err-t"}">${p.met ? "✓" : "✗"} ${esc(p.point)}<div class="faint">${esc(p.why)}</div></li>`).join("")}</ul>`
+        : t.done?.length ? `<div class="tlabel">Done when${t.verdict ? ` · ${esc(t.verdict)}` : ""}</div><ul>${t.done.map((d) => `<li>${esc(d)}</li>`).join("")}</ul>` : ""}
+      ${t.tokens ? `<div class="tiny faint">used ${tok(t.tokens)} of the subscriptions</div>` : ""}
+      ${t.steps?.length ? taskStepsHtml(t) : t.plan?.length ? `<div class="tlabel">Plan</div><ol class="tplan">${t.plan.map((p) => `<li><b>${esc(p.step)}</b> <span class="agent">${esc(p.agent)}</span><div class="faint">${esc(p.why)}</div></li>`).join("")}</ol>` : ""}
+      ${t.result ? `<a class="btn sm primary" href="#/read?path=${encodeURIComponent(t.result)}">${ic.doc}Read the answer</a>` : ""}
+      ${t.status === "needs_answer" ? `<form class="tans" data-tans="${t.id}">${t.questions.map((q, i) => `<label><span>${esc(q)}</span><input class="input" name="a${i}" required></label>`).join("")}<div class="row" style="justify-content:flex-end"><button class="btn sm primary">${ic.check}Answer</button></div></form>` : ""}
+      <div class="row tacts">${t.door === "plan" ? `<a class="btn sm ghost" href="#/live/${encodeURIComponent(`task:${t.id}`)}">${ic.pulse}Live trace</a>` : ""}${href ? `<a class="btn sm ghost" href="${href}">${ic.next}${esc(label)}</a>` : ""}${t.door !== "chat" && t.source !== "door" ? `<a class="btn sm ghost" href="#/live/${encodeURIComponent(`task-intake:${t.id}-${(t.answers || []).length}`)}">${ic.pulse}How it was planned</a>` : ""}
+        ${t.status === "waiting_approval" ? `<button class="btn sm primary" data-tok="${t.id}">${ic.check}Start it</button>` : ""}
+        ${t.status === "failed" && !t.ref ? `<button class="btn sm ghost" data-tretry="${t.id}">${ic.repeat}Plan it again</button>` : ""}
+        ${!["done", "failed", "cancelled"].includes(t.status) && !t.ref ? `<button class="btn sm ghost danger" data-tcancel="${t.id}">${ic.x}Cancel</button>` : ""}</div>
+    </div></details>`;
+}
+
+function taskBoardHtml() {
+  const ts = S.tasks || [];
+  return TGROUPS.map(([name, sts]) => { const g = ts.filter((t) => sts.includes(t.status)); return name === "Done"
+    ? `<details class="section" data-keep="tdone"><summary class="section-h"><h2>Done · ${g.length}</h2></summary><div class="stack">${g.map(taskCard).join("") || `<div class="muted small">Nothing in the last 7 days</div>`}</div></details>`
+    : `<div class="section"><div class="section-h"><h2>${name} · ${g.length}</h2></div><div class="stack">${g.map(taskCard).join("") || `<div class="muted small">${name === "Waiting on you" ? "Nothing waits for you" : "None"}</div>`}</div></div>`; }).join("");
+}
+
+function vTasks() {
+  taskOpen = +route.q.get("t") || null;
+  const details = route.q.get("new") === "1";
+  view.innerHTML = `<div class="hero"><div><h1>Tasks</h1><p>Say what the stack should do. It writes what done means, plans it, picks the agents and starts it; you see the plan here and answer only real questions.</p></div></div>
+  <form class="card pad tform" id="taskform"><textarea class="input" name="text" rows="2" placeholder="What should the stack do? One sentence is enough." required></textarea>
+    <details id="tdet"${details ? " open" : ""}><summary class="small">Details: leave any as it is, and the stack decides it</summary><div class="tgrid">
+      <label>Kind<select class="input" name="kind"><option value="">The stack decides</option>${Object.entries(TKINDS).map(([k, v]) => `<option value="${k}">${v}</option>`).join("")}</select></label>
+      <label>When<select class="input" name="rtype"><option value="">The stack decides</option><option value="once">Once, now</option><option value="schedule">On a schedule</option><option value="after">After another task</option></select></label>
+      <label>Schedule<input class="input" name="schedule" placeholder="daily 07:00 · weekly mon 08:00 · every 6h"></label>
+      <label>After task #<input class="input" name="after" type="number" min="1"></label>
+      <label>Deadline<input class="input" name="deadline" type="date"></label>
+      <label>Effort<select class="input" name="effort"><option value="">The stack decides</option><option value="light">Light: a quick look</option><option value="standard">Standard</option><option value="deep">Deep: thorough</option></select></label>
+      <label>Before it starts<select class="input" name="autonomy"><option value="auto">Start right away</option><option value="ask">Show me the plan first</option></select></label>
+      <label class="wide">Done when (one point per line; empty: the stack writes it)<textarea class="input" name="done" rows="2"></textarea></label></div></details>
+    <div class="row" style="justify-content:flex-end;margin-top:10px"><button class="btn primary">${ic.rocket}Do it</button></div></form>
+  <div id="taskboard">${taskBoardHtml()}</div>
+  <div class="section-h section" id="triggers"><h2>Triggers</h2><span class="tiny faint">events that start tasks by themselves</span></div>
+  <div id="trigboard">${trigBoardHtml()}</div>
+  ${ruleFormHtml()}
+  <div class="section-h section"><h2>Agents, measured</h2><span class="tiny faint">how each agent did, per kind of task, last 30 days</span></div>
+  <div id="staffboard">${staffHtml()}</div>`;
+  bindTasks();
+  bindTriggers();
+  if (taskOpen) setTimeout(() => $(`#task-${taskOpen}`)?.scrollIntoView({ block: "center" }), 30);
+}
+
+function bindTasks() {
+  const f = $("#taskform");
+  if (f && !f.dataset.bound) {
+    f.dataset.bound = 1;
+    f.onsubmit = async (e) => {
+      e.preventDefault();
+      const d = $("#tdet").open, req = { action: "task_create", text: f.text.value.trim(), autonomy: f.autonomy.value };
+      if (d) {                                            // deliberate mode: only what the owner set is decided already
+        if (f.kind.value) req.kind = f.kind.value;
+        if (f.effort.value) req.effort = f.effort.value;
+        if (f.deadline.value) req.deadline = f.deadline.value;
+        if (f.rtype.value === "schedule") req.rhythm = { type: "schedule", schedule: f.schedule.value.trim() };
+        else if (f.rtype.value === "after") req.rhythm = { type: "after", task: f.after.value };
+        else if (f.rtype.value === "once") req.rhythm = { type: "once" };
+        req.done = f.done.value.split("\n").map((x) => x.trim()).filter(Boolean);
+      }
+      const r = await act(req, "The stack is planning it");
+      if (r?.task) { f.reset(); location.hash = `#/tasks?t=${r.task}`; }
+    };
+  }
+  $$("[data-tans]").forEach((fm) => (fm.onsubmit = async (e) => { e.preventDefault(); await act({ action: "task_answer", id: +fm.dataset.tans, answers: [...fm.querySelectorAll("input")].map((x) => x.value) }, "Answered: it plans again"); }));
+  $$("[data-tok]").forEach((b) => (b.onclick = () => act({ action: "task_approve", id: +b.dataset.tok }, "Started")));
+  $$("[data-tretry]").forEach((b) => (b.onclick = () => act({ action: "task_retry", id: +b.dataset.tretry }, "Planning it again")));
+  $$("[data-tcancel]").forEach((b) => (b.onclick = () => act({ action: "task_cancel", id: +b.dataset.tcancel }, "Cancelled")));
+}
+
+// ---------- Triggers (TSK-10 to TSK-12): the event bus's sources, the owner's rules, breaking stories ----------
+const PARAM = { news: ["Search for", "uranium supply"], breaking: ["Subject to watch", "Cameco"], feed: ["Feed address", "https://example.com/feed.xml"],
+  github: ["Repository (owner/name)", "regenzeus/AI_Swarm_Stack"], price: ["Symbol:percent", "CCJ:8"], filing: ["US ticker", "CCJ"],
+  forgejo: ["Repository (empty: all)", "ai-stack"], mail: ["Sender or words (empty: any)", "invoice"], house: ["Thing or room (empty: any)", "front door"],
+  file: ["File name part (empty: any)", ".pdf"], schedule: ["When", "weekdays 07:00"], task: ["Task # or words (empty: any)", ""], mission: ["Mission (empty: any)", ""] };
+function trigBoardHtml() {
+  const b = S.bus || { sources: {}, rules: [], events: [], breaking: [], ratings: {} };
+  const src = Object.entries(b.sources).map(([k, s]) => `<div class="row tsrc"><span class="dot ${s.error ? "err" : s.off ? "" : "ok"}"></span><b>${esc(k)}</b><span class="grow tiny faint">${esc(s.what)}</span>
+    <span class="tiny ${s.error ? "err-t" : "faint"}">${s.error ? esc(s.error) : s.off ? esc(s.off) : `${s.found} new · ${rel(s.at)}`}</span></div>`).join("");
+  const rule = (r) => `<div class="card pad small trule"><div class="row" style="gap:8px"><b class="grow">${esc(r.name)}</b>
+      <button class="btn sm ghost" data-rtog="${r.id}" data-on="${r.enabled ? 0 : 1}">${r.enabled ? "Pause" : "Resume"}</button><button class="btn sm ghost danger" data-rdel="${r.id}">${ic.x}Delete</button></div>
+    <div class="faint">When ${esc(b.sources[r.source]?.what || r.source)}${r.param ? `: <b>${esc(r.param)}</b>` : ""}${r.words ? ` · with “${esc(r.words)}”` : ""} · then: ${esc(r.task)}</div>
+    <div class="tiny faint">${r.enabled ? "" : "paused · "}at most once every ${r.cooldown_min} min${r.check_text ? ` · checked: “${esc(r.check_text)}”` : ""}${r.last_fired ? ` · last fired ${rel(r.last_fired)}` : ""}</div>
+    ${r.firings.length ? `<ul class="tiny">${r.firings.map((f) => `<li>${rel(f.ts)}: ${esc(f.decision)}${f.task ? ` → <a href="#/tasks?t=${f.task}">task #${f.task}</a>` : ""}${f.why ? ` · ${esc(f.why)}` : ""}</li>`).join("")}</ul>` : ""}</div>`;
+  const story = (e) => `<div class="card pad small"><div class="row" style="gap:8px;align-items:flex-start"><div class="grow"><b>${esc(e.title)}</b><div class="tiny faint">${esc(e.param)} · ${rel(e.ts)}</div></div>
+      <button class="btn sm ${e.rating === 1 ? "primary" : "ghost"}" data-rate="${e.id}" data-v="${e.rating === 1 ? 0 : 1}">Right</button><button class="btn sm ${e.rating === -1 ? "primary" : "ghost"}" data-rate="${e.id}" data-v="${e.rating === -1 ? 0 : -1}">Not news</button></div>
+    <details class="tiny"><summary>The reports</summary><div class="md">${md(e.detail || "")}</div></details></div>`;
+  return `<details class="card pad small" data-keep="tsrcs"><summary>Sources · ${Object.values(b.sources).filter((s) => !s.off && !s.error).length} looking, ${Object.values(b.sources).filter((s) => s.error).length} with an error</summary>${src}</details>
+    <div class="stack" style="margin-top:10px">${b.rules.map(rule).join("") || `<div class="muted small">No rules yet: add one below.</div>`}</div>
+    ${b.breaking.length ? `<div class="section-h section"><h2>Breaking stories · ${b.breaking.length}</h2><span class="tiny faint">rated right ${b.ratings.right} · not news ${b.ratings.not_news}</span></div><div class="stack">${b.breaking.map(story).join("")}</div>` : ""}
+    <details class="card pad small" data-keep="tevents" style="margin-top:10px"><summary>Newest events · ${b.events.length}</summary><div class="list">${b.events.map((e) => `<div><span class="agent">${esc(e.source)}</span><div class="grow"><div class="ttl">${e.url ? `<a href="${esc(e.url)}" target="_blank" rel="noopener">${esc(e.title)}</a>` : esc(e.title)}</div></div><div class="tiny faint" style="white-space:nowrap">${rel(e.ts)}</div></div>`).join("") || `<div class="muted small">Nothing yet</div>`}</div></details>`;
+}
+
+// TSK-13, TSK-15, TSK-16: measured results per agent and kind, and the temporary agents' archive
+function staffHtml() {
+  const s = S.staffing || { abilities: [], designs: [] };
+  const row = (a) => `<tr><td><span class="agent">${esc(a.agent)}</span> <span class="tiny faint">${esc(a.harness)}</span></td><td>${esc(TKINDS[a.kind] || a.kind)}</td><td class="num">${a.tasks}</td>
+    <td class="num">${Math.round(a.success * 100)} %</td><td class="num">${a.seconds >= 60 ? Math.round(a.seconds / 60) + " min" : a.seconds + " s"}</td><td class="num">${tok(a.tokens)}</td></tr>`;
+  const design = (d) => `<div class="card pad small"><b>${esc(d.name)}</b> <span class="tiny faint">${esc(d.model)} · written ${rel(d.created)}</span><div class="faint">${esc(d.purpose)}</div>
+    <div class="tiny">${d.uses} task${d.uses === 1 ? "" : "s"} · met ${d.met}, partly ${d.partly}, not ${d.not_met}${d.proposed ? ` · proposed as a permanent agent ${rel(d.proposed)} (Agents → Ideas)` : ""}</div></div>`;
+  return `${s.abilities.length ? `<div class="card pad small" style="overflow-x:auto"><table class="ntable"><thead><tr><th>Agent</th><th>Kind</th><th>Tasks</th><th>Done</th><th>Time</th><th>Tokens</th></tr></thead><tbody>${s.abilities.map(row).join("")}</tbody></table>
+    <div class="tiny faint" style="margin-top:6px">Done: the share of judged tasks that met their definition of done (partly counts half). From 3 tasks of a kind on, the Conductor gives a step to the agent that does that kind best.</div></div>`
+    : `<div class="muted small">No judged tasks yet: each task you give is judged against its definition of done when it finishes.</div>`}
+    ${s.designs.length ? `<div class="section-h section"><h2>Temporary agents · ${s.designs.length}</h2><span class="tiny faint">written for a step no agent fitted</span></div><div class="stack">${s.designs.map(design).join("")}</div>` : ""}`;
+}
+
+function ruleFormHtml() {
+  const src = Object.entries(S.bus?.sources || {});
+  return `<form class="card pad tform" id="ruleform" style="margin-top:12px"><b>New rule</b><div class="tgrid">
+    <label>Name<input class="input" name="name" placeholder="Cameco breaking news" required></label>
+    <label>When<select class="input" name="source">${src.map(([k, s]) => `<option value="${k}">${esc(s.what)}</option>`).join("")}</select></label>
+    <label id="rparam"><span>${PARAM[src[0]?.[0]]?.[0] || "Parameter"}</span><input class="input" name="param" placeholder="${esc(PARAM[src[0]?.[0]]?.[1] || "")}"></label>
+    <label>Only with these words (optional)<input class="input" name="words" placeholder="contract, uranium"></label>
+    <label class="wide">Then the stack should<input class="input" name="task" placeholder="Read {title} and tell me in three lines what it means for my uranium positions" required></label>
+    <label>At most once every (minutes)<input class="input" name="cooldown_min" type="number" min="0" value="60"></label>
+    <label class="wide">Check first (optional: a model decides if the event really is this)<input class="input" name="check" placeholder="a new supply contract, not a rumour or an old story"></label></div>
+    <div class="tiny faint" style="margin-top:6px">{title}, {detail}, {url} and {source} in the task are filled in from the event.</div>
+    <div class="row" style="justify-content:flex-end;margin-top:10px"><button class="btn primary">${ic.check}Save the rule</button></div></form>`;
+}
+
+function bindTriggers() {
+  const f = $("#ruleform");
+  if (f && !f.dataset.bound) {
+    f.dataset.bound = 1;
+    f.source.onchange = () => { const p = PARAM[f.source.value] || ["Parameter", ""]; $("#rparam span").textContent = p[0]; f.param.placeholder = p[1]; };
+    f.onsubmit = async (e) => {
+      e.preventDefault();
+      const r = await act({ action: "rule_save", name: f.elements.name.value, when: f.source.value, param: f.param.value, words: f.words.value, task: f.task.value,
+        cooldown_min: +f.cooldown_min.value, check: f.check.value }, "Rule saved: it looks from now on");
+      if (r) f.reset();
+    };
+  }
+  $$("[data-rtog]").forEach((b) => (b.onclick = () => act({ action: "rule_toggle", id: +b.dataset.rtog, on: +b.dataset.on }, +b.dataset.on ? "Resumed" : "Paused")));
+  $$("[data-rdel]").forEach((b) => (b.onclick = () => confirm("Delete this rule? Its past firings stay in the log.") && act({ action: "rule_delete", id: +b.dataset.rdel }, "Rule deleted")));
+  $$("[data-rate]").forEach((b) => (b.onclick = () => act({ action: "event_rate", id: +b.dataset.rate, rating: +b.dataset.v }, "Thanks: rated")));
+}
+
+// a live update of the board that keeps what you opened and never replaces a field you are typing in
+let taskSig = "";
+function tasksUpdate() {
+  const b = $("#taskboard");
+  if (!b || (typing() && b.contains(document.activeElement))) return;
+  const sig = JSON.stringify([S.tasks || [], S.bus || {}, S.staffing || {}]);
+  if (sig === taskSig) return;
+  taskSig = sig;
+  const open = [...view.querySelectorAll("details[open][data-keep]")].map((d) => d.dataset.keep);
+  b.innerHTML = taskBoardHtml();
+  const tb = $("#trigboard");
+  if (tb) tb.innerHTML = trigBoardHtml();
+  const sb = $("#staffboard");
+  if (sb) sb.innerHTML = staffHtml();
+  for (const k of open) { const d = view.querySelector(`details[data-keep="${CSS.escape(k)}"]`); if (d) d.open = true; }
+  bindTasks();
+  bindTriggers();
+}
+
 // ---------- Home (redesigned 28 Oct 2026) ----------
 // Three questions, in this order: does anything need me (decisions only, each one tap away), what is happening right now,
 // and what did my agents produce (a live feed of results, newest first). Live updates replace only the parts that changed
@@ -413,6 +614,8 @@ function needsItems() {
   if (pend) out.push({ href: "#/system", icon: ic.brain, title: `${pend} memor${pend > 1 ? "ies wait" : "y waits"} for your OK`, sub: "Hermes wants to remember it" });
   const hs = S.house?.reachable ? houseSteps(S.house).find((x) => !x.done && !x.optional) : null;
   if (hs) out.push({ href: "#/house", icon: ic.house, title: "Finish setting up the House", sub: `next: ${hs.title.toLowerCase()}` });
+  for (const t of (S.tasks || []).filter((x) => ["needs_answer", "waiting_approval"].includes(x.status)))   // TSK-04
+    out.push({ href: `#/tasks?t=${t.id}`, icon: ic.target, title: t.status === "needs_answer" ? `Task #${t.id} asks you` : `Task #${t.id} waits for your OK`, sub: t.title });
   for (const m of S.swarm?.owner_requests || [])        // SWM-98: what an agent asks of you waits here until you answer
     out.push({ href: `#/swarm?tab=chat&ctx=${encodeURIComponent(m.context || "")}`, icon: ic.chat || ic.alert, title: `${m.sender} asks you`, sub: m.text });
   return out;
@@ -556,8 +759,8 @@ function vHome() {
   <div class="home-head">
     <div class="hero" style="margin-bottom:6px"><div><h1>${greet()}${S.viewer_name ? ", " + esc(String(S.viewer_name).split(" ")[0]) : ""}</h1>${homeHeadHtml()}</div></div>
     ${!Object.keys(gp.read).length && !Object.keys(gp.tried).length && !gp.hideTour ? `<div class="banner info tour" style="margin-bottom:10px">${ic.doc}<a class="grow" href="#/guide/first-ten-minutes"><b>New here?</b> Take the ten-minute tour of everything your stack can do.</a><button class="icon-btn" id="hidetour" title="Hide">${ic.x}</button></div>` : ""}
-    <form class="askbar" id="askbar"><input class="input" name="q" autocomplete="off" placeholder="Ask Hermes anything, or tell it what to watch for you…"><button class="btn primary" type="submit" title="Ask">${ic.chat}<span class="hide-s">Ask</span></button></form>
-    <div class="chips hquick"><a class="tag" href="#/new">${ic.plus}New agent</a><a class="tag" href="#/wiki?new=1">${ic.wiki}New wiki</a><a class="tag" href="#/chat">${ic.chat}Chats</a><a class="tag" href="#/missions">${ic.target}All agents</a></div>
+    <form class="askbar" id="askbar"><input class="input" name="q" autocomplete="off" placeholder="Ask or give a task"><button class="btn ghost" type="submit" data-to="chat" title="Ask Hermes in a chat">${ic.chat}<span>Ask</span></button><button class="btn primary" type="submit" data-to="task" title="The stack plans it and does it">${ic.rocket}<span>Do it</span></button></form>
+    <div class="chips hquick"><a class="tag" href="#/tasks">${ic.target}Tasks${openTasks() ? ` · ${openTasks()}` : ""}</a><a class="tag" href="#/tasks?new=1">${ic.tune}Task with details</a><a class="tag" href="#/new">${ic.plus}New agent</a><a class="tag" href="#/wiki?new=1">${ic.wiki}New wiki</a><a class="tag" href="#/chat">${ic.chat}Chats</a><a class="tag" href="#/missions">${ic.target}All agents</a></div>
   </div>
   <div class="home-side">
     ${needsHtml()}
@@ -574,7 +777,14 @@ function vHome() {
 function bindHome() {
   const ht = $("#hidetour"); if (ht) ht.onclick = () => { gp.hideTour = 1; gsave(); ht.closest(".banner").remove(); };
   const f = $("#askbar");
-  if (f) f.onsubmit = (e) => { e.preventDefault(); const v = f.q.value.trim(); if (v) location.hash = `#/chat?prompt=${encodeURIComponent(v)}&send=1`; };
+  if (f) f.onsubmit = async (e) => {                      // TSK-02: Ask goes to a chat, Do it makes a task the stack plans and does
+    e.preventDefault();
+    const v = f.q.value.trim();
+    if (!v) return;
+    if (e.submitter?.dataset.to !== "task") { location.hash = `#/chat?prompt=${encodeURIComponent(v)}&send=1`; return; }
+    const r = await act({ action: "task_create", text: v }, "The stack is planning it");
+    if (r?.task) { f.q.value = ""; location.hash = `#/tasks?t=${r.task}`; }
+  };
   $$("[data-hf]").forEach((b) => (b.onclick = () => { homeFilter = b.dataset.hf; homeShow = 12; const el = $("#homefeed"); el.outerHTML = feedHtml(); homeLast.homefeed = $("#homefeed").outerHTML; bindHome(); }));
   if ($("#hfmore")) $("#hfmore").onclick = () => { homeShow += 40; const el = $("#homefeed"); el.outerHTML = feedHtml(); homeLast.homefeed = $("#homefeed").outerHTML; bindHome(); };
   loadExcerpts();
@@ -1579,8 +1789,15 @@ function bubble(x, i) {
     return `<div class="mrow user" data-i="${i}"><div class="msg user">${attsHtml(x.attachments)}${x.content && x.content !== "(see attachment)" ? `<div class="utext">${esc(x.content)}</div>` : ""}</div>
       <div class="macts"><button data-copy="${i}" title="Copy">${ic.doc}</button><button data-edit="${i}" title="Edit and resend">${ic.tune}</button></div></div>`;
   }
-  return `<div class="mrow assistant" data-i="${i}"><div class="msg assistant">${toolsHtml(x.tools)}${reasoningHtml(x.reasoning)}<div class="md">${md(x.content)}</div></div>
+  return `<div class="mrow assistant" data-i="${i}"><div class="msg assistant">${toolsHtml(x.tools)}${reasoningHtml(x.reasoning)}<div class="md">${md(x.content)}</div>${x.limit ? limitHtml(x) : ""}</div>
     <div class="macts"><button data-copy="${i}" title="Copy">${ic.doc}</button><button data-regen="${i}" title="Regenerate">${ic.repeat}</button>${x.model ? `<span class="tiny faint">${esc(modelName(x.model))}${x.effort ? " · " + esc(x.effort) : ""}</span>` : ""}</div></div>`;
+}
+
+// AST-12: a message that waits for the subscription's usage limit says when it is tried again, in this device's time
+function limitHtml(x) {
+  const at = new Date(x.limit.retry_at * 1000), other = at.toDateString() !== new Date().toDateString();
+  return `<div class="limitnote tiny"><span>${x.limit.reset_known ? "The limit resets" : "Next try"} at <b>${at.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</b>${other ? " " + esc(at.toLocaleDateString([], { weekday: "long" })) : ""}</span>
+    <button class="btn sm ghost" data-retrynow>${ic.repeat}Try now</button></div>${x.detail ? `<details class="limitdetail tiny faint"><summary>What the subscription answered</summary><pre>${esc(x.detail)}</pre></details>` : ""}`;
 }
 
 function codeCopy(root) {
@@ -1928,6 +2145,12 @@ function bindMsgActions() {
     if (!x) return;
     editing = i; $("#editbar").hidden = false;
     const ta = $("#cf").q; ta.value = x.content === "(see attachment)" ? "" : x.content; ta.focus(); ta.oninput();
+  }));
+  $$("[data-retrynow]").forEach((b) => (b.onclick = async () => {   // AST-12: try the waiting message now
+    b.disabled = true;
+    const id = cur?.id, r = await api(`/api/chats/${id}/retry`, { method: "POST" }).catch((e) => ({ ok: false, error: e.message }));
+    toast(r.ok ? "Trying now: the answer appears here within half a minute" : r.error, !r.ok);
+    if (r.ok) setTimeout(() => { if (cur?.id === id && route.name === "chat") vChat(); }, 25000);
   }));
   $$("[data-regen]").forEach((b) => (b.onclick = () => {
     if (streaming) return;
@@ -3071,6 +3294,39 @@ function librarianHtml(lib) {
     <div class="card memlist">${ws.map(wrow).join("")}</div>`;
 }
 
+// OBS-16: the one notification path: what goes where, quiet hours, and what it did lately (Stack → Notifications)
+const NDOT = { sent: "ok", held: "warn", failed: "err" };
+function notifyHtml(sy) {
+  const n = S.notify || { prefs: { telegram: {}, push: {}, quiet: null }, categories: {}, recent: [] }, q = n.prefs.quiet;
+  const box = (ch, c) => `<input type="checkbox" data-np="${ch}" data-cat="${esc(c)}" aria-label="${esc(ch)}: ${esc(c)}"${n.prefs[ch]?.[c] !== false ? " checked" : ""}${c === "approval" ? ` disabled title="Approvals always go out: they expire when nobody sees them"` : ""}>`;
+  const name = (r) => r.title || (n.categories[r.category] || r.category).split(":")[0];
+  return `<div class="card pad small">
+    <div class="row"><span class="dot ok"></span>Telegram with buttons, and push to this app</div>
+    <div class="row" style="margin-top:8px"><span class="dot ${sy.email_ready ? "ok" : "warn"}"></span>${sy.email_ready ? "E-mail ready" : "E-mail not set up: on the PC, run <code>make email-setup</code> once"}</div>
+    <table class="ntable"><thead><tr><th>What</th><th>Telegram</th><th>Push</th></tr></thead><tbody>
+      ${Object.entries(n.categories).map(([c, d]) => { const [what, ...more] = d.split(": "); return `<tr><td><b>${esc(what)}</b>${more.length ? `<div class="tiny faint">${esc(more.join(": "))}</div>` : ""}</td><td>${box("telegram", c)}</td><td>${box("push", c)}</td></tr>`; }).join("")}</tbody></table>
+    <div class="nquiet"><label><input type="checkbox" id="nquiet"${q ? " checked" : ""}> Quiet hours from</label>
+      <input class="input" type="time" id="nfrom" value="${esc(q?.from || "22:00")}"> <span>to</span> <input class="input" type="time" id="nto" value="${esc(q?.to || "07:00")}"></div>
+    <div class="tiny faint" style="margin-top:6px">In quiet hours only approvals reach you; the Telegram messages wait and come as one message when they end.${n.quiet_now ? ` <b>Quiet hours now${n.held ? `: ${n.held} waiting` : ""}.</b>` : ""}</div>
+    <div class="row" style="justify-content:flex-end;margin-top:10px"><button class="btn sm primary" id="nsave">${ic.check}Save</button></div>
+  </div>
+  <details class="card pad small nrecent" data-keep="nrecent" style="margin-top:10px"><summary>What the stack sent lately · ${n.recent.length}</summary>
+    <div class="list">${n.recent.map((r) => `<div><span class="dot ${NDOT[r.decision] || ""}"></span><div class="grow"><div class="ttl">${esc(name(r))}</div><div class="sub">${esc(r.text || "")}</div></div>
+      <div class="tiny faint" style="white-space:nowrap;text-align:right">${esc(r.channel)} · ${esc(r.decision)}<br>${rel(new Date(r.ts * 1000).toISOString())}</div></div>`).join("") || `<div class="muted small">Nothing sent yet</div>`}</div></details>`;
+}
+
+function bindNotify() {
+  const save = $("#nsave");
+  if (!save) return;
+  save.onclick = async () => {
+    const prefs = { telegram: {}, push: {}, quiet: $("#nquiet").checked ? { from: $("#nfrom").value, to: $("#nto").value } : null };
+    $$("[data-np]").forEach((b) => (prefs[b.dataset.np][b.dataset.cat] = b.checked));
+    save.disabled = true;
+    await act({ action: "notify_prefs", prefs }, "Notification settings saved");
+    save.disabled = false;
+  };
+}
+
 // U1 (review 2026-10-30): the Stack page has 17 sections; one row of chips jumps to each
 function fillJump() {
   const nav = $("#stackjump");
@@ -3123,8 +3379,8 @@ function vSystem() {
     <div>
       <div class="section-h"><h2>Scheduled jobs</h2>${how("stack-page")}</div>
       <div class="card list">${(sy.timers || []).map((t) => { const failed = (sy.failed || []).some((f) => f.startsWith(t.unit + ".")); return `<div><div class="ic ${failed ? "err" : ""}">${failed ? ic.alert : ic.clock}</div><div class="grow"><div class="ttl">${esc((S.crew || []).find((c) => c.unit === t.unit)?.name || t.unit)}</div><div class="sub">last ${t.last ? rel(new Date(t.last / 1000).toISOString()) : "–"}</div></div><div class="tiny faint" style="white-space:nowrap">${t.next ? rel(new Date(t.next / 1000).toISOString()) : "–"}</div></div>`; }).join("")}</div>
-      <div class="section-h section"><h2>Delivery</h2>${how("delivery")}</div>
-      <div class="card pad small"><div class="row"><span class="dot ok"></span>Telegram with buttons</div><div class="row" style="margin-top:8px"><span class="dot ${sy.email_ready ? "ok" : "warn"}"></span>${sy.email_ready ? "E-mail ready" : "E-mail not set up: on the PC, run <code>make email-setup</code> once"}</div></div>
+      <div class="section-h section"><h2>Notifications</h2>${how("delivery")}</div>
+      ${notifyHtml(sy)}
       <div class="section-h section"><h2>This device</h2>${how("first-ten-minutes")}</div>
       <div class="card pad" id="device"></div>
     </div>
@@ -3135,6 +3391,7 @@ function vSystem() {
   fillLive();
   $$("[data-mem]").forEach((b) => (b.onclick = async () => { b.disabled = true; await act({ action: "memory", id: b.dataset.id, decision: b.dataset.mem }, b.dataset.mem === "approve" ? "Remembered" : "Discarded"); }));
   deviceCard();
+  bindNotify();
   if (scrollToLearn) { scrollToLearn = false; setTimeout(() => $("#learn")?.scrollIntoView({ block: "start" }), 30); }
 }
 
@@ -3178,7 +3435,8 @@ function onState(s) {
   const wasRunning = S?.running?.id, first = !S;
   S = s;
   lastState = Date.now();
-  if (first && ["mission", "chat", "wiki", "new", "system", "build", "repo", "guide", "crew", "house"].includes(route.name)) return render(true);
+  if (first && ["mission", "chat", "wiki", "new", "system", "build", "repo", "guide", "crew", "house", "tasks"].includes(route.name)) return render(true);
+  if (route.name === "tasks" && !first) { tasksUpdate(); chrome(); return; }
   if (first && route.name === "swarm" && ["tasks", "flow", "improve", "agents"].includes(swTab)) return render(true);   // FND-36: they read S
   if (route.name === "house" && !first) { houseUpdate(); chrome(); return; }
   if (route.name === "guide") { guideOnState(); chrome(); return; }

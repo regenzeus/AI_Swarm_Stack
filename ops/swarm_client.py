@@ -571,8 +571,8 @@ def notify_owner(send=None, notify=None, now=None):
 
 
 def _notify(text):
-    import subprocess
-    subprocess.run(["bash", str(Path(__file__).resolve().parent / "notify.sh"), text], capture_output=True, timeout=60)
+    import notify as N                            # the one notification path (OBS-16)
+    N.send(text, "swarm")
 
 
 # ---------------------------------------------------------------- answers for every request (SWM-12, SWM-13, SWM-49)

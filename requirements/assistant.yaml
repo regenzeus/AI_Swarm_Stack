@@ -125,9 +125,13 @@ items:
     priority: should
     status: partial
     parents: [SN-13, SN-02]
-    sources: [docs/REVIEW-2026-10-27.md, images/mission-control/guide/14-safety.md]
-    gap: Missions and builds wait and resume; chat answers with an error (review item 3).
-    verify: {method: inspection, by: [images/mission-control/server.py]}
+    sources: [docs/REVIEW-2026-10-27.md, images/mission-control/guide/14-safety.md, docs/SWARM-ROADMAP.md]
+    gap: The app's chat keeps the message, says when the limit resets, answers by itself afterwards and notifies the
+      owner; on Telegram, Hermes' own gateway answers the limit with its own message, which the stack does not shape.
+    verify: {method: test, by: [tests/test_chat_limit.py::test_a_usage_limit_keeps_the_message_and_says_when_the_limit_resets,
+      tests/test_chat_limit.py::test_after_the_reset_the_message_is_answered_by_itself_and_the_owner_is_told,
+      tests/test_chat_limit.py::test_a_limit_that_lasts_a_day_stops_and_try_now_moves_the_retry,
+      tests/test_chat_limit.py::test_a_normal_answer_about_rate_limits_is_not_a_usage_limit]}
   - id: AST-13
     title: Morning digest
     statement: Every morning at 07:30 the digest shall send the night's results to Telegram.

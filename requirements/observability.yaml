@@ -171,15 +171,19 @@ items:
   - id: OBS-16
     title: One notification policy
     statement: Every notification the stack sends (push, Telegram) shall go through one path that applies the same
-      once-per-issue rule and the owner's notification preferences.
+      once-per-issue rule, the owner's preferences per kind of message and channel, and quiet hours in which only
+      approvals go out and Telegram messages wait to be sent as one when the quiet hours end; each decision, and each
+      report e-mail sent or failed, shall be logged and shown in the app.
     type: quality
     priority: should
-    status: violated
+    status: implemented
     parents: [SN-18]
-    sources: [docs/REVIEW-2026-10-27.md]
-    gap: Telegram is sent from seven files (re-checked 2026-10-30, FND-70; memory_review.py, skills_sync.py,
-      vault-ingest.sh and vault-lint.sh now go through notify.sh); notify.sh, missions.py and mission_extras.py
-      (deliveries, approvals), desk.sh, digest.py, upgrade_check.py and swarm_client.py each send their own; only the
-      health board applies once-per-issue, and there are no notification preferences (FND-17).
-    verify: {method: inspection, by: [ops/notify.sh, ops/missions.py]}
-    findings: [FND-17, FND-70]
+    sources: [docs/REVIEW-2026-10-27.md, docs/SWARM-ROADMAP.md]
+    verify: {method: test, by: [tests/test_notify.py::test_preferences_decide_per_category_and_approvals_always_go_out,
+      tests/test_notify.py::test_quiet_hours_hold_telegram_and_send_it_as_one_message_afterwards,
+      tests/test_notify.py::test_the_same_key_goes_out_once_a_day_and_every_decision_is_logged,
+      tests/test_notify.py::test_a_push_from_the_activity_feed_follows_the_preferences,
+      tests/test_notify.py::test_nothing_but_the_notification_path_talks_to_telegram,
+      tests/test_quiet_runs.py::test_every_email_outcome_is_recorded]}
+    trace: [ops/notify.py, ops/notify.sh, ops/missions.py, ops/mission_extras.py]
+    findings: [FND-17, FND-70, FND-78]

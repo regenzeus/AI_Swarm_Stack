@@ -41,7 +41,10 @@ ACTIONS = {"claude_task", "forgejo_connect", "create", "run", "pause", "resume",
            "improve_scan", "proposal_accept", "proposal_dismiss", "build_recheck", "build_switch_engine", "codemap", "repo_create", "repo_buildable", "repo_remove", "crew_run", "crew_memory_forget", "crew_schedule",
            "journal_note", "journal_edit", "health_ack", "swarm_pause", "swarm_confirm", "swarm_reopen", "swarm_autonomy", "swarm_post", "swarm_help_verdict", "phone_cleanup_do", "phone_cleanup_do_all", "phone_cleanup_dismiss",
            "shop_decide", "shop_limits",           # shop_*: only through /api/shop/* (the owner, never the AI phone or an agent)
-           "house_connect", "house_switch", "house_alexa", "house_say", "house_settings", "house_status"}   # house_*: /api/house* and the house MCP tools
+           "house_connect", "house_switch", "house_alexa", "house_say", "house_settings", "house_status",   # house_*: /api/house* and the house MCP tools
+           "notify_prefs", "chat_ready",           # notify_*: the owner's notification preferences; chat_ready: from the app itself
+           "task_create", "task_answer", "task_approve", "task_cancel", "task_retry",   # task_*: the task kernel (TSK-01 to TSK-04)
+           "rule_save", "rule_toggle", "rule_delete", "event_rate"}                      # the event bus's rules and ratings (TSK-10 to TSK-12)
 BUILDS = M / "builds"
 
 
@@ -143,6 +146,12 @@ async def api_request(request):
         return JSONResponse({"ok": False, "error": "not from the AI phone"}, status_code=403)
     if body.get("action") in ("phone_cleanup_do", "phone_cleanup_do_all") and from_ai_phone(request):   # the AI phone never approves its own cleanup
         return JSONResponse({"ok": False, "error": "not from the AI phone"}, status_code=403)
+    if str(body.get("action", "")).startswith(("task_", "rule_", "event_")) and from_ai_phone(request):   # the AI phone gives the stack no work of its own
+        return JSONResponse({"ok": False, "error": "not from the AI phone"}, status_code=403)
+    if body.get("action") == "notify_prefs" and from_ai_phone(request):   # the AI phone cannot silence what the owner is told
+        return JSONResponse({"ok": False, "error": "not from the AI phone"}, status_code=403)
+    if body.get("action") == "chat_ready":                                 # sent by the app itself when a waiting chat is answered
+        return JSONResponse({"ok": False, "error": "not a request the app's screens make"}, status_code=403)
     body["source"] = "app"
     return JSONResponse(await submit(body))
 
@@ -687,6 +696,31 @@ def build_request(c, model, effort):
 
 LIVE = {}            # chat id -> answer in progress: text, reasoning, tools, done; the Hermes call is a background task
 RUNNING = {}         # chat id -> asyncio task (for stop)
+LIMITED = {}         # chat id -> when its message is tried again (AST-12: the subscription's usage limit)
+LIMIT = re.compile(r"usage.?limit|rate.?limit|ratelimit|\b429\b|too many requests|hit your limit", re.I)
+LIMIT_RETRY = 15 * 60                    # no reset time in the error: try again every 15 minutes
+LIMIT_GIVE_UP = 24 * 3600                # still limited after a day: stop and say so
+
+
+def reset_in(text):
+    """Seconds until the usage limit resets, from the provider's error (ChatGPT sends resets_at), or None."""
+    m = re.search(r'resets?_in_seconds\W{0,3}(\d+)', text)
+    if m:
+        return int(m[1])
+    m = re.search(r'resets?_at\W{0,3}(\d{10})', text)
+    if m:
+        return max(0, int(m[1]) - int(time.time()))
+    m = re.search(r"(?:try again|resets?) in (?:about )?(\d+(?:\.\d+)?)\s*(s|sec|seconds?|m|min|minutes?|h|hours?)\b", text, re.I)
+    return int(float(m[1]) * {"s": 1, "m": 60, "h": 3600}[m[2][0].lower()]) if m else None
+
+
+def limit_of(status, text, tools=()):
+    """AST-12: did the answer fail on the subscription's usage limit (not a real error)? -> (bool, seconds to reset).
+    A normal answer that talks about rate limits is not one: it has to be a short error without any tool work."""
+    t = text or ""
+    hit = status == 429 or (status not in (None, 200) and LIMIT.search(t)) or (
+        not tools and len(t) < 2000 and re.search(r"RateLimitError|usage_limit_reached|usage limit (?:has been |was )?reached|hit your limit", t, re.I))
+    return (True, reset_in(t)) if hit else (False, None)
 
 
 def tool_label(d):
@@ -696,13 +730,15 @@ def tool_label(d):
             "detail": str(d.get("preview") or d.get("summary") or d.get("args_preview") or d.get("message") or "")}
 
 
-async def run_chat(c, payload, headers=None):
-    """Talk to Hermes in the background: the answer is saved even if the phone drops the connection or sleeps."""
-    live = LIVE[c["id"]] = {"text": "", "reasoning": "", "tools": [], "done": False, "stopped": False}
+async def run_chat(c, payload, headers=None, retry=False):
+    """Talk to Hermes in the background: the answer is saved even if the phone drops the connection or sleeps. On the
+    usage limit the message is kept and answered by itself after the reset (AST-12, limit_retrier)."""
+    live = LIVE[c["id"]] = {"text": "", "reasoning": "", "tools": [], "done": False, "stopped": False, "status": None}
     try:
         async with httpx.AsyncClient(timeout=httpx.Timeout(1800, connect=10)) as h:
             async with h.stream("POST", HERMES, json=payload,
                                 headers={"Authorization": f"Bearer {HERMES_KEY}", **(headers or {})}) as r:
+                live["status"] = r.status_code
                 if r.status_code != 200:
                     live["text"] = f"⚠ Hermes answered HTTP {r.status_code}: {cut((await r.aread()).decode(errors='replace'), 4000)}"  # cap: untrusted
                 else:
@@ -736,10 +772,29 @@ async def run_chat(c, payload, headers=None):
         live["text"] += f"\n\n⚠ Hermes not reachable ({type(e).__name__})"
     finally:
         c = load_chat(c["id"]) or c
-        c["messages"].append({"role": "assistant", "ts": time.time(),
-                              "content": (live["text"] or ("_(stopped)_" if live["stopped"] else "(no answer)")) + ("\n\n_(stopped)_" if live["stopped"] and live["text"] else ""),
-                              "reasoning": tail(live["reasoning"], 200000), "tools": live["tools"][-400:],  # cap: store
-                              "model": payload.get("model"), "effort": (payload.get("model_options") or {}).get("reasoning_effort")})
+        limited, reset = (False, None) if live["stopped"] else limit_of(live["status"], live["text"], live["tools"])
+        effort = (payload.get("model_options") or {}).get("reasoning_effort")
+        if limited:
+            now, prev = time.time(), c.get("limit") or {}
+            at = now + (reset + 60 if reset is not None else LIMIT_RETRY)
+            c["limit"] = {"retry_at": at, "since": prev.get("since", now), "tries": prev.get("tries", 0) + 1,
+                          "model": payload.get("model"), "effort": effort, "reset_known": reset is not None}
+            c["messages"].append({"role": "assistant", "ts": now, "limit": {"retry_at": at, "reset_known": reset is not None},
+                                  "detail": live["text"], "model": payload.get("model"),
+                                  "content": "⏳ **The ChatGPT subscription's usage limit is reached.** Your message is kept and is answered "
+                                             "here by itself " + ("when the limit resets." if reset is not None else
+                                                                  "as soon as the limit is over (it tries every 15 minutes).")
+                                             + " You get a notification when the answer is ready."})
+            LIMITED[c["id"]] = at
+        else:
+            c["messages"].append({"role": "assistant", "ts": time.time(),
+                                  "content": (live["text"] or ("_(stopped)_" if live["stopped"] else "(no answer)")) + ("\n\n_(stopped)_" if live["stopped"] and live["text"] else ""),
+                                  "reasoning": tail(live["reasoning"], 200000), "tools": live["tools"][-400:],  # cap: store
+                                  "model": payload.get("model"), "effort": effort})
+            if c.pop("limit", None) is not None:
+                LIMITED.pop(c["id"], None)
+                if retry and live["text"]:                # the owner may have left: tell them through the one path (OBS-16)
+                    await submit({"action": "chat_ready", "chat": c["id"], "title": c.get("title", "")}, wait=0)
         c["pending"] = False
         save_chat(c)
         live["done"] = True
@@ -777,6 +832,8 @@ async def api_chat(request):
     model = body.get("model") if body.get("model") in {m["id"] for m in MODELS} else "gpt-sub"
     effort = body.get("effort") if body.get("effort") in EFFORTS else "medium"
     c["messages"].append({"role": "user", "content": text or "(see attachment)", "ts": time.time(), "attachments": atts})
+    if c.pop("limit", None) is not None:          # a new message replaces the one that waited for the usage limit
+        LIMITED.pop(c["id"], None)
     c["files"] = sorted(set(c.get("files", []) + [a["id"] for a in atts]))
     c["pending"] = True
     payload, headers = build_request(c, model, effort)
@@ -786,6 +843,57 @@ async def api_chat(request):
     TASKS.add(t)
     t.add_done_callback(TASKS.discard)
     return JSONResponse({"chat": c["id"], "title": c["title"]})
+
+
+async def api_chat_retry(request):
+    """Try a message that waits for the usage limit now, instead of at its next try (AST-12)."""
+    cid = request.path_params["cid"]
+    c = load_chat(cid)
+    if not c or not c.get("limit"):
+        return JSONResponse({"ok": False, "error": "nothing waits for the usage limit in this chat"})
+    LIMITED[cid] = time.time()
+    return JSONResponse({"ok": True})
+
+
+async def limit_retrier():
+    """AST-12: a chat message that hit the usage limit is sent again at its retry time; after a day it stops and says so."""
+    for p in CHATS.glob("*.json") if CHATS.exists() else []:        # waiting messages survive a restart of the app
+        try:
+            c = json.loads(p.read_text())
+            if c.get("limit"):
+                LIMITED[c["id"]] = c["limit"]["retry_at"]
+        except (OSError, ValueError, KeyError) as e:
+            print(f"chat {p.name}: its usage-limit wait was not read: {type(e).__name__}", flush=True)
+    while True:
+        await asyncio.sleep(20)
+        retry_due()
+
+
+def retry_due():
+    """One pass: every waiting chat message whose time has come is sent to Hermes again."""
+    for cid, at in list(LIMITED.items()):
+        if at > time.time() or cid in RUNNING:
+            continue
+        LIMITED.pop(cid, None)
+        c = load_chat(cid)
+        if not c or not c.get("limit") or c.get("pending"):
+            continue
+        lim = c["limit"]
+        while c["messages"] and c["messages"][-1].get("limit"):
+            c["messages"].pop()                           # the waiting notice gives way to the answer
+        if time.time() - lim["since"] > LIMIT_GIVE_UP or not c["messages"] or c["messages"][-1]["role"] != "user":
+            c.pop("limit")
+            c["messages"].append({"role": "assistant", "ts": time.time(), "content": "⚠ The usage limit did not end within a day, "
+                                  "so this message was not answered. Send it again when the subscription works again."})
+            save_chat(c)
+            continue
+        c["pending"] = True
+        payload, headers = build_request(c, lim.get("model") or "gpt-sub", lim.get("effort") or "medium")
+        save_chat(c)
+        t = asyncio.get_running_loop().create_task(run_chat(c, payload, headers, retry=True))
+        RUNNING[cid] = t
+        TASKS.add(t)
+        t.add_done_callback(TASKS.discard)
 
 
 async def api_chat_stop(request):
@@ -1766,7 +1874,8 @@ app = Starlette(routes=[
     Route("/api/rt/run/{run}/stream", api_rt_stream), Route("/api/crew/{cid}", api_crew_one), Route("/api/swarm", api_swarm, methods=["POST"]), Route("/api/swarm/tokens", api_swarm_tokens), Route("/api/swarm/now", api_swarm_now), Route("/api/swarm/timeline", api_swarm_timeline), Route("/api/swarm/interactions", api_swarm_interactions), Route("/api/swarm/delegations", api_swarm_delegations), Route("/api/swarm/room", api_swarm_room), Route("/api/health/issues", api_health_issues), Route("/api/claude/{tid}", api_claude_task), Route("/api/phoenix", api_phoenix), Route("/api/build/{bid}/{kind}", api_build_file),
     Route("/api/chat", api_chat, methods=["POST"]), Route("/api/chats", api_chats),
     Route("/api/chats/{cid}", api_chat_one, methods=["GET", "DELETE", "PATCH"]), Route("/api/chats/{cid}/stream", api_chat_stream),
-    Route("/api/chats/{cid}/stop", api_chat_stop, methods=["POST"]), Route("/api/chat/upload", api_chat_upload, methods=["POST"]),
+    Route("/api/chats/{cid}/stop", api_chat_stop, methods=["POST"]), Route("/api/chats/{cid}/retry", api_chat_retry, methods=["POST"]),
+    Route("/api/chat/upload", api_chat_upload, methods=["POST"]),
     Route("/api/chat/files/{fid}", api_chat_file), Route("/api/models", api_models),
     Route("/api/upload", api_upload, methods=["POST"]),
     Route("/share", share, methods=["POST"]),
@@ -2232,7 +2341,7 @@ async def main():
         uvicorn.Server(uvicorn.Config(house_mcp.streamable_http_app(transport_security=TransportSecuritySettings(
             allowed_hosts=["mission-control:8094"], allowed_origins=[])), host="0.0.0.0", port=8094, log_level="warning")).serve(),
         uvicorn.Server(uvicorn.Config(rt_app, host="0.0.0.0", port=8093, log_level="warning")).serve(),   # runtime ingest
-        push_events(), push_phone(), push_conn(), rt_housekeeping())
+        push_events(), push_phone(), push_conn(), rt_housekeeping(), limit_retrier())
 
 
 if __name__ == "__main__":

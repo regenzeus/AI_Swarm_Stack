@@ -1,4 +1,5 @@
 #!/bin/sh
-# Send one Telegram message to the owner through Hermes:  ops/notify.sh "text"
-export DOCKER_HOST=unix:///run/user/1000/docker.sock
-docker exec -u hermes aistack-hermes-1 sh -c 'hermes send -t "telegram:$TELEGRAM_ALLOWED_USERS" "$0"' "$*"
+# Send one message to the owner through the one notification path (ops/notify.py, OBS-16):  ops/notify.sh "text"
+# NOTIFY_CATEGORY (result, alert, health, build, swarm, system; default system) decides what the owner's preferences
+# and quiet hours do with it.
+exec python3 "$(dirname "$0")/notify.py" send --category "${NOTIFY_CATEGORY:-system}" -- "$*"

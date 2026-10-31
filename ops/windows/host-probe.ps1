@@ -41,10 +41,12 @@ while ($true) {
     $cpu = (Get-CimInstance Win32_Processor | Measure-Object -Property LoadPercentage -Average).Average
     $c = Get-PSDrive C
     $vm = (Get-Process -Name vmmemWSL, vmmem -ErrorAction SilentlyContinue | Measure-Object WorkingSet64 -Sum).Sum
+    $avail = (Get-CimInstance Win32_PerfFormattedData_PerfOS_Memory).AvailableMBytes   # free plus the cache Windows hands back
     $o = [ordered]@{
       ts = (Get-Date).ToUniversalTime().ToString("o")
       ram_total_gb = [math]::Round($os.TotalVisibleMemorySize / 1MB, 2)
       ram_free_gb = [math]::Round($os.FreePhysicalMemory / 1MB, 2)
+      ram_available_gb = [math]::Round($avail / 1024, 2)
       cpu_pct = [int]$cpu
       disk_c_free_gb = [math]::Round($c.Free / 1GB, 1)
       disk_c_total_gb = [math]::Round(($c.Used + $c.Free) / 1GB, 1)

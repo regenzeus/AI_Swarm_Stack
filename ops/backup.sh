@@ -15,9 +15,9 @@ STAGE=$(mktemp -d); trap "rm -rf $STAGE; docker unpause aistack-hermes-1 aistack
 # while their containers are paused, so each file is a consistent crash image.
 docker exec aistack-postgres-1 pg_dumpall -U litellm > $STAGE/postgres.sql
 docker exec aistack-hindsight-db-1 pg_dumpall -U hindsight > $STAGE/hindsight.sql      # long-term memory bank
-# phone/home is the AI phone's ADB pairing key, readable only by the phone container: not backed up (after a
-# restore the phone is paired again once on the Phone page). It made every backup fail on 2026-10-29.
-rsync -a --exclude backup-outbox --exclude phone/home --exclude 'swarm/swarm.db*' --exclude swarm/runner.sock /srv/ai/ $STAGE/srv-ai/   # the swarm: its hourly snapshot, not the live WAL files
+# /srv/ai, without what ops/backup-copy.sh names; a file the backup user cannot read is skipped and logged, not a failed
+# backup (PLT-13: one did that on 2026-10-29, the AI phone's key, and another on 2026-10-31, a container's file in workbench/)
+"$(dirname "$0")/backup-copy.sh" /srv/ai/ $STAGE/srv-ai/
 tar -C ~ -cf $STAGE/home.tar ai-stack hermes-skills code .config/systemd/user
 tar -C /srv -cf $STAGE/vault.tar vault
 docker pause aistack-hermes-1 aistack-openwebui-1 aistack-qmd-1 aistack-opencode-1 >/dev/null

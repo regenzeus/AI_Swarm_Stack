@@ -113,3 +113,17 @@ items:
       noise.
     priority: should
     sources: [docs/OBSERVABILITY.md, images/mission-control/guide/18-crew.md]
+  - id: SN-19
+    title: Give a task, the stack does the rest
+    need: The owner gives any task (coding, research, analysis, watching, errands) in one sentence, or with details
+      preset when wanted; the stack works out what done means, plans it, chooses or creates the agents, models and
+      harnesses, runs it once, on a schedule, on an event or after other work, for minutes or for months, and asks
+      only the real decisions.
+    priority: must
+    sources: ["owner 2026-10-31: the user should just give a task and the AI Stack figures out the rest", docs/SWARM-ROADMAP.md]
+  - id: SN-20
+    title: Work that starts when the world changes
+    need: Tasks start by themselves when something happens, such as a news story breaking, mail arriving, code changing,
+      a price moving, a device changing state or another task finishing.
+    priority: should
+    sources: ["owner 2026-10-31: trigger on different kinds of events, like a particular news event breaking", docs/SWARM-ROADMAP.md]

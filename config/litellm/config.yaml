@@ -31,6 +31,10 @@ mcp_servers:
     url: "http://fetch:8000/mcp"
     transport: "http"
     description: "Fetch a public web page as markdown (scout only; isolated network)."
+  jobs:
+    url: "http://fetch:8001/mcp"
+    transport: "http"
+    description: "Current job openings in Germany from the federal job board (Bundesagentur für Arbeit): search and full ads (scout only; isolated network)."
   research:
     url: "http://research:8000/mcp"
     transport: "http"

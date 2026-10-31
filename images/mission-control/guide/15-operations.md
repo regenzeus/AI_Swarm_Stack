@@ -65,6 +65,8 @@ decrypts the secrets it needs for itself and never prints them.
 | `make lock` | record the exact images that are running |
 | `make deploy-testrepo` | deploy the TestRepo project to the NAS |
 | `make ha-deploy` | deploy or upgrade Home Assistant on the NAS (its config and devices stay) |
+| `make tasks-gate` | check that the task intake writes a checkable plan for 20 sample tasks (starts nothing) |
+| `make conductor-gate` | run a five-step test task on three kinds of agents and restart the runner in the middle; it must finish |
 | `make publish-check` | build the public copy without your personal data, scan it and run its tests (pushes nothing) |
 | `make publish` | the same, then push it to GitHub; only when it is clean (docs/PUBLISHING.md) |
 

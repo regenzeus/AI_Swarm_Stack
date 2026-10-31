@@ -1,0 +1,515 @@
+"""The task kernel (TSK-01 to TSK-04; phase 1 of docs/SWARM-ROADMAP.md). Every piece of work is a task: its goal,
+definition of done, budget, deadline, autonomy and rhythm (once, on a schedule, on an event, or after another task).
+
+- A task given in one sentence (the app's composer, request task_create) goes to the intake agent, which writes its
+  specification: a checkable definition of done, the plan with the agent for each step and why, and at most two
+  questions. Then it is handed to the door that does that kind of work: a mission (research, analysis, watching,
+  briefings, shopping; once, scheduled or on an event), a build (coding) or a Claude task (a question about code).
+- Work started at a door directly (a new mission, build, Claude task or chat) becomes a task too (sync), so the board
+  shows every piece of work of the last 7 days.
+- The door keeps its own approvals (deploy taps, purchases, the AI phone); the task's autonomy decides only whether
+  the plan waits for the owner first (TSK-20 proposes the default: it does not).
+
+  python3 ops/tasks.py gate      the phase 1 gate: eval/tasks-v1.yaml's 20 one-sentence tasks through the intake
+"""
+import datetime as dt
+import json
+import re
+import sys
+import threading
+import time
+from pathlib import Path
+
+import yaml
+
+ROOT = Path(__file__).resolve().parent.parent
+CHATS = Path("/srv/ai/missions/app/chats")       # the app's chats (images/mission-control/server.py)
+WINDOW = 7 * 86400                                # the board shows the work of the last 7 days, and every open task
+KINDS = {"coding": "build", "code_question": "claude", "research": "mission", "analysis": "mission", "errand": "mission",
+         "watching": "mission", "briefing": "mission", "shopping": "mission"}
+MISSION_TYPE = {"briefing": "briefing", "shopping": "shopping"}           # every other mission kind is a task mission
+EFFORTS = ("light", "standard", "deep")
+AUTONOMY = ("auto", "ask")                        # auto: start when planned (TSK-20's proposal); ask: the plan waits for the owner
+OPEN = ("intake", "needs_answer", "waiting_approval", "running", "waiting_owner", "scheduled", "after")
+DONE_OF = {"briefing": "Each briefing is delivered with the sources it used", "task": "The report answers the goal, with its sources",
+           "shopping": "A proposal within the owner's limits, or a price alert", "cleanup": "A ranked cleanup report the owner can act on",
+           "build": "The change is merged and deployed with its checks passing", "claude": "The question is answered",
+           "chat": "The question is answered in the chat"}
+QUESTIONS = 2                                     # TSK-03: at most two questions, only when the goal cannot be planned without them
+STEPS = 6                                         # a plan of more steps is a task for the Conductor's plan graph (phase 2)
+M = None                                          # ops/missions.py, set by its main()
+lock = threading.Lock()
+
+
+def table(c):
+    c.execute("""create table if not exists tasks (id integer primary key, text text, title text, goal text, kind text,
+                 door text, ref text, done text, effort text, deadline text, autonomy text, rhythm text, after integer,
+                 spec text, questions text, answers text, status text, source text, created text, updated text, error text)""")
+    c.execute("create index if not exists tasks_door_ref on tasks (door, ref)")    # not unique: two tasks may reach one mission
+                                                                                    # (a duplicate title joins the existing one)
+
+
+def now():
+    return dt.datetime.now().astimezone().isoformat(timespec="seconds")
+
+
+def put(c, tid, **kw):
+    kw["updated"] = now()
+    for k in ("done", "rhythm", "spec", "questions", "answers"):
+        if k in kw and not isinstance(kw[k], str) and kw[k] is not None:
+            kw[k] = json.dumps(kw[k], ensure_ascii=False)
+    c.execute(f"update tasks set {', '.join(f'{k}=?' for k in kw)} where id=?", (*kw.values(), tid))
+    c.commit()
+
+
+def row(c, tid):
+    r = c.execute("select * from tasks where id=?", (tid,)).fetchone()
+    if not r:
+        raise ValueError(f"no task {tid}")
+    d = dict(r)
+    for k, empty in (("done", []), ("rhythm", {"type": "once"}), ("spec", {}), ("questions", []), ("answers", [])):
+        d[k] = json.loads(d[k]) if d.get(k) else empty
+    return d
+
+
+# ---------- every door's work is a task (TSK-01) ----------
+def register(c, door, ref, goal, title="", *, done=None, rhythm=None, status="running", source="door", created=None):
+    """The task of a piece of work started at a door; once per (door, ref)."""
+    if c.execute("select 1 from tasks where door=? and ref=?", (door, str(ref))).fetchone():
+        return None
+    t = created or now()
+    cur = c.execute("insert into tasks (text, title, goal, kind, door, ref, done, effort, deadline, autonomy, rhythm, spec, questions, "
+                    "answers, status, source, created, updated) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                    (goal, (title or goal)[:80], goal, None, door, str(ref), json.dumps(done or []), "standard", None,  # cap: id
+                     "door", json.dumps(rhythm or {"type": "once"}), "{}", "[]", "[]", status, source, t, t))
+    c.commit()
+    return cur.lastrowid
+
+
+def rhythm_of_mission(m):
+    if m.get("triggers"):
+        return {"type": "event", "triggers": m["triggers"]}
+    if m.get("schedule") and m["schedule"] != "manual" and not m.get("once"):
+        return {"type": "schedule", "schedule": m["schedule"]}
+    return {"type": "once"}
+
+
+def _recent(iso, now_ts):
+    try:
+        return now_ts - dt.datetime.fromisoformat(iso).timestamp() < WINDOW
+    except (TypeError, ValueError):
+        return False
+
+
+def discover(c, missions, now_ts=None):
+    """New missions, builds, Claude tasks and chats of the last 7 days that no task holds yet become tasks."""
+    now_ts = now_ts or time.time()
+    for m in missions.values():
+        if _recent(m.get("created"), now_ts):
+            register(c, "mission", m["slug"], m.get("goal") or m["title"], m["title"], done=[DONE_OF.get(m.get("type"), DONE_OF["task"])],
+                     rhythm=rhythm_of_mission(m), created=m.get("created"))
+    for b in c.execute("select id, title, description, created from builds").fetchall() if _has(c, "builds") else []:
+        if _recent(b["created"], now_ts):
+            register(c, "build", b["id"], b["description"] or b["title"], b["title"], done=[DONE_OF["build"]], created=b["created"])
+    for q in c.execute("select id, question, created from claude_tasks").fetchall() if _has(c, "claude_tasks") else []:
+        if _recent(q["created"], now_ts):
+            register(c, "claude", q["id"], q["question"], q["question"][:80], done=[DONE_OF["claude"]], created=q["created"])  # cap: id
+    for f in CHATS.glob("*.json") if CHATS.exists() else []:
+        if now_ts - f.stat().st_mtime < WINDOW and not c.execute("select 1 from tasks where door='chat' and ref=?", (f.stem,)).fetchone():
+            try:
+                ch = json.loads(f.read_text())
+            except (OSError, ValueError) as e:
+                print(f"tasks: chat {f.name} not read ({type(e).__name__})", flush=True)
+                continue
+            first = next((m["content"] for m in ch.get("messages", []) if m.get("role") == "user"), ch.get("title") or "chat")
+            register(c, "chat", f.stem, first, ch.get("title") or first, done=[DONE_OF["chat"]],
+                     created=dt.datetime.fromtimestamp(ch.get("created") or f.stat().st_mtime).astimezone().isoformat(timespec="seconds"))
+
+
+def _has(c, name):
+    return bool(c.execute("select 1 from sqlite_master where type='table' and name=?", (name,)).fetchone())
+
+
+BUILD = {"review": "waiting_owner", "deployed": "done", "merged": "done", "failed": "failed", "rolled_back": "failed",
+         "reverted": "failed", "rejected": "cancelled"}
+
+
+def status_of(c, t, missions):
+    """The task's status from its door: the mission's runs, the build, the Claude task, the chat."""
+    door, ref = t["door"], t["ref"]
+    if door == "mission":
+        m = missions.get(ref)
+        if not m or m.get("status") == "archived":
+            return "done" if m else "cancelled"
+        r = c.execute("select status from runs where slug=? order by id desc limit 1", (ref,)).fetchone()
+        st = r["status"] if r else None
+        periodic = t["rhythm"].get("type") in ("schedule", "event")
+        if st in ("running", "queued", "waiting"):
+            return "running"
+        if periodic:
+            return "scheduled" if m.get("status") == "active" else "cancelled"
+        return {"ok": "done", "failed": "failed", "skipped": "cancelled"}.get(st, "running")
+    if door == "build":
+        r = c.execute("select status from builds where id=?", (int(ref),)).fetchone()
+        return BUILD.get(r["status"], "running") if r else "cancelled"
+    if door == "claude":
+        r = c.execute("select status from claude_tasks where id=?", (int(ref),)).fetchone()
+        return {"done": "done", "failed": "failed"}.get(r["status"], "running") if r else "cancelled"
+    if door == "chat":
+        try:
+            return "running" if json.loads((CHATS / f"{ref}.json").read_text()).get("pending") else "done"
+        except (OSError, ValueError):
+            return "done"
+    return t["status"]
+
+
+def sync(c, missions):
+    """Discover new door work, follow each open task's door, and start tasks whose 'after' task has finished."""
+    table(c)
+    with lock:
+        discover(c, missions)
+        for r in c.execute(f"select id from tasks where status in ({','.join('?' * len(OPEN))})", OPEN).fetchall():
+            t = row(c, r["id"])
+            if t["status"] == "after":
+                a = c.execute("select status from tasks where id=?", (t["after"],)).fetchone()
+                if a and a["status"] == "done":
+                    dispatch(c, t)
+                elif a and a["status"] in ("failed", "cancelled"):
+                    put(c, t["id"], status="cancelled", error=f"task #{t['after']} it waited for did not finish ({a['status']})")
+            elif t["door"] and t["ref"] and t["status"] in ("running", "waiting_owner", "scheduled"):
+                st = status_of(c, t, missions)
+                if st != t["status"]:
+                    put(c, t["id"], status=st)
+                    if st in ("done", "failed"):                              # TSK-10: a finished task is an event
+                        import events as EV
+                        EV.task_done(c, t, st)
+                    if st in ("done", "failed") and t["source"] != "door":    # a door reports its own work: only the
+                                                                              # composer's tasks are told here (65 lines once)
+                        M.event("task", "", f"Task #{t['id']} {'done' if st == 'done' else 'failed'}: {t['title']}", title="Tasks")
+
+
+# ---------- a task given in a sentence (TSK-02, TSK-03) ----------
+def preset_of(req):
+    """Deliberate mode: the fields the owner set before the start; anything else is the intake's to decide."""
+    p = {}
+    if req.get("kind") in KINDS:
+        p["kind"] = req["kind"]
+    if req.get("effort") in EFFORTS:
+        p["effort"] = req["effort"]
+    if re.fullmatch(r"\d{4}-\d{2}-\d{2}", str(req.get("deadline") or "")):
+        p["deadline"] = req["deadline"]
+    r = req.get("rhythm") or {}
+    if r.get("type") == "schedule" and M.valid_schedule(str(r.get("schedule", ""))):
+        p["rhythm"] = {"type": "schedule", "schedule": r["schedule"]}
+    elif r.get("type") == "once":
+        p["rhythm"] = {"type": "once"}
+    elif r.get("type") == "after" and str(r.get("task", "")).isdigit():
+        p["rhythm"] = {"type": "after", "task": int(r["task"])}
+    done = [d.strip() for d in req.get("done") or [] if str(d).strip()]
+    if done:
+        p["done"] = done[:8]                                  # cap: list (a definition of done of more points is a plan)
+    if str(req.get("repo") or "") in B_repos():
+        p["repo"] = req["repo"]
+    return p
+
+
+def B_repos():
+    import builds as B
+    return B.repos()
+
+
+def create(req, c):
+    """task_create: the owner's sentence (and deliberate presets) -> a task the intake worker picks up."""
+    table(c)
+    text = re.sub(r"\s+", " ", str(req.get("text", ""))).strip()
+    if len(text) < 8:
+        raise ValueError("say what the stack should do (at least a few words)")
+    if len(text) > 4000:
+        raise ValueError(f"the task is {len(text):,} characters; keep it under 4,000 and put the rest in a document")
+    autonomy = req.get("autonomy") if req.get("autonomy") in AUTONOMY else "auto"
+    p = preset_of(req)
+    after = p.get("rhythm", {}).get("task") if p.get("rhythm", {}).get("type") == "after" else None
+    if after and not c.execute("select 1 from tasks where id=?", (after,)).fetchone():
+        raise ValueError(f"there is no task #{after} to wait for")
+    t = now()
+    cur = c.execute("insert into tasks (text, title, goal, kind, door, ref, done, effort, deadline, autonomy, rhythm, after, spec, questions, "
+                    "answers, status, source, created, updated) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                    (text, text[:80], text, p.get("kind"), None, None, json.dumps(p.get("done") or []), p.get("effort", "standard"),  # cap: id
+                     p.get("deadline"), autonomy, json.dumps(p.get("rhythm") or {"type": "once"}), after, json.dumps({"preset": p}),
+                     "[]", "[]", "intake", req.get("source") or "app", t, t))
+    c.commit()
+    M.event("task", "", f"Task #{cur.lastrowid}: {text[:120]}", title="Tasks")  # cap: list (the feed line; the task holds all of it)
+    return {"task": cur.lastrowid}
+
+
+def cards():
+    reg = yaml.safe_load((ROOT / "config/agents.yaml").read_text())
+    return {a["id"]: a["purpose"] for a in reg["agents"]}
+
+
+def intake_prompt(t, repos, agents):
+    import prompts as P
+    return P.text("intake", "INTAKE").format(
+        text=t["text"], today=dt.date.today().isoformat(), preset=json.dumps(t["spec"].get("preset") or {}, ensure_ascii=False),
+        answers="\n".join(f"- {q}: {a}" for q, a in t["spec"].get("answered") or []) or "(none)",
+        repos=", ".join(repos) or "(none)", agents="\n".join(f"- {k}: {v}" for k, v in agents.items()))
+
+
+def validate(spec, preset, repos, agents):
+    """The intake's answer -> a clean specification, or ValueError saying what is wrong with it."""
+    s = {**spec, **{k: v for k, v in preset.items() if k in ("kind", "effort", "deadline", "rhythm", "done", "repo")}}
+    if s.get("kind") not in KINDS:
+        raise ValueError(f"the intake chose no known kind ({s.get('kind')!r})")
+    done = [str(d).strip() for d in s.get("done") or [] if len(str(d).split()) >= 3]
+    if not done:
+        raise ValueError("the intake wrote no checkable definition of done")
+    qs = [str(q).strip() for q in s.get("questions") or [] if str(q).strip()][:QUESTIONS]
+    plan = []
+    for st in (s.get("plan") or [])[:STEPS]:
+        a = str(st.get("agent", ""))
+        named = a and a not in agents and a != "new"   # TSK-15: an agent the intake names that does not exist = no agent fits
+        plan.append({"step": str(st.get("step", "")).strip(), "agent": a if a in agents or a == "new" else "new" if named else "mission",
+                     "after": [int(x) for x in st.get("after") or [] if str(x).isdigit()],
+                     "why": str(st.get("why", "")).strip() + (f" (the intake named {a!r}, which is no agent: a temporary agent is written for it)" if named
+                                                              else "" if a in agents or a == "new" else " (no agent named: the mission agent takes it)")})
+    if not plan and not qs:
+        raise ValueError("the intake wrote no plan")
+    r = s.get("rhythm") or {"type": "once"}
+    if r.get("type") == "schedule" and not M.valid_schedule(str(r.get("schedule", ""))):
+        r = {"type": "once"}
+    if r.get("type") == "event":
+        r = {"type": "event", "triggers": M.X.clean_triggers(r.get("triggers"))}
+    repo = s.get("repo") if s.get("repo") in repos else None
+    if KINDS[s["kind"]] in ("build",) and not repo and not qs:
+        qs = ["Which repository should this change go into: " + ", ".join(repos) + "?"]
+    title = re.sub(r"\s+", " ", str(s.get("title") or s.get("goal") or "")).strip()[:80] or "Task"  # cap: id
+    return {"title": title if len(title) >= 3 else "Task " + title, "goal": str(s.get("goal") or title).strip(), "kind": s["kind"],
+            "done": done, "plan": plan, "questions": qs, "rhythm": r, "repo": repo,
+            "effort": s.get("effort") if s.get("effort") in EFFORTS else "standard",
+            "deadline": s.get("deadline") if re.fullmatch(r"\d{4}-\d{2}-\d{2}", str(s.get("deadline") or "")) else None}
+
+
+def intake(c, tid, ask=None):
+    """One task through the intake agent (its own key, vk-intake), then to its door or to the owner."""
+    import os
+    import runtime as RTM
+    t = row(c, tid)
+    repos, agents = B_repos(), cards()
+    run, t0 = f"task-intake:{tid}-{len(t['answers'])}", time.time()      # one run per pass (a pass after answers is another)
+    RTM.start(run, "intake", f"Task #{tid}: specification", detail=t["text"])
+    RTM.set_ref(run, "intake")
+    try:
+        raw = (ask or (lambda p: M.ask_json(p, os.environ["VK_INTAKE"])))(intake_prompt(t, repos, agents))
+        s = validate(raw, t["spec"].get("preset") or {}, repos, agents)
+    except Exception as e:                             # a failed intake says why on the task; the owner can retry it
+        put(c, tid, status="failed", error=f"intake: {type(e).__name__}: {e}")
+        M.event("task", "", f"Task #{tid} could not be planned: {e}", title="Tasks")
+        RTM.end(run, "intake", "limit" if M.paused(str(e)) else "failed", str(e), time.time() - t0)
+        RTM.set_ref(None)
+        return
+    RTM.end(run, "intake", "done", f"{s['kind']}: {len(s['done'])} done criteria, {len(s['plan'])} steps, {len(s['questions'])} questions",
+            time.time() - t0)
+    RTM.set_ref(None)
+    spec = {**t["spec"], **s}
+    put(c, tid, title=s["title"], goal=s["goal"], kind=s["kind"], done=s["done"], rhythm=s["rhythm"], effort=s["effort"],
+        deadline=s["deadline"], spec=spec, questions=s["questions"], error=None)
+    if s["questions"]:
+        put(c, tid, status="needs_answer")
+        M.notify_task(tid, s["title"], "has a question for you" if len(s["questions"]) == 1 else "has two questions for you")
+    elif t["autonomy"] == "ask":
+        put(c, tid, status="waiting_approval")
+        M.notify_task(tid, s["title"], "waits for your OK on its plan")
+    elif s["rhythm"].get("type") == "after" or t["after"]:
+        put(c, tid, status="after")
+    else:
+        dispatch(c, row(c, tid))
+
+
+PLAN_KINDS = ("research", "analysis", "errand")          # one-off work the Conductor can run as a plan graph (phase 2)
+
+
+def conducted(t):
+    """TSK-05: a one-off research, analysis or errand task whose plan uses two or more agents that can do a step runs
+    as a plan graph under the Conductor; every other task goes to its door."""
+    import conductor as CD
+    plan, agents = t["spec"].get("plan") or [], CD.cards()
+    return (t["kind"] in PLAN_KINDS and t["rhythm"].get("type") in ("once", "after") and len(plan) >= 2
+            and len({p["agent"] for p in plan}) >= 2 and all(p["agent"] == CD.NEW or (p["agent"] in agents and CD.runs_steps(agents[p["agent"]])) for p in plan))
+
+
+def dispatch(c, t):
+    """Hand the task to its door; the door keeps its own approvals (deploy taps, purchases, the AI phone)."""
+    s, door = t["spec"], KINDS.get(t["kind"])
+    if conducted(t):
+        import conductor as CD
+        try:
+            ref = CD.start(c, t)
+        except ValueError as e:                          # a plan with a cycle or a step nobody can do is refused (TSK-05)
+            put(c, t["id"], status="failed", door="plan", error=f"plan: {e}")
+            M.event("task", "", f"Task #{t['id']} could not start: {e}", title="Tasks")
+            return
+        put(c, t["id"], door="plan", ref=ref, status="running")
+        M.event("task", "", f"Task #{t['id']} started: {len(s.get('plan') or [])} steps under the Conductor: {t['title']}", title="Tasks")
+        return
+    brief = (f"{t['goal']}\n\nDefinition of done:\n" + "\n".join(f"- {d}" for d in t["done"])
+             + ("\n\nPlan:\n" + "\n".join(f"{i + 1}. {p['step']} ({p['agent']}: {p['why']})" for i, p in enumerate(s.get("plan") or []))
+                if s.get("plan") else "")
+             + ("\n\nThe owner's answers:\n" + "\n".join(f"- {q}: {a}" for q, a in s["answered"]) if s.get("answered") else "")
+             + (f"\n\nDeadline: {t['deadline']}" if t["deadline"] else "") + f"\n\n(Task #{t['id']} in Mission Control)")
+    if t["kind"] == "briefing":     # FND-77: the desk drafts its writer's notes from this; a plan for agents only confused it
+        brief = (f"{t['goal']}\n\nWhat each report must deliver:\n" + "\n".join(f"- {d}" for d in t["done"])
+                 + ("\n\nThe owner's answers:\n" + "\n".join(f"- {q}: {a}" for q, a in s["answered"]) if s.get("answered") else "")
+                 + "\n\nMission Control runs the schedule and delivers each report; the notes are about the content only.")
+    asked = " ".join([t["text"] or "", t["goal"] or "", *t["done"]])
+    deliver = ["telegram", "app"] + (["email"] if re.search(r"\be-?mail", asked, re.I) else [])   # the task asked for e-mail
+    try:
+        if door == "build":
+            import builds as B
+            res = B.handle({"action": "build_assign", "repo": s.get("repo"), "title": t["title"], "description": brief}, c)
+            ref = res.get("build") or res.get("id")
+        elif door == "claude":
+            import claude_tasks as CT
+            res = CT.handle({"action": "claude_task", "question": brief, "repo": s.get("repo") or "", "mode": "ask"}, c)
+            ref = res.get("task") or res.get("id")
+        else:
+            r = t["rhythm"]
+            req = {"action": "create", "type": MISSION_TYPE.get(t["kind"], "task"), "title": t["title"], "description": brief,
+                   "schedule": r.get("schedule") if r.get("type") == "schedule" else "manual",
+                   "triggers": r.get("triggers") if r.get("type") == "event" else [], "once": r.get("type") in ("once", "after"),
+                   "depth": "deep" if t["effort"] == "deep" else None, "run_now": r.get("type") != "event", "deliver": deliver}
+            res = M.handle(req, M.load_missions(), c)
+            ref = res.get("slug")
+        if not ref:
+            raise ValueError(f"the {door} door gave no reference back: {res}")
+    except Exception as e:                             # the door refused (no repo, Claude not connected, ...): say so on the task
+        put(c, t["id"], status="failed", door=door, error=f"{door}: {e}")
+        M.event("task", "", f"Task #{t['id']} could not start: {e}", title="Tasks")
+        return
+    if c.execute("select id from tasks where door=? and ref=? and id<>?", (door, str(ref), t["id"])).fetchone():
+        c.execute("delete from tasks where door=? and ref=? and id<>? and source='door'", (door, str(ref), t["id"]))   # found first by sync
+    put(c, t["id"], door=door, ref=str(ref), status="scheduled" if t["rhythm"].get("type") in ("schedule", "event") else "running")
+    M.event("task", "", f"Task #{t['id']} started as {door} {ref}: {t['title']}", title="Tasks")
+
+
+ACTIONS = {"task_create", "task_answer", "task_approve", "task_cancel", "task_retry"}
+
+
+def handle(req, c):
+    table(c)
+    a = req["action"]
+    if a == "task_create":
+        return create(req, c)
+    t = row(c, int(req.get("id") or 0))
+    if a == "task_answer":
+        if t["status"] != "needs_answer":
+            raise ValueError("this task asks nothing right now")
+        ans = [str(x).strip() for x in req.get("answers") or []]
+        if len(ans) != len(t["questions"]) or not all(ans):
+            raise ValueError(f"answer each of its {len(t['questions'])} question(s)")
+        spec = {**t["spec"], "answered": (t["spec"].get("answered") or []) + [[q, a] for q, a in zip(t["questions"], ans)]}
+        put(c, t["id"], answers=ans, spec=spec, status="intake")          # kept: a new pass may ask nothing more
+        return {"task": t["id"]}
+    if a == "task_approve":
+        if t["status"] != "waiting_approval":
+            raise ValueError("this task does not wait for your OK")
+        put(c, t["id"], status="after" if t["after"] else "planned")
+        if not t["after"]:
+            dispatch(c, row(c, t["id"]))
+        return {"task": t["id"]}
+    if a == "task_cancel":
+        if t["status"] not in OPEN:
+            raise ValueError("this task is over already")
+        if t["door"] == "plan":                          # the Conductor's own: its steps that have not started never will
+            import conductor as CD
+            CD.cancel(c, t)
+            return {"task": t["id"]}
+        if t["ref"]:                                   # the board would stop following work that goes on: stop it at its door
+            raise ValueError(f"it has started as {t['door']} {t['ref']}: stop it on that page")
+        put(c, t["id"], status="cancelled")
+        return {"task": t["id"]}
+    if a == "task_retry":
+        if t["status"] != "failed" or t["ref"]:
+            raise ValueError("only a task that failed before it started can be planned again")
+        put(c, t["id"], status="intake", error=None, spec={**t["spec"], "retried": (t["spec"].get("retried") or 0) + 1})
+        return {"task": t["id"]}
+    raise ValueError("unknown task action")
+
+
+def worker():
+    """Tasks waiting for the intake, one at a time (one model call each); the runner's main loop never waits on it."""
+    c = M.db()
+    table(c)
+    while not M.stop.is_set():
+        try:
+            r = c.execute("select id from tasks where status='intake' order by id limit 1").fetchone()
+            if r:
+                with lock:
+                    put(c, r["id"], status="planning")
+                intake(c, r["id"])
+                if row(c, r["id"])["status"] == "planning":   # an intake that ended without a decision
+                    put(c, r["id"], status="failed", error="intake ended without a decision")
+                continue
+        except Exception as e:                         # one bad task must not stop the others; it is logged
+            M.log(f"tasks worker: {type(e).__name__}: {e}")
+        M.stop.wait(3)
+
+
+def state(c):
+    """The task board: every open task and every task of the last 7 days, newest first (TSK-04)."""
+    table(c)
+    since = (dt.datetime.now().astimezone() - dt.timedelta(seconds=WINDOW)).isoformat(timespec="seconds")
+    rows = c.execute(f"select id from tasks where status in ({','.join('?' * len(OPEN))}, 'planning') or updated >= ? order by id desc",
+                     (*OPEN, since)).fetchall()
+    out = []
+    import conductor as CD
+    stepped = CD.state(c, [r["id"] for r in rows if c.execute("select door from tasks where id=?", (r["id"],)).fetchone()["door"] == "plan"])
+    missions = None
+    for r in rows:
+        t = row(c, r["id"])
+        last = nxt = None
+        if t["door"] == "mission" and t["ref"]:       # a mission task shows its last run and its next one, not only "scheduled"
+            run = c.execute("select id, status, summary, output, started, ended from runs where slug=? order by id desc limit 1",
+                            (t["ref"],)).fetchone()
+            last = dict(run) if run else None
+            missions = M.load_missions() if missions is None else missions
+            m = missions.get(t["ref"]) or {}
+            due = m.get("status") == "active" and M.next_due(m.get("schedule"), M.now())
+            nxt = due.isoformat(timespec="minutes") if due else None
+        out.append({k: t.get(k) for k in ("id", "title", "goal", "text", "kind", "door", "ref", "done", "effort", "deadline", "autonomy",
+                                          "rhythm", "after", "questions", "answers", "status", "source", "created", "updated", "error",
+                                          "verdict", "tokens")} | {"judgement": t["spec"].get("judgement")}
+                   | {"plan": t["spec"].get("plan") or [], "steps": stepped.get(t["id"], []), "result": t["spec"].get("result"),
+                      "last_run": last, "next_run": nxt})
+    return {"tasks": out}
+
+
+def gate(path=None):
+    """Phase 1's gate (TSK-03): each one-sentence task of the set gets a specification with a checkable definition of
+    done and no more than two questions. One intake call per task; nothing is started."""
+    import os
+    sys.path.insert(0, str(ROOT / "ops"))
+    import missions as MM
+    globals()["M"] = MM
+    cases = yaml.safe_load((path or ROOT / "eval/tasks-v1.yaml").read_text())["tasks"]
+    repos, agents, rows, ok = B_repos(), cards(), [], 0
+    for case in cases:
+        t = {"text": case["text"], "spec": {}, "questions": [], "answers": []}
+        try:
+            s = validate(MM.ask_json(intake_prompt(t, repos, agents), os.environ["VK_INTAKE"]), {}, repos, agents)
+            good = s["kind"] in case["kinds"] and bool(s["done"]) and len(s["questions"]) <= QUESTIONS
+            rows.append({"text": case["text"], "kind": s["kind"], "done": s["done"], "questions": s["questions"], "plan": s["plan"], "pass": good})
+        except Exception as e:                         # a failed case is a failed gate case, with its reason
+            good = False
+            rows.append({"text": case["text"], "error": f"{type(e).__name__}: {e}", "pass": False})
+        ok += good
+        print(f"{'PASS' if good else 'FAIL'}  {case['text']}", flush=True)
+    out = ROOT / "eval/results" / f"{time.strftime('%Y%m%d-%H%M%S')}-tasks-gate.json"
+    out.write_text(json.dumps({"set": "eval/tasks-v1.yaml", "passed": ok, "total": len(cases), "cases": rows}, indent=1, ensure_ascii=False))
+    print(f"{ok} of {len(cases)} passed; {out.relative_to(ROOT)}")
+    return 0 if ok == len(cases) else 1
+
+
+if __name__ == "__main__":
+    if sys.argv[1:] == ["gate"]:
+        sys.exit(gate())
+    sys.exit(__doc__)

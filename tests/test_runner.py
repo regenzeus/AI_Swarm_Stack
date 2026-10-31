@@ -109,6 +109,13 @@ def test_slugify_is_unique_and_ascii(runner):
     assert runner.slugify("Uranium", {"uranium": {}}) == "uranium-2"
 
 
+@pytest.mark.parametrize("s,hours,label", [("daily 06:30", 36, "Daily"), ("weekly mon 08:00", 180, "Weekly"),
+                                           ("weekly mon,thu 08:00", 96, "Weekly"), ("manual", 36, "Daily")])
+def test_a_briefing_reads_the_news_of_its_schedule_s_window(runner, s, hours, label):
+    """FND-77: a weekly briefing read only 36 hours of news."""
+    assert runner.window_hours(s) == hours and runner.period({"schedule": s}) == label
+
+
 def test_section_parsing(runner):
     out = "## Result\nfound it\n\n## Notes\n- a\n## Summary\nshort"
     assert runner.section(out, "Result") == "found it"

@@ -41,6 +41,7 @@ Every `/api/` and `/share` route needs the `Tailscale-User-Login` header that `t
 | `/api/chats/{cid}` | GET, DELETE, PATCH | One chat: GET reads it, PATCH renames or pins it, DELETE removes it with its attached files. |
 | `/api/chats/{cid}/stream` | GET | SSE of the answer in progress: {text, reasoning, tools, done}; keep-alive pings; reconnectable. |
 | `/api/chats/{cid}/stop` | POST | Stops the answer that is being written in a chat. |
+| `/api/chats/{cid}/retry` | POST | Try a message that waits for the usage limit now, instead of at its next try (AST-12). |
 | `/api/chat/upload` | POST | An attachment for the next chat message: images go to Hermes as images, documents as extracted text. |
 | `/api/chat/files/{fid}` | GET | A file attached to a chat. |
 | `/api/models` | GET | The chat's model choices and reasoning efforts, with the default. |

@@ -14,7 +14,7 @@ KEYS=(
   "vk-main|gpt-sub,gpt-sub-fast|0.15|qmd,research,graphify,missions,phone,claude,mail,house,swarm"
   "vk-code|gpt-sub,gpt-sub-fast|0.10|graphify"
   "vk-curator|gpt-sub-fast|0.10|qmd,swarm"
-  "vk-scout|gpt-sub-fast|0.05|fetch,browser,swarm"
+  "vk-scout|gpt-sub-fast|0.05|fetch,jobs,browser,swarm"
   "vk-memory|gpt-sub-fast|0.05|"         # the crew's memory curator (ops/crew.py memory)
   "vk-ui|gpt-sub-fast|0.02|"
   "vk-hindsight|gpt-sub-fast|0.02|"       # long-term memory extraction (Hindsight server)
@@ -26,6 +26,7 @@ KEYS=(
   "vk-guard|gpt-sub-fast|0.02|"          # research privacy check (images/research)
   # background jobs: one key each, so a mission run's cost window holds only its own calls (FND-03)
   "vk-review|gpt-sub,gpt-sub-fast|0.02|"       # the weekly self-review (ops/improve.py)
+  "vk-intake|gpt-sub,gpt-sub-fast|0.02|"       # the task intake: a task given in a sentence becomes its specification (ops/tasks.py)
   "vk-inbox|gpt-sub-fast|0.02|mail"            # the Inbox digest: Gmail read under the owner's grant (ops/inbox.py)
   "vk-journal|gpt-sub-fast|0.05|"              # agent journals: entries and the curator's folds (ops/journal.py)
   "vk-wikis|gpt-sub-fast|0.02|"                # wiki summaries for the Wiki tab (ops/wikis.py)

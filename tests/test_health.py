@@ -38,6 +38,7 @@ def C(tmp_path, monkeypatch):
     events, sent = [], []
     crew.M = types.SimpleNamespace(event=lambda *a, **k: events.append(a), log=lambda *a: None, _queue_cache=[],
                                    X=types.SimpleNamespace(telegram=lambda text, *a: sent.append(text), APP="https://x"))
+    monkeypatch.setattr(crew.N, "send", lambda text, category, **k: sent.append(text))   # the one notification path (OBS-16)
     monkeypatch.setattr(crew, "OUT", tmp_path)
     monkeypatch.setattr(crew, "ACK", tmp_path / "health-ack.json")
     monkeypatch.setattr(crew, "refresh_history", lambda c: None)

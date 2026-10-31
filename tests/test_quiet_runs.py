@@ -31,12 +31,30 @@ def test_an_empty_run_is_not_sent_and_the_next_full_one_names_its_day(runner, mo
     assert sent == []
     day = f"{runner.now():%d %b}"
     assert json.loads(X.quiet_file().read_text()) == {"job-report": [day]}
+    X.deliver(m, "Later today", "short", "p", "Daily briefing · 30 Oct 2026", "# full")
+    assert "nothing new" not in sent[0][1] and json.loads(X.quiet_file().read_text()) == {}   # a full run the same day covers it
+    sent.clear()
+    X.quiet_file().write_text(json.dumps({"job-report": ["29 Oct"]}))
     assert X.deliver(m, "Three roles", "short", "topics/job-report/2026-10-31.md", "Daily briefing · 31 Oct 2026", "# full") is True
     assert [k for k, _ in sent] == ["telegram", "email"]
-    assert f"Daily briefing · 31 Oct 2026 · nothing new on {day}" in sent[0][1] and sent[1][1].endswith(f"nothing new on {day}")
+    assert "Daily briefing · 31 Oct 2026 · nothing new on 29 Oct" in sent[0][1] and sent[1][1].endswith("nothing new on 29 Oct")
     assert json.loads(X.quiet_file().read_text()) == {}                       # named once, then forgotten
     X.deliver(m, "Again", "short", "p", "Daily briefing · 1 Nov 2026", "# full")
     assert "nothing new" not in sent[2][1]
+
+
+def test_every_email_outcome_is_recorded(runner, monkeypatch):
+    """FND-78: a report's e-mail left no trace when it was sent, so its delivery could only be assumed."""
+    import mission_extras as X
+    rows, stages = [], []
+    monkeypatch.setattr(X.N, "record", lambda *a: rows.append(a))
+    monkeypatch.setattr(X.M.RTM, "stage", lambda title, *a, **k: stages.append((title, k.get("kind"))))
+    for k in ("GMAIL_ADDRESS", "GMAIL_APP_PASSWORD", "MAIL_TO"):
+        monkeypatch.delenv(k, raising=False)
+    assert X.email("Weekly: VW profit falls", "# x", "Weekly briefing", "u") is False
+    assert rows[0][0] == "email" and rows[0][4] == "failed" and "not set up" in rows[0][3]
+    assert stages == [("E-mail not sent: Weekly: VW profit falls", "error")]
+    assert X.sent("Weekly: VW profit falls", "sent") is True and rows[1][4] == "sent" and stages[1][1] == "stage"
 
 
 def test_the_briefing_run_asks_whether_the_report_is_empty():

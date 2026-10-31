@@ -43,8 +43,9 @@ def hermes(*cmd, inp=None):
     return run("docker", "exec", "-i", "-u", "hermes", C, *cmd, inp=inp)
 
 
-def notify(text):
-    hermes("sh", "-c", 'hermes send -t "telegram:$TELEGRAM_ALLOWED_USERS" "$0"', text)
+def notify(text, category="system"):
+    import notify as N                            # the one notification path (OBS-16)
+    N.send(text, category)
 
 
 def record(**kw):
@@ -104,7 +105,7 @@ def main(note=()):
             r = hermes("hermes", "curator", "archive", name)
             parked.append(f"{name}; {' '.join(caps)}")
             record(item_id=name, rule=",".join(caps), decision="parked", actor="auto", findings=s["findings"])
-            notify(f"Skill '{name}' needs your OK ({', '.join(caps)}). It is parked and not used until you approve.\n"
+            notify(category="approval", text=f"Skill '{name}' needs your OK ({', '.join(caps)}). It is parked and not used until you approve.\n"
                    f"Approve: tell Claude \"approve skill {name}\"  (or: make skill-approve NAME={name})")
             if r.returncode:
                 print(f"archive {name} failed: {r.stderr.strip()}")

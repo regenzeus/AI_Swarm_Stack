@@ -628,7 +628,7 @@ button.arch-node { font: inherit; color: inherit; text-align: left; cursor: poin
 .findings li.high .sev { color: var(--err); background: var(--err-bg); } .findings li.medium .sev { color: var(--warn); background: var(--warn-bg); }
 
 /* AI phone */
-.phshot { display: block; margin-top: 14px; max-height: 300px; max-width: 100%; border-radius: 14px; border: 1px solid var(--line); }
+.phshot { display: block; margin-top: 14px; max-height: 300px; max-width: 100%; border-radius: 14px; border: 1px solid var(--border); }
 .phreq { border: 1px solid color-mix(in srgb, var(--warn) 45%, transparent); }
 .phlog { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 8px; }
 .phlog li { font-size: 13px; }
@@ -888,3 +888,34 @@ a.swconn:hover { border-color: var(--accent); }
 .chartbtns button:active { background: var(--surface-2); }
 .swlbl { fill: var(--text); font-weight: 600; pointer-events: none; paint-order: stroke; stroke: var(--surface); }
 .swlbl.idea { fill: var(--muted); font-weight: 500; }
+/* OBS-16: Stack → Notifications; AST-12: a chat message that waits for the usage limit */
+.ntable { width: 100%; border-collapse: collapse; margin-top: 12px; }
+.ntable th { text-align: left; font-weight: 600; padding: 4px 6px; border-bottom: 1px solid var(--border); }
+.ntable th:not(:first-child), .ntable td:not(:first-child) { text-align: center; width: 72px; }
+.ntable td { padding: 6px; border-bottom: 1px solid var(--border); vertical-align: top; }
+.nquiet { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.nquiet .input { width: auto; }
+.limitnote { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+.limitdetail pre { white-space: pre-wrap; word-break: break-word; margin-top: 6px; }
+/* TSK-02, TSK-04: the task composer and board */
+.askbar .btn + .btn { margin-left: 6px; }
+@media (max-width: 560px) { .askbar .btn { padding-left: 10px; padding-right: 10px; gap: 4px; } }
+.tform textarea { width: 100%; resize: vertical; }
+.tform details { margin-top: 10px; }
+.tgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 10px; }
+.tgrid label, .tans label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+.tgrid .wide { grid-column: 1 / -1; }
+.tcard summary { list-style: none; cursor: pointer; padding: 12px 14px; }
+.tcard summary::-webkit-details-marker { display: none; }
+.tbody { padding: 0 14px 14px; display: flex; flex-direction: column; gap: 8px; }
+.tbody ul, .tbody ol { margin: 0; padding-left: 20px; }
+.tlabel { font-weight: 600; margin-top: 4px; }
+.tplan li { margin-bottom: 6px; }
+.tans { display: flex; flex-direction: column; gap: 8px; }
+.tacts { flex-wrap: wrap; gap: 8px; }
+/* TSK-10 to TSK-12: Tasks → Triggers */
+.tsrc { gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+.trule ul { margin: 6px 0 0; padding-left: 18px; }
+/* TSK-13 to TSK-17: judged tasks, agents measured */
+.tjudge { list-style: none; padding-left: 0; }
+.tjudge li { margin-bottom: 4px; }

@@ -37,6 +37,11 @@ import house as H
 import swarm_client as SW
 import memory as MEM
 import registry as REG
+import notify as N                                # OBS-16: the one notification path
+import tasks as TK                                # TSK-01 to TSK-04: every piece of work is a task
+import conductor as CD                            # TSK-05 to TSK-09: a task's plan graph, step by step
+import events as EV                               # TSK-10 to TSK-12: the event bus, the owner's rules, breaking news
+import staffing as ST                             # TSK-13 to TSK-17: judged tasks, measured agents, routing, temporary agents
 from textcap import limit, limit_items, tail as tailcut                    # visible caps and input limits (AGENTS.md, truncation)
 import prompts as P                               # MEM-11: the agent prompts live in prompts/<owner>.md
 
@@ -102,15 +107,17 @@ def db():
     return c
 
 
-def event(kind, slug="", text="", push=False, title=""):
+def event(kind, slug="", text="", push=False, title="", category=None):
+    if push:                                       # OBS-16: a push only where the owner's preferences and quiet hours allow it
+        push = N.push_allowed(kind, text, title, category)
     e = {"ts": now().isoformat(timespec="seconds"), "kind": kind, "slug": slug, "title": title, "text": text, "push": push}
     with open(PUBLIC / "events.jsonl", "a") as f:
         f.write(json.dumps(e, ensure_ascii=False) + "\n")
     log(f"event {kind} {slug}: {text}")
 
 
-def notify(text):
-    subprocess.run([str(OPS / "notify.sh"), text], capture_output=True, timeout=60)
+def notify(text, category="system"):
+    N.send(text, category)
 
 
 # ---------- missions on disk ----------
@@ -266,6 +273,17 @@ def schedule_text(s):
     return f"Every {m[7]} h"
 
 
+def window_hours(s):
+    """The hours of news a briefing on schedule s reads: 36 for a daily one, the gap between runs plus half a day for a
+    weekly one (a week for one day a week), so a weekly briefing doesn't read only its last day and a half."""
+    m = SCHED.match(s or "")
+    return round(168 / len(m[4].split(","))) + 12 if m and m[4] else 36
+
+
+def period(m):
+    return "Weekly" if (m.get("schedule") or "").startswith("weekly") else "Daily"
+
+
 def next_due(s, t):
     """The next scheduled time after t (looks a week ahead, so weekly schedules always have one)."""
     return next((d for d in due_times(s, t + dt.timedelta(days=7)) if d > t), None)
@@ -376,7 +394,7 @@ def run_briefing(m, logf):
     head = re.search(r'^headline: "?(.*?)"?$', text, re.M)
     title = json.loads(f'"{head.group(1)}"') if head else "Briefing"
     tg = Path(f"/srv/ai/desk/{topic}/out/{rel[-13:-3]}.telegram.txt")
-    if not X.deliver(m, title, tg.read_text() if tg.exists() else "", rel, f"Daily briefing · {now():%d %b %Y}", text,
+    if not X.deliver(m, title, tg.read_text() if tg.exists() else "", rel, f"{period(m)} briefing · {now():%d %b %Y}", text,
                      empty=X.briefing_empty(text)):
         RTM.stage("Nothing new: kept in the app", "no news was chosen, so this briefing is not sent by Telegram or e-mail; "
                   "the next full one names this day")
@@ -517,7 +535,7 @@ def execute(c, row, missions):
     else:
         event("run_failed", m["slug"], f"Run failed: {summary}", push=True, title=m["title"])
         if "telegram" in (m.get("deliver") or []):
-            X.telegram(f"<b>{m['title']}</b>: run failed.\n{summary}", X.links(m["slug"]))
+            X.telegram(f"<b>{m['title']}</b>: run failed.\n{summary}", X.links(m["slug"]), category="result")
 
 
 def park(what, ready, timeout=1800, every=10):
@@ -664,8 +682,11 @@ def create_briefing(meta, req):
              "mission": d.get("mission", req.get("description", "")), "key_questions": d.get("key_questions", [])[:8],
              "watchlist": watch,
              "sources": {"feeds": ok["feeds"], "search": [q for q in d.get("search", []) if isinstance(q, str)][:10],
+                         "jobs": [{"what": str(j["what"])[:120], "where": str(j.get("where") or "")[:80],   # cap: id
+                                   "radius_km": min(max(int(j.get("radius_km") or 50), 0), 200)}
+                                  for j in d.get("jobs") or [] if isinstance(j, dict) and j.get("what")][:6],
                          "gdelt": [], "filings": ok["filings"], "prefer": d.get("prefer", []), "avoid": d.get("avoid", [])},
-             "report": {"sections": sections, "length": "2 minutes to read"}}
+             "report": {"sections": sections, "length": "2 minutes to read"}, "window_hours": window_hours(meta.get("schedule"))}
     write_front(VAULT / "topics" / meta["slug"] / "TOPIC.md", topic, d.get("notes", ""))
     dropped = len(spec["symbols"]) - len(ok["symbols"]) + len(spec["feeds"]) - len(ok["feeds"])
     return f"{len(topic['key_questions'])} key questions, {len(watch)} watched, {len(topic['sources']['search'])} searches" + \
@@ -709,7 +730,7 @@ def handle(req, missions, c):
         save_mission(meta)                    # first, so a retried create finds it as a duplicate
         if typ == "briefing":
             meta["topic"] = s
-            meta["goal"] = f"Daily briefing: {title}. {desc}".strip() + f"\n\nContent, key questions and sources: topics/{s}/TOPIC.md"
+            meta["goal"] = f"{period(meta)} briefing: {title}. {desc}".strip() + f"\n\nContent, key questions and sources: topics/{s}/TOPIC.md"
             try:
                 detail = create_briefing(meta, req)
             except Exception:
@@ -785,6 +806,12 @@ def handle(req, missions, c):
             write_front(p, meta, body)
             paths.append(f"topics/{m.get('topic', slug)}")
             changed.append("briefing focus")
+        if "schedule" in f and m["type"] == "briefing":     # the news window follows the schedule (weekly: a week)
+            (meta, body), p = topic_of(m)
+            if meta.get("window_hours") != window_hours(m["schedule"]):
+                meta["window_hours"] = window_hours(m["schedule"])
+                write_front(p, meta, body)
+                paths.append(f"topics/{m.get('topic', slug)}")
         save_mission(m)
         vault_commit(paths, f"mission: update {slug} ({', '.join(changed)})")
         event("updated", slug, "changed: " + (", ".join(changed) or "nothing"), title=m["title"])
@@ -922,6 +949,25 @@ def store_secret(name, value, msg):
         subprocess.run(cmd, cwd=str(STACK_REPO), capture_output=True, timeout=120)
 
 
+def notify_task(tid, title, what):
+    """A task that waits for the owner (a question, its plan's OK), through the one notification path."""
+    N.send(f"Task #{tid} {what}: {title}", "result", title="Tasks", buttons=[[("🔍 Open the task", f"{X.APP}/#/tasks?t={tid}")]],
+           push_on=True, event_kind="task")
+
+
+def handle_notify(req):
+    """The owner's notification preferences (OBS-16), and the app's word that a chat which waited for the usage limit
+    is answered (AST-12): the owner may have left the app, so it goes out through the one path."""
+    if req["action"] == "notify_prefs":
+        return {"prefs": N.set_prefs(req.get("prefs") or {})}
+    cid = str(req.get("chat", ""))
+    if not re.fullmatch(r"[a-z0-9]{6,24}", cid):
+        raise ValueError("no such chat")
+    N.send(f"The answer that waited for the usage limit is ready: {req.get('title') or 'your chat'}", "result", title="Chat",
+           buttons=[[("💬 Open the chat", f"{X.APP}/#/chat?c={cid}")]], push_on=True, event_kind="chat")
+    return {}
+
+
 def respond(rid, req):
     c = db()
     try:
@@ -930,7 +976,7 @@ def respond(rid, req):
                else B.handle(req, c) if a in BUILD_ACTIONS else I.handle(req, c) if a in IMPROVE_ACTIONS
                else R.handle(req, c) if a in REPO_ACTIONS else CR.handle(req, c) if a in CREW_ACTIONS else J.handle(req) if a in J.ACTIONS
                else SH.handle(req, c) if a in SH.ACTIONS else W.handle(req) if a in W.ACTIONS else H.handle(req) if a in H.ACTIONS
-               else SW.handle(req, c) if a in SW.ACTIONS
+               else SW.handle(req, c) if a in SW.ACTIONS else handle_notify(req) if a in ("notify_prefs", "chat_ready") else TK.handle(req, c) if a in TK.ACTIONS else EV.handle(req, c) if a in EV.ACTIONS
                else handle(req, load_missions(), c))
         res = {"ok": True, **res}
     except Exception as e:
@@ -1158,7 +1204,7 @@ def write_state(c, missions):
     except FileNotFoundError:
         ev = []
     state = {"generated": t.isoformat(timespec="seconds"), "missions": out, "running": run or None, "queue": queue,
-             "activity": ev, "calls": recent_calls(), "system": system_info(), "resources": RES, **B.state(c), **I.state(c), **R.state(), **CT.state(c), **CR.state(), **SH.state(), **H.state(), **SW.state(), **MEM.state(CR.status()), "health": health}
+             "activity": ev, "calls": recent_calls(), "system": system_info(), "resources": RES, **B.state(c), **I.state(c), **R.state(), **CT.state(c), **CR.state(), **SH.state(), **H.state(), **SW.state(), **MEM.state(CR.status()), **N.state(), **TK.state(c), **EV.state(c), **ST.state(c), "health": health}
     tmp = PUBLIC / "state.json.tmp"
     tmp.write_text(json.dumps(state, ensure_ascii=False, default=str))
     tmp.replace(PUBLIC / "state.json")
@@ -1230,17 +1276,17 @@ def phone_watch():
                     go = f"{X.APP}/#/phone?id={p['id']}&do="       # one tap: the app opens and records the answer
                     first = [("✅ Allow", go + "allow")] if p.get("money") else [("✅ Allow", go + "allow"), ("✅ Allow 5 min", go + "allow5")]
                     X.telegram(f"📱 <b>AI phone: OK?</b>\n{html.escape(p.get('text', ''))}\n<i>{html.escape(p.get('why', ''))}</i>\n"
-                               f"(waits 15 min)", [first, [("❌ Decline", go + "deny"), ("🔍 Look first", f"{X.APP}/#/phone")]])
+                               f"(waits 15 min)", [first, [("❌ Decline", go + "deny"), ("🔍 Look first", f"{X.APP}/#/phone")]], category="approval")
             for f in CONN_PENDING.glob("*.json") if CONN_PENDING.exists() else []:
                 if f.stem not in seen:
                     seen.add(f.stem)
                     p = json.loads(f.read_text())
                     sample = "\n".join("· " + html.escape(x) for x in p.get("sample", [])[:8])
                     X.telegram(f"📧 <b>Gmail: move {p.get('count')} mails to Trash?</b>\n<i>{html.escape(p.get('reason', ''))}</i>\n{sample}\n"
-                               "(Trash only, undo possible; waits 15 min)", [[("🔍 Review", f"{X.APP}/#/system?conn=1")]])
+                               "(Trash only, undo possible; waits 15 min)", [[("🔍 Review", f"{X.APP}/#/system?conn=1")]], category="approval")
             for f in sorted(PHONE_DONE.glob("*.json")) if PHONE_DONE.exists() else []:     # a finished phone task
                 d = json.loads(f.read_text())
-                X.telegram(f"📱 <b>AI phone: done</b>\n{html.escape(d.get('summary', ''))}", [[("Phone page", f"{X.APP}/#/phone")]])
+                X.telegram(f"📱 <b>AI phone: done</b>\n{html.escape(d.get('summary', ''))}", [[("Phone page", f"{X.APP}/#/phone")]], category="result")
                 f.unlink(missing_ok=True)
         except Exception:
             log(traceback.format_exc())
@@ -1262,7 +1308,7 @@ def watcher():
 
 
 def main():
-    X.M = B.M = I.M = R.M = SH.M = CL.M = T.M = CT.M = CR.M = J.M = W.M = H.M = sys.modules[__name__]
+    X.M = B.M = I.M = R.M = SH.M = CL.M = T.M = CT.M = CR.M = J.M = W.M = H.M = TK.M = CD.M = EV.M = ST.M = sys.modules[__name__]
     CT.B = B
     CR.I = I
     I.B = R.B = B
@@ -1287,6 +1333,10 @@ def main():
     threading.Thread(target=RTM.forwarder, args=(stop,), daemon=True).start()     # the sandboxes' runtime spools
     threading.Thread(target=T.worker, daemon=True).start()
     threading.Thread(target=I.worker, daemon=True).start()
+    threading.Thread(target=TK.worker, daemon=True, name="task-intake").start()   # tasks given in a sentence (TSK-03)
+    threading.Thread(target=CD.worker, daemon=True, name="conductor").start()      # plan graphs, step by step (TSK-05)
+    threading.Thread(target=EV.worker, daemon=True, name="event-bus").start()      # events, rules, breaking news (TSK-10)
+    threading.Thread(target=ST.worker, daemon=True, name="staffing").start()       # judged tasks, measured agents (TSK-17)
     log("mission runner started")
     last_state = last_cost = 0
     while not stop.is_set():
@@ -1296,6 +1346,8 @@ def main():
             check_schedules(missions, c)
             if time.time() - last_cost > 30:
                 refresh_costs(c, missions)
+                N.flush()                          # after quiet hours: what was held goes out as one message
+                TK.sync(c, missions)               # every door's work is a task; each task follows its door
                 last_cost = time.time()
             if time.time() - last_state > 4:
                 write_state(c, missions)

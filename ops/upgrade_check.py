@@ -1,7 +1,7 @@
 """Which pinned components have a newer release? Read-only: changes nothing, just reports.
   python3 ops/upgrade_check.py [--notify]     (monthly timer sends the list to Telegram)
 How to upgrade one: see UPGRADE.md."""
-import json, re, subprocess, sys, urllib.request
+import json, re, sys, urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -62,4 +62,6 @@ print("\n".join(rows))
 if "--notify" in sys.argv and newer:
     msg = ("Monthly upgrade check: newer releases for " + "; ".join(newer)
            + ". Nothing was changed. To upgrade one: ask Claude, or follow UPGRADE.md in ai-stack.")
-    subprocess.run([str(ROOT / "ops" / "notify.sh"), msg], capture_output=True)
+    sys.path.insert(0, str(ROOT / "ops"))
+    import notify as N                            # the one notification path (OBS-16)
+    N.send(msg, "system")

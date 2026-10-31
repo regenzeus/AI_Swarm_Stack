@@ -264,7 +264,7 @@ def research(m, logf, ev=None):
     if status == "ok" and dropped:
         text = f"Price drop: {prev:.2f} € → {best:.2f} € ({(1 - best / prev) * 100:.0f} % less). {summary}"
         M.event("price_drop", m["slug"], text, push=True, title=m["title"])
-        M.X.telegram(f"🛒 <b>{m['title']}</b>\n{text}", M.X.links(m["slug"], rel))
+        M.X.telegram(f"🛒 <b>{m['title']}</b>\n{text}", M.X.links(m["slug"], rel), category="alert")
     if status == "ok":
         d = offers_json(out)
         step("offers and verdict from the report", cut(json.dumps(d, ensure_ascii=False), STORE) if d else "no Offers JSON block: no proposal this run",  # cap: store
@@ -371,7 +371,7 @@ def tell(m, p):
         M.event("shop_over", m["slug"], f"{p['item']}: {p['over']}: buy-it-yourself link only", push=True, title=m["title"])
     else:
         return
-    M.X.telegram(f"{head}\n{card_text(p)}", [b for b in buttons if b])
+    M.X.telegram(f"{head}\n{card_text(p)}", [b for b in buttons if b], category="approval")
     step("told the owner (Telegram + Mission Control)", p["status"], kind="stage")
 
 
@@ -553,7 +553,7 @@ def buy(m, logf, pid):
             PW.forget(p["watch"])
         text = f"✅ <b>Ordered</b>: {html.escape(p['item'])}\n{(r.get('total_eur') or p['total_eur']):.2f} € at {html.escape(p['shop'])}" \
                f"{', order ' + html.escape(order) if order else ''}\nI follow the confirmation and shipping mails until it arrives."
-        M.X.telegram(text, [[("🔍 Order", f"{M.X.APP}/#/mission/{urllib.parse.quote(m['slug'])}?shop={pid}")]])
+        M.X.telegram(text, [[("🔍 Order", f"{M.X.APP}/#/mission/{urllib.parse.quote(m['slug'])}?shop={pid}")]], category="alert")
         M.event("shop_bought", m["slug"], f"Ordered {p['item']} ({order or 'order number not read'})", push=True, title=m["title"])
         return "ok", f"Ordered {p['item']} for {(r.get('total_eur') or p['total_eur']):.2f} € (order {order or '?'}).", ""
     reason = r.get("reason") or "the agent stopped before the final screen: " + ((out.strip().splitlines() or ["no answer"])[-1])
@@ -561,7 +561,7 @@ def buy(m, logf, pid):
     note(p, f"Stopped before buying: {reason}")
     save(p)
     M.X.telegram(f"✋ <b>Stopped before buying</b> {html.escape(p['item'])}\n{html.escape(reason)}\nNothing was bought. Finish it yourself "
-                 "in the app, or approve again after a change.", [[("📱 Phone page (screenshot)", shot), ("🛒 Buy it yourself", p["url"])]])
+                 "in the app, or approve again after a change.", [[("📱 Phone page (screenshot)", shot), ("🛒 Buy it yourself", p["url"])]], category="alert")
     M.event("shop_stopped", m["slug"], f"Stopped before buying {p['item']}: {reason}", push=True, title=m["title"])
     return "failed", f"Stopped before buying: {reason}", ""
 
@@ -597,7 +597,7 @@ def track(m, logf, pid):
                  + (f", expected {d.get('eta')}" if d.get("eta") else "") + f" ({d.get('evidence') or ''})")
             M.X.telegram(f"📦 <b>{html.escape(p['item'])}</b>: {html.escape(st or 'order confirmed')}"
                          + (f"\n{html.escape(str(d.get('carrier')))} {html.escape(str(d.get('tracking') or ''))}" if d.get("carrier") else "")
-                         + (f"\nexpected {html.escape(str(d.get('eta')))}" if d.get("eta") else ""), [])
+                         + (f"\nexpected {html.escape(str(d.get('eta')))}" if d.get("eta") else ""), [], category="alert")
         if st == "shipped":
             p["status"] = "shipped"
         if st == "delivered":

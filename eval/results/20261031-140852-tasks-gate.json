@@ -1,0 +1,616 @@
+{
+ "set": "eval/tasks-v1.yaml",
+ "passed": 20,
+ "total": 20,
+ "cases": [
+  {
+   "text": "Add a dark mode toggle to the Mission Control settings",
+   "kind": "coding",
+   "done": [
+    "Mission Control settings contains a clearly labeled Dark mode toggle that is keyboard operable and exposes its current state to assistive technology.",
+    "Changing the toggle immediately switches all Mission Control views between light and dark themes without reloading; text, controls, navigation, and dialogs remain readable in both themes on desktop and mobile.",
+    "The selected theme persists across reloads and navigation using the existing preference mechanism, or browser-local storage if none exists; without a saved preference, the initial theme follows the operating system preference.",
+    "Automated tests cover theme initialization, switching, and persistence using the repository's existing test tooling, and relevant checks pass or outstanding failures are explicitly reported.",
+    "The review handoff identifies changed files, summarizes behavior and verification results, and includes manual verification steps; no deployment is performed."
+   ],
+   "questions": [],
+   "plan": [
+    {
+     "step": "Inspect ai-stack to locate Mission Control settings, shared styling, preference storage, and test tooling; reuse existing theme support where available.",
+     "agent": "builder",
+     "why": "Builder can inspect the repository and implement the change in its sandbox."
+    },
+    {
+     "step": "Implement the accessible settings toggle and application-wide theme handling, preserving the existing visual language. Default to the operating system preference until the user chooses explicitly, and persist that choice using existing storage or browser-local storage.",
+     "agent": "builder",
+     "why": "Builder owns UI and preference changes and can keep the implementation consistent with existing architecture."
+    },
+    {
+     "step": "Add regression tests, run relevant tests and available lint/type/build checks, verify both themes at desktop and mobile sizes, and prepare the change and verification notes for owner review without deploying.",
+     "agent": "builder",
+     "why": "Builder can validate its sandbox changes and provide a reviewable implementation with clear evidence."
+    }
+   ],
+   "pass": true
+  },
+  {
+   "text": "The wiki map labels overlap on small phones, fix that",
+   "kind": "coding",
+   "done": [
+    "The wiki map implementation in ai-stack includes a responsive label layout that prevents visible labels from overlapping at viewport widths of 320, 360, and 390 CSS pixels.",
+    "Labels adapt when the viewport or map view changes; any item whose label is suppressed or shortened remains identifiable through an accessible tap, selection, or existing details interaction.",
+    "Existing map navigation and supported pan, zoom, and selection interactions still work, with no new horizontal page overflow on small phones.",
+    "Regression coverage checks the mobile label behavior, and the handoff includes test results and visual verification at the target phone widths and a desktop width."
+   ],
+   "questions": [],
+   "plan": [
+    {
+     "step": "Use ai-stack as the default repository because this concerns the stack's wiki UI. Locate the wiki map, inspect its rendering and interaction model, and reproduce the overlap at 320, 360, and 390 CSS pixels using representative dense map content.",
+     "agent": "builder",
+     "why": "Builder can inspect the repository and reproduce the UI defect in the coding sandbox."
+    },
+    {
+     "step": "Implement the smallest maintainable responsive fix using the existing rendering approach. Prefer collision-aware label placement or selective display over making text unreadably small; preserve item identification, current styling, and desktop behavior.",
+     "agent": "builder",
+     "why": "Builder makes repository changes in the sandbox for owner review before deployment."
+    },
+    {
+     "step": "Add or update regression tests using the existing test tooling, check layout and interactions at the target phone widths and a desktop width, and report results, screenshots where supported, and any verification limitations for owner review without deploying.",
+     "agent": "builder",
+     "why": "Builder can run the application and tests against the implemented fix and provide a reviewable handoff."
+    }
+   ],
+   "pass": true
+  },
+  {
+   "text": "Make the backup job send me its size every night",
+   "kind": "coding",
+   "done": [
+    "A reviewable change exists in ai-stack that sends one nightly backup-size notification through the owner's existing Telegram destination, without changing the backup schedule or retention policy.",
+    "Each successful report identifies the backup run, its completion time and the total stored size of the artifacts produced by that run, displayed in human-readable units; it does not report the cumulative size of backup history.",
+    "Reporting runs daily at 03:00 in the stack's configured timezone, defaulting to UTC only if none is configured. A backup that is still running, failed or missing produces an explicit status message rather than a misleading successful size report.",
+    "Tests cover successful size reporting, multiple backup artifacts, missing or failed backups, in-progress backups and duplicate-send prevention for the same reporting night.",
+    "The change documents the reporting schedule, timezone, size calculation and notification configuration, and remains undeployed pending owner review."
+   ],
+   "questions": [],
+   "plan": [
+    {
+     "step": "Inspect ai-stack to locate the active backup job, its artifact metadata, scheduler, timezone configuration and existing owner-directed Telegram notifications. Default to the primary full-stack backup if multiple jobs exist.",
+     "agent": "builder",
+     "why": "Builder can inspect the repository and implement the change in a sandbox without requiring production access."
+    },
+    {
+     "step": "Implement a daily 03:00 report using existing scheduling and notification mechanisms. Measure the latest backup run's stored artifacts without modifying them, preserve the backup schedule and retention, distinguish stale or unsuccessful runs, and prevent duplicate notifications during retries.",
+     "agent": "builder",
+     "why": "Builder owns repository changes and can reuse the stack's established operational patterns."
+    },
+    {
+     "step": "Add automated tests and configuration documentation, run the relevant checks, and provide the patch with sample success and failure messages for owner review before deployment.",
+     "agent": "builder",
+     "why": "Builder can verify the implementation and deliver a reviewable change without deploying it."
+    }
+   ],
+   "pass": true
+  },
+  {
+   "text": "Write a test that checks every guide chapter has a summary",
+   "kind": "coding",
+   "done": [
+    "A test exists in the selected repository's existing test framework and discovers guide chapters without maintaining a separate hard-coded chapter list.",
+    "The test fails when any guide chapter has a missing or whitespace-only summary and identifies the offending chapter.",
+    "The test passes when every guide chapter has a non-empty summary.",
+    "The test runs through the repository's normal test workflow, and the handoff reports the command and result, including any existing chapters that fail the check."
+   ],
+   "questions": [
+    "Which repository contains the guide: ai-stack or TestRepo?"
+   ],
+   "plan": [
+    {
+     "step": "In the repository selected by the owner, inspect guide chapter discovery, summary conventions, and the existing test workflow. Default to treating every published guide chapter as in scope and using its established summary representation.",
+     "agent": "builder",
+     "why": "Builder can inspect the repository and implement the test in the coding sandbox."
+    },
+    {
+     "step": "Implement the summary coverage test using existing test conventions. Keep the change focused on validation rather than writing missing chapter summaries.",
+     "agent": "builder",
+     "why": "Builder makes reviewable code changes that fit the repository's tooling."
+    },
+    {
+     "step": "Run the test and relevant checks, verify that a temporarily missing or blank summary produces a chapter-specific failure, restore any temporary changes, and provide the patch and verification results for owner review.",
+     "agent": "builder",
+     "why": "Builder can verify both passing and failing behavior before handing off the change."
+    }
+   ],
+   "pass": true
+  },
+  {
+   "text": "Rename the 'Agents today' card on the Stack page to 'Agent activity'",
+   "kind": "coding",
+   "done": [
+    "The Stack page displays 'Agent activity' as the title of the card previously titled 'Agents today'.",
+    "The card's content, behavior, and styling remain unchanged.",
+    "Any tests or snapshots that assert this card title reflect the new text, and relevant checks pass."
+   ],
+   "questions": [],
+   "plan": [
+    {
+     "step": "Locate the Stack page card in ai-stack and change its displayed title to 'Agent activity', preserving all other behavior and appearance.",
+     "agent": "builder",
+     "why": "Builder makes repository changes in a sandbox for owner review; ai-stack is the sensible repository default for the stack's own UI."
+    },
+    {
+     "step": "Update any affected title assertions or snapshots, run relevant checks, and report the diff and validation results for owner review without deploying.",
+     "agent": "builder",
+     "why": "Builder can validate the small UI change and provide a review-ready result."
+    }
+   ],
+   "pass": true
+  },
+  {
+   "text": "Find out which 32 GB DDR4 SO-DIMM kits work with my laptop and what they cost",
+   "kind": "shopping",
+   "done": [
+    "The report identifies the exact laptop model and cites evidence for its memory generation, slot configuration, maximum capacity, and supported speeds.",
+    "The report lists up to three verified-compatible 32 GB kits, with manufacturer part numbers, module configuration, speed, voltage, and compatibility evidence; if fewer qualify, it explains why.",
+    "Each shortlisted kit has a dated offer with seller, product link, currency, stock status, and item price; shipping, tax, and delivery estimates are included when available and otherwise marked unknown.",
+    "The report recommends the best-value compatible kit and explains any installation constraints, replacement of existing modules, or speed limitations.",
+    "No purchase is made, and unverified compatibility or unavailable pricing is explicitly labeled rather than assumed."
+   ],
+   "questions": [
+    "What is your laptop's exact manufacturer and model, including the model number or machine type if available? Please do not share its serial number."
+   ],
+   "plan": [
+    {
+     "step": "Establish the exact laptop model from the owner's answer and existing notes, including any known installed memory configuration and shopping location. Default to a 2 x 16 GB kit; use the owner's recorded delivery market, or US retailers and USD if none is recorded.",
+     "agent": "mission",
+     "why": "Runs shopping tasks and can assemble the owner's requirements and existing context."
+    },
+    {
+     "step": "Verify memory upgrade constraints against manufacturer documentation and reputable memory compatibility tools. Establish whether a 2 x 16 GB DDR4 SO-DIMM kit is supported; if it is not, document the limitation rather than substitute a different capacity or memory generation.",
+     "agent": "scout",
+     "why": "Is the only agent that reads the web and can retrieve authoritative compatibility sources."
+    },
+    {
+     "step": "Find up to three compatible kits and compare live offers from reputable retailers or manufacturer stores in the selected market. Prefer new, non-ECC, unbuffered kits with standard JEDEC profiles supported by the laptop; check exact part numbers, seller identity, availability, and landed costs where possible.",
+     "agent": "scout",
+     "why": "Can research current product listings and prices with source links and check dates."
+    },
+    {
+     "step": "Produce a sourced comparison and best-value recommendation, clearly separating verified facts from uncertainties. If the laptop cannot support the requested kit, report that finding with evidence instead of recommending an incompatible purchase.",
+     "agent": "mission",
+     "why": "Can synthesize compatibility and shopping evidence into a purchase proposal for owner approval."
+    }
+   ],
+   "pass": true
+  },
+  {
+   "text": "What changed in the latest Home Assistant release that matters for Alexa?",
+   "kind": "research",
+   "done": [
+    "The report names the latest stable Home Assistant version and release date as of 2026-10-31, including any relevant patch releases and excluding beta or preview releases.",
+    "The report identifies Alexa-relevant changes with practical impact, covering Home Assistant Cloud and manually configured Alexa Smart Home connections, plus Alexa Media Player only where a documented compatibility issue applies.",
+    "Each reported change includes a source link and explains who is affected, what behavior changes, and whether any configuration or upgrade action is required.",
+    "The report clearly distinguishes confirmed changes from uncertainties and explicitly states if no Alexa-relevant changes are documented.",
+    "The report provides a concise bottom line and uses relevant owner notes if available without assuming the owner's installed version or Alexa setup."
+   ],
+   "questions": [],
+   "plan": [
+    {
+     "step": "Check accessible owner notes for the installed Home Assistant version, Alexa connection method, and relevant custom integrations; proceed without questions if these are unavailable.",
+     "agent": "mission",
+     "why": "Runs the one-off task and can gather owner context to make the findings relevant."
+    },
+    {
+     "step": "Verify the latest stable release as of 2026-10-31 using official release announcements and changelogs, including patch notes. Investigate linked issues or integration documentation for Alexa-related changes and documented custom-integration compatibility concerns.",
+     "agent": "scout",
+     "why": "The only agent that reads the web; can establish release facts and collect primary-source evidence."
+    },
+    {
+     "step": "Produce a short, sourced impact report organized around what changed, who is affected, and what the owner should do, stating assumptions and evidence gaps.",
+     "agent": "mission",
+     "why": "Synthesizes the research into an actionable answer without changing the owner's installation."
+    }
+   ],
+   "pass": true
+  },
+  {
+   "text": "Research how other people run local LLMs on 16 GB machines",
+   "kind": "research",
+   "done": [
+    "A sourced report summarizes at least six firsthand accounts across Apple Silicon and Windows/Linux machines, identifying hardware, model, quantization, runtime and reported performance where available; missing details are explicitly marked.",
+    "The report compares practical setups using tools such as llama.cpp, Ollama, LM Studio and MLX where supported by evidence, and explains installation approach, GPU offloading, context length, memory overhead and swap tradeoffs.",
+    "A comparison table separates 16 GB unified memory, 16 GB system RAM with CPU or integrated graphics, and systems with separate GPU memory; it does not treat 16 GB dedicated VRAM as equivalent to a 16 GB machine.",
+    "The report recommends three evidence-backed starting configurations for different hardware situations, with model size, quantization, runtime, initial context settings, expected limitations and reproducible setup instructions or authoritative setup links.",
+    "Sources include direct links and publication dates where available, distinguish firsthand measurements from estimates or vendor claims, prioritize the past 12 months while retaining useful older evidence, and state whether relevant owner notes were found and used."
+   ],
+   "questions": [],
+   "plan": [
+    {
+     "step": "Search accessible owner notes for hardware details, prior local-model experiments and preferences. Default to a cross-platform comparison of 16 GB system or unified memory rather than assuming the owner's hardware; proceed if no relevant notes are available.",
+     "agent": "mission",
+     "why": "Runs the research task and can incorporate available owner context without requiring clarification."
+    },
+    {
+     "step": "Research recent firsthand reports, community discussions and supporting runtime/model documentation. Collect at least six concrete setups across Apple Silicon and Windows/Linux, recording hardware, memory type, model, quantization, context, runtime, performance, dates and source links; flag gaps and conflicting claims.",
+     "agent": "scout",
+     "why": "The only agent that reads the web, suited to collecting and checking practical reports against primary documentation."
+    },
+    {
+     "step": "Synthesize the evidence into a concise report with a setup comparison table, three hardware-specific starting configurations and practical tuning guidance. Clearly separate measured results from estimates, identify evidence gaps, and explain memory and speed tradeoffs without assuming a purchase or changing any system.",
+     "agent": "mission",
+     "why": "Owns one-off task delivery and can turn the collected sources into actionable, qualified recommendations."
+    }
+   ],
+   "pass": true
+  },
+  {
+   "text": "Compare Tailscale and ZeroTier for a home NAS",
+   "kind": "research",
+   "done": [
+    "A sourced comparison covers NAS and client compatibility, installation and maintenance, access controls and authentication, encryption, NAT traversal and relays, subnet access, networking limitations, and expected performance without presenting untested speeds as measured results.",
+    "The report compares current personal-use pricing and limits, reliance on vendor infrastructure, and self-hosted control-plane options, including Headscale for Tailscale and the components needed for ZeroTier.",
+    "The report states its assumptions: one home NAS, a small household, remote access from laptops and phones, no assumed public IP or inbound port forwarding, and no known NAS model; it flags model-specific compatibility checks rather than inventing owner hardware.",
+    "A clear recommendation identifies the better default, the circumstances favoring the alternative, and concise setup and security checklists for the recommended option, including avoiding public exposure of NAS administration and file-sharing ports.",
+    "Time-sensitive claims include links to authoritative sources and an access date; any relevant owner notes are cited, and uncertainties or conflicting evidence are explicitly identified."
+   ],
+   "questions": [],
+   "plan": [
+    {
+     "step": "Check available owner notes for NAS hardware, client devices, networking constraints, and self-hosting preferences; use the stated household defaults wherever notes provide no answer.",
+     "agent": "mission",
+     "why": "Mission can gather internal context and coordinate this one-time comparison without requiring follow-up questions."
+    },
+    {
+     "step": "Research current official Tailscale and ZeroTier documentation, pricing, supported NAS installations, security models, relay behavior, and self-hosting options; use secondary sources only where they add clearly labeled practical evidence.",
+     "agent": "scout",
+     "why": "Scout is the only agent that reads the web and can provide current, traceable evidence."
+    },
+    {
+     "step": "Produce a concise side-by-side comparison, a justified default recommendation with exceptions, and practical setup and security checklists; distinguish verified facts from assumptions and hardware-dependent outcomes.",
+     "agent": "mission",
+     "why": "Mission synthesizes the research into an actionable report tailored to the owner's task."
+    }
+   ],
+   "pass": true
+  },
+  {
+   "text": "Look up the current EU rules for returning online orders",
+   "kind": "research",
+   "done": [
+    "A dated report explains the withdrawal period, when it starts, how to notify the seller, the deadline for sending goods back, and what happens if the seller fails to provide withdrawal information.",
+    "The report explains refund deadlines, any right to withhold a refund pending return or proof of dispatch, original delivery charges, return postage, and deductions for handling beyond what is necessary to inspect goods.",
+    "The report identifies major exceptions, distinguishes change-of-mind returns from remedies for faulty or misdescribed goods, and explains scope limits for private sellers and non-EU sellers targeting EU consumers.",
+    "Material claims have links to official EU guidance or legislation, with effective dates checked; adopted but not yet applicable changes are clearly separated from current rules, including any relevant online withdrawal-function requirements.",
+    "The result includes a practical return checklist and escalation options, flags where national law may differ without assuming the owner's country, and notes any relevant owner context found in accessible notes."
+   ],
+   "questions": [],
+   "plan": [
+    {
+     "step": "Check accessible owner notes for relevant country or purchase context; otherwise use an EU-wide consumer overview without assuming a particular member state.",
+     "agent": "mission",
+     "why": "Runs the one-off task and can establish scope from available owner context without requiring clarification."
+    },
+    {
+     "step": "Research official EU consumer guidance and current legislation, checking applicability dates, withdrawal requirements, exceptions, refunds, faulty-goods remedies, and cross-border scope.",
+     "agent": "scout",
+     "why": "The only agent that reads the web; can collect authoritative sources and verify which rules apply on the reference date."
+    },
+    {
+     "step": "Produce a concise, sourced report with a practical return checklist, clear distinctions between statutory rights and shop policies, and escalation routes; disclose unresolved jurisdictional limits.",
+     "agent": "mission",
+     "why": "Synthesizes research into an actionable answer and checks it against the completion criteria."
+    }
+   ],
+   "pass": true
+  },
+  {
+   "text": "Analyse which of my missions cost the most model calls last week and why",
+   "kind": "analysis",
+   "done": [
+    "A report states the timezone, exact inclusive-start/exclusive-end reporting window, data sources, counting rules, and any missing records or attribution limitations.",
+    "A ranked table lists the ten highest-call missions, or all missions if fewer, with mission name or ID, model-call count, share of attributable calls, and the period's total attributable and unattributed calls.",
+    "The report explains the call drivers for each of the top five missions, or all if fewer, with supporting run IDs, timestamps, or log references and a breakdown by agent, phase, retries, or other available dimensions.",
+    "The report separates evidence-backed causes from hypotheses and gives up to three practical ways to reduce unnecessary calls without changing configuration or code."
+   ],
+   "questions": [],
+   "plan": [
+    {
+     "step": "Locate available mission records, model-call telemetry, and timezone settings using read-only access. Use the last completed Monday-to-Sunday week: 2026-10-19 00:00 inclusive to 2026-10-26 00:00 exclusive in the configured timezone, or UTC if none exists.",
+     "agent": "mission",
+     "why": "Mission handles one-off analyses of the owner's tasks and their recorded execution."
+    },
+    {
+     "step": "Count recorded model invocation attempts within the window, including failed attempts and retries where captured. Deduplicate repeated telemetry, attribute delegated and child-agent calls to their owning mission, and keep unrelated or unresolvable calls separate without double counting.",
+     "agent": "mission",
+     "why": "Mission can reconcile execution records with usage telemetry to produce an auditable mission-level ranking."
+    },
+    {
+     "step": "Investigate the top five missions using their traces and activity records. Quantify supported drivers such as repeated attempts, planning and delegation, long tool-use loops, and repeated runs; distinguish observed mechanisms from uncertain root causes.",
+     "agent": "mission",
+     "why": "Mission understands task execution and can connect high call counts to concrete execution behaviour."
+    },
+    {
+     "step": "Deliver the ranked table, evidence-linked explanations, data-quality caveats, and up to three targeted recommendations. If telemetry is incomplete or unavailable, report the supported partial findings and exact gaps rather than estimating unsupported counts.",
+     "agent": "mission",
+     "why": "Mission can consolidate the analysis into a one-off report without modifying the stack."
+    }
+   ],
+   "pass": true
+  },
+  {
+   "text": "Go through my vault notes on uranium and summarise where the sources disagree",
+   "kind": "analysis",
+   "done": [
+    "The report lists the uranium-related notes reviewed with vault paths or links, identifies their underlying sources where available, and states any access or coverage gaps.",
+    "Each material disagreement names the issue, describes the competing positions, and cites supporting passages or precise locations in the vault notes.",
+    "The report distinguishes substantive contradictions from differences in publication date, forecast horizon, units, definitions or assumptions, and avoids treating repeated references to one source as independent evidence.",
+    "A concise concluding summary identifies the most consequential unresolved disagreements and explains what evidence would resolve them; if no material disagreements are found, it says so explicitly."
+   ],
+   "questions": [],
+   "plan": [
+    {
+     "step": "Find uranium-related vault notes using titles, tags, full-text search and relevant internal links; include linked notes only where they inform uranium claims. Record the scope and any inaccessible material without modifying the vault.",
+     "agent": "mission",
+     "why": "Runs one-off analyses of the owner's information and can assemble the evidence set."
+    },
+    {
+     "step": "Extract material claims and source attribution, including dates, units, forecast horizons and assumptions. Compare claims by topic, prioritising disagreements that affect the overall uranium outlook, and flag missing provenance rather than guessing.",
+     "agent": "mission",
+     "why": "Can systematically compare the supplied evidence and separate genuine disagreements from contextual differences."
+    },
+    {
+     "step": "Deliver a concise synthesis followed by an evidence-backed disagreement table and a reviewed-notes list. Explain unresolved uncertainties without selecting a winner where the vault evidence is insufficient; do not browse the web or fetch external source documents.",
+     "agent": "mission",
+     "why": "Produces the final analytical report with traceable evidence while keeping the task limited to the owner's vault."
+    }
+   ],
+   "pass": true
+  },
+  {
+   "text": "Which agents failed most often this month, and what do the failures have in common?",
+   "kind": "analysis",
+   "done": [
+    "A report states the reporting timezone, data sources, extraction cutoff, and coverage for October 1, 2026 through the extraction time on October 31, explicitly noting that the final day may be incomplete.",
+    "A ranking lists every agent with recorded runs, its total runs, failed runs, and failure rate, ordered by failed-run count; agents with no runs or unavailable data are identified separately.",
+    "The report defines failure using recorded terminal error, timeout, or explicit unsuccessful outcome, counts each run once, and distinguishes retries, cancellations, pending runs, and quality failures recorded by evaluations.",
+    "The report groups recurring failure patterns, gives counts and affected agents for each, and cites traceable run IDs, timestamps, or source paths for representative evidence.",
+    "The conclusion names the largest failure contributors, separates evidenced causes from hypotheses, states data limitations, and proposes prioritized corrective actions without changing code, configuration, or agent behavior."
+   ],
+   "questions": [],
+   "plan": [
+    {
+     "step": "Locate available run histories, execution logs, scorecards, and health findings. Use the stack's configured reporting timezone, falling back to UTC, and define this month as October 1 through the extraction time on October 31, 2026. Record inaccessible sources and coverage gaps.",
+     "agent": "mission",
+     "why": "Runs one-off analyses of the owner's stack data and can assemble the evidence without modifying the system."
+    },
+    {
+     "step": "Normalize records by agent and unique run ID, deduplicate repeated events, and classify terminal outcomes. Rank agents by failed-run count alongside run volume and failure rate; distinguish retried attempts from logical tasks where identifiers allow, and report evaluated quality failures separately.",
+     "agent": "mission",
+     "why": "Can perform consistent aggregation and distinguish frequent failures from merely high workloads."
+    },
+    {
+     "step": "Inspect failure evidence across agents and group shared symptoms, dependencies, and supported causes. Quantify each pattern, allowing explicitly labeled overlapping categories, and retain representative source references without exposing secrets.",
+     "agent": "mission",
+     "why": "Can compare operational evidence across the stack and explain common patterns without treating similar error messages as proof of a shared root cause."
+    },
+    {
+     "step": "Produce a source-backed report with the ranking, common failure patterns, uncertainty, and prioritized recommendations. If evidence is missing, report what cannot be determined rather than infer a complete ranking; do not apply fixes.",
+     "agent": "mission",
+     "why": "Owns delivery of the requested analysis and can turn the findings into actionable conclusions while keeping the task read-only."
+    }
+   ],
+   "pass": true
+  },
+  {
+   "text": "Review the ai-stack requirements and list the partial ones that block the swarm roadmap",
+   "kind": "code_question",
+   "done": [
+    "The report identifies the requirements and swarm roadmap sources reviewed, with repository revision and file references.",
+    "Each partial requirement that blocks the roadmap is listed with its identifier or name, implemented portion, missing capability, and supporting documentation or code references.",
+    "Each blocker is mapped to the specific swarm milestone or capability it prevents, with an explanation of the dependency and a distinction between documented dependencies and inferred ones.",
+    "The report prioritizes blockers by dependency order and states the minimum completion condition for each; partial requirements that do not block the roadmap are separated from blockers.",
+    "Unverifiable implementation status, conflicting documents, and missing sources are explicitly identified rather than treated as confirmed blockers."
+   ],
+   "questions": [],
+   "plan": [
+    {
+     "step": "Locate the current requirements, status records, and swarm roadmap in ai-stack; use explicitly designated current sources, or the latest maintained versions when none are designated.",
+     "agent": "mission",
+     "why": "Can carry out a bounded repository investigation and establish the authoritative inputs."
+    },
+    {
+     "step": "Trace requirements marked partial, plus requirements whose completion claims conflict with implementation evidence, through relevant code and tests using read-only inspection.",
+     "agent": "opencode",
+     "why": "Provides codebase mapping and implementation analysis without requesting code changes."
+    },
+    {
+     "step": "Map confirmed gaps to swarm roadmap dependencies and produce a prioritized, source-linked blocker report, separating direct blockers, inferred blockers, nonblocking partials, and uncertainties.",
+     "agent": "mission",
+     "why": "Synthesizes the evidence into the actionable analysis the owner requested."
+    }
+   ],
+   "pass": true
+  },
+  {
+   "text": "How does the builder decide when a build is ready for review?",
+   "kind": "code_question",
+   "done": [
+    "The answer identifies the readiness criteria, who or what evaluates them, and the status transition or handoff that makes work available for owner review.",
+    "The answer explains which checks are mandatory, which are advisory, and what happens when checks fail or cannot run, including any bypasses found.",
+    "The answer cites repository file paths and line numbers for its key claims and explicitly identifies any gaps or conflicting instructions."
+   ],
+   "questions": [],
+   "plan": [
+    {
+     "step": "Use ai-stack as the repository because the question concerns the stack's builder agent; locate its instructions, execution workflow, validation checks, and review handoff.",
+     "agent": "builder",
+     "why": "Builder can read the repository and trace its own implementation and instructions without making changes."
+    },
+    {
+     "step": "Trace the readiness decision through the relevant code and report the criteria and failure paths in plain language, separating executable enforcement from instructions and citing supporting file locations.",
+     "agent": "builder",
+     "why": "Builder can connect the implementation to the owner-facing review workflow and produce a source-backed explanation."
+    }
+   ],
+   "pass": true
+  },
+  {
+   "text": "Tell me when Cameco moves more than 8 % in a day",
+   "kind": "watching",
+   "done": [
+    "An ongoing price-move watch is active for CCJ with an 8% threshold in either direction.",
+    "The trigger uses the latest regular-session price relative to the previous trading day's close, excludes extended-hours trading, and requires an absolute move strictly greater than 8%.",
+    "Each alert identifies Cameco and CCJ, direction and percentage move, current price, previous close, quote timestamp with timezone, and a source link.",
+    "Alerts reach the owner through the main assistant's Telegram channel, with chat as fallback, at most once per trading day per direction."
+   ],
+   "questions": [],
+   "plan": [
+    {
+     "step": "Register an ongoing CCJ price-move watch using the NYSE USD listing as the default, measuring both directions against the previous trading day's close during regular trading hours.",
+     "agent": "mission",
+     "why": "Runs the owner's missions and can configure the ongoing watch and daily deduplication."
+    },
+    {
+     "step": "On each trigger, obtain the timestamped quote and previous close from a web market-data source; verify that the absolute move exceeds 8% and belongs to the regular session before issuing an alert.",
+     "agent": "scout",
+     "why": "Is the only agent that reads the web and can verify market data and provide its source."
+    },
+    {
+     "step": "Send each verified qualifying alert promptly through Telegram, falling back to chat, and suppress further alerts in the same direction for that trading day.",
+     "agent": "main",
+     "why": "Communicates with the owner in chat and Telegram."
+    }
+   ],
+   "pass": true
+  },
+  {
+   "text": "Watch for news about a new Raspberry Pi model",
+   "kind": "watching",
+   "done": [
+    "An ongoing news watch is active from 2026-10-31 for new Raspberry Pi computer models, excluding accessories, software updates, restocks, and discounts.",
+    "An initial baseline records models already announced as of activation so old announcements do not trigger new-model alerts.",
+    "Each alert names the model, states what is new, identifies whether the news is officially confirmed, and includes publication date and source links.",
+    "Alerts include announced specifications, price, and availability when provided; missing details are explicitly marked as unannounced.",
+    "Duplicate coverage is suppressed; follow-up alerts are sent only for material developments such as official confirmation, specifications, pricing, or release availability."
+   ],
+   "questions": [],
+   "plan": [
+    {
+     "step": "Establish the current model baseline using Raspberry Pi's official announcements and reputable technology reporting, treating previously announced models as existing products.",
+     "agent": "scout",
+     "why": "Scout is the only agent that reads the web and can verify sources and announcement dates."
+    },
+    {
+     "step": "Activate an ongoing event-driven watch with no fixed end date, covering Raspberry Pi computer families but excluding Pico microcontroller boards and third-party products by default.",
+     "agent": "mission",
+     "why": "Mission runs ongoing owner tasks and can maintain the watch's scope and deduplication state."
+    },
+    {
+     "step": "Verify matching news against primary sources where available, distinguish official announcements from credible unconfirmed reporting, and extract material changes.",
+     "agent": "scout",
+     "why": "Scout can inspect web evidence and distinguish new developments from recycled coverage."
+    },
+    {
+     "step": "Send concise alerts through the owner's existing chat or Telegram delivery route when qualifying developments occur; remain silent when there is nothing new.",
+     "agent": "main",
+     "why": "Main handles owner-facing communication in chat and Telegram."
+    }
+   ],
+   "pass": true
+  },
+  {
+   "text": "Let me know when Boss Energy files anything with the SEC",
+   "kind": "watching",
+   "done": [
+    "Boss Energy Limited is identified against authoritative sources, with its SEC CIK and supported ticker recorded if available; distinguish it from similarly named issuers.",
+    "An ongoing SEC-filing watch covers all forms and amendments for the verified issuer, or the owner receives a clear explanation if no SEC registrant or supported monitoring identifier can be established.",
+    "Each new-filing alert contains the company name, form type, filing date, accession number, direct SEC filing link, and a brief description based on the filing.",
+    "Existing filings establish the initial baseline without generating historical alerts; subsequent filings are reported once per accession number."
+   ],
+   "questions": [],
+   "plan": [
+    {
+     "step": "Verify Boss Energy Limited using its official investor-relations information and SEC records. Use ASX ticker BOE and US OTC ticker BQSSF as identity leads, not proof of SEC registration; establish the correct CIK and supported SEC-monitoring ticker.",
+     "agent": "scout",
+     "why": "Scout is the only agent that reads the web and can verify the issuer and authoritative SEC records."
+    },
+    {
+     "step": "Activate the all-forms SEC-filing event watch using the verified identifier, correcting the provisional BQSSF ticker if necessary. Baseline existing accession numbers at activation and monitor indefinitely until cancelled. If SEC coverage cannot be established, report that limitation rather than silently substituting ASX announcements or news.",
+     "agent": "main",
+     "why": "Main is the owner's assistant and can coordinate the ongoing watch and communicate any activation limitation."
+    },
+    {
+     "step": "On each new filing event, obtain the filing details through scout and send one concise alert through the owner's existing notification channel, defaulting to Telegram when available and otherwise chat.",
+     "agent": "main",
+     "why": "Main delivers owner-facing notifications and can coordinate source verification without reading the web directly."
+    }
+   ],
+   "pass": true
+  },
+  {
+   "text": "Every Monday morning, check whether my NAS has firmware updates",
+   "kind": "watching",
+   "done": [
+    "A recurring check is scheduled for Mondays at 09:00 using the owner's configured timezone, or the stack's local timezone if none is configured, starting November 2, 2026.",
+    "Each check identifies the NAS model and installed firmware using existing inventory, notes, or authorized read-only access; if multiple owner-managed NAS devices are found, it covers each.",
+    "Each report states the installed firmware, latest applicable stable firmware, update availability, check timestamp, and an official vendor source; unavailable or unverifiable details are explicitly marked unknown.",
+    "When an update is available, the report includes its release date and notable security fixes or upgrade prerequisites when published; beta releases are excluded.",
+    "The owner receives a concise result through the existing assistant notification channel after each check, including an actionable blocked status if identification, access, or verification fails; no firmware or configuration changes are made."
+   ],
+   "questions": [],
+   "plan": [
+    {
+     "step": "Set up the Monday 09:00 recurrence beginning November 2, 2026, using the owner's configured timezone or otherwise the stack's local timezone.",
+     "agent": "mission",
+     "why": "Runs recurring owner tasks and coordinates their execution."
+    },
+    {
+     "step": "Identify owner-managed NAS devices, models, installed firmware, and vendor-supported update channels from existing notes, inventory, and authorized read-only integrations. Do not guess credentials or bypass access controls; record any missing information as a blocker.",
+     "agent": "mission",
+     "why": "Can work through the owner's available information and authorized task integrations."
+    },
+    {
+     "step": "On each run, verify the latest stable firmware applicable to each identified model and its supported upgrade path against official vendor release notes or support pages, capturing sources, release dates, security fixes, and prerequisites.",
+     "agent": "scout",
+     "why": "Is the only agent that reads the web and can verify vendor firmware information."
+    },
+    {
+     "step": "Compare installed and applicable available firmware, retain the check result for future comparisons, and send a concise status through the existing assistant notification channel, explicitly reporting blockers rather than treating an incomplete check as up to date.",
+     "agent": "mission",
+     "why": "Owns task completion, result tracking, and reporting without performing an upgrade."
+    }
+   ],
+   "pass": true
+  },
+  {
+   "text": "Send me a short uranium news briefing every weekday at 7",
+   "kind": "briefing",
+   "done": [
+    "A recurring briefing is scheduled for Monday through Friday at 07:00 in the owner's configured timezone, falling back to UTC, starting with the next scheduled occurrence.",
+    "Each briefing contains 3–5 concise news bullets, or fewer if there are fewer material developments, and stays under 250 words.",
+    "Each news bullet includes a source link, the development's date, and a brief explanation of its significance for uranium.",
+    "Coverage prioritizes developments since the previous briefing, including weekend news on Mondays; older context is labeled and previously reported news is not repeated without a material update.",
+    "Each briefing is delivered through the owner's configured briefing channel, defaulting to Telegram and then chat if no channel is configured; quiet days receive a short no-material-news update rather than filler."
+   ],
+   "questions": [],
+   "plan": [
+    {
+     "step": "Configure the weekday 07:00 Topic Desk briefing using the owner's configured timezone and delivery channel, defaulting to UTC and Telegram, with chat as the delivery fallback.",
+     "agent": "desk",
+     "why": "Desk runs regular topic briefings and can apply the scheduling and delivery defaults."
+    },
+    {
+     "step": "Before each delivery, gather and verify material uranium news since the previous briefing, prioritizing primary announcements and reputable reporting; report prices only with their date and spot or term designation.",
+     "agent": "scout",
+     "why": "Scout is the only agent that reads the web and can supply current reporting with source links."
+    },
+    {
+     "step": "Select the most consequential developments, remove duplicates, write the concise sourced briefing, and deliver it at the scheduled time; explicitly report when no material news is found or fresh sources cannot be checked.",
+     "agent": "desk",
+     "why": "Desk writes Topic Desk briefings and maintains continuity between editions."
+    }
+   ],
+   "pass": true
+  }
+ ]
+}

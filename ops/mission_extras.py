@@ -11,6 +11,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from textcap import cut, tail                    # visible caps and input limits (AGENTS.md, truncation)
 import prompts as P                               # MEM-11: the agent prompts live in prompts/<owner>.md
+import notify as N                                # OBS-16: the one notification path
 
 M = None                      # the missions module
 APP = os.environ.get("MC_URL", "https://pc.example.ts.net:8447")
@@ -20,22 +21,10 @@ WATCH_EVERY = 600             # seconds between event checks
 
 
 # ---------- delivery ----------
-def telegram(text, buttons=()):
-    """HTML message with URL buttons into Mission Control (callback buttons would need Hermes' bot loop)."""
-    tok, chat = os.environ.get("TELEGRAM_BOT_TOKEN"), (os.environ.get("TELEGRAM_ALLOWED_USERS") or "").split(",")[0]
-    if tok and chat:
-        body = {"chat_id": chat, "text": text[:4000], "parse_mode": "HTML", "disable_web_page_preview": True}  # cap: api
-        if buttons:
-            body["reply_markup"] = {"inline_keyboard": [[{"text": t, "url": u} for t, u in row] for row in buttons]}
-        try:
-            req = urllib.request.Request(f"https://api.telegram.org/bot{tok}/sendMessage", data=json.dumps(body).encode(),
-                                         headers={"Content-Type": "application/json"})
-            if json.load(urllib.request.urlopen(req, timeout=30)).get("ok"):
-                return True
-        except Exception as e:
-            M.log(f"telegram failed ({type(e).__name__}), falling back to plain text")
-    M.notify(re.sub(r"<[^>]+>", "", html.unescape(text)))
-    return False
+def telegram(text, buttons=(), category="result"):
+    """HTML message with URL buttons into Mission Control (callback buttons would need Hermes' bot loop), through the
+    one notification path: the owner's preferences and quiet hours decide (OBS-16). True when it went out now."""
+    return N.send(text, category, buttons=buttons, is_html=True).get("telegram") == "sent"
 
 
 def links(slug, path=None):
@@ -50,15 +39,23 @@ def email_ready():
     return all(os.environ.get(k) for k in ("GMAIL_ADDRESS", "GMAIL_APP_PASSWORD", "MAIL_TO"))
 
 
+def sent(subject, decision, why=""):
+    """FND-78: every e-mail outcome is recorded (the notification log and the run's timeline), so a delivery is
+    checked, not assumed."""
+    N.record("email", "result", subject, why or f"to {os.environ.get('MAIL_TO', '?')}", decision)
+    M.RTM.stage(f"E-mail {'sent' if decision == 'sent' else 'not sent'}: {subject}", why, kind="stage" if decision == "sent" else "error")
+    return decision == "sent"
+
+
 def email(subject, markdown_text, kicker, url):
     if not email_ready():
-        return False
+        return sent(subject, "failed", "e-mail is not set up (GMAIL_ADDRESS, GMAIL_APP_PASSWORD, MAIL_TO)")
     p = subprocess.run(["docker", "run", "--rm", "-i", "--network", "none", "aistack/desk:1", "--email"],
                        input=json.dumps({"markdown": markdown_text, "kicker": kicker, "url": url}), capture_output=True,
                        text=True, timeout=120)
     if p.returncode:
         M.log("email render failed:", tail(p.stderr, 4000))  # cap: store
-        return False
+        return sent(subject, "failed", "the e-mail could not be rendered")
     d = json.loads(p.stdout)
     msg = MIMEMultipart("alternative")
     msg["Subject"], msg["From"], msg["To"] = subject, f"AI Stack <{os.environ['GMAIL_ADDRESS']}>", os.environ["MAIL_TO"]
@@ -68,11 +65,11 @@ def email(subject, markdown_text, kicker, url):
         with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=60) as s:
             s.login(os.environ["GMAIL_ADDRESS"], os.environ["GMAIL_APP_PASSWORD"])
             s.send_message(msg)
-        return True
+        return sent(subject, "sent")
     except Exception as e:
         M.log(f"email failed: {type(e).__name__}: {str(e)}")
         M.event("error", "", f"E-mail could not be sent ({type(e).__name__})", push=True)
-        return False
+        return sent(subject, "failed", f"{type(e).__name__}: {str(e)}")
 
 
 def briefing_empty(text):
@@ -97,7 +94,7 @@ def deliver(m, title, short, path, kicker, markdown_text=None, empty=False):
         quiet = json.loads(f.read_text())
     except (OSError, ValueError):
         quiet = {}
-    days = quiet.pop(m["slug"], [])
+    days = [x for x in quiet.pop(m["slug"], []) if empty or x != f"{M.now():%d %b}"]   # a full run today covers today's empty one
     if empty:
         if "telegram" in d or "email" in d:
             M.log(f"{m['slug']}: nothing new, kept in the app (not sent by Telegram or e-mail)")
@@ -106,7 +103,7 @@ def deliver(m, title, short, path, kicker, markdown_text=None, empty=False):
         return False
     if days:
         kicker += f" · nothing new on {', '.join(days)}"
-        f.write_text(json.dumps(quiet))
+    f.write_text(json.dumps(quiet))
     if "telegram" in d:
         telegram(f"<b>{html.escape(title)}</b>\n<i>{html.escape(kicker)}</i>\n\n{html.escape(short)}", links(m["slug"], path))
     if "email" in d and markdown_text:
@@ -209,6 +206,11 @@ def check_events(missions, c):
             ev["trigger"] = trigger_text(t)
             M.enqueue(c, m["slug"], "event", event=ev)
             M.event("triggered", m["slug"], f"{ev['trigger']}: {ev['summary']}", push=True, title=m["title"])
+            try:                                      # TSK-10: the event bus logs it too (its rules may start tasks)
+                import events as EV
+                EV.mission_event(c, m["slug"], ev)
+            except Exception as e:                    # the mission's own run is queued already; the log line is lost, and said
+                M.log(f"event bus: mission event of {m['slug']} not logged: {type(e).__name__}: {e}")
     c.commit()
 
 

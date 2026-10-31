@@ -12,7 +12,7 @@ data or doing damage. The design keeps the "lethal trifecta" (untrusted input + 
 | App auth | One sign-in: the `Tailscale-User-Login` header that `tailscale serve` adds for your devices. Mission Control checks it itself, Open WebUI trusts it (`WEBUI_AUTH_TRUSTED_EMAIL_HEADER`), and the Hermes dashboard and the code map sit behind gates that require it (`config/gate`); OpenCode and Phoenix have no login (tailnet only). Forgejo on the NAS keeps its own accounts. |
 | Model spend | No paid model is configured in LiteLLM; every agent key lists subscription models only (paid model → HTTP 403). |
 | Per-agent rights | One LiteLLM virtual key per agent with its own model list, daily budget and MCP grants (`ops/keys.sh`). |
-| Web content | Only the `scout` profile reads the web; questions pass a privacy guard (patterns, private-terms list, model check, fail-closed); pages are read by `fetch` in an isolated network with an egress firewall (no LAN, no Tailscale ranges). Results are labelled untrusted. |
+| Web content | Only the `scout` profile reads the web; questions pass a privacy guard (patterns, private-terms list, model check, fail-closed); pages are read by `fetch` in an isolated network with an egress firewall (no LAN, no Tailscale ranges). Results are labelled untrusted. The federal job board's search (`jobs`, MIS-21) runs in the same container as the same user; only search words, a place and a radius leave the house, and only `vk-scout` holds it. |
 | Code execution (Claude engine) | For Claude Code builds the runner passes `CLAUDE_CODE_OAUTH_TOKEN` into the builder for that one run (`docker exec -e`); the builder's own proxy (`pkgproxy-builder`) allows npm, PyPI and `api.anthropic.com` only. OpenCode's proxy is unchanged. |
 | Code execution | Only the `builder` has a shell, inside its own container: sees `/work` only, no vault, secrets, SSH keys or Docker socket; networks: LiteLLM + npm/PyPI proxy. It cannot push or deploy. |
 | Deploys | Only the host runner merges and deploys, and only after the owner taps Approve; smoke test + automatic rollback. |
@@ -52,6 +52,27 @@ data or doing damage. The design keeps the "lethal trifecta" (untrusted input + 
 - **Experiments spend nobody's key:** replays run on the service key `vk-eval` (ChatGPT models, no MCP tools) or Claude Code
   read-only in the builder sandbox; nothing a replay writes is applied. An MCP agent cannot set its own replay input (only
   the runner's door adds what a host agent worked from).
+
+### Tasks, the Conductor and temporary agents (phases 1 to 4; reviewed 31 Oct 2026)
+
+What the stack may start by itself is DEC-34 (TSK-20): it plans, staffs and runs tasks, and asks before it messages other
+people, spends money, deploys code, deletes data or acts on the AI phone. These hold it:
+
+- **The doors keep their gates.** A task reaches a mission, a build or a Claude task through the same request the app
+  uses; the deploy tap, purchase approvals, the AI phone's per-action OK and Gmail's Trash approval are unchanged.
+- **A Conductor step is one agent's ordinary run.** Hermes agents run on their own profile and key with their own MCP
+  grants (`ops/keys.sh`); a Claude step is a read-only Claude task in the builder sandbox; a Python step is one model call
+  on the agent's own key. No step gets a grant its agent does not already have.
+- **A temporary agent (TSK-15)** is one model call per step, nothing more: its design may ask only for the subscription
+  models and no tools (`staffing.admit` refuses anything else); it gets its own LiteLLM key with those models, no MCP
+  server and a 0.02 daily budget, made when its step starts and deleted when its task ends; keys left by a restart are
+  swept at the next start (the keys live in the runner's memory only, never on disk). Its instructions are written by the
+  intake model from the task's own text, so they carry whatever the task carries: like any agent run, its answer is data
+  for the next step and the owner, never an instruction to the stack. It cannot become permanent by itself: a design
+  that met three tasks becomes an idea, which the owner reviews, the builder makes and a replay tests (TSK-16).
+- **Rules (TSK-11)** start tasks only within their cooldown and, if the owner set one, after a model check; web, Forgejo
+  and inbox sources are read only while a rule asks for them; the AI phone cannot make, change or rate rules or tasks.
+- **Judging (TSK-17)** reads a task's own result on the evaluation key (`vk-eval`, no tools) and changes nothing.
 
 ### The AI phone
 

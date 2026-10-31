@@ -38,8 +38,8 @@ def record(**kw):
 
 
 def notify(text):
-    subprocess.run(["docker", "exec", "-u", "hermes", C, "sh", "-c",
-                    'hermes send -t "telegram:$TELEGRAM_ALLOWED_USERS" "$0"', text], capture_output=True)
+    import notify as N                            # the one notification path (OBS-16); a memory waiting for the owner's OK
+    N.send(text, "approval")
 
 
 def main():

@@ -223,14 +223,16 @@ items:
   - id: QA-20
     title: What the documents name exists
     statement: Every file path, make target, app screen and relative link that a Markdown document in the repository
-      names shall exist, and docs/README.md shall list every document under docs/ as current guidance or a record; the
-      tests shall fail on one that does not.
+      names shall exist, every make recipe shall call its interpreter and a repository file that exists, and
+      docs/README.md shall list every document under docs/ as current guidance or a record; the tests shall fail on one
+      that does not.
     type: process
     priority: should
     status: implemented
     parents: [SN-15]
     sources: [docs/REVIEW-2026-10-30.md]
-    findings: [FND-71]
+    findings: [FND-71, FND-81]
     verify: {method: test, by: [tests/test_docs.py::test_every_path_make_target_screen_and_link_a_document_names_exists,
+      tests/test_repo_docs.py::test_every_make_recipe_calls_a_file_that_exists,
       tests/test_docs.py::test_the_readme_and_the_index_point_at_what_is_current]}
     trace: [README.md, docs/README.md]

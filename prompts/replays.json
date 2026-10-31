@@ -67,6 +67,23 @@
    "at": "2026-10-30",
    "baseline": "moved verbatim from ops/missions.py DRAFT",
    "sha": "8af9d9c4ab1e"
+  },
+  {
+   "at": "2026-10-31",
+   "cases": 3,
+   "from": "8af9d9c4ab1e",
+   "judge": {
+    "equal": 0,
+    "new": 3,
+    "old": 0
+   },
+   "model": "gpt-sub",
+   "passed": true,
+   "sha": "7658e903fdd4",
+   "valid": [
+    3,
+    3
+   ]
   }
  ],
  "desk/TRIAGE": [
@@ -109,6 +126,61 @@
    "at": "2026-10-30",
    "baseline": "moved verbatim from ops/inbox.py PICK",
    "sha": "395283c4a8a4"
+  }
+ ],
+ "intake/INTAKE": [
+  {
+   "at": "2026-10-31",
+   "baseline": "new prompt: the task intake (phase 1, TSK-03)",
+   "sha": "c01c19d38b94"
+  },
+  {
+   "at": "2026-10-31",
+   "cases": 6,
+   "from": "c01c19d38b94",
+   "judge": {
+    "equal": 0,
+    "new": 6,
+    "old": 0
+   },
+   "model": "gpt-sub",
+   "passed": true,
+   "sha": "b5d8471e28f9",
+   "valid": [
+    6,
+    6
+   ]
+  },
+  {
+   "at": "2026-10-31",
+   "cases": 6,
+   "from": "b5d8471e28f9",
+   "judge": {
+    "equal": 3,
+    "new": 1,
+    "old": 2
+   },
+   "model": "gpt-sub",
+   "passed": false,
+   "sha": "5d65fe846c4d",
+   "valid": [
+    6,
+    6
+   ]
+  }
+ ],
+ "intake/RULE_CHECK": [
+  {
+   "at": "2026-10-31",
+   "baseline": "new prompt: a rule's model check (phase 3, TSK-11)",
+   "sha": "607cd09277da"
+  }
+ ],
+ "intake/TEMP_AGENT": [
+  {
+   "at": "2026-10-31",
+   "baseline": "new prompt: a temporary agent for a step no agent fits (phase 4, TSK-15)",
+   "sha": "ea388f68426f"
   }
  ],
  "journal/ENTRY": [
@@ -312,6 +384,20 @@
    "at": "2026-10-30",
    "baseline": "moved verbatim from ops/claude_tasks.py PROMPT",
    "sha": "7af68c51c337"
+  }
+ ],
+ "shared/TASK_JUDGE": [
+  {
+   "at": "2026-10-31",
+   "baseline": "new prompt: a finished task against its definition of done (phase 4, TSK-17)",
+   "sha": "6b67f50d310f"
+  }
+ ],
+ "shared/TASK_STEP": [
+  {
+   "at": "2026-10-31",
+   "baseline": "new prompt: one step of a task's plan (phase 2, TSK-07)",
+   "sha": "444c4ae0cd6d"
   }
  ],
  "shared/WAKE": [

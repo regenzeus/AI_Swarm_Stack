@@ -46,7 +46,7 @@ def SH(runner, monkeypatch, tmp_path):
     monkeypatch.setattr(shopping.PW, "forget", lambda uid: None)
     sent = {"events": [], "telegram": [], "delivered": []}
     monkeypatch.setattr(M, "event", lambda kind, slug="", text="", push=False, title="": sent["events"].append((kind, text)))
-    monkeypatch.setattr(M.X, "telegram", lambda text, buttons=(): sent["telegram"].append(text) or sent.setdefault("buttons", []).append(buttons))
+    monkeypatch.setattr(M.X, "telegram", lambda text, buttons=(), category="result": sent["telegram"].append(text) or sent.setdefault("buttons", []).append(buttons))
     monkeypatch.setattr(M.X, "deliver", lambda *a, **k: sent["delivered"].append(a[1]))
     monkeypatch.setattr(M.X, "compile_wiki", lambda *a, **k: None)
     monkeypatch.setattr(M, "vault_commit", lambda *a, **k: None)

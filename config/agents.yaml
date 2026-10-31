@@ -56,7 +56,7 @@ agents:
     contact: ["*"]
     wake: on_request
     budgets: {wakes_per_day: 6, messages_per_hour: 20}
-    tools: [fetch, browser, swarm]
+    tools: [fetch, jobs, browser, swarm]     # jobs: the federal job board's search (MIS-21)
     autonomy: {}
   - id: curator
     purpose: Keeps the vault wiki and long-term memory tidy.
@@ -228,6 +228,23 @@ agents:
     schedule: weekly (runner thread)
     roles: [reviewers]
     rooms: [all, ops]
+    contact: ["*"]
+    wake: never
+    budgets: {wakes_per_day: 0, messages_per_hour: 5}
+    tools: []
+    autonomy: {}
+  - id: intake
+    purpose: Turns a task given in one sentence into its specification and plan, and hands it to the door that does that work.
+    responsibilities: [write each task's checkable definition of done, propose an agent for each step with a reason, ask at most two questions]
+    owns: {task: its definition of done is checkable and the task reached a door}
+    harness: python
+    model: gpt-sub
+    key: vk-intake
+    prompts: prompts/intake.md           # MEM-11: its prompts, each change replay-tested
+    jobs: []
+    schedule: on each new task (runner thread)
+    roles: [missions]
+    rooms: [all]
     contact: ["*"]
     wake: never
     budgets: {wakes_per_day: 0, messages_per_hour: 5}

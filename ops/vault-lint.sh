@@ -13,5 +13,5 @@ find "$V/wiki" -type f ! -name "*.md" ! -name ".gitkeep" -exec sh -c 'mv "$1" "$
 cd "$V" && git add -A && git commit -qm "lint: $(date +%F)" -m "${report:-REPORT: (none)}" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>" && git push -q 2>/dev/null
 docker exec aistack-qmd-1 sh -c 'qmd update >/dev/null 2>&1 && qmd embed >/dev/null 2>&1' || true
 echo "$check"; echo "${report:-$out}"
-docker exec -u hermes aistack-hermes-1 sh -c 'hermes send -t "telegram:$TELEGRAM_ALLOWED_USERS" "$0"' "Vault lint $(date +%F):
-${report:-no report}" >/dev/null 2>&1 || true
+NOTIFY_CATEGORY=result "$(dirname "$0")/notify.sh" "Vault lint $(date +%F):
+${report:-no report}" >/dev/null 2>&1 || true      # the one notification path (OBS-16)

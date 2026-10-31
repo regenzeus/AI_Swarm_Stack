@@ -7,7 +7,7 @@ INBOX=$V/raw/_inbox
 LOG=/srv/ai/state/vault-ingest.log
 exec 9>/srv/ai/state/vault-ingest.lock; flock -n 9 || exit 0      # one run at a time
 log() { echo "$(date '+%F %T') $*" | tee -a "$LOG"; }
-notify() { docker exec -u hermes aistack-hermes-1 sh -c 'hermes send -t "telegram:$TELEGRAM_ALLOWED_USERS" "$0"' "$1" >/dev/null 2>&1 || true; }
+notify() { "$(dirname "$0")/notify.sh" "$1" >/dev/null 2>&1 || true; }      # the one notification path (OBS-16)
 
 shopt -s nullglob
 for f in "$INBOX"/*; do

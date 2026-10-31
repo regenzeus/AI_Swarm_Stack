@@ -18,7 +18,7 @@ Secrets arrive as environment variables from `sops exec-env`. Scripts never decr
 | **Knowledge** | `vault-ingest.sh`, `vault-lint.sh`, `vault_check.py`, `wiki_rebuild.py`, `private-terms.sh`, `hindsight_forget.py`, `hindsight-models.sh`, `memory_review.py` |
 | **Code understanding** | `understand.sh`, `understand-dashboard.sh`, `ua_enrich.py` (explains files and functions where Understand Anything's structural fallback left placeholders, drops graphify-out nodes, splits folder layers; resumable, `make ua-enrich REPO=`), `ua_digest.py`, `graphify-sync.sh`, `graph_repos.py` |
 | **Skills and learning** | `skills_sync.py`, `skills-restore.sh`, `curate.py` |
-| **Briefings and reports** | `desk.sh`, `digest.py`, `notify.sh`, `email-setup.sh`, `ask.sh` |
+| **Briefings and reports** | `desk.sh`, `digest.py`, `notify.py` (the one notification path: the owner's preferences, quiet hours, once per key, a log; OBS-16), `notify.sh` (its shell entry), `email-setup.sh`, `ask.sh` |
 | **Backups** | `backup.sh`, `restore.sh`, `restore_check.py`, `disk-state.sh` |
 | **Setup and maintenance** | `bootstrap-wsl-1-root.sh`, `bootstrap-wsl-2-user.sh`, `new-machine.sh`, `stack_ready.py`, `upgrade_check.py` |
 | **Host integration** | `systemd/` (units and timers), `windows/` (PowerShell for the Windows side) |

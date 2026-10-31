@@ -747,7 +747,7 @@ def review(c, b, path, main, summary, slot=None, **kw):
     said = {"approve": "AI review: fine", "changes": "AI review: improve first", "block": "AI review: do not deploy"}.get(rv.get("verdict"), "AI review: not done")
     M.event("build", "", f"Build #{bid} ready for review: {len(files)} files, checks {'passed' if ok else 'FAILED'}, {said}", push=True, title="Builder")
     M.X.telegram(f"<b>Build #{bid} ready for review</b>\n{b['title']} ({repo})\n{len(files)} files changed · checks {'passed ✓' if ok else 'failed ✗'} · {said}",
-                 [[("🔍 Review", f"{M.X.APP}/#/build/{bid}")]])
+                 [[("🔍 Review", f"{M.X.APP}/#/build/{bid}")]], category="build")
 
 
 # ---------- the second pair of eyes: every build is reviewed by the other engine ----------
@@ -1002,7 +1002,7 @@ def deploy(c, b):
             M.event("build", "", f"Build #{bid} failed its deploy checks and was rolled back{'' if ok2 else ' (rollback deploy also had problems!)'}",
                     push=True, title="Builder")
             M.X.telegram(f"<b>Build #{bid} rolled back</b>\n{b['title']}: the deploy checks failed, the change was reverted.",
-                         [[("🔍 Details", f"{M.X.APP}/#/build/{bid}")]])
+                         [[("🔍 Details", f"{M.X.APP}/#/build/{bid}")]], category="build")
         else:
             put(c, bid, status="deployed", deploy=tail("\n".join(log), STORE))  # cap: store
             M.event("build", "", f"Build #{bid} deployed: {b['title']}", push=True, title="Builder")

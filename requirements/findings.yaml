@@ -218,7 +218,8 @@ items:
     evidence: ["ops/memory_review.py:41", "ops/skills_sync.py:45", "ops/missions.py:107", "ops/mission_extras.py", "ops/notify.sh", "ops/vault-ingest.sh", "ops/vault-lint.sh"]
     affects: [OBS-16, SWM-59]
     recommendation: One notify function with the policy, used by every sender; reopen proposal 10 in that light.
-    status: open
+    status: fixed
+    resolved: "feat/phase0, 2026-10-31: ops/notify.py is the one path (preferences, quiet hours, once per key, log); every sender goes through it, and tests/test_notify.py stops a new one that bypasses it"
   - id: FND-18
     severity: medium
     kind: risk
@@ -931,3 +932,85 @@ items:
     recommendation: Keep the identifiers in a private file outside the repository; publish only a rewritten, scanned and tested snapshot.
     status: fixed
     resolved: "feat/publish, 2026-10-31: ops/publish.py; ops/private-terms.sh reads /srv/ai/private/research-terms.txt"
+  - id: FND-76
+    title: The nightly backup failed on one unreadable file again
+    finding: "On 2026-10-31 at 03:32 the backup failed: rsync could not read a file a container had written under its
+      own user in /srv/ai/workbench (scratch copies of repositories), exited 23, and the whole backup failed. PLT-13 was
+      marked implemented, but it had been built as one exclusion for the 29 Oct case (the AI phone's key), verified by
+      inspection only. The health board raised it (crew: Backup failed); the newest backup was a day old."
+    evidence: ["journalctl --user -u backup (2026-10-31 03:32): Permission denied (13) on workbench/ai-stack.1/.serena/project.yml, code 23", "/srv/ai/state/backups.jsonl: last backup 2026-10-30 03:32"]
+    severity: high
+    kind: defect
+    affects: [PLT-13]
+    recommendation: Skip and name any unreadable file in general, keep failing on every other copy error, test it with a fake rsync, and leave the scratch workbench out.
+    status: fixed
+    resolved: "fix/backup-unreadable, 2026-10-31: ops/backup-copy.sh, tests/test_backup.py; a backup run by hand after the deploy"
+  - id: FND-77
+    title: A weekly briefing task wrote "blocked" on its first run and looked like it waited for Monday
+    finding: "Task #79 (a weekly e-mail of Chinese automotive news) ran at once (mission run 52), but the desk kept only
+      36 hours of the week its searches asked for (231 items, 3 recent, 0 chosen), sent its Chinese queries to US-English
+      Google News with when:1d added to their own when:7d, and the brief's notes were the intake's plan for agents (Main,
+      Scout, Desk), so the writer reported its research and e-mail blocked. The task never asked the desk for e-mail, the
+      price table carried the uranium brief's Sprott note, and the board showed the task only as scheduled."
+    evidence: ["/srv/ai/desk/weekly-chinese-automotive-news-email/last.log (2026-10-31 16:54): 231 items collected, 3 new in 36 h; triage kept 0",
+      "topics/weekly-chinese-automotive-news-email/TOPIC.md notes (Main must enable Task #79 ...)", "missions.sqlite runs id 52: Briefing blocked: no source material supplied"]
+    severity: high
+    kind: defect
+    affects: [MIS-11, MIS-15, TSK-04]
+    recommendation: The window follows the schedule, queries search in their own language, a briefing's brief holds the content and not the plan, e-mail is set up when the task asks for it, and the board shows the last and next run.
+    status: fixed
+    resolved: "fix/weekly-briefing, 2026-10-31: images/desk/desk.py, ops/missions.py, ops/tasks.py, app.js; task #79's topic repaired and run again"
+  - id: FND-78
+    title: A report's e-mail left no trace when it was sent
+    finding: "After task #79's run 54 the Telegram message was in the notification log, but the e-mail had no record:
+      ops/mission_extras.py email() logged only failures, so whether the owner got the report could only be assumed. The
+      same delivery named the day as having nothing new, because an empty run earlier that day was still on the list."
+    evidence: ["/srv/ai/state/notifications.jsonl after run 54: telegram sent, no e-mail row", "journalctl --user -u missions 17:28-17:32: no e-mail line"]
+    severity: medium
+    kind: defect
+    affects: [MIS-15, OBS-16]
+    recommendation: Record every e-mail outcome in the notification log and the run's timeline; a full run covers an empty one of the same day.
+    status: fixed
+    resolved: "fix/delivery-record, 2026-10-31: ops/mission_extras.py sent(), ops/notify.py record(); tests/test_quiet_runs.py"
+  - id: FND-79
+    title: Report e-mails showed the kicker twice and a giant headline on the phone
+    finding: "Every briefing e-mail since the desk began has a blank line after the report's front matter, so email()
+      in images/desk/desk.py never found the headline: the header showed the kicker twice and the headline stayed in the
+      body as an unstyled h1 (2em). The page was a fixed 640 px table without a viewport, so Gmail on Android scaled the
+      text up further; the owner saw five words per screen."
+    evidence: ["owner's screenshot of the China Automotive Weekly e-mail, 2026-10-31", "the 30 Oct job report e-mail: 'Daily briefing · 30 Oct 2026' twice"]
+    severity: medium
+    kind: defect
+    affects: [MIS-15]
+    recommendation: Strip the blank line before reading the headline, style every heading, and lay the e-mail out fluid with a viewport.
+    status: fixed
+    resolved: "fix/email-mobile, 2026-10-31: images/desk/desk.py MAIL and email(); checked at 375 px with the real report"
+  - id: FND-80
+    title: A job search found no openings because the stack had no job board
+    finding: "On 30 Oct the owner's job hunt (an AUTOSAR RTE expert near Heilbronn) ran first as a news briefing: Google
+      News over 36 hours holds no job ads, so it collected 0 items and mailed an empty report with a Mercedes share price.
+      Run again as deep research, the scouts made 97 web searches and read 47 pages in 16 minutes and confirmed two
+      openings, in Ergersheim and Kassel. General web search finds job ads badly and the big portals refuse automated
+      readers; the federal job board's open search returns current AUTOSAR openings within 50 km of Heilbronn."
+    evidence: ["/srv/ai/desk/job-report/last.log: 0 items collected", "mission run 47: 97 web_search, 47 fetch calls, 489,941 tokens",
+      "rest.arbeitsagentur.de .../pc/v6/jobs?was=AUTOSAR&wo=Heilbronn&umkreis=50: 5 openings (2026-10-31)"]
+    severity: high
+    kind: defect
+    affects: [MIS-11, MIS-21]
+    recommendation: Give the scout the job board's search and full ads as tools, and a job-hunt briefing the board as a source.
+    status: fixed
+    resolved: "feat/job-board, 2026-10-31: images/fetch/jobs.py, images/desk/desk.py from_jobs(), prompts/desk.md TOPIC_DRAFT; the job search run again"
+  - id: FND-81
+    title: The phase 1 commit broke most make targets and no check ran them
+    finding: "The phase 1 commit (b08aa31, 2026-10-31) re-wrote the Makefile with the first space of 99 lines removed:
+      `python3ops/...`, `bashops/...`, `sopsexec-env`, `dockernetwork`, `$(calldc,` and `$(callSECRETS_ALL,`. Some were
+      mended later by hand; make publish, req, restore, keys, smoke, up and most other targets stayed broken. Found when
+      the owner asked for a GitHub push; the tests only checked that targets exist and are documented."
+    evidence: ["make publish-check: /bin/bash: python3ops/publish.py: No such file or directory", "git log -S'python3ops/publish.py' -- Makefile: b08aa31",
+      "git diff b08aa31^ b08aa31 -- Makefile: 99 lines re-added with whitespace removed; no other file of that commit"]
+    severity: medium
+    kind: defect
+    affects: [QA-20]
+    recommendation: Check every recipe's interpreter and the repo file it runs, without running the target.
+    status: fixed
+    resolved: "fix/makefile-python, 2026-10-31: Makefile; tests/test_repo_docs.py::test_every_make_recipe_calls_a_file_that_exists"

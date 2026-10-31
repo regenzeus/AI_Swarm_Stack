@@ -34,6 +34,7 @@ from pathlib import Path
 import journal as J
 from textcap import cut, limit, tail                    # visible caps and input limits (AGENTS.md, truncation)
 import prompts as P                               # MEM-11: the agent prompts live in prompts/<owner>.md
+import notify as N                                # OBS-16: the one notification path
 
 M = I = None                                      # ops/missions.py and ops/improve.py (set by missions.main or run())
 STACK = Path.home() / "ai-stack"
@@ -537,8 +538,8 @@ def health(c, missions):
     out = []
     def send(lines):
         text = "\n".join(f"• {html_escape(x)}" for x in lines[:8]) + (f"\n… and {len(lines) - 8} more" if len(lines) > 8 else "")
-        M.event("health", "", "; ".join(lines), push=True, title="Agent health")
-        M.X.telegram(f"⚠️ <b>Agent health</b>\n{text}", [[("🔍 Open", f"{M.X.APP}/#/missions")]])
+        N.send(f"⚠️ <b>Agent health</b>\n{text}", "health", buttons=[[("🔍 Open", f"{M.X.APP}/#/missions")]], push_on=True,
+               event_kind="health", title="Agent health", is_html=True)
     try:
         O.notify([{**it, "issues": [i for i in it["issues"] if i["severity"] == "alert"]} for it in items], OUT / "health-notified.json", out.append)
         if out:

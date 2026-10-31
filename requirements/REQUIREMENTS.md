@@ -17,8 +17,8 @@ Method, statuses and rules: [README.md](README.md). Names of the parts: [glossar
 | [House](#hse-house) (HSE) | 9 | 9 | 0 | 0 | 0 | 0 | 0 |
 | [Knowledge](#knw-knowledge) (KNW) | 15 | 15 | 0 | 0 | 0 | 0 | 0 |
 | [Memory](#mem-memory) (MEM) | 13 | 13 | 0 | 0 | 0 | 0 | 0 |
-| [Missions](#mis-missions) (MIS) | 20 | 17 | 2 | 0 | 0 | 0 | 1 |
-| [Observability](#obs-observability) (OBS) | 16 | 15 | 0 | 1 | 0 | 0 | 0 |
+| [Missions](#mis-missions) (MIS) | 21 | 18 | 2 | 0 | 0 | 0 | 1 |
+| [Observability](#obs-observability) (OBS) | 16 | 16 | 0 | 0 | 0 | 0 | 0 |
 | [AI phone](#phn-ai-phone) (PHN) | 16 | 16 | 0 | 0 | 0 | 0 | 0 |
 | [Platform](#plt-platform) (PLT) | 23 | 21 | 2 | 0 | 0 | 0 | 0 |
 | [Quality and process](#qa-quality-and-process) (QA) | 20 | 18 | 0 | 0 | 0 | 2 | 0 |
@@ -26,9 +26,10 @@ Method, statuses and rules: [README.md](README.md). Names of the parts: [glossar
 | [Security](#sec-security) (SEC) | 19 | 18 | 1 | 0 | 0 | 0 | 0 |
 | [Shopping](#shp-shopping) (SHP) | 12 | 12 | 0 | 0 | 0 | 0 | 0 |
 | [Agent swarm](#swm-agent-swarm) (SWM) | 109 | 95 | 10 | 0 | 2 | 0 | 2 |
-| **All** | **383** | **353** | **19** | **3** | **2** | **2** | **4** |
+| [Task engine](#tsk-task-engine) (TSK) | 20 | 13 | 5 | 0 | 1 | 1 | 0 |
+| **All** | **404** | **368** | **24** | **2** | **3** | **3** | **4** |
 
-Unit tests claimed by a requirement: 502 of 502.
+Unit tests claimed by a requirement: 559 of 559.
 
 ## Findings
 
@@ -36,7 +37,6 @@ Unit tests claimed by a requirement: 502 of 502.
 |---|---|---|---|---|
 | [FND-22](#fnd-22) Agents talking to each other would cross the trust boundaries | high | open | - | [SWM-09](#swm-09), [SWM-10](#swm-10), [SWM-15](#swm-15), [SWM-67](#swm-67), [SEC-04](#sec-04) |
 | [FND-14](#fnd-14) The mail connector can strand an approval like the phone did | medium | open | - | [CNX-06](#cnx-06), [SWM-19](#swm-19) |
-| [FND-17](#fnd-17) Seven ways to send a Telegram message | medium | open | - | [OBS-16](#obs-16), [SWM-59](#swm-59) |
 | [FND-18](#fnd-18) Memory is the top risk and nothing budgets it | medium | open | yes | [CST-14](#cst-14), [SWM-74](#swm-74) |
 | [FND-23](#fnd-23) The swarm would start jobs, which only the runner may do | medium | open | - | [SWM-13](#swm-13) |
 | [FND-63](#fnd-63) Agents call swarm_context although their opening holds it | low | open | - | [SWM-16](#swm-16) |
@@ -48,11 +48,15 @@ Unit tests claimed by a requirement: 502 of 502.
 | [FND-52](#fnd-52) Start mission threw before sending anything, since 28 October | high | fixed | - | [APP-23](#app-23) |
 | [FND-53](#fnd-53) The app's errors lived only in the container's log | high | fixed | - | [APP-24](#app-24) |
 | [FND-54](#fnd-54) No check catches a name the app's scripts never define | high | fixed | - | [APP-24](#app-24) |
+| [FND-76](#fnd-76) The nightly backup failed on one unreadable file again | high | fixed | - | [PLT-13](#plt-13) |
+| [FND-77](#fnd-77) A weekly briefing task wrote "blocked" on its first run and looked like it waited for Monday | high | fixed | - | [MIS-11](#mis-11), [MIS-15](#mis-15), [TSK-04](#tsk-04) |
+| [FND-80](#fnd-80) A job search found no openings because the stack had no job board | high | fixed | - | [MIS-11](#mis-11), [MIS-21](#mis-21) |
 | [FND-03](#fnd-03) One key, many agents | medium | fixed | - | [SEC-07](#sec-07), [MIS-16](#mis-16), [SWM-23](#swm-23) |
 | [FND-04](#fnd-04) A second, undocumented delivery path | medium | fixed | yes | [CST-07](#cst-07), [PLT-10](#plt-10), [BLD-20](#bld-20) |
 | [FND-05](#fnd-05) "Everything goes to the ChatGPT subscription" is no longer true | medium | fixed | - | [SEC-18](#sec-18), [CST-02](#cst-02) |
 | [FND-10](#fnd-10) The scout's web search package is not where the scout looks | medium | fixed | - | [RES-02](#res-02) |
 | [FND-12](#fnd-12) Caps the owner rejected are still in the code | medium | fixed | - | [CRW-06](#crw-06), [SWM-08](#swm-08), [SWM-35](#swm-35) |
+| [FND-17](#fnd-17) Seven ways to send a Telegram message | medium | fixed | - | [OBS-16](#obs-16), [SWM-59](#swm-59) |
 | [FND-24](#fnd-24) A second store for the same artifacts | medium | fixed | - | [SWM-03](#swm-03), [SWM-35](#swm-35) |
 | [FND-25](#fnd-25) The Claude Code agents are invisible to the gateway's records | medium | fixed | - | [SWM-17](#swm-17), [SWM-79](#swm-79), [SWM-81](#swm-81), [SWM-82](#swm-82), [MIS-16](#mis-16) |
 | [FND-29](#fnd-29) The price watch repeats a reached target as news | medium | fixed | - | [SHP-04](#shp-04), [MIS-04](#mis-04) |
@@ -82,6 +86,9 @@ Unit tests claimed by a requirement: 502 of 502.
 | [FND-72](#fnd-72) The app's HTTP API was not documented | medium | fixed | - | [QA-19](#qa-19) |
 | [FND-74](#fnd-74) Recreating Hermes alone cut the dashboard's gate off its network | medium | fixed | - | [PLT-23](#plt-23) |
 | [FND-75](#fnd-75) The owner's identifiers were written into a tracked script | medium | fixed | - | [SEC-19](#sec-19) |
+| [FND-78](#fnd-78) A report's e-mail left no trace when it was sent | medium | fixed | - | [MIS-15](#mis-15), [OBS-16](#obs-16) |
+| [FND-79](#fnd-79) Report e-mails showed the kicker twice and a giant headline on the phone | medium | fixed | - | [MIS-15](#mis-15) |
+| [FND-81](#fnd-81) The phase 1 commit broke most make targets and no check ran them | medium | fixed | - | [QA-20](#qa-20) |
 | [FND-06](#fnd-06) Which engine is the default | low | fixed | - | [BLD-08](#bld-08), [APP-14](#app-14) |
 | [FND-07](#fnd-07) Approve before CI is green | low | fixed | - | [BLD-02](#bld-02), [APP-14](#app-14) |
 | [FND-08](#fnd-08) Needs you, as the guide describes it | low | fixed | - | [APP-06](#app-06), [APP-14](#app-14) |
@@ -129,16 +136,6 @@ The first-Trash approval uses the same pending/decisions loop the AI phone used 
 - Evidence: `images/mail/mail.py:27-40,308 (pending/ and decisions/, no sweep)`; `images/phone/phone.py sweep_orphans() (the phone's fix)`
 - Affects: [CNX-06](#cnx-06), [SWM-19](#swm-19)
 - Recommendation: Port sweep_orphans() to the mail connector, or move both to the swarm's persistent waits (SWM-19).
-
-### FND-17
-
-**Seven ways to send a Telegram message** (medium incoherence, open)
-
-Only the health board applies once-per-issue; other jobs send Telegram messages through their own code, so there is no single place for a notification policy (quiet hours, preferences, dedupe) that SN-18 needs. (The maintainability proposal to route them through notify.sh was dismissed on 2026-10-29 as low value; seen from the notification policy it is not.)
-
-- Evidence: `ops/memory_review.py:41`; `ops/skills_sync.py:45`; `ops/missions.py:107`; `ops/mission_extras.py`; `ops/notify.sh`; `ops/vault-ingest.sh`; `ops/vault-lint.sh`
-- Affects: [OBS-16](#obs-16), [SWM-59](#swm-59)
-- Recommendation: One notify function with the policy, used by every sender; reopen proposal 10 in that light.
 
 ### FND-18
 
@@ -258,6 +255,39 @@ The app's four scripts share one global scope and have no build step, so an unde
 - Recommendation: Lint the scripts for undefined names in every landing and image build, and keep a click-through harness.
 - Resolved: fix/ux-review, 2026-10-30: ops/app_lint.py in ops/check.sh, ESLint in the builder and CI images, ops/ui_crawl.js
 
+### FND-76
+
+**The nightly backup failed on one unreadable file again** (high defect, fixed)
+
+On 2026-10-31 at 03:32 the backup failed: rsync could not read a file a container had written under its own user in /srv/ai/workbench (scratch copies of repositories), exited 23, and the whole backup failed. PLT-13 was marked implemented, but it had been built as one exclusion for the 29 Oct case (the AI phone's key), verified by inspection only. The health board raised it (crew: Backup failed); the newest backup was a day old.
+
+- Evidence: `journalctl --user -u backup (2026-10-31 03:32): Permission denied (13) on workbench/ai-stack.1/.serena/project.yml, code 23`; `/srv/ai/state/backups.jsonl: last backup 2026-10-30 03:32`
+- Affects: [PLT-13](#plt-13)
+- Recommendation: Skip and name any unreadable file in general, keep failing on every other copy error, test it with a fake rsync, and leave the scratch workbench out.
+- Resolved: fix/backup-unreadable, 2026-10-31: ops/backup-copy.sh, tests/test_backup.py; a backup run by hand after the deploy
+
+### FND-77
+
+**A weekly briefing task wrote "blocked" on its first run and looked like it waited for Monday** (high defect, fixed)
+
+Task #79 (a weekly e-mail of Chinese automotive news) ran at once (mission run 52), but the desk kept only 36 hours of the week its searches asked for (231 items, 3 recent, 0 chosen), sent its Chinese queries to US-English Google News with when:1d added to their own when:7d, and the brief's notes were the intake's plan for agents (Main, Scout, Desk), so the writer reported its research and e-mail blocked. The task never asked the desk for e-mail, the price table carried the uranium brief's Sprott note, and the board showed the task only as scheduled.
+
+- Evidence: `/srv/ai/desk/weekly-chinese-automotive-news-email/last.log (2026-10-31 16:54): 231 items collected, 3 new in 36 h; triage kept 0`; `topics/weekly-chinese-automotive-news-email/TOPIC.md notes (Main must enable Task #79 ...)`; `missions.sqlite runs id 52: Briefing blocked: no source material supplied`
+- Affects: [MIS-11](#mis-11), [MIS-15](#mis-15), [TSK-04](#tsk-04)
+- Recommendation: The window follows the schedule, queries search in their own language, a briefing's brief holds the content and not the plan, e-mail is set up when the task asks for it, and the board shows the last and next run.
+- Resolved: fix/weekly-briefing, 2026-10-31: images/desk/desk.py, ops/missions.py, ops/tasks.py, app.js; task #79's topic repaired and run again
+
+### FND-80
+
+**A job search found no openings because the stack had no job board** (high defect, fixed)
+
+On 30 Oct the owner's job hunt (an AUTOSAR RTE expert near Heilbronn) ran first as a news briefing: Google News over 36 hours holds no job ads, so it collected 0 items and mailed an empty report with a Mercedes share price. Run again as deep research, the scouts made 97 web searches and read 47 pages in 16 minutes and confirmed two openings, in Ergersheim and Kassel. General web search finds job ads badly and the big portals refuse automated readers; the federal job board's open search returns current AUTOSAR openings within 50 km of Heilbronn.
+
+- Evidence: `/srv/ai/desk/job-report/last.log: 0 items collected`; `mission run 47: 97 web_search, 47 fetch calls, 489,941 tokens`; `rest.arbeitsagentur.de .../pc/v6/jobs?was=AUTOSAR&wo=Heilbronn&umkreis=50: 5 openings (2026-10-31)`
+- Affects: [MIS-11](#mis-11), [MIS-21](#mis-21)
+- Recommendation: Give the scout the job board's search and full ads as tools, and a job-hunt briefing the board as a source.
+- Resolved: feat/job-board, 2026-10-31: images/fetch/jobs.py, images/desk/desk.py from_jobs(), prompts/desk.md TOPIC_DRAFT; the job search run again
+
 ### FND-03
 
 **One key, many agents** (medium incoherence, fixed)
@@ -312,6 +342,17 @@ Per-agent caps on open proposals were added on 2026-10-29 and rejected by the ow
 - Affects: [CRW-06](#crw-06), [SWM-08](#swm-08), [SWM-35](#swm-35)
 - Recommendation: Remove the caps when SWM-04/SWM-08 land (phase 1 of the swarm design), or earlier on the owner's word.
 - Resolved: feat/swarm-switch, 2026-10-29 (caps, title matching and stale closures removed; the Ledger ranks instead)
+
+### FND-17
+
+**Seven ways to send a Telegram message** (medium incoherence, fixed)
+
+Only the health board applies once-per-issue; other jobs send Telegram messages through their own code, so there is no single place for a notification policy (quiet hours, preferences, dedupe) that SN-18 needs. (The maintainability proposal to route them through notify.sh was dismissed on 2026-10-29 as low value; seen from the notification policy it is not.)
+
+- Evidence: `ops/memory_review.py:41`; `ops/skills_sync.py:45`; `ops/missions.py:107`; `ops/mission_extras.py`; `ops/notify.sh`; `ops/vault-ingest.sh`; `ops/vault-lint.sh`
+- Affects: [OBS-16](#obs-16), [SWM-59](#swm-59)
+- Recommendation: One notify function with the policy, used by every sender; reopen proposal 10 in that light.
+- Resolved: feat/phase0, 2026-10-31: ops/notify.py is the one path (preferences, quiet hours, once per key, log); every sender goes through it, and tests/test_notify.py stops a new one that bypasses it
 
 ### FND-24
 
@@ -632,6 +673,39 @@ ops/private-terms.sh listed the owner's name, e-mail handle, PC hostname, tailne
 - Recommendation: Keep the identifiers in a private file outside the repository; publish only a rewritten, scanned and tested snapshot.
 - Resolved: feat/publish, 2026-10-31: ops/publish.py; ops/private-terms.sh reads /srv/ai/private/research-terms.txt
 
+### FND-78
+
+**A report's e-mail left no trace when it was sent** (medium defect, fixed)
+
+After task #79's run 54 the Telegram message was in the notification log, but the e-mail had no record: ops/mission_extras.py email() logged only failures, so whether the owner got the report could only be assumed. The same delivery named the day as having nothing new, because an empty run earlier that day was still on the list.
+
+- Evidence: `/srv/ai/state/notifications.jsonl after run 54: telegram sent, no e-mail row`; `journalctl --user -u missions 17:28-17:32: no e-mail line`
+- Affects: [MIS-15](#mis-15), [OBS-16](#obs-16)
+- Recommendation: Record every e-mail outcome in the notification log and the run's timeline; a full run covers an empty one of the same day.
+- Resolved: fix/delivery-record, 2026-10-31: ops/mission_extras.py sent(), ops/notify.py record(); tests/test_quiet_runs.py
+
+### FND-79
+
+**Report e-mails showed the kicker twice and a giant headline on the phone** (medium defect, fixed)
+
+Every briefing e-mail since the desk began has a blank line after the report's front matter, so email() in images/desk/desk.py never found the headline: the header showed the kicker twice and the headline stayed in the body as an unstyled h1 (2em). The page was a fixed 640 px table without a viewport, so Gmail on Android scaled the text up further; the owner saw five words per screen.
+
+- Evidence: `owner's screenshot of the China Automotive Weekly e-mail, 2026-10-31`; `the 30 Oct job report e-mail: 'Daily briefing · 30 Oct 2026' twice`
+- Affects: [MIS-15](#mis-15)
+- Recommendation: Strip the blank line before reading the headline, style every heading, and lay the e-mail out fluid with a viewport.
+- Resolved: fix/email-mobile, 2026-10-31: images/desk/desk.py MAIL and email(); checked at 375 px with the real report
+
+### FND-81
+
+**The phase 1 commit broke most make targets and no check ran them** (medium defect, fixed)
+
+The phase 1 commit (b08aa31, 2026-10-31) re-wrote the Makefile with the first space of 99 lines removed: `python3ops/...`, `bashops/...`, `sopsexec-env`, `dockernetwork`, `$(calldc,` and `$(callSECRETS_ALL,`. Some were mended later by hand; make publish, req, restore, keys, smoke, up and most other targets stayed broken. Found when the owner asked for a GitHub push; the tests only checked that targets exist and are documented.
+
+- Evidence: `make publish-check: /bin/bash: python3ops/publish.py: No such file or directory`; `git log -S'python3ops/publish.py' -- Makefile: b08aa31`; `git diff b08aa31^ b08aa31 -- Makefile: 99 lines re-added with whitespace removed; no other file of that commit`
+- Affects: [QA-20](#qa-20)
+- Recommendation: Check every recipe's interpreter and the repo file it runs, without running the target.
+- Resolved: fix/makefile-python, 2026-10-31: Makefile; tests/test_repo_docs.py::test_every_make_recipe_calls_a_file_that_exists
+
 ### FND-06
 
 **Which engine is the default** (low drift, fixed)
@@ -933,24 +1007,26 @@ At 375 px the Stack page ran 19 screens (17 sections, nothing to jump with) and 
 
 | Need | Priority | Refined by |
 |---|---|---|
-| <a id="sn-01"></a>**SN-01** A personal AI team that works by itself: Agents read the news, research companies and topics, watch filings and prices, and deliver briefings, alerts and research results on their own, so that the owner mostly just reads results. | must | [APP-05](#app-05), [APP-25](#app-25), [APP-26](#app-26), [AST-01](#ast-01), [AST-05](#ast-05), [AST-07](#ast-07), [AST-13](#ast-13), [CST-01](#cst-01), [MIS-01](#mis-01), [MIS-02](#mis-02), [MIS-06](#mis-06), [MIS-08](#mis-08), [MIS-09](#mis-09), [MIS-10](#mis-10), [MIS-11](#mis-11), [MIS-13](#mis-13), [MIS-14](#mis-14), [MIS-15](#mis-15), [RES-02](#res-02), [RES-03](#res-03), [RES-04](#res-04), [RES-05](#res-05) |
-| <a id="sn-02"></a>**SN-02** Out of the loop except for real decisions: the owner is asked only for decisions that are really his (approvals of spending, deploys, deletions, settings, grants), each one tap away with enough context to decide; no scripts to run, no busywork, nothing shown as needing him that does not. | must | [APP-04](#app-04), [APP-05](#app-05), [APP-06](#app-06), [APP-07](#app-07), [APP-13](#app-13), [APP-14](#app-14), [APP-21](#app-21), [APP-25](#app-25), [APP-26](#app-26), [AST-06](#ast-06), [AST-12](#ast-12), [CNX-02](#cnx-02), [CRW-02](#crw-02), [CRW-05](#crw-05), [CRW-06](#crw-06), [CST-03](#cst-03), [MIS-07](#mis-07), [MIS-20](#mis-20), [PHN-02](#phn-02), [PHN-11](#phn-11), [PHN-12](#phn-12), [SHP-01](#shp-01), [SHP-03](#shp-03), [SHP-08](#shp-08), [SWM-05](#swm-05), [SWM-06](#swm-06), [SWM-08](#swm-08), [SWM-33](#swm-33), [SWM-38](#swm-38), [SWM-39](#swm-39), [SWM-40](#swm-40), [SWM-42](#swm-42), [SWM-43](#swm-43), [SWM-44](#swm-44), [SWM-54](#swm-54), [SWM-55](#swm-55), [SWM-61](#swm-61), [SWM-87](#swm-87) |
+| <a id="sn-01"></a>**SN-01** A personal AI team that works by itself: Agents read the news, research companies and topics, watch filings and prices, and deliver briefings, alerts and research results on their own, so that the owner mostly just reads results. | must | [APP-05](#app-05), [APP-25](#app-25), [APP-26](#app-26), [AST-01](#ast-01), [AST-05](#ast-05), [AST-07](#ast-07), [AST-13](#ast-13), [CST-01](#cst-01), [MIS-01](#mis-01), [MIS-02](#mis-02), [MIS-06](#mis-06), [MIS-08](#mis-08), [MIS-09](#mis-09), [MIS-10](#mis-10), [MIS-11](#mis-11), [MIS-13](#mis-13), [MIS-14](#mis-14), [MIS-15](#mis-15), [MIS-21](#mis-21), [RES-02](#res-02), [RES-03](#res-03), [RES-04](#res-04), [RES-05](#res-05) |
+| <a id="sn-02"></a>**SN-02** Out of the loop except for real decisions: the owner is asked only for decisions that are really his (approvals of spending, deploys, deletions, settings, grants), each one tap away with enough context to decide; no scripts to run, no busywork, nothing shown as needing him that does not. | must | [APP-04](#app-04), [APP-05](#app-05), [APP-06](#app-06), [APP-07](#app-07), [APP-13](#app-13), [APP-14](#app-14), [APP-21](#app-21), [APP-25](#app-25), [APP-26](#app-26), [AST-06](#ast-06), [AST-12](#ast-12), [CNX-02](#cnx-02), [CRW-02](#crw-02), [CRW-05](#crw-05), [CRW-06](#crw-06), [CST-03](#cst-03), [MIS-07](#mis-07), [MIS-20](#mis-20), [PHN-02](#phn-02), [PHN-11](#phn-11), [PHN-12](#phn-12), [SHP-01](#shp-01), [SHP-03](#shp-03), [SHP-08](#shp-08), [SWM-05](#swm-05), [SWM-06](#swm-06), [SWM-08](#swm-08), [SWM-33](#swm-33), [SWM-38](#swm-38), [SWM-39](#swm-39), [SWM-40](#swm-40), [SWM-42](#swm-42), [SWM-43](#swm-43), [SWM-44](#swm-44), [SWM-54](#swm-54), [SWM-55](#swm-55), [SWM-61](#swm-61), [SWM-87](#swm-87), [TSK-03](#tsk-03), [TSK-20](#tsk-20) |
 | <a id="sn-03"></a>**SN-03** Costs nothing to run: Running the stack costs $0 beyond the subscriptions the owner already pays; nothing can spend money by accident. | must | [AST-02](#ast-02), [AST-08](#ast-08), [BLD-06](#bld-06), [CST-02](#cst-02), [GW-02](#gw-02), [GW-04](#gw-04), [MIS-04](#mis-04), [MIS-16](#mis-16), [PLT-11](#plt-11), [RES-07](#res-07), [SHP-05](#shp-05), [SWM-13](#swm-13), [SWM-14](#swm-14), [SWM-29](#swm-29), [SWM-40](#swm-40), [SWM-53](#swm-53), [SWM-60](#swm-60), [SWM-62](#swm-62), [SWM-81](#swm-81) |
 | <a id="sn-04"></a>**SN-04** Private data stays home: Notes, reports, memory, chats, mail and files stay on the PC and the NAS; only the model calls leave, and The owner knows which provider sees what. | must | [CST-04](#cst-04), [CST-06](#cst-06), [HSE-07](#hse-07), [KNW-05](#knw-05), [KNW-07](#knw-07), [MEM-06](#mem-06), [PHN-16](#phn-16), [RES-01](#res-01), [SEC-03](#sec-03), [SEC-04](#sec-04), [SEC-06](#sec-06), [SEC-17](#sec-17), [SEC-18](#sec-18), [SEC-19](#sec-19), [SWM-67](#swm-67) |
-| <a id="sn-05"></a>**SN-05** Agents cannot do damage: No agent can spend money, delete data for good, leak private data, change the NAS, the router or phone and PC security settings, or deploy code without the owner's approval; prompt injection from the web or mail cannot steer an agent into any of it. | must | [APP-10](#app-10), [APP-20](#app-20), [AST-08](#ast-08), [AST-09](#ast-09), [AST-10](#ast-10), [AST-14](#ast-14), [BLD-02](#bld-02), [BLD-07](#bld-07), [BLD-10](#bld-10), [BLD-13](#bld-13), [BLD-16](#bld-16), [BLD-18](#bld-18), [CNX-01](#cnx-01), [CNX-03](#cnx-03), [CNX-04](#cnx-04), [CNX-05](#cnx-05), [CRW-04](#crw-04), [CRW-10](#crw-10), [CRW-11](#crw-11), [CRW-13](#crw-13), [CST-04](#cst-04), [CST-05](#cst-05), [CST-06](#cst-06), [CST-07](#cst-07), [CST-10](#cst-10), [CST-11](#cst-11), [CST-12](#cst-12), [GW-05](#gw-05), [HSE-04](#hse-04), [HSE-05](#hse-05), [HSE-08](#hse-08), [HSE-09](#hse-09), [KNW-04](#knw-04), [KNW-06](#knw-06), [KNW-11](#knw-11), [MEM-04](#mem-04), [MIS-17](#mis-17), [PHN-01](#phn-01), [PHN-03](#phn-03), [PHN-04](#phn-04), [PHN-05](#phn-05), [PHN-06](#phn-06), [PHN-07](#phn-07), [PHN-08](#phn-08), [PHN-15](#phn-15), [PLT-02](#plt-02), [PLT-03](#plt-03), [PLT-09](#plt-09), [RES-01](#res-01), [RES-03](#res-03), [RES-04](#res-04), [RES-06](#res-06), [SEC-01](#sec-01), [SEC-02](#sec-02), [SEC-03](#sec-03), [SEC-04](#sec-04), [SEC-05](#sec-05), [SEC-06](#sec-06), [SEC-07](#sec-07), [SEC-08](#sec-08), [SEC-09](#sec-09), [SEC-10](#sec-10), [SEC-11](#sec-11), [SEC-12](#sec-12), [SEC-13](#sec-13), [SEC-14](#sec-14), [SEC-15](#sec-15), [SEC-16](#sec-16), [SHP-05](#shp-05), [SHP-06](#shp-06), [SHP-07](#shp-07), [SHP-09](#shp-09), [SHP-10](#shp-10), [SWM-06](#swm-06), [SWM-109](#swm-109), [SWM-11](#swm-11), [SWM-15](#swm-15), [SWM-23](#swm-23), [SWM-24](#swm-24), [SWM-26](#swm-26), [SWM-42](#swm-42), [SWM-43](#swm-43), [SWM-46](#swm-46), [SWM-51](#swm-51), [SWM-58](#swm-58), [SWM-66](#swm-66), [SWM-67](#swm-67), [SWM-68](#swm-68), [SWM-69](#swm-69), [SWM-70](#swm-70), [SWM-77](#swm-77), [SWM-89](#swm-89) |
-| <a id="sn-06"></a>**SN-06** Usable from the phone, anywhere, one sign-in: Everything is usable and decidable from the owner's phone (installable app, push, Telegram), from anywhere on his tailnet, with his Tailscale login as the only sign-in. | must | [APP-01](#app-01), [APP-02](#app-02), [APP-03](#app-03), [APP-04](#app-04), [APP-08](#app-08), [APP-09](#app-09), [APP-15](#app-15), [APP-17](#app-17), [APP-19](#app-19), [APP-20](#app-20), [AST-01](#ast-01), [AST-03](#ast-03), [MIS-15](#mis-15), [QA-16](#qa-16), [SEC-01](#sec-01), [SEC-02](#sec-02), [SWM-11](#swm-11), [SWM-57](#swm-57), [SWM-93](#swm-93), [SWM-95](#swm-95) |
-| <a id="sn-07"></a>**SN-07** See what every agent does: For every agent, mission, crew job, build and tool the owner can see what it did step by step, what it read and changed, what it produced, what it cost and when something went wrong, without having to look for it. | must | [APP-07](#app-07), [APP-11](#app-11), [APP-12](#app-12), [APP-16](#app-16), [APP-19](#app-19), [APP-22](#app-22), [APP-23](#app-23), [APP-24](#app-24), [AST-04](#ast-04), [BLD-14](#bld-14), [BLD-20](#bld-20), [CRW-01](#crw-01), [CRW-02](#crw-02), [CRW-09](#crw-09), [CRW-12](#crw-12), [GW-01](#gw-01), [GW-07](#gw-07), [HSE-02](#hse-02), [MEM-01](#mem-01), [MEM-07](#mem-07), [MEM-09](#mem-09), [MEM-10](#mem-10), [MIS-16](#mis-16), [OBS-01](#obs-01), [OBS-02](#obs-02), [OBS-03](#obs-03), [OBS-04](#obs-04), [OBS-05](#obs-05), [OBS-06](#obs-06), [OBS-07](#obs-07), [OBS-08](#obs-08), [OBS-09](#obs-09), [OBS-10](#obs-10), [OBS-14](#obs-14), [OBS-15](#obs-15), [QA-17](#qa-17), [RES-05](#res-05), [SEC-07](#sec-07), [SHP-11](#shp-11), [SWM-103](#swm-103), [SWM-104](#swm-104), [SWM-105](#swm-105), [SWM-106](#swm-106), [SWM-107](#swm-107), [SWM-17](#swm-17), [SWM-23](#swm-23), [SWM-25](#swm-25), [SWM-30](#swm-30), [SWM-57](#swm-57), [SWM-58](#swm-58), [SWM-64](#swm-64), [SWM-78](#swm-78), [SWM-79](#swm-79), [SWM-80](#swm-80), [SWM-81](#swm-81), [SWM-82](#swm-82), [SWM-84](#swm-84), [SWM-90](#swm-90), [SWM-96](#swm-96), [SWM-99](#swm-99) |
-| <a id="sn-08"></a>**SN-08** The stack maintains and improves itself: Housekeeping agents keep the stack healthy, and the stack proposes and builds its own improvements; the owner approves what ships. | must | [APP-21](#app-21), [AST-11](#ast-11), [BLD-01](#bld-01), [BLD-03](#bld-03), [BLD-04](#bld-04), [BLD-05](#bld-05), [BLD-08](#bld-08), [BLD-10](#bld-10), [BLD-21](#bld-21), [BLD-22](#bld-22), [CRW-01](#crw-01), [CRW-03](#crw-03), [CRW-04](#crw-04), [CRW-07](#crw-07), [CRW-08](#crw-08), [CRW-09](#crw-09), [CRW-10](#crw-10), [CST-07](#cst-07), [KNW-08](#knw-08), [MEM-11](#mem-11), [MEM-13](#mem-13), [OBS-13](#obs-13), [PLT-08](#plt-08), [PLT-19](#plt-19), [QA-07](#qa-07), [SEC-08](#sec-08), [SWM-07](#swm-07), [SWM-102](#swm-102), [SWM-18](#swm-18), [SWM-38](#swm-38), [SWM-44](#swm-44), [SWM-45](#swm-45), [SWM-46](#swm-46), [SWM-47](#swm-47), [SWM-61](#swm-61), [SWM-70](#swm-70), [SWM-82](#swm-82), [SWM-83](#swm-83), [SWM-84](#swm-84), [SWM-91](#swm-91), [SWM-92](#swm-92), [SWM-93](#swm-93), [SWM-94](#swm-94), [SWM-95](#swm-95), [SWM-96](#swm-96) |
+| <a id="sn-05"></a>**SN-05** Agents cannot do damage: No agent can spend money, delete data for good, leak private data, change the NAS, the router or phone and PC security settings, or deploy code without the owner's approval; prompt injection from the web or mail cannot steer an agent into any of it. | must | [APP-10](#app-10), [APP-20](#app-20), [AST-08](#ast-08), [AST-09](#ast-09), [AST-10](#ast-10), [AST-14](#ast-14), [BLD-02](#bld-02), [BLD-07](#bld-07), [BLD-10](#bld-10), [BLD-13](#bld-13), [BLD-16](#bld-16), [BLD-18](#bld-18), [CNX-01](#cnx-01), [CNX-03](#cnx-03), [CNX-04](#cnx-04), [CNX-05](#cnx-05), [CRW-04](#crw-04), [CRW-10](#crw-10), [CRW-11](#crw-11), [CRW-13](#crw-13), [CST-04](#cst-04), [CST-05](#cst-05), [CST-06](#cst-06), [CST-07](#cst-07), [CST-10](#cst-10), [CST-11](#cst-11), [CST-12](#cst-12), [GW-05](#gw-05), [HSE-04](#hse-04), [HSE-05](#hse-05), [HSE-08](#hse-08), [HSE-09](#hse-09), [KNW-04](#knw-04), [KNW-06](#knw-06), [KNW-11](#knw-11), [MEM-04](#mem-04), [MIS-17](#mis-17), [PHN-01](#phn-01), [PHN-03](#phn-03), [PHN-04](#phn-04), [PHN-05](#phn-05), [PHN-06](#phn-06), [PHN-07](#phn-07), [PHN-08](#phn-08), [PHN-15](#phn-15), [PLT-02](#plt-02), [PLT-03](#plt-03), [PLT-09](#plt-09), [RES-01](#res-01), [RES-03](#res-03), [RES-04](#res-04), [RES-06](#res-06), [SEC-01](#sec-01), [SEC-02](#sec-02), [SEC-03](#sec-03), [SEC-04](#sec-04), [SEC-05](#sec-05), [SEC-06](#sec-06), [SEC-07](#sec-07), [SEC-08](#sec-08), [SEC-09](#sec-09), [SEC-10](#sec-10), [SEC-11](#sec-11), [SEC-12](#sec-12), [SEC-13](#sec-13), [SEC-14](#sec-14), [SEC-15](#sec-15), [SEC-16](#sec-16), [SHP-05](#shp-05), [SHP-06](#shp-06), [SHP-07](#shp-07), [SHP-09](#shp-09), [SHP-10](#shp-10), [SWM-06](#swm-06), [SWM-109](#swm-109), [SWM-11](#swm-11), [SWM-15](#swm-15), [SWM-23](#swm-23), [SWM-24](#swm-24), [SWM-26](#swm-26), [SWM-42](#swm-42), [SWM-43](#swm-43), [SWM-46](#swm-46), [SWM-51](#swm-51), [SWM-58](#swm-58), [SWM-66](#swm-66), [SWM-67](#swm-67), [SWM-68](#swm-68), [SWM-69](#swm-69), [SWM-70](#swm-70), [SWM-77](#swm-77), [SWM-89](#swm-89), [TSK-15](#tsk-15), [TSK-20](#tsk-20) |
+| <a id="sn-06"></a>**SN-06** Usable from the phone, anywhere, one sign-in: Everything is usable and decidable from the owner's phone (installable app, push, Telegram), from anywhere on his tailnet, with his Tailscale login as the only sign-in. | must | [APP-01](#app-01), [APP-02](#app-02), [APP-03](#app-03), [APP-04](#app-04), [APP-08](#app-08), [APP-09](#app-09), [APP-15](#app-15), [APP-17](#app-17), [APP-19](#app-19), [APP-20](#app-20), [AST-01](#ast-01), [AST-03](#ast-03), [MIS-15](#mis-15), [QA-16](#qa-16), [SEC-01](#sec-01), [SEC-02](#sec-02), [SWM-11](#swm-11), [SWM-57](#swm-57), [SWM-93](#swm-93), [SWM-95](#swm-95), [TSK-02](#tsk-02) |
+| <a id="sn-07"></a>**SN-07** See what every agent does: For every agent, mission, crew job, build and tool the owner can see what it did step by step, what it read and changed, what it produced, what it cost and when something went wrong, without having to look for it. | must | [APP-07](#app-07), [APP-11](#app-11), [APP-12](#app-12), [APP-16](#app-16), [APP-19](#app-19), [APP-22](#app-22), [APP-23](#app-23), [APP-24](#app-24), [AST-04](#ast-04), [BLD-14](#bld-14), [BLD-20](#bld-20), [CRW-01](#crw-01), [CRW-02](#crw-02), [CRW-09](#crw-09), [CRW-12](#crw-12), [GW-01](#gw-01), [GW-07](#gw-07), [HSE-02](#hse-02), [MEM-01](#mem-01), [MEM-07](#mem-07), [MEM-09](#mem-09), [MEM-10](#mem-10), [MIS-16](#mis-16), [OBS-01](#obs-01), [OBS-02](#obs-02), [OBS-03](#obs-03), [OBS-04](#obs-04), [OBS-05](#obs-05), [OBS-06](#obs-06), [OBS-07](#obs-07), [OBS-08](#obs-08), [OBS-09](#obs-09), [OBS-10](#obs-10), [OBS-14](#obs-14), [OBS-15](#obs-15), [QA-17](#qa-17), [RES-05](#res-05), [SEC-07](#sec-07), [SHP-11](#shp-11), [SWM-103](#swm-103), [SWM-104](#swm-104), [SWM-105](#swm-105), [SWM-106](#swm-106), [SWM-107](#swm-107), [SWM-17](#swm-17), [SWM-23](#swm-23), [SWM-25](#swm-25), [SWM-30](#swm-30), [SWM-57](#swm-57), [SWM-58](#swm-58), [SWM-64](#swm-64), [SWM-78](#swm-78), [SWM-79](#swm-79), [SWM-80](#swm-80), [SWM-81](#swm-81), [SWM-82](#swm-82), [SWM-84](#swm-84), [SWM-90](#swm-90), [SWM-96](#swm-96), [SWM-99](#swm-99), [TSK-04](#tsk-04), [TSK-09](#tsk-09), [TSK-17](#tsk-17) |
+| <a id="sn-08"></a>**SN-08** The stack maintains and improves itself: Housekeeping agents keep the stack healthy, and the stack proposes and builds its own improvements; the owner approves what ships. | must | [APP-21](#app-21), [AST-11](#ast-11), [BLD-01](#bld-01), [BLD-03](#bld-03), [BLD-04](#bld-04), [BLD-05](#bld-05), [BLD-08](#bld-08), [BLD-10](#bld-10), [BLD-21](#bld-21), [BLD-22](#bld-22), [CRW-01](#crw-01), [CRW-03](#crw-03), [CRW-04](#crw-04), [CRW-07](#crw-07), [CRW-08](#crw-08), [CRW-09](#crw-09), [CRW-10](#crw-10), [CST-07](#cst-07), [KNW-08](#knw-08), [MEM-11](#mem-11), [MEM-13](#mem-13), [OBS-13](#obs-13), [PLT-08](#plt-08), [PLT-19](#plt-19), [QA-07](#qa-07), [SEC-08](#sec-08), [SWM-07](#swm-07), [SWM-102](#swm-102), [SWM-18](#swm-18), [SWM-38](#swm-38), [SWM-44](#swm-44), [SWM-45](#swm-45), [SWM-46](#swm-46), [SWM-47](#swm-47), [SWM-61](#swm-61), [SWM-70](#swm-70), [SWM-82](#swm-82), [SWM-83](#swm-83), [SWM-84](#swm-84), [SWM-91](#swm-91), [SWM-92](#swm-92), [SWM-93](#swm-93), [SWM-94](#swm-94), [SWM-95](#swm-95), [SWM-96](#swm-96), [TSK-13](#tsk-13), [TSK-16](#tsk-16), [TSK-17](#tsk-17) |
 | <a id="sn-09"></a>**SN-09** Nothing is ever lost: Data and configuration are backed up, the backups are proven to restore, and the whole stack can move to a new PC. | must | [AST-10](#ast-10), [CNX-03](#cnx-03), [CST-05](#cst-05), [KNW-01](#knw-01), [KNW-11](#knw-11), [MEM-08](#mem-08), [MEM-12](#mem-12), [PLT-12](#plt-12), [PLT-13](#plt-13), [PLT-14](#plt-14), [PLT-15](#plt-15), [PLT-16](#plt-16), [PLT-17](#plt-17), [SWM-30](#swm-30), [SWM-35](#swm-35), [SWM-36](#swm-36), [SWM-73](#swm-73), [SWM-76](#swm-76) |
-| <a id="sn-10"></a>**SN-10** Knowledge that grows and answers with sources: Everything the owner and his agents write becomes a searchable, linked knowledge base (vault, wikis, long-term memory) that answers questions with citations. | must | [APP-15](#app-15), [CRW-13](#crw-13), [KNW-01](#knw-01), [KNW-02](#knw-02), [KNW-03](#knw-03), [KNW-04](#knw-04), [KNW-05](#knw-05), [KNW-06](#knw-06), [KNW-08](#knw-08), [KNW-09](#knw-09), [KNW-10](#knw-10), [KNW-12](#knw-12), [KNW-13](#knw-13), [KNW-14](#knw-14), [KNW-15](#knw-15), [MEM-01](#mem-01), [MEM-02](#mem-02), [MEM-03](#mem-03), [MEM-04](#mem-04), [MEM-05](#mem-05), [MEM-06](#mem-06), [MEM-09](#mem-09), [MEM-10](#mem-10), [MEM-12](#mem-12), [MIS-01](#mis-01), [MIS-11](#mis-11), [MIS-18](#mis-18), [MIS-19](#mis-19), [SWM-66](#swm-66) |
+| <a id="sn-10"></a>**SN-10** Knowledge that grows and answers with sources: Everything the owner and his agents write becomes a searchable, linked knowledge base (vault, wikis, long-term memory) that answers questions with citations. | must | [APP-15](#app-15), [CRW-13](#crw-13), [KNW-01](#knw-01), [KNW-02](#knw-02), [KNW-03](#knw-03), [KNW-04](#knw-04), [KNW-05](#knw-05), [KNW-06](#knw-06), [KNW-08](#knw-08), [KNW-09](#knw-09), [KNW-10](#knw-10), [KNW-12](#knw-12), [KNW-13](#knw-13), [KNW-14](#knw-14), [KNW-15](#knw-15), [MEM-01](#mem-01), [MEM-02](#mem-02), [MEM-03](#mem-03), [MEM-04](#mem-04), [MEM-05](#mem-05), [MEM-06](#mem-06), [MEM-09](#mem-09), [MEM-10](#mem-10), [MEM-12](#mem-12), [MIS-01](#mis-01), [MIS-11](#mis-11), [MIS-18](#mis-18), [MIS-19](#mis-19), [MIS-21](#mis-21), [SWM-66](#swm-66) |
 | <a id="sn-11"></a>**SN-11** Hands in the real world, under control: Agents can act through the AI phone, Gmail, shopping and the House (lights, plugs, Echos), each only within grants and approvals the owner controls, with Stop and a log. | should | [CNX-01](#cnx-01), [CNX-02](#cnx-02), [CRW-11](#crw-11), [CST-12](#cst-12), [HSE-01](#hse-01), [HSE-02](#hse-02), [HSE-03](#hse-03), [HSE-05](#hse-05), [HSE-06](#hse-06), [HSE-07](#hse-07), [MIS-17](#mis-17), [PHN-01](#phn-01), [PHN-02](#phn-02), [PHN-05](#phn-05), [PHN-13](#phn-13), [PHN-14](#phn-14), [PLT-22](#plt-22), [SHP-01](#shp-01), [SHP-02](#shp-02), [SHP-03](#shp-03), [SHP-04](#shp-04), [SHP-11](#shp-11), [SWM-26](#swm-26) |
 | <a id="sn-12"></a>**SN-12** English everywhere: Chat, app, reports, wikis, Telegram, code, docs and commit messages are in English. | must | [CST-09](#cst-09), [MIS-12](#mis-12) |
-| <a id="sn-13"></a>**SN-13** Runs unattended for months: The stack keeps working through usage-limit pauses, restarts, deploys, reboots and power cuts, and recovers by itself; no work, approval or message is lost on a restart. | must | [APP-23](#app-23), [APP-24](#app-24), [AST-03](#ast-03), [AST-12](#ast-12), [BLD-03](#bld-03), [BLD-06](#bld-06), [BLD-09](#bld-09), [BLD-12](#bld-12), [CNX-06](#cnx-06), [CST-03](#cst-03), [CST-08](#cst-08), [CST-14](#cst-14), [GW-03](#gw-03), [GW-04](#gw-04), [GW-06](#gw-06), [GW-08](#gw-08), [MEM-05](#mem-05), [MEM-07](#mem-07), [MEM-08](#mem-08), [MIS-03](#mis-03), [MIS-04](#mis-04), [MIS-05](#mis-05), [MIS-10](#mis-10), [OBS-03](#obs-03), [OBS-04](#obs-04), [PHN-09](#phn-09), [PHN-10](#phn-10), [PHN-11](#phn-11), [PHN-14](#phn-14), [PLT-04](#plt-04), [PLT-05](#plt-05), [PLT-06](#plt-06), [PLT-07](#plt-07), [PLT-08](#plt-08), [PLT-09](#plt-09), [PLT-10](#plt-10), [PLT-11](#plt-11), [PLT-13](#plt-13), [PLT-18](#plt-18), [PLT-21](#plt-21), [PLT-23](#plt-23), [QA-17](#qa-17), [SHP-12](#shp-12), [SWM-12](#swm-12), [SWM-19](#swm-19), [SWM-31](#swm-31), [SWM-47](#swm-47), [SWM-52](#swm-52), [SWM-53](#swm-53), [SWM-63](#swm-63), [SWM-71](#swm-71), [SWM-72](#swm-72), [SWM-73](#swm-73), [SWM-76](#swm-76), [SWM-85](#swm-85), [SWM-87](#swm-87) |
+| <a id="sn-13"></a>**SN-13** Runs unattended for months: The stack keeps working through usage-limit pauses, restarts, deploys, reboots and power cuts, and recovers by itself; no work, approval or message is lost on a restart. | must | [APP-23](#app-23), [APP-24](#app-24), [AST-03](#ast-03), [AST-12](#ast-12), [BLD-03](#bld-03), [BLD-06](#bld-06), [BLD-09](#bld-09), [BLD-12](#bld-12), [CNX-06](#cnx-06), [CST-03](#cst-03), [CST-08](#cst-08), [CST-14](#cst-14), [GW-03](#gw-03), [GW-04](#gw-04), [GW-06](#gw-06), [GW-08](#gw-08), [MEM-05](#mem-05), [MEM-07](#mem-07), [MEM-08](#mem-08), [MIS-03](#mis-03), [MIS-04](#mis-04), [MIS-05](#mis-05), [MIS-10](#mis-10), [OBS-03](#obs-03), [OBS-04](#obs-04), [PHN-09](#phn-09), [PHN-10](#phn-10), [PHN-11](#phn-11), [PHN-14](#phn-14), [PLT-04](#plt-04), [PLT-05](#plt-05), [PLT-06](#plt-06), [PLT-07](#plt-07), [PLT-08](#plt-08), [PLT-09](#plt-09), [PLT-10](#plt-10), [PLT-11](#plt-11), [PLT-13](#plt-13), [PLT-18](#plt-18), [PLT-21](#plt-21), [PLT-23](#plt-23), [QA-17](#qa-17), [SHP-12](#shp-12), [SWM-12](#swm-12), [SWM-19](#swm-19), [SWM-31](#swm-31), [SWM-47](#swm-47), [SWM-52](#swm-52), [SWM-53](#swm-53), [SWM-63](#swm-63), [SWM-71](#swm-71), [SWM-72](#swm-72), [SWM-73](#swm-73), [SWM-76](#swm-76), [SWM-85](#swm-85), [SWM-87](#swm-87), [TSK-06](#tsk-06), [TSK-08](#tsk-08) |
 | <a id="sn-14"></a>**SN-14** Understand and change any codebase: The stack can study any repository (code graph, code map), answer questions about it, change the owner's own repositories through the builder, and check code against large specifications. | should | [AST-09](#ast-09), [BLD-01](#bld-01), [BLD-11](#bld-11), [BLD-15](#bld-15), [BLD-17](#bld-17), [BLD-18](#bld-18), [BLD-19](#bld-19), [BLD-23](#bld-23), [QA-14](#qa-14) |
 | <a id="sn-15"></a>**SN-15** A codebase AI agents can develop safely: The repository is organised for coding agents (rules per directory, checks, tests, docs that stay true), so that agents can change it without breaking it. | must | [APP-13](#app-13), [AST-07](#ast-07), [AST-11](#ast-11), [CRW-07](#crw-07), [CRW-08](#crw-08), [CST-08](#cst-08), [CST-13](#cst-13), [KNW-13](#knw-13), [QA-01](#qa-01), [QA-02](#qa-02), [QA-03](#qa-03), [QA-04](#qa-04), [QA-05](#qa-05), [QA-06](#qa-06), [QA-07](#qa-07), [QA-13](#qa-13), [QA-16](#qa-16), [QA-18](#qa-18), [QA-19](#qa-19), [QA-20](#qa-20), [SEC-15](#sec-15), [SWM-01](#swm-01), [SWM-16](#swm-16), [SWM-22](#swm-22), [SWM-28](#swm-28), [SWM-37](#swm-37), [SWM-41](#swm-41), [SWM-85](#swm-85), [SWM-88](#swm-88) |
 | <a id="sn-16"></a>**SN-16** Known, current and checkable requirements: What the stack must do is written down properly, kept current with every change, and contradictions between the parts are found and shown. | must | [APP-14](#app-14), [APP-18](#app-18), [MEM-02](#mem-02), [MEM-11](#mem-11), [MEM-13](#mem-13), [QA-06](#qa-06), [QA-08](#qa-08), [QA-09](#qa-09), [QA-10](#qa-10), [QA-11](#qa-11), [QA-12](#qa-12), [QA-13](#qa-13), [QA-14](#qa-14), [QA-15](#qa-15), [SWM-03](#swm-03), [SWM-20](#swm-20), [SWM-35](#swm-35), [SWM-55](#swm-55), [SWM-88](#swm-88) |
-| <a id="sn-17"></a>**SN-17** Agents that work together over time: Agents keep working on the same topics over many runs, refine and reopen each other's work, see each other's artifacts and talk to each other directly, to groups or to all, with the owner reading along. | should | [CRW-05](#crw-05), [MEM-03](#mem-03), [MIS-18](#mis-18), [MIS-19](#mis-19), [MIS-20](#mis-20), [OBS-13](#obs-13), [SWM-01](#swm-01), [SWM-02](#swm-02), [SWM-03](#swm-03), [SWM-04](#swm-04), [SWM-05](#swm-05), [SWM-07](#swm-07), [SWM-08](#swm-08), [SWM-09](#swm-09), [SWM-10](#swm-10), [SWM-100](#swm-100), [SWM-101](#swm-101), [SWM-102](#swm-102), [SWM-103](#swm-103), [SWM-104](#swm-104), [SWM-105](#swm-105), [SWM-106](#swm-106), [SWM-107](#swm-107), [SWM-108](#swm-108), [SWM-109](#swm-109), [SWM-11](#swm-11), [SWM-12](#swm-12), [SWM-13](#swm-13), [SWM-16](#swm-16), [SWM-17](#swm-17), [SWM-18](#swm-18), [SWM-20](#swm-20), [SWM-21](#swm-21), [SWM-22](#swm-22), [SWM-27](#swm-27), [SWM-28](#swm-28), [SWM-32](#swm-32), [SWM-33](#swm-33), [SWM-34](#swm-34), [SWM-37](#swm-37), [SWM-41](#swm-41), [SWM-48](#swm-48), [SWM-49](#swm-49), [SWM-50](#swm-50), [SWM-51](#swm-51), [SWM-52](#swm-52), [SWM-54](#swm-54), [SWM-56](#swm-56), [SWM-60](#swm-60), [SWM-62](#swm-62), [SWM-63](#swm-63), [SWM-64](#swm-64), [SWM-65](#swm-65), [SWM-75](#swm-75), [SWM-86](#swm-86), [SWM-90](#swm-90), [SWM-97](#swm-97), [SWM-98](#swm-98), [SWM-99](#swm-99) |
+| <a id="sn-17"></a>**SN-17** Agents that work together over time: Agents keep working on the same topics over many runs, refine and reopen each other's work, see each other's artifacts and talk to each other directly, to groups or to all, with the owner reading along. | should | [CRW-05](#crw-05), [MEM-03](#mem-03), [MIS-18](#mis-18), [MIS-19](#mis-19), [MIS-20](#mis-20), [OBS-13](#obs-13), [SWM-01](#swm-01), [SWM-02](#swm-02), [SWM-03](#swm-03), [SWM-04](#swm-04), [SWM-05](#swm-05), [SWM-07](#swm-07), [SWM-08](#swm-08), [SWM-09](#swm-09), [SWM-10](#swm-10), [SWM-100](#swm-100), [SWM-101](#swm-101), [SWM-102](#swm-102), [SWM-103](#swm-103), [SWM-104](#swm-104), [SWM-105](#swm-105), [SWM-106](#swm-106), [SWM-107](#swm-107), [SWM-108](#swm-108), [SWM-109](#swm-109), [SWM-11](#swm-11), [SWM-12](#swm-12), [SWM-13](#swm-13), [SWM-16](#swm-16), [SWM-17](#swm-17), [SWM-18](#swm-18), [SWM-20](#swm-20), [SWM-21](#swm-21), [SWM-22](#swm-22), [SWM-27](#swm-27), [SWM-28](#swm-28), [SWM-32](#swm-32), [SWM-33](#swm-33), [SWM-34](#swm-34), [SWM-37](#swm-37), [SWM-41](#swm-41), [SWM-48](#swm-48), [SWM-49](#swm-49), [SWM-50](#swm-50), [SWM-51](#swm-51), [SWM-52](#swm-52), [SWM-54](#swm-54), [SWM-56](#swm-56), [SWM-60](#swm-60), [SWM-62](#swm-62), [SWM-63](#swm-63), [SWM-64](#swm-64), [SWM-65](#swm-65), [SWM-75](#swm-75), [SWM-86](#swm-86), [SWM-90](#swm-90), [SWM-97](#swm-97), [SWM-98](#swm-98), [SWM-99](#swm-99), [TSK-05](#tsk-05), [TSK-07](#tsk-07), [TSK-18](#tsk-18), [TSK-19](#tsk-19) |
 | <a id="sn-18"></a>**SN-18** Told once, not spammed: the owner hears about what needs him or went wrong once, on his phone, and is not flooded with repeats or noise. | should | [CRW-12](#crw-12), [OBS-10](#obs-10), [OBS-11](#obs-11), [OBS-12](#obs-12), [OBS-16](#obs-16), [SHP-04](#shp-04), [SWM-100](#swm-100), [SWM-14](#swm-14), [SWM-39](#swm-39), [SWM-50](#swm-50), [SWM-56](#swm-56), [SWM-59](#swm-59), [SWM-71](#swm-71), [SWM-80](#swm-80) |
+| <a id="sn-19"></a>**SN-19** Give a task, the stack does the rest: The owner gives any task (coding, research, analysis, watching, errands) in one sentence, or with details preset when wanted; the stack works out what done means, plans it, chooses or creates the agents, models and harnesses, runs it once, on a schedule, on an event or after other work, for minutes or for months, and asks only the real decisions. | must | [TSK-01](#tsk-01), [TSK-02](#tsk-02), [TSK-03](#tsk-03), [TSK-04](#tsk-04), [TSK-05](#tsk-05), [TSK-06](#tsk-06), [TSK-07](#tsk-07), [TSK-11](#tsk-11), [TSK-13](#tsk-13), [TSK-14](#tsk-14), [TSK-15](#tsk-15), [TSK-16](#tsk-16) |
+| <a id="sn-20"></a>**SN-20** Work that starts when the world changes: Tasks start by themselves when something happens, such as a news story breaking, mail arriving, code changing, a price moving, a device changing state or another task finishing. | should | [TSK-10](#tsk-10), [TSK-11](#tsk-11), [TSK-12](#tsk-12) |
 
 ## APP App
 
@@ -1361,9 +1437,9 @@ The weekly skill curation shall keep its changes only if the frozen benchmark's 
 If the subscription's usage limit is reached, then the chat shall say so and when it expects to answer again, instead of failing with a bare error.
 
 - Parents: [SN-13](#sn-13), [SN-02](#sn-02)
-- Sources: `docs/REVIEW-2026-10-27.md`, `images/mission-control/guide/14-safety.md`
-- Verified by: inspection: `images/mission-control/server.py`
-- Gap: Missions and builds wait and resume; chat answers with an error (review item 3).
+- Sources: `docs/REVIEW-2026-10-27.md`, `images/mission-control/guide/14-safety.md`, `docs/SWARM-ROADMAP.md`
+- Verified by: test: `tests/test_chat_limit.py::test_a_usage_limit_keeps_the_message_and_says_when_the_limit_resets`, `tests/test_chat_limit.py::test_after_the_reset_the_message_is_answered_by_itself_and_the_owner_is_told`, `tests/test_chat_limit.py::test_a_limit_that_lasts_a_day_stops_and_try_now_moves_the_retry`, `tests/test_chat_limit.py::test_a_normal_answer_about_rate_limits_is_not_a_usage_limit`
+- Gap: The app's chat keeps the message, says when the limit resets, answers by itself afterwards and notifies the owner; on Telegram, Hermes' own gateway answers the limit with its own message, which the stack does not shape.
 
 ### AST-13
 
@@ -1723,7 +1799,7 @@ The gateway shall serve only subscription models (the ChatGPT subscription throu
 - Verified by: test: `tests/test_keys_policy.py::test_every_key_holds_only_subscription_models`, `tests/test_keys_policy.py::test_models_are_served_by_the_gateway`
 - Trace: `config/litellm/config.yaml`, `ops/keys.sh`, `config/litellm/chatgpt-models.yaml`
 - Findings: [FND-05](#fnd-05)
-- Refined by: [BLD-08](#bld-08), [GW-01](#gw-01), [GW-02](#gw-02), [MIS-05](#mis-05), [SWM-02](#swm-02), [SWM-29](#swm-29)
+- Refined by: [BLD-08](#bld-08), [GW-01](#gw-01), [GW-02](#gw-02), [MIS-05](#mis-05), [SWM-02](#swm-02), [SWM-29](#swm-29), [TSK-14](#tsk-14), [TSK-18](#tsk-18)
 
 ### CST-03
 
@@ -1746,7 +1822,7 @@ No service shall be reachable from the internet; PC services shall bind 127.0.0.
 - Sources: `docs/SECURITY.md`, `AGENTS.md`
 - Verified by: inspection: `.semgrep.yml`, `compose/AGENTS.md`
 - Trace: `compose/apps.yaml`, `compose/core.yaml`, `nas/homeassistant/compose.yaml`
-- Refined by: [HSE-09](#hse-09), [PLT-02](#plt-02), [SWM-27](#swm-27), [SWM-77](#swm-77)
+- Refined by: [HSE-09](#hse-09), [PLT-02](#plt-02), [SWM-27](#swm-27), [SWM-77](#swm-77), [TSK-10](#tsk-10), [TSK-19](#tsk-19)
 
 ### CST-05
 
@@ -1864,7 +1940,7 @@ The services in WSL together shall stay within the 10 GB WSL cap, each with a me
 - Trace: `compose/AGENTS.md`, `ops/windows/host-probe.ps1`, `ops/crew.py`
 - Gap: The Windows host drops to about 0.45 GB free with Claude sessions and builds running, and wsl.exe then times out; nothing budgets memory across services (FND-18). Since 2026-10-30 the health board notes full swap and alerts when RAM is short too (This PC), so the limit is seen before reads fail.
 - Findings: [FND-18](#fnd-18)
-- Refined by: [PLT-01](#plt-01), [PLT-21](#plt-21), [SWM-74](#swm-74), [SWM-86](#swm-86)
+- Refined by: [PLT-01](#plt-01), [PLT-21](#plt-21), [SWM-74](#swm-74), [SWM-86](#swm-86), [TSK-08](#tsk-08)
 
 ## CRW Crew
 
@@ -2612,12 +2688,13 @@ Each trigger kind shall have fired at least once end to end, or been replayed fr
 
 **Briefings by the Topic Desk** · must · functional · **implemented**
 
-A briefing run shall have the Topic Desk collect the brief's news, filings and prices, write a structured report with sources in the brief's language, file it under topics/<slug>/reports/YYYY/MM/, skip filing boilerplate, and commit it to the vault.
+A briefing run shall have the Topic Desk collect the brief's news, filings and prices over the window its schedule gives (36 hours for a daily briefing, the time between runs plus 12 hours for a weekly one), search Google News in each query's own language, write a structured report with sources, file it under topics/<slug>/reports/YYYY/MM/, skip filing boilerplate, and commit it to the vault.
 
 - Parents: [SN-01](#sn-01), [SN-10](#sn-10)
 - Sources: `images/desk/AGENTS.md`
-- Verified by: test: `tests/test_desk.py::test_release_text_skips_filing_boilerplate`, `tests/test_runner.py::test_section_parsing`
-- Trace: `images/desk/desk.py`, `ops/desk.sh`
+- Verified by: test: `tests/test_desk.py::test_release_text_skips_filing_boilerplate`, `tests/test_runner.py::test_section_parsing`, `tests/test_runner.py::test_a_briefing_reads_the_news_of_its_schedule_s_window`, `tests/test_desk.py::test_google_news_searches_in_the_query_s_language_over_the_brief_s_window`, `tests/test_desk.py::test_a_weekly_brief_keeps_a_week_of_news_and_a_daily_one_36_hours`, `tests/test_desk.py::test_the_price_note_names_proxies_only_when_a_row_is_one`
+- Trace: `images/desk/desk.py`, `ops/desk.sh`, `ops/missions.py`
+- Findings: [FND-77](#fnd-77), [FND-80](#fnd-80)
 
 ### MIS-12
 
@@ -2655,13 +2732,13 @@ When a mission is created as one-off, the runner shall run it once, deliver its 
 
 **Delivery channels** · must · functional · **implemented**
 
-The runner shall deliver a mission's results on each of its channels (app push, Telegram with buttons into the app, designed HTML e-mail) after every finished run, except that a briefing the desk chose no news for shall stay in the app, and the next full delivery by Telegram and e-mail shall name the days that found nothing.
+The runner shall deliver a mission's results on each of its channels (app push, Telegram with buttons into the app, designed HTML e-mail) after every finished run, except that a briefing the desk chose no news for shall stay in the app, and the next full delivery by Telegram and e-mail shall name the earlier days that found nothing; every e-mail sent or failed shall be recorded in the notification log and the run's timeline.
 
 - Parents: [SN-01](#sn-01), [SN-06](#sn-06)
 - Sources: `images/mission-control/guide/07-delivery.md`
-- Verified by: test: `tests/test_quiet_runs.py::test_a_briefing_with_no_news_chosen_is_empty_and_prices_alone_do_not_count`, `tests/test_quiet_runs.py::test_an_empty_run_is_not_sent_and_the_next_full_one_names_its_day`, `tests/test_quiet_runs.py::test_the_briefing_run_asks_whether_the_report_is_empty`
+- Verified by: test: `tests/test_desk.py::test_the_email_puts_the_headline_in_its_header_and_fits_a_phone`, `tests/test_quiet_runs.py::test_a_briefing_with_no_news_chosen_is_empty_and_prices_alone_do_not_count`, `tests/test_quiet_runs.py::test_an_empty_run_is_not_sent_and_the_next_full_one_names_its_day`, `tests/test_quiet_runs.py::test_every_email_outcome_is_recorded`, `tests/test_quiet_runs.py::test_the_briefing_run_asks_whether_the_report_is_empty`
 - Trace: `ops/mission_extras.py`, `ops/missions.py`
-- Findings: [FND-60](#fnd-60)
+- Findings: [FND-60](#fnd-60), [FND-77](#fnd-77), [FND-78](#fnd-78), [FND-79](#fnd-79)
 
 ### MIS-16
 
@@ -2719,6 +2796,18 @@ The owner shall be able to add, edit and forget journal lines on the agent's Mem
 - Parents: [SN-17](#sn-17), [SN-02](#sn-02)
 - Sources: `images/mission-control/guide/18-crew.md`
 - Verified by: test: `tests/test_journal.py::test_notes_edits_and_forgetting_are_commits`, `tests/test_journal.py::test_the_curator_folds_old_entries_and_archives_them`
+
+### MIS-21
+
+**Job openings from the federal job board** · should · functional · **implemented**
+
+A job hunt shall search the Bundesagentur für Arbeit's job board for current openings by job title or skill, place and radius, and read an opening's full ad by its reference number; the research scout shall have these as tools on its isolated web container, and a job-hunt briefing shall carry such searches as a source and report each opening once.
+
+- Parents: [SN-01](#sn-01), [SN-10](#sn-10)
+- Sources: `Bundesagentur für Arbeit Jobsuche API (rest.arbeitsagentur.de/jobboerse/jobsuche-service)`
+- Verified by: test: `tests/test_jobs.py::test_the_scout_finds_openings_near_a_place_with_their_employer_place_and_link`, `tests/test_jobs.py::test_a_full_ad_is_read_by_its_reference_and_labelled_untrusted`, `tests/test_jobs.py::test_the_scout_alone_gets_the_jobs_tools_on_the_isolated_fetch_container`, `tests/test_jobs.py::test_a_job_hunt_brief_collects_each_opening_once_as_its_own_event`
+- Trace: `images/fetch/jobs.py`, `images/fetch/entrypoint.sh`, `images/desk/desk.py`, `ops/missions.py`, `prompts/desk.md`, `config/litellm/config.yaml`, `ops/keys.sh`
+- Findings: [FND-80](#fnd-80)
 
 ## OBS Observability
 
@@ -2883,15 +2972,15 @@ Each agent's page shall show its payoff (runs, success, time, model calls, token
 
 ### OBS-16
 
-**One notification policy** · should · quality · **violated**
+**One notification policy** · should · quality · **implemented**
 
-Every notification the stack sends (push, Telegram) shall go through one path that applies the same once-per-issue rule and the owner's notification preferences.
+Every notification the stack sends (push, Telegram) shall go through one path that applies the same once-per-issue rule, the owner's preferences per kind of message and channel, and quiet hours in which only approvals go out and Telegram messages wait to be sent as one when the quiet hours end; each decision, and each report e-mail sent or failed, shall be logged and shown in the app.
 
 - Parents: [SN-18](#sn-18)
-- Sources: `docs/REVIEW-2026-10-27.md`
-- Verified by: inspection: `ops/notify.sh`, `ops/missions.py`
-- Gap: Telegram is sent from seven files (re-checked 2026-10-30, FND-70; memory_review.py, skills_sync.py, vault-ingest.sh and vault-lint.sh now go through notify.sh); notify.sh, missions.py and mission_extras.py (deliveries, approvals), desk.sh, digest.py, upgrade_check.py and swarm_client.py each send their own; only the health board applies once-per-issue, and there are no notification preferences (FND-17).
-- Findings: [FND-17](#fnd-17), [FND-70](#fnd-70)
+- Sources: `docs/REVIEW-2026-10-27.md`, `docs/SWARM-ROADMAP.md`
+- Verified by: test: `tests/test_notify.py::test_preferences_decide_per_category_and_approvals_always_go_out`, `tests/test_notify.py::test_quiet_hours_hold_telegram_and_send_it_as_one_message_afterwards`, `tests/test_notify.py::test_the_same_key_goes_out_once_a_day_and_every_decision_is_logged`, `tests/test_notify.py::test_a_push_from_the_activity_feed_follows_the_preferences`, `tests/test_notify.py::test_nothing_but_the_notification_path_talks_to_telegram`, `tests/test_quiet_runs.py::test_every_email_outcome_is_recorded`
+- Trace: `ops/notify.py`, `ops/notify.sh`, `ops/missions.py`, `ops/mission_extras.py`
+- Findings: [FND-17](#fnd-17), [FND-70](#fnd-70), [FND-78](#fnd-78)
 - Refined by: [SWM-59](#swm-59)
 
 ## PHN AI phone
@@ -3196,11 +3285,13 @@ Every night at 03:30 the backup job shall write an age-encrypted archive of the 
 
 **An unreadable file does not stop the backup** · must · functional · **implemented**
 
-If a part of /srv/ai cannot be read by the backup user (the AI phone's ADB key), then the backup shall skip it and still complete.
+If a file under /srv/ai cannot be read by the backup user, then the backup shall skip it, name it in its log and still complete; any other copy error shall fail the backup.
 
 - Parents: [SN-09](#sn-09), [SN-13](#sn-13)
-- Sources: `incident 2026-10-29: backup failed on /srv/ai/phone/home`
-- Verified by: inspection: `ops/backup.sh`
+- Sources: `incident 2026-10-29: backup failed on /srv/ai/phone/home`, `incident 2026-10-31: backup failed on a container's file in /srv/ai/workbench`
+- Verified by: test: `tests/test_backup.py::test_an_unreadable_file_is_skipped_and_named_and_the_backup_goes_on`, `tests/test_backup.py::test_any_other_copy_error_still_fails_the_backup`
+- Trace: `ops/backup.sh`, `ops/backup-copy.sh`
+- Findings: [FND-76](#fnd-76)
 
 ### PLT-14
 
@@ -3529,13 +3620,13 @@ Every HTTP route of Mission Control and of the run record's ingest shall have a 
 
 **What the documents name exists** · should · process · **implemented**
 
-Every file path, make target, app screen and relative link that a Markdown document in the repository names shall exist, and docs/README.md shall list every document under docs/ as current guidance or a record; the tests shall fail on one that does not.
+Every file path, make target, app screen and relative link that a Markdown document in the repository names shall exist, every make recipe shall call its interpreter and a repository file that exists, and docs/README.md shall list every document under docs/ as current guidance or a record; the tests shall fail on one that does not.
 
 - Parents: [SN-15](#sn-15)
 - Sources: `docs/REVIEW-2026-10-30.md`
-- Verified by: test: `tests/test_docs.py::test_every_path_make_target_screen_and_link_a_document_names_exists`, `tests/test_docs.py::test_the_readme_and_the_index_point_at_what_is_current`
+- Verified by: test: `tests/test_docs.py::test_every_path_make_target_screen_and_link_a_document_names_exists`, `tests/test_repo_docs.py::test_every_make_recipe_calls_a_file_that_exists`, `tests/test_docs.py::test_the_readme_and_the_index_point_at_what_is_current`
 - Trace: `README.md`, `docs/README.md`
-- Findings: [FND-71](#fnd-71)
+- Findings: [FND-71](#fnd-71), [FND-81](#fnd-81)
 
 ## RES Research
 
@@ -5476,6 +5567,292 @@ An agent's own write to another agent's artifact (evidence, a link from it, an u
 - Trace: `images/swarm/ledger.py`, `images/swarm/swarm.py`, `ops/coach.py`, `ops/swarm_client.py`, `images/mission-control/teamroom.py`, `images/mission-control/web/static/swarm.js`
 - Rationale: The owner's rule: each agent is responsible for its own lane first and for the team's goals, and gets involved in another's only with a clear, valuable contribution its owner would not see or has missed. Broadcast coordination costs every agent every message and the MAST study finds a third of multi-agent failures between agents; so a step in is rare, reasoned, new and judged, and an agent whose steps do not help learns to stay out.
 
+## TSK Task engine
+
+| Phase | | Requirements |
+|---|---|---|
+| 0 | Headroom | - |
+| 1 | Task kernel | [TSK-01](#tsk-01), [TSK-02](#tsk-02), [TSK-03](#tsk-03), [TSK-04](#tsk-04), [TSK-20](#tsk-20) |
+| 2 | Plan graph and durable steps | [TSK-05](#tsk-05), [TSK-06](#tsk-06), [TSK-07](#tsk-07), [TSK-08](#tsk-08), [TSK-09](#tsk-09) |
+| 3 | Event fabric | [TSK-10](#tsk-10), [TSK-11](#tsk-11), [TSK-12](#tsk-12) |
+| 4 | Self-staffing | [TSK-13](#tsk-13), [TSK-14](#tsk-14), [TSK-15](#tsk-15), [TSK-16](#tsk-16), [TSK-17](#tsk-17) |
+| 5 | Reach | [TSK-18](#tsk-18), [TSK-19](#tsk-19) |
+
+### Task kernel
+
+#### TSK-01
+
+**One task for every kind of work** · must · functional · **implemented**
+
+The stack shall represent every piece of work as a task with its goal, definition of done, budget, deadline, autonomy level and rhythm (once, on a schedule, on an event, or after other tasks finish), and chat, missions, builds and Claude tasks shall each create one.
+
+- Parents: [SN-19](#sn-19)
+- Sources: `owner 2026-10-31: the user should just give a task and the AI Stack figures out the rest`, `docs/SWARM-ROADMAP.md`
+- Verified by: test: `tests/test_tasks.py::test_every_door_s_work_becomes_a_task_with_every_field`
+- Phase: 1 Task kernel
+- Acceptance: Test: a task created from each door carries every field; the task list holds every run of the last 7 days.
+- Trace: `ops/tasks.py`, `ops/missions.py`
+
+#### TSK-02
+
+**Give a task in one sentence** · must · interface · **implemented**
+
+Mission Control shall start a task from one sentence in a single composer, and its deliberate mode shall show the task's fields filled with their presets before the task starts.
+
+- Parents: [SN-19](#sn-19), [SN-06](#sn-06)
+- Sources: `owner 2026-10-31: give more deliberate tasks with details preset, but just giving a task is the usual way`, `docs/SWARM-ROADMAP.md`
+- Verified by: test: `tests/test_tasks.py::test_a_sentence_gets_a_specification_and_reaches_its_door`, `tests/test_tasks.py::test_the_owner_s_presets_are_kept_and_show_me_the_plan_first_waits`
+- Phase: 1 Task kernel
+- Acceptance: Test: a sentence becomes a task with every field set, and a preset changed in deliberate mode is kept. Checked on screen at 375 px.
+- Trace: `images/mission-control/web/static/app.js`, `images/mission-control/server.py`, `images/mission-control/guide/20-tasks.md`
+
+#### TSK-03
+
+**The stack writes the specification** · must · functional · **implemented**
+
+Before a task's first step, the intake agent shall write its specification (the goal, a checkable definition of done, the plan, and the agents it proposes with the reason for each), ask at most two questions and only when the goal cannot be planned without them, and wait for the owner only where the task's autonomy level asks for it.
+
+- Parents: [SN-19](#sn-19), [SN-02](#sn-02)
+- Sources: `docs/SWARM-ROADMAP.md`, `Blitzy: requirements into a specification and an action plan, checked against the result`
+- Verified by: test: `tests/test_tasks.py::test_at_most_two_questions_and_answers_plan_it_again`, `tests/test_tasks.py::test_a_coding_task_without_a_repository_asks_which_one`, `tests/test_tasks.py::test_a_failed_intake_says_why_and_can_be_planned_again`, `tests/test_tasks.py::test_the_intake_prompt_names_every_agent_and_repository_and_the_app_cannot_be_used_from_the_ai_phone`, `eval/tasks-v1.yaml`, `eval/results/20261031-140852-tasks-gate.json`
+- Phase: 1 Task kernel
+- Acceptance: Replay: 20 recorded one-sentence tasks (coding, research, analysis, watching) each get a specification with a checkable definition of done; no task gets more than two questions.
+- Trace: `ops/tasks.py`, `prompts/intake.md`, `config/agents.yaml`, `ops/keys.sh`
+
+#### TSK-04
+
+**One board for every task** · should · interface · **implemented**
+
+The app shall list the tasks under Waiting on you, Running, Scheduled and Done, each with its plan, the live tree of its agents, its use of the subscriptions and the reason each agent was chosen; a scheduled task shall show when its last run ended, what it produced, and when the next run comes.
+
+- Parents: [SN-19](#sn-19), [SN-07](#sn-07)
+- Sources: `docs/SWARM-ROADMAP.md`
+- Verified by: test: `tests/test_tasks.py::test_after_another_task_waits_until_that_one_is_done`, `tests/test_tasks.py::test_a_weekly_briefing_task_gets_its_content_not_the_plan_email_when_asked_and_shows_its_runs`
+- Phase: 1 Task kernel
+- Acceptance: Test: a running two-agent task appears under Running with both agents in its tree; checked on screen at 375 px.
+- Trace: `images/mission-control/web/static/app.js`
+- Findings: [FND-77](#fnd-77)
+
+### Plan graph and durable steps
+
+#### TSK-05
+
+**A plan graph for every task** · must · functional · **implemented**
+
+The Conductor shall turn a specification into a graph of steps with dependencies and parallel branches, stored with the task in the runner's task database, and a step shall start only when every step it depends on has finished; a plan with a cycle, or with a step no agent can do, shall be refused.
+
+- Parents: [SN-19](#sn-19), [SN-17](#sn-17)
+- Sources: `docs/SWARM-ROADMAP.md`, `Anthropic dynamic workflows (beta, 2026-10-09): the lead model writes the orchestration`, [DEC-35](#dec-35)
+- Verified by: test: `tests/test_conductor.py::test_branches_run_together_the_join_after_both_and_a_cycle_is_refused`, `tests/test_tasks.py::test_a_one_off_task_with_several_agents_goes_to_the_conductor_as_a_plan_graph`, `tests/test_conductor.py::test_the_owner_can_cancel_and_only_multi_agent_one_off_work_goes_to_the_conductor`
+- Phase: 2 Plan graph and durable steps
+- Acceptance: Test: a plan with two parallel branches and a joining step runs the branches together and the join after both; a plan with a cycle is refused.
+- Trace: `ops/conductor.py`, `ops/tasks.py`, `prompts/intake.md`
+
+#### TSK-06
+
+**Steps survive restarts** · must · quality · **implemented**
+
+Each step shall be recorded with its inputs, outputs and resume point before and after it runs, so that a restart resumes the task at its first unfinished step and no finished step runs twice.
+
+- Parents: [SN-13](#sn-13), [SN-19](#sn-19)
+- Sources: [SWM-19](#swm-19), `docs/SWARM-ROADMAP.md`
+- Verified by: test: `tests/test_conductor.py::test_a_restart_runs_the_interrupted_step_again_and_no_finished_step_twice`, `tests/test_conductor.py::test_a_claude_step_waits_for_its_claude_task_also_across_a_restart`, `tests/test_conductor.py::test_a_step_that_fails_twice_fails_its_task_and_a_limit_is_waited_out`, `tests/test_conductor.py::test_a_step_cut_off_by_the_runner_stopping_is_interrupted_not_failed`, `tests/test_conductor.py::test_a_claude_task_cut_off_by_the_runner_stopping_is_queued_again`, `eval/results/20261031-152501-conductor-gate.json`
+- Phase: 2 Plan graph and durable steps
+- Acceptance: Test: the runner is killed during step 3 of a five-step task; after the restart step 3 runs again, steps 1 and 2 ran once, and the task finishes.
+- Trace: `ops/conductor.py`
+
+#### TSK-07
+
+**Any step on any harness** · must · functional · **partial**
+
+The Conductor shall run each step on the harness and model its plan names, through the one adapter contract every harness implements.
+
+- Parents: [SN-19](#sn-19), [SN-17](#sn-17)
+- Sources: [SWM-02](#swm-02), [SWM-28](#swm-28)
+- Verified by: test: `tests/test_conductor.py::test_each_step_s_prompt_carries_the_results_it_waits_for`, `tests/test_conductor.py::test_a_claude_step_waits_for_its_claude_task_also_across_a_restart`
+- Phase: 2 Plan graph and durable steps
+- Acceptance: Test: one task whose steps run on Hermes, Claude Code and OpenCode finishes, each step through its adapter.
+- Trace: `ops/conductor.py`, `prompts/shared.md`
+- Gap: Hermes (a turn of the agent's profile), Claude Code (a read-only Claude task) and Python (a call on the agent's own key) have adapters, and the phase 2 gate (eval/results/20261031-152501-conductor-gate.json) ran one task across those three; OpenCode has none yet (SWM-28).
+
+#### TSK-08
+
+**Steps start only with headroom** · must · quality · **implemented**
+
+The Conductor shall start a step only when the PC has the memory its harness needs available (0.25 GB for a model call, 0.5 GB for a Hermes turn, 0.75 GB for Claude Code, by Windows' available memory) and the subscription the step uses is below its usage limit, and shall otherwise queue the step and show why it waits.
+
+- Parents: [SN-13](#sn-13), [CST-14](#cst-14)
+- Sources: [AST-12](#ast-12), `docs/SWARM-ROADMAP.md`
+- Verified by: test: `tests/test_conductor.py::test_a_step_starts_only_with_headroom_and_says_what_it_waits_for`
+- Phase: 2 Plan graph and durable steps
+- Acceptance: Test: with available memory stubbed below a step's need, the ready step stays queued with the reason shown, and starts when memory returns.
+- Trace: `ops/conductor.py`, `ops/windows/host-probe.ps1`
+- Rationale: The first rule asked 1.5 GB free for every step and held the phase 2 gate at 0.7 GB while the owner played a game; a step asks for what its harness starts (owner, 31 Oct 2026: "You can make due with less RAM").
+
+#### TSK-09
+
+**One trace per task** · must · quality · **partial**
+
+Every agent run, model call and tool call of a task shall be part of one trace for that task, in the shape of the OpenTelemetry GenAI conventions (invoke_agent with chat and execute_tool spans under it), shown in Phoenix and in the task's run view.
+
+- Parents: [SN-07](#sn-07)
+- Sources: `OpenTelemetry GenAI semantic conventions (development status, 2026)`, `docs/SWARM-ROADMAP.md`
+- Verified by: test: `tests/test_conductor.py::test_one_trace_the_task_s_run_holds_each_step_s_run`, `tests/test_runtime.py::test_a_hermes_run_without_a_ref_joins_the_live_step_of_its_agent`
+- Phase: 2 Plan graph and durable steps
+- Acceptance: Test: a task with steps on two harnesses yields one trace whose spans name every agent run, model call and tool call.
+- Trace: `ops/conductor.py`, `ops/runtime.py`, `images/mission-control/runrecord.py`
+- Gap: The task is one run in the runtime record, each step a run inside it and the agents' own runs and model calls inside the steps (#/live/task:<id>, Live trace on the task; a Hermes run, which can't carry its parent in, joins the live step of its agent); a Claude step links its Claude task instead of nesting it, and the trace is not yet exported to Phoenix in the OpenTelemetry GenAI shape.
+
+### Event fabric
+
+#### TSK-10
+
+**One event bus** · must · functional · **partial**
+
+The stack shall collect events from news searches and feeds, Forgejo and GitHub activity (read on a schedule, since nothing may reach the PC from outside), incoming mail, Home Assistant state changes, the calendar, watched files, prices, filings, schedules and finished tasks into one event log, each with its source, time and content, and shall show for each source when it last looked, what it found, or why it is off.
+
+- Parents: [SN-20](#sn-20), [CST-04](#cst-04)
+- Sources: `owner 2026-10-31: trigger on different kinds of events, like a particular news event breaking`, `docs/SWARM-ROADMAP.md`
+- Verified by: test: `tests/test_events.py::test_the_web_sources_baseline_first_then_fire_their_rules`, `tests/test_events.py::test_the_local_sources_each_fire`, `tests/test_events.py::test_mail_and_forgejo_are_read_only_while_a_rule_asks_and_a_baseline_is_not_new`
+- Phase: 3 Event fabric
+- Acceptance: Test: a sample event from each source lands in the event log with its source, time and content.
+- Trace: `ops/events.py`, `images/desk/desk.py`, `ops/mission_extras.py`, `ops/tasks.py`
+- Gap: Every source but the calendar is in (ops/events.py); the stack has no calendar connection yet. The web is read through the desk container on the isolated network, and the web, Forgejo and the inbox only while a rule asks for them.
+
+#### TSK-11
+
+**Rules that start tasks** · must · functional · **implemented**
+
+When a trigger rule's condition matches an event, the stack shall start a task from the rule's template at most once per cooldown, after a model confirms the event is the one the rule describes where the rule asks for it, and shall record each firing with the event that caused it.
+
+- Parents: [SN-20](#sn-20), [SN-19](#sn-19)
+- Sources: `docs/SWARM-ROADMAP.md`
+- Verified by: test: `tests/test_events.py::test_a_rule_waits_out_its_cooldown_runs_its_check_and_records_every_firing`, `tests/test_events.py::test_rules_are_checked_when_saved_and_schedules_come_due`
+- Phase: 3 Event fabric
+- Acceptance: Test: two matching events within the cooldown start one task; a rule with the model check skips an event the check rejects; every firing names its event.
+- Trace: `ops/events.py`, `prompts/intake.md`, `images/mission-control/web/static/app.js`
+
+#### TSK-12
+
+**Breaking news** · should · functional · **implemented**
+
+When at least three independent sources report the same new story on a watched subject within 30 minutes, the event bus shall raise one breaking-news event for that story, and later reports of the story shall attach to that event.
+
+- Parents: [SN-20](#sn-20)
+- Sources: `owner 2026-10-31: like a particular news event breaking`
+- Verified by: test: `tests/test_events.py::test_breaking_news_is_three_publishers_on_one_new_story_within_30_minutes`
+- Phase: 3 Event fabric
+- Acceptance: Test: three sources on one story within 30 minutes raise one event, a fourth attaches to it, and two sources raise none.
+- Trace: `ops/events.py`
+
+### Self-staffing
+
+#### TSK-13
+
+**What each agent can do, measured** · must · functional · **implemented**
+
+Every agent card, harness and model shall carry its skills, tools and limits and its measured success, time and usage per task type, updated after each task.
+
+- Parents: [SN-19](#sn-19), [SN-08](#sn-08)
+- Sources: `docs/SWARM-ROADMAP.md`
+- Verified by: test: `tests/test_staffing.py::test_judged_tasks_credit_each_agent_and_measure_it`
+- Phase: 4 Self-staffing
+- Acceptance: Test: a finished task updates the measured success, time and usage of each agent, harness and model it used, for its task type.
+- Trace: `ops/staffing.py`, `config/agents.yaml`
+
+#### TSK-14
+
+**Routing by measured results** · should · functional · **partial**
+
+The Conductor shall choose each step's agent, model and harness from the measured results for the step's task type, and shall fall back to the next choice when a subscription reaches its usage limit.
+
+- Parents: [SN-19](#sn-19), [CST-02](#cst-02)
+- Sources: `Vals Router Index (2026-10-20): no router beat the best single model on long agent tasks`, `docs/SWARM-ROADMAP.md`
+- Verified by: test: `tests/test_staffing.py::test_a_step_goes_to_the_agent_that_did_that_kind_best_or_away_from_a_limit`, `tests/test_staffing.py::test_the_conductor_routes_a_step_before_its_first_attempt_and_says_why`
+- Phase: 4 Self-staffing
+- Acceptance: Replay: routing by measured results scores at least as well as the fixed assignment on the replay sets; with one subscription stubbed at its limit, steps go to the next choice.
+- Trace: `ops/staffing.py`, `ops/conductor.py`
+- Gap: The Conductor routes a step before its first attempt to an agent sharing the planned one's role that met that kind of task at least 15 points more often (from 3 judged tasks on), or away from a subscription at its limit, and writes why on the step; whether routing beats the fixed assignment can only be measured once enough tasks are judged.
+
+#### TSK-15
+
+**Agents made for the task** · must · functional · **implemented**
+
+When no agent card fits a step, the Conductor shall write a temporary agent (its prompt, tools, model, harness and budget) within the grants the task's autonomy level allows, run it under the existing keys, grants and sandbox, and end it with its task.
+
+- Parents: [SN-19](#sn-19), [SN-05](#sn-05)
+- Sources: `owner 2026-10-31: even invent new agents for this task specifically`, `docs/SWARM-ROADMAP.md`, [DEC-34](#dec-34)
+- Verified by: test: `tests/test_staffing.py::test_a_temporary_agent_stays_within_its_grants_and_ends_with_its_task`, `tests/test_staffing.py::test_a_step_no_agent_fits_gets_a_temporary_agent_that_ends_with_the_task`, `tests/test_tasks.py::test_an_agent_the_intake_names_that_does_not_exist_gets_a_temporary_agent`, `docs/SECURITY.md`
+- Phase: 4 Self-staffing
+- Acceptance: Test: a step no card fits gets a temporary agent whose grants are inside the task's autonomy level; a grant outside it is refused; the agent is gone when its task ends. Security review before the phase ships.
+- Trace: `ops/staffing.py`, `ops/conductor.py`, `prompts/intake.md`
+
+#### TSK-16
+
+**Good temporary agents become permanent** · should · functional · **implemented**
+
+A temporary agent that served at least three tasks that met their definition of done shall become a Coach proposal, replay-tested like any agent change, and every agent design shall stay in an archive with its scores.
+
+- Parents: [SN-08](#sn-08), [SN-19](#sn-19)
+- Sources: `Automated Design of Agentic Systems (Hu, Lu, Clune; ICLR 2025)`, `docs/SWARM-ROADMAP.md`
+- Verified by: test: `tests/test_staffing.py::test_a_design_is_archived_reused_by_name_and_proposed_after_three_met_tasks`
+- Phase: 4 Self-staffing
+- Acceptance: Test: the third successful task of a temporary agent creates one Coach proposal; the archive keeps the design with its scores.
+- Trace: `ops/staffing.py`
+
+#### TSK-17
+
+**Each task judged against its definition of done** · must · quality · **implemented**
+
+The Checker shall judge each finished task against its definition of done, and the stack shall keep a daily history of success, time, tokens, usage headroom, queue length and the owner's corrections per agent, model and task type.
+
+- Parents: [SN-07](#sn-07), [SN-08](#sn-08)
+- Sources: [MIS-16](#mis-16), `docs/SWARM-ROADMAP.md`
+- Verified by: test: `tests/test_staffing.py::test_a_finished_task_is_judged_point_by_point_and_a_build_by_what_happened`, `tests/test_staffing.py::test_judged_tasks_credit_each_agent_and_measure_it`
+- Phase: 4 Self-staffing
+- Acceptance: Test: a finished task gets a verdict against its definition of done, and the day's history row of each agent, model and task type it used changes.
+- Trace: `ops/staffing.py`, `prompts/shared.md`
+
+### Reach
+
+#### TSK-18
+
+**More harnesses at no cost** · could · functional · **planned**
+
+The stack shall offer Codex CLI on the ChatGPT subscription as a harness, and shall add a further harness only if running it costs nothing.
+
+- Parents: [SN-17](#sn-17), [CST-02](#cst-02)
+- Sources: `docs/SWARM-ROADMAP.md`
+- Verified by: -
+- Phase: 5 Reach
+- Acceptance: Test: the adapter conformance suite (SWM-28) passes for Codex CLI.
+
+#### TSK-19
+
+**Agents outside the stack through A2A** · could · interface · **proposed**
+
+The swarm shall accept A2A tasks from agents outside the stack on the tailnet, each outside agent under its own key and grants.
+
+- Parents: [SN-17](#sn-17), [CST-04](#cst-04)
+- Sources: `docs/SWARM-ROADMAP.md`, `A2A protocol v1.0 (Linux Foundation, 2026)`
+- Verified by: -
+- Phase: 5 Reach
+- Rationale: The swarm already speaks A2A on the Docker network; letting outside agents in is an exposure the owner decides.
+
+### Task kernel
+
+#### TSK-20
+
+**What the Conductor may do without asking** · must · constraint · **partial**
+
+The Conductor shall plan, staff and run tasks and create temporary agents within read-only and sandboxed grants without the owner's approval, and shall ask before it messages other people, spends money, deploys code, deletes data or acts on the AI phone.
+
+- Parents: [SN-02](#sn-02), [SN-05](#sn-05)
+- Sources: `docs/SWARM-ROADMAP.md`, [DEC-34](#dec-34)
+- Verified by: test: `tests/test_tasks.py::test_a_sentence_gets_a_specification_and_reaches_its_door`, `tests/test_tasks.py::test_the_owner_s_presets_are_kept_and_show_me_the_plan_first_waits`
+- Phase: 1 Task kernel
+- Gap: Phase 1 holds it through the doors (a task starts when planned; builds wait for the deploy tap, purchases, the AI phone and Gmail's Trash for the owner's OK); temporary agents and their grants come in phase 4 (TSK-15).
+
 ## Decisions
 
 | Decision | Date | What | Supersedes |
@@ -5513,6 +5890,8 @@ An agent's own write to another agent's artifact (evidence, a link from it, an u
 | <a id="dec-31"></a>**DEC-31** The stack's memories as one system | 2026-10-30 | The owner asked for an overview of every memory system, a coherent design, the wikis' bubble map on the Wiki tab and where it is seen which agent uses which wiki, and asked whether one wiki should hold all the others. The review found ten stores (vault notes, vault wiki, agent wikis, journals, mission notes, Hindsight, the Ledger, skills, run records, the search index) with overlaps and no curator for three. Following CoALA (episodic, semantic, procedural), the LLM-wiki pattern (raw sources, one curator, ingest, query, lint) and scoped stores: no wiki that merges all the others (it would mix topics and owners), the vault wiki as the top layer with hub pages for shared subjects, one writer per wiki, reading scoped by the card, Hindsight for personal facts only, and every store with a limit, a curator and a view. Part 1 (built, "Yes, build part 1"): the inventory, the Memory section on Stack, the wikis' map and who reads and writes which wiki. Part 2 (built, "Yes, build part 2"): one opening per run with the swarm's pack inside, the working state in the journal, reading scoped by the card, one writer per wiki folding in helps, no journal copies in Hindsight (MEM-03 to MEM-06). Part 3 (built, "Yes, build part 3"): the Librarian (MEM-08, MEM-12, DEC-32). Part 4 (built, "Yes, build part 4"): prompts as files, tested (MEM-11, DEC-33). | - |
 | <a id="dec-32"></a>**DEC-32** The Librarian tidies every wiki and adds nothing | 2026-10-30 | The owner said "Yes, build part 3". The memory curator, which already tidies the journals and long-term memory, becomes the Librarian, with no new agent or key: once a week it lints every agent wiki, marks pages not confirmed for 90 days as stale (agent wikis hold news; the vault wiki keeps its own 180-day rule), and asks one model call per wiki which candidate pairs are one subject and which claims contradict. It is the one change to a wiki besides its writer's (MEM-03), and it only rearranges: a merge keeps every link of both pages and leaves a stub that points on, a contradiction is a callout with both sources already on the page, and nothing is deleted except its own hub pages whose subject is no longer shared. Hubs are the top layer the owner asked about: one vault-wiki page per subject two or more wikis share, linking each wiki's page, instead of one wiki holding all the others. It also runs qmd cleanup. Each pass is one vault commit; a store over its limit for 8 days alerts its curator. | - |
 | <a id="dec-33"></a>**DEC-33** Prompts are files, versioned by their text and changed only after a replay | 2026-10-30 | The owner said "Yes, build part 4". The 42 agent prompts of ops/ and the Hermes configure scripts moved verbatim into prompts/<owner>.md, one file per card (or service, or shared.md), each a marked section; the code loads them by name and shell scripts render them. A prompt's version is the sha of its text, so it can never be forgotten or bumped wrongly; each send records it, and the card hash follows the file. A change is accepted by a replay instead of a reviewer's taste: the prompt's last live cases (or committed cases), the approved and the new text on the agent's own model, a pairwise judge in random order, passing when the new text is valid as often and the judge prefers the old answer no more often. The verbatim move is each prompt's baseline, accepted only as its first record. The swarm's agent changes (SWM-18) keep their own scored replay of proposals. The desk's, the scout's and the privacy check's prompts followed ("Yes, do MEM-13"): their containers read prompts/ through a read-only mount (MEM-13). | - |
+| <a id="dec-34"></a>**DEC-34** What the stack may do without asking | 2026-10-31 | The owner accepted the roadmap's proposed default ("Accept the default"). Without asking, the stack plans, staffs and runs tasks and may create temporary agents within read-only and sandboxed grants; it asks before it messages other people, spends money, deploys code, deletes data or acts on the AI phone. A task given in a sentence starts as soon as it is planned unless the owner chose "Show me the plan first"; every door keeps its own approvals (the deploy tap, purchases, the AI phone, Gmail's Trash). | - |
+| <a id="dec-35"></a>**DEC-35** The plan graph lives with the tasks, not in the Ledger | 2026-10-31 | Building phase 2 ("Start phase 2"), the Conductor's plan graph and step journal went into the runner's task database (task_steps beside tasks, in the nightly backup) instead of the swarm's Ledger, as the roadmap first said. The Ledger's task model belongs to the idea-to-build flow (one plan per idea, builders claim its tasks) in a service capped at 256 MB, while a step has to be recorded in the same transaction that starts it, so a restart can never run a finished step again. The trace is the runtime record's (one run per task, a run per step inside it). A one-off research, analysis or errand task whose plan uses two or more agents goes to the Conductor; every other task keeps its door. | - |
 
 ## Test index
 
@@ -5541,6 +5920,8 @@ An agent's own write to another agent's artifact (evidence, a link from it, an u
 | `tests/test_app_routes.py::test_view_scripts_load_before_app_js_and_take_no_arguments` | [APP-02](#app-02) |
 | `tests/test_app_timeouts.py::test_a_poll_that_stalls_is_retried_and_a_finished_request_still_arrives` | [APP-23](#app-23) |
 | `tests/test_app_timeouts.py::test_a_request_that_never_answers_ends_with_a_clear_message_instead_of_spinning` | [APP-23](#app-23) |
+| `tests/test_backup.py::test_an_unreadable_file_is_skipped_and_named_and_the_backup_goes_on` | [PLT-13](#plt-13) |
+| `tests/test_backup.py::test_any_other_copy_error_still_fails_the_backup` | [PLT-13](#plt-13) |
 | `tests/test_builds.py::test_a_clash_only_in_the_generated_requirements_is_drawn_again` | [BLD-21](#bld-21) |
 | `tests/test_builds.py::test_a_rate_limited_reviewer_hands_over_to_the_other_engine` | [BLD-10](#bld-10) |
 | `tests/test_builds.py::test_an_old_build_branch_gets_todays_main` | [BLD-05](#bld-05) |
@@ -5566,6 +5947,10 @@ An agent's own write to another agent's artifact (evidence, a link from it, an u
 | `tests/test_charts.py::test_every_chart_moves_and_zooms_through_one_helper_with_one_finger` | [APP-22](#app-22) |
 | `tests/test_charts.py::test_names_never_cover_each_other_and_the_busiest_keep_theirs` | [APP-22](#app-22) |
 | `tests/test_charts.py::test_who_works_on_what_names_every_dot_and_hides_closed_ideas_until_asked` | [APP-22](#app-22) |
+| `tests/test_chat_limit.py::test_a_limit_that_lasts_a_day_stops_and_try_now_moves_the_retry` | [AST-12](#ast-12) |
+| `tests/test_chat_limit.py::test_a_normal_answer_about_rate_limits_is_not_a_usage_limit` | [AST-12](#ast-12) |
+| `tests/test_chat_limit.py::test_a_usage_limit_keeps_the_message_and_says_when_the_limit_resets` | [AST-12](#ast-12) |
+| `tests/test_chat_limit.py::test_after_the_reset_the_message_is_answered_by_itself_and_the_owner_is_told` | [AST-12](#ast-12) |
 | `tests/test_checker.py::test_a_check_must_be_complete_and_name_what_exists` | [SWM-44](#swm-44), [SWM-45](#swm-45) |
 | `tests/test_checker.py::test_a_failing_proposer_pauses_itself_once` | [SWM-71](#swm-71) |
 | `tests/test_checker.py::test_a_log_count_can_read_a_host_units_journal` | [SWM-44](#swm-44) |
@@ -5592,6 +5977,16 @@ An agent's own write to another agent's artifact (evidence, a link from it, an u
 | `tests/test_cleanup.py::test_target_is_guessed_from_the_words` | [MIS-17](#mis-17) |
 | `tests/test_cleanup.py::test_uninstall_always_asks_even_inside_the_time_window` | [PHN-03](#phn-03) |
 | `tests/test_cleanup.py::test_uninstall_refuses_blocked_and_system_apps` | [PHN-15](#phn-15) |
+| `tests/test_conductor.py::test_a_claude_step_waits_for_its_claude_task_also_across_a_restart` | [TSK-06](#tsk-06), [TSK-07](#tsk-07) |
+| `tests/test_conductor.py::test_a_claude_task_cut_off_by_the_runner_stopping_is_queued_again` | [TSK-06](#tsk-06) |
+| `tests/test_conductor.py::test_a_restart_runs_the_interrupted_step_again_and_no_finished_step_twice` | [TSK-06](#tsk-06) |
+| `tests/test_conductor.py::test_a_step_cut_off_by_the_runner_stopping_is_interrupted_not_failed` | [TSK-06](#tsk-06) |
+| `tests/test_conductor.py::test_a_step_starts_only_with_headroom_and_says_what_it_waits_for` | [TSK-08](#tsk-08) |
+| `tests/test_conductor.py::test_a_step_that_fails_twice_fails_its_task_and_a_limit_is_waited_out` | [TSK-06](#tsk-06) |
+| `tests/test_conductor.py::test_branches_run_together_the_join_after_both_and_a_cycle_is_refused` | [TSK-05](#tsk-05) |
+| `tests/test_conductor.py::test_each_step_s_prompt_carries_the_results_it_waits_for` | [TSK-07](#tsk-07) |
+| `tests/test_conductor.py::test_one_trace_the_task_s_run_holds_each_step_s_run` | [TSK-09](#tsk-09) |
+| `tests/test_conductor.py::test_the_owner_can_cancel_and_only_multi_agent_one_off_work_goes_to_the_conductor` | [TSK-05](#tsk-05) |
 | `tests/test_crew.py::test_crew_actions_are_validated` | [CRW-02](#crw-02), [SEC-11](#sec-11) |
 | `tests/test_crew.py::test_forget_soft_retires_only_the_given_facts` | [KNW-08](#knw-08) |
 | `tests/test_crew.py::test_memory_near_duplicates_keep_the_older` | [KNW-08](#knw-08) |
@@ -5607,9 +6002,13 @@ An agent's own write to another agent's artifact (evidence, a link from it, an u
 | `tests/test_deploy.py::test_the_landing_script_checks_before_it_merges` | [BLD-20](#bld-20) |
 | `tests/test_deploy.py::test_the_lock_is_held_across_processes` | [PLT-10](#plt-10) |
 | `tests/test_deploy.py::test_the_runner_restarts_for_any_module_it_may_import_also_one_it_reaches_indirectly` | [OBS-11](#obs-11) |
+| `tests/test_desk.py::test_a_weekly_brief_keeps_a_week_of_news_and_a_daily_one_36_hours` | [MIS-11](#mis-11) |
 | `tests/test_desk.py::test_every_briefing_is_english_even_for_a_topic_once_marked_german` | [CST-09](#cst-09) |
+| `tests/test_desk.py::test_google_news_searches_in_the_query_s_language_over_the_brief_s_window` | [MIS-11](#mis-11) |
 | `tests/test_desk.py::test_public_url_refuses_private_targets` | [SEC-06](#sec-06) |
 | `tests/test_desk.py::test_release_text_skips_filing_boilerplate` | [MIS-11](#mis-11) |
+| `tests/test_desk.py::test_the_email_puts_the_headline_in_its_header_and_fits_a_phone` | [MIS-15](#mis-15) |
+| `tests/test_desk.py::test_the_price_note_names_proxies_only_when_a_row_is_one` | [MIS-11](#mis-11) |
 | `tests/test_docs.py::test_every_path_make_target_screen_and_link_a_document_names_exists` | [QA-20](#qa-20) |
 | `tests/test_docs.py::test_the_api_reference_is_drawn_from_the_code_and_every_route_says_what_it_does` | [QA-19](#qa-19) |
 | `tests/test_docs.py::test_the_readme_and_the_index_point_at_what_is_current` | [QA-20](#qa-20), [SEC-12](#sec-12) |
@@ -5620,6 +6019,12 @@ An agent's own write to another agent's artifact (evidence, a link from it, an u
 | `tests/test_doctor.py::test_evidence_is_redacted` | [SEC-16](#sec-16) |
 | `tests/test_doctor.py::test_open_issues_come_from_the_board_one_per_issue` | [CRW-09](#crw-09) |
 | `tests/test_doctor.py::test_the_doctor_is_a_crew_agent_with_its_units` | [CRW-09](#crw-09) |
+| `tests/test_events.py::test_a_rule_waits_out_its_cooldown_runs_its_check_and_records_every_firing` | [TSK-11](#tsk-11) |
+| `tests/test_events.py::test_breaking_news_is_three_publishers_on_one_new_story_within_30_minutes` | [TSK-12](#tsk-12) |
+| `tests/test_events.py::test_mail_and_forgejo_are_read_only_while_a_rule_asks_and_a_baseline_is_not_new` | [TSK-10](#tsk-10) |
+| `tests/test_events.py::test_rules_are_checked_when_saved_and_schedules_come_due` | [TSK-11](#tsk-11) |
+| `tests/test_events.py::test_the_local_sources_each_fire` | [TSK-10](#tsk-10) |
+| `tests/test_events.py::test_the_web_sources_baseline_first_then_fire_their_rules` | [TSK-10](#tsk-10) |
 | `tests/test_guide.py::test_activity_feed_links_build_events_to_their_build` | [APP-16](#app-16) |
 | `tests/test_guide.py::test_chapters_are_well_formed` | [APP-13](#app-13) |
 | `tests/test_guide.py::test_every_app_screen_has_a_chapter` | [APP-13](#app-13) |
@@ -5665,6 +6070,10 @@ An agent's own write to another agent's artifact (evidence, a link from it, an u
 | `tests/test_improve.py::test_requests_are_validated` | [SEC-11](#sec-11) |
 | `tests/test_improve.py::test_scan_turns_signals_into_ideas_and_refines_a_known_one` | [CRW-03](#crw-03), [SWM-05](#swm-05) |
 | `tests/test_improve.py::test_when_a_self_review_is_due` | [CRW-03](#crw-03) |
+| `tests/test_jobs.py::test_a_full_ad_is_read_by_its_reference_and_labelled_untrusted` | [MIS-21](#mis-21) |
+| `tests/test_jobs.py::test_a_job_hunt_brief_collects_each_opening_once_as_its_own_event` | [MIS-21](#mis-21) |
+| `tests/test_jobs.py::test_the_scout_alone_gets_the_jobs_tools_on_the_isolated_fetch_container` | [MIS-21](#mis-21) |
+| `tests/test_jobs.py::test_the_scout_finds_openings_near_a_place_with_their_employer_place_and_link` | [MIS-21](#mis-21) |
 | `tests/test_journal.py::test_a_plain_model_prompt_gets_no_tool_hint` | [MIS-18](#mis-18) |
 | `tests/test_journal.py::test_a_run_writes_one_entry_deterministically_when_the_model_is_out` | [MIS-19](#mis-19) |
 | `tests/test_journal.py::test_a_runs_first_prompt_gets_its_memory_once` | [MIS-18](#mis-18) |
@@ -5722,6 +6131,11 @@ An agent's own write to another agent's artifact (evidence, a link from it, an u
 | `tests/test_new_machine_docs.py::test_documented_builder_default_matches_configuration` | [PLT-17](#plt-17) |
 | `tests/test_new_machine_docs.py::test_rehearsal_checklist_keeps_manual_steps_isolated` | [PLT-17](#plt-17) |
 | `tests/test_new_machine_docs.py::test_required_setup_topics` | [PLT-17](#plt-17) |
+| `tests/test_notify.py::test_a_push_from_the_activity_feed_follows_the_preferences` | [OBS-16](#obs-16) |
+| `tests/test_notify.py::test_nothing_but_the_notification_path_talks_to_telegram` | [OBS-16](#obs-16) |
+| `tests/test_notify.py::test_preferences_decide_per_category_and_approvals_always_go_out` | [OBS-16](#obs-16) |
+| `tests/test_notify.py::test_quiet_hours_hold_telegram_and_send_it_as_one_message_afterwards` | [OBS-16](#obs-16) |
+| `tests/test_notify.py::test_the_same_key_goes_out_once_a_day_and_every_decision_is_logged` | [OBS-16](#obs-16) |
 | `tests/test_observe.py::test_files_read_and_changed_across_engines` | [OBS-05](#obs-05) |
 | `tests/test_observe.py::test_health_flags_streaks_overdue_slow_and_limits` | [OBS-10](#obs-10) |
 | `tests/test_observe.py::test_manifest_diff_names_what_changed` | [OBS-08](#obs-08) |
@@ -5779,6 +6193,7 @@ An agent's own write to another agent's artifact (evidence, a link from it, an u
 | `tests/test_queue.py::test_park_times_out` | [MIS-04](#mis-04) |
 | `tests/test_quiet_runs.py::test_a_briefing_with_no_news_chosen_is_empty_and_prices_alone_do_not_count` | [MIS-15](#mis-15) |
 | `tests/test_quiet_runs.py::test_an_empty_run_is_not_sent_and_the_next_full_one_names_its_day` | [MIS-15](#mis-15) |
+| `tests/test_quiet_runs.py::test_every_email_outcome_is_recorded` | [MIS-15](#mis-15), [OBS-16](#obs-16) |
 | `tests/test_quiet_runs.py::test_the_briefing_run_asks_whether_the_report_is_empty` | [MIS-15](#mis-15) |
 | `tests/test_recoverable.py::test_a_container_cut_off_from_the_network_it_shares_is_an_alert_until_it_is_recreated` | [PLT-23](#plt-23) |
 | `tests/test_recoverable.py::test_a_container_on_another_build_than_its_tag_and_an_unlocked_image_are_named` | [PLT-20](#plt-20) |
@@ -5794,6 +6209,7 @@ An agent's own write to another agent's artifact (evidence, a link from it, an u
 | `tests/test_registry.py::test_the_repo_cards_pass_the_registry_check` | [SWM-01](#swm-01), [SWM-24](#swm-24) |
 | `tests/test_repo_docs.py::test_claude_entry_point_imports_agents_md` | [QA-02](#qa-02) |
 | `tests/test_repo_docs.py::test_every_directory_has_a_guide` | [QA-02](#qa-02) |
+| `tests/test_repo_docs.py::test_every_make_recipe_calls_a_file_that_exists` | [QA-20](#qa-20) |
 | `tests/test_repo_docs.py::test_every_shell_script_is_executable` | [QA-03](#qa-03) |
 | `tests/test_repo_docs.py::test_root_map_links_every_guide` | [QA-02](#qa-02) |
 | `tests/test_repos.py::test_a_code_graph_the_update_cannot_read_is_built_anew_and_a_failure_is_logged_once_per_commit` | [BLD-15](#bld-15) |
@@ -5816,6 +6232,7 @@ An agent's own write to another agent's artifact (evidence, a link from it, an u
 | `tests/test_requirements.py::test_the_repo_requirements_pass_the_checker` | [QA-08](#qa-08) |
 | `tests/test_requirements.py::test_vague_statements_are_refused` | [QA-08](#qa-08) |
 | `tests/test_requirements.py::test_vague_words_are_known` | [QA-08](#qa-08) |
+| `tests/test_runner.py::test_a_briefing_reads_the_news_of_its_schedule_s_window` | [MIS-11](#mis-11) |
 | `tests/test_runner.py::test_a_paused_agents_runs_are_skipped` | [SWM-26](#swm-26) |
 | `tests/test_runner.py::test_check_schedules_catches_up_once_and_not_before_created` | [MIS-03](#mis-03) |
 | `tests/test_runner.py::test_create_and_unknown_actions_are_validated` | [SEC-11](#sec-11) |
@@ -5831,6 +6248,7 @@ An agent's own write to another agent's artifact (evidence, a link from it, an u
 | `tests/test_runner.py::test_update_validates_and_resume_skips_catch_up` | [MIS-03](#mis-03), [MIS-08](#mis-08) |
 | `tests/test_runner.py::test_valid_schedule` | [MIS-02](#mis-02) |
 | `tests/test_runtime.py::test_a_declared_wait_is_not_a_stall` | [OBS-03](#obs-03) |
+| `tests/test_runtime.py::test_a_hermes_run_without_a_ref_joins_the_live_step_of_its_agent` | [TSK-09](#tsk-09) |
 | `tests/test_runtime.py::test_a_run_opens_on_first_event_and_stays_closed_after_its_end` | [OBS-01](#obs-01) |
 | `tests/test_runtime.py::test_chat_sessions_are_tied_to_their_chat` | [OBS-01](#obs-01) |
 | `tests/test_runtime.py::test_children_show_under_their_parent_and_keep_it_alive` | [OBS-03](#obs-03) |
@@ -5889,6 +6307,13 @@ An agent's own write to another agent's artifact (evidence, a link from it, an u
 | `tests/test_shopping.py::test_the_pc_facts_reach_the_prompt` | [SHP-01](#shp-01) |
 | `tests/test_shopping.py::test_the_same_price_under_the_target_proposes_once` | [SHP-04](#shp-04) |
 | `tests/test_shopping.py::test_wait_verdict_keeps_watching` | [SHP-03](#shp-03) |
+| `tests/test_staffing.py::test_a_design_is_archived_reused_by_name_and_proposed_after_three_met_tasks` | [TSK-16](#tsk-16) |
+| `tests/test_staffing.py::test_a_finished_task_is_judged_point_by_point_and_a_build_by_what_happened` | [TSK-17](#tsk-17) |
+| `tests/test_staffing.py::test_a_step_goes_to_the_agent_that_did_that_kind_best_or_away_from_a_limit` | [TSK-14](#tsk-14) |
+| `tests/test_staffing.py::test_a_step_no_agent_fits_gets_a_temporary_agent_that_ends_with_the_task` | [TSK-15](#tsk-15) |
+| `tests/test_staffing.py::test_a_temporary_agent_stays_within_its_grants_and_ends_with_its_task` | [TSK-15](#tsk-15) |
+| `tests/test_staffing.py::test_judged_tasks_credit_each_agent_and_measure_it` | [TSK-13](#tsk-13), [TSK-17](#tsk-17) |
+| `tests/test_staffing.py::test_the_conductor_routes_a_step_before_its_first_attempt_and_says_why` | [TSK-14](#tsk-14) |
 | `tests/test_swarm_board.py::test_a_request_is_tracked_until_it_ends_and_expires_with_a_reason` | [SWM-12](#swm-12), [SWM-50](#swm-50), [SWM-63](#swm-63) |
 | `tests/test_swarm_board.py::test_a_request_wakes_an_on_request_agent_within_its_budget` | [SWM-13](#swm-13) |
 | `tests/test_swarm_board.py::test_code_guards_loops_floods_repeats_and_room_all` | [SWM-14](#swm-14) |
@@ -5973,6 +6398,17 @@ An agent's own write to another agent's artifact (evidence, a link from it, an u
 | `tests/test_swarm_views.py::test_the_swarm_page_has_the_timeline_the_map_the_team_and_tool_calls_in_the_chatroom` | [SWM-103](#swm-103), [SWM-104](#swm-104), [SWM-105](#swm-105), [SWM-106](#swm-106) |
 | `tests/test_swarm_views.py::test_the_timeline_has_every_run_with_its_lane_its_end_and_what_started_it` | [SWM-103](#swm-103) |
 | `tests/test_swarm_views.py::test_tool_calls_between_agents_are_exchanges_with_the_whole_question_and_answer` | [SWM-105](#swm-105) |
+| `tests/test_tasks.py::test_a_coding_task_without_a_repository_asks_which_one` | [TSK-03](#tsk-03) |
+| `tests/test_tasks.py::test_a_failed_intake_says_why_and_can_be_planned_again` | [TSK-03](#tsk-03) |
+| `tests/test_tasks.py::test_a_one_off_task_with_several_agents_goes_to_the_conductor_as_a_plan_graph` | [TSK-05](#tsk-05) |
+| `tests/test_tasks.py::test_a_sentence_gets_a_specification_and_reaches_its_door` | [TSK-02](#tsk-02), [TSK-20](#tsk-20) |
+| `tests/test_tasks.py::test_a_weekly_briefing_task_gets_its_content_not_the_plan_email_when_asked_and_shows_its_runs` | [TSK-04](#tsk-04) |
+| `tests/test_tasks.py::test_after_another_task_waits_until_that_one_is_done` | [TSK-04](#tsk-04) |
+| `tests/test_tasks.py::test_an_agent_the_intake_names_that_does_not_exist_gets_a_temporary_agent` | [TSK-15](#tsk-15) |
+| `tests/test_tasks.py::test_at_most_two_questions_and_answers_plan_it_again` | [TSK-03](#tsk-03) |
+| `tests/test_tasks.py::test_every_door_s_work_becomes_a_task_with_every_field` | [TSK-01](#tsk-01) |
+| `tests/test_tasks.py::test_the_intake_prompt_names_every_agent_and_repository_and_the_app_cannot_be_used_from_the_ai_phone` | [TSK-03](#tsk-03) |
+| `tests/test_tasks.py::test_the_owner_s_presets_are_kept_and_show_me_the_plan_first_waits` | [TSK-02](#tsk-02), [TSK-20](#tsk-20) |
 | `tests/test_team_room.py::test_lines_mark_help_in_another_agent_s_lane_and_keep_every_text_whole` | [SWM-107](#swm-107) |
 | `tests/test_team_room.py::test_the_chatroom_is_the_team_room_with_its_filters` | [SWM-107](#swm-107) |
 | `tests/test_team_room.py::test_the_ledger_feed_has_events_and_messages_but_not_the_requirements_mirror` | [SWM-107](#swm-107) |

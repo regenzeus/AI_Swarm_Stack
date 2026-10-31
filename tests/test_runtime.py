@@ -63,6 +63,17 @@ def test_children_show_under_their_parent_and_keep_it_alive(RT):
     assert RT.view("hermes:mission:abc:1")["name"] == "Hermes (mission) · in mission-run:5"   # under its parent's name
 
 
+def test_a_hermes_run_without_a_ref_joins_the_live_step_of_its_agent(RT):
+    t = time.time() - 100
+    RT.ingest([ev("mission-run:7", "run", t, agent="runner"), ev("task:3", "run", t, agent="conductor"),
+               ev("task:3:step:1", "run", t + 1, agent="scout", ref="task:3"), ev("task:3:step:2", "run", t + 2, agent="mission", ref="task:3")])
+    RT.ingest([ev("hermes:scout:a:1", "run", t + 3, agent="scout"), ev("hermes:mission:b:1", "run", t + 4, agent="mission")])
+    refs = {r["run"]: r["ref"] for r in RT.db().execute("select run, ref from runs")}
+    assert refs["hermes:scout:a:1"] == "task:3:step:1" and refs["hermes:mission:b:1"] == "task:3:step:2"
+    RT.ingest([ev("task:3:step:2", "end", t + 5, agent="mission", status="done"), ev("hermes:mission:c:1", "run", t + 6, agent="mission")])
+    assert RT.db().execute("select ref from runs where run='hermes:mission:c:1'").fetchone()["ref"] == "mission-run:7"   # no live step: as before
+
+
 def test_the_watchdog_closes_silent_runs_honestly(RT):
     t = time.time() - 5000
     RT.ingest([ev("m", "run", t), ev("phone:1", "run", t, agent="ai-phone", data={"manifest": {"agent": "ai-phone", "idle_end": True}})])

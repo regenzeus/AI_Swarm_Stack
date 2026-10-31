@@ -9,7 +9,7 @@ PROMPTS="$(cd "$(dirname "$0")/.." && pwd)/prompts"     # prompts/desk.md, mount
 export DOCKER_HOST=${DOCKER_HOST:-unix:///run/user/1000/docker.sock}
 V=/srv/vault; ONLY=${1:-}; DATE=$(date +%F)
 [ "${2:-}" = "--date" ] && DATE=$3
-notify() { [ "${DESK_TELEGRAM:-1}" = 0 ] || "$(dirname "$0")/notify.sh" "$1" >/dev/null 2>&1 || true; }
+notify() { [ "${DESK_TELEGRAM:-1}" = 0 ] || NOTIFY_CATEGORY=result "$(dirname "$0")/notify.sh" "$1" >/dev/null 2>&1 || true; }
 
 for t in "$V"/topics/*/TOPIC.md; do
   slug=$(basename "$(dirname "$t")")

@@ -136,14 +136,17 @@ items:
     trace: [ops/backup.sh]
   - id: PLT-13
     title: An unreadable file does not stop the backup
-    statement: If a part of /srv/ai cannot be read by the backup user (the AI phone's ADB key), then the backup shall
-      skip it and still complete.
+    statement: If a file under /srv/ai cannot be read by the backup user, then the backup shall skip it, name it in its
+      log and still complete; any other copy error shall fail the backup.
     type: functional
     priority: must
     status: implemented
     parents: [SN-09, SN-13]
-    sources: ["incident 2026-10-29: backup failed on /srv/ai/phone/home"]
-    verify: {method: inspection, by: [ops/backup.sh]}
+    sources: ["incident 2026-10-29: backup failed on /srv/ai/phone/home", "incident 2026-10-31: backup failed on a container's file in /srv/ai/workbench"]
+    findings: [FND-76]
+    verify: {method: test, by: [tests/test_backup.py::test_an_unreadable_file_is_skipped_and_named_and_the_backup_goes_on,
+      tests/test_backup.py::test_any_other_copy_error_still_fails_the_backup]}
+    trace: [ops/backup.sh, ops/backup-copy.sh]
   - id: PLT-14
     title: Off-site copy
     statement: A Windows task shall copy the newest encrypted backup to OneDrive daily and at logon and keep the

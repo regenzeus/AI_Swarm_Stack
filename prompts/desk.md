@@ -17,11 +17,15 @@ Answer only JSON:
  "watchlist": [{{"name": "...", "symbol": "Yahoo Finance symbol or null", "aliases": ["..."], "proxy": "spot|sector|null"}}],
  "feeds": ["RSS feed URLs you are sure exist; may be empty"],
  "search": ["6-8 Google News queries"],
+ "jobs": [{{"what": "a job title or skill as job ads word it", "where": "a German city or postcode, or empty for all of Germany", "radius_km": 50}}],
  "filings": ["tickers of watchlist companies that file with the US SEC; may be empty"],
  "prefer": ["source kinds"], "avoid": ["source kinds"],
  "sections": ["report section names, starting with Headline, In 60 seconds, Prices (only if prices matter)"],
  "notes": "2-3 sentences of instructions for the agents"}}
 If the topic is not about companies or markets, the watchlist may hold organisations or people without symbols.
+If the topic is finding job openings, "jobs" holds 3-6 searches of the German federal job board (German and English
+job titles, the person's place and a radius they can commute), the watchlist has no symbols, and there is no Prices
+section; news searches then cover only the employers' news. For any other topic "jobs" is [].
 <!-- end -->
 
 <!-- prompt: TRIAGE · images/desk/desk.py triage(): which news items matter (gpt-sub-fast) · fills: avoid, items, mission, prefer, questions, topic -->

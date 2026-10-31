@@ -222,6 +222,10 @@ def run(c, t):
                 p.kill()
                 break
         p.wait(timeout=60)
+        if M.stop.is_set():                               # the runner stops (a deploy): the task was cut off, not failed;
+            put(c, tid, status="queued", started=None, error=None)   # it is asked again after the restart (31 Oct 2026)
+            M.log(f"Claude task #{tid} cut off by the runner stopping: queued again")
+            return
         log = "\n".join(ln for _, ln in lines)
         res = B.claude_result(log)
         steps, tokens = steps_of(lines)

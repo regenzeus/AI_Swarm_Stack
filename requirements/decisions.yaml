@@ -166,3 +166,21 @@ items:
     answer no more often. The verbatim move is each prompt''s baseline, accepted only as its first record. The swarm''s
     agent changes (SWM-18) keep their own scored replay of proposals. The desk''s, the scout''s and the privacy check''s
     prompts followed ("Yes, do MEM-13"): their containers read prompts/ through a read-only mount (MEM-13).'
+- id: DEC-34
+  date: '2026-10-31'
+  title: What the stack may do without asking
+  decision: 'The owner accepted the roadmap''s proposed default ("Accept the default"). Without asking, the stack plans,
+    staffs and runs tasks and may create temporary agents within read-only and sandboxed grants; it asks before it
+    messages other people, spends money, deploys code, deletes data or acts on the AI phone. A task given in a sentence
+    starts as soon as it is planned unless the owner chose "Show me the plan first"; every door keeps its own approvals
+    (the deploy tap, purchases, the AI phone, Gmail''s Trash).'
+- id: DEC-35
+  date: '2026-10-31'
+  title: The plan graph lives with the tasks, not in the Ledger
+  decision: 'Building phase 2 ("Start phase 2"), the Conductor''s plan graph and step journal went into the runner''s task
+    database (task_steps beside tasks, in the nightly backup) instead of the swarm''s Ledger, as the roadmap first said.
+    The Ledger''s task model belongs to the idea-to-build flow (one plan per idea, builders claim its tasks) in a service
+    capped at 256 MB, while a step has to be recorded in the same transaction that starts it, so a restart can never run
+    a finished step again. The trace is the runtime record''s (one run per task, a run per step inside it). A one-off
+    research, analysis or errand task whose plan uses two or more agents goes to the Conductor; every other task keeps
+    its door.'

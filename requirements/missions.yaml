@@ -113,16 +113,22 @@ items:
     verify: {method: demonstration, by: [ops/mission_extras.py]}
   - id: MIS-11
     title: Briefings by the Topic Desk
-    statement: A briefing run shall have the Topic Desk collect the brief's news, filings and prices, write a
-      structured report with sources in the brief's language, file it under topics/<slug>/reports/YYYY/MM/, skip
-      filing boilerplate, and commit it to the vault.
+    statement: A briefing run shall have the Topic Desk collect the brief's news, filings and prices over the window its
+      schedule gives (36 hours for a daily briefing, the time between runs plus 12 hours for a weekly one), search
+      Google News in each query's own language, write a structured report with sources, file it under
+      topics/<slug>/reports/YYYY/MM/, skip filing boilerplate, and commit it to the vault.
     type: functional
     priority: must
     status: implemented
     parents: [SN-01, SN-10]
     sources: [images/desk/AGENTS.md]
-    verify: {method: test, by: [tests/test_desk.py::test_release_text_skips_filing_boilerplate, tests/test_runner.py::test_section_parsing]}
-    trace: [images/desk/desk.py, ops/desk.sh]
+    findings: [FND-77, FND-80]
+    verify: {method: test, by: [tests/test_desk.py::test_release_text_skips_filing_boilerplate, tests/test_runner.py::test_section_parsing,
+      tests/test_runner.py::test_a_briefing_reads_the_news_of_its_schedule_s_window,
+      tests/test_desk.py::test_google_news_searches_in_the_query_s_language_over_the_brief_s_window,
+      tests/test_desk.py::test_a_weekly_brief_keeps_a_week_of_news_and_a_daily_one_36_hours,
+      tests/test_desk.py::test_the_price_note_names_proxies_only_when_a_row_is_one]}
+    trace: [images/desk/desk.py, ops/desk.sh, ops/missions.py]
   - id: MIS-12
     title: German report clean-up
     statement: Where a brief's language is German, the desk shall normalise dates, number formats and units to German
@@ -159,15 +165,18 @@ items:
     title: Delivery channels
     statement: The runner shall deliver a mission's results on each of its channels (app push, Telegram with buttons
       into the app, designed HTML e-mail) after every finished run, except that a briefing the desk chose no news for
-      shall stay in the app, and the next full delivery by Telegram and e-mail shall name the days that found nothing.
+      shall stay in the app, and the next full delivery by Telegram and e-mail shall name the earlier days that found
+      nothing; every e-mail sent or failed shall be recorded in the notification log and the run's timeline.
     type: functional
     priority: must
     status: implemented
     parents: [SN-01, SN-06]
     sources: [images/mission-control/guide/07-delivery.md]
-    findings: [FND-60]
-    verify: {method: test, by: [tests/test_quiet_runs.py::test_a_briefing_with_no_news_chosen_is_empty_and_prices_alone_do_not_count,
+    findings: [FND-60, FND-77, FND-78, FND-79]
+    verify: {method: test, by: [tests/test_desk.py::test_the_email_puts_the_headline_in_its_header_and_fits_a_phone,
+      tests/test_quiet_runs.py::test_a_briefing_with_no_news_chosen_is_empty_and_prices_alone_do_not_count,
       tests/test_quiet_runs.py::test_an_empty_run_is_not_sent_and_the_next_full_one_names_its_day,
+      tests/test_quiet_runs.py::test_every_email_outcome_is_recorded,
       tests/test_quiet_runs.py::test_the_briefing_run_asks_whether_the_report_is_empty]}
     trace: [ops/mission_extras.py, ops/missions.py]
   - id: MIS-16
@@ -230,3 +239,20 @@ items:
     parents: [SN-17, SN-02]
     sources: [images/mission-control/guide/18-crew.md]
     verify: {method: test, by: [tests/test_journal.py::test_notes_edits_and_forgetting_are_commits, tests/test_journal.py::test_the_curator_folds_old_entries_and_archives_them]}
+  - id: MIS-21
+    title: Job openings from the federal job board
+    statement: A job hunt shall search the Bundesagentur für Arbeit's job board for current openings by job title or
+      skill, place and radius, and read an opening's full ad by its reference number; the research scout shall have
+      these as tools on its isolated web container, and a job-hunt briefing shall carry such searches as a source and
+      report each opening once.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-01, SN-10]
+    sources: ['Bundesagentur für Arbeit Jobsuche API (rest.arbeitsagentur.de/jobboerse/jobsuche-service)']
+    findings: [FND-80]
+    verify: {method: test, by: [tests/test_jobs.py::test_the_scout_finds_openings_near_a_place_with_their_employer_place_and_link,
+      tests/test_jobs.py::test_a_full_ad_is_read_by_its_reference_and_labelled_untrusted,
+      tests/test_jobs.py::test_the_scout_alone_gets_the_jobs_tools_on_the_isolated_fetch_container,
+      tests/test_jobs.py::test_a_job_hunt_brief_collects_each_opening_once_as_its_own_event]}
+    trace: [images/fetch/jobs.py, images/fetch/entrypoint.sh, images/desk/desk.py, ops/missions.py, prompts/desk.md, config/litellm/config.yaml, ops/keys.sh]
