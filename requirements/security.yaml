@@ -217,5 +217,6 @@ items:
     verify: {method: test, by: [tests/test_publish.py::test_terms_are_replaced_as_whole_words_and_only_a_capitalised_sentence_start_is_capitalised,
       tests/test_publish.py::test_the_scan_names_every_leftover_without_printing_the_term_and_lets_placeholders_pass,
       tests/test_publish.py::test_the_snapshot_leaves_out_the_secrets_and_follows_the_public_text,
-      tests/test_publish.py::test_a_snapshot_with_a_leftover_runs_no_tests_and_pushes_nothing]}
+      tests/test_publish.py::test_a_snapshot_with_a_leftover_runs_no_tests_and_pushes_nothing,
+      tests/test_publish.py::test_the_push_refuses_when_git_would_leave_out_a_file_of_the_snapshot]}
     trace: [ops/publish.py, ops/private-terms.sh, Makefile]

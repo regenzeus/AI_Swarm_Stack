@@ -224,6 +224,11 @@ def push(dest, head):
             shutil.rmtree(p) if p.is_dir() else p.unlink()
     shutil.copytree(dest, repo, dirs_exist_ok=True)
     git("add", "-A")
+    tracked = set(git("ls-files").stdout.splitlines())    # what git would commit is exactly the snapshot, no file dropped
+    want = {str(p.relative_to(dest)) for p in dest.rglob("*") if p.is_file()}
+    if tracked != want:                                   # (an ignore rule dropped the secrets examples once, 31 Oct 2026)
+        raise SystemExit(f"not pushed: git would commit {len(tracked)} files, the snapshot has {len(want)}: "
+                         + ", ".join(sorted(want ^ tracked)[:10]))
     if not git("status", "--porcelain").stdout.strip():
         return None
     sha = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "--short", head], check=True, capture_output=True, text=True).stdout.strip()

@@ -28,7 +28,7 @@ Method, statuses and rules: [README.md](README.md). Names of the parts: [glossar
 | [Agent swarm](#swm-agent-swarm) (SWM) | 109 | 95 | 10 | 0 | 2 | 0 | 2 |
 | **All** | **383** | **353** | **19** | **3** | **2** | **2** | **4** |
 
-Unit tests claimed by a requirement: 501 of 501.
+Unit tests claimed by a requirement: 502 of 502.
 
 ## Findings
 
@@ -3823,7 +3823,7 @@ make publish shall push the committed stack to the public GitHub repository only
 
 - Parents: [SN-04](#sn-04)
 - Sources: `docs/PUBLISHING.md`
-- Verified by: test: `tests/test_publish.py::test_terms_are_replaced_as_whole_words_and_only_a_capitalised_sentence_start_is_capitalised`, `tests/test_publish.py::test_the_scan_names_every_leftover_without_printing_the_term_and_lets_placeholders_pass`, `tests/test_publish.py::test_the_snapshot_leaves_out_the_secrets_and_follows_the_public_text`, `tests/test_publish.py::test_a_snapshot_with_a_leftover_runs_no_tests_and_pushes_nothing`
+- Verified by: test: `tests/test_publish.py::test_terms_are_replaced_as_whole_words_and_only_a_capitalised_sentence_start_is_capitalised`, `tests/test_publish.py::test_the_scan_names_every_leftover_without_printing_the_term_and_lets_placeholders_pass`, `tests/test_publish.py::test_the_snapshot_leaves_out_the_secrets_and_follows_the_public_text`, `tests/test_publish.py::test_a_snapshot_with_a_leftover_runs_no_tests_and_pushes_nothing`, `tests/test_publish.py::test_the_push_refuses_when_git_would_leave_out_a_file_of_the_snapshot`
 - Trace: `ops/publish.py`, `ops/private-terms.sh`, `Makefile`
 - Findings: [FND-75](#fnd-75)
 
@@ -5772,6 +5772,7 @@ An agent's own write to another agent's artifact (evidence, a link from it, an u
 | `tests/test_prompts.py::test_the_desk_and_the_scout_read_their_prompts_from_the_mount_and_the_desk_hands_back_its_cases` | [MEM-13](#mem-13) |
 | `tests/test_publish.py::test_a_snapshot_with_a_leftover_runs_no_tests_and_pushes_nothing` | [SEC-19](#sec-19) |
 | `tests/test_publish.py::test_terms_are_replaced_as_whole_words_and_only_a_capitalised_sentence_start_is_capitalised` | [SEC-19](#sec-19) |
+| `tests/test_publish.py::test_the_push_refuses_when_git_would_leave_out_a_file_of_the_snapshot` | [SEC-19](#sec-19) |
 | `tests/test_publish.py::test_the_scan_names_every_leftover_without_printing_the_term_and_lets_placeholders_pass` | [SEC-19](#sec-19) |
 | `tests/test_publish.py::test_the_snapshot_leaves_out_the_secrets_and_follows_the_public_text` | [SEC-19](#sec-19) |
 | `tests/test_queue.py::test_a_parked_run_frees_the_slot` | [MIS-04](#mis-04) |

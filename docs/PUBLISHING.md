@@ -49,6 +49,9 @@ term from the map in any case, so a missing variant stops the publish instead of
 2. **The snapshot's own tests**: the whole suite runs on the rewritten tree in the builder sandbox. A rewrite that
    breaks code (a name the code compares, a hash) fails here, and nothing is pushed.
 
+3. **Nothing dropped**: before the commit, the files git would commit must be exactly the snapshot's (an ignore
+   rule once left out the secrets examples).
+
 GitHub's own secret scanning and push protection then check the push once more.
 
 ## Setting it up on a new machine

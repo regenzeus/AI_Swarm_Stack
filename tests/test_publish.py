@@ -6,6 +6,7 @@ import hashlib
 import io
 import json
 import tarfile
+import types
 
 import publish as P
 
@@ -69,6 +70,24 @@ def test_the_snapshot_leaves_out_the_secrets_and_follows_the_public_text(tmp_pat
     assert files["ops/run.sh"] == "echo owner\n" and P.scan(files, TERMS) == []
     out = P.write(files, executable, tmp_path / "tree")
     assert out == files and (tmp_path / "tree/ops/run.sh").stat().st_mode & 0o111 and not (tmp_path / "tree/.sops.yaml").stat().st_mode & 0o111
+
+
+def test_the_push_refuses_when_git_would_leave_out_a_file_of_the_snapshot(tmp_path, monkeypatch):
+    import subprocess
+    tree, repo = tmp_path / "tree", tmp_path / "repo"
+    files = {".gitignore": "secrets/*.yaml\n", "secrets/secrets.example.yaml": 'API_KEY: ""\n', "README.md": "hi\n"}
+    P.write(files, set(), tree)
+    monkeypatch.setattr(P, "WORK", tmp_path)
+    monkeypatch.setattr(P, "REMOTE", str(tmp_path / "none.git"))           # never reached: it stops before a push
+    subprocess.run(["git", "init", "-q", "-b", "main", str(repo)], check=True)
+    subprocess.run(["git", "-C", str(repo), "remote", "add", "origin", P.REMOTE], check=True)
+    monkeypatch.setattr(P, "subprocess", types.SimpleNamespace(**{**vars(subprocess), "run": lambda a, **k: (
+        subprocess.CompletedProcess(a, 0, "", "") if "ls-remote" in a else subprocess.run(a, **k))}))
+    try:
+        P.push(tree, "HEAD")
+        raise AssertionError("pushed")
+    except SystemExit as e:
+        assert "git would commit 2 files, the snapshot has 3: secrets/secrets.example.yaml" in str(e)
 
 
 def test_a_snapshot_with_a_leftover_runs_no_tests_and_pushes_nothing(tmp_path, monkeypatch):

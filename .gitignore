@@ -1,6 +1,7 @@
 # Never commit decrypted secrets
 secrets/*.yaml
 !secrets/*.enc.yaml
+!secrets/*.example.yaml
 *.dec.*
 .env
 __pycache__/
