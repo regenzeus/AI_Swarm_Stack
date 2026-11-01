@@ -76,10 +76,28 @@ people, spends money, deploys code, deletes data or acts on the AI phone. These 
 
 ### The AI phone
 
-- Typing text, opening a web address and opening an app always ask the owner, even inside a time window: they are ways for
-  private data to leave (DEC-23, FND-02). Inside a purchase the owner approved, its own steps don't ask again.
+- Typing text and opening a web address are ways for private data to leave (FND-02). They ask the owner unless a task he
+  approved names that exact text or app (PHN-18), or he opened free mode and the text or address holds no e-mail
+  address, phone number, IBAN, key or IP address (PHN-19, DEC-38, superseding DEC-23). Inside a purchase the owner
+  approved, its own steps don't ask again. Money, passwords and blocked apps are never covered; the Home Assistant app
+  opens only inside a task that names it (VOI-07).
+
+### The voice gateway
+
+- Home Assistant on the NAS reaches Hermes through the app's voice gateway (VOI-03): its own port, only the model list
+  and the chat, a key (sops `VOICE_KEY`, held by Home Assistant) instead of Tailscale, because the NAS is not on the
+  tailnet. On the PC it listens on 127.0.0.1:11435; Windows passes the LAN's port 11434 to it from the NAS's
+  address only.
+- A spoken turn is untrusted input like a chat message, and anyone in the room (or the TV) can be heard: the voice
+  prompt says purchases, deploys, deletions, e-mail to others and the NAS and the network are never done by voice, and
+  mail, calendar details and money are not read aloud. The approvals that guard them are unchanged.
 
 ## Accepted risks (deliberate, revisit when the setup changes)
+
+- **Private data the free-mode check does not recognise** (DEC-38). In the owner's free mode on the AI phone, an agent
+  tricked by text in a page or an e-mail could type something private that is not an e-mail address, phone number,
+  IBAN, key or IP address (a name, an address, a note) into a web form. The owner chose fewer approvals; free mode is
+  time-limited, every action is logged with the screen, and a task approval names its exact texts instead.
 
 - **Local spoofing of the identity header.** A process on the PC can call `127.0.0.1:8090` (and the gates on 9119/5173, Open WebUI on 3080) with a forged
   `Tailscale-User-Login`. Anything that can do that can already read the files directly.
@@ -100,3 +118,25 @@ Never delete NAS data or Docker volumes without explicit approval; never alter R
 unrelated shares; never expose services publicly or touch router port forwarding without approval; never weaken
 NAS security; never print, commit or store credentials unencrypted; never bypass authentication or MFA; never
 deploy without the owner's explicit approval.
+
+## An agent's tools changed in the app (TSK-29)
+
+Swarm → Team → Settings can propose a change to an agent's tools. Nothing is applied from the app: the change becomes
+an agent change in the Ledger, is replayed on the agent's past runs (no score may drop), and ships only through the
+owner's Build it and deploy tap, with Revert on the build. A tool **added** widens the agent's key grants (ops/keys.sh,
+its Hermes profile), so the app asks for an explicit grant tick and the change carries `plan.security.adds` and a
+"security change" evidence line in its history; the agents rule (SWM-70, builds.agent_gate) still holds the build until
+the change's experiment passed. A tool removed narrows the grants and needs only the replay. An agent can never file such
+a change about itself (the Ledger refuses it).
+
+## Outside agents over A2A (TSK-19)
+
+Off by default (`/srv/ai/missions/app/a2a.json`, mode 600). When on, `/.well-known/agent-card.json` and `/a2a`
+(JSON-RPC) answer only requests that came through Tailscale serve (the tailnet identity header) and carry a bearer token
+of an agent the owner added; tokens are made by the web server, shown to the owner once, and kept only as SHA-256 hashes;
+the comparison is constant-time. Each message becomes a task with source `a2a:<name>` whose autonomy is forced to "ask"
+(ops/tasks.py), so nothing runs before the owner's Start it; an agent reads only its own tasks; ten tasks an hour per
+agent. Adding, switching and revoking are refused from the AI phone, and `a2a_token` is refused through the generic
+request path. The calendar's iCal address is a secret link: it lives in /srv/ai/private/calendar.json (mode 600), is
+never logged, and the app shows only its host.
+

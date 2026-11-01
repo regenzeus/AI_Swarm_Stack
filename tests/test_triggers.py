@@ -45,3 +45,27 @@ def test_check_events_baseline_then_fire(runner, monkeypatch):
     X._last_watch["t"] = 0
     X.check_events({"aspi": m}, c)                           # nothing new: no more runs
     assert c.execute("select count(*) from runs where trigger='event'").fetchone()[0] == 1
+
+
+def test_a_task_s_trigger_starts_the_task_s_next_run_not_a_mission_run(runner, monkeypatch):
+    """TSK-21: an event-triggered task under the Conductor is watched with the missions' triggers; its event is queued
+    for the task's next occurrence."""
+    import mission_extras as X
+    import tasks as TK
+    news = [{"id": "n1", "title": "Cameco signs a supply deal", "url": "https://news.example/1"}]
+    monkeypatch.setattr(X.subprocess, "run", lambda *a, **k: types.SimpleNamespace(returncode=0, stdout=json.dumps({"sec": {}, "prices": {}, "news": {"Cameco": news}}), stderr=""))
+    c = runner.db()
+    TK.table(c)
+    t0 = TK.now()
+    tid = c.execute("insert into tasks (text, title, goal, kind, door, ref, done, effort, autonomy, rhythm, spec, questions, answers, status, source, created, updated) "
+                    "values ('x','Cameco deals','say what it means','research','plan','1','[\"names the deal\"]','standard','auto',?,'{}','[]','[]','scheduled','app',?,?)",
+                    (json.dumps({"type": "event", "triggers": [{"type": "news", "query": "Cameco"}]}), t0, t0)).lastrowid
+    c.commit()
+    X._last_watch["t"] = 0
+    X.check_events({}, c)                                    # first look: only remember what exists
+    news.append({"id": "n2", "title": "Cameco signs again", "url": "https://news.example/2"})
+    X._last_watch["t"] = 0
+    X.check_events({}, c)
+    evs = [json.loads(r["event"]) for r in c.execute("select event from task_events where task=?", (tid,))]
+    assert [e["summary"] for e in evs] == ["1 new article(s) about “Cameco”: Cameco signs again"] and evs[0]["trigger"] == "News about “Cameco”"
+    assert c.execute("select count(*) from runs").fetchone()[0] == 0

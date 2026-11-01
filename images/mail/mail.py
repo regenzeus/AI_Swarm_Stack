@@ -38,6 +38,7 @@ PROTECTED = re.compile(
 for d in (PENDING, DECISIONS, BATCHES):
     d.mkdir(parents=True, exist_ok=True)
 DECISIONS.chmod(0o1777)          # Mission Control (another user) writes the owner's answers here
+WAITING = set()                  # the approval cards this process waits for; any other card was left by a restart (CNX-06)
 
 
 def now_iso():
@@ -292,9 +293,33 @@ def remember_ok():
     p.write_text(json.dumps(d))
 
 
+def sweep_orphans():
+    """Approval cards nobody waits for any more: the connector restarted (every deploy that touches it does) while a card
+    was open, so a yes reached nothing and the card stayed up in Mission Control (FND-14, as the AI phone's on
+    2026-10-29). Drop them and their late answers; the agent's call ended with the restart, and it asks again if it
+    still needs to. -> the dropped cards."""
+    dropped = []
+    for f in PENDING.glob("*.json"):
+        if f.stem in WAITING:
+            continue
+        try:
+            item = json.loads(f.read_text())
+        except Exception:
+            item = {}
+        f.unlink(missing_ok=True)
+        log(action="trash-dropped", count=item.get("count"), mission=item.get("mission", ""), reason=item.get("reason", ""),
+            why="the mail connector restarted while this waited for your OK; the agent asks again if it still needs to")
+        dropped.append(item)
+    for f in DECISIONS.glob("*.json"):
+        if f.stem not in WAITING:                # an answer to a card nobody waits for (late, or after a restart)
+            f.unlink(missing_ok=True)
+    return dropped
+
+
 async def ask_owner(items, reason, mission):
     """The first Trash batch under a new grant: the owner sees what would go and says yes or no."""
     aid = uuid.uuid4().hex[:16]
+    WAITING.add(aid)                             # before the card exists: a sweep never takes a card someone waits for
     froms = {}
     for it in items:
         froms[it["from"][:60]] = froms.get(it["from"][:60], 0) + 1  # cap: id
@@ -314,6 +339,7 @@ async def ask_owner(items, reason, mission):
         return False
     finally:
         (PENDING / f"{aid}.json").unlink(missing_ok=True)
+        WAITING.discard(aid)
 
 
 def move_to_trash(items, reason, mission):
@@ -381,6 +407,10 @@ async def status_loop():
             await asyncio.to_thread(check_status)
         except Exception:
             pass
+        try:
+            sweep_orphans()                      # at the start (cards left by the restart) and every pass (late answers)
+        except Exception as e:
+            log(action="sweep-failed", why=f"{type(e).__name__}: {e}")
         await asyncio.sleep(600)
 
 

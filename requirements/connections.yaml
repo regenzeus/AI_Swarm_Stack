@@ -58,10 +58,9 @@ items:
       unanswerable; it shall be dropped and asked again, or kept answerable.
     type: functional
     priority: must
-    status: violated
+    status: implemented
     parents: [SN-13]
     sources: ["same pattern as the AI phone's orphaned cards, fixed 2026-10-29"]
-    gap: images/mail/mail.py waits for its decision in a process loop over pending/ and decisions/ with no sweep of
-      cards left by a restart (FND-14).
-    verify: {method: analysis, by: [images/mail/mail.py]}
+    verify: {method: test, by: [tests/test_mail.py::test_a_card_left_by_a_restart_is_dropped_with_its_late_answer_and_a_waited_card_stays]}
+    trace: [images/mail/mail.py]
     findings: [FND-14]

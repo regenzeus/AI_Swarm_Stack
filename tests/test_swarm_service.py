@@ -64,3 +64,36 @@ def test_the_snapshot_is_a_consistent_copy(svc, tmp_path):
     (restored / "swarm.snapshot.db").write_bytes((tmp_path / "swarm.snapshot.db").read_bytes())
     assert swarm.restore_if_missing(restored) and not swarm.restore_if_missing(restored)     # only when the database is missing
     assert swarm.Service(restored, CARDS, {}).ledger.find(None, kind="finding")[0]["title"] == "A finding to back up"
+
+
+def test_a_pack_asked_again_soon_is_not_built_twice(svc, monkeypatch):
+    """FND-63: missions called swarm_context several times a run although their opening holds it. The runner's opening
+    counts as given; the agent's own second ask within REPEAT gets a short note and its cursor stays."""
+    built = []
+    monkeypatch.setattr(svc, "op", lambda actor, name, args: built.append((actor["id"], name)) or {"pack": "full"})
+    agent = lambda: svc.agent_from_headers({"x-api-key": "tok-scout"})
+    runner = lambda: {"id": "scout", "cls": "agent", "via": "runner", "run": ""}
+    assert svc.answer(runner, "context", {"team": True}, clock=lambda: 1000)["result"] == {"pack": "full"}     # the opening
+    assert svc.answer(runner, "context", {"team": True}, clock=lambda: 1060)["result"] == {"pack": "full"}     # the runner: always
+    r = svc.answer(agent, "context", {"team": False}, clock=lambda: 1300)["result"]
+    assert r["repeat"] and "it still holds" in r["note"]
+    assert svc.answer(agent, "team", {"agent": "doctor"}, clock=lambda: 1300)["result"] == {"pack": "full"}    # another pack
+    assert svc.answer(agent, "context", {}, clock=lambda: 1060 + swarm.REPEAT + 1)["result"] == {"pack": "full"}   # a later run
+    assert built == [("scout", "context"), ("scout", "context"), ("scout", "team"), ("scout", "context")]
+
+
+def test_the_restore_drill_opens_the_swarm_snapshot_and_counts_its_record(svc, tmp_path):
+    """SWM-36: the nightly backup holds /srv/ai; the drill opens the restored swarm snapshot and counts its record, and
+    fails when it is missing."""
+    import restore_check as RC
+    svc.answer(lambda: svc.agent_from_headers({"x-api-key": "tok-scout"}), "upsert",
+               {"idem": "i1", "kind": "report", "key": "r1", "title": "Uranium miners note", "body": "text"})
+    svc.snapshot()
+    root = tmp_path / "restored"
+    (root / "swarm").mkdir(parents=True)
+    (svc.data / "swarm.snapshot.db").replace(root / "swarm/swarm.snapshot.db")
+    ok, line = RC.swarm(root)
+    assert ok and "1 artifacts" in line and "events" in line
+    assert RC.swarm(tmp_path / "nothing") == (False, f"swarm ledger: no snapshot at {tmp_path / 'nothing/swarm/swarm.snapshot.db'}")
+    assert "restore_check.py\" swarm" in (__import__("pathlib").Path(__file__).resolve().parent.parent / "ops/restore.sh").read_text()
+

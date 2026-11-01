@@ -39,10 +39,17 @@ HOME = Path("/srv/ai/house")
 LOG, SETTINGS = HOME / "log.jsonl", HOME / "settings.json"
 HERMES_API = "http://127.0.0.1:8642/v1/chat/completions"
 CONTROL = ("light", "switch", "cover", "fan")
-PROTECT = re.compile(r"fridge|freezer|k[uü]hl|gefrier|router|fritz|modem|repeater|\bnas\b|server|\bpc\b|computer|desktop|"
+PROTECT = re.compile(r"fridge|freezer|k[uü]hl|gefrier|router|fritz|modem|repeater|\bnas\b|synology|diskstation|server|\bpc\b|"
+                     r"computer|desktop|wlan|wi-?fi|port ?forward|internet ?(?:access|zugang)|"
                      r"aquarium|medic|cpap|heater pump|boiler|security|alarm", re.I)
+# the network and the NAS: whatever these integrations offer is the owner's alone, whatever it is called (a FRITZ!Box
+# client's internet switch carries the client's name, not the router's)
+INFRA = {"fritz", "synology_dsm"}
 TRIGGER = re.compile(r"^\s*(?:alexa[\s,]+)?(?:(?:frag(?:e)?|ask|tell|sag(?:e)?)\s+)?hermes\b[\s,:.!?-]*(.*)$", re.I)
 VOICE_MAX_PER_HOUR = 30
+ACK_WAIT = 3          # s: Alexa first gives her own reply ("Ich weiß nicht ..."); then the Echo says Hermes heard it
+ACK = {"de": "Einen Moment, Hermes kümmert sich darum.", "en": "One moment, Hermes is on it."}
+ENGLISH = re.compile(r"(what|how|who|when|where|why|which|is|are|can|could|please|tell|write|turn|switch|send)\b", re.I)
 SPOKEN = P.text("main", "SPOKEN")
 
 _status = {"t": 0, "data": {"configured": True}}
@@ -203,9 +210,15 @@ def snapshot():
         areas = {a["area_id"]: a["name"] for a in ws.call(type="config/area_registry/list")}
         states = {s["entity_id"]: s for s in ws.call(type="get_states")}
         entries = ws.call(type="config_entries/get")
+        try:                                      # VOI-08: the AI phone's voice steps (who can log in, the pipelines)
+            people = [u["name"] for u in ws.call(type="config/auth/list") or []      # the logins: a user need not be a person
+                      if u.get("is_active") and not u.get("system_generated")]
+            pipes = [p["name"] for p in (ws.call(type="assist_pipeline/pipeline/list") or {}).get("pipelines", [])]
+        except (RuntimeError, ValueError, KeyError, OSError):
+            people, pipes = [], []
     finally:
         ws.close()
-    out["connected"] = True
+    out["connected"], out["people"], out["pipelines"] = True, people, pipes
     out["integrations"] = sorted({(e["domain"], e.get("title", ""), e.get("state", "")) for e in entries
                                   if e.get("source") not in ("system", "ignore")})
     out["integrations"] = [{"domain": d, "title": t, "state": s} for d, t, s in out["integrations"]]
@@ -237,7 +250,8 @@ def snapshot():
         d = devs.get(e.get("device_id")) or {}
         name = e.get("name") or a.get("friendly_name") or e.get("original_name") or e["entity_id"]
         item = {"entity_id": e["entity_id"], "name": name, "domain": dom, "area": area_of(e), "state": s.get("state", "unknown"),
-                "platform": e["platform"], "protected": bool(PROTECT.search(" ".join([name, e["entity_id"], d.get("name") or ""])))}
+                "platform": e["platform"],
+                "protected": e["platform"] in INFRA or bool(PROTECT.search(" ".join([name, e["entity_id"], d.get("name") or ""])))}
         if dom == "light" and a.get("brightness") is not None:
             item["brightness"] = round(a["brightness"] * 100 / 255)
         if dom == "cover" and a.get("current_position") is not None:
@@ -309,7 +323,7 @@ def switch(req):
     by = req.get("by", "ai")
     t = find(str(req.get("entity", "")))
     op, val = str(req.get("op", "toggle")).lower(), req.get("value")
-    if t["protected"] and by != "owner":
+    if (t["protected"] or t.get("platform") in INFRA) and by != "owner":
         raise ValueError(f"{t['name']} is protected (it may power something important): only the owner switches it, in the app")
     dom = t["domain"]
     data = {"entity_id": t["entity_id"]}
@@ -417,6 +431,8 @@ def answer(question, echo):
     RTM.set_ref(run, "house")
     try:
         RTM.stage("Question from the Echo", question)
+        time.sleep(ACK_WAIT)                              # an answer takes up to a minute: say at once that it was heard
+        rest("POST", "/api/services/notify/send_message", {"entity_id": echo["speak"], "message": ACK["en" if ENGLISH.match(question) else "de"]})
         text = ask_hermes(question, echo)
         RTM.stage("Hermes answered", text, ms=int((time.time() - t0) * 1000), kind="say")
         rest("POST", "/api/services/notify/send_message", {"entity_id": echo["speak"], "message": text or "Sorry, I have no answer."})

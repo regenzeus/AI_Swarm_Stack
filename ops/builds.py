@@ -44,8 +44,10 @@ RUNS = ("planning", "queued", "recheck")                # what a slot works on (
 CHECKS = {
     "ai-stack": "bash ops/check.sh",          # the same script CI runs; it prints ALL CHECKS PASSED itself
 }
-DEFAULT_CHECK = ("if [ -f Makefile ] && grep -q '^test:' Makefile; then make test; "
-                 "elif ls tests test_*.py */test_*.py >/dev/null 2>&1; then pytest -q; "
+# A repo without its own check script: its tests, found the way pytest finds them. `ls a b c` fails when any one of
+# them is missing, so a repo with only tests/ ran nothing and passed (trial semver, 1 Nov 2026: "no automatic checks").
+DEFAULT_CHECK = ("PATH=/opt/tools/bin:$PATH; if [ -f Makefile ] && grep -q '^test:' Makefile; then make test; "
+                 "elif [ -d tests ] || [ -n \"$(find . -maxdepth 3 -name 'test_*.py' -not -path './.git/*' | head -n 1)\" ]; then pytest -q; "
                  "elif [ -f package.json ] && grep -q '\"test\"' package.json; then npm test --silent; "
                  "else echo 'no automatic checks in this repo'; fi && echo ALL CHECKS PASSED")
 SENSITIVE = re.compile(r"^(compose/|config/litellm/|config/gate/|ops/keys\.sh|ops/deploy\.py|ops/builds\.py|ops/missions\.py|images/\w+/entrypoint|"
@@ -487,6 +489,28 @@ def clone(repo, slot=None):
         for k, d in (("user.name", "Owner"), ("user.email", "builder@ai-stack.local")):
             git(path, "config", k, git(live, "config", k, check=False) or d)
     return path
+
+
+def trial_merge(c, b):
+    """TRL-05: a trial's build merged into its scratch repository's main (repositories called trial-…, never deployed), so
+    the next stage of the trial works on it. -> the merge commit, or None when it does not merge (left as it was)."""
+    if not str(b["repo"]).startswith("trial-"):
+        raise ValueError("only a trial's scratch repository is merged without the owner")
+    path = clone(b["repo"])
+    main = default_branch(path)
+    git(path, "merge", "--abort", check=False)
+    git(path, "reset", "-q", "--hard")
+    git(path, "fetch", "-q", "origin")
+    git(path, "checkout", "-q", main)
+    git(path, "reset", "-q", "--hard", f"origin/{main}")
+    if not merge(path, f"origin/{b['branch']}", f"Merge build #{b['id']}: {b['title']}\n\nA trial stage, merged by the Conductor.", "--no-ff"):
+        git(path, "reset", "-q", "--hard", f"origin/{main}")
+        return None
+    sha = git(path, "rev-parse", "HEAD")
+    git(path, "push", "-q", "origin", main, timeout=120)
+    git(path, "push", "-q", "origin", "--delete", b["branch"], check=False)
+    put(c, b["id"], status="merged", merged=sha)
+    return sha
 
 
 def default_branch(path):

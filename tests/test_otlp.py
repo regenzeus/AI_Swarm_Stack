@@ -88,3 +88,31 @@ def test_only_claude_runs_are_traced_when_they_end(tmp_path, monkeypatch):
     RR.ingest([{"run": "hermes:main:x", "agent": "main", "source": "hermes", "ts": 1, "kind": "run"},
                {"run": "hermes:main:x", "agent": "main", "source": "hermes", "ts": 2, "kind": "end", "status": "done"}])
     assert len(sent) == 1                                                 # gateway runs are traced by LiteLLM already
+
+
+def test_a_task_run_is_one_trace_from_the_run_to_every_model_and_tool_call():
+    """TSK-26: the run is the root, each step under it, the agent runs a step started under the step, their calls under them."""
+    runs = [{"run": "task:5", "ref": "task-intake:5-0", "agent": "conductor", "title": "Task #5", "started": 100, "ended": 200},
+            {"run": "task:5:step:1", "ref": "task:5", "agent": "scout", "title": "Step 1", "started": 101, "ended": 150},
+            {"run": "hermes:scout:a", "ref": "task:5:step:1", "agent": "scout", "title": "", "started": 102, "ended": 149},
+            {"run": "task:5:step:2", "ref": "task:5", "agent": "desk", "title": "Step 2", "started": 151, "ended": 199}]
+    events = {"hermes:scout:a": [{"ts": 103, "kind": "call", "title": "web_search", "detail": "{}"}, {"ts": 104, "kind": "result", "title": "web_search", "detail": "[]"},
+                                 {"ts": 110, "kind": "llm", "title": "gpt-sub-fast", "tokens": {"in": 10, "out": 2}}],
+              "task:5:step:2": [{"ts": 160, "kind": "llm", "title": "gpt-sub", "tokens": {"in": 5, "out": 1}}]}
+    spans = otlp.tree_spans("task:5", runs, events)
+    assert len({s["trace_id"] for s in spans}) == 1
+    by = {s["span_id"]: s for s in spans}
+    roots = [s for s in spans if not s.get("parent_id")]
+    assert [s["name"] for s in roots] == ["invoke_agent conductor"]
+    def path(s):
+        out = [s["name"]]
+        while s.get("parent_id"):
+            s = by[s["parent_id"]]
+            out.append(s["name"])
+        return out
+    tool = next(s for s in spans if s["name"] == "execute_tool web_search")
+    assert path(tool) == ["execute_tool web_search", "invoke_agent scout", "invoke_agent scout", "invoke_agent conductor"]
+    chat = next(s for s in spans if s["name"] == "chat gpt-sub")
+    assert path(chat) == ["chat gpt-sub", "invoke_agent desk", "invoke_agent conductor"]
+    assert otlp.encode(spans)                                                        # the protobuf takes the tree
+

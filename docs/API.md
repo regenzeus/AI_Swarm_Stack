@@ -22,6 +22,10 @@ Every `/api/` and `/share` route needs the `Tailscale-User-Login` header that `t
 | `/api/runlog/{rid}` | GET | The last 300 lines of a mission run's log (an earlier-lines marker says how many more there are). |
 | `/api/run/{rid}/timeline` | GET | A run's timeline (ops/telemetry.py writes it: model calls, tool calls, results, thinking, tokens). |
 | `/api/rt/runs` | GET | Runs from the run record, newest first (filter: live, agent, ref; limit). |
+| `/api/task/{tid:int}` | GET | APP-35: one task's page: the task, its runs and their steps (the runner's file), the agents that worked on it, their actions and what they read from and kept in memory (the run record), and its answer. |
+| `/api/agent/{aid}/tasks` | GET | APP-35: the tasks an agent worked on, newest first, with their titles and states. |
+| `/api/trials` | GET | TRL-09: the trial scoreboard as the runner wrote it (ops/trials.py publish). |
+| `/api/usage` | GET | How much each subscription carried in the last 5 and 24 hours (runrecord.usage). |
 | `/api/rt/run/{run}` | GET | One run from the run record: its events, problems, statistics and manifest. |
 | `/api/rt/run/{run}/stream` | GET | New events of a run (and its children) as they arrive; ends when the run has ended. |
 | `/api/crew/{cid}` | GET | A crew agent's history (ops/crew.py writes it every 5 minutes): runs, logs, stats, payoff, health. |
@@ -60,7 +64,7 @@ Every `/api/` and `/share` route needs the `Tailscale-User-Login` header that `t
 | `/api/shop/limits` | POST | The shopping limits (per purchase, per month, shops, the address check): the owner only, never the AI phone. |
 | `/api/clienterror` | POST | An error the app hit in the browser: logged and kept (newest 500) for the health board (APP-24). |
 | `/api/phone/decide` | POST | The owner's answer to the AI phone's approval card (a documented exception, SEC-12); never from the AI phone itself. |
-| `/api/phone/control` | POST | Stop, resume or open a time window for the AI phone (a documented exception, SEC-12); the phone may only stop itself. |
+| `/api/phone/control` | POST | Stop, resume, open the free mode, end a task or keep the screen on for the AI phone (a documented exception, SEC-12); the phone may only stop itself. |
 | `/api/phone/shot/{sid}` | GET | A screenshot the AI phone took, for the owner. |
 | `/api/share/{sid}` | GET | One shared item, for its page with the one-tap choices. |
 | `/api/share/{sid}/save` | POST | Save a shared item into the knowledge base: the link's page, the text, and every document or picture. |
@@ -74,6 +78,11 @@ Every `/api/` and `/share` route needs the `Tailscale-User-Login` header that `t
 | `/api/wiki/roots` | GET | Every wiki (the vault's and each mission's) with pages, links, summary and whether its mission is archived. |
 | `/api/wiki/graph` | GET | One wiki's pages and links, for its graph. |
 | `/api/wiki/map` | GET | MEM-09: the top layer of the wikis: every wiki as a bubble (pages, links, pages changed in 7 days, who writes it) and the subjects two or more of them share (a page with the same title or alias), so you see how they connect. |
+| `/api/task/map` | GET | TSK-24: a task run's swarm map as the runner wrote it (public/maps/<task>.<occ>.json, ops/provenance.py); the task's newest run when no run is named. |
+| `/api/a2a/token` | POST | The owner adds an outside agent: its token is made here and shown once; the runner keeps only its hash. |
+| `/.well-known/agent-card.json` | GET | The stack's A2A agent card, for agents on the tailnet, while A2A is on. |
+| `/a2a` | POST | TSK-19: A2A JSON-RPC (message/send, tasks/get, tasks/cancel; the 1.0 names too) from an outside agent on the tailnet with its token. A message becomes a task (source a2a:<name>) that waits for the owner's OK; an agent sees only its own. |
+| `/api/telemetry` | GET | TSK-25: the daily telemetry history per agent, model, harness and kind (a year), and the price table (ops/history.py). |
 | `/api/wiki/access` | GET | MEM-10: who read and wrote which wiki in the window (runrecord.wiki_access), at most 30 days. |
 | `/api/wiki/page` | GET | One wiki page with its rendered text, links and backlinks. |
 | `/api/wiki/search` | GET | Pages of one wiki whose title, summary or text contains the search text. |
@@ -92,6 +101,17 @@ For the stack's own writers (the runner, Hermes' runtime plugin, Claude's hook).
 | `/problems` | GET | The run record's open problems (by=agent: rolled up per owning agent) for the runner's health board; ingest key only. |
 | `/view/{run:path}` | GET | One run's view for the runner (ops/journal.py condenses it into the agent's journal at the run's end). |
 | `/healthz` | GET | Liveness: answers ok. |
+
+## Voice gateway (port 8095, published to 127.0.0.1:11435 only)
+
+Ollama's API for Home Assistant's Ollama integration on the NAS (VOI-03, docs/HOME-VOICE.md). Every route but `/api/version` needs `Authorization: Bearer` with `VOICE_KEY`; with no key set, all refuse.
+
+| Route | Methods | What it does |
+|---|---|---|
+| `/api/tags` | GET | The models Home Assistant can pick: one per room (hermes:kitchen). |
+| `/api/show` | POST | A model's details: it completes text; no tools of Home Assistant's (Hermes has its own). |
+| `/api/version` | GET | The Ollama version the gateway answers as (the one Home Assistant's client was built against). |
+| `/api/chat` | POST | Ollama's /api/chat: the newest user message is the spoken turn; Home Assistant's own history and tools are not used (Hermes keeps the conversation and its tools). |
 
 ## MCP tools
 

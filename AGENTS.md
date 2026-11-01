@@ -38,12 +38,14 @@ docs it points to. `README.md` is the product overview; `docs/` holds architectu
 | `.forgejo/workflows/` | CI | [.forgejo/workflows/AGENTS.md](.forgejo/workflows/AGENTS.md) |
 | `docs/` | Architecture, security model, reviews | [docs/AGENTS.md](docs/AGENTS.md) |
 | `eval/` | Frozen benchmark and retrieval evaluation | [eval/AGENTS.md](eval/AGENTS.md) |
+| `eval/trials/` | Trials: tasks with an answer key no agent sees, scored and audited (docs/SWARM-TRIALS.md) | [eval/trials/AGENTS.md](eval/trials/AGENTS.md) |
 | `requirements/` | What the stack must do: needs, constraints, decisions, requirements, findings (contradictions) | [requirements/AGENTS.md](requirements/AGENTS.md) |
 | `spec/` | Requirements-checker pilot (specs of other projects) | [spec/AGENTS.md](spec/AGENTS.md) |
 | `smoke/` | Wiring test, no tokens spent | [smoke/AGENTS.md](smoke/AGENTS.md) |
 | `converters/` | Mail and chat export conversion | [converters/AGENTS.md](converters/AGENTS.md) |
 | `nas/` | What runs on the NAS (Forgejo, Home Assistant) | [nas/AGENTS.md](nas/AGENTS.md) |
 | `nas/homeassistant/` | Home Assistant on the NAS: the House (Echos, lights, plugs) | [nas/homeassistant/AGENTS.md](nas/homeassistant/AGENTS.md) |
+| `nas/voice/` | Hermes' voice on the NAS: speech to text and Piper for Home Assistant | [nas/voice/AGENTS.md](nas/voice/AGENTS.md) |
 | `secrets/` | sops-encrypted secrets: never read or edit | [secrets/AGENTS.md](secrets/AGENTS.md) |
 | `vault-template/` | The Obsidian vault's own contract (copied into the vault) | [vault-template/README.md](vault-template/README.md) |
 | root files | `Makefile` (every operation), `versions.env` (pins), `versions.lock` (digests), `README.md`, `NEW-MACHINE.md`, `UPGRADE.md` | this file |

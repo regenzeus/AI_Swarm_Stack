@@ -60,3 +60,27 @@ def test_the_readme_and_the_index_point_at_what_is_current():
     for f in ("AGENTS.md", "docs/MISSION-CONTROL.md"):
         assert "The only writes the app does itself are" in (ROOT / f).read_text()      # the invariant with SEC-12's exceptions
     assert "make forgejo-connect" not in (ROOT / "docs/DOGFOOD.md").read_text()
+
+
+def test_what_the_docs_list_matches_the_configuration():
+    """QA-13: the lists the docs keep of the configuration are checked against it, not only for a mention: every Compose
+    service has its row in compose/AGENTS.md (and nothing else is there), every tool server of the gateway is named in
+    the guide or the docs, and every harness a Conductor step can run on is in the tasks chapter."""
+    import re
+    import yaml
+    import conductor as CD
+    svcs = set()
+    for f in ("core.yaml", "apps.yaml"):
+        d = yaml.safe_load((ROOT / "compose" / f).read_text().replace("!reset ", "").replace("!override ", ""))
+        svcs |= set(d["services"])
+    rows = set(re.findall(r"^\| `([a-z0-9-]+)` \| (?:core|apps) \|", (ROOT / "compose/AGENTS.md").read_text(), re.M))
+    assert rows == svcs, f"compose/AGENTS.md lists {sorted(rows - svcs)} not in Compose and misses {sorted(svcs - rows)}"
+    cfg = yaml.safe_load(next((ROOT / "config/litellm").glob("*.yaml")).read_text())
+    docs = "\n".join(p.read_text() for p in [ROOT / "README.md", ROOT / "AGENTS.md", *(ROOT / "images/mission-control/guide").glob("*.md")])
+    assert not [m for m in cfg["mcp_servers"] if not re.search(rf"\b{re.escape(m)}\b", docs)]
+    tasks = (ROOT / "images/mission-control/guide/20-tasks.md").read_text().lower()
+    assert not [h for h in CD.HARNESSES if h.replace("-", " ") not in tasks and h not in tasks]
+    import builds as B
+    builder = (ROOT / "images/mission-control/guide/10-builder.md").read_text()
+    assert not [n for n in B.ENGINES.values() if n.split(" · ")[-1] not in builder]          # each build engine by its name
+

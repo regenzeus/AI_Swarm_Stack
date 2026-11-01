@@ -111,8 +111,10 @@ def test_wiki_delete_is_wired_for_the_app_only():
     runner = (ROOT / "ops/missions.py").read_text()
     server = (ROOT / "images/mission-control/server.py").read_text()
     assert "W.handle(req) if a in W.ACTIONS" in runner and "target=W.worker" in runner
-    assert 'body.get("action") == "wiki_delete" and from_ai_phone(request)' in server            # never from the AI phone
-    assert server.count("wiki_delete") == 1                                                        # and no MCP tool sends it
+    assert 'body.get("action") in ("wiki_delete", "calendar_set", "calendar_clear", "a2a_settings", "a2a_revoke") and from_ai_phone(request)' in server  # never from the AI phone
+    assert "wiki_delete" in __import__("server").ACTIONS                                            # the button gets through
+    assert server.count("wiki_delete") == 2           # the AI phone refused, the app allowed; no MCP tool sends it (the old
+                                                       # count of 1 also kept it out of ACTIONS: Delete wiki said unknown action)
 
 
 def test_mission_wikis_and_agent_journals_are_searchable():

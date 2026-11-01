@@ -48,6 +48,9 @@ decrypts the secrets it needs for itself and never prints them.
 | `make curate` | run the weekly learning pass now |
 | `make vault-check` | check the vault's structure (add `ARGS=--fix` to repair) |
 | `make req` | check the stack's requirements and rewrite their readable list (`requirements/REQUIREMENTS.md`) |
+| `make trial NAME=semver` | a trial in the background: a task with an answer key no agent sees, given like you would give it, scored, checked for copying; its report lands in the vault under trials/ |
+| `make trial-check NAME=semver` | does a trial's answer key score its own reference fully (changes nothing) |
+| `make journeys` | the journey checks now: a task followed to its result on replayed answers, every screen at 375 px on your data and with none, the newest e-mail on a phone, every make target dry-run (no model; nightly anyway) |
 | `make retrieval` | measure how well search finds things |
 | `make bench-gate` / `make bench` | the quality benchmark, quick or full |
 | `make skill-approve NAME=<skill>` | approve a skill Hermes parked for review |
@@ -65,6 +68,7 @@ decrypts the secrets it needs for itself and never prints them.
 | `make lock` | record the exact images that are running |
 | `make deploy-testrepo` | deploy the TestRepo project to the NAS |
 | `make ha-deploy` | deploy or upgrade Home Assistant on the NAS (its config and devices stay) |
+| `make voice-deploy` | deploy or upgrade Hermes' voice on the NAS: speech to text and the voice, for Home Assistant only |
 | `make tasks-gate` | check that the task intake writes a checkable plan for 20 sample tasks (starts nothing) |
 | `make conductor-gate` | run a five-step test task on three kinds of agents and restart the runner in the middle; it must finish |
 | `make publish-check` | build the public copy without your personal data, scan it and run its tests (pushes nothing) |

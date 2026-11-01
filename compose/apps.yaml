@@ -323,6 +323,7 @@ services:
     environment:
       API_SERVER_KEY: ${API_SERVER_KEY:?run via make}   # chat with Hermes (main profile), as Open WebUI does
       SWARM_APP_TOKEN: ${SWARM_APP_TOKEN:-}           # the Swarm page's read-only door (ops/swarm_setup.py)
+      VOICE_KEY: ${VOICE_KEY:-}                       # the voice gateway's key, held by Home Assistant (VOI-03)
     volumes:
       - /srv/ai/missions:/missions        # inbox (write), public state + run logs (read), app/ (push keys, devices)
       - /srv/vault:/vault:ro              # reports and mission results, read-only
@@ -330,7 +331,11 @@ services:
       - /srv/ai/code-docs:/code-docs:ro   # code map digests (Understand Anything), read-only
       - /srv/ai/phone:/phone              # the AI phone: its state (read), the owner's decisions and Stop (write)
       - /srv/ai/connections:/connections  # app connections: grants and decisions (write), status and log (read)
-    ports: ["127.0.0.1:8090:8090", "127.0.0.1:8093:8093"]   # 8093: the agent runtime's ingest (runner → spooled events)
+      - ../prompts:/prompts:ro            # Hermes' voice prompt (main.md VOICE), read at each turn (MEM-13)
+    # 8093: the agent runtime's ingest (runner → spooled events); 11435: the voice gateway for Home Assistant on the
+    # NAS (VOI-03), which Windows passes on from the NAS's address only (the LAN's 11434; Windows' own 11434 is the
+    # owner's Ollama app)
+    ports: ["127.0.0.1:8090:8090", "127.0.0.1:8093:8093", "127.0.0.1:11435:8095"]
     networks: [mcnet, mcui, obs, swarmmcp]   # obs: Phoenix ("Open in Phoenix"); swarmmcp: the swarm's read-only door (Swarm page)
     read_only: true
     tmpfs: [/tmp]

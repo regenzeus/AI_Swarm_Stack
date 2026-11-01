@@ -24,6 +24,7 @@ Everything is pinned (versions.env, images/*/Dockerfile). Nothing upgrades by it
 ## Notes per component
 
 - LiteLLM: chatgpt/ models block startup until auth.json exists (ops/enable-chatgpt.py); check MCP gateway changes.
+  After it runs, `python3 ops/prices.py refresh` takes the list prices from its table (config/prices.json, TSK-27).
 - Hermes: re-run config/hermes/configure.sh; the gateway caches skills (restart after skill changes).
 - qmd: images/qmd patches the rerank default to false; check the patch still applies (the build fails if not).
 - Forgejo runs on the NAS (nas/forgejo); major versions (16 -> 17) need its own backup first.

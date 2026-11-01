@@ -98,6 +98,23 @@ def fill(owner, name, t, fills):
     return t if raw(owner, name) else t.format(**fills)
 
 
+DRY_RUN = ("This is a dry run: the tools are not connected, which is expected, so do not apologise or refuse. Write your "
+           "plan: the tool calls you would make, in order, with their arguments, then what you would report.")
+
+
+def task_of(owner, name, t, case):
+    """What a replay sends for one case. A raw prompt that is an agent's standing brief (a system message) is nothing
+    to answer on its own: its case brings the request, and with no tools in a replay the answer names the tool calls
+    it would make, so the judge sees whether the brief changes what the agent does. A filled prompt that drives tools
+    (main/VOICE starts missions) says so with "dry_run": true on its cases: without tools it could only say it cannot
+    act, which the replay counted as no answer."""
+    if raw(owner, name) and case.get("user"):
+        return f"{t}\n\n--- The request. {DRY_RUN} ---\n{case['user']}"
+    if case.get("dry_run"):
+        return f"{fill(owner, name, t, case['fills'])}\n\n--- {DRY_RUN} Then the words you would say. ---"
+    return fill(owner, name, t, case["fills"])
+
+
 # ---------- what a run records ----------
 def record(prompt):
     """The prompt's ref in the current run's record (MEM-11: every run records the version it used)."""
@@ -232,8 +249,8 @@ def replay(owner, name, ask=None, judge_ask=None, now=None):
     score = {"valid": [0, 0], "judge": {"new": 0, "old": 0, "equal": 0}, "cases": len(cases)}
     rnd = random.Random(sha(new))
     for c in cases:
-        task = fill(owner, name, new, c["fills"])
-        a_old, a_new = ask(fill(owner, name, old, c["fills"])), ask(task)
+        task = task_of(owner, name, new, c)
+        a_old, a_new = ask(task_of(owner, name, old, c)), ask(task)
         score["valid"][0] += valid(a_old, wants_json)
         score["valid"][1] += valid(a_new, wants_json)
         flip = rnd.random() < 0.5

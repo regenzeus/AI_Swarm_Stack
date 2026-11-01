@@ -13,6 +13,9 @@ into `requirements/findings.yaml`.
 | [OBSERVABILITY.md](OBSERVABILITY.md) | The run record, the agent log, problems, the health board, notifications |
 | [SECURITY.md](SECURITY.md) | Trust boundaries, sign-in, egress, keys, and the accepted risks |
 | [SWARM-ROADMAP.md](SWARM-ROADMAP.md) | Where the swarm goes next: give a task and the stack does the rest; the phases, gates and the owner's decisions |
+| [SWARM-TRIALS.md](SWARM-TRIALS.md) | Proposed (phase 10): trials with an answer key so the swarm gets better by being used; the roles software work needs; the improvement loop; the owner's open decisions |
+| [SWARM-DESIGN.md](SWARM-DESIGN.md) | How the swarm works after phase 4: every task a plan graph, fan-out, artifacts and the swarm map, telemetry, customisation, UX standards, reach (phases 6-9) |
+| [HOME-VOICE.md](HOME-VOICE.md) | Hermes at home by voice (V0 measured, V1 next): its own wake word, one running conversation in every room, the AI phone as the first speaker, missions by voice; the phases and the owner's decisions |
 | [PUBLISHING.md](PUBLISHING.md) | The public copy on GitHub: what it replaces and leaves out, the checks, how to push it |
 | [SHOPPING.md](SHOPPING.md) | Shopping missions from wish to door: offers, approvals, the checked purchase on the AI phone |
 | [TOKENS.md](TOKENS.md) | Where the tokens of each agent go, and the prompt-caching measurements |

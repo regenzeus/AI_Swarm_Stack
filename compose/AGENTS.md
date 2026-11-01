@@ -9,6 +9,37 @@
 Run through `make` only (`make up`, `make ps`, `make logs`): the Makefile decrypts the secrets into compose's
 environment. Project name `aistack`; images pinned in `../versions.env` or built from `../images/<name>`.
 
+## Every service by name
+
+| Service | File | What it is |
+|---|---|---|
+| `postgres` | core | LiteLLM's database (keys, spend logs) |
+| `litellm` | core | the model gateway: every model call and MCP tool server, one virtual key per agent |
+| `phoenix` | core | traces of the model calls and task runs |
+| `ollama` | core | the smoke test's tiny model, reachable only through LiteLLM with vk-smoke |
+| `hermes` | apps | the assistant (Hermes Agent) with its profiles: main, scout, mission, curator |
+| `hermes-dashboard` | apps | Hermes' own admin UI, in Hermes' network namespace |
+| `gate-hermes-dashboard` | apps | the tailnet sign-in gate in front of the Hermes dashboard |
+| `openwebui` | apps | Open WebUI, the second chat front end |
+| `mission-control` | apps | the app (phone and desktop), its MCP servers, the run record's ingest and the voice gateway |
+| `qmd` | apps | the vault's search index (keywords and meaning) as MCP |
+| `research` | apps | the research tool: one question to the scout profile |
+| `fetch` | apps | the scout's page reader, internet only through its egress firewall |
+| `browser` | apps | the scout's look-only browser (shops), behind its guard |
+| `pricewatch` | apps | the shopping agents' price watch (changedetection.io) |
+| `graphify` | apps | the code knowledge graph across ~/code as MCP |
+| `opencode` | apps | OpenCode, the coding agent of Conductor steps (no internet) |
+| `opencode-port` | apps | publishes OpenCode's web UI on 127.0.0.1:4096 (portfwd), so OpenCode stays on internal networks |
+| `pkgproxy` | apps | npm and PyPI for OpenCode and nothing else |
+| `pkgproxy-builder` | apps | the builder's own proxy: the same registries plus api.anthropic.com for its Claude Code engine |
+| `builder` | apps | the build sandbox (Hermes and Claude Code engines, checks, Serena), its own clones |
+| `ci-runner` | apps | the Forgejo Actions runner (CI), no Docker socket |
+| `hindsight` | apps | long-term memory (facts from conversations) |
+| `hindsight-db` | apps | Hindsight's Postgres with pgvector |
+| `phone` | apps | the AI phone's tools (ADB over Tailscale), behind approvals |
+| `mail` | apps | the Gmail connector's tools, behind time-limited grants |
+| `swarm` | apps | the swarm's Ledger, Board and doors |
+
 ## Rules for every service
 
 - **Ports**: `127.0.0.1:<port>:<port>` only. Outside access is `tailscale serve` on Windows, never a public bind.

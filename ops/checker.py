@@ -33,6 +33,8 @@ GRACE = 2 * 3600                               # the health board needs a little
 REGRESSION_DAYS = 30
 WAIT_CI = 2 * 86400
 REFUSALS_ALERT = 10                            # refused writes per agent and day before it is a health signal
+REFUSALS_QUIET = 2 * 3600                      # ... unless none came for 2 h: its cause stopped (FND-93: a fixed cause
+                                               # kept the Checker failing for the rest of the day)
 PROPOSERS = ("doctor", "maintainability", "tests", "self-review")
 OPS = {"<": lambda a, b: a < b, "<=": lambda a, b: a <= b, ">": lambda a, b: a > b, ">=": lambda a, b: a >= b, "==": lambda a, b: a == b}
 METRICS = ("health_alerts", "failed_runs")
@@ -325,9 +327,13 @@ def signals(send=None, now=None):
     r = send("stats", {}, "system")
     st = r.get("result") or {}
     out = []
+    causes = st.get("refusal_causes_24h") or {}
     for actor, n in (st.get("refusals_24h") or {}).items():
-        if n > REFUSALS_ALERT:
-            out.append(f"{actor} had {n} refused swarm writes in 24 h")
+        why = causes.get(actor) or []
+        if n <= REFUSALS_ALERT or (why and now - max(w["last"] for w in why) > REFUSALS_QUIET):
+            continue
+        top = why[0] if why else None
+        out.append(f"{actor} had {n} refused swarm writes in 24 h" + (f", {top['n']} of them {top['op']}: {top['reason']}" if top else ""))
     for actor, n in (st.get("guard_trips_24h") or {}).items():
         if n >= GUARD_TRIPS and not SW.paused(actor) and actor not in ("owner", "system", "checker"):
             if send("pause", {"agent": actor, "on": True}, "system").get("ok"):

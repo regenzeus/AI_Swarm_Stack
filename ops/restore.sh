@@ -48,6 +48,7 @@ if [ "$MODE" = drill ]; then
     $(docker inspect -f "{{.Config.Image}}" aistack-hermes-1) /check.py || bad=1
   for v in $VOLS; do docker volume rm drill_$v >/dev/null; done
   tar -tf $W/home.tar | grep -c . | xargs echo "4/4 home folders: files" ; tar -tf $W/vault.tar | grep -c "\.md$" | xargs echo "    vault markdown files:"
+  python3 "$(dirname "$0")/restore_check.py" swarm "$W/srv-ai" || bad=1        # SWM-36: the swarm's ledger restores
   [ -s $W/pg.err ] && { echo "postgres warnings:"; head -5 $W/pg.err; }
   [ "$keys" -gt 0 ] || bad=1
   if [ -n "${bad:-}" ]; then

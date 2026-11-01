@@ -1,0 +1,6 @@
+[
+ {"fills": {}, "model": "gpt-sub-fast", "user": "Find currently open senior AUTOSAR RTE or embedded middleware jobs within commuting distance of Heilbronn, Germany, with the employer, place, posting date and a link to each live posting."},
+ {"fills": {}, "model": "gpt-sub-fast", "user": "Which employers near Stuttgart are hiring embedded software architects right now? Name the openings with their reference numbers."},
+ {"fills": {}, "model": "gpt-sub-fast", "user": "What did Cameco report in its latest quarterly results, and how did the share price react? Give dates and sources."},
+ {"fills": {}, "model": "gpt-sub-fast", "user": "What does a 32 GB DDR5-5600 SO-DIMM kit cost at German shops today? Give three offers with shop, price and availability."}
+]

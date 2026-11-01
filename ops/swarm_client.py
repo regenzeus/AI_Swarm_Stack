@@ -35,7 +35,8 @@ STATE = Path(os.environ.get("SWARM_STATE", "/srv/ai/swarm-outbox"))
 MISSIONS = Path(os.environ.get("MISSIONS_DB", "/srv/ai/missions/missions.sqlite"))
 REPORT = Path(os.environ.get("SWARM_PUBLIC", "/srv/ai/missions/public/swarm.json"))
 WRITES = {"upsert", "evidence", "transition", "link", "watch", "pin", "ref"}
-ACTIONS = {"swarm_pause", "swarm_confirm", "swarm_reopen", "swarm_autonomy", "swarm_post", "swarm_help_verdict"}   # requests from the app (the owner's)
+ACTIONS = {"swarm_pause", "swarm_confirm", "swarm_reopen", "swarm_autonomy", "swarm_post", "swarm_help_verdict",   # requests from the app (the owner's)
+           "swarm_agent_change"}                          # TSK-28, TSK-29: the owner's agent settings
 
 
 class Down(Exception):
@@ -949,12 +950,92 @@ def state():
         return {"swarm": None}
 
 
+HARNESSES = ("hermes", "claude-code", "python")
+MAX_INSTRUCTIONS = 12                                     # cap: list (a card's standing instructions; more is a prompt change)
+
+
+def agent_change(req, by="app", send=None, cards=None, models=None):
+    """TSK-28, TSK-29: the owner's change to an agent in the app (model, harness, tools, standing instructions) becomes an
+    agent change in the Ledger, as the Coach's do: replayed on the agent's past runs (no score may drop, SWM-18), shown
+    with its diff and result under Ideas, built only after the owner's Build it and deploy tap, and reverted like any
+    build. A tool added is a grant of the agent's key: it needs the owner's explicit yes, and is recorded as a security
+    change; a tool removed needs only the replay. -> {id, diff, security}"""
+    import registry
+    import prices as PR
+    send = send or call
+    cards = cards or {x["id"]: x for x in registry.load().get("agents") or []}
+    agent = str(req.get("agent") or "")
+    card = cards.get(agent)
+    if not card:
+        raise ValueError("no such agent")
+    want, change, diff, added = req.get("change") or {}, {}, [], []
+    models = models or ((set(PR.load().get("models") or {}) | {x.get("model") for x in cards.values()}) - {None, "", "none"})
+    if want.get("model") and want["model"] != card.get("model"):
+        if want["model"] not in models:
+            raise ValueError(f"{want['model']!r} is no model the gateway serves ({', '.join(sorted(models))})")
+        change["model"] = want["model"]
+        diff.append(f"model: {card.get('model')} → {want['model']}")
+    if want.get("harness") and want["harness"] != card.get("harness"):
+        if want["harness"] not in HARNESSES:
+            raise ValueError(f"a harness is one of {', '.join(HARNESSES)}")
+        change["harness"] = want["harness"]
+        diff.append(f"harness: {card.get('harness')} → {want['harness']}")
+    if want.get("tools") is not None:
+        known = set().union(*(set(x.get("tools") or []) for x in cards.values()))
+        tools = list(dict.fromkeys(str(x) for x in want["tools"]))
+        if set(tools) - known:
+            raise ValueError(f"no such tool: {', '.join(sorted(set(tools) - known))}")
+        have = card.get("tools") or []
+        added, removed = sorted(set(tools) - set(have)), sorted(set(have) - set(tools))
+        if added and not req.get("grant"):
+            raise ValueError(f"adding {', '.join(added)} gives {agent}'s key access to it: tick the grant to confirm it")
+        if added or removed:
+            change["tools"] = tools
+            diff += [f"tools: adds {', '.join(added)}"] * bool(added) + [f"tools: removes {', '.join(removed)}"] * bool(removed)
+    if want.get("instructions") is not None:
+        ins = [limit(str(x).strip(), 400, "an instruction") for x in want["instructions"] if str(x).strip()]
+        if len(ins) > MAX_INSTRUCTIONS:
+            raise ValueError(f"at most {MAX_INSTRUCTIONS} standing instructions; more belongs in the agent's prompt")
+        if ins != (card.get("instructions") or []):
+            change["instructions"] = ins
+            diff.append(f"standing instructions: {len(card.get('instructions') or [])} → {len(ins)}")
+    if not change:
+        raise ValueError("nothing changes")
+    why = limit(str(req.get("why") or "").strip(), 1000, "the reason") or "the owner's choice"
+    files = ["config/agents.yaml"] + (["ops/keys.sh", "config/hermes"] if "tools" in change else []) + (["config/hermes"] if "model" in change else [])
+    plan = {"agent": agent, "change": change, "target": {"score": None, "why": why},
+            "experiment": {"examples": 10, "rule": "no replay score drops (the owner's change, TSK-28)"},
+            "files": sorted(set(files)), "test": "tests/test_registry.py"}
+    if added:
+        plan["security"] = {"adds": added, "granted_by": by}
+    key = f"owner:{agent}:{int(time.time())}"
+    body = (f"Your change to {agent}: " + "; ".join(diff) + f". Why: {why}."
+            + (f" Tools are grants: the build gives {agent}'s key {', '.join(added)} (ops/keys.sh) and its Hermes profile, as the card's tools say." if added else ""))
+    r = send("upsert", {"idem": key, "kind": "agent_change", "key": key, "title": f"Your change: {agent} — " + "; ".join(diff)[:120],  # cap: id
+                        "body": body, "plan": plan, "evidence": [{"text": d, "ref": "owner"} for d in diff],
+                        "impact": "medium", "confidence": "medium", "effort": "small"}, "owner", by=by)
+    if not r.get("ok"):
+        raise ValueError(r.get("refused") or "the swarm service is not reachable; nothing changed")
+    aid = r["result"]["id"]
+    for to in ("open", "ready"):
+        t = send("transition", {"idem": f"{key}:{to}", "id": aid, "to": to, "reason": "the owner's change: replay it"}, "owner", by=by)
+        if not t.get("ok") and "already" not in str(t.get("refused") or ""):
+            raise ValueError(t.get("refused") or "the change could not be put up for its replay")
+    if added:                                             # TSK-29: recorded where the change lives, for the security review
+        send("evidence", {"idem": f"{key}:grant", "id": aid, "text": f"security change: adds {', '.join(added)} to {agent}'s key grants; "
+                          f"granted by the owner ({by}) in the app"}, "owner", by=by)
+    publish()
+    return {"id": aid, "diff": diff, "security": plan.get("security")}
+
+
 def handle(req, c=None):
     """The owner's swarm actions from the app: swarm_pause (one agent or all, "*"), swarm_confirm ("It works" on a shipped
     idea whose check is owner_confirms), swarm_reopen ("Still broken": back to open with his words), swarm_autonomy
     (switch a rule template on or off, ops/checker.py TEMPLATES)."""
     a = req.get("action")
     by = str(req.get("by") or "app")
+    if a == "swarm_agent_change":
+        return agent_change(req, by)
     if a == "swarm_post":                                      # the owner writes in the Chatroom (SWM-11)
         to = [str(x) for x in req.get("to") or []][:10]
         r = call("send", {"idem": f"post:{time.time():.3f}", "to": to, "act": "request" if req.get("request") else "inform",

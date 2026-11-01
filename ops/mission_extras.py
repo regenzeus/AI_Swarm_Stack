@@ -157,6 +157,11 @@ def check_events(missions, c):
         return
     _last_watch["t"] = time.time()
     act = [(m, t) for m in missions.values() if m.get("status") == "active" for t in m.get("triggers") or []]
+    try:                                         # TSK-21: a task that runs on an event watches like a mission
+        import tasks as TK
+        act += [(w, t) for w in TK.watchers(c) for t in w["triggers"]]
+    except Exception as e:                       # the missions' triggers are watched all the same; logged
+        M.log(f"watch: the tasks' triggers not read: {type(e).__name__}: {e}")
     if not act:
         return
     spec = {"sec": sorted({x for _, t in act if t["type"] == "sec_filing" for x in t["tickers"]}),
@@ -204,8 +209,13 @@ def check_events(missions, c):
             continue                         # baseline only
         if ev and ev.get("summary"):
             ev["trigger"] = trigger_text(t)
-            M.enqueue(c, m["slug"], "event", event=ev)
-            M.event("triggered", m["slug"], f"{ev['trigger']}: {ev['summary']}", push=True, title=m["title"])
+            if m.get("task"):                    # a task's trigger starts its next occurrence under the Conductor
+                import conductor as CD
+                CD.fire(c, m["task"], ev)
+                M.event("triggered", "", f"Task #{m['task']}: {ev['trigger']}: {ev['summary']}", push=True, title=m["title"])
+            else:
+                M.enqueue(c, m["slug"], "event", event=ev)
+                M.event("triggered", m["slug"], f"{ev['trigger']}: {ev['summary']}", push=True, title=m["title"])
             try:                                      # TSK-10: the event bus logs it too (its rules may start tasks)
                 import events as EV
                 EV.mission_event(c, m["slug"], ev)
@@ -225,26 +235,41 @@ def mark(c, k):
 def run_alert(m, ev, logf):
     """Event on a briefing mission: a short alert written by the desk from the event's sources."""
     topic = m.get("topic", m["slug"])
+    a, err = alert_of(topic, ev)
+    open(logf, "w").write(err)
+    if not a:
+        return "failed", (err.strip().splitlines() or ["alert failed"])[-1], ""
+    rel = file_alert(topic, a, ev)
+    deliver(m, a.get("title") or ev["summary"][:80], a.get("short", ""), rel, f"Alert · {ev.get('trigger', '')}", a["markdown"])  # cap: id
+    return "ok", a.get("short") or a.get("title", "Alert"), rel
+
+
+def alert_of(topic, ev):
+    """The desk writes a short alert from the event's sources -> ({"title", "markdown", "short"} or None, its log). A
+    briefing mission's event run and a briefing task's event occurrence (ops/conductor.py) both write it this way."""
     p = subprocess.run(["docker", "run", "--rm", "-i", "--network", "aistack_webonly", "-e", "VK_DESK", "-e", "SEC_CONTACT",
                         "-v", f"/srv/vault/topics/{topic}:/topic:ro", "-v", f"{M.OPS.parent / 'prompts'}:/prompts:ro", "aistack/desk:1", "--alert"],
                        input=json.dumps({"event": ev}), capture_output=True, text=True, timeout=900)
-    open(logf, "w").write(p.stderr)
     if p.returncode or not p.stdout.strip():
-        return "failed", (p.stderr.strip().splitlines() or ["alert failed"])[-1], ""
+        return None, p.stderr
     a = json.loads(p.stdout)
     if a.get("prompt"):                          # MEM-11: the alert's prompt version in the run record, its call a replay case
         M.RTM.stage("Prompt", a["prompt"])
     if a.get("case"):
         P.add_case(**a["case"])
     a.pop("prompt", None), a.pop("case", None)
+    return a, p.stderr
+
+
+def file_alert(topic, a, ev):
+    """The alert in the vault under topics/<topic>/alerts/ -> its path."""
     t = M.now()
     rel = f"topics/{topic}/alerts/{t:%Y}/{t:%m}/{t:%Y-%m-%d-%H%M}-{ev['kind']}.md"
     M.write_front(M.VAULT / rel, {"topic": topic, "date": t.isoformat(timespec="minutes"), "type": "alert",
                                   "trigger": ev.get("trigger", ev["kind"])}, a["markdown"])
     M.vault_commit([f"topics/{topic}/alerts"], f"desk: {topic} alert {t:%F %H:%M}")
     M.reindex()
-    deliver(m, a.get("title") or ev["summary"][:80], a.get("short", ""), rel, f"Alert · {ev.get('trigger', '')}", a["markdown"])  # cap: id
-    return "ok", a.get("short") or a.get("title", "Alert"), rel
+    return rel
 
 
 # ---------- deep research ----------
@@ -315,44 +340,57 @@ def wiki_pages(root):
 def compile_wiki(m, source_rel, text, key):
     if m.get("wiki_off"):                        # the owner deleted this mission's wiki (ops/wikis.py)
         return 0
-    root = wiki_root(m)
-    pages = wiki_pages(root)
+    return len(compile_into(wiki_root(m), m["title"], source_rel, text, key))
+
+
+def mentioned(pages, text):
+    """The pages a text names (by title or alias)."""
     low = text.lower()
-    touched = [p for p in pages if any(n and n.lower() in low for n in [p["title"], *p["aliases"]])][:6]
+    return [p for p in pages if any(n and n.lower() in low for n in [p["title"], *p["aliases"]])]
+
+
+def compile_into(root, title, source_rel, text, key, touched=None):
+    """A result folded into the wiki at root: the pages it names (or `touched`, a list of page paths) are rewritten,
+    new pages made, superseded facts kept. -> the paths written. A refinement task's wiki step (ops/conductor.py
+    run_wiki) calls it once per group of pages; a mission's result once."""
+    pages = wiki_pages(root)
+    touched = [p for p in pages if p["path"] in touched] if touched is not None else mentioned(pages, text)[:6]   # cap: prompt
     index = "\n".join(f"- [[{p['path']}]] {p['title']}: {p['summary']}" for p in pages) or "(empty: this is the first result)"
     src = source_rel[:-3] if source_rel.endswith(".md") else source_rel
     try:                                         # MEM-03: the one writer folds in what other agents gave the wiki
         import swarm_client as SW
-        helps = SW.wiki_helps(root, m["title"])
+        helps = SW.wiki_helps(root, title)
     except Exception:
         SW, helps = None, []
     contrib = "\n".join(f"- from {h['helper']}: {h['text']} (why its owner would not see it, it says: {h['unseen']})" for h in helps) or "(none)"
-    r = M.ask_json(WIKI.format(title=m["title"], source=src, index=index[:6000], contributions=contrib,  # cap: prompt
+    r = M.ask_json(WIKI.format(title=title, source=src, index=index[:6000], contributions=contrib,  # cap: prompt
                                pages="\n\n".join(f"=== {p['path']}\n{p['body'][:3000]}" for p in touched) or "(none)",  # cap: prompt
                                text=re.sub(r"^---\n.*?\n---\n", "", text, flags=re.S)[:14000]), key, timeout=400)  # cap: prompt
     today = dt.date.today().isoformat()
     by_path = {p["path"]: p for p in pages}
-    n = 0
+    folders = "|".join(sorted({"entities", "concepts", "projects", "events"} | {p["path"].split("/")[0] for p in pages if "/" in p["path"]}))
+    written = []
     for pg in r.get("pages", [])[:8]:
         path = str(pg.get("path", "")).strip().lower().removesuffix(".md")
-        if not re.fullmatch(r"(entities|concepts|projects|events)/[a-z0-9][a-z0-9-]{0,60}", path) or not pg.get("body"):
-            continue
+        if not (re.fullmatch(rf"({folders})/[a-z0-9][a-z0-9-]{{0,60}}", path) or path in by_path) or not pg.get("body"):
+            continue                             # a folder the wiki has (the vault wiki's howto, answers ...) or a page it has
         old = by_path.get(path, {}).get("meta", {})
         body = keep_superseded(by_path.get(path, {}).get("body", ""), str(pg["body"]))    # MEM-12: a superseded fact stays
-        meta = {"title": str(pg.get("title") or path.split("/")[1])[:100], "type": KIND[path.split("/")[0]],  # cap: untrusted
+        meta = {"title": str(pg.get("title") or path.split("/")[-1])[:100], "type": KIND.get(path.split("/")[0]) or old.get("type") or "page",  # cap: untrusted
                 "summary": str(pg.get("summary", "")), "aliases": [str(a)[:60] for a in pg.get("aliases") or []][:8],  # cap: untrusted
                 "sources": sorted(set((old.get("sources") or []) + [src]))[-30:], "created": old.get("created", today),
                 "last_validated": today, "trust": "contested" if "[!contradiction]" in body else "news"}
         M.write_front(M.VAULT / root / f"{path}.md", meta, body)
         M.RTM.touched(f"{root}/{path}.md", changed=True, note="wiki page compiled from the result")   # MEM-10: the access map sees it
-        n += 1
+        written.append(path)
     if helps and SW:
         try:
             SW.wiki_folded(root, helps, src)
         except Exception:
             pass
-    write_index(root, m["title"])
-    return n
+    if root != "wiki":                           # the vault wiki's index is its curator's
+        write_index(root, title)
+    return written
 
 
 def write_index(root, title):

@@ -58,7 +58,9 @@ Read live from the stack's version file:
 versions
 ```
 
-## Apps you can open
+## Tools you can open
+
+The same list as Tools on the Stack page, with each tool's menus.
 
 ```live
 apps

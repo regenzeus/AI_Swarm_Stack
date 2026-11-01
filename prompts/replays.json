@@ -167,6 +167,23 @@
     6,
     6
    ]
+  },
+  {
+   "at": "2026-11-01",
+   "cases": 6,
+   "from": "b5d8471e28f9",
+   "judge": {
+    "equal": 2,
+    "new": 3,
+    "old": 1
+   },
+   "model": "gpt-sub",
+   "passed": true,
+   "sha": "13e314a3a2ec",
+   "valid": [
+    6,
+    6
+   ]
   }
  ],
  "intake/RULE_CHECK": [
@@ -244,6 +261,64 @@
    "at": "2026-10-30",
    "baseline": "moved verbatim from ops/house.py SPOKEN",
    "sha": "8f2b4e115533"
+  },
+  {
+   "at": "2026-11-01",
+   "cases": 4,
+   "from": "8f2b4e115533",
+   "judge": {
+    "equal": 1,
+    "new": 2,
+    "old": 1
+   },
+   "model": "gpt-sub-fast",
+   "passed": true,
+   "sha": "b6d0bf1613a4",
+   "valid": [
+    4,
+    4
+   ]
+  }
+ ],
+ "main/VOICE": [
+  {
+   "at": "2026-11-01",
+   "baseline": "new prompt: a turn spoken to Hermes through a speaker in the flat (voice V1, VOI-04); tried on its 5 cases: short answers, say-back before a mission, a question to keep talking, no purchase or mail aloud",
+   "sha": "b2ebed7acf47"
+  },
+  {
+   "at": "2026-11-01",
+   "cases": 6,
+   "from": "b2ebed7acf47",
+   "judge": {
+    "equal": 2,
+    "new": 2,
+    "old": 2
+   },
+   "model": "gpt-sub-fast",
+   "passed": false,
+   "sha": "07da9e2d69a8",
+   "valid": [
+    4,
+    3
+   ]
+  },
+  {
+   "at": "2026-11-01",
+   "cases": 6,
+   "from": "b2ebed7acf47",
+   "judge": {
+    "equal": 1,
+    "new": 5,
+    "old": 0
+   },
+   "model": "gpt-sub-fast",
+   "passed": true,
+   "sha": "07da9e2d69a8",
+   "valid": [
+    6,
+    6
+   ]
   }
  ],
  "main/WEB_RULE": [
@@ -356,6 +431,40 @@
    "at": "2026-10-30",
    "baseline": "moved verbatim from images/research/server.py BRIEF",
    "sha": "68dbd43cfcda"
+  },
+  {
+   "at": "2026-10-31",
+   "cases": 4,
+   "from": "68dbd43cfcda",
+   "judge": {
+    "equal": 0,
+    "new": 4,
+    "old": 0
+   },
+   "model": "gpt-sub-fast",
+   "passed": false,
+   "sha": "55f922548065",
+   "valid": [
+    4,
+    2
+   ]
+  },
+  {
+   "at": "2026-10-31",
+   "cases": 4,
+   "from": "68dbd43cfcda",
+   "judge": {
+    "equal": 0,
+    "new": 3,
+    "old": 1
+   },
+   "model": "gpt-sub-fast",
+   "passed": true,
+   "sha": "55f922548065",
+   "valid": [
+    4,
+    4
+   ]
   }
  ],
  "self-review/REVIEW": [
@@ -386,11 +495,35 @@
    "sha": "7af68c51c337"
   }
  ],
+ "shared/TASK_CHECKPOINT": [
+  {
+   "at": "2026-11-01",
+   "baseline": "new: the Orchestrator looks at a running plan between waves (TRL-08)",
+   "sha": "136c5455bc2a"
+  }
+ ],
  "shared/TASK_JUDGE": [
   {
    "at": "2026-10-31",
    "baseline": "new prompt: a finished task against its definition of done (phase 4, TSK-17)",
    "sha": "6b67f50d310f"
+  },
+  {
+   "at": "2026-11-01",
+   "cases": 3,
+   "from": "6b67f50d310f",
+   "judge": {
+    "equal": 3,
+    "new": 0,
+    "old": 0
+   },
+   "model": "gpt-sub",
+   "passed": true,
+   "sha": "7966c0c60490",
+   "valid": [
+    3,
+    3
+   ]
   }
  ],
  "shared/TASK_STEP": [
@@ -398,6 +531,57 @@
    "at": "2026-10-31",
    "baseline": "new prompt: one step of a task's plan (phase 2, TSK-07)",
    "sha": "444c4ae0cd6d"
+  },
+  {
+   "at": "2026-11-01",
+   "cases": 3,
+   "from": "444c4ae0cd6d",
+   "judge": {
+    "equal": 2,
+    "new": 0,
+    "old": 1
+   },
+   "model": "gpt-sub",
+   "passed": false,
+   "sha": "3ae0c3a6608b",
+   "valid": [
+    3,
+    3
+   ]
+  },
+  {
+   "at": "2026-11-01",
+   "cases": 6,
+   "from": "444c4ae0cd6d",
+   "judge": {
+    "equal": 3,
+    "new": 1,
+    "old": 2
+   },
+   "model": "gpt-sub",
+   "passed": false,
+   "sha": "3ae0c3a6608b",
+   "valid": [
+    6,
+    6
+   ]
+  },
+  {
+   "at": "2026-11-01",
+   "cases": 6,
+   "from": "444c4ae0cd6d",
+   "judge": {
+    "equal": 2,
+    "new": 3,
+    "old": 1
+   },
+   "model": "gpt-sub",
+   "passed": true,
+   "sha": "6841fbcae457",
+   "valid": [
+    6,
+    6
+   ]
   }
  ],
  "shared/WAKE": [

@@ -1,0 +1,19 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "provider": {
+    "litellm": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "LiteLLM (ai-stack)",
+      "options": { "baseURL": "http://litellm:4000/v1", "apiKey": "{env:LITELLM_API_KEY}" },
+      "models": {
+        "gpt-sub": { "name": "gpt-sub" },
+        "gpt-sub-fast": { "name": "gpt-sub-fast" }
+      }
+    }
+  },
+  "model": "litellm/gpt-sub",
+  "small_model": "litellm/gpt-sub-fast",
+  "permission": { "bash": "deny", "edit": "deny", "webfetch": "deny" },
+  "share": "disabled",
+  "autoupdate": false
+}

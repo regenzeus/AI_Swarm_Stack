@@ -254,4 +254,16 @@ items:
     rationale: A ChatGPT build's tokens are counted by its key's time window, so two at once would count each other's calls.
     verify: {method: test, by: [tests/test_swarm_phase4.py::test_builds_run_together_only_when_their_files_do_not_overlap]}
     trace: [ops/builds.py]
-
+  - id: BLD-24
+    title: A repository without a check script runs its tests
+    statement: The builder's checks on a repository without its own check script shall run its tests as pytest finds them
+      (a tests folder, or test_*.py files up to three folders deep), else its Makefile's test target or its npm test, and
+      say plainly when it has none.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-08]
+    sources: ['trial semver, 1 Nov 2026: build #13 checks said "no automatic checks in this repo" though it had 114 tests']
+    findings: [FND-94]
+    verify: {method: test, by: [tests/test_builds.py::test_a_repo_without_a_check_script_runs_its_tests]}
+    trace: [ops/builds.py]

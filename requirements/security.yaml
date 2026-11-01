@@ -38,13 +38,14 @@ items:
   - id: SEC-04
     title: No way out for an agent that holds private data
     statement: An agent that holds private data and reads untrusted content shall have no tool that can send data to
-      a third party without the owner's approval of that action.
+      a third party without the owner's approval of that action, of a task naming it, or (for text and addresses that
+      hold no e-mail address, phone number, IBAN, key or IP address) of his free mode on the AI phone (DEC-38).
     type: constraint
     priority: must
     status: implemented
     parents: [SN-05, SN-04]
     sources: [docs/SECURITY.md]
-    verify: {method: analysis, by: [tests/test_phone.py::test_typing_urls_and_apps_always_ask_even_in_a_time_window, ops/keys.sh, images/phone/phone.py, docs/SECURITY.md]}
+    verify: {method: analysis, by: [tests/test_phone.py::test_in_free_mode_only_an_address_or_text_with_private_data_asks, ops/keys.sh, images/phone/phone.py, docs/SECURITY.md]}
     findings: [FND-02, FND-22]
   - id: SEC-05
     title: Untrusted content stays labelled

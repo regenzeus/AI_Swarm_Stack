@@ -47,6 +47,21 @@ def test_the_email_puts_the_headline_in_its_header_and_fits_a_phone(desk, monkey
     assert 'name="viewport"' in h and 'width="640"' not in h and "max-width:640px" in h
 
 
+def test_the_collected_events_survive_the_hand_over_and_each_finding_cites_its_links(desk):
+    """TSK-22: the collecting step saves its chosen events for the writing step (times and all), and each scout's
+    finding becomes an event whose sources are the links it names."""
+    import datetime as dt, json
+    when = dt.datetime(2026, 10, 30, 8, 0, tzinfo=dt.timezone.utc)
+    chosen = [({"words": {"vw", "profit"}, "items": [{"title": "VW profit", "url": "https://caixin.com/1", "source": "财新", "published": when}],
+                "text": "VW's profit fell."}, {"questions": [1]})]
+    back = desk.thaw(json.loads(json.dumps(desk.freeze(chosen))))
+    assert back[0][0]["items"][0]["published"] == when and back[0][1] == {"questions": [1]} and back[0][0]["text"] == "VW's profit fell."
+    ev = desk.research_events([{"question": "Who sells most EVs abroad?", "text": "BYD leads exports (https://cpca.cn/a.html). See also https://x.cn/b."},
+                               {"question": "Recalls?", "text": "No recall this week."}])
+    assert [it["url"] for it in ev[0][0]["items"]] == ["https://cpca.cn/a.html", "https://x.cn/b"] and ev[0][0]["text"].startswith("BYD leads")
+    assert ev[1][0]["items"][0]["title"] == "Research: Recalls?" and ev[1][0]["items"][0]["url"] == ""
+
+
 def test_a_weekly_brief_keeps_a_week_of_news_and_a_daily_one_36_hours(desk):
     import datetime as dt, sqlite3
     db = sqlite3.connect(":memory:")

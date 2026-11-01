@@ -120,13 +120,13 @@ items:
     statement: The Wiki tab shall open with a map of every wiki of the vault and of a mission that is not archived (one bubble
       per wiki, sized by its pages, its name below, above or beside it where it covers no other name or bubble) and a line
       between two wikis for the subjects both have (a page with the same title or alias), each subject named in full on a
-      tap; an archived mission's wiki shall stay readable in a fold below the list.
+      tap; a tap on a bubble shall open its wiki (FND-83); an archived mission's wiki shall stay readable in a fold below the list.
     type: functional
     priority: should
     status: implemented
     parents: [SN-10, SN-07]
     sources: [DEC-31]
-    findings: [FND-61]
+    findings: [FND-61, FND-83]
     verify: {method: test, by: [tests/test_memory.py::test_the_wiki_map_has_every_wiki_and_the_subjects_they_share,
       tests/test_memory.py::test_an_archived_mission_s_wiki_is_listed_last_and_left_off_the_map,
       tests/test_memory.py::test_the_map_s_names_cover_no_other_name_or_bubble_and_stay_in_the_box,
@@ -165,6 +165,7 @@ items:
       tests/test_prompts.py::test_a_send_records_the_ref_and_a_live_call_keeps_its_case,
       tests/test_prompts.py::test_the_build_gate_refuses_a_changed_prompt_until_its_replay_passed,
       tests/test_prompts.py::test_a_replay_the_judge_prefers_the_old_text_on_fails_and_the_gate_stays_shut,
+      tests/test_prompts.py::test_an_agent_s_standing_brief_is_replayed_on_the_requests_its_cases_bring, tests/test_prompts.py::test_a_filled_prompt_that_drives_tools_is_replayed_as_a_dry_run,
       tests/test_prompts.py::test_the_deploy_hands_each_configure_script_its_soul_text_from_the_prompts_file,
       tests/test_registry.py::test_a_card_names_its_own_prompts_file_and_every_prompts_file_has_an_owner]}
     trace: [ops/prompts.py, prompts/AGENTS.md, ops/registry.py, ops/deploy.py, ops/check.sh, ops/missions.py, config/hermes/configure.sh]

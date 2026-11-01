@@ -158,7 +158,10 @@ def test_refused_writes_become_a_health_signal_and_scorecards_add_up(ledger):
     for n in range(12):
         ledger.answer(lambda: ledger.actor_for_runner({"authorization": "Bearer tok", "x-swarm-actor": "tests"}), "transition",
                       {"idem": f"r{n}", "id": 999, "to": "open", "reason": "x"})
-    assert CK.signals() == ["tests had 12 refused swarm writes in 24 h"]
+    [sig] = CK.signals()
+    assert sig.startswith("tests had 12 refused swarm writes in 24 h, 12 of them transition: ")
+    ledger.ledger.db.execute("update refusals set ts=ts-3*3600"); ledger.ledger.db.commit()
+    assert CK.signals() == []                                   # FND-93: none for 2 h, its cause stopped
     aid = doctor_idea(ledger)
     SW.dismiss(aid, "fixed by hand already")
     SW.propose("doctor", [{"title": "Make the backup skip the phone home folder", "covers": ["crew:backup:failed"],

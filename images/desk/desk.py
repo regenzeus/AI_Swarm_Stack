@@ -637,6 +637,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--topic"); ap.add_argument("--state"); ap.add_argument("--out")
     ap.add_argument("--date", default=dt.date.today().isoformat()); ap.add_argument("--dry", action="store_true")
+    ap.add_argument("--collect", action="store_true")   # TSK-22: the briefing's first step: collect, choose, read; no writing
+    ap.add_argument("--write", action="store_true")     # its writing step: the collected events and the scouts' findings
     a = ap.parse_args()
     global CASE_FILE
     if a.out and not a.dry:
@@ -645,6 +647,13 @@ def main():
     b = brief(a.topic)
     global WINDOW_H
     WINDOW_H = int(b.get("window_hours") or 36)
+    out = Path(a.out or ".")
+    if a.write:
+        saved = json.loads((out / f"{a.date}.collected.json").read_text())
+        fp = out / "findings.json"
+        chosen = thaw(saved["chosen"]) + research_events(json.loads(fp.read_text()) if fp.exists() else [])
+        file_report(b, a, out, chosen, saved["prices"], saved["stats"])
+        return
     db = sqlite3.connect(Path(a.state) / "seen.sqlite")
     db.execute("create table if not exists seen (id text primary key, first_seen text, title text)")
     items = collect(b)
@@ -659,17 +668,47 @@ def main():
     for g, _ in chosen:
         g["text"] = read(g)
     rows = prices(b)
-    report, telegram, headline = write(b, chosen, rows, previous(a.topic, a.date), a.date)
-    stats = {"items": len(items), "new": len(fresh), "events": len(groups), "chosen": len(chosen),
-             "sources": report.count("](http")}
-    front = (f"---\ntopic: {b['slug']}\ndate: {a.date}\ntype: daily-briefing\nheadline: {json.dumps(headline, ensure_ascii=False)}\n"
-             f"stats: {json.dumps(stats)}\n---\n\n")
-    out = Path(a.out)
-    (out / f"{a.date}.md").write_text(front + report)
-    (out / f"{a.date}.telegram.txt").write_text(telegram)
+    stats = {"items": len(items), "new": len(fresh), "events": len(groups), "chosen": len(chosen)}
+    if a.collect:
+        (out / f"{a.date}.collected.json").write_text(json.dumps({"chosen": freeze(chosen), "prices": rows, "stats": stats}, ensure_ascii=False))
+        log(f"collected: {json.dumps(stats)}")
+    else:
+        file_report(b, a, out, chosen, rows, stats)
     db.executemany("insert or ignore into seen values (?,?,?)", [(it["id"], NOW.isoformat(), it["title"]) for it in fresh])
     db.commit()
+
+
+def file_report(b, a, out, chosen, rows, stats):
+    report, telegram, headline = write(b, chosen, rows, previous(a.topic, a.date), a.date)
+    stats = {**stats, "chosen": len(chosen), "sources": report.count("](http")}
+    front = (f"---\ntopic: {b['slug']}\ndate: {a.date}\ntype: daily-briefing\nheadline: {json.dumps(headline, ensure_ascii=False)}\n"
+             f"stats: {json.dumps(stats)}\n---\n\n")
+    (out / f"{a.date}.md").write_text(front + report)
+    (out / f"{a.date}.telegram.txt").write_text(telegram)
     log(f"report written: {stats}")
+
+
+def freeze(chosen):
+    """The chosen events as JSON (their times as ISO text), for the writing step."""
+    return [[{**g, "words": sorted(g.get("words") or []), "items": [{**it, "published": it["published"].isoformat() if it["published"] else None}
+                                                                   for it in g["items"]]}, p] for g, p in chosen]
+
+
+def thaw(saved):
+    return [({**g, "items": [{**it, "published": dt.datetime.fromisoformat(it["published"]) if it["published"] else None} for it in g["items"]]}, p)
+            for g, p in saved]
+
+
+def research_events(findings):
+    """Each scout's finding as one more event for the writer; the links it names are its sources (TSK-22)."""
+    out = []
+    for f in findings:
+        urls = list(dict.fromkeys(re.findall(r"https?://[^\s)\]>\"']+", f.get("text") or "")))[:4]   # cap: list (write() cites four per event)
+        items = [{"title": f"{urllib.parse.urlparse(u).hostname or u} (research: {f['question'][:80]})", "url": u.rstrip(".,;"),  # cap: id
+                  "source": "scout research", "published": None, "summary": ""} for u in urls] or \
+                [{"title": f"Research: {f['question'][:80]}", "url": "", "source": "scout research", "published": None, "summary": ""}]  # cap: id
+        out.append(({"items": items, "text": (f.get("text") or "")[:6000]}, {"questions": []}))   # cap: prompt
+    return out
 
 
 if __name__ == "__main__":

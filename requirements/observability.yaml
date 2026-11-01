@@ -11,8 +11,9 @@ items:
     status: implemented
     parents: [SN-07]
     sources: [DEC-05, docs/OBSERVABILITY.md]
-    verify: {method: test, by: [tests/test_runtime.py::test_a_run_opens_on_first_event_and_stays_closed_after_its_end, tests/test_runtime.py::test_chat_sessions_are_tied_to_their_chat, tests/test_runtime.py::test_hermes_runs_without_a_ref_are_tied_to_the_live_mission]}
+    verify: {method: test, by: [tests/test_runtime.py::test_a_run_opens_on_first_event_and_stays_closed_after_its_end, tests/test_runtime.py::test_requests_that_come_together_each_read_their_own_runs, tests/test_runtime.py::test_chat_sessions_are_tied_to_their_chat, tests/test_runtime.py::test_hermes_runs_without_a_ref_are_tied_to_the_live_mission]}
     trace: [images/mission-control/runrecord.py, ops/runtime.py, config/hermes/plugins/aistack-runtime/__init__.py, config/hermes/plugins/aistack-runtime/plugin.yaml, config/hermes/install-runtime-plugin.sh, config/hermes/claude-hooks/claude-runtime-settings.json]
+    findings: [FND-88]
   - id: OBS-02
     title: One honest end state
     statement: Each run shall end in exactly one of done, failed, stopped, stalled or limit; an unknown end state shall
@@ -159,14 +160,15 @@ items:
     sources: [docs/OBSERVABILITY.md]
     verify: {method: test, by: [tests/test_server.py::test_phoenix_picks_the_litellm_span_of_a_model_call]}
   - id: OBS-15
-    title: Payoff per agent
-    statement: Each agent's page shall show its payoff (runs, success, time, model calls, tokens, cost, results, wiki
-      pages; for proposing agents the proposals and their fate).
+    title: Results per agent
+    statement: Each agent's page shall show, under Results, what it delivered first (each result, newest first, opening
+      it; for a mission run as a task, a link to the task's runs) and then what it took (runs, success, time, model
+      calls, tokens, cost, wiki pages; for proposing agents the proposals and their fate).
     type: functional
     priority: must
     status: implemented
     parents: [SN-07]
-    sources: [DEC-05]
+    sources: [DEC-05, 'chat 2026-11-01: Presenter ... show in that useless Payoff tab?', docs/SWARM-TRIALS.md]
     verify: {method: inspection, by: [ops/crew.py, images/mission-control/web/static/app.js]}
   - id: OBS-16
     title: One notification policy
@@ -187,3 +189,18 @@ items:
       tests/test_quiet_runs.py::test_every_email_outcome_is_recorded]}
     trace: [ops/notify.py, ops/notify.sh, ops/missions.py, ops/mission_extras.py]
     findings: [FND-17, FND-70, FND-78]
+  - id: OBS-17
+    title: How much each subscription carries
+    statement: The Stack page shall show, for ChatGPT and Claude, the tokens and calls of the last 5 hours (ChatGPT's
+      usage window) and 24 hours, the agents that used most, and whether the subscription is at its usage limit now and
+      until when, so that the owner sees a limit coming before work waits for it.
+    type: quality
+    priority: should
+    status: implemented
+    parents: [SN-18]
+    sources: ['chat 2026-11-01: Do we have data we are missing out to report in mission control in some way that user would care about?']
+    rationale: Both subscriptions are the stack's only capacity (CST subscription only); the app said "waiting for ChatGPT"
+      only after work had stopped.
+    verify: {method: test, by: [tests/test_task_page.py::test_each_subscription_s_load_in_its_window_and_who_used_it]}
+    trace: [images/mission-control/runrecord.py, images/mission-control/server.py, images/mission-control/web/static/app.js]
+

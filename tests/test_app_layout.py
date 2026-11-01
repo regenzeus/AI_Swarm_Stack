@@ -32,9 +32,10 @@ def test_an_icon_in_text_is_one_line_high_and_no_page_has_an_app_top_bar():
 
 def test_the_swarm_s_views_are_under_agents_on_every_screen():
     assert '["swarm", "#/swarm"' not in JS                                              # no section of its own, hidden on a phone
-    assert '"read", "swarm"].includes(route.name)' in JS                               # Agents lights up on them
+    assert '"new", "swarm", "tasks", "task", "taskmap"].includes(route.name)' in JS     # Agents lights up on them and on tasks
+    assert '"read", "swarm"' not in JS                    # a result opened from the Wiki or Home is no Agents page (FND-95)
     views = re.search(r"^const AGENT_VIEWS = .*?;$", JS, re.M | re.S)[0]
-    for label in ("All agents", "Now", "Timeline", "Map", "Chatroom", "Team", "Ideas", "Tasks", "Flow"):
+    for label in ("Overview", "Activity", "Team", "Ideas"):                          # four views (1 Nov 2026)
         assert f'"{label}"]' in views
     assert '${agentViews("list")}' in JS and "${agentViews(swTab)}" in SWARM and "<h1>Agents</h1>" in SWARM
 
@@ -47,7 +48,7 @@ def test_new_chat_starts_afresh_and_attaching_is_a_clip():
 
 
 def test_the_wiki_s_new_button_is_one_line_on_the_title_row():
-    hero = re.search(r'<div class="hero heading".*?</div><p>', JS, re.S)[0]
+    hero = re.search(r'<div class="hero heading"[^>]*><div class="row between"[^>]*><h1>Wiki</h1>.*?</div><p>', JS, re.S)[0]
     assert "<h1>Wiki</h1>" in hero and 'class="btn sm" id="wnewb"' in hero
     assert ".btn.sm { white-space: nowrap; flex: none; }" in CSS and ".hero.heading { display: block; }" in CSS
 

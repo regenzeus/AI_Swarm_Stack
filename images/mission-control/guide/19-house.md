@@ -43,18 +43,35 @@ chat: Say on all Echos that dinner is ready.
 note: Uses house_say with announce on every Echo.
 ```
 
+## Home Assistant's menus
+
+Whenever Home Assistant answers, the House page starts with its menus: Settings, Integrations, Voice assistants, People,
+Devices and Logs, each opening that screen in a new tab (on your home Wi-Fi).
+
+## Hermes on the AI phone
+
+**Talk to Hermes on the AI phone** lists the steps that make the AI phone a speaker for Hermes, each with a button to
+the exact screen: add the person "AI phone" (you choose its password), install the Home Assistant app and sign in,
+then the app's Assist settings. The stack ticks a step off as soon as Home Assistant shows it done; the app's own
+settings it cannot see, so those stay a plain instruction. Then say "Okay Nabu" and talk: the conversation is the
+Voice chat.
+
 ## Talking to Hermes through an Echo
 
-Say **"Alexa, Hermes, …"** or **"Alexa, frag Hermes …"**. Alexa may first say it can't help (it doesn't know Hermes);
-then the same Echo speaks Hermes' answer, usually within 5-20 seconds. Only requests that start with "Hermes" are passed
-on; nothing else you say to Alexa is kept. Switch the bridge off on the House page. For a real conversation without
+Say **"Alexa, Hermes, …"** or **"Alexa, frag Hermes …"**. Alexa first says it can't help (it doesn't know Hermes);
+right after, the same Echo says "Einen Moment, Hermes kümmert sich darum", and then speaks Hermes' answer, within
+about a minute. For bigger work ("schreib mir einen Newsletter über …") Hermes starts a one-off job and says where
+the result will arrive. Only requests that start with "Hermes" are passed on; nothing else you say to Alexa is
+kept. Switch the bridge off on the House page. For a real conversation without
 Alexa in between, a Home Assistant Voice speaker is the better device.
 
 ## Safety
 
 - **Protected things**: a plug or switch whose name says it powers the fridge, freezer, router, NAS, PC, server or
-  similar is shown with *protected*. Hermes can read it but never switch it, also not through an Alexa command. You
-  can, on the House page. Name your plugs clearly in the Tapo app (e.g. "Fridge") so this works.
+  similar is shown with *protected*, and so is everything the FRITZ!Box and NAS integrations offer (guest Wi-Fi, port
+  forwards, a device's internet access, the NAS's restart), whatever it is called. Hermes can read it but never switch
+  it, also not through an Alexa command. You can, on the House page. Name your plugs clearly in the Tapo app (e.g.
+  "Fridge") so this works.
 - **No shopping through Alexa**: commands that buy or order are refused.
 - **Everything is logged**: *What happened* on the House page, the activity feed, and the run view (*house*).
 - Upgrades and redeploys of Home Assistant: `make ha-deploy` (Operations).

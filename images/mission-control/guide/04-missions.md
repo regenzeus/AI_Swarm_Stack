@@ -18,8 +18,8 @@ The **Agents** tab is one list: your missions (**Yours**) and the crew that keep
 It is sorted by what needs you first, then what is running, then by the next run. The top line counts what needs
 you (a grant, memories to look at, an OK on the phone).
 
-The row under the title switches between **All agents** (this list) and the views of your agents as a team: **Now**,
-**Timeline**, **Map**, **Chatroom**, **Team**, **Ideas**, **Tasks**, **Who works on what** and **Flow** (see the
+The row under the title has four views: **Overview** (this list, with who works now and the map of who works with
+whom above it), **Activity**, **Team** and **Ideas** (see the
 swarm chapter).
 
 Health is the colour of a card's edge: green the last run went well, red it failed (or keeps failing), amber
@@ -41,7 +41,8 @@ Every agent, a mission or a housekeeping job, opens the same page with five tabs
 | **Now** | what it needs from you, then its live log (or its latest run's), then its latest result |
 | **History** | every run: state, trigger, summary, totals, its **Log**, its **Result** and the raw output |
 | **Memory** | its journal: standing notes and one entry per run; edit or forget any line |
-| **Payoff** | runs, success, time, model calls, tokens, the $0 it costs, results, wiki pages, proposals |
+| **Tasks** | the tasks it worked on, its part in each (a step, planned it, called in by another agent), each opening its task's page |
+| **Results** | what it delivered, newest first, each opening the result; then what it took: runs, success, time, model calls, tokens, the $0 it costs, wiki pages, proposals |
 | **Settings** | the mission's form (schedule, triggers, delivery, goal) or the crew job's schedule |
 
 ## The agent log

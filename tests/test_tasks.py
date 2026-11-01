@@ -23,15 +23,19 @@ def K(tmp_path, monkeypatch):
     B.table(c)
     CT.table(c)
     TK.table(c)
-    started, events, told = [], [], []
+    started, events, told, made = [], [], [], {}
 
     def handle(req, missions, c):
         started.append(("mission", req))
-        return {"slug": "ram-buy" if req["type"] == "shopping" else "ram-prices"}
+        slug = "ram-buy" if req["type"] == "shopping" else "ram-prices"
+        made[slug] = {"slug": slug, "title": req["title"], "type": req["type"], "status": "active", "task": req.get("task")}
+        return {"slug": slug}
     import missions as MM
-    TK.M = types.SimpleNamespace(event=lambda *a, **k: events.append(a), valid_schedule=MM.valid_schedule, handle=handle, load_missions=lambda: {},
+    TK.M = types.SimpleNamespace(event=lambda *a, **k: events.append(a), valid_schedule=MM.valid_schedule, handle=handle, load_missions=lambda: made,
                                  X=types.SimpleNamespace(clean_triggers=lambda t: list(t or [])), notify_task=lambda *a: told.append(a),
-                                 paused=lambda s: False, stop=threading.Event(), log=print)
+                                 paused=lambda s: False, stop=threading.Event(), log=print, next_due=MM.next_due, now=MM.now)
+    import conductor as CD
+    monkeypatch.setattr(CD, "M", TK.M)
     monkeypatch.setattr(TK, "B_repos", lambda: ["ai-stack", "testrepo"])
     monkeypatch.setattr(TK, "CHATS", tmp_path / "chats")
     monkeypatch.setattr(B, "handle", lambda req, c: started.append(("build", req)) or {"id": 7})
@@ -73,35 +77,43 @@ def test_a_sentence_gets_a_specification_and_reaches_its_door(K):
     tid = TK.handle({"action": "task_create", "text": "Find out what a 32 GB DDR4 kit for my laptop costs"}, K.c)["task"]
     TK.intake(K.c, tid, ask=lambda prompt: spec())
     t = TK.row(K.c, tid)
-    assert t["status"] == "running" and t["door"] == "mission" and t["ref"] == "ram-prices" and t["kind"] == "research"
+    assert t["status"] == "running" and t["door"] == "plan" and t["kind"] == "research" and not K.started    # TSK-21: the Conductor's
     assert t["done"] == ["names three offers with price, shop and delivery date"]
     assert [p["agent"] for p in t["spec"]["plan"]] == ["mission", "mission"]
+    import conductor as CD
+    tid = TK.handle({"action": "task_create", "text": "Buy a 32 GB DDR4 kit for my laptop when it is cheap"}, K.c)["task"]
+    TK.intake(K.c, tid, ask=lambda prompt: spec(kind="shopping"))                  # TSK-21: a price watch too, with its agent
+    t = TK.row(K.c, tid)
+    assert (t["door"], t["status"], t["spec"]["shop"]) == ("plan", "running", "ram-buy") and [s["harness"] for s in CD.steps(K.c, tid)] == ["shop"]
     kind, req = K.started[0]
-    assert kind == "mission" and req["once"] and req["run_now"] and "Definition of done:\n- names three offers" in req["description"]
-    assert f"(Task #{tid} in Mission Control)" in req["description"]
+    assert kind == "mission" and req["type"] == "shopping" and req["task"] == tid and not req["run_now"] and req["schedule"] == "manual"
+    assert "Definition of done:\n- names three offers" in req["description"] and f"(Task #{tid} in Mission Control)" in req["description"]
     assert req["deliver"] == ["telegram", "app"]                                     # no e-mail unless the task asks for it
+    TK.sync(K.c, TK.M.load_missions())
+    assert [x["id"] for x in TK.state(K.c)["tasks"]] == [tid, tid - 1]               # the task's agent is no task of its own
 
 
 def test_a_weekly_briefing_task_gets_its_content_not_the_plan_email_when_asked_and_shows_its_runs(K):
     """FND-77: the plan's agent instructions became the desk's notes and the writer reported itself blocked; the e-mail
     the owner asked for was never set up; the board said only "scheduled" although the first run had finished."""
+    import conductor as CD
     import missions as MM
+    drafted = []
+    TK.M.slugify, TK.M.VAULT, TK.M.vault_commit = MM.slugify, K.tmp, lambda paths, msg: None
+    TK.M.create_briefing = lambda meta, req: drafted.append((meta, req))
+    TK.M.topic_of = lambda m: (({"key_questions": ["Sales and exports?", "Batteries?"], "window_hours": 180}, ""), None)
     tid = TK.handle({"action": "task_create", "text": "Send me an email with Chinese automotive news every week"}, K.c)["task"]
     TK.intake(K.c, tid, ask=lambda p: spec(kind="briefing", rhythm={"type": "schedule", "schedule": "weekly mon 08:00"},
                                           done=["covers sales and exports", "is emailed to the owner"]))
-    kind, req = K.started[0]
-    assert kind == "mission" and req["type"] == "briefing" and req["schedule"] == "weekly mon 08:00" and req["run_now"]
+    t = TK.row(K.c, tid)
+    meta, req = drafted[0]
+    assert t["door"] == "plan" and t["status"] == "running" and not K.started and meta["schedule"] == "weekly mon 08:00"   # TSK-22
     assert "Plan:" not in req["description"] and "search the shops" not in req["description"] and "Task #" not in req["description"]
-    assert "- covers sales and exports" in req["description"] and req["deliver"] == ["telegram", "app", "email"]
-    assert TK.row(K.c, tid)["status"] == "scheduled"
-    K.c.execute("insert into runs (slug, status, summary, output, started, ended) values ('ram-prices','ok','China Automotive Weekly',"
-                "'topics/x/reports/2026/10/2026-10-31.md','2026-10-31T16:53:46+01:00','2026-10-31T16:55:33+01:00')")
-    TK.M.load_missions, TK.M.next_due, TK.M.now = (lambda: {"ram-prices": {"status": "active", "schedule": "weekly mon 08:00"}}), MM.next_due, MM.now
-    t = next(x for x in TK.state(K.c)["tasks"] if x["id"] == tid)
-    assert t["last_run"]["summary"] == "China Automotive Weekly" and t["last_run"]["output"].endswith("2026-10-31.md")
-    import datetime as dt
-    n = dt.datetime.fromisoformat(t["next_run"])
-    assert (n.weekday(), n.hour, n.minute) == (0, 8, 0)
+    assert "- covers sales and exports" in req["description"] and t["spec"]["deliver"] == ["telegram", "app", "email"]
+    assert [p["step"] for p in t["spec"]["intake_plan"]] == ["search the shops", "write the report"]           # kept, not run
+    assert [(s["harness"], s["item"]) for s in CD.steps(K.c, tid)] == [("desk-collect", None), ("hermes", "Sales and exports?"),
+                                                                     ("hermes", "Batteries?"), ("desk-write", None), ("deliver", None)]
+    assert CD.steps(K.c, tid)[1]["title"] == "Research the last 8 days — Sales and exports?"
 
 
 def test_a_one_off_task_with_several_agents_goes_to_the_conductor_as_a_plan_graph(K):
@@ -166,9 +178,18 @@ def test_the_owner_s_presets_are_kept_and_show_me_the_plan_first_waits(K):
     assert t["rhythm"] == {"type": "schedule", "schedule": "daily 07:00"} and t["status"] == "waiting_approval" and not K.started
     TK.handle({"action": "task_approve", "id": tid}, K.c)
     t = TK.row(K.c, tid)
-    assert t["status"] == "scheduled" and K.started[0][1]["schedule"] == "daily 07:00" and K.started[0][1]["depth"] == "deep"
-    with pytest.raises(ValueError, match="stop it on that page"):              # started work is stopped at its door
-        TK.handle({"action": "task_cancel", "id": tid}, K.c)
+    assert t["status"] == "running" and t["door"] == "plan" and not K.started     # its first run starts now; then daily 07:00
+    TK.handle({"action": "task_cancel", "id": tid}, K.c)                            # a plan task stops here, schedule and all
+    assert TK.row(K.c, tid)["status"] == "cancelled"
+    shop = TK.handle({**req, "text": "Buy the kit when it costs under 60 €", "kind": "shopping"}, K.c)["task"]
+    TK.intake(K.c, shop, ask=lambda p: spec(kind="shopping"))
+    TK.handle({"action": "task_approve", "id": shop}, K.c)
+    t = TK.row(K.c, shop)
+    assert (t["status"], t["door"], t["rhythm"]["schedule"]) == ("running", "plan", "daily 07:00") and K.started[0][1]["schedule"] == "manual"
+    TK.sync(K.c, {"ram-old": {"slug": "ram-old", "title": "RAM", "type": "shopping", "status": "active", "schedule": "daily 07:00", "created": TK.now()}})
+    door = next(x["id"] for x in TK.state(K.c)["tasks"] if x["door"] == "mission")
+    with pytest.raises(ValueError, match="stop it on that page"):              # work started at a mission is stopped there
+        TK.handle({"action": "task_cancel", "id": door}, K.c)
     other = TK.handle({"action": "task_create", "text": "Plan a trip I may not take", "autonomy": "ask"}, K.c)["task"]
     TK.handle({"action": "task_cancel", "id": other}, K.c)                         # not started yet: cancelled
     assert TK.row(K.c, other)["status"] == "cancelled"
@@ -179,15 +200,15 @@ def test_after_another_task_waits_until_that_one_is_done(K):
     TK.intake(K.c, first, ask=lambda p: spec())
     then = TK.handle({"action": "task_create", "text": "Then propose the cheapest one to buy", "rhythm": {"type": "after", "task": first}}, K.c)["task"]
     TK.intake(K.c, then, ask=lambda p: spec(kind="shopping"))
-    assert TK.row(K.c, then)["status"] == "after" and len(K.started) == 1
+    assert TK.row(K.c, then)["status"] == "after" and TK.row(K.c, first)["door"] == "plan" and not K.started
     with pytest.raises(ValueError):
         TK.handle({"action": "task_create", "text": "after a task that is not there", "rhythm": {"type": "after", "task": 999}}, K.c)
-    K.c.execute("insert into runs (slug, status) values ('ram-prices', 'ok')")
-    TK.sync(K.c, {"ram-prices": {"slug": "ram-prices", "title": "RAM prices", "status": "active", "type": "task", "schedule": "manual", "once": True, "created": TK.now()}})
-    assert TK.row(K.c, first)["status"] == "done"
+    TK.sync(K.c, {})
+    assert TK.row(K.c, then)["status"] == "after"                                  # the research runs: it waits
+    TK.put(K.c, first, status="done")                                              # the Conductor finished it
     TK.sync(K.c, {s: {"slug": s, "title": s, "status": "active", "type": "task", "schedule": "manual", "once": True, "created": TK.now()}
-                  for s in ("ram-prices", "ram-buy")})
-    assert TK.row(K.c, then)["status"] == "running" and K.started[-1][1]["type"] == "shopping"
+                  for s in ("ram-buy",)})
+    assert (TK.row(K.c, then)["status"], TK.row(K.c, then)["door"]) == ("running", "plan") and K.started[-1][1]["type"] == "shopping"
 
 
 def test_a_failed_intake_says_why_and_can_be_planned_again(K):
@@ -210,3 +231,94 @@ def test_the_intake_prompt_names_every_agent_and_repository_and_the_app_cannot_b
     assert {"task_create", "task_answer", "task_approve", "task_cancel", "task_retry"} <= S.ACTIONS
     src = open(S.__file__).read()
     assert 'str(body.get("action", "")).startswith(("task_", "rule_", "event_")) and from_ai_phone(request)' in src
+
+
+def test_a_task_on_an_event_waits_for_its_trigger_and_is_watched_with_the_missions_triggers(K):
+    """TSK-21: an event-triggered task is the Conductor's too: it starts nothing until its trigger fires; a briefing on
+    an event gets the desk's alert plan."""
+    import conductor as CD
+    import missions as MM
+    TK.M.slugify, TK.M.VAULT, TK.M.vault_commit = MM.slugify, K.tmp, lambda paths, msg: None
+    TK.M.create_briefing = lambda meta, req: None
+    TK.M.topic_of = lambda m: (({"key_questions": ["Contracts?"]}, ""), None)
+    news = {"type": "event", "triggers": [{"type": "news", "query": "Cameco supply contract"}]}
+    tid = TK.handle({"action": "task_create", "text": "When Cameco signs a supply contract, tell me what it means for my position"}, K.c)["task"]
+    TK.intake(K.c, tid, ask=lambda p: spec(rhythm=news))
+    al = TK.handle({"action": "task_create", "text": "Alert me on Cameco supply contract news"}, K.c)["task"]
+    TK.intake(K.c, al, ask=lambda p: spec(kind="briefing", rhythm=news))
+    t, a = TK.row(K.c, tid), TK.row(K.c, al)
+    assert (t["door"], t["status"], CD.occurrences(K.c, tid)) == ("plan", "scheduled", []) and not K.started
+    assert [p["harness"] for p in a["spec"]["plan"]] == ["desk-alert", "deliver"] and a["status"] == "scheduled"
+    assert sorted((w["task"], w["slug"], w["triggers"] == news["triggers"]) for w in TK.watchers(K.c)) == [(tid, f"task-{tid}", True), (al, f"task-{al}", True)]
+    board = {x["id"]: x for x in TK.state(K.c)["tasks"]}
+    assert board[tid]["runs"] == [] and board[tid]["next_run"] is None
+
+
+def test_improving_a_wiki_or_a_page_is_a_task_that_ends_writing_into_that_wiki(K, monkeypatch):
+    """TSK-34: the owner's correction or research request on a wiki or one of its pages becomes a task: the intake's
+    research, then the wiki's writer as the last step after every leaf; a wiki or page that is not there is refused."""
+    import conductor as CD
+    import missions as MM
+    import wikis as W
+    monkeypatch.setattr(W, "roots", lambda: [("wiki", "Vault wiki"), ("missions/u/wiki", "Uranium mining")])
+    TK.M.VAULT, TK.M.split_front = K.tmp, MM.split_front
+    (K.tmp / "missions/u/wiki/entities").mkdir(parents=True)
+    (K.tmp / "missions/u/wiki/entities/cameco.md").write_text("---\ntitle: Cameco\n---\n## Key facts\n- 2025 output 30 Mlb")
+    tid = TK.handle({"action": "task_create", "text": "Check its facts and fix the mistakes", "kind": "research",
+                     "wiki": {"root": "missions/u/wiki", "page": "entities/cameco"}}, K.c)["task"]
+    t = TK.row(K.c, tid)
+    assert t["text"] == "Check its facts and fix the mistakes (On the wiki “Uranium mining”, its page “Cameco”: what is found is written into it.)"
+    assert t["spec"]["wiki"] == {"root": "missions/u/wiki", "title": "Uranium mining", "page": "entities/cameco", "page_title": "Cameco"}
+    plan = [{"step": "check the output", "agent": "scout", "why": "web", "after": []}, {"step": "check the price", "agent": "scout", "why": "web", "after": []}]
+    TK.intake(K.c, tid, ask=lambda p: spec(plan=plan))
+    t = TK.row(K.c, tid)
+    assert t["door"] == "plan" and t["spec"]["wiki"]["page"] == "entities/cameco"                         # the intake keeps it
+    assert [(s["agent"], s["harness"], s["after"]) for s in CD.steps(K.c, tid)] == [("scout", "hermes", []), ("scout", "hermes", []), ("mission", "wiki", [1, 2])]
+    assert CD.steps(K.c, tid)[2]["title"] == "Write it into the wiki “Uranium mining”, page “Cameco” first"
+    for bad in ({"root": "missions/x/wiki"}, {"root": "missions/u/wiki", "page": "entities/nobody"}, {"root": "missions/u/wiki", "page": "../../etc"}):
+        with pytest.raises(ValueError):
+            TK.handle({"action": "task_create", "text": "Research what is missing", "wiki": bad}, K.c)
+
+
+def test_a_briefing_that_runs_as_its_mission_moves_under_the_conductor_and_its_mission_keeps_the_topic(K, monkeypatch):
+    """TSK-21, DEC-37: Run it under the Conductor on a briefing task that still runs as its mission: the task gets the
+    desk's plan on the mission's schedule, its first run when due; the mission keeps its topic and wiki but runs no more
+    by itself; only an active briefing or price watch can move."""
+    import conductor as CD
+    saved, commits = [], []
+    m = {"slug": "china-auto", "title": "China auto", "type": "briefing", "status": "active", "schedule": "weekly mon 08:00",
+         "topic": "china-auto", "deliver": ["telegram", "app", "email"], "triggers": [], "created": TK.now()}
+    TK.M.load_missions = lambda: {"china-auto": m}
+    TK.M.save_mission, TK.M.vault_commit = (lambda mm: saved.append(dict(mm))), (lambda paths, msg: commits.append(msg))
+    TK.M.topic_of = lambda mm: (({"key_questions": ["Sales?", "Batteries?"], "window_hours": 180}, ""), None)
+    tid = TK.register(K.c, "mission", "china-auto", "Weekly China auto news", "China auto", done=["covers sales"],
+                      rhythm={"type": "schedule", "schedule": "weekly mon 08:00"}, status="scheduled", source="app")
+    K.c.execute("update tasks set kind='briefing' where id=?", (tid,)); K.c.commit()
+    out = TK.handle({"action": "task_conduct", "id": tid}, K.c)
+    t = TK.row(K.c, tid)
+    assert (t["door"], t["ref"], t["status"], t["rhythm"]) == ("plan", str(tid), "scheduled", {"type": "schedule", "schedule": "weekly mon 08:00"})
+    assert t["spec"]["topic"] == "china-auto" and t["spec"]["deliver"] == ["telegram", "app", "email"] and out["steps"] == 5
+    assert [p.get("harness") for p in t["spec"]["plan"]] == ["desk-collect", None, "desk-write", "deliver"]
+    assert saved[-1]["task"] == tid and saved[-1]["schedule"] == "manual" and commits
+    assert CD.occurrences(K.c, tid) == []                                           # its first run comes when due, not now
+    with pytest.raises(ValueError):
+        TK.handle({"action": "task_conduct", "id": tid}, K.c)                       # moved already: it is a plan task now
+
+
+def test_the_intake_keeps_a_check_s_fix_loop_and_a_budget_preset():
+    import tasks as TK
+    agents = {"builder": "codes", "judge": "runs every test"}
+    s = TK.validate({"kind": "research", "done": ["the tests pass on main"], "plan": [{"step": "code", "agent": "builder", "after": []},
+                     {"step": "test", "agent": "judge", "after": [1], "loop": {"to": 1, "max": 3}}]}, {}, [], agents)
+    assert s["plan"][1]["loop"] == {"to": 1, "max": 3} and "loop" not in s["plan"][0]
+    assert TK.preset_of({"budget": {"hours": 30, "tokens": "3000000"}}) == {"budget": {"hours": 24.0, "tokens": 3000000}}
+
+
+def test_the_plan_sees_what_each_agent_can_reach():
+    """TSK-35: the intake gave the AI phone's steps to an agent without the phone (task #104); the agents it plans with
+    name their tools in words, so a phone step goes to the agent that holds the phone."""
+    import tasks as T
+    agents = T.cards()
+    assert "the AI phone" in agents["main"] and "the AI phone" not in agents["mission"]
+    assert "web research" in agents["mission"] and "Its tools:" not in agents["judge"]
+

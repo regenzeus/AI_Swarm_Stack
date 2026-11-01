@@ -39,7 +39,9 @@ sops exec-env secrets/agent-keys.enc.yaml "python3 ops/prompts.py replay <owner>
 ```
 
 The replay takes the prompt's last cases, 3 to 6 of them (live runs keep up to 12 per prompt in /srv/ai/state/prompt-cases, owner-only;
-a prompt no run has used yet needs `prompts/cases/<owner>.<NAME>.json`, a list of `{"fills": {...}, "out": "..."}`),
+a prompt no run has used yet needs `prompts/cases/<owner>.<NAME>.json`, a list of `{"fills": {...}, "out": "..."}`;
+an agent's standing brief, a raw system message, has cases with `"user": "the request"` and is replayed as a dry run that
+names the tool calls it would make, as `prompts/cases/scout.BRIEF.json` does),
 sends the last approved text and the new one to the agent's own model (Claude without tools in the builder sandbox,
 ChatGPT through vk-eval), and lets a judge (`eval.md` JUDGE, gpt-sub) compare each pair in random order. It passes when
 the new text gives a valid answer (JSON where the prompt asks for JSON) at least as often and the judge prefers the old

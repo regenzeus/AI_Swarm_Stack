@@ -64,8 +64,8 @@ const ARCH = [
     ["Telegram", "chat, briefings, digest", null, "delivery", "Telegram", "Hermes on Telegram: chat with it there, get briefings with buttons into this app, and the morning digest."]]],
   ["Front doors", [
     ["Mission Control", "this app + its tools", "mission-control", "welcome", "The app at a glance", "This app and its API, plus the tools Hermes uses to manage missions, builds and repositories. It never runs jobs itself: the runner does.", "#/"],
-    ["Open WebUI", "classic chat", "openwebui", "technology", "Apps you can open", "A classic chat interface to Hermes. You are signed in through your Tailscale login.", "443"],
-    ["Hermes admin", "skills, sessions, logs", "hermes-dashboard", "technology", "Apps you can open", "Hermes' own dashboard: its skills, sessions, logs and settings. No password: your Tailscale login lets you in.", "8448"],
+    ["Open WebUI", "classic chat", "openwebui", "technology", "Tools you can open", "A classic chat interface to Hermes. You are signed in through your Tailscale login.", "443"],
+    ["Hermes admin", "skills, sessions, logs", "hermes-dashboard", "technology", "Tools you can open", "Hermes' own dashboard: its skills, sessions, logs and settings. No password: your Tailscale login lets you in.", "8448"],
     ["OpenCode", "code editor", "opencode", "code", "The other code tools", "A coding app in the browser for hands-on changes to your repositories.", "8445"],
     ["Sign-in gate", "your Tailscale login, no passwords", "gate-hermes-dashboard", "safety", "Private by default", "Single sign-in: a small gate in front of the apps that have their own login (Hermes admin, the code map). It lets in only requests carrying your Tailscale login, so there are no passwords or tokens to remember."]]],
   ["Agents", [
@@ -75,7 +75,7 @@ const ARCH = [
     ["Builder", "codes in a sandbox", "builder", "builder", "The flow", "The coding agent (ChatGPT via Hermes, or Claude Code) in a sandbox: no secrets, no deploy rights. You review and tap to deploy.", "#/build"]]],
   ["Gateway", [
     ["LiteLLM", "every model call, keys, tools", "litellm", "technology", "The layers", "Every model call of every agent goes through here: per-agent keys and limits, tool access, cost tracking. Subscription models only."],
-    ["Phoenix", "traces", "phoenix", "technology", "Apps you can open", "A trace of every model call: what was asked, which tools ran, how long it took.", "8443"]]],
+    ["Phoenix", "traces", "phoenix", "technology", "Tools you can open", "A trace of every model call: what was asked, which tools ran, how long it took.", "8443"]]],
   ["Knowledge & tools", [
     ["Vault search", "qmd", "qmd", "knowledge", "The vault", "Searches your vault, reports, wikis and code summaries by keywords and by meaning. Hermes uses it before answering.", "#/wiki"],
     ["Memory", "Hindsight", "hindsight", "knowledge", "Long-term memory", "Remembers lasting facts about you from conversations, with your approval for the important ones. Runs local models."],
@@ -173,7 +173,8 @@ const LIVEB = {
   tools: () => `<div class="gl-tools">${(GLIVE?.tools || []).map((t) => `<div><code>${esc(t.name)}</code><span class="small muted">${esc(TOOL_HELP[t.name] || t.about)}</span></div>`).join("")}</div>`,
   versions: () => !S ? loading : `<div class="gl-grid">${(S.system?.versions || []).map((v) => `<div class="gl-svc"><span class="grow">${esc(v.name)}</span><code class="tiny">${esc(v.version)}</code></div>`).join("")}</div>`,
   changes: () => !S ? loading : `<div class="gl-changes">${(S.system?.changes || []).map((c) => `<div><span class="tiny faint num">${esc(c.sha)}</span><span class="grow">${esc(c.subject)}</span><span class="tiny faint" style="white-space:nowrap">${rel(c.ts)}</span></div>`).join("") || `<div class="small muted">No history available</div>`}</div>`,
-  apps: () => `<div class="grid g2">${APPS.map(([n, d, port]) => `<a class="card pad appl" href="${HOSTURL}${port.replace(":443", "")}" target="_blank" rel="noopener"><b>${n}</b><div class="small muted">${d}</div></a>`).join("")}</div>`,
+  apps: () => { if (!TOOLS) { toolsLoad().then(() => fillLive()); return loading; }        // the Stack tab's tools list (APP-30)
+    return `<div class="grid g2">${TOOLS.tools.map((t) => `<div class="card pad tool"><b>${esc(t.name)}</b><div class="small muted">${esc(t.what)}</div><div class="chips" style="margin-top:6px">${toolLinks(t)}</div></div>`).join("")}</div>`; },
   costs: () => { const sy = S?.system || {}; return !S ? loading : `<div class="grid g2"><div class="card kpi"><div class="kpi-l">Paid, all time</div><div class="kpi-v">${usd(sy.spend_total)}</div><div class="kpi-s">30 days: ${usd(sy.spend_30d)}</div></div><div class="card kpi"><div class="kpi-l">Calls today</div><div class="kpi-v">${nf(sy.calls_today)}</div><div class="kpi-s">all on the ChatGPT subscription</div></div></div>`; },
 };
 function fillLive(root = document) {
@@ -189,6 +190,11 @@ function guideOnState() { if (route.name === "guide" || route.name === "system")
 // ---------- the guide inside the Stack page ----------
 let scrollToLearn = false;
 const how = (id) => `<a class="howto" href="#/guide/${id}" title="How this works">${ic.doc}<span>How it works</span></a>`;
+// APP-31: an explanation is there for who needs it and folded for who knows: one small line opens it, and it stays open
+// through every live redraw (the page's and a card's own) until closed
+const EXPLAIN_OPEN = new Set();
+const explain = (key, html, label = "About this") => `<details class="explain" data-x="${key}"${EXPLAIN_OPEN.has(key) ? " open" : ""}><summary><span class="xi">i</span>${label}</summary><div class="small muted">${html}</div></details>`;
+document.addEventListener("toggle", (e) => { const k = e.target?.dataset?.x; if (k) e.target.open ? EXPLAIN_OPEN.add(k) : EXPLAIN_OPEN.delete(k); }, true);
 
 async function vGuide() {
   if (!route.args[0]) { scrollToLearn = true; location.replace("#/system"); return; }   // the guide's home is the Stack page

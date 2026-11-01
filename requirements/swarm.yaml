@@ -360,17 +360,16 @@ items:
     none shall be deleted before then.
   type: quality
   priority: must
-  status: partial
+  status: implemented
   parents: [SN-09]
   sources: [DEC-15]
   acceptance: 'Inspection: the swarm database lies under /srv/ai and is in the backup set; the restore rehearsal restores
     it.'
   verify:
     method: test
-    by: ['tests/test_swarm_service.py::test_the_snapshot_is_a_consistent_copy']
-  trace: [images/swarm/swarm.py, ops/backup.sh]
-  gap: The hourly snapshot lies under /srv/ai and goes into the nightly backup; the restore rehearsal does not check it
-    yet.
+    by: ['tests/test_swarm_service.py::test_the_snapshot_is_a_consistent_copy',
+      'tests/test_swarm_service.py::test_the_restore_drill_opens_the_swarm_snapshot_and_counts_its_record']
+  trace: [images/swarm/swarm.py, ops/backup.sh, ops/restore.sh, ops/restore_check.py]
 - id: SWM-04
   group: Lifecycle
   phase: 1
@@ -973,7 +972,8 @@ items:
     no adapter yet.
   verify:
     method: test
-    by: ['tests/test_improve.py::test_no_caps_and_a_known_problem_is_refined_not_copied', 'tests/test_swarm_ledger.py::test_the_context_pack_has_its_order_budget_and_lessons',
+    by: [tests/test_swarm_service.py::test_a_pack_asked_again_soon_is_not_built_twice,
+      'tests/test_improve.py::test_no_caps_and_a_known_problem_is_refined_not_copied', 'tests/test_swarm_ledger.py::test_the_context_pack_has_its_order_budget_and_lessons',
       'tests/test_swarm_phase4.py::test_a_wake_waits_out_the_usage_limit_and_a_hermes_agent_gets_one_turn', 'tests/test_swarm_phase4.py::test_a_woken_crew_agent_answers_its_requests_with_its_model',
       'tests/test_swarm_phase4.py::test_a_finish_is_checked_first_and_a_run_without_one_is_a_health_note']
   trace: [ops/swarm_client.py, images/swarm/ledger.py, ops/crew.py]
@@ -1173,6 +1173,7 @@ items:
   parents: [SN-05, CST-06]
   sources: [DEC-15, SEC-16]
   acceptance: 'Test: a message carrying a sample API key is refused; a log excerpt with a token is stored redacted.'
+  findings: [FND-93]
   verify:
     method: test
     by: ['tests/test_swarm_ledger.py::test_secrets_are_redacted_and_card_numbers_refused']
@@ -1246,8 +1247,8 @@ items:
     method: test
     by: ['tests/test_swarm_client.py::test_writes_wait_in_the_outbox_while_the_service_is_down', 'tests/test_swarm_service.py::test_the_snapshot_is_a_consistent_copy']
   trace: [images/swarm/ledger.py, ops/swarm_client.py]
-  gap: The Ledger and the runner's outbox survive restarts; the mail connector can still strand a Trash approval on a restart
-    (FND-14).
+  gap: The Ledger and the runner's outbox survive restarts; the mail connector drops a first-Trash card left by a restart
+    and its agent asks again (CNX-06, FND-14), so that wait is redone rather than resumed.
 - id: SWM-72
   group: Reliability and resources
   phase: 1
@@ -1304,7 +1305,8 @@ items:
     method: test
     by: ['tests/test_swarm_service.py::test_the_tool_surface_is_small']
   trace: [compose/apps.yaml, images/swarm/ledger.py]
-  gap: mem_limit 256 MB and no embedding model; the live service's p95 memory is measured after a week of use.
+  gap: mem_limit 256 MB and no embedding model. Measured on 2026-11-01 at 22:43, three days after the switch-over, it used 60.5
+    MB with 504 artifacts, 1,357 events and 7 messages; the p95 over a full week is still to be read.
   findings: [FND-18, FND-26]
 - id: SWM-75
   group: Reliability and resources
@@ -1804,17 +1806,18 @@ items:
   verify:
     method: test
     by: ['tests/test_swarm_views.py::test_runs_are_drawn_in_the_lane_of_their_swarm_agent', 'tests/test_swarm_views.py::test_the_timeline_has_every_run_with_its_lane_its_end_and_what_started_it',
-      'tests/test_swarm_views.py::test_the_swarm_page_has_the_timeline_the_map_the_team_and_tool_calls_in_the_chatroom']
+      'tests/test_swarm_views.py::test_the_agents_tab_is_four_views_and_none_of_the_ten_is_lost']
   trace: [images/mission-control/runrecord.py, images/mission-control/web/static/swarm.js]
   findings: [FND-40]
 - id: SWM-104
   group: Observability
   phase: 5
   title: A map of who starts and messages whom
-  statement: The Swarm page shall show, for a chosen window, one row per connection between two agents or an agent and you,
-    in words, with both named and each one's role from its card, what the connection was (asked to research, chatted
-    with, asked Claude Code, wrote on the Board), how often, when last and how many are running now, and list the agents
-    that worked alone with their roles.
+  statement: The Agents overview shall show, for a chosen window, a map with every agent that ran as a named dot (its
+    size by its runs, a ring for failed runs and for running now) and a line between two agents that worked together
+    (an arrow from the one who asked, how often, dashed for Board messages only), where a tap on a dot or a line opens
+    Activity on that agent or that pair; and, one tap away, each connection in words with both named, their roles, what
+    it was, how often, when last and how many run now, the agents that worked alone, and the ideas each agent wrote to.
   type: functional
   priority: should
   status: implemented
@@ -1822,10 +1825,10 @@ items:
   sources: *id001
   verify:
     method: test
-    by: ['tests/test_swarm_views.py::test_the_map_counts_who_starts_whom_and_shows_what_runs_now', 'tests/test_swarm_views.py::test_the_swarm_page_has_the_timeline_the_map_the_team_and_tool_calls_in_the_chatroom',
-      'tests/test_swarm_views.py::test_the_map_says_in_words_who_did_what_to_whom_with_each_agent_s_role']
+    by: ['tests/test_swarm_views.py::test_the_map_counts_who_starts_whom_and_shows_what_runs_now', 'tests/test_swarm_views.py::test_the_agents_tab_is_four_views_and_none_of_the_ten_is_lost',
+      'tests/test_swarm_views.py::test_the_map_is_agents_as_dots_and_lines_that_open_activity']
   trace: [images/mission-control/runrecord.py, images/mission-control/web/static/swarm.js]
-  findings: [FND-40]
+  findings: [FND-40, FND-89]
 - id: SWM-105
   group: Board
   phase: 5
@@ -1839,7 +1842,7 @@ items:
   sources: *id001
   verify:
     method: test
-    by: ['tests/test_swarm_views.py::test_tool_calls_between_agents_are_exchanges_with_the_whole_question_and_answer', 'tests/test_swarm_views.py::test_the_swarm_page_has_the_timeline_the_map_the_team_and_tool_calls_in_the_chatroom']
+    by: ['tests/test_swarm_views.py::test_tool_calls_between_agents_are_exchanges_with_the_whole_question_and_answer', 'tests/test_swarm_views.py::test_the_agents_tab_is_four_views_and_none_of_the_ten_is_lost']
   trace: [images/mission-control/runrecord.py, images/mission-control/web/static/swarm.js]
   findings: [FND-40]
 - id: SWM-106
@@ -1847,7 +1850,10 @@ items:
   phase: 5
   title: A map of the team
   statement: The Swarm page shall show every agent grouped by its job, with what it is for, how it runs and wakes, what
-    it can reach, whether it reads private data, takes in outside content or can send data out, and its last 7 days of runs.
+    it can reach, whether it reads private data, takes in outside content or can send data out, and its last 7 days of runs;
+    each agent shall have one page (its housekeeping page's Team tab, or its own) with its last 30 days, its open health
+    issues, its runs, with whom it works, what it said and did, the tasks it did steps for, its memory and the ideas it
+    worked on; and a mission's page shall show its own last 30 days.
   type: functional
   priority: should
   status: implemented
@@ -1855,7 +1861,7 @@ items:
   sources: *id001
   verify:
     method: test
-    by: ['tests/test_swarm_views.py::test_the_swarm_page_has_the_timeline_the_map_the_team_and_tool_calls_in_the_chatroom']
+    by: ['tests/test_swarm_views.py::test_every_team_agent_has_one_page', 'tests/test_swarm_views.py::test_the_agents_tab_is_four_views_and_none_of_the_ten_is_lost']
   trace: [images/mission-control/web/static/swarm.js, images/swarm/swarm.py]
   findings: [FND-40]
 - id: SWM-107
@@ -1866,7 +1872,8 @@ items:
     has to post: tool calls between agents with their answers, work on another agent''s artifact marked as help, Board
     messages, work on the shared artifacts, the owner''s decisions and messages, and runs no one asked for; filtered by type,
     agent (two picked: only what passes between them), topic, time and text, with a burst of asks between the same two agents
-    folded into one line.'
+    folded into one line; its filters come from the address on every visit and go back into it, and the run timeline
+    under them shows the same agents and window.'
   type: functional
   priority: should
   status: implemented
@@ -1879,7 +1886,8 @@ items:
   verify:
     method: test
     by: ['tests/test_team_room.py::test_lines_mark_help_in_another_agent_s_lane_and_keep_every_text_whole', 'tests/test_team_room.py::test_the_ledger_feed_has_events_and_messages_but_not_the_requirements_mirror',
-      'tests/test_team_room.py::test_the_chatroom_is_the_team_room_with_its_filters']
+      'tests/test_team_room.py::test_the_chatroom_is_the_team_room_with_its_filters', 'tests/test_swarm_views.py::test_a_tapped_line_opens_activity_on_what_passed_between_the_two_and_the_filter_does_not_stick']
+  findings: [FND-89]
   trace: [images/mission-control/teamroom.py, images/swarm/ledger.py, images/swarm/swarm.py, images/mission-control/server.py, images/mission-control/web/static/swarm.js]
 - id: SWM-108
   group: Run contract

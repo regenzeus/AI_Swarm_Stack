@@ -169,3 +169,60 @@ def test_the_conductor_routes_a_step_before_its_first_attempt_and_says_why(K, mo
     s = CD.routed(K.c, TK.row(K.c, tid), CD.steps(K.c, tid)[0], CARDS)
     assert (s["agent"], s["harness"], s["model"]) == ("scout", "hermes", "gpt-sub-fast") and "(routed: scout met research tasks 95%" in s["why"]
     assert CD.steps(K.c, tid)[0]["agent"] == "scout"
+
+
+def test_each_run_of_a_recurring_task_is_judged_on_its_own_and_a_quiet_run_is_not(K):
+    """TSK-22: every run of a scheduled or event-triggered task gets its own verdict, points and tokens; the history
+    credits that run's steps; the task shows its latest verdict; a run that found nothing new is not judged."""
+    tid = task(K, status="scheduled")
+    K.c.execute("update tasks set rhythm=? where id=?", (json.dumps({"type": "schedule", "schedule": "daily 07:00"}), tid))
+    (K.tmp / "tasks").mkdir(exist_ok=True)
+    for occ, st, res, verdict, ended in ((1, "done", "tasks/1-x-1.md", None, "2026-11-01T07:10:00+01:00"),
+                                         (2, "done", "tasks/1-x-2.md", "quiet", "2026-11-02T07:10:00+01:00"),
+                                         (3, "done", "tasks/1-x-3.md", None, "2026-11-03T07:10:00+01:00"),
+                                         (4, "failed", "step 1 (scout) failed: timeout", None, "2026-11-04T07:10:00+01:00")):
+        (K.tmp / f"tasks/1-x-{occ}.md").write_text(f"Python 3.14, 7 Oct 2026 (run {occ})")
+        K.c.execute("insert into task_occ (task, occ, trigger, started, ended, status, result, verdict, judged) values (?,?,?,?,?,?,?,?,?)",
+                    (tid, occ, "schedule", ended, ended, st, res, verdict, ended if verdict else None))
+        K.c.execute("insert into task_steps (task, occ, idx, title, agent, harness, model, after, status, started, ended) values (?,?,1,'Look','scout','hermes','gpt-sub-fast','[]',?,?,?)",
+                    (tid, occ, st, ended, ended))
+    K.c.commit()
+    asked = []
+    ST.judge_due(K.c, ask=lambda p: asked.append(p) or {"points": [{"met": True, "why": "named"}, {"met": "(run 3)" in p, "why": "listed"}]})
+    runs = {o["occ"]: o for o in CD.occurrences(K.c, tid)}
+    assert [runs[i]["verdict"] for i in (1, 2, 3, 4)] == ["partly", "quiet", "met", "failed"] and len(asked) == 2
+    assert "(run 1)" in asked[0] and runs[3]["judgement"]["points"][1] == {"point": "lists three changes", "met": True, "why": "listed"}
+    t = TK.row(K.c, tid)
+    assert (t["verdict"], t["spec"]["judgement"]["run"]) == ("failed", 4)                # the task shows its latest run
+    m = K.c.execute("select tasks, met, partly, failed from task_metrics where agent='scout'").fetchone()
+    assert tuple(m) == (3, 1, 1, 1)                                                    # each judged run, its own steps; not the quiet one
+    assert any("Task #%d run 3 judged: met (2 of 2 points)" % tid in e[2] for e in K.ev)
+    ST.judge_due(K.c, ask=lambda p: asked.append(p))
+    assert len(asked) == 2                                                             # judged once
+
+
+def test_the_judge_reads_what_the_stack_measured_not_only_the_summary(tmp_path, monkeypatch):
+    """FND-92: a build's checks, a check step's counts and the opened pages go to the judge after the result."""
+    import conductor as CD
+    import staffing as ST
+    c = sqlite3.connect(":memory:")
+    c.row_factory = sqlite3.Row
+    CD.table(c)
+    c.execute("create table builds (id integer primary key, status text, checks text, files text)")
+    c.execute("create table prov (task integer, artifact integer)")
+    c.execute("create table artifacts (id integer primary key, uri text)")
+    c.execute("insert into builds values (13, 'review', '114 passed in 2.1s\nALL CHECKS PASSED', ?)", (json.dumps([["A", "semverlib/__init__.py"]]),))
+    CD.step_ref(c, "build", 13, 91)
+    c.execute("insert into task_steps (task, occ, idx, title, agent, harness, after, status, output) values "
+              "(91, 1, 2, 'Run every test', 'judge', 'check', '[1]', 'done', 'All checks pass: 114 passed.')")
+    c.execute("insert into artifacts values (1, 'https://semver.org/')")
+    c.execute("insert into prov values (91, 1)")
+    seen = []
+    t = {"id": 91, "door": "plan", "goal": "a semver library", "done": ["every rule has a test"], "spec": {}}
+    j = ST.judge(c, t, ask=lambda p: seen.append(p) or '{"points": [{"met": true, "why": "114 tests pass"}]}', text="Built it.", occ=1)
+    assert j["verdict"] == "met"
+    p = seen[0]
+    assert ST.MEASURED in p and "Build #13 (review)" in p and "114 passed" in p and "semverlib/__init__.py" in p
+    assert "All checks pass: 114 passed." in p and "https://semver.org/" in p
+    assert ST.evidence_of(c, {**t, "id": 5}, 1) == ""                 # nothing measured: nothing added
+

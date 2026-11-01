@@ -298,3 +298,44 @@ def test_house_connect_sends_owner_to_home_assistant_and_back(app):
     c.get(f"/api/house/callback?state={q['state']}&code=" + "a" * 32, headers=H, follow_redirects=False)
     reqs = [json.loads(p.read_text()) for p in app.INBOX.glob("*.json")]
     assert reqs == [{"action": "house_connect", "code": "a" * 32, "client_id": "https://pc.example.ts.net:8447/"}]
+
+
+def test_a_task_run_s_map_is_served_as_the_runner_wrote_it_and_the_newest_run_without_a_number(app, monkeypatch):
+    """TSK-24: /api/task/map serves public/maps/<task>.<occ>.json; a run without a map says so; no path tricks."""
+    d = app.STATE.parent / "maps"
+    d.mkdir()
+    monkeypatch.setattr(app, "MAPS", d)
+    (d / "7.1.json").write_text(json.dumps({"task": 7, "occ": 1}))
+    (d / "7.10.json").write_text(json.dumps({"task": 7, "occ": 10}))
+    c = TestClient(app.app)
+    assert c.get("/api/task/map", headers=H, params={"t": 7, "o": 1}).json()["occ"] == 1
+    assert c.get("/api/task/map", headers=H, params={"t": 7}).json()["occ"] == 10          # the newest run (10 after 9, not after 1)
+    assert c.get("/api/task/map", headers=H, params={"t": 8}).status_code == 404
+    assert c.get("/api/task/map", headers=H, params={"t": "../x"}).status_code == 400
+    assert c.get("/api/task/map", params={"t": 7}).status_code == 403
+
+
+def test_the_telemetry_history_is_served_and_says_when_there_is_none_yet(app, monkeypatch, tmp_path):
+    """TSK-25: /api/telemetry serves public/telemetry.json as the runner wrote it."""
+    f = tmp_path / "telemetry.json"
+    monkeypatch.setattr(app, "TELEMETRY", f)
+    c = TestClient(app.app)
+    assert c.get("/api/telemetry", headers=H).json()["rows"] == [] and "within the hour" in c.get("/api/telemetry", headers=H).json()["error"]
+    f.write_text(json.dumps({"rows": [{"day": "2026-11-01", "agent": "scout", "runs": 3}], "prices": {}}))
+    assert c.get("/api/telemetry", headers=H).json()["rows"][0]["runs"] == 3
+
+
+def test_the_owner_keeps_the_phone_screen_on_for_an_hour_at_most(app, monkeypatch, tmp_path):
+    """PHN-17"""
+    monkeypatch.setattr(app, "PHONE", tmp_path)
+    c = TestClient(app.app)
+    assert c.post("/api/phone/control", headers=H, json={"do": "screen", "minutes": 500}).json() == {"ok": True}
+    assert json.loads(next((tmp_path / "control").glob("*.json")).read_text()) == {"do": "screen", "minutes": 60}
+
+
+def test_every_action_a_button_sends_is_one_the_app_lets_through(app):
+    """Delete wiki answered "unknown action" (1 Nov): the runner knew wiki_delete, the app's list did not."""
+    import re
+    js = "".join((Path(app.__file__).parent / "web/static" / f).read_text() for f in ("app.js", "swarm.js", "guide.js", "shop.js"))
+    assert sorted(set(re.findall(r'action: "([a-z0-9_]+)"', js)) - app.ACTIONS) == []
+

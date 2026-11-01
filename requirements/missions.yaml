@@ -105,12 +105,13 @@ items:
       its alert delivered.
     type: quality
     priority: should
-    status: partial
+    status: implemented
     parents: [SN-01, SN-13]
     sources: [docs/REVIEW-2026-10-27.md]
-    gap: Only one replayed SEC filing went through the full path; price and news triggers have not fired for real, and
-      GDELT is always rate-limited (review item 4).
-    verify: {method: demonstration, by: [ops/mission_extras.py]}
+    note: A replayed SEC filing went through a mission's full path (2026-10-27); on 2026-11-01 a replayed news article
+      and a replayed 7 % price move went through the real watcher, each starting its task's run under the live
+      Conductor, which finished, was judged met and was delivered (eval/results/20261101-020317-trigger-proof.json; python3 ops/conductor.py triggers).
+    verify: {method: demonstration, by: [ops/conductor.py, eval/results/20261101-020317-trigger-proof.json]}
   - id: MIS-11
     title: Briefings by the Topic Desk
     statement: A briefing run shall have the Topic Desk collect the brief's news, filings and prices over the window its

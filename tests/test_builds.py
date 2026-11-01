@@ -383,3 +383,21 @@ def test_a_clash_only_in_the_generated_requirements_is_drawn_again(B, tmp_path, 
         assert sh("git", "status", "--porcelain", cwd=a) == ""
     else:
         assert (a / "requirements/REQUIREMENTS.md").read_text() == "build\nmain\n" and sh("git", "status", "--porcelain", cwd=a) == ""
+
+
+@pytest.mark.parametrize("files, ran", [(["tests/test_a.py"], True), (["pkg/test_b.py"], True), (["README.md"], False)])
+def test_a_repo_without_a_check_script_runs_its_tests(B, tmp_path, files, ran):
+    """The default check finds tests as pytest does: a repo with only tests/ ran nothing and passed before (FND-94)."""
+    import subprocess
+    for f in files:
+        (tmp_path / f).parent.mkdir(parents=True, exist_ok=True)
+        (tmp_path / f).write_text("def test_x():\n    pass\n")
+    bin_ = tmp_path / "bin"
+    bin_.mkdir()
+    (bin_ / "pytest").write_text("#!/bin/sh\necho '1 passed'\n")
+    (bin_ / "pytest").chmod(0o755)
+    out = subprocess.run(["sh", "-c", B.DEFAULT_CHECK], cwd=tmp_path, capture_output=True, text=True,
+                         env={"PATH": f"{bin_}:/usr/bin:/bin"}).stdout
+    assert ("1 passed" in out) is ran and ("no automatic checks" in out) is not ran
+    assert out.strip().endswith("ALL CHECKS PASSED")
+

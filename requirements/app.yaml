@@ -8,16 +8,19 @@ items:
       navigation from 960 px, and the tab bar shall spread over however many tabs there are; no screen has an app
       top bar, each starts with its own title (the chat with its own bar), every section including Stack is in the
       tab bar, the live state is a dot on Stack, a bar shows at the top only while the app is offline or an update
-      waits, and a page's main action fits on its title row.
+      waits, and a page's main action fits on its title row; a card that stands for a page opens it on a tap, and an
+      agent's text in a card is its formatted markdown.
     type: quality
     priority: must
     status: implemented
     parents: [SN-06]
     sources: [images/mission-control/web/AGENTS.md]
-    verify: {method: test, by: [tests/test_app_layout.py::test_an_icon_in_text_is_one_line_high_and_no_page_has_an_app_top_bar, tests/test_app_layout.py::test_the_chat_has_one_top_bar_on_a_phone_with_the_live_state_in_it, tests/test_app_layout.py::test_the_wiki_s_new_button_is_one_line_on_the_title_row,
+    verify: {method: test, by: [tests/test_now_card.py::test_the_running_card_opens_its_mission_and_folds_each_finding_as_markdown,
+      tests/test_now_card.py::test_a_tap_on_a_card_opens_its_page_but_not_on_its_own_links_or_folds,
+      tests/test_app_layout.py::test_an_icon_in_text_is_one_line_high_and_no_page_has_an_app_top_bar, tests/test_app_layout.py::test_the_chat_has_one_top_bar_on_a_phone_with_the_live_state_in_it, tests/test_app_layout.py::test_the_wiki_s_new_button_is_one_line_on_the_title_row,
       tests/test_app_routes.py::test_the_tab_bar_spreads_however_many_tabs_there_are, tests/test_app_layout.py::test_the_section_headings_keep_their_gap_and_stay_on_one_line, tests/test_app_layout.py::test_the_swarm_s_views_are_under_agents_on_every_screen, tests/test_app_layout.py::test_new_chat_starts_afresh_and_attaching_is_a_clip]}
     trace: [images/mission-control/web/static/app.css]
-    findings: [FND-40, FND-41]
+    findings: [FND-40, FND-41, FND-82]
   - id: APP-02
     title: Every screen opens cold
     statement: Every app route shall render when it is opened directly (a link, a notification, a reload), without
@@ -237,18 +240,19 @@ items:
     trace: [images/mission-control/web/static/swarm.js, images/mission-control/web/static/app.js]
   - id: APP-22
     title: Every chart moves, zooms and names its dots the same way
-    statement: Every zoomable chart (the code graph, the wiki graphs, Who works on what) shall move with one finger or the
-      mouse, zoom with two fingers, ctrl and the wheel or its + and − buttons, fit everything in with its fit button, and
-      leave a plain wheel to the page; every dot shall have a name, shown when it covers no busier dot's name, at the same
+    statement: Every zoomable chart (the code graph, the wiki graphs, Who works with whom) shall move with two fingers or the
+      mouse and zoom with two fingers, ctrl and the wheel or its + and − buttons, fit everything in with its fit button,
+      and leave one finger and a plain wheel to the page (a chart never swallows a scroll); a live redraw shall keep its
+      dots where they were and its zoom; every dot shall have a name, shown when it covers no busier dot's name, at the same
       size on screen at any zoom, and a tap on a dot shall say what it is.
     type: functional
     priority: should
     status: implemented
     parents: [SN-07]
     sources: [images/mission-control/guide/19-swarm.md]
-    verify: {method: test, by: [tests/test_charts.py::test_every_chart_moves_and_zooms_through_one_helper_with_one_finger,
+    verify: {method: test, by: [tests/test_charts.py::test_every_chart_moves_and_zooms_through_one_helper_and_one_finger_scrolls_the_page, tests/test_charts.py::test_a_redraw_keeps_the_map_s_dots_and_zoom,
       tests/test_charts.py::test_names_never_cover_each_other_and_the_busiest_keep_theirs,
-      tests/test_charts.py::test_who_works_on_what_names_every_dot_and_hides_closed_ideas_until_asked]}
+      tests/test_charts.py::test_the_map_names_every_dot_and_shows_open_ideas_when_asked]}
     trace: [images/mission-control/web/static/app.js, images/mission-control/web/static/swarm.js, images/mission-control/web/static/app.css]
   - id: APP-23
     title: No call of the app waits forever
@@ -321,3 +325,88 @@ items:
       tests/test_ux_polish.py::test_home_opens_short_and_the_code_tab_never_shows_an_empty_name,
       tests/test_ux_polish.py::test_the_crew_rows_carry_their_unit_so_the_app_can_name_a_job]}
     trace: [images/mission-control/web/static/app.js, images/mission-control/web/static/app.css, images/mission-control/server.py, ops/crew.py]
+  - id: APP-30
+    title: Every tool's menus one tap away
+    statement: The Stack page shall start with Tools, one card for every tool the stack runs on (Home Assistant, the NAS,
+      the FRITZ!Box, Forgejo, Hermes admin, Phoenix and the rest) with where it opens (anywhere, or the home network)
+      and its main menus as links, and a Go-to search over those menus and the app's own pages; one list
+      (web/static/tools.json) feeds them, the guide and the House page; every link shall be opened each night and a
+      broken one reported.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-01, SN-02]
+    sources: [images/mission-control/guide/12-stack-page.md]
+    verify: {method: test, by: ['tests/test_tools.py::test_every_tool_has_its_menus_and_every_page_exists', 'tests/test_tools.py::test_go_to_finds_menus_and_pages_by_their_words',
+      'tests/test_tools.py::test_a_tool_link_that_does_not_open_is_a_journey_failure']}
+    trace: [images/mission-control/web/static/tools.json, images/mission-control/web/static/app.js, images/mission-control/web/static/guide.js, ops/journeys.py]
+  - id: APP-31
+    title: Explanations are there, folded
+    statement: An explanation of how to read a screen shall be folded behind one small labelled line with an i that
+      opens it, and stay open through live redraws until closed; what an action will do (a revert, a save, a
+      move to Trash, where a secret is stored) shall stay next to its button. No floating button shall cover the
+      content; New mission is a button in the header of the missions list.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-01, SN-02]
+    sources: [images/mission-control/guide/12-stack-page.md]
+    verify: {method: test, by: [tests/test_charts.py::test_explanations_fold_and_stay_open_through_redraws]}
+    trace: [images/mission-control/web/static/guide.js, images/mission-control/web/static/app.js, images/mission-control/web/static/swarm.js, images/mission-control/web/static/app.css]
+  - id: APP-32
+    title: A live update never moves the page
+    statement: A live update of the Agents overview shall redraw the page only when what it lists changed; its live
+      parts (working now, the map) shall update in place, so a page being scrolled stays where it is.
+    type: functional
+    priority: must
+    status: implemented
+    findings: [FND-96]
+    parents: [SN-01]
+    sources: [images/mission-control/guide/19-swarm.md]
+    verify: {method: test, by: [tests/test_charts.py::test_a_live_update_redraws_the_agents_page_only_when_its_list_changed]}
+    trace: [images/mission-control/web/static/app.js]
+  - id: APP-33
+    title: Back returns to where you were
+    statement: Going back or forward to a page shall return to where it was scrolled, once its slower parts have loaded,
+      unless the owner scrolled meanwhile; a newly opened page shall start at its top.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-01]
+    sources: [images/mission-control/guide/02-first-ten-minutes.md]
+    verify: {method: test, by: [tests/test_charts.py::test_back_returns_to_where_you_were_and_a_new_page_starts_at_the_top]}
+    trace: [images/mission-control/web/static/app.js]
+  - id: APP-34
+    title: A calm, readable dark theme
+    statement: The app shall use a graphite background with opaque surfaces and hairline borders, one accent colour, text
+      slightly softer than white, section titles in sentence case and grey counts, with no background glow, shadows or
+      gradient buttons; colour shall mark what needs attention.
+    type: constraint
+    priority: should
+    status: implemented
+    parents: [SN-01]
+    sources: [images/mission-control/guide/02-first-ten-minutes.md]
+    verify: {method: test, by: [tests/test_charts.py::test_the_theme_is_calm]}
+    trace: [images/mission-control/web/static/app.css, images/mission-control/web/index.html, images/mission-control/web/manifest.webmanifest]
+  - id: APP-35
+    title: Every task has its own page
+    statement: Each task shall have its own page (#/task/<id>), opened from every notification, list and link that names
+      the task, showing where it stands and why, its answer, its definition of done with the verdict and the judge's
+      reasons, its steps with their results, the agents that worked on it with their part (planned it, a step, called in
+      by another agent) and what each did (runs, tool and model calls, tokens, time), a timeline of when each agent worked
+      and of every action, what its agents read from and kept in memory, and every run of a recurring task; an agent's
+      page shall list the tasks it worked on and its part in each.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-01, SN-07]
+    sources: ['chat 2026-11-01: Should we not have proper pages for tasks? ... Which agents have been involved? ... Memories
+      beeing made and accessed in task. A timeline of agent actions.']
+    findings: [FND-97, FND-95, FND-98]
+    verify: {method: test, by: [tests/test_task_page.py::test_a_task_s_agents_actions_and_memory_come_from_its_run_tree,
+      tests/test_task_page.py::test_an_agent_s_page_lists_the_tasks_it_worked_on_with_its_part,
+      tests/test_task_page.py::test_the_runner_writes_each_task_s_page_with_every_run_and_its_steps,
+      tests/test_app_routes.py::test_a_page_that_loads_draws_only_while_you_are_still_on_it,
+      tests/test_app_routes.py::test_a_live_redraw_never_scrolls_the_page]}
+    trace: [images/mission-control/web/static/task.js, images/mission-control/runrecord.py, images/mission-control/server.py,
+      ops/tasks.py, images/mission-control/web/static/app.js, images/mission-control/web/static/app.css]

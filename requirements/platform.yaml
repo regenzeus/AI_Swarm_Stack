@@ -228,16 +228,17 @@ items:
   - id: PLT-21
     title: Growing files are pruned
     statement: The stack shall prune event logs, run logs, build logs and diffs, chat uploads and shares older than
-      90 days (shares after 14 days), keeping run summaries for good.
+      90 days (shares after 14 days), once a day, keeping run summaries for good.
     type: quality
     priority: should
-    status: partial
+    status: implemented
     parents: [SN-13, CST-14]
     sources: [docs/REVIEW-2026-10-27.md]
-    gap: The runtime record drops full events after 90 days and shares go after 14 days; events.jsonl, run and build
-      logs, chats and uploads are not pruned (review item 11).
-    verify: {method: test, by: [tests/test_runtime.py::test_touches_refusals_connections_and_retention]}
-    trace: [images/mission-control/runrecord.py, images/mission-control/server.py]
+    rationale: The owner's chats are his conversations, not growing logs; they stay until he deletes them. Uploads that
+      were filed into the vault stay in the vault.
+    verify: {method: test, by: [tests/test_runtime.py::test_touches_refusals_connections_and_retention,
+      tests/test_prune.py::test_the_runner_drops_what_is_older_than_90_days, tests/test_prune.py::test_the_app_drops_uploads_older_than_90_days]}
+    trace: [images/mission-control/runrecord.py, images/mission-control/server.py, ops/prune.py, ops/missions.py]
   - id: PLT-22
     title: Home Assistant deploys host-side
     statement: make ha-deploy shall deploy or upgrade Home Assistant on the NAS from nas/homeassistant, seed its

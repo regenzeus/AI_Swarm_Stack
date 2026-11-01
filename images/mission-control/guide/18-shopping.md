@@ -22,6 +22,9 @@ chat: I'd like to upgrade this PC to 32 GB RAM.
 note: Hermes asks for budget and deadline if you didn't say them, then the agent's first run takes a few minutes.
 ```
 
+Or give it as a task on **Home** ("Buy a 32 GB kit for this PC when it is cheap"): the task gets its shopping agent, and
+each of its checks is a run of the task (Tasks); the proposals, your approval and the purchase are the same as here.
+
 ## 2. What it does
 
 1. **What fits**: from your PC's own facts plus the manufacturer's specs and the board's memory support list, with

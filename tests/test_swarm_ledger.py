@@ -228,6 +228,11 @@ def test_secrets_are_redacted_and_card_numbers_refused(L):
     assert "sk-abcdef" not in body and "hunter2" not in body and "[redacted]" in body
     with pytest.raises(Refused, match="payment card"):
         L.add_evidence(DOC, "c", aid, "card 4111 1111 1111 1111 in the form")
+    for card in ("4111111111111111", "4111-1111-1111-1111", "3782 822463 10005"):
+        with pytest.raises(Refused, match="payment card"):
+            L.add_evidence(DOC, "c", aid, f"paid with {card}")
+    # FND-93: a gate result's time stamp passes the Luhn check but is no card
+    L.add_evidence(DOC, "g", aid, "eval/results/20261031-140852-tasks-gate.json and 20261031-152501")
 
 
 def test_paused_agents_are_refused(L):

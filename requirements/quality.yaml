@@ -131,15 +131,17 @@ items:
   - id: QA-13
     title: What the docs say is checked
     statement: The checks shall compare the guide's and the AGENTS files' lists that mirror the configuration (tool
-      servers, services, test files, engines) with the configuration itself.
+      servers, services, step harnesses, build engines) with the configuration itself.
     type: process
     priority: should
-    status: proposed
+    status: implemented
     parents: [SN-16, SN-15]
     sources: [DEC-14]
     rationale: The coverage tests check that a feature is mentioned, not that what is said about it is true; most findings
       of 2026-10-29 are this kind of drift.
     findings: [FND-09, FND-15, FND-16]
+    verify: {method: test, by: [tests/test_docs.py::test_what_the_docs_list_matches_the_configuration]}
+    trace: [compose/AGENTS.md, images/mission-control/guide/20-tasks.md, images/mission-control/guide/10-builder.md]
   - id: QA-14
     title: The stack checks itself against its requirements
     statement: Every week an agent shall check the code against these requirements with the spec pipeline (link and

@@ -78,6 +78,9 @@ com.google.android.gms.wallet
 com.samsung.android.spay
 com.osp.app.signin
 com.google.android.apps.accountsettings
+# the voice satellite (docs/HOME-VOICE.md, VOI-07): its sign-in reaches the house, the FRITZ!Box and the NAS, so only
+# a task the owner approved that names it opens it ("task:" = blocked except inside such a task)
+task:homeassistant
 """
 for d in (PENDING, DECISIONS, CONTROL, SHOTS, DONE):
     d.mkdir(parents=True, exist_ok=True)
@@ -92,6 +95,14 @@ S = {"connected": False, "serial": "", "model": "", "android": "", "foreground":
 # Paired before (ADB keeps the phone it trusts): after a restart of this container (every deploy) it reconnects by
 # itself within a minute, instead of staying dark until someone presses Connect; the screen-awake loop needs it too.
 S["paired"] = (Path(os.environ.get("HOME", str(D / "home"))) / ".android" / "adb_known_hosts.pb").exists()
+# PHN-21: the owner's free mode and an approved task outlive a restart (every deploy); Stop still ends both
+try:
+    _was = json.loads((D / "state.json").read_text())
+    if not (D / "STOP").exists():
+        S["trust_until"] = _was.get("trust_until", 0) if _was.get("trust_until", 0) > time.time() else 0
+        S["task"] = _was.get("task") if (_was.get("task") or {}).get("until", 0) > time.time() else None
+except (OSError, ValueError):
+    pass
 elements = []                                            # the last phone_look, for phone_tap(element=n)
 
 # ---------- the money guard ----------
@@ -262,9 +273,18 @@ def blocklist():
     return [ln.strip().lower() for ln in (D / "blocklist.txt").read_text().splitlines() if ln.strip() and not ln.startswith("#")]
 
 
-def blocked(pkg):
+def blocked(pkg, hard=False):
+    """The block-list word in pkg, or None. A word written "task:homeassistant" blocks that app except inside a task the
+    owner approved that names it (VOI-07); hard=True asks only about the words no task can open."""
     pkg = (pkg or "").lower()
-    return next((b for b in blocklist() if b in pkg), None) if pkg else None
+    if not pkg:
+        return None
+    t = active_task()
+    for b in blocklist():
+        word, task_only = (b[5:], True) if b.startswith("task:") else (b, False)
+        if word in pkg and not (task_only and (hard or (t and pkg in t["apps"]))):
+            return word
+    return None
 
 
 def foreground():
@@ -286,6 +306,51 @@ def wake():
         if "isKeyguardShowing=true" in adb("shell", "dumpsys window | grep isKeyguardShowing", timeout=15):
             return ("The AI phone is locked with a PIN, pattern or password, and it never enters one. Ask the owner to "
                     "unlock it, or to set its screen lock to Swipe or None (it is a test phone).")
+    hold_screen(SCREEN_HOLD, "the agents are working")
+    return None
+
+
+# PHN-17: the owner watches the agents work; idle, the screen is off (it drained the battery when kept on, 2026-10-29)
+SCREEN_HOLD = 120                    # s the screen stays on after the agents' last action
+SCREEN_WAIT_MAX = 15 * 60            # s it stays on while an action waits for the owner's OK (= the approval's own wait)
+SCREEN_OWNER_MAX = 60                # minutes the owner can keep it on from the Phone page
+
+
+def hold_screen(seconds, why, now=None):
+    """Keep the screen on for the next `seconds`; screen_tick lets it sleep afterwards. Android's own 30 s timeout is
+    moved out of the way while held (one setting, not on every action)."""
+    now = now or time.time()
+    if now + seconds > S.get("screen_until", 0):
+        S["screen_until"], S["screen_why"] = now + seconds, why
+    if not S.get("screen_held"):
+        adb("shell", "settings", "put", "system", "screen_off_timeout", str(SCREEN_WAIT_MAX * 1000 + 60000))
+        S["screen_held"] = True
+
+
+def screen_tick(now=None):
+    """Every pass of the control loop: an action waiting for the owner's OK keeps the screen on (up to SCREEN_WAIT_MAX);
+    once nothing holds it, the 30 s timeout is back and the screen goes off at once."""
+    now = now or time.time()
+    if S.get("screen_held") and any(now - p.stat().st_mtime < SCREEN_WAIT_MAX for p in PENDING.glob("*.json")):
+        hold_screen(10, "an action waits for your OK", now)
+    if S.get("screen_held") and now > S.get("screen_until", 0):
+        let_screen_sleep()
+        if "mWakefulness=Awake" in adb("shell", "dumpsys power | grep mWakefulness=", timeout=15):
+            adb("shell", "input", "keyevent", "KEYCODE_SLEEP")
+        S.update(screen_held=False, screen_until=0, screen_why="")
+
+
+def owner_screen(minutes):
+    """The Phone page: keep the screen on for `minutes` (up to SCREEN_OWNER_MAX) to watch, or 0 = off now."""
+    minutes = max(0, min(SCREEN_OWNER_MAX, int(minutes)))
+    if minutes:
+        err = wake()
+        if err:
+            return err
+        S["screen_until"], S["screen_why"] = time.time() + minutes * 60, "you are watching"
+        hold_screen(0, "you are watching")
+    else:
+        S["screen_until"], S["screen_held"] = 0, True         # the next screen_tick turns it off
     return None
 
 
@@ -307,6 +372,43 @@ BOOT_SETUP = [   # (what the owner approves, adb commands): the AI phone comes b
      [["shell", "dumpsys", "deviceidle", "whitelist", f"+{TAILSCALE}"],
       ["shell", "dumpsys", "deviceidle", "whitelist", f"+{KEEPADB}"]]),
 ]
+
+
+# PHN-22: the AI phone as Hermes' speaker (docs/HOME-VOICE.md): Home Assistant becomes Android's assistant and may use the
+# microphone. Both are Android settings, so the stack applies them only after the owner's one Allow on its own card.
+HA_APP = "io.homeassistant.companion.android"
+VOICE_SETUP = ("Make Home Assistant this phone's voice assistant: the default digital assistant instead of Google's, "
+               "allowed to use the microphone, and never put to sleep by battery saving, so its wake word reaches Hermes "
+               "also with the screen locked or off",
+               [["shell", "cmd", "role", "add-role-holder", "--user", "0", "android.app.role.ASSISTANT", HA_APP],
+                ["shell", "pm", "grant", HA_APP, "android.permission.RECORD_AUDIO"],
+                ["shell", "dumpsys", "deviceidle", "whitelist", f"+{HA_APP}"],          # Samsung put it to sleep when locked
+                ["shell", "cmd", "appops", "set", HA_APP, "RUN_ANY_IN_BACKGROUND", "allow"]])
+
+
+def voice_status():
+    """Is Home Assistant the phone's assistant, and may it hear? (the House page ticks its step from this)"""
+    S["voice"] = {"assistant": HA_APP in adb("shell", "cmd", "role", "get-role-holders", "android.app.role.ASSISTANT"),
+                  "mic": "RECORD_AUDIO: granted=true" in adb("shell", "dumpsys", "package", HA_APP),
+                  "awake": f",{HA_APP}," in adb("shell", "dumpsys", "deviceidle", "whitelist")}
+    return S["voice"]
+
+
+async def voice_setup():
+    if not await connect():
+        log(tool="phone_setting", result=f"not changed: {S['error'] or 'the phone is not connected'}")
+        return
+    st = await asyncio.to_thread(voice_status)
+    if all(st.values()):
+        return
+    what, cmds = VOICE_SETUP
+    if (err := await guard("phone_setting", {"what": what}, "The owner asked to talk to Hermes on the AI phone", always="⚙ Phone setting: ")):
+        log(tool="phone_setting", args={"what": what}, result=f"not changed: {err}")
+        return
+    out = [await asyncio.to_thread(adb, *c) for c in cmds]
+    st = await asyncio.to_thread(voice_status)
+    log(tool="phone_setting", args={"what": what}, result=("done" if all(st.values()) else f"not complete: {st}")
+        + "".join(f"; {o.strip()}" for o in out if o.strip()))
 
 
 def boot_status():
@@ -419,6 +521,7 @@ async def connect():
                 log(tool="connect", result=f"connected to {S['model']} (Android {S['android']}) on port {port}")
                 let_screen_sleep()
                 boot_status()
+                voice_status()
                 return True
         await asyncio.to_thread(adb, "disconnect", f"{HOST}:{port}")
     S.update(connected=False, serial="", error="No wireless debugging port answered. Is Wireless debugging on, and the phone paired?")
@@ -449,8 +552,17 @@ async def control_loop():
                     await connect()
                 elif req.get("do") == "boot_setup":
                     asyncio.create_task(boot_setup())          # waits for the owner's OKs: not in this loop
+                elif req.get("do") == "voice_setup":
+                    asyncio.create_task(voice_setup())         # waits for the owner's one Allow: not in this loop
                 elif req.get("do") == "trust":
                     S["trust_until"] = allowance(int(req.get("minutes", 0)))
+                elif req.get("do") == "end_task":
+                    if S.get("task"):
+                        log(tool="phone_task", result=f"ended by the owner after {S['task'].get('actions', 0)} actions")
+                    S["task"] = None
+                elif req.get("do") == "screen" and S["connected"]:
+                    err = await asyncio.to_thread(owner_screen, req.get("minutes", 0))
+                    log(tool="phone_screen", result=err or (f"on for {req.get('minutes')} min (the owner watches)" if req.get("minutes") else "off (the owner)"))
                 elif req.get("do") == "shop_look":
                     asyncio.create_task(shop_look(req))       # it may wait for the owner's OK: not in this loop
                 elif req.get("do") == "shop_open":
@@ -472,6 +584,7 @@ async def control_loop():
                 S["connected"] = f"{S['serial']}\tdevice" in await asyncio.to_thread(adb, "devices")
                 if S["connected"]:
                     await asyncio.to_thread(foreground)
+                    await asyncio.to_thread(screen_tick)
             if S["paired"] and not S["connected"] and not stopped() and time.time() - S.get("tried", 0) > S.get("retry_s", 60):
                 S["tried"] = time.time()                     # Wi-Fi changed: wireless debugging has a new port
                 ok = await connect()                         # failing again and again: try less often (up to 10 min)
@@ -625,13 +738,43 @@ def sweep_orphans():
     return dropped
 
 
-OUTWARD = "↗ This can send text or a web address off the phone, so it always asks you: "   # FND-02, DEC-23
+OUTWARD = "↗ This can send text or a web address off the phone, so it asks you: "   # FND-02, DEC-23
+# What must never leave the phone on an agent's own say (= images/research/server.py _LEAK): e-mail, IBAN, phone number,
+# API key, IP address. In the owner's free mode only typing or an address with one of these still asks (PHN-19).
+PRIVATE = re.compile(r"[\w.+-]+@[\w-]+\.[\w.]+|\b[A-Z]{2}\d{2}(?: ?[A-Z0-9]{4}){3,7}\b|\+?\d[\d /-]{8,}\d"
+                     r"|\b(?:sk|ghp|xox[bp]|AKIA)[-_A-Za-z0-9]{12,}|\b(?:\d{1,3}\.){3}\d{1,3}\b")
+TASK_MAX = 60                         # minutes one task approval lasts at most
+HOMES = ("com.sec.android.app.launcher", "com.google.android.apps.nexuslauncher", "com.android.launcher3")   # the home screen
 
 
-def outward(target_pkg=None):
-    """Typing, opening a web address or an app always ask (DEC-23), except the steps of a purchase the owner approved."""
+def active_task():
+    t = S.get("task")
+    return t if t and t["until"] > time.time() else None
+
+
+def outward(target_pkg=None, text=None):
+    """Typing, opening a web address or an app ask (DEC-23), unless the owner's permission covers them: the steps of a
+    purchase he approved, the apps and texts of a task he approved (PHN-18), or his free mode when the text holds
+    nothing private (PHN-19)."""
     pa = active_purchase()
-    return "" if pa and target_pkg and target_pkg == pa["pkg"] else OUTWARD
+    if pa and target_pkg and target_pkg == pa["pkg"]:
+        return ""
+    t = active_task()
+    if t and ((text is None and target_pkg in t["apps"]) or (text is not None and text in t["texts"])):
+        return ""
+    if time.time() < S["trust_until"] and not (text and PRIVATE.search(text)):
+        return ""
+    return OUTWARD
+
+
+def covered(tool, fg):
+    """Why the owner's standing permission covers a tap, swipe or key here, or "" (then it asks)."""
+    if time.time() < S["trust_until"]:
+        return "the owner's free mode"
+    t = active_task()
+    if t and tool in ("phone_tap", "phone_swipe", "phone_key", "phone_type", "phone_open", "phone_url") and (fg in t["apps"] or fg in HOMES):
+        return f"task “{t['task'][:60]}”"  # cap: preview
+    return ""
 
 
 async def guard(tool, args, why, acting=True, mark=None, target_pkg=None, money=False, always=""):
@@ -646,15 +789,17 @@ async def guard(tool, args, why, acting=True, mark=None, target_pkg=None, money=
         return err
     fg = await asyncio.to_thread(foreground)
     for pkg in (fg, target_pkg):
-        if (b := blocked(pkg)):
+        if (b := blocked(pkg, hard=tool == "phone_task" and pkg in args.get("apps", []))):   # a task may name a task: app
             if pkg == fg:
                 adb("shell", "input", "keyevent", "KEYCODE_HOME")
             log(tool=tool, args=args, why=why, result=f"refused: {pkg} is on the block list ({b})")
             return f"Refused: {pkg} is a blocked app (banking, payments, passwords or settings). The AI phone never uses it."
     if not acting:
         return None
-    if time.time() < S["trust_until"] and not money and not always:
-        log(tool=tool, args=args, why=why, decision="allowed (owner's time window)")
+    if not money and not always and (c := covered(tool, fg)):
+        log(tool=tool, args=args, why=why, decision=f"allowed ({c})")
+        if (t := active_task()) and c.startswith("task"):
+            t["actions"] = t.get("actions", 0) + 1
         return None
     pa = active_purchase()
     if pa and not money and not always and fg == pa["pkg"] and tool in ("phone_tap", "phone_swipe", "phone_key"):
@@ -671,6 +816,9 @@ async def guard(tool, args, why, acting=True, mark=None, target_pkg=None, money=
         while time.time() - t0 < WAIT:
             if stopped():
                 return "The owner switched the AI phone off."
+            if not money and not always and (c := covered(tool, fg)):      # PHN-20: his permission came while it waited
+                log(tool=tool, args=args, why=why, shot=shot, decision=f"allowed ({c}, given while it waited)")
+                return await asyncio.to_thread(wake)
             d = DECISIONS / f"{aid}.json"
             if d.exists():
                 dec = json.loads(d.read_text())
@@ -692,6 +840,8 @@ async def guard(tool, args, why, acting=True, mark=None, target_pkg=None, money=
 
 def describe(tool, a):
     return {"phone_tap": lambda: f"Tap “{a.get('label') or ''}”".replace("“”", f"at {a.get('x')},{a.get('y')}"),
+            "phone_task": lambda: f"{a.get('task')} · apps: {', '.join(a.get('apps') or [])} · types: "
+                                  f"{'; '.join(a.get('texts') or []) or 'nothing'} · for {a.get('minutes')} min",
             "phone_type": lambda: f"Type “{a.get('text', '')}”" + (" and press Enter" if a.get("enter") else ""),
             "phone_swipe": lambda: f"Swipe {a.get('direction')}",
             "phone_shop_look": lambda: f"Search “{a.get('query', '')}” in {a.get('app', 'the shop app')} and read the results (read-only: no taps)",
@@ -980,7 +1130,7 @@ async def phone_type(text: str, why: str, enter: bool = False) -> str:
         log(tool="phone_type", why=why, result="refused: secret field or card/bank number")
         return ("Refused: that is a password, card, bank or security-code field (or the text looks like a card/IBAN "
                 "number). The owner types those himself; stop here and tell him what is left to do.")
-    if (err := await guard("phone_type", args, why, always=outward())):
+    if (err := await guard("phone_type", args, why, always=outward(text=text))):
         return err
     for chunk in re.findall(r".{1,60}", text, re.S):            # adb input text: spaces as %s, shell-escaped
         adb("shell", "input", "text", "'" + chunk.replace("'", "'\\''").replace(" ", "%s") + "'")
@@ -1011,7 +1161,7 @@ async def phone_url(url: str, why: str) -> str:
     if len(url) > 2000:
         return f"Refused: the address is {len(url)} characters; at most 2,000."
     args = {"url": url}
-    if (err := await guard("phone_url", args, why, target_pkg="com.android.chrome", always=outward("com.android.chrome"))):
+    if (err := await guard("phone_url", args, why, target_pkg="com.android.chrome", always=outward("com.android.chrome", url))):
         return err
     adb("shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", url, "com.android.chrome")
     return await after("phone_url", args, why)
@@ -1020,9 +1170,36 @@ async def phone_url(url: str, why: str) -> str:
 @mcp.tool(description="Finish a phone task: a short summary for the owner (what you did, what you found, what he still has to do, "
                       "e.g. pay at checkout). It goes to his Telegram. No approval needed.")
 async def phone_done(summary: str) -> str:
+    t, S["task"] = active_task(), None                   # the task's permission ends with it
+    if t:
+        summary = f"{summary}\n\n(Task “{t['task'][:80]}”: {t.get('actions', 0)} actions under your one OK.)"  # cap: preview
     (DONE / f"{uuid.uuid4().hex[:16]}.json").write_text(json.dumps({"at": now(), "summary": summary[:3000]}, ensure_ascii=False))  # cap: id
     log(tool="phone_done", result=summary)
     return "Sent to the owner."
+
+
+@mcp.tool(description="Ask the owner ONCE for a whole phone task, before its first action: what the task is, the apps it needs (package "
+                      "names or words from phone_apps), the exact texts you will type (empty if none) and how many minutes (5 to 60). "
+                      "After his one Allow, taps, swipes and keys in those apps, opening them and typing those exact texts run without "
+                      "asking; anything else still asks. Money, passwords and blocked apps are never covered. End it with phone_done. " + WHY)
+async def phone_task(task: str, apps: list[str], why: str, texts: list[str] = [], minutes: int = 30) -> str:
+    known = await asyncio.to_thread(launchable)
+    pkgs, missing = [], []
+    for a in apps[:8]:
+        p = a if a in known else next((k for k in known if a.lower() in k.lower()), "")
+        (pkgs.append(p) if p and not blocked(p, hard=True) else missing.append(a))
+    if missing or not pkgs:
+        return f"Not a task the phone can approve: {', '.join(missing) or 'no app'} is not an app it may open (call phone_apps)."
+    if any(len(x) > 200 or CARDLIKE.search(x) for x in texts):
+        return "Refused: a text to type is too long, or looks like a card or bank number."
+    args = {"task": task[:300], "apps": pkgs, "texts": [x for x in texts[:20] if x], "minutes": max(5, min(TASK_MAX, int(minutes)))}  # cap: id
+    if (err := await guard("phone_task", args, why, always="" if time.time() < S["trust_until"] else "📋 One OK for a whole task: ")):
+        return err
+    S["task"] = {**args, "until": time.time() + args["minutes"] * 60, "at": now(), "actions": 0}
+    save_state()
+    return (f"Allowed for {args['minutes']} minutes: in {', '.join(pkgs)} you may tap, swipe, press keys, open them and type "
+            f"{'only: ' + '; '.join(args['texts']) if args['texts'] else 'nothing'} without asking. Anything else still asks. "
+            "Call phone_done when finished.")
 
 
 @mcp.tool(description="Press a key: back, home, recents or enter. " + WHY)
@@ -1059,6 +1236,14 @@ async def phone_open(app: str, why: str) -> str:
     if (err := await guard("phone_open", args, why, target_pkg=pkg, always=outward(pkg))):
         return err
     adb("shell", "monkey", "-p", pkg, "-c", "android.intent.category.LAUNCHER", "1")
+    await asyncio.sleep(1.2)
+    if (fg := await asyncio.to_thread(foreground)) != pkg and blocked(fg):
+        # PHN-23: the app had opened a blocked screen (Android's settings) that still sits on top of it: open it fresh at
+        # its start screen instead of walking into that screen again
+        act = (adb("shell", "cmd", "package", "resolve-activity", "--brief", "-c", "android.intent.category.LAUNCHER", pkg).strip().splitlines() or [""])[-1]
+        if act.startswith(pkg + "/"):
+            adb("shell", "am", "start", "--activity-clear-task", "-n", act)
+            log(tool="phone_open", args=args, why=why, result=f"{fg} sat on top of it: opened {pkg} fresh")
     return await after("phone_open", args, why)
 
 

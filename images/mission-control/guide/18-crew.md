@@ -33,13 +33,14 @@ note: A red edge means its last run failed: open it and look at Now or History. 
 | **Phone cleanup** | turns the AI phone's storage into steps you approve one by one (below) | Sundays |
 | **Phone check** | battery, storage, security patch and connection of the AI phone | Mondays |
 | **Inbox digest** | files the newsletters worth keeping into your vault, while you grant Gmail read | daily 07:15 |
+| **Journey checks** | follows your journeys end to end without a model: a task to its result (on replayed answers), every screen at phone width, the newest briefing's e-mail on a phone, every make target; a failure is an alert | nightly 04:10 |
 | **Checker** | decides whether each shipped idea worked, starts what your autonomy rules allow, pauses an agent that keeps failing | hourly |
 | **Coach** | reads every agent's scorecard and turns a real problem into an agent change with its evidence; each change is replayed on the agent's past runs before you tap Build | monthly, on the 2nd |
 | **Token probe** | measured once whether the ChatGPT prompt cache hits (docs/TOKENS.md) | one-off |
 | **Swarm sync** | puts the swarm's changes on your timeline and refreshes the ideas list | every minute |
 | **Code graph**, **Upgrade check**, **Backup**, **Restore drill**, **Daily digest** | the stack's operations | their own schedules |
 
-**Scorecard** on a proposing agent's Payoff page: how many of its ideas you accepted, how many were proved to
+**Scorecard** on a proposing agent's Results tab: how many of its ideas you accepted, how many were proved to
 work, how many came back, how often it refined a known idea instead of copying it, and your reasons for declining.
 An agent whose last three runs failed pauses itself and tells you once; **Resume** it when it is fixed.
 
@@ -50,7 +51,7 @@ An agent whose last three runs failed pauses itself and tells you once; **Resume
 
 Tap a crew member for its page, the same one every agent has: **Now** (its latest run's log, and the memories the
 curator wants you to look at), **History** (every run of the last 30 days with its log), **Memory** (its journal),
-**Payoff** (how often it succeeded, how long it takes; for the reviewers how many proposals it made, and how many
+**Results** (how often it succeeded, how long it takes; for the reviewers how many proposals it made, and how many
 you accepted, built or dismissed) and **Settings**: pick a schedule (every 10 minutes, daily, Mondays 04:30…) or type your
 own (an interval like `2h`, or a systemd time like `Tue *-*-* 05:00`), switch it off or on, or Run now.
 

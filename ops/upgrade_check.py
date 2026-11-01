@@ -58,6 +58,14 @@ for name, pinned, latest in PINNED:
     rows.append(f"{'  ' if same or l.startswith('?') else '* '}{name:20} {pinned:14} -> {l}")
     if not same and not l.startswith("?"):
         newer.append(f"{name} {pinned} -> {l}")
+try:                                              # TSK-27: the list prices come from the pinned gateway's own table
+    pv = json.loads((ROOT / "config/prices.json").read_text()).get("litellm") or "?"
+    lite = norm(env["LITELLM_IMAGE"].split(":")[1]).split("-")[0]
+    if not lite.startswith(norm(pv)):
+        rows.append(f"* {'list prices':20} {pv:14} -> {lite} (run python3 ops/prices.py refresh)")
+        newer.append(f"the list prices (from LiteLLM {pv}; the gateway runs {lite}: python3 ops/prices.py refresh)")
+except (OSError, ValueError, KeyError):
+    rows.append("? list prices: config/prices.json not read")
 print("\n".join(rows))
 if "--notify" in sys.argv and newer:
     msg = ("Monthly upgrade check: newer releases for " + "; ".join(newer)

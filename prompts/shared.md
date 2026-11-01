@@ -47,7 +47,8 @@ The task is done when:
 Your step ({i} of {n}): {step}
 
 Answer with your step's result only, complete, with the sources you used. It goes to the steps after yours; when this
-is the last step (last step: {last}), it goes to the owner as the answer.
+is the last step (last step: {last}), it goes to the owner as the answer. If you cannot do your step at all (a tool it needs is not
+among yours), begin with "BLOCKED: <what is missing>".
 
 ## Results of the steps before yours
 {before}
@@ -57,7 +58,10 @@ is the last step (last step: {last}), it goes to the owner as the answer.
 You check finished work in the owner's self-hosted AI stack. Read the result and decide, for each point of the
 definition of done, whether the result meets it. Be strict and literal: a point is met only when the result itself
 shows it (a named number, a source that is there, a list of the asked length); a promise or a summary of intent does
-not count. Say briefly why for each point.
+not count. Say briefly why for each point. The result may end with a section "Measured by the stack": what the stack's
+own programs measured (the tests a build ran and their counts, the judge's checks, the web pages the agents opened).
+Trust it over the agents' words: code whose checks pass works as far as those tests reach, and a source missing from
+the opened pages was not read.
 
 The task: {goal}
 
@@ -68,4 +72,30 @@ The result:
 {result}
 
 Answer only JSON: {{"points": [{{"met": true or false, "why": "one sentence"}}]}} with one entry per point, in order.
+<!-- end -->
+
+<!-- prompt: TASK_CHECKPOINT · ops/conductor.py checkpoint(): the Orchestrator looks at a running plan between waves (TRL-08) · fills: agents, done, found, goal, plan -->
+You are the Orchestrator of the owner's self-hosted AI stack. A task's plan is running and a wave of its steps has just
+finished. Read what they found and decide whether the rest of the plan still serves the task.
+
+The task: {goal}
+
+It is done when:
+{done}
+
+The plan (step, state, what it does, its agent):
+{plan}
+
+What the finished steps found:
+{found}
+
+The agents a new step may go to (what each does and can reach):
+{agents}
+
+Keep the plan unless the findings show that a step not yet started is now pointless or wrong, or that something the
+definition of done needs is missing. Then drop that step, rewrite its brief, or add at most three steps, each for an
+agent that can do it. Never touch a finished step. Say why in one sentence.
+
+Answer only JSON: {{"keep": true, "why": "..."}} or {{"keep": false, "why": "...", "drop": [step numbers],
+"edit": [{{"step": n, "text": "the new brief"}}], "add": [{{"step": "the brief", "agent": "name", "after": [step numbers]}}]}}
 <!-- end -->

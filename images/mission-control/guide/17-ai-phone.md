@@ -22,12 +22,16 @@ note: Your phone buzzes for each step. Tap Allow, or Allow 5 min to let it work 
   going back and going home happen without asking.
 - **Fastest way to answer**: the Telegram message has *Allow*, *Allow 5 min* and *Decline* buttons. One tap records
   your answer. The Phone page shows the same request as a card with a screenshot and a red circle where it wants to tap.
-- **Let it work through a whole task**: before you ask Hermes, pick a time on the Phone page: *10 min*, *1 hour*,
-  *8 hours*, your own number of minutes, or *Until I stop it*. It then goes through the task without asking at each
-  step. Everything is still logged, blocked apps stay blocked, and Stop ends it at once.
+- **One OK for a whole task**: before it starts, Hermes asks once: what the task is, which apps, the exact texts it will
+  type, and for how long (at most an hour). After your Allow it goes through the task in those apps without asking;
+  only something outside it asks. The Phone page shows the task with *End task*; when it's done you get a summary with
+  how many actions ran under your OK.
+- **Let it use the phone freely**: pick a time on the Phone page: *10 min*, *1 hour*, *8 hours*, your own number of
+  minutes, or *Until I stop it*. Taps, swipes, opening apps and typing then run without asking; a step that was already
+  waiting goes ahead too. Everything is still logged, blocked apps stay blocked, and Stop ends it at once.
 - **Money always asks.** Anything that would buy, pay, order or subscribe needs its own OK every time, marked
-  ↗ *Typing text, opening a web address or an app always asks you*, even inside a time window: they could send your
-  data off the phone. (Inside a purchase you approved, its own steps don't ask again.)
+  ↗ *Typing or a web address that holds an e-mail address, phone number, IBAN or key asks you*, even in free mode: it
+  could send your data off the phone. (Inside a purchase you approved, its own steps don't ask again.)
   💳 *This would spend money*, even while it works on its own. That OK never opens a time window. Password, card and bank
   fields are never typed into: you type those yourself.
 - **Some apps are never touched**: banking, investment, payment, wallet, password and authenticator apps, the
@@ -98,3 +102,10 @@ note: Shows whether it is connected, what is in front, waiting approvals and the
 
 > [!warning] Don't sign the AI phone into anything sensitive. It is a test phone: keep banking, e-mail with
 > important accounts and password managers off it, even though they are on the block list.
+
+## Watching it work
+
+While the agents act on the AI phone its screen stays on, until two minutes after the last action and while an action
+waits for your OK, so you can see what it does. Idle, the screen goes off at once to save the battery. The Phone page
+shows the screen's state: **Watch 10 min** keeps it on to look, **Turn off now** ends that.
+

@@ -102,7 +102,7 @@ def test_money_buttons_always_ask_even_in_a_time_window(P, monkeypatch):
     answer(P, True, minutes=5)
     assert asyncio.run(P.phone_tap(why="buy it", text="Jetzt kaufen")).startswith("Done")      # but this waited for its own OK
     log = [json.loads(x) for x in (P.D / "log.jsonl").read_text().splitlines()]
-    assert [e.get("decision") for e in log if e.get("decision")][-2:] == ["allowed (owner's time window)", "allowed"]
+    assert [e.get("decision") for e in log if e.get("decision")][-2:] == ["allowed (the owner's free mode)", "allowed"]
     assert P.S["trust_until"] < time.time() + 601                                              # its "5 min" opened nothing
     for label in ("Place your order", "Zahlungspflichtig bestellen", "Subscribe", "Pay now", "Zur Kasse"):
         assert P.spends_money(label), label
@@ -121,16 +121,16 @@ def test_secret_fields_and_card_numbers_are_never_typed(P, monkeypatch):
     assert asyncio.run(P.phone_type(text="ddr4 32gb", why="search")).startswith("Done")
 
 
-def test_typing_urls_and_apps_always_ask_even_in_a_time_window(P, monkeypatch):
-    """FND-02: Hermes holds private data; typing and opening addresses are a way out, so a time window never covers them."""
+def test_in_free_mode_only_an_address_or_text_with_private_data_asks(P, monkeypatch):
+    """FND-02, PHN-19: Hermes holds private data and typing or an address is a way out; in the owner's free mode a plain
+    one runs, one carrying an e-mail address, phone number, IBAN or key still asks."""
     screen(P, monkeypatch, {"label": "Search", "kind": "field", "x": 500, "y": 900, "focused": True})
+    assert P.outward() == P.OUTWARD                                     # no free mode: it asks
     P.S["trust_until"] = time.time() + 600
+    assert asyncio.run(P.phone_url(url="https://example.com/?q=notes", why="look it up")).startswith("Done")
     answer(P, False)
-    r = asyncio.run(P.phone_url(url="https://example.com/?q=notes", why="look it up"))
+    r = asyncio.run(P.phone_url(url="https://example.com/?to=owner@example.com", why="send it"))
     assert "declined" in r, r                                           # it asked, and the owner said no
-    log = [json.loads(x) for x in (P.D / "log.jsonl").read_text().splitlines()]
-    assert not any(e.get("tool") == "phone_url" and e.get("decision") == "allowed (owner's time window)" for e in log)
-    assert P.outward() == P.OUTWARD
 
 
 def test_url_block_list_and_done_summary(P):
@@ -293,3 +293,155 @@ def test_cards_left_by_a_restart_are_dropped_and_start_in_ai_mode_asks_again(P, 
         res["r"] = await t
     asyncio.run(run())
     assert res["r"] is None and not P.WAITING
+
+
+def test_the_screen_stays_on_while_working_or_waiting_and_goes_off_when_idle(P):
+    """PHN-17: each action holds the screen on for SCREEN_HOLD; an action waiting for the owner's OK keeps it on; then
+    Android's 30 s timeout is back and the screen goes off at once. The owner can watch for up to an hour, or turn it off."""
+    awake = ["mWakefulness=Awake"]
+    P.adb = lambda *a, **k: P.calls.append(a) or (awake[0] if "dumpsys power" in " ".join(a) else "")
+    t0 = time.time()
+    P.hold_screen(P.SCREEN_HOLD, "the agents are working", t0)
+    assert P.S["screen_held"] and P.S["screen_why"] == "the agents are working"
+    assert ("shell", "settings", "put", "system", "screen_off_timeout", str(P.SCREEN_WAIT_MAX * 1000 + 60000)) in P.calls
+    n = len(P.calls)
+    P.hold_screen(P.SCREEN_HOLD, "the agents are working", t0 + 5)
+    assert len(P.calls) == n                                       # one setting while held, not one per action
+    P.screen_tick(t0 + 60)
+    assert P.S["screen_held"] and not any("KEYCODE_SLEEP" in c for c in P.calls)
+    (P.PENDING / "x.json").write_text("{}")                       # an action waits for the owner
+    P.screen_tick(t0 + P.SCREEN_HOLD + 30)
+    assert P.S["screen_held"] and P.S["screen_why"] == "an action waits for your OK"
+    (P.PENDING / "x.json").unlink()
+    P.screen_tick(t0 + P.SCREEN_HOLD + 60)
+    assert not P.S["screen_held"] and ("shell", "input", "keyevent", "KEYCODE_SLEEP") in P.calls
+    assert ("shell", "settings", "put", "system", "screen_off_timeout", "30000") in P.calls
+    assert P.owner_screen(500) is None and 59 * 60 < P.S["screen_until"] - time.time() <= 60 * 60      # at most an hour
+    assert P.S["screen_why"] == "you are watching"
+    P.owner_screen(0)
+    P.screen_tick()
+    assert not P.S["screen_held"]
+
+
+HA = "io.homeassistant.companion.android"
+
+
+def test_one_ok_covers_a_whole_task_and_money_still_asks(P):
+    """PHN-18: one Allow for the task; then taps in its apps, opening them and typing its exact texts run without asking;
+    another app or another text asks; money always asks; phone_done ends the task and says how much ran under the OK."""
+    P.launchable = lambda: [HA, "com.android.chrome", "de.sparkasse.app"]
+    P.fg[0] = HA
+    answer(P, True)
+    out = asyncio.run(P.phone_task(task="Set up Assist in Home Assistant", apps=["homeassistant"], why="voice speaker",
+                                   texts=["aiphone"], minutes=500))
+    assert out.startswith("Allowed for 60 minutes") and P.S["task"]["apps"] == [HA]
+    assert asyncio.run(P.guard("phone_tap", {"label": "Assist"}, "settings")) is None
+    assert asyncio.run(P.guard("phone_swipe", {"direction": "up"}, "scroll")) is None and P.S["task"]["actions"] == 2
+    assert P.outward(HA) == "" and P.outward(text="aiphone") == "" and P.outward(text="something else") == P.OUTWARD
+    assert P.covered("phone_tap", "com.android.chrome") == "" and P.covered("phone_tap", "com.sec.android.app.launcher")
+    answer(P, False)
+    assert "declined" in asyncio.run(P.guard("phone_tap", {"label": "Buy"}, "pay", money=True))   # it asked
+    assert "is not an app it may open" in asyncio.run(P.phone_task(task="x", apps=["sparkasse"], why="y"))
+    asyncio.run(P.phone_done(summary="Assist is set up."))
+    done = json.loads(next(P.DONE.glob("*.json")).read_text())["summary"]
+    assert P.S["task"] is None and "2 actions under your one OK" in done
+
+
+def test_free_mode_types_freely_but_private_text_asks(P):
+    """PHN-19"""
+    assert P.outward(text="hello") == P.OUTWARD                      # no permission: it asks
+    P.S["trust_until"] = time.time() + 600
+    assert P.outward(text="weather in Heilbronn tomorrow") == "" and P.outward("com.android.chrome") == ""
+    for private in ("write to owner@example.com", "call +49 171 1234567", "DE89 3704 0044 0532 0130 00", "key sk-abcdefghijklmnop12"):
+        assert P.outward(text=private) == P.OUTWARD, private
+    assert P.outward("com.android.chrome", "https://example.com/?to=owner@example.com") == P.OUTWARD
+
+
+def test_a_waiting_request_goes_ahead_when_the_owner_opens_free_mode(P):
+    """PHN-20: the request does not wait for an Allow the owner already gave as a window or a task."""
+    async def go():
+        waiting = asyncio.create_task(P.guard("phone_swipe", {"direction": "up"}, "scroll"))
+        await asyncio.sleep(0.5)
+        assert list(P.PENDING.glob("*.json"))                         # it asked
+        P.S["trust_until"] = time.time() + 600
+        return await asyncio.wait_for(waiting, 2)
+    assert asyncio.run(go()) is None and not list(P.PENDING.glob("*.json"))
+    log = [json.loads(x) for x in (P.D / "log.jsonl").read_text().splitlines()]
+    assert log[-1]["decision"] == "allowed (the owner's free mode, given while it waited)"
+
+
+def test_the_home_assistant_app_opens_only_inside_a_task_that_names_it(P):
+    """VOI-07: free mode alone does not open it; a task the owner approved that names it does, for that task only."""
+    P.launchable = lambda: [HA, "com.android.chrome"]
+    P.S["trust_until"] = time.time() + 600
+    assert P.blocked(HA) == "homeassistant" and P.blocked("de.sparkasse.app") == "sparkasse"
+    out = asyncio.run(P.phone_task(task="Assist settings", apps=["homeassistant"], why="voice"))   # free mode: no card
+    assert out.startswith("Allowed") and P.blocked(HA) is None and P.blocked("de.sparkasse.app") == "sparkasse"
+    asyncio.run(P.phone_done(summary="done"))
+    assert P.blocked(HA) == "homeassistant"
+
+
+def test_free_mode_and_a_task_outlive_a_restart_but_not_stop(P):
+    """PHN-21: a deploy restarts the phone service; the owner's permission stays, Stop ends it."""
+    (P.D / "state.json").write_text(json.dumps({"trust_until": time.time() + 600,
+                                                "task": {"task": "x", "apps": [HA], "texts": [], "until": time.time() + 600}}))
+    again = importlib.reload(P)
+    assert again.S["trust_until"] > time.time() and again.S["task"]["task"] == "x"
+    (P.D / "state.json").write_text(json.dumps({"trust_until": time.time() - 5, "task": {"until": time.time() - 5}}))
+    again = importlib.reload(P)
+    assert again.S["trust_until"] == 0 and again.S["task"] is None              # what has run out stays out
+    (P.D / "state.json").write_text(json.dumps({"trust_until": time.time() + 600}))
+    (P.D / "STOP").write_text("now")
+    assert importlib.reload(P).S["trust_until"] == 0
+
+
+def test_home_assistant_becomes_the_phone_s_voice_assistant_after_one_allow(P):
+    """PHN-22: two Android settings (the assistant role, the microphone), one card, applied only after the owner's Allow
+    and never by free mode."""
+    have = {"role": "com.google.android.googlequicksearchbox", "mic": "RECORD_AUDIO: granted=false", "idle": "system,com.tailscale.ipn,"}
+
+    def adb(*a, **k):
+        P.calls.append(a)
+        if "add-role-holder" in a:
+            have["role"] = P.HA_APP
+        if "grant" in a:
+            have["mic"] = "RECORD_AUDIO: granted=true"
+        if f"+{P.HA_APP}" in a:
+            have["idle"] += f"{P.HA_APP},"
+        if "get-role-holders" in a:
+            return have["role"]
+        return have["idle"] if "deviceidle" in a else have["mic"] if "dumpsys" in a else ""
+    P.adb = adb
+    P.S["trust_until"] = time.time() + 600                     # free mode does not cover a setting
+    answer(P, True)
+    asyncio.run(P.voice_setup())
+    assert ("shell", "cmd", "role", "add-role-holder", "--user", "0", "android.app.role.ASSISTANT", P.HA_APP) in P.calls
+    assert ("shell", "pm", "grant", P.HA_APP, "android.permission.RECORD_AUDIO") in P.calls
+    assert ("shell", "dumpsys", "deviceidle", "whitelist", f"+{P.HA_APP}") in P.calls       # also locked or dark
+    assert P.S["voice"] == {"assistant": True, "mic": True, "awake": True}
+    log = [json.loads(x) for x in (P.D / "log.jsonl").read_text().splitlines()]
+    assert [e.get("decision") for e in log if e.get("tool") == "phone_setting" and e.get("decision")] == ["allowed"]   # it asked
+    n = len(P.calls)
+    asyncio.run(P.voice_setup())                                 # done: nothing asked or changed again
+    assert not any("add-role-holder" in c for c in P.calls[n:])
+
+
+def test_an_app_opens_fresh_when_a_blocked_screen_sits_on_top_of_it(P):
+    """PHN-23: Home Assistant had opened Android's default-assistant screen; opening it again landed there and the guard
+    sent the phone home, every time. Now it is opened fresh at its start screen."""
+    P.launchable = lambda: [HA]
+    P.S["task"] = {"task": "wake word", "apps": [HA], "texts": [], "until": time.time() + 600}   # the app opens only in a task
+    P.fg[0] = "com.sec.android.app.launcher"
+
+    def adb(*a, **k):
+        P.calls.append(a)
+        if "monkey" in a:
+            P.fg[0] = "com.android.settings"                    # what sits on top of the app's task
+        if "--activity-clear-task" in a:
+            P.fg[0] = HA
+        return f"priority=0\n{HA}/.launch.LaunchActivity" if "resolve-activity" in a else ""
+    P.adb = adb
+    out = asyncio.run(P.phone_open(app="homeassistant", why="wake word"))
+    assert ("shell", "am", "start", "--activity-clear-task", "-n", f"{HA}/.launch.LaunchActivity") in P.calls
+    assert P.fg[0] == HA and "blocked" not in out
+

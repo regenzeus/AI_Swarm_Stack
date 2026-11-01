@@ -1,0 +1,110 @@
+{
+ "replayed": {
+  "id": "proof-%E9%94%80%E9%87%8F%E4%BB%BD%E9%A2%9D12-7",
+  "title": "中国车企欧洲季度销量首超日本车企 9月欧洲销量份额占12.7%",
+  "url": "https://www.rfi.fr/cn/%E7%BB%8F%E8%B4%B8/20261026-%E4%B8%AD%E5%9B%BD%E8%BD%A6%E4%BC%81%E6%AC%A7%E6%B4%B2%E5%AD%A3%E5%BA%A6%E9%94%80%E9%87%8F%E9%A6%96%E6%AC%A1%E8%B6%85%E6%97%A5%E6%9C%AC%E8%BD%A6%E4%BC%81-9%E6%9C%88%E6%AC%A7%E6%B4%B2%E9%94%80%E9%87%8F%E4%BB%BD%E9%A2%9D12-7",
+  "source": "topics/weekly-chinese-automotive-news-email/reports/2026/10/2026-10-31.md"
+ },
+ "checks": {
+  "news: the trigger queued one event": true,
+  "news: the event started run 1 under the Conductor": true,
+  "news: the run finished": true,
+  "news: its step knew the event": false,
+  "news: the run was judged": true,
+  "news: one trace": true,
+  "price: the trigger queued one event": true,
+  "price: the event started run 1 under the Conductor": true,
+  "price: the run finished": true,
+  "price: its step knew the event": true,
+  "price: the run was judged": true,
+  "price: one trace": true
+ },
+ "tasks": {
+  "news": {
+   "task": 82,
+   "event": [
+    {
+     "kind": "news",
+     "summary": "1 new article(s) about “zzqx trigger proof replay 7d1f”: 中国车企欧洲季度销量首超日本车企 9月欧洲销量份额占12.7%",
+     "items": [
+      {
+       "id": "proof-%E9%94%80%E9%87%8F%E4%BB%BD%E9%A2%9D12-7",
+       "title": "中国车企欧洲季度销量首超日本车企 9月欧洲销量份额占12.7%",
+       "url": "https://www.rfi.fr/cn/%E7%BB%8F%E8%B4%B8/20261026-%E4%B8%AD%E5%9B%BD%E8%BD%A6%E4%BC%81%E6%AC%A7%E6%B4%B2%E5%AD%A3%E5%BA%A6%E9%94%80%E9%87%8F%E9%A6%96%E6%AC%A1%E8%B6%85%E6%97%A5%E6%9C%AC%E8%BD%A6%E4%BC%81-9%E6%9C%88%E6%AC%A7%E6%B4%B2%E9%94%80%E9%87%8F%E4%BB%BD%E9%A2%9D12-7",
+       "source": "topics/weekly-chinese-automotive-news-email/reports/2026/10/2026-10-31.md"
+      }
+     ],
+     "trigger": "News about “zzqx trigger proof replay 7d1f”"
+    }
+   ],
+   "run": {
+    "status": "done",
+    "verdict": "met",
+    "result": "tasks/82-trigger-proof-news-2026-11-01-1.md",
+    "judgement": {
+     "verdict": "met",
+     "points": [
+      {
+       "point": "names the event that started the run",
+       "met": true,
+       "why": "The result names the triggering event: RFI reporting that Chinese automakers’ quarterly European sales surpassed Japanese automakers’ for the first time."
+      },
+      {
+       "point": "says in at most two lines why it may matter",
+       "met": true,
+       "why": "In one line, the result explains that the shift could intensify price competition, pressure established brands, and raise the stakes for EU–China trade policy."
+      }
+     ]
+    }
+   },
+   "step_output": "Event: RFI reports that Chinese automakers’ quarterly European sales surpassed Japanese automakers’ for the first time, with Chinese brands reaching 12.7% of European sales in September.\nWhy it may matter: This signals a shift in Europe’s auto market that could intensify price competition and pressure on established brands, while raising the stakes for EU–China trade policy.\nSource: [RFI, October 26, 2026](https://www.rfi.fr/cn/%E7%BB%8F%E8%B4%B8/20261026-%E4%B8%AD%E5%9B%BD%E8%BD%A6%E4%BC%81%E6%AC%A7%E6%B4%B2%E5%AD%A3%E5%BA%A6%E9%94%80%E9%87%8F%E9%A6%96%E6%AC%A1%E8%B6%85%E6%97%A5%E6%9C%AC%E8%BD%A6%E4%BC%81-9%E6%9C%88%E6%AC%A7%E6%B4%B2%E9%94%80%E9%87%8F%E4%BB%BD%E9%A2%9D12-7) (supplied headline)."
+  },
+  "price": {
+   "task": 83,
+   "event": [
+    {
+     "kind": "price_move",
+     "items": [],
+     "summary": "PROOF.TEST up 7.0 % to 10.70 USD (previous close 10.00, 2026-11-01)",
+     "trigger": "PROOF.TEST moves ±5 % in a day"
+    }
+   ],
+   "run": {
+    "status": "done",
+    "verdict": "met",
+    "result": "tasks/83-trigger-proof-price-2026-11-01-1.md",
+    "judgement": {
+     "verdict": "met",
+     "points": [
+      {
+       "point": "names the event that started the run",
+       "met": true,
+       "why": "The result names the triggering event: PROOF.TEST rose 7.0% on 2026-11-01, activating the ±5% daily-move alert."
+      },
+      {
+       "point": "says in at most two lines why it may matter",
+       "met": true,
+       "why": "In one line, the result explains that exceeding the monitoring threshold may warrant checking for news or changes in exposure."
+      }
+     ]
+    }
+   },
+   "step_output": "Event: On 2026-11-01, PROOF.TEST rose 7.0% to USD 10.70 from its USD 10.00 previous close, triggering the ±5% daily-move alert.\n\nWhy it may matter: The move exceeded the monitoring threshold and may warrant checking for news or changes in exposure; the alert alone does not establish a cause.\n\nSource: Run-trigger event supplied in the task."
+  }
+ },
+ "recheck": {
+  "check": "news: its step knew the event",
+  "why": "the proof looked for the first word of the Chinese title in an English answer; the fixed check (ops/conductor.py triggers_proof) looks for the title's numbers or the source's site",
+  "marks": [
+   "9",
+   "12.7",
+   "rfi"
+  ],
+  "found": [
+   "9",
+   "12.7",
+   "rfi"
+  ],
+  "passed": true
+ }
+}

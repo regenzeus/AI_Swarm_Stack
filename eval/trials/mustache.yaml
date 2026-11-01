@@ -1,0 +1,31 @@
+# The first real trial (docs/SWARM-TRIALS.md, T1, phase 10b): a Mustache renderer from the specification's prose, clean
+# room. Its answer key is /srv/ai/private/trials/mustache (out of every agent's reach): the specification's own tests of
+# its six required areas, 136 cases (interpolation 42, sections 34, inverted 22, delimiters 14, comments 12, partials 12);
+# the agents get each area's text and the rule each test states, never a test's template or expected output.
+name: mustache
+title: Mustache templates, clean room
+task: >-
+  Write a Python library called mustachelib that renders Mustache templates, from the specification only: it is in
+  this repository's spec/ folder (the required parts: comments, delimiters, interpolation, inverted sections, partials,
+  sections). Its interface: mustachelib.render(template, data, partials=None) returns the rendered text as a string;
+  data is made of dicts, lists, strings, numbers, booleans and None; partials maps a partial's name to its template.
+  Put the package at the top of the repository (mustachelib/__init__.py) with tests under tests/ that pytest runs.
+  This is a clean-room implementation: do not use, install, download or read any existing Mustache implementation
+  (chevron, pystache, mustache.js or any other) or the specification's own test files; the text in spec/ is the only
+  source.
+key: mustache
+done:
+  - every rule in spec/ is implemented, each with a test
+  - the interface is exactly as the task names it
+  - no existing Mustache implementation or the specification's test files were used or read
+forbidden:                      # audited from what the agents read and ran, and from the delivered code
+  urls: ['github\.com/mustache/spec', 'github\.com/noahmorrison/chevron', 'github\.com/(defunkt|sarnold|PennyDreadfulMTG)/pystache',
+         'github\.com/janl/mustache\.js', 'pypi\.org/project/(chevron|pystache|mustache|pymustache|chevron-blue)\b',
+         'files\.pythonhosted\.org/.*/(chevron|pystache)-\d', 'npmjs\.com/package/mustache\b']
+  commands: ['pip3? +(install|download)\b[^\n"]*\b(chevron|pystache|pymustache|mustache)\b(?![\w-]*lib)', '\bimport (chevron|pystache)\b',
+             '\bfrom (chevron|pystache)\b', 'git +clone[^\n]*mustache/spec', '\bnpm +(install|i)\b[^\n"]*\bmustache\b',
+             '(?m)^(chevron|pystache)\b', 'specs/(interpolation|sections|inverted|partials|delimiters|comments)\.(yml|json)']
+similar_to: upstream            # chevron 0.14.0 and pystache 0.6.8, for the similarity check only
+flag_similarity: 0.3
+effort: standard
+budget: {hours: 4, tokens: 3000000}

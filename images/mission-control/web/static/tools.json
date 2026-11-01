@@ -1,0 +1,47 @@
+{
+ "_about": "Every tool the stack runs on, with the menus the owner needs (APP-30): the Stack tab's Tools, the Go-to search and the House page read it; ops/journeys.py opens every link each night. host 'tailnet' = the PC through tailscale serve (anywhere), an address = the home network only.",
+ "tools": [
+  {"id": "homeassistant", "name": "Home Assistant", "what": "The house: Echos, lights, plugs, Hermes' voice", "host": "http://192.168.1.80:8123", "status": "house",
+   "menus": [
+    {"name": "Overview", "path": "/", "words": "dashboard home"},
+    {"name": "Settings", "path": "/config/dashboard", "words": "configuration"},
+    {"name": "Integrations", "path": "/config/integrations/dashboard", "words": "alexa fritz synology wyoming ollama connect add"},
+    {"name": "Voice assistants", "path": "/config/voice-assistants/assistants", "words": "assist pipeline hermes speech wake word"},
+    {"name": "People", "path": "/config/person", "words": "users login person account ai phone"},
+    {"name": "Devices", "path": "/config/devices/dashboard", "words": "echo phone plug"},
+    {"name": "Logs", "path": "/config/logs", "words": "errors problems"}]},
+  {"id": "nas", "name": "NAS (Synology DSM)", "what": "Storage, backups, Docker, users", "host": "https://192.168.1.80:5001",
+   "menus": [
+    {"name": "Desktop", "path": "/", "words": "dsm synology"},
+    {"name": "Control Panel", "path": "/?launchApp=SYNO.SDS.ControlPanel.Instance", "words": "users notification security ssh settings"},
+    {"name": "Storage Manager", "path": "/?launchApp=SYNO.SDS.StorageManager.Instance", "words": "disks volume raid space"},
+    {"name": "Package Center", "path": "/?launchApp=SYNO.SDS.PkgManApp.Instance", "words": "apps install update"}]},
+  {"id": "fritzbox", "name": "FRITZ!Box", "what": "Internet, Wi-Fi, home network", "host": "http://fritz.box",
+   "menus": [
+    {"name": "Overview", "path": "/", "words": "router internet wifi wlan guest home network heimnetz fixed address"}]},
+  {"id": "forgejo", "name": "Forgejo", "what": "Code history on the NAS (its own login)", "host": "http://192.168.1.80:3000",
+   "menus": [
+    {"name": "Repositories", "path": "/regenzeus", "words": "repos git code"},
+    {"name": "ai-stack Actions", "path": "/regenzeus/ai-stack/actions", "words": "ci builds"},
+    {"name": "Access tokens", "path": "/user/settings/applications", "words": "token key"}]},
+  {"id": "hermes", "name": "Hermes admin", "what": "Skills, cron jobs, logs, sessions, settings", "host": "tailnet:8448",
+   "menus": [{"name": "Open", "path": "/", "words": "skills cron logs sessions config"}]},
+  {"id": "openwebui", "name": "Open WebUI", "what": "Chat with Hermes (classic)", "host": "tailnet",
+   "menus": [{"name": "Open", "path": "/", "words": "chat"}]},
+  {"id": "opencode", "name": "OpenCode", "what": "Change code in your repos", "host": "tailnet:8445",
+   "menus": [{"name": "Open", "path": "/", "words": "code editor"}]},
+  {"id": "codemap", "name": "Code map", "what": "Understand Anything dashboard", "host": "tailnet:8446",
+   "menus": [{"name": "Open", "path": "/", "words": "understand graph"}]},
+  {"id": "phoenix", "name": "Phoenix", "what": "Traces of every model call", "host": "tailnet:8443",
+   "menus": [{"name": "Projects", "path": "/projects", "words": "traces spans observability"}]},
+  {"id": "tailscale", "name": "Tailscale", "what": "Your private network: devices and access", "host": "https://login.tailscale.com",
+   "menus": [{"name": "Machines", "path": "/admin/machines", "words": "devices vpn network"}]}
+ ],
+ "pages": [
+  ["Home", "#/", "feed results"], ["Agents", "#/missions", "missions overview map"], ["Activity", "#/swarm?tab=activity", "chatroom timeline"],
+  ["Team", "#/swarm?tab=agents", "cards roles"], ["Ideas", "#/swarm?tab=improve", "proposals"], ["Tasks", "#/tasks", "plans"],
+  ["New mission", "#/new", "create"], ["Chat", "#/chat", "hermes talk voice"], ["Wiki", "#/wiki", "knowledge vault"],
+  ["Code", "#/build", "builds deploy"], ["Stack", "#/system", "tools health resources"], ["House", "#/house", "alexa echo lights voice"],
+  ["AI phone", "#/phone", "s22 android"], ["Telemetry", "#/telemetry", "tokens runs cost"], ["Guide", "#/guide", "help how"]
+ ]
+}

@@ -50,6 +50,15 @@ def roots():
         r = M.X.wiki_root(m)
         if not m.get("wiki_off") and (M.VAULT / r).is_dir() and r not in {x for x, _ in out}:
             out.append((r, m["title"]))
+    try:                                         # a briefing task's topic without a mission of its own (TSK-22)
+        c = M.db()
+        for row in c.execute("select title, spec from tasks where door='plan' and status <> 'cancelled' and json_extract(spec, '$.topic') is not null"):
+            r = f"topics/{json.loads(row['spec'])['topic']}/wiki"
+            if (M.VAULT / r).is_dir() and r not in {x for x, _ in out}:
+                out.append((r, row["title"]))
+        c.close()
+    except Exception as e:                       # the missions' wikis are listed all the same; logged
+        M.log(f"wikis: the tasks' topics not read: {type(e).__name__}: {e}")
     return out
 
 

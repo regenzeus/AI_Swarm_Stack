@@ -5,8 +5,11 @@ name: homeassistant
 
 services:
   homeassistant:
-    # 2026.10.4 pinned by digest (ops/upgrade-check.sh reports newer releases; upgrades go through `make ha-deploy`).
-    image: ghcr.io/home-assistant/home-assistant:2026.10.4@sha256:23f4dfbb69ce76315dbc4de7915504f1c2dcecd7ca2648113a493a385972e133
+    # 2026.11.0b2 pinned by digest (ops/upgrade-check.sh reports newer releases; upgrades go through `make ha-deploy`).
+    # The beta, from 1 Nov 2026: 2026.10.x carries aioamazondevices 16.3.2, whose Alexa sign-in hangs on Amazon's new
+    # identifier-first page (/ax/claim; aioamazondevices #1188, #1236); 2026.11 carries 17.2.3. Move to 2026.11.0 when
+    # it is out (due 4 Nov). Before it: config-backup-2026-11-01-ha2026.10.4.tgz next to config/ on the NAS.
+    image: ghcr.io/home-assistant/home-assistant:2026.11.0b2@sha256:dc3e4f99a631ce15a0854c720815adf40ab5ca850809fee5edcc4c2c1cc6a6fd
     container_name: homeassistant
     restart: unless-stopped
     network_mode: host

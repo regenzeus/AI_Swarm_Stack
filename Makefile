@@ -7,7 +7,7 @@ COMPOSE := docker compose --env-file versions.env -f compose/core.yaml -f compos
 # Run a compose command with secrets in its environment: $(call dc,<args>)
 dc = sops exec-env $(SECRETS) 'sops exec-env $(KEYS) "$(COMPOSE) $(1)"'
 
-.PHONY: up down ps logs restart keys secrets-edit smoke claude-connect probe-tools req check lock pull-smoke-model chatgpt-login ingest-exports bench bench-gate retrieval curate vault-check skill-approve skills-restore-from-git backup restore-drill restore understand understand-dashboard upgrade-check digest forget hindsight-models desk email-setup wiki-rebuild ua-enrich publish-check publish tasks-gate conductor-gate
+.PHONY: up down ps logs restart keys secrets-edit smoke claude-connect probe-tools req check lock pull-smoke-model chatgpt-login ingest-exports bench bench-gate retrieval curate vault-check skill-approve skills-restore-from-git backup restore-drill restore understand understand-dashboard upgrade-check digest forget hindsight-models desk email-setup wiki-rebuild ua-enrich publish-check publish tasks-gate conductor-gate journeys trial trial-check
 
 up:               ## start core services
 	$(call dc,up -d $(UP_SERVICES))
@@ -65,6 +65,9 @@ ingest-exports:   ## convert mail/chat exports from C:\AI\exports (offline) and 
 
 ha-deploy:  ## deploy or upgrade Home Assistant on the NAS (nas/homeassistant; host-side, keeps its config)
 	bash ops/deploy-ha.sh
+
+voice-deploy:  ## deploy Hermes' voice services on the NAS (nas/voice: speech to text, Piper; host-side; docs/HOME-VOICE.md)
+	bash ops/deploy-voice.sh
 
 deploy-testrepo:  ## deploy the committed HEAD of ~/code/TestRepo to the NAS (host-side; the agent has no NAS key)
 	ops/deploy-testrepo.sh
@@ -138,6 +141,15 @@ tasks-gate:      ## phase 1's gate: eval/tasks-v1.yaml's 20 one-sentence tasks t
 
 conductor-gate:  ## phase 2's gate: a five-step task on three harnesses, the runner restarted during it (uses the subscriptions)
 	sops exec-env $(SECRETS) 'sops exec-env $(KEYS) "python3 ops/conductor.py gate"'
+
+trial:            ## one trial run in the background: make trial NAME=semver (eval/trials; its report lands in the vault, trials/)
+	systemd-run --user --collect --unit=trial-$(NAME)-$$(date +%H%M) --working-directory=$(CURDIR) -E DOCKER_HOST=unix:///run/user/1000/docker.sock /usr/local/bin/sops exec-env $(SECRETS) 'sops exec-env $(KEYS) "python3 ops/trials.py run $(NAME)"'
+
+trial-check:      ## does a trial's answer key score its own reference fully: make trial-check NAME=semver (changes nothing)
+	python3 ops/trials.py check $(NAME)
+
+journeys:         ## the journey checks now: a task to its result (replayed), every screen at 375 px, the e-mail, every make target (no model; nightly by timer)
+	python3 ops/journeys.py all
 
 publish-check:    ## build the public snapshot, scan it and run its tests; pushes nothing (docs/PUBLISHING.md)
 	python3 ops/publish.py check

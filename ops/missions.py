@@ -42,6 +42,11 @@ import tasks as TK                                # TSK-01 to TSK-04: every piec
 import conductor as CD                            # TSK-05 to TSK-09: a task's plan graph, step by step
 import events as EV                               # TSK-10 to TSK-12: the event bus, the owner's rules, breaking news
 import staffing as ST                             # TSK-13 to TSK-17: judged tasks, measured agents, routing, temporary agents
+import provenance as PV                           # TSK-23, TSK-24: what each step used and made, each run's swarm map
+import history as HI                              # TSK-25: the daily telemetry history per agent, model, harness, kind
+import prune as PN                                 # PLT-21: growing files pruned once a day
+import prices as PR                               # TSK-27: tokens at list price
+import a2a as A2                                  # TSK-19: outside agents over A2A, off until the owner switches it on
 from textcap import limit, limit_items, tail as tailcut                    # visible caps and input limits (AGENTS.md, truncation)
 import prompts as P                               # MEM-11: the agent prompts live in prompts/<owner>.md
 
@@ -107,11 +112,14 @@ def db():
     return c
 
 
+EVENTS_LOCK = threading.Lock()                     # the event log's writer and its daily pruning (ops/prune.py)
+
+
 def event(kind, slug="", text="", push=False, title="", category=None):
     if push:                                       # OBS-16: a push only where the owner's preferences and quiet hours allow it
         push = N.push_allowed(kind, text, title, category)
     e = {"ts": now().isoformat(timespec="seconds"), "kind": kind, "slug": slug, "title": title, "text": text, "push": push}
-    with open(PUBLIC / "events.jsonl", "a") as f:
+    with EVENTS_LOCK, open(PUBLIC / "events.jsonl", "a") as f:
         f.write(json.dumps(e, ensure_ascii=False) + "\n")
     log(f"event {kind} {slug}: {text}")
 
@@ -152,7 +160,8 @@ def load_missions():
 
 def save_mission(m):
     meta = {k: m[k] for k in ("title", "type", "status", "schedule", "triggers", "depth", "once", "budget_usd_month", "deliver",
-                              "topic", "created", "target", "watch_pct", "best_price_eur", "best_price_at")      # last three: shopping
+                              "topic", "created", "target", "watch_pct", "best_price_eur", "best_price_at",      # these three: shopping
+                              "task")                                         # TSK-21: the task that runs this agent
             if m.get(k) not in (None, [], "", False)}
     write_front(MISSIONS / m["slug"] / "MISSION.md", meta, m.get("goal", ""))
 
@@ -725,6 +734,8 @@ def handle(req, missions, c):
             meta["target"] = req.get("target") if req.get("target") in ("phone", "pc") else CL.target_of(meta)
         if typ == "shopping":                 # price watch: later runs only report a drop of at least this many percent
             meta["watch_pct"] = min(max(float(req.get("watch_pct") or 0), 0), 50)
+            if req.get("task"):               # TSK-21: a task holds it; the Conductor runs its checks
+                meta["task"] = int(req["task"])
         if meta["once"]:
             meta["schedule"] = "manual"
         save_mission(meta)                    # first, so a retried create finds it as a duplicate
@@ -951,7 +962,7 @@ def store_secret(name, value, msg):
 
 def notify_task(tid, title, what):
     """A task that waits for the owner (a question, its plan's OK), through the one notification path."""
-    N.send(f"Task #{tid} {what}: {title}", "result", title="Tasks", buttons=[[("🔍 Open the task", f"{X.APP}/#/tasks?t={tid}")]],
+    N.send(f"Task #{tid} {what}: {title}", "result", title="Tasks", buttons=[[("🔍 Open the task", f"{X.APP}/#/task/{tid}")]],
            push_on=True, event_kind="task")
 
 
@@ -976,7 +987,7 @@ def respond(rid, req):
                else B.handle(req, c) if a in BUILD_ACTIONS else I.handle(req, c) if a in IMPROVE_ACTIONS
                else R.handle(req, c) if a in REPO_ACTIONS else CR.handle(req, c) if a in CREW_ACTIONS else J.handle(req) if a in J.ACTIONS
                else SH.handle(req, c) if a in SH.ACTIONS else W.handle(req) if a in W.ACTIONS else H.handle(req) if a in H.ACTIONS
-               else SW.handle(req, c) if a in SW.ACTIONS else handle_notify(req) if a in ("notify_prefs", "chat_ready") else TK.handle(req, c) if a in TK.ACTIONS else EV.handle(req, c) if a in EV.ACTIONS
+               else SW.handle(req, c) if a in SW.ACTIONS else handle_notify(req) if a in ("notify_prefs", "chat_ready") else TK.handle(req, c) if a in TK.ACTIONS else EV.handle(req, c) if a in EV.ACTIONS else A2.handle(req) if a in A2.ACTIONS
                else handle(req, load_missions(), c))
         res = {"ok": True, **res}
     except Exception as e:
@@ -1157,7 +1168,7 @@ def write_state(c, missions):
                          (m["slug"],)).fetchone()
         nd = next_due(m.get("schedule"), t) if m.get("status") == "active" else None
         item = {k: m.get(k) for k in ("slug", "title", "type", "status", "schedule", "budget_usd_month", "deliver", "created", "goal",
-                                      "topic", "depth", "needs")}
+                                      "topic", "depth", "needs", "task")}
         item.update(schedule_text=schedule_text(m.get("schedule")), next_run=nd.isoformat() if nd else None, runs=runs,
                     triggers=[{**tr, "text": X.trigger_text(tr)} for tr in m.get("triggers") or []], wiki=X.wiki_root(m),
                     stats={"runs": st[0], "ok": st[1] or 0, "failed": st[2] or 0, "calls": st[3], "tokens": st[4],
@@ -1204,7 +1215,8 @@ def write_state(c, missions):
     except FileNotFoundError:
         ev = []
     state = {"generated": t.isoformat(timespec="seconds"), "missions": out, "running": run or None, "queue": queue,
-             "activity": ev, "calls": recent_calls(), "system": system_info(), "resources": RES, **B.state(c), **I.state(c), **R.state(), **CT.state(c), **CR.state(), **SH.state(), **H.state(), **SW.state(), **MEM.state(CR.status()), **N.state(), **TK.state(c), **EV.state(c), **ST.state(c), "health": health}
+             "activity": ev, "calls": recent_calls(), "system": system_info(), "resources": RES, **B.state(c), **I.state(c), **R.state(), **CT.state(c), **CR.state(), **SH.state(), **H.state(), **SW.state(), **MEM.state(CR.status()), **N.state(), **TK.state(c), **EV.state(c), **ST.state(c), "health": health,
+             "prices": PR.load().get("models", {}), **A2.state()}                  # TSK-27: the app prices tokens with the same table
     tmp = PUBLIC / "state.json.tmp"
     tmp.write_text(json.dumps(state, ensure_ascii=False, default=str))
     tmp.replace(PUBLIC / "state.json")
@@ -1308,7 +1320,7 @@ def watcher():
 
 
 def main():
-    X.M = B.M = I.M = R.M = SH.M = CL.M = T.M = CT.M = CR.M = J.M = W.M = H.M = TK.M = CD.M = EV.M = ST.M = sys.modules[__name__]
+    X.M = B.M = I.M = R.M = SH.M = CL.M = T.M = CT.M = CR.M = J.M = W.M = H.M = TK.M = CD.M = EV.M = ST.M = PV.M = HI.M = A2.M = PN.M = sys.modules[__name__]
     CT.B = B
     CR.I = I
     I.B = R.B = B
@@ -1336,6 +1348,8 @@ def main():
     threading.Thread(target=TK.worker, daemon=True, name="task-intake").start()   # tasks given in a sentence (TSK-03)
     threading.Thread(target=CD.worker, daemon=True, name="conductor").start()      # plan graphs, step by step (TSK-05)
     threading.Thread(target=EV.worker, daemon=True, name="event-bus").start()      # events, rules, breaking news (TSK-10)
+    HI.start()                                                                      # the telemetry history, hourly (TSK-25)
+    PN.start()                                                                      # growing files pruned, daily (PLT-21)
     threading.Thread(target=ST.worker, daemon=True, name="staffing").start()       # judged tasks, measured agents (TSK-17)
     log("mission runner started")
     last_state = last_cost = 0

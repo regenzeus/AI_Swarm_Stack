@@ -4,7 +4,9 @@ step to the agent that does that kind of work best (and away from a subscription
 agent fits gets a temporary agent written for it; one that keeps doing well is proposed as a permanent agent.
 
 Judging (TSK-17): a Conductor task's answer, a mission's report or a Claude answer is read by a model (vk-eval) against
-each point of the definition of done; a build counts by what happened to it (deployed or merged: met). Chats and work
+each point of the definition of done; a build counts by what happened to it (deployed or merged: met). A Conductor task
+is judged per occurrence (TSK-22): every run of a scheduled or event-triggered task gets its own verdict, and the
+task shows its latest; a run that found nothing to send (a quiet briefing, no price drop) is not judged. Chats and work
 found at a door (without the owner's definition of done) are not judged.
 
 Temporary agents (TSK-15), within the grants of a task that starts by itself (DEC-34): one model call per step on the
@@ -46,9 +48,9 @@ def table(c):
         model text, created text, uses integer default 0, met integer default 0, partly integer default 0,
         not_met integer default 0, last_task integer, proposed text);""")
     cols = {r[1] for r in c.execute("pragma table_info(tasks)")}
-    for col in ("verdict", "judged", "tokens"):
-        if col not in cols:
-            c.execute(f"alter table tasks add column {col} {'integer' if col == 'tokens' else 'text'}")
+    for col, decl in (("verdict", "text"), ("judged", "text"), ("tokens", "integer"), ("cost", "real")):
+        if col not in cols:                               # cost: the tokens at list price (TSK-27)
+            c.execute(f"alter table tasks add column {col} {decl}")
     c.commit()
 
 
@@ -67,6 +69,33 @@ def tokens_of(run, db=None):
         return int(r[0] or 0)
     except sqlite3.Error:
         return 0
+
+
+def usage_of(run, db=None, tree=True):
+    """{model: {in, out, cached}} of a run (and every run inside it): what ops/prices.py prices (TSK-27)."""
+    q = ("with recursive t(run) as (select ? union select r.run from runs r join t on r.ref = t.run) "
+         "select e.title, e.data from events e where e.run in (select run from t) and e.kind = 'llm'") if tree else \
+        "select e.title, e.data from events e where e.run = ? and e.kind = 'llm'"
+    out = {}
+    try:
+        c = sqlite3.connect(f"file:{db or RUNTIME_DB}?mode=ro", uri=True)
+        for model, data in c.execute(q, (run,)):
+            tok = json.loads(data or "{}").get("tokens") or {}
+            u = out.setdefault(model or "", {"in": 0, "out": 0, "cached": 0})
+            for k in u:
+                u[k] += int(tok.get(k) or 0)
+        c.close()
+    except (sqlite3.Error, ValueError):
+        return {}
+    return out
+
+
+def cost_of(run, db=None):
+    """USD at list price of a run's tokens (None when none of its models has a price)."""
+    import prices as PR
+    u = usage_of(run, db)
+    usd, missing = PR.total(u)
+    return usd if u and len(missing) < len(u) else None
 
 
 # ---------- judging (TSK-17) ----------
@@ -90,16 +119,49 @@ def result_of(c, t):
     return None, None
 
 
-def judge(c, t, ask=None):
-    """The task's result against each point of its definition of done -> {verdict, points: [{point, met, why}]}."""
+MEASURED = "## Measured by the stack (its own programs, not the agents' words)"
+PAGES = 40                                         # cap: list (pages named for the judge; the run's map has every one)
+
+
+def evidence_of(c, t, occ=None):
+    """FND-92: what the stack's own programs measured about a task's work, for the judge: each build's checks (the
+    tests it ran), each check step's result and the pages its agents opened. A judge that reads only the agents' words
+    cannot tell working code from a modest report. -> markdown, or "" when nothing was measured."""
+    import conductor as CD
+    out = []
+    for r in c.execute("select ref from step_refs where kind='build' and task=? order by ref", (t["id"],)).fetchall():
+        b = c.execute("select id, status, checks, files from builds where id=?", (int(r["ref"]),)).fetchone()
+        if b and b["checks"]:
+            files = [f[-1] for f in json.loads(b["files"] or "[]")]
+            out.append(f"### Build #{b['id']} ({b['status']}): its checks on the delivered code\n"
+                       + (f"Files: {', '.join(files)}\n" if files else "") + f"```\n{b['checks'][-3000:]}\n```")  # cap: prompt (the end names the counts)
+    if t["door"] == "plan":
+        for s in CD.steps(c, t["id"], occ):
+            if s["harness"] == "check" and s["output"]:
+                out.append(f"### Step {s['idx']}: the judge's checks\n{s['output'][:3000]}")  # cap: prompt (verdict and counts come first)
+    try:
+        pages = [r["uri"] for r in c.execute("select distinct a.uri from prov p join artifacts a on a.id = p.artifact "
+                                             "where p.task=? and a.uri like 'http%' order by a.uri", (t["id"],))]
+    except Exception:                                  # no provenance tables yet (a fresh database)
+        pages = []
+    if out or pages:
+        out.append(f"### Web pages the agents opened ({len(pages)})\n" + ("\n".join(f"- {u}" for u in pages[:PAGES]) or "none")
+                   + (f"\n- … and {len(pages) - PAGES} more" if len(pages) > PAGES else ""))
+    return f"{MEASURED}\n\n" + "\n\n".join(out) if out else ""
+
+
+def judge(c, t, ask=None, text=None, occ=None):
+    """The task's result (or one run's, `text`) against each point of its definition of done -> {verdict, points:
+    [{point, met, why}]}. What the stack measured itself (evidence_of) goes in after the result."""
     import prompts as P
-    text, truth = result_of(c, t)
+    text, truth = (text, None) if text is not None else result_of(c, t)
     if truth:
         return {"verdict": truth, "points": [{"point": d, "met": truth == "met", "why": "what happened to the build"} for d in t["done"]]}
     if not text:
         return {"verdict": "not judged", "points": [], "why": "no result to read"}
+    ev = evidence_of(c, t, occ)
     p = P.text("shared", "TASK_JUDGE").format(goal=t["goal"], done="\n".join(f"{i + 1}. {d}" for i, d in enumerate(t["done"])),
-                                              result=text[:30000])  # cap: prompt (the answer; the vault keeps all of it)
+                                              result=text[:30000] + (f"\n\n{ev}" if ev else ""))  # cap: prompt (the answer; the vault keeps all of it)
     raw = (ask or (lambda q: __import__("evals").ask({"id": "eval", "model": "gpt-sub"}, q, ref=f"judge task {t['id']}")))(p)
     d = json.loads(re.search(r"\{.*\}", raw, re.S).group(0)) if isinstance(raw, str) else raw
     pts = [{"point": t["done"][i] if i < len(t["done"]) else str(x.get("point", "")), "met": bool(x.get("met")), "why": str(x.get("why", ""))}
@@ -109,16 +171,17 @@ def judge(c, t, ask=None):
     return {"verdict": verdict, "points": pts}
 
 
-def credit(c, t, verdict, day=None):
-    """The day's history row of each agent, harness and model the task used, for its kind."""
+def credit(c, t, verdict, day=None, occ=None):
+    """The day's history row of each agent, harness and model the task (or its run `occ`) used, for its kind."""
     import conductor as CD
     day = day or now().date().isoformat()
-    tok = tokens_of(f"task:{t['id']}") if t["door"] == "plan" else 0
+    run = CD.run_of(t["id"], occ or 1)
+    tok = tokens_of(run) if t["door"] == "plan" else 0
     corrections = len(t["spec"].get("answered") or []) + (1 if t["spec"].get("retried") else 0)
     if t["door"] == "plan":
-        rows = [(s["agent"], s["harness"], s["model"], tokens_of(f"task:{t['id']}:step:{s['idx']}"),
+        rows = [(s["agent"], s["harness"], s["model"], tokens_of(f"{run}:step:{s['idx']}"),
                  (dt.datetime.fromisoformat(s["ended"]) - dt.datetime.fromisoformat(s["started"])).total_seconds() if s["started"] and s["ended"] else 0)
-                for s in CD.steps(c, t["id"])]
+                for s in CD.steps(c, t["id"], occ)]
     else:
         agent = {"mission": "desk" if t["kind"] == "briefing" else "mission", "build": "builder", "claude": "claude-task"}.get(t["door"], t["door"] or "?")
         card = CD.cards().get(agent) or {}
@@ -138,11 +201,15 @@ def credit(c, t, verdict, day=None):
 
 
 def judge_due(c, ask=None):
-    """Finished tasks with the owner's definition of done that are not judged yet: judge, record, credit, tell the archive."""
+    """Finished tasks with the owner's definition of done that are not judged yet: judge, record, credit, tell the archive.
+    A Conductor task is judged per run (judge_runs)."""
+    import conductor as CD
     import tasks as TK
     table(c)
+    CD.table(c)
+    judge_runs(c, ask)
     rows = c.execute("select id from tasks where status in ('done', 'failed') and judged is null and (source in ('app', 'gate') or source like 'rule:%') "
-                     "order by id limit 5").fetchall()
+                     "and not (door = 'plan' and exists (select 1 from task_occ o where o.task = tasks.id)) order by id limit 5").fetchall()
     for r in rows:
         t = TK.row(c, r["id"])
         try:
@@ -151,10 +218,41 @@ def judge_due(c, ask=None):
             M.log(f"staffing: judging task {t['id']} failed: {type(e).__name__}: {e}")
             continue
         tok = credit(c, t, j["verdict"])
-        TK.put(c, t["id"], verdict=j["verdict"], judged=TK.now(), tokens=tok, spec={**t["spec"], "judgement": j})
+        TK.put(c, t["id"], verdict=j["verdict"], judged=TK.now(), tokens=tok, cost=cost_of(f"task:{t['id']}") if t["door"] == "plan" else None,
+               spec={**t["spec"], "judgement": j})
         for d in {s["agent"] for s in __import__("conductor").steps(c, t["id"])} if t["door"] == "plan" else ():
             design_scored(c, d, t["id"], j["verdict"])
         M.event("task", "", f"Task #{t['id']} judged: {j['verdict']} ({sum(p['met'] for p in j['points'])} of {len(j['points'])} points)", title="Tasks")
+
+
+def judge_runs(c, ask=None):
+    """Each finished run of a Conductor task (TSK-22) against the task's definition of done: the run's verdict, points and
+    tokens on the run, the day's history credited for the run's own steps, and the task showing its latest verdict."""
+    import conductor as CD
+    import tasks as TK
+    rows = c.execute("""select o.task, o.occ, o.status, o.result from task_occ o join tasks t on t.id = o.task
+                        where o.status in ('done', 'failed') and o.judged is null and t.door = 'plan'
+                        and (t.source in ('app', 'gate') or t.source like 'rule:%' or t.source like 'trial:%') order by o.ended limit 5""").fetchall()
+    for r in rows:
+        t = TK.row(c, r["task"])
+        f = M.VAULT / (r["result"] or "")
+        try:
+            j = ({"verdict": "failed", "points": []} if r["status"] == "failed" else
+                 judge(c, t, ask, text=f.read_text() if r["result"] and f.is_file() else "", occ=r["occ"]))
+        except Exception as e:                       # a usage limit or a broken answer: tried again on the next pass; logged
+            M.log(f"staffing: judging task {t['id']} run {r['occ']} failed: {type(e).__name__}: {e}")
+            continue
+        tok = credit(c, t, j["verdict"], occ=r["occ"])
+        usd = cost_of(CD.run_of(t["id"], r["occ"]))
+        c.execute("update task_occ set verdict=?, judged=?, tokens=?, cost=?, judgement=? where task=? and occ=?",
+                  (j["verdict"], TK.now(), tok, usd, json.dumps(j, ensure_ascii=False), t["id"], r["occ"]))
+        c.commit()
+        CD.mapped(c, t["id"], r["occ"])                  # the map's numbers show the verdict
+        TK.put(c, t["id"], verdict=j["verdict"], judged=TK.now(), tokens=tok, cost=usd, spec={**TK.row(c, t["id"])["spec"], "judgement": {**j, "run": r["occ"]}})
+        for d in {s["agent"] for s in CD.steps(c, t["id"], r["occ"])}:
+            design_scored(c, d, t["id"], j["verdict"])
+        run = f" run {r['occ']}" if t["rhythm"].get("type") in ("schedule", "event") or r["occ"] > 1 else ""
+        M.event("task", "", f"Task #{t['id']}{run} judged: {j['verdict']} ({sum(p['met'] for p in j['points'])} of {len(j['points'])} points)", title="Tasks")
 
 
 # ---------- measured abilities (TSK-13) ----------

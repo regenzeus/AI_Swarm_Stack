@@ -117,3 +117,23 @@ def test_trash_asks_first_keeps_bank_mail_and_can_be_undone(mail):
 def test_mail_tools_cannot_send(mail):
     tools = {t.name for t in asyncio.run(mail.mcp.list_tools())}
     assert tools == {"mail_access", "mail_search", "mail_read", "mail_label", "mail_archive", "mail_mark", "mail_trash", "mail_untrash"}
+
+
+def test_a_card_left_by_a_restart_is_dropped_with_its_late_answer_and_a_waited_card_stays(mail):
+    """CNX-06, FND-14: after a restart nobody waits for an open first-Trash card; it is dropped (and logged) instead of
+    staying up unanswerable, a late answer goes too, and a card this process waits for is never taken."""
+    (mail.PENDING / "old.json").write_text(json.dumps({"id": "old", "count": 3, "mission": "spam-cleanup", "reason": "spam"}))
+    (mail.DECISIONS / "old.json").write_text(json.dumps({"allow": True}))
+    (mail.DECISIONS / "late.json").write_text(json.dumps({"allow": True}))
+    mail.WAITING.add("live")
+    (mail.PENDING / "live.json").write_text(json.dumps({"id": "live", "count": 1}))
+    (mail.DECISIONS / "live.json").write_text(json.dumps({"allow": False}))
+    assert [d["id"] for d in mail.sweep_orphans()] == ["old"]
+    assert sorted(f.name for f in mail.PENDING.iterdir()) == ["live.json"] and sorted(f.name for f in mail.DECISIONS.iterdir()) == ["live.json"]
+    entry = json.loads((mail.D / "log.jsonl").read_text().splitlines()[-1])
+    assert entry["action"] == "trash-dropped" and entry["count"] == 3 and "restarted" in entry["why"]
+    mail.WAITING.discard("live"); (mail.PENDING / "live.json").unlink(); (mail.DECISIONS / "live.json").unlink()   # its waiter ended
+    grant(mail, "read", "trash")
+    answer(mail, True)                                                        # a new ask after the restart works as before
+    assert "Moved 1" in asyncio.run(mail.mail_trash(["101"], "obvious spam")) and not mail.WAITING
+

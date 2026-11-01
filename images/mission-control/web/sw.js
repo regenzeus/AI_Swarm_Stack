@@ -1,6 +1,6 @@
 // Mission Control service worker: app shell offline, live data always from the network, push notifications.
-const CACHE = "mc-v3";
-const SHELL = ["/", "/static/app.css", "/static/app.js", "/static/shop.js", "/static/guide.js", "/static/guide.css", "/static/vendor/marked.min.js", "/static/vendor/purify.min.js", "/static/vendor/d3.min.js",
+const CACHE = "mc-v4";
+const SHELL = ["/", "/static/app.css", "/static/app.js", "/static/shop.js", "/static/swarm.js", "/static/task.js", "/static/guide.js", "/static/guide.css", "/static/vendor/marked.min.js", "/static/vendor/purify.min.js", "/static/vendor/d3.min.js",
   "/static/vendor/inter.woff2", "/static/icons/icon-192.png", "/manifest.webmanifest"];
 
 self.addEventListener("install", (e) => {

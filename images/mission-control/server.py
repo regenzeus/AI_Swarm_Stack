@@ -8,7 +8,7 @@ This container never starts anything itself: it reads the runner's state (/missi
 requests into /missions/inbox; ops/missions.py on the host validates and executes them. Chats are kept in
 /missions/app/chats (one JSON file each), so every device sees the same history. The wiki views read the vault.
 """
-import asyncio, base64, json, os, re, shutil, time, urllib.parse, urllib.request, uuid
+import asyncio, base64, datetime as dt, hashlib, hmac, json, os, re, shutil, time, urllib.parse, urllib.request, uuid
 from pathlib import Path
 
 import httpx
@@ -39,13 +39,18 @@ HERMES_KEY = os.environ.get("API_SERVER_KEY", "")
 ACTIONS = {"claude_task", "forgejo_connect", "create", "run", "pause", "resume", "archive", "update", "memory", "email", "vault_add", "understand",
            "forget", "memory_search", "build_assign", "build_revise", "build_approve", "build_approve_all", "build_reject", "build_revert",
            "improve_scan", "proposal_accept", "proposal_dismiss", "build_recheck", "build_switch_engine", "codemap", "repo_create", "repo_buildable", "repo_remove", "crew_run", "crew_memory_forget", "crew_schedule",
-           "journal_note", "journal_edit", "health_ack", "swarm_pause", "swarm_confirm", "swarm_reopen", "swarm_autonomy", "swarm_post", "swarm_help_verdict", "phone_cleanup_do", "phone_cleanup_do_all", "phone_cleanup_dismiss",
+           "journal_note", "journal_edit", "health_ack", "swarm_pause", "swarm_confirm", "swarm_reopen", "swarm_autonomy", "swarm_post", "swarm_help_verdict", "swarm_agent_change", "phone_cleanup_do", "phone_cleanup_do_all", "phone_cleanup_dismiss",
            "shop_decide", "shop_limits",           # shop_*: only through /api/shop/* (the owner, never the AI phone or an agent)
            "house_connect", "house_switch", "house_alexa", "house_say", "house_settings", "house_status",   # house_*: /api/house* and the house MCP tools
            "notify_prefs", "chat_ready",           # notify_*: the owner's notification preferences; chat_ready: from the app itself
-           "task_create", "task_answer", "task_approve", "task_cancel", "task_retry",   # task_*: the task kernel (TSK-01 to TSK-04)
-           "rule_save", "rule_toggle", "rule_delete", "event_rate"}                      # the event bus's rules and ratings (TSK-10 to TSK-12)
+           "task_create", "task_answer", "task_approve", "task_cancel", "task_retry", "task_run", "task_conduct",   # task_*: the task kernel (TSK-01 to TSK-04, TSK-21, TSK-22)
+           "rule_save", "rule_toggle", "rule_delete", "event_rate", "calendar_set", "calendar_clear",
+           "a2a_settings", "a2a_token", "a2a_revoke",
+           "wiki_delete"}                                  # ops/wikis.py: from the app only (refused from the AI phone above)                                    # TSK-19: outside agents (A2A)                      # the event bus's rules and ratings (TSK-10 to TSK-12)
 BUILDS = M / "builds"
+MAPS = M / "public/maps"                          # TSK-24: each task run's swarm map (ops/provenance.py)
+TASK_PAGES = M / "public/tasks"                        # APP-35: each task page's data, written by the runner (ops/tasks.py publish)
+TELEMETRY = M / "public/telemetry.json"           # TSK-25: the daily history (ops/history.py)
 
 
 def state():
@@ -140,7 +145,9 @@ async def api_request(request):
         return JSONResponse({"ok": False, "error": "purchases are decided at /api/shop/decide"}, status_code=403)
     if str(body.get("action", "")).startswith("house_"):
         return JSONResponse({"ok": False, "error": "the House is controlled through /api/house"}, status_code=403)
-    if body.get("action") == "wiki_delete" and from_ai_phone(request):
+    if body.get("action") == "a2a_token":                                   # the token is made at /api/a2a/token, shown once
+        return JSONResponse({"ok": False, "error": "outside agents are added at /api/a2a/token"}, status_code=403)
+    if body.get("action") in ("wiki_delete", "calendar_set", "calendar_clear", "a2a_settings", "a2a_revoke") and from_ai_phone(request):
         return JSONResponse({"ok": False, "error": "not from the AI phone"}, status_code=403)
     if str(body.get("action", "")).startswith("swarm_") and from_ai_phone(request):   # pausing, confirming, autonomy: the owner's devices only
         return JSONResponse({"ok": False, "error": "not from the AI phone"}, status_code=403)
@@ -353,7 +360,12 @@ async def api_rt_runs(request):
     """Runs from the run record, newest first (filter: live, agent, ref; limit)."""
     q = request.query_params
     live = {"1": True, "0": False}.get(q.get("live", ""))
-    return JSONResponse(await asyncio.to_thread(RT.runs, live, q.get("agent"), q.get("ref"), int(q.get("limit", 60))))
+    num = lambda k: float(q[k]) if q.get(k) else None
+    try:
+        since, until = num("since"), num("until")
+    except ValueError:
+        return JSONResponse({"error": "since and until are seconds"}, status_code=400)
+    return JSONResponse(await asyncio.to_thread(RT.runs, live, q.get("agent"), q.get("ref"), min(int(q.get("limit", 60)), 500), since, until))
 
 
 async def api_rt_run(request):
@@ -388,6 +400,20 @@ async def api_rt_stream(request):
     return StreamingResponse(gen(), media_type="text/event-stream", headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
 
+def prune_uploads(now=None, folders=None):
+    """PLT-21: files people added (chat files, phone uploads) older than 90 days; what was filed into the vault stays there.
+    -> files removed."""
+    now, n = now or time.time(), 0
+    for d in folders or (UPLOADS, FILES):
+        for f in (d.rglob("*") if d.is_dir() else []):
+            if f.is_file() and now - f.stat().st_mtime > 90 * 86400:
+                f.unlink()
+                n += 1
+    if n:
+        print(f"pruned {n} uploads older than 90 days", flush=True)
+    return n
+
+
 async def rt_housekeeping():
     """The runtime's watchdog (every run ends once) and the 90-day event retention."""
     last_prune = 0
@@ -400,6 +426,7 @@ async def rt_housekeeping():
             if time.time() - last_prune > 86400:
                 last_prune = time.time()
                 await asyncio.to_thread(RT.prune)
+                await asyncio.to_thread(prune_uploads)
         except Exception as ex:
             print("runtime housekeeping:", ex, flush=True)
 
@@ -962,9 +989,14 @@ LINK = re.compile(r"\[\[([^\]|#]+)(?:#[^\]|]*)?(?:\|([^\]]+))?\]\]")
 def wiki_roots():
     """Every wiki: the vault's, then each mission's, an archived mission's last (its files stay; FND-61)."""
     roots = [{"root": "wiki", "title": "Vault wiki", "mission": None, "archived": False}]
-    for m in state()["missions"]:
+    st = state()
+    for m in st["missions"]:
         if m.get("wiki") and (VAULT / m["wiki"]).exists():
             roots.append({"root": m["wiki"], "title": m["title"], "mission": m["slug"], "archived": m.get("status") == "archived"})
+    for t in st.get("tasks") or []:                      # a briefing task's topic without a mission of its own (TSK-22)
+        r = f"topics/{t['topic']}/wiki" if t.get("topic") else None
+        if r and (VAULT / r).exists() and r not in {x["root"] for x in roots}:
+            roots.append({"root": r, "title": t["title"], "mission": None, "task": t["id"], "archived": t.get("status") == "cancelled"})
     return sorted(roots, key=lambda r: r["archived"])
 
 
@@ -1050,6 +1082,190 @@ def subject(title):
     t = re.sub(r"\([^)]*\)", " ", str(title).lower())
     t = re.sub(r"[^a-z0-9]+", " ", t).strip()
     return t if len(t) >= 4 and t not in SUBJECT_STOP else ""
+
+
+async def api_telemetry(request):
+    """TSK-25: the daily telemetry history per agent, model, harness and kind (a year), and the price table (ops/history.py)."""
+    f = TELEMETRY
+    if not f.exists():
+        return JSONResponse({"rows": [], "prices": {}, "error": "No history yet: the runner writes it within the hour."})
+    return PlainTextResponse(f.read_text(), media_type="application/json")
+
+
+# ---------- TSK-19: outside agents over A2A (ops/a2a.py), on the tailnet, off until the owner switches it on ----------
+A2A_STATE = {"submitted": "submitted", "intake": "submitted", "planning": "working", "after": "submitted", "needs_answer": "input-required",
+             "waiting_approval": "input-required", "running": "working", "scheduled": "working", "waiting_owner": "input-required",
+             "done": "completed", "failed": "failed", "cancelled": "canceled"}
+A2A_PER_HOUR = 10                                  # tasks one outside agent may give in an hour
+
+
+def a2a_conf():
+    try:
+        d = json.loads((DATA / "a2a.json").read_text())
+    except (OSError, ValueError):
+        d = {}
+    return {"enabled": bool(d.get("enabled")), "agents": d.get("agents") or {}}
+
+
+def a2a_agent(request, conf):
+    """The outside agent whose bearer token this is, or None."""
+    import hashlib
+    import hmac
+    tok = (request.headers.get("authorization") or "").removeprefix("Bearer ").strip()
+    if not tok:
+        return None
+    h = hashlib.sha256(tok.encode()).hexdigest()
+    return next((n for n, a in conf["agents"].items() if hmac.compare_digest(str(a.get("hash", "")), h)), None)
+
+
+def a2a_task(t):
+    """A task on the board -> an A2A Task object (its answer as an artifact once it is done)."""
+    st = A2A_STATE.get(t.get("status"), "working")
+    note = "waits for the owner's OK" if st == "input-required" else t.get("error") or ""
+    out = {"kind": "task", "id": f"task-{t['id']}", "contextId": f"task-{t['id']}",
+           "status": {"state": st, "timestamp": t.get("updated"), **({"message": {"role": "agent", "parts": [{"kind": "text", "text": note}]}} if note else {})}}
+    if st == "completed" and t.get("result"):
+        try:
+            text = (VAULT / t["result"]).read_text()[:40000]   # cap: api (the answer; the vault keeps all of it)
+            out["artifacts"] = [{"artifactId": "answer", "name": t.get("title") or "answer", "parts": [{"kind": "text", "text": text}]}]
+        except OSError:
+            pass
+    return out
+
+
+async def a2a_card(request):
+    """The stack's A2A agent card, for agents on the tailnet, while A2A is on."""
+    if not a2a_conf()["enabled"] or not request.headers.get("tailscale-user-login"):
+        return JSONResponse({"error": "not found"}, status_code=404)
+    base = f"https://{request.headers.get('host', '')}"
+    return JSONResponse({"protocolVersion": "1.0", "name": "AI stack", "version": "1", "url": f"{base}/a2a", "preferredTransport": "JSONRPC",
+                         "description": "Give the stack a task in a sentence. Every task from outside waits for its owner's OK, then the stack plans and does it.",
+                         "capabilities": {"streaming": False, "pushNotifications": False}, "defaultInputModes": ["text/plain"], "defaultOutputModes": ["text/plain"],
+                         "skills": [{"id": "task", "name": "A task for the stack", "description": "Research, a briefing, an analysis: one sentence.",
+                                     "tags": ["research", "briefing", "analysis"], "examples": ["Find what changed in the newest Python release"]}],
+                         "securitySchemes": {"bearer": {"type": "http", "scheme": "bearer"}}, "security": [{"bearer": []}]})
+
+
+async def api_a2a(request):
+    """TSK-19: A2A JSON-RPC (message/send, tasks/get, tasks/cancel; the 1.0 names too) from an outside agent on the tailnet
+    with its token. A message becomes a task (source a2a:<name>) that waits for the owner's OK; an agent sees only its own."""
+    conf = a2a_conf()
+    if not conf["enabled"]:
+        return JSONResponse({"error": "A2A is off"}, status_code=404)
+    if not request.headers.get("tailscale-user-login"):
+        return JSONResponse({"error": "only reachable through Tailscale"}, status_code=403)
+    try:
+        body = await request.json()
+    except ValueError:
+        return JSONResponse({"jsonrpc": "2.0", "id": None, "error": {"code": -32700, "message": "parse error"}}, status_code=400)
+    rid, method, params = body.get("id"), str(body.get("method") or ""), body.get("params") or {}
+    err = lambda code, msg, status=200: JSONResponse({"jsonrpc": "2.0", "id": rid, "error": {"code": code, "message": msg}}, status_code=status)
+    name = a2a_agent(request, conf)
+    if not name:
+        return err(-32001, "no valid token for an outside agent", 401)
+    mine = [t for t in state().get("tasks") or [] if t.get("source") == f"a2a:{name}"]
+    if method in ("message/send", "SendMessage"):
+        parts = (params.get("message") or {}).get("parts") or []
+        text = " ".join(str(p.get("text") or "") for p in parts if p.get("kind", p.get("type", "text")) == "text").strip()[:4000]  # cap: api
+        if len(text) < 8:
+            return err(-32602, "send the task as a text part of at least a few words")
+        hour_ago = (dt.datetime.now().astimezone() - dt.timedelta(hours=1)).isoformat()
+        if sum(1 for t in mine if (t.get("created") or "") >= hour_ago) >= A2A_PER_HOUR:
+            return err(-32002, f"at most {A2A_PER_HOUR} tasks an hour from one outside agent")
+        r = await submit({"action": "task_create", "text": text, "autonomy": "ask", "source": f"a2a:{name}"}, wait=10)
+        tid = (r.get("result") or {}).get("task") if r.get("ok") else None
+        if not tid:
+            return err(-32603, r.get("error") or "the stack did not take the task in time; send it again")
+        return JSONResponse({"jsonrpc": "2.0", "id": rid, "result": {"kind": "task", "id": f"task-{tid}", "contextId": f"task-{tid}",
+                                                                      "status": {"state": "submitted", "message": {"role": "agent", "parts": [
+                                                                          {"kind": "text", "text": "taken: it waits for the owner's OK"}]}}}})
+    if method in ("tasks/get", "GetTask", "tasks/cancel", "CancelTask"):
+        m = re.fullmatch(r"task-(\d+)", str(params.get("id") or ""))
+        t = next((x for x in mine if m and x["id"] == int(m.group(1))), None)
+        if not t:
+            return err(-32001, "no such task of this agent")
+        if method in ("tasks/cancel", "CancelTask"):
+            r = await submit({"action": "task_cancel", "id": t["id"], "source": f"a2a:{name}"}, wait=8)
+            if not r.get("ok"):
+                return err(-32002, r.get("error") or "it cannot be cancelled now")
+            t = {**t, "status": "cancelled"}
+        return JSONResponse({"jsonrpc": "2.0", "id": rid, "result": a2a_task(t)})
+    return err(-32601, f"no method {method}")
+
+
+async def api_a2a_token(request):
+    """The owner adds an outside agent: its token is made here and shown once; the runner keeps only its hash."""
+    import hashlib
+    import secrets
+    if from_ai_phone(request):
+        return JSONResponse({"ok": False, "error": "not from the AI phone"}, status_code=403)
+    body = await request.json()
+    tok = secrets.token_urlsafe(32)
+    r = await submit({"action": "a2a_token", "name": str(body.get("name") or ""), "hash": hashlib.sha256(tok.encode()).hexdigest(),
+                      "source": "app", "by": request.headers.get("tailscale-user-login", "")})
+    if not r.get("ok"):
+        return JSONResponse({"ok": False, "error": r.get("error") or "the runner did not answer"}, status_code=400)
+    return JSONResponse({"ok": True, "name": r["result"]["name"], "token": tok, "card": f"https://{request.headers.get('host', '')}/.well-known/agent-card.json"})
+
+
+def task_page(tid):
+    f = TASK_PAGES / f"{tid}.json"
+    if not f.exists():
+        return None
+    d = json.loads(f.read_text())
+    d["activity"] = RT.task_activity(tid)
+    res = VAULT / (d.get("result") or "")
+    d["answer"] = res.read_text(errors="replace") if d.get("result") and res.is_file() else None
+    return d
+
+
+async def api_task(request):
+    """APP-35: one task's page: the task, its runs and their steps (the runner's file), the agents that worked on it, their
+    actions and what they read from and kept in memory (the run record), and its answer."""
+    try:
+        tid = int(request.path_params["tid"])
+    except ValueError:
+        return JSONResponse({"error": "no such task"}, status_code=400)
+    d = await asyncio.to_thread(task_page, tid)
+    if d is None:
+        return JSONResponse({"error": f"There is no task #{tid}."}, status_code=404)
+    return JSONResponse(d)
+
+
+async def api_usage(request):
+    """How much each subscription carried in the last 5 and 24 hours (runrecord.usage)."""
+    return JSONResponse(await asyncio.to_thread(RT.usage))
+
+
+async def api_trials(request):
+    """TRL-09: the trial scoreboard as the runner wrote it (ops/trials.py publish)."""
+    f = M / "public/trials.json"
+    return PlainTextResponse(f.read_text(), media_type="application/json") if f.exists() else JSONResponse({"trials": {}, "runs": []})
+
+
+async def api_agent_tasks(request):
+    """APP-35: the tasks an agent worked on, newest first, with their titles and states."""
+    rows = await asyncio.to_thread(RT.agent_tasks, request.path_params["aid"])
+    out = []
+    for r in rows:
+        f = TASK_PAGES / f"{r['task']}.json"
+        t = json.loads(f.read_text()) if f.exists() else {}
+        out.append({**r, "title": t.get("title") or f"Task #{r['task']}", "status": t.get("status"), "verdict": t.get("verdict")})
+    return JSONResponse(out)
+
+
+async def api_task_map(request):
+    """TSK-24: a task run's swarm map as the runner wrote it (public/maps/<task>.<occ>.json, ops/provenance.py); the
+    task's newest run when no run is named."""
+    try:
+        t, o = int(request.query_params.get("t", "")), request.query_params.get("o")
+        d = MAPS
+        f = d / f"{t}.{int(o)}.json" if o else max(d.glob(f"{t}.*.json"), key=lambda p: int(p.name.split(".")[1]), default=None)
+    except ValueError:
+        return JSONResponse({"error": "no such task run"}, status_code=400)
+    if not f or not f.exists():
+        return JSONResponse({"error": "This run has no map yet: it is drawn from its first step on."}, status_code=404)
+    return PlainTextResponse(f.read_text(), media_type="application/json")
 
 
 async def api_wiki_map(request):
@@ -1248,7 +1464,7 @@ def phone_summary():
     st = phone_state()
     return {"on": bool(st), "connected": bool(st and st.get("connected")), "stopped": (PHONE / "STOP").exists(),
             "pending": len(phone_pending()), "model": st.get("model", ""), "foreground": st.get("foreground", ""),
-            "trust_until": st.get("trust_until", 0)} if st else None
+            "trust_until": st.get("trust_until", 0), "voice": st.get("voice") or {}} if st else None
 
 
 # ---------- app connections (images/mail and later others): time-limited grants the owner gives in the app ----------
@@ -1540,7 +1756,8 @@ async def api_phone_decide(request):
 
 
 async def api_phone_control(request):
-    """Stop, resume or open a time window for the AI phone (a documented exception, SEC-12); the phone may only stop itself."""
+    """Stop, resume, open the free mode, end a task or keep the screen on for the AI phone (a documented exception,
+    SEC-12); the phone may only stop itself."""
     b = await request.json()
     if from_ai_phone(request) and b.get("do") != "stop":                # it may switch itself off, nothing else
         return JSONResponse({"ok": False, "error": "not from the AI phone"}, status_code=403)
@@ -1549,7 +1766,7 @@ async def api_phone_control(request):
         (PHONE / "STOP").write_text(time.strftime("%Y-%m-%dT%H:%M:%S%z"))
     elif do == "resume":
         (PHONE / "STOP").unlink(missing_ok=True)
-    elif do in ("pair", "connect", "trust", "boot_setup"):
+    elif do in ("pair", "connect", "trust", "boot_setup", "voice_setup", "screen", "end_task"):
         req = {"do": do}
         if do == "pair":
             if not re.fullmatch(r"\d{4,5}", str(b.get("port", ""))) or not re.fullmatch(r"\d{6}", str(b.get("code", ""))):
@@ -1558,6 +1775,8 @@ async def api_phone_control(request):
         if do == "trust":
             m = int(b.get("minutes") or 0)
             req["minutes"] = -1 if m < 0 else min(7 * 24 * 60, m)            # -1 = until the owner stops it
+        if do == "screen":                                                  # PHN-17: keep it on to watch, or off now
+            req["minutes"] = max(0, min(60, int(b.get("minutes") or 0)))
         (PHONE / "control").mkdir(exist_ok=True)
         (PHONE / "control" / f"{time.time_ns()}.json").write_text(json.dumps(req))
     else:
@@ -1870,7 +2089,8 @@ app = Starlette(routes=[
     Route("/", index), Route("/sw.js", sw), Route("/manifest.webmanifest", manifest), Route("/healthz", health),
     Route("/api/state", api_state), Route("/api/stream", api_stream), Route("/api/version", api_version),
     Route("/api/request", api_request, methods=["POST"]), Route("/api/result/{rid}", api_result),
-    Route("/api/file", api_file), Route("/api/runlog/{rid}", api_runlog), Route("/api/run/{rid}/timeline", api_run_timeline), Route("/api/rt/runs", api_rt_runs), Route("/api/rt/run/{run}", api_rt_run),
+    Route("/api/file", api_file), Route("/api/runlog/{rid}", api_runlog), Route("/api/run/{rid}/timeline", api_run_timeline), Route("/api/rt/runs", api_rt_runs), Route("/api/task/{tid:int}", api_task),
+    Route("/api/agent/{aid}/tasks", api_agent_tasks), Route("/api/trials", api_trials), Route("/api/usage", api_usage), Route("/api/rt/run/{run}", api_rt_run),
     Route("/api/rt/run/{run}/stream", api_rt_stream), Route("/api/crew/{cid}", api_crew_one), Route("/api/swarm", api_swarm, methods=["POST"]), Route("/api/swarm/tokens", api_swarm_tokens), Route("/api/swarm/now", api_swarm_now), Route("/api/swarm/timeline", api_swarm_timeline), Route("/api/swarm/interactions", api_swarm_interactions), Route("/api/swarm/delegations", api_swarm_delegations), Route("/api/swarm/room", api_swarm_room), Route("/api/health/issues", api_health_issues), Route("/api/claude/{tid}", api_claude_task), Route("/api/phoenix", api_phoenix), Route("/api/build/{bid}/{kind}", api_build_file),
     Route("/api/chat", api_chat, methods=["POST"]), Route("/api/chats", api_chats),
     Route("/api/chats/{cid}", api_chat_one, methods=["GET", "DELETE", "PATCH"]), Route("/api/chats/{cid}/stream", api_chat_stream),
@@ -1889,7 +2109,8 @@ app = Starlette(routes=[
     Route("/api/repo/{name}/graph", api_repo_graph), Route("/api/repo/{name}/overview", api_repo_overview),
     Route("/api/repo/{name}/node", api_repo_node), Route("/api/repo/{name}/map", api_repo_map),
     Route("/api/guide", api_guide), Route("/api/guide/live", api_guide_live), Route("/api/guide/{gid}", api_guide_one),
-    Route("/api/wiki/roots", api_wiki_roots), Route("/api/wiki/graph", api_wiki_graph), Route("/api/wiki/map", api_wiki_map), Route("/api/wiki/access", api_wiki_access),
+    Route("/api/wiki/roots", api_wiki_roots), Route("/api/wiki/graph", api_wiki_graph), Route("/api/wiki/map", api_wiki_map), Route("/api/task/map", api_task_map), Route("/api/a2a/token", api_a2a_token, methods=["POST"]),
+    Route("/.well-known/agent-card.json", a2a_card), Route("/a2a", api_a2a, methods=["POST"]), Route("/api/telemetry", api_telemetry), Route("/api/wiki/access", api_wiki_access),
     Route("/api/wiki/page", api_wiki_page), Route("/api/wiki/search", api_wiki_search),
     Route("/api/push/key", api_push_key), Route("/api/push/subscribe", api_push_sub, methods=["POST"]),
     Route("/api/push/unsubscribe", api_push_sub, methods=["POST"]), Route("/api/push/test", api_push_test, methods=["POST"]),
@@ -2329,6 +2550,168 @@ def close_interrupted_chats():
             print(f"chat {p.name} not closed after the restart: {type(e).__name__}: {e}", flush=True)
 
 
+# ---------- the voice gateway: Home Assistant's Ollama integration talks to Hermes (docs/HOME-VOICE.md, VOI-03 to VOI-05) ----------
+# Its own server (8095 in the container, 127.0.0.1:11435 on the PC), only these routes, guarded by a key instead of
+# Tailscale: the NAS is not on the tailnet. Each room is one "model" (hermes:kitchen); every spoken turn joins the one
+# running Voice chat (the same Hermes session in every room and in the app) and the answer streams back as Ollama's
+# one JSON object per line, while the app shows it live.
+PROMPTS = Path(os.environ.get("PROMPTS_DIR", "/prompts"))     # prompts/ of the repository, mounted read-only (MEM-13)
+SECTION = re.compile(r"^<!-- prompt: ([A-Z][A-Z0-9_]*)\b([^\n]*)-->\n(.*?)\n<!-- end -->$", re.M | re.S)   # = ops/prompts.py SECTION
+VOICE_KEY = os.environ.get("VOICE_KEY", "")
+VOICE_CHAT = "voicechat"
+VOICE_ROOMS = ("home", "living-room", "kitchen", "office", "bedroom", "bathroom", "hallway", "guest-bath")
+VOICE_MODEL = "gpt-sub-fast"          # V0: the first word in 1.3 to 1.6 s
+VOICE_CHECK = "Let me check. "        # said when Hermes reaches for a tool before a word (V0: a tool answer starts after 5.5 to 6.8 s)
+NEW_TOPIC = re.compile(r"^\W*(?:let'?s start over|start over|new topic|new conversation|forget that)\W*$", re.I)
+
+
+def prompt(owner, name):
+    """(text, ref) of one prompt, read at each call so a deployed change applies at once; ref = owner/NAME@sha."""
+    t = {m.group(1): m.group(3) for m in SECTION.finditer((PROMPTS / f"{owner}.md").read_text())}[name]
+    return t, f"{owner}/{name}@{hashlib.sha256(t.encode()).hexdigest()[:12]}"
+
+
+def voice_ok(request):
+    return bool(VOICE_KEY) and hmac.compare_digest(request.headers.get("authorization", ""), f"Bearer {VOICE_KEY}")
+
+
+def room_of(model):
+    r = str(model or "").removeprefix("hermes:").split(":")[0]
+    return r if r in VOICE_ROOMS else "home"
+
+
+def ollama_line(model, content="", done=False, **extra):
+    return json.dumps({"model": model, "created_at": dt.datetime.now(dt.timezone.utc).isoformat().replace("+00:00", "Z"),
+                       "message": {"role": "assistant", "content": content}, "done": done, **extra}) + "\n"
+
+
+async def voice_tags(request):
+    """The models Home Assistant can pick: one per room (hermes:kitchen)."""
+    if not voice_ok(request):
+        return JSONResponse({"error": "unauthorized"}, status_code=401)
+    return JSONResponse({"models": [{"name": f"hermes:{r}", "model": f"hermes:{r}", "modified_at": "2026-11-01T00:00:00Z", "size": 0,
+                                     "digest": hashlib.sha256(r.encode()).hexdigest(),
+                                     "details": {"format": "hermes", "family": "hermes", "parameter_size": "", "quantization_level": ""}}
+                                    for r in VOICE_ROOMS]})
+
+
+async def voice_show(request):
+    """A model's details: it completes text; no tools of Home Assistant's (Hermes has its own)."""
+    if not voice_ok(request):
+        return JSONResponse({"error": "unauthorized"}, status_code=401)
+    return JSONResponse({"modelfile": "", "parameters": "", "template": "", "model_info": {}, "capabilities": ["completion"],
+                         "details": {"format": "hermes", "family": "hermes", "parameter_size": "", "quantization_level": ""}})
+
+
+async def voice_version(request):
+    """The Ollama version the gateway answers as (the one Home Assistant's client was built against)."""
+    return JSONResponse({"version": "0.6.2"})
+
+
+def voice_turn(text, room):
+    """Add a spoken turn to the Voice chat. -> (chat, payload, headers), or (chat, None, reply) for "new topic"."""
+    c = load_chat(VOICE_CHAT) or {"id": VOICE_CHAT, "created": time.time(), "messages": [], "title": "Voice", "origin": "voice"}
+    if NEW_TOPIC.match(text):
+        c["hrev"] = c.get("hrev", 0) + 1                  # Hermes starts a fresh session; the chat keeps what was said
+        c.pop("hsid", None)
+        reply = "Sure. What's on your mind?"
+        c["messages"] += [{"role": "user", "content": text, "ts": time.time(), "room": room, "attachments": []},
+                          {"role": "assistant", "content": reply, "ts": time.time(), "voice": {"room": room, "new_topic": True}}]
+        save_chat(c)
+        return c, None, reply
+    c["messages"].append({"role": "user", "content": text, "ts": time.time(), "room": room, "attachments": []})
+    c["pending"] = True
+    payload, headers = build_request(c, VOICE_MODEL, "low")
+    frame, ref = prompt("main", "VOICE")                # the chat keeps the plain words; Hermes gets them framed
+    payload["messages"][-1]["content"] = frame.format(room=room.replace("-", " "), question=text)
+    c["prompt"] = ref
+    save_chat(c)
+    return c, payload, headers
+
+
+async def voice_chat(request):
+    """Ollama's /api/chat: the newest user message is the spoken turn; Home Assistant's own history and tools are not
+    used (Hermes keeps the conversation and its tools)."""
+    if not voice_ok(request):
+        return JSONResponse({"error": "unauthorized"}, status_code=401)
+    body = await request.json()
+    model = str(body.get("model") or "hermes:home")
+    text = next((str(m.get("content") or "").strip() for m in reversed(body.get("messages") or []) if m.get("role") == "user"), "")
+    if not text:
+        return JSONResponse({"error": "no spoken text"}, status_code=400)
+    text, room = cut(text, 4000, "a spoken turn"), room_of(model)  # cap: untrusted
+    old = RUNNING.get(VOICE_CHAT)
+    if old and not old.done():                            # a new question replaces the one still being answered
+        old.cancel()
+        try:
+            await asyncio.wait_for(asyncio.shield(old), 5)
+        except (asyncio.CancelledError, asyncio.TimeoutError):
+            pass
+    try:
+        c, payload, headers = voice_turn(text, room)
+    except (OSError, KeyError) as e:          # the voice prompt is missing: say so, never answer without it
+        payload, headers = None, f"My voice instructions could not be read ({type(e).__name__}), so I can't answer by voice right now."
+    if payload is None:
+        reply = headers
+        if not body.get("stream", True):
+            return JSONResponse(json.loads(ollama_line(model, reply, True, done_reason="stop")))
+        return StreamingResponse(iter([ollama_line(model, reply), ollama_line(model, "", True, done_reason="stop")]),
+                                 media_type="application/x-ndjson")
+    stale = LIVE.pop(VOICE_CHAT, None)
+    t0 = time.time()
+    task = asyncio.get_running_loop().create_task(run_chat(c, payload, headers))
+    RUNNING[VOICE_CHAT] = task
+    TASKS.add(task)
+    task.add_done_callback(TASKS.discard)
+
+    async def chunks():
+        live = None
+        while live is None or live is stale:              # run_chat puts its own record in LIVE at its first step
+            live = LIVE.get(VOICE_CHAT)
+            if task.done() and (live is None or live is stale):
+                return
+            await asyncio.sleep(0.02)
+        sent, first, checked = 0, None, False
+        while True:
+            if live["tools"] and not sent and not checked:
+                checked = True
+                first = first or time.time()
+                yield VOICE_CHECK
+            new = live["text"][sent:]
+            if new:
+                sent += len(new)
+                first = first or time.time()
+                yield new
+            if live["done"]:
+                break
+            await asyncio.sleep(0.03)
+        voice_meta(room, t0, first, checked)
+
+    if not body.get("stream", True):
+        text_out = "".join([x async for x in chunks()])
+        return JSONResponse(json.loads(ollama_line(model, text_out, True, done_reason="stop")))
+
+    async def gen():
+        async for piece in chunks():
+            yield ollama_line(model, piece)
+        yield ollama_line(model, "", True, done_reason="stop", total_duration=int((time.time() - t0) * 1e9))
+    return StreamingResponse(gen(), media_type="application/x-ndjson")
+
+
+def voice_meta(room, t0, first, checked):
+    """The voice part of the turn's record, on the answer in the Voice chat: the room, the time to the first word, and
+    whether "let me check" was said (VOI-05; the run record keeps the rest)."""
+    c = load_chat(VOICE_CHAT)
+    if c and c["messages"] and c["messages"][-1]["role"] == "assistant":
+        c["messages"][-1]["voice"] = {"room": room, "first_ms": round((first - t0) * 1000) if first else None, "checked": checked,
+                                      "ms": round((time.time() - t0) * 1000)}
+        save_chat(c)
+
+
+voice_app = Starlette(routes=[Route("/api/tags", voice_tags), Route("/api/show", voice_show, methods=["POST"]),
+                              Route("/api/version", voice_version), Route("/api/chat", voice_chat, methods=["POST"])])
+
+
 async def main():
     close_interrupted_chats()
     await asyncio.gather(
@@ -2341,6 +2724,7 @@ async def main():
         uvicorn.Server(uvicorn.Config(house_mcp.streamable_http_app(transport_security=TransportSecuritySettings(
             allowed_hosts=["mission-control:8094"], allowed_origins=[])), host="0.0.0.0", port=8094, log_level="warning")).serve(),
         uvicorn.Server(uvicorn.Config(rt_app, host="0.0.0.0", port=8093, log_level="warning")).serve(),   # runtime ingest
+        uvicorn.Server(uvicorn.Config(voice_app, host="0.0.0.0", port=8095, log_level="warning")).serve(),  # the voice gateway (VOI-03)
         push_events(), push_phone(), push_conn(), rt_housekeeping(), limit_retrier())
 
 

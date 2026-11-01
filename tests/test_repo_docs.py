@@ -6,7 +6,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 # data or sub-parts covered by the parent directory's AGENTS.md
-COVERED_BY_PARENT = {"eval/results", "eval/qrels", "eval/fixtures", "spec/pilot", "images/mission-control/web/static", "nas/forgejo", "tests/semgrep",
+COVERED_BY_PARENT = {"prompts/cases", "eval/results", "eval/qrels", "eval/fixtures", "spec/pilot", "images/mission-control/web/static", "nas/forgejo", "tests/semgrep",
                      "config/hermes/claude-hooks", "config/hermes/plugins/aistack-runtime"}   # config/hermes/AGENTS.md
 SKIP_PARTS = {".git", "__pycache__", ".pytest_cache"}
 

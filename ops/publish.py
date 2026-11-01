@@ -38,7 +38,7 @@ EXCLUDE = {
 # Addresses that are placeholders or test fixtures, not anyone's mailbox. A new one stops the publish until it is here.
 ALLOW_EMAILS = {"owner@example.com", "test@example.com", "test@example.org", "anna@example.com", "noreply@anthropic.com",
                 "builder@ai-stack.local", "x@spam.ru", "service@paypal.de", "secret@github.com", "newsletter@x.com",
-                "n@shop.de", AUTHOR[1]}
+                "n@shop.de", "journeys@stack.local", "trials@stack.local", AUTHOR[1]}   # the journeys' and trials' own identities
 # Words that hold a private term by chance; the scan matches terms inside words, so each one is named here.
 ALLOW_WORDS = {"mmarco"}                                         # the mMARCO dataset in a reranker model's name
 # Fake tokens in tests (the redaction tests need something token-shaped to redact).

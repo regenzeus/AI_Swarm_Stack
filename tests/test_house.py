@@ -81,7 +81,7 @@ def test_alexa_command_and_refusals(H):
     H.alexa({"command": "schalte das Licht im Wohnzimmer aus", "echo": "bedroom"})
     assert H.calls[-1] == ("POST", "/api/services/alexa_devices/send_text_command",
                            {"device_id": "dev2", "text_command": "schalte das Licht im Wohnzimmer aus"})
-    for bad, why in (("schalte den Kühlschrank aus", "protected"), ("turn off the router", "protected"), ("bestelle Milch", "shopping")):
+    for bad, why in (("schalte den Kühlschrank aus", "protected"), ("turn off the router", "protected"), ("schalte das WLAN aus", "protected"), ("bestelle Milch", "shopping")):
         with pytest.raises(ValueError, match=why):
             H.alexa({"command": bad})
     with pytest.raises(ValueError, match="no Echo called"):
@@ -197,22 +197,31 @@ def test_snapshot_over_websocket(H, monkeypatch):
             {"entity_id": "switch.echo_kitchen_do_not_disturb", "platform": "alexa_devices", "device_id": "d1"},
             {"entity_id": "switch.plug_fridge", "platform": "tplink", "device_id": "d2"},
             {"entity_id": "switch.plug_fridge_led", "platform": "tplink", "device_id": "d2", "entity_category": "config"},
-            {"entity_id": "light.desk", "platform": "hue", "device_id": "d3", "name": "Desk lamp"}],
+            {"entity_id": "light.desk", "platform": "hue", "device_id": "d3", "name": "Desk lamp"},
+            {"entity_id": "switch.abt3_c_0005c_access", "platform": "fritz", "device_id": "d4"},
+            {"entity_id": "switch.fritz_box_7530_ax_wi_fi_guest", "platform": "fritz", "device_id": "d5", "entity_category": "config"},
+            {"entity_id": "button.nas_user_reboot", "platform": "synology_dsm", "device_id": "d6"}],
         "config/device_registry/list": [{"id": "d1", "name": "Echo Dot", "name_by_user": "Kitchen Echo", "area_id": "kitchen", "model": "Echo Dot (5th Gen)"},
-                                        {"id": "d2", "name": "Kühlschrank", "area_id": "kitchen"}, {"id": "d3", "name": "Hue", "area_id": None}],
+                                        {"id": "d2", "name": "Kühlschrank", "area_id": "kitchen"}, {"id": "d3", "name": "Hue", "area_id": None},
+                                        {"id": "d4", "name": "ABT3-C-0005C"}, {"id": "d5", "name": "FRITZ!Box 7530 AX"}, {"id": "d6", "name": "The owner_NAS"}],
         "config/area_registry/list": [{"area_id": "kitchen", "name": "Kitchen"}],
         "get_states": [{"entity_id": "switch.plug_fridge", "state": "on", "attributes": {"friendly_name": "Plug", "current_power_w": 61.5}},
                        {"entity_id": "light.desk", "state": "on", "attributes": {"brightness": 128}}],
         "config_entries/get": [{"domain": "alexa_devices", "title": "Amazon", "state": "loaded", "source": "user"},
                                {"domain": "sun", "title": "Sun", "state": "loaded", "source": "system"}],
+        "config/auth/list": [{"name": "The owner", "is_active": True}, {"name": "Supervisor", "is_active": True, "system_generated": True},
+                             {"name": "Old", "is_active": False}, {"name": "AI phone", "is_active": True}],
+        "assist_pipeline/pipeline/list": {"pipelines": [{"name": "Home Assistant"}, {"name": "Hermes"}], "preferred_pipeline": None},
     }
     monkeypatch.setattr(H, "HA", fake_ha(results, token="t0ken"))
     monkeypatch.setattr(H, "_onboarded", lambda: True)
     s = H.real_snapshot()
     assert s["connected"] and s["integrations"] == [{"domain": "alexa_devices", "title": "Amazon", "state": "loaded"}]
+    assert s["people"] == ["The owner", "AI phone"] and s["pipelines"] == ["Home Assistant", "Hermes"]     # VOI-08: who can log in
     assert s["echos"] == [{"id": "d1", "name": "Kitchen Echo", "area": "Kitchen", "speak": "notify.echo_kitchen_speak",
                            "announce": "notify.echo_kitchen_announce", "event": "event.echo_kitchen_last_called", "model": "Echo Dot (5th Gen)"}]
-    plug, desk = sorted(s["things"], key=lambda t: t["entity_id"], reverse=True)
+    plug, client, desk = sorted(s["things"], key=lambda t: t["entity_id"], reverse=True)
+    assert client["entity_id"] == "switch.abt3_c_0005c_access" and client["protected"]   # the router's, though named for its client
     assert plug == {"entity_id": "switch.plug_fridge", "name": "Plug", "domain": "switch", "area": "Kitchen", "state": "on",
                     "platform": "tplink", "protected": True, "power_w": 61.5}      # protected by its id and device name (Kühlschrank)
     assert desk["name"] == "Desk lamp" and desk["brightness"] == 50 and desk["area"] == "" and not desk["protected"]
@@ -223,3 +232,18 @@ def test_snapshot_bad_token(H, monkeypatch):
     monkeypatch.setattr(H, "_onboarded", lambda: True)
     s = H.real_snapshot()
     assert not s["connected"] and "connect again" in s["error"]
+
+
+def test_a_voice_question_is_acknowledged_before_its_answer(H, monkeypatch):
+    """An answer takes up to a minute: right after Alexa's own reply the Echo says Hermes heard it, in its language."""
+    spoken = []
+    monkeypatch.setattr(H, "rest", lambda m, path, body=None, **k: spoken.append(body["message"]) or {})
+    monkeypatch.setattr(H.time, "sleep", lambda s: None)
+    monkeypatch.setattr(H, "ask_hermes", lambda q, e: "Der Mond ist 4,5 Milliarden Jahre alt.")
+    echo = H._status["data"]["echos"][0]
+    H.answer("wie alt ist der Mond", echo)
+    assert spoken == [H.ACK["de"], "Der Mond ist 4,5 Milliarden Jahre alt."]
+    spoken.clear()
+    H.answer("how old is the moon", echo)
+    assert spoken[0] == H.ACK["en"] and not H._voice["busy"]
+

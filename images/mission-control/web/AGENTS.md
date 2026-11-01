@@ -31,6 +31,16 @@ font are vendored by the Dockerfile into `static/vendor/`).
 - **Colours** only through the CSS variables (dark and light themes both define them). No hex in component CSS
   except the wiki folder colours.
 - **Phone first**: check every change at 375 px width with no horizontal scroll, and on desktop (side nav ≥ 960 px).
+  `make journeys` opens every route at 375 px in a browser, on the live data and with none (ops/journeys.py).
+- **One look and wording (TSK-31)**, checked by tests/test_ux_standards.py and the journey checks:
+  - Dates, times, numbers and money only through the formatting block at the top of `app.js`: `dt()` "Sat 31 Oct,
+    18:40", `when()` (relative within a day), `day()`, `clock()`, `nf()` "1,234", `kn()`/`tok()` "4.2k", `usd()`,
+    `eur()` "€12.34", `gb()`, `dur()`, `fmtMs()`. No `toLocale…`, `Intl` or sliced ISO times anywhere else (a key or a
+    coordinate is marked `fmt-ok`).
+  - A card that stands for a page (its heading is the link) opens it on a tap anywhere: `data-href`.
+  - An empty state says what fills it and offers that action: `emptyState(text, action)`.
+  - Every `act(req, message)` says what happens next ("Started: its steps show here as they run"), or makes that
+    sentence from the answer (`(r) => …`); `null` only for a read whose answer shows in place.
 - **No truncated text** (root AGENTS.md, Truncation; APP-19):
   - Text wraps with `.wrap` and `overflow-wrap: anywhere`. Never use `text-overflow: ellipsis`, `line-clamp` or a
     `.slice()` of something the owner reads.

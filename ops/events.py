@@ -7,6 +7,8 @@ Sources (each one says when it last looked, what it found, or why it is off, on 
   local: Forgejo activity (the NAS) and new mail (only under the owner's Gmail read grant, every 5 minutes), both only
   while a rule asks for them; changes in the House (Home
   Assistant), new files in C:\\AI\\exports, schedules, finished tasks, and the missions' own event triggers
+  the calendar (TSK-33): the owner's ICS address (kept in /srv/ai/private, never shown whole), read every 15 minutes
+  while a rule asks for it; a rule fires a given time before or after an event (ops/ics.py reads its repeats)
   (Forgejo and GitHub are read, not called back: nothing may reach the PC from outside, CST-04.)
 
 A source's first look at something only records what is there (a baseline), so a new rule never fires on old items.
@@ -32,12 +34,17 @@ from pathlib import Path
 WEB_EVERY = 600                                  # seconds between web looks (one desk container run for every rule's subjects)
 LOCAL_EVERY = 60                                 # seconds between local looks
 MAIL_EVERY = 300                                 # seconds between looks at the inbox (a Gmail search each time)
-ASKED = ("forgejo", "mail")                      # looked at only while a rule asks for them, like the web (the owner's inbox above all)
+ASKED = ("forgejo", "mail", "calendar")          # looked at only while a rule asks for them, like the web (the owner's inbox above all)
+CAL_EVERY = 900                                  # seconds between reads of the calendar (its fire times are looked at every minute)
+CAL_WINDOW = 20 * 60                             # a fire time this long ago still fires (the runner may have been down a moment)
+CAL_FILE = Path("/srv/ai/private/calendar.json")  # the owner's ICS address: a secret link, outside the repository (mode 600)
+CAL_PARAM = re.compile(r"^(?:(\d{1,4}) before|start|end|(\d{1,4}) after)$")
 SOURCES = {"news": "news on a search", "breaking": "a breaking story on a subject", "feed": "a new item in an RSS/Atom feed",
            "github": "activity on a GitHub repository", "price": "a price move of a symbol", "filing": "a new SEC filing of a ticker",
            "forgejo": "activity on a Forgejo repository", "mail": "new mail (Gmail, under its read grant)",
            "house": "a change in the House", "file": "a new file in C:\\AI\\exports", "schedule": "a time",
-           "task": "a task that finished", "mission": "a mission's own event trigger"}
+           "task": "a task that finished", "mission": "a mission's own event trigger",
+           "calendar": "a calendar event (your ICS address, read only)"}
 WEB = ("news", "breaking", "feed", "github", "price", "filing")
 EXPORTS = Path("/srv/win-exports")
 STORY_SOURCES, STORY_MINUTES, STORY_FRESH_H = 3, 30, 3    # TSK-12: 3 publishers within 30 min; a story older than 3 h is not breaking
@@ -146,6 +153,9 @@ def save_rule(c, req):
         raise ValueError("give the US ticker")
     if src == "schedule" and not M.valid_schedule(param):
         raise ValueError("a schedule is daily HH:MM, weekdays HH:MM, weekly mon,thu HH:MM or every Nh")
+    if src == "calendar" and not CAL_PARAM.match(param):
+        raise ValueError("say when, as minutes before its start (60 before), at its start (start), at its end (end) or "
+                         "minutes after its end (15 after)")
     cooldown = min(max(int(req.get("cooldown_min") or 60), 0), 7 * 1440)
     row = (name, src, param, str(req.get("words") or "").strip(), cooldown, task, str(req.get("check") or "").strip())
     if req.get("id"):
@@ -161,7 +171,7 @@ def save_rule(c, req):
 def matches(rule, ev):
     if rule["source"] != ev["source"] or ev.get("baseline"):
         return False
-    if ev["source"] == "schedule":                     # a schedule event belongs to the one rule that set it
+    if ev["source"] in ("schedule", "calendar"):       # a schedule's or a calendar rule's event belongs to the rule that set it
         return ev.get("param") == f"rule {rule['id']}"
     if rule["param"] and rule["param"].lower() != (ev.get("param") or "").lower():
         if not (ev["source"] in ("forgejo", "house", "file", "task", "mission", "mail") and rule["param"].lower() in
@@ -427,6 +437,80 @@ def files(c, folder=None, ask=None, create=None):
     status("file", found=n)
 
 
+_cal = {"t": 0, "events": [], "error": None}
+
+
+def calendar_url():
+    try:
+        return json.loads(CAL_FILE.read_text()).get("url")
+    except (OSError, ValueError):
+        return None
+
+
+def calendar_host():
+    u = calendar_url()
+    return re.sub(r"^https?://([^/]+).*$", r"\1", u) if u else None
+
+
+def calendar(c, t=None, fetch=None, ask=None, create=None):
+    """TSK-33: each calendar rule fires once per event occurrence, its time before the start, at the start, at the end
+    or after the end; the event's summary is the title, its time and place the detail. Read, never written."""
+    import ics
+    rs = rules(c, "calendar")
+    if not rs:
+        return status("calendar", off="no rule asks for it")
+    url = calendar_url()
+    if not url:
+        return status("calendar", off="no calendar address yet: add it under Triggers → Sources")
+    t = t or now()
+    if fetch or time.time() - _cal["t"] >= CAL_EVERY:
+        _cal["t"] = time.time()
+        try:
+            if fetch:
+                text = fetch()
+            else:
+                import urllib.request
+                with urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": "aistack-calendar"}), timeout=20) as r:
+                    text = r.read(5_000_000).decode("utf-8", "replace")      # cap: api (a calendar file, 5 MB)
+            _cal["events"], _cal["error"] = ics.parse(text), None
+        except Exception as e:                       # the last good copy stays; the source says why
+            _cal["error"] = f"{type(e).__name__}: {str(e)[:120]}"  # cap: preview
+    if _cal["error"]:
+        status("calendar", error=f"{calendar_host()}: {_cal['error']}")
+    n = 0
+    for r in rs:
+        m = CAL_PARAM.match(r["param"])
+        if not m:
+            continue
+        before, after = int(m.group(1) or 0), int(m.group(2) or 0)
+        for o in ics.occurrences(_cal["events"], t - dt.timedelta(days=1), t + dt.timedelta(minutes=before) + dt.timedelta(days=1)):
+            at = (o["start"] - dt.timedelta(minutes=before) if m.group(1) or r["param"] == "start" else o["end"] + dt.timedelta(minutes=after))
+            if at <= t < at + dt.timedelta(seconds=CAL_WINDOW):
+                when = f"{o['start'].astimezone(t.tzinfo):%a %d %b %H:%M}–{o['end'].astimezone(t.tzinfo):%H:%M}"   # in the owner's time
+                n += bool(emit(c, "calendar", "event", f"{r['id']}|{o['uid']}|{o['start'].isoformat()}", o["summary"] or "(no title)", ask, create,
+                               param=f"rule {r['id']}", detail=" · ".join(x for x in (when, o["location"], o["description"][:500]) if x))[0])  # cap: preview
+    if not _cal["error"]:
+        status("calendar", found=n)
+
+
+def calendar_set(req):
+    """calendar_set / calendar_clear (the owner, in the app; never from the AI phone): the ICS address, kept private."""
+    if req["action"] == "calendar_clear":
+        CAL_FILE.unlink(missing_ok=True)
+        _cal.update(t=0, events=[], error=None)
+        return {"calendar": None}
+    url = str(req.get("url") or "").strip()
+    if not re.match(r"^https://[^\s/]+/\S+$", url) or len(url) > 2000:
+        raise ValueError("give the calendar's secret address in iCal format (https://…, often ending in .ics)")
+    CAL_FILE.parent.mkdir(parents=True, exist_ok=True)
+    tmp = CAL_FILE.with_suffix(".tmp")
+    tmp.write_text(json.dumps({"url": url, "set": iso()}))
+    tmp.chmod(0o600)
+    tmp.replace(CAL_FILE)
+    _cal.update(t=0, events=[], error=None)
+    return {"calendar": calendar_host()}
+
+
 DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
 
 
@@ -480,7 +564,7 @@ def tick(c):
         mail_due = "mail" in asked and t - _last["mail"] >= MAIL_EVERY
         if mail_due:
             _last["mail"] = t
-        for f in [schedules, house, files] + ([forgejo] if "forgejo" in asked else []) + ([mail] if mail_due else []):
+        for f in [schedules, house, files] + ([forgejo] if "forgejo" in asked else []) + ([mail] if mail_due else []) + ([calendar] if "calendar" in asked else []):
             try:
                 f(c)
             except Exception as e:                # one source's bug never stops the others; it is logged and shown
@@ -502,10 +586,12 @@ def worker():
         M.stop.wait(15)
 
 
-ACTIONS = {"rule_save", "rule_toggle", "rule_delete", "event_rate"}
+ACTIONS = {"rule_save", "rule_toggle", "rule_delete", "event_rate", "calendar_set", "calendar_clear"}
 
 
 def handle(req, c):
+    if req["action"] in ("calendar_set", "calendar_clear"):
+        return calendar_set(req)
     table(c)
     a = req["action"]
     if a == "rule_save":
@@ -531,4 +617,5 @@ def state(c):
     br = [dict(r) for r in c.execute("select id, ts, title, detail, url, param, rating from bus where source='breaking' order by id desc limit 20").fetchall()]  # cap: list
     rated = c.execute("select sum(rating=1), sum(rating=-1), count(*) from bus where source='breaking'").fetchone()
     return {"bus": {"sources": {s: {"what": SOURCES[s], **_status.get(s, {"off": "not looked at yet"})} for s in SOURCES}, "rules": rs, "events": evs,
+                    "calendar": calendar_host(),                     # TSK-33: only the host of the secret address
                     "breaking": br, "ratings": {"right": rated[0] or 0, "not_news": rated[1] or 0, "raised": rated[2] or 0}}}

@@ -40,7 +40,7 @@ private data. The coding agent works in a sandbox and can't deploy. Nothing reac
 | Tab | What you do there |
 |---|---|
 | **Home** | What needs you, what is running now, and a live feed of everything your agents produced; ask Hermes from the top |
-| **Agents** | one list of agents: **Yours** (your missions: create, run, pause, tune, read results) and **Housekeeping** (the crew); each opens a page with Now, History, Memory, Payoff and Settings. The row under the title shows them as a team: **Now**, **Timeline**, **Map**, **Chatroom**, **Team** and more |
+| **Agents** | one list of agents: **Yours** (your missions: create, run, pause, tune, read results) and **Housekeeping** (the crew); each opens a page with Now, History, Tasks, Memory, Results and Settings. Four views under the title: **Overview** (who works now, a map of who works with whom, every agent), **Activity**, **Team** (a page for every agent) and **Ideas** |
 | **Wiki** | Browse the knowledge your missions have built, as pages and as a graph |
 | **Code** | Your repositories with code graphs and code maps, the builder's work, reviews and deploys |
 | **Chat** | Talk to Hermes, your assistant. It can use every feature in this guide |

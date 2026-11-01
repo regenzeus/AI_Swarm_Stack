@@ -20,7 +20,10 @@ APPS = {"app": ("Mission Control (port 8090, behind `tailscale serve`)",
                 "(chat, the run record, the owner's phone and connection answers, push subscriptions, client errors)."),
         "rt_app": ("Run record ingest (port 8093, published to 127.0.0.1 only)",
                    "For the stack's own writers (the runner, Hermes' runtime plugin, Claude's hook). `/ingest` and "
-                   "`/problems` need `Authorization: Bearer` with Hermes' API key, which the app and these writers share.")}
+                   "`/problems` need `Authorization: Bearer` with Hermes' API key, which the app and these writers share."),
+        "voice_app": ("Voice gateway (port 8095, published to 127.0.0.1:11435 only)",
+                      "Ollama's API for Home Assistant's Ollama integration on the NAS (VOI-03, docs/HOME-VOICE.md). Every "
+                      "route but `/api/version` needs `Authorization: Bearer` with `VOICE_KEY`; with no key set, all refuse.")}
 
 
 def first(doc):

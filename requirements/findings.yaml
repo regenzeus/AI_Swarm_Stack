@@ -184,7 +184,8 @@ items:
     evidence: ["images/mail/mail.py:27-40,308 (pending/ and decisions/, no sweep)", "images/phone/phone.py sweep_orphans() (the phone's fix)"]
     affects: [CNX-06, SWM-19]
     recommendation: Port sweep_orphans() to the mail connector, or move both to the swarm's persistent waits (SWM-19).
-    status: open
+    status: fixed
+    resolved: "feat/reliability, 2026-11-01: images/mail/mail.py WAITING and sweep_orphans() (at the start and every status pass); tests/test_mail.py"
   - id: FND-15
     severity: low
     kind: drift
@@ -285,7 +286,8 @@ items:
     recommendation: Information-flow labels on every message, evidence entry and artifact, carried into whatever is
       derived from them and enforced by the Swarm service when it delivers (SWM-67); room:all and artifact search
       respect the labels.
-    status: open
+    status: fixed
+    resolved: "swarm phase 4 (2026-10-30): images/swarm sensitivity labels and the way-out rule (SWM-67); confirmed 2026-11-01 by tests/test_swarm_board.py::test_contact_policy_and_private_content and tests/test_swarm_ledger.py::test_private_artifacts_never_reach_an_agent_with_a_way_out"
   - id: FND-23
     severity: medium
     kind: contradiction
@@ -298,7 +300,8 @@ items:
     affects: [SWM-13]
     recommendation: A wake is a request in the runner's inbox; the runner checks it against the card's wake policy and
       budget and starts the unit (SWM-13 says so).
-    status: open
+    status: fixed
+    resolved: "swarm phase 4 (2026-10-30): a wake is a request in the runner's inbox, checked against the card's wake policy and budget (SWM-13); confirmed 2026-11-01 by tests/test_swarm_board.py::test_a_request_wakes_an_on_request_agent_within_its_budget"
   - id: FND-24
     severity: medium
     kind: incoherence
@@ -789,7 +792,8 @@ items:
     kind: incoherence
     affects: [SWM-16]
     recommendation: Make a repeated swarm_context in the same run answer from the opening, or drop the tool from runs that get the opening.
-    status: open
+    status: fixed
+    resolved: "night/w1, 2026-11-01: images/swarm/swarm.py answer() gives a repeated pack within 20 min as a short note (the runner's opening always built); MCP instructions say once; tests/test_swarm_service.py"
   - id: FND-64
     title: An old stall stayed on the board behind every later run's note
     finding: "Claude worker: stopped answering stayed open from 29 Oct 07:33 although the worker ran again; only a run
@@ -999,7 +1003,10 @@ items:
     affects: [MIS-11, MIS-21]
     recommendation: Give the scout the job board's search and full ads as tools, and a job-hunt briefing the board as a source.
     status: fixed
-    resolved: "feat/job-board, 2026-10-31: images/fetch/jobs.py, images/desk/desk.py from_jobs(), prompts/desk.md TOPIC_DRAFT; the job search run again"
+    resolved: "feat/job-board, 2026-10-31: images/fetch/jobs.py, images/desk/desk.py from_jobs(), prompts/desk.md TOPIC_DRAFT. The
+      re-run (mission run 55) still made 99 web searches and no job-board call, because the scout's brief did not name the
+      board; fix/now-card added it to prompts/scout.md BRIEF (replay 4/4 valid, judge 3-1) and replays of a standing brief
+      now bring their requests (ops/prompts.py task_of)"
   - id: FND-81
     title: The phase 1 commit broke most make targets and no check ran them
     finding: "The phase 1 commit (b08aa31, 2026-10-31) re-wrote the Makefile with the first space of 99 lines removed:
@@ -1014,3 +1021,231 @@ items:
     recommendation: Check every recipe's interpreter and the repo file it runs, without running the target.
     status: fixed
     resolved: "fix/makefile-python, 2026-10-31: Makefile; tests/test_repo_docs.py::test_every_make_recipe_calls_a_file_that_exists"
+  - id: FND-82
+    title: The running card did not open its mission and a long link widened it past the phone screen
+    finding: "On Home, the card of the running job search could not be tapped to open its mission. Its steps' findings
+      were shown as plain text with the markdown lost, and the step's text sat in a flex row without min-width: 0, so one
+      long job-posting link made the card, and the page, wider than the phone; the owner saw the text cut at both edges."
+    evidence: ["owner's screenshots, 2026-10-31 18:37 and 18:40 (Job report, deep research)", "app.css .steps li: display: flex; its text div had no min-width"]
+    severity: medium
+    kind: defect
+    affects: [APP-01]
+    recommendation: A card that stands for a page opens it on a tap; findings are folded markdown; flex text may shrink and wraps anywhere.
+    status: fixed
+    resolved: "fix/now-card, 2026-10-31: app.js stepsHtml(), runningCard(), the data-href tap; app.css .steps .sbody; tests/test_now_card.py"
+  - id: FND-83
+    title: A wiki could not be opened from its bubble, its delete was hidden, and nothing in a wiki could be corrected
+    finding: "On the Wiki tab a tap on a bubble only showed a card under the map, with Open in it, so the owner thought
+      the bubbles could not be tapped. Delete wiki existed but sat in the About tab and only for an agent's wiki. No wiki
+      and no page offered a way to correct a mistake or ask for more research; the only way was a new mission. On Home,
+      Ask looked like a link beside the Do it button."
+    evidence: ["owner's screenshots, 2026-11-01 01:27 to 01:31 (the Wiki tab, Memory proof wiki, page LEU, Home)"]
+    severity: medium
+    kind: defect
+    affects: [MEM-09, TSK-34]
+    recommendation: A bubble opens its wiki; a wiki's actions sit under its name; every wiki and page has Improve /
+      Correct or research, which becomes a task; Ask is a button.
+    status: fixed
+    resolved: "feat/wiki-refine, 2026-11-01: app.js wikiMap, vWiki (wacts), refineForm/bindRefine, wikiPage; tasks.wiki_target,
+      wiki_plan; conductor.run_wiki; mission_extras.compile_into; app.css .btn.ask"
+  - id: FND-84
+    title: The first run started by an event deadlocked the Conductor
+    finding: "The Conductor's worker ticks while holding its lock, and start() takes the same lock to open a run. The lock
+      was a plain threading.Lock, so the first occurrence started from the worker (an event's, or a schedule's) blocked
+      the worker for good: the trigger proof's task #82 stayed running with no run, and no plan task could move until a
+      restart. The tests called tick() without the lock, so they never saw it. The task was also marked running before
+      its run existed, so a stop in between left it running with nothing to run."
+    evidence: ["2026-11-01 01:55: trigger proof, task #82 status running, no task_occ row, no Conductor log line after the event", "ops/conductor.py: lock = threading.Lock(); worker(): with lock: tick(c); start(): with lock:"]
+    severity: high
+    kind: defect
+    affects: [TSK-21, TSK-22]
+    recommendation: A re-entrant lock; the run first, then the claim; recover() puts a claimed but never started task back to waiting; a test ticks under the lock.
+    status: fixed
+    resolved: "fix/conductor-lock, 2026-11-01: ops/conductor.py lock (RLock), tick(), recover(); tests/test_conductor.py"
+  - id: FND-85
+    title: A briefing run under the Conductor did not grow its topic wiki
+    finding: "Since phase 6b a briefing task files and delivers its report through the Conductor's desk steps, but only
+      a briefing mission's run compiled the report into the topic's wiki, so a briefing task's wiki stopped growing; and
+      the Wiki tab listed only missions' wikis, so a briefing task without a mission had no wiki in it."
+    evidence: ["ops/missions.py run_briefing(): compile_wiki after delivery; ops/conductor.py run_deliver(): none", "images/mission-control/server.py wiki_roots(): missions only"]
+    severity: medium
+    kind: defect
+    affects: [TSK-22]
+    recommendation: The delivery step compiles the report into topics/<slug>/wiki on the desk's key unless that wiki was deleted; the wiki list and the summaries take a task's topic.
+    status: fixed
+    resolved: "feat/reliability, 2026-11-01: ops/conductor.py topic_wiki(); server.py wiki_roots(); ops/wikis.py roots(); tests/test_conductor.py"
+
+  - id: FND-86
+    title: The first journey check found a run page wider than the phone and empty states with no way on
+    finding: "The first run of the journey checks (TSK-32) opened 67 screens at 375 px. A run's log stretched its page to
+      2,546 px, because a long result in the log's grid column never shrank; the shared-item page and a run with no
+      record said so with no action to go on. The UX pass (TSK-31) also found the shopping cards showing prices the German
+      way (12,34 €) and about 30 places formatting dates and numbers by hand, and 40 actions whose message did not say
+      what happens next or said nothing."
+    evidence: ["ops/journeys.py routes, 1 Nov 2026: #/live/mission-run:58 scrolls sideways by 129 px from div.lgd's grid column", "app.js vShare(), vLive(): .empty without an action", "shop.js eur(): replace('.', ',')"]
+    severity: medium
+    kind: defect
+    affects: [TSK-31, TSK-32]
+    recommendation: The log's grid column may shrink and its rows wrap; every empty state is emptyState(text, action); dates, numbers and money go through the formatting helpers only; every act() call says what happens next. The journey checks run nightly so the next one is found the same night.
+    status: fixed
+    resolved: "feat/ux-journeys, 2026-11-01: app.css .lgd; app.js formatting block, emptyState(), act() messages; shop.js; tests/test_ux_standards.py; ops/journeys.py"
+  - id: FND-87
+    title: The Alexa sign-in in Home Assistant spun forever
+    finding: "Adding Alexa Devices in Home Assistant 2026.10.4 never finished: its library, aioamazondevices 16.3.2,
+      expects Amazon's old sign-in form with e-mail and password together, while Amazon now asks for the e-mail first
+      on a form that posts to a relative /ax/claim address; the request failed inside the library and the setup showed
+      no error. Upstream fixed it (aioamazondevices #1194, 16.9.1 and later); Home Assistant ships it with 2026.11."
+    evidence: ["homeassistant container on the NAS, 1 Nov 2026: 2026.10.4 with aioamazondevices 16.3.2", "aioamazondevices issues #1188 and #1236 (the same version pair, closed: the fix ships in 2026.11)"]
+    severity: medium
+    kind: defect
+    affects: [HSE-05]
+    recommendation: Run Home Assistant 2026.11.0b2 (aioamazondevices 17.2.3) until 2026.11.0 is out, then pin the release; the config folder was backed up on the NAS before the switch.
+    status: fixed
+    resolved: "fix/ha-alexa-login, 2026-11-01: nas/homeassistant/compose.yaml pins 2026.11.0b2; deployed with make ha-deploy; the sign-in form opens on it. The owner's own sign-in with Amazon is the last proof."
+  - id: FND-88
+    title: Requests that came together mixed up their reads of the run record
+    finding: "Mission Control's run record (runrecord.py) kept one SQLite connection for all of its request threads. Two
+      requests at once, such as an agent's page asking for its runs and its room, could interleave on it: sqlite's 'bad
+      parameter or other API misuse' or a run read back as None, an HTTP 500 the page showed as an error. The journey
+      check found it on every new agent page; a test with eight threads reading while one writes failed on it 3 times in 3."
+    evidence: ["ops/journeys.py routes, 1 Nov 2026: HTTP 500 /api/swarm/timeline and /api/swarm/room on #/swarm/agent/*", "mission-control log: sqlite3.InterfaceError at runrecord.name_of; AttributeError: 'NoneType' object has no attribute 'startswith'"]
+    severity: high
+    kind: defect
+    affects: [OBS-01]
+    recommendation: One connection per thread; writes stay behind the one lock.
+    status: fixed
+    resolved: "fix/agents-one-page, 2026-11-01: images/mission-control/runrecord.py db(); tests/test_runtime.py"
+  - id: FND-89
+    title: The Chatroom opened empty from the map and stayed empty until a reload
+    finding: "A row on the Agents map opened the Chatroom on a conversation id (calls:mission+scout) that none of the room's
+      lines carry, so it showed nothing; the filter was kept in the page's memory, so the Chatroom tab stayed empty on later
+      visits until a reload. The map itself was a list of rows, the team's cards opened nothing and team agents had no page."
+    evidence: ["the owner's screenshots, 1 Nov 2026 09:14-09:18", "/api/swarm/room?hours=168: 699 of 705 lines without ref.context"]
+    severity: medium
+    kind: defect
+    affects: [SWM-104, SWM-107]
+    recommendation: A pair is two picked agents; Activity's filters come from the address on every visit; the map is agents as dots and lines that open Activity; every team agent has one page.
+    status: fixed
+    resolved: "fix/agents-one-page, 2026-11-01: swarm.js swActivityFromUrl(), swMapCard(), swAgentPanel(); app.js AGENT_VIEWS; tests/test_swarm_views.py"
+  - id: FND-90
+    title: The first trial failed in 3 minutes on a builder step that only planned
+    finding: "Trial semver (1 Nov 2026, task #88): the intake split the coding work into three builder steps (read the
+      spec and plan; implement with tests; run the tests and fix). Each builder step is a build, a build that commits
+      nothing fails, so the first step failed although the builder mapped every rule of the specification to tests and
+      named its traps; its retry (build #12) did the same and the task failed. The third step would have failed the same
+      way whenever its tests already passed. The harness also lost the builds' numbers (a failed step's retry keeps only
+      the newest) and reported none."
+    evidence: ["/srv/vault/trials/semver/semver-20261101-1128.md", "builds #11 and #12: 'the builder made no commit'", "task_steps of task 88"]
+    severity: high
+    kind: defect
+    affects: [TRL-10, TRL-06]
+    recommendation: Consecutive builder steps become one build with stages; the harness finds a trial's builds by its repository.
+    status: fixed
+    resolved: "feat/trials, 2026-11-01: ops/conductor.py fold_builders(); ops/trials.py build_ids(repo); tests/test_conductor.py"
+  - id: FND-91
+    title: A plan's build also shows as a task of its own
+    finding: "The trial's build #11 appeared on the Tasks board as task #89 (source door) beside its plan's task #88:
+      the board's sync registers every build as a door task, also one a plan's build step started."
+    evidence: ["tasks 88 (trial:semver, plan) and 89 (door, build 11), 1 Nov 2026"]
+    severity: low
+    kind: defect
+    affects: [TRL-05]
+    recommendation: The sync leaves out a build that a task's build step started (task_steps.resume names it).
+    status: fixed
+    resolved: "feat/trials-10b, 2026-11-01: ops/conductor.py step_refs; ops/tasks.py discover() leaves them out; tests/test_conductor.py"
+  - id: FND-92
+    title: The model judge said "not met" on code that passed every case
+    finding: "Trial semver, second run (task #91, 1 Nov 2026): the delivered library passed 351 of 351 answer-key cases,
+      yet the model judge rated the run not met: it read only the builder's summary, which named 114 passing tests but did
+      not list a test per rule, and judged the summary, not the code. A judge that reads text cannot tell working code
+      from a modest report."
+    evidence: ["/srv/vault/trials/semver/semver-20261101-1144.md", "task_occ of task 91: verdict not met"]
+    severity: medium
+    kind: defect
+    affects: [TRL-03, TSK-17]
+    recommendation: For coding work the judge runs the checks (the build's tests, a trial's scorer) and reads their results;
+      a model judges only what no program can (phase 10b). The trial report flags every disagreement meanwhile.
+    status: fixed
+    resolved: "night/w1, 2026-11-01: ops/staffing.py evidence_of() puts each build's checks, the check steps and the opened pages after the answer; prompts/shared.md TASK_JUDGE trusts them; tests/test_staffing.py"
+  - id: FND-93
+    title: The card guard took a gate result's file name for a card number
+    finding: "From 31 Oct 2026 14:13 every requirements sync to the swarm was refused (1,117 times in a day) as carrying a
+      payment card: TSK-03 and TSK-06 name gate results like eval/results/20261031-140852-tasks-gate.json, and the
+      14 digits of that stamp pass the Luhn check. The swarm's copy of the requirements stopped updating, and the Checker
+      failed every hour on the refusal count."
+    evidence: ["swarm.db refusals: actor system, op requirements_sync, 1,117 rows from 2026-10-31 14:13", "journalctl crew-checker.service, 1 Nov 2026"]
+    severity: medium
+    kind: defect
+    affects: [SWM-68]
+    recommendation: A card is one run of 13 to 19 digits or groups of 3 to 6 digits; a date-time stamp is neither. The
+      Checker's alert names the operation and reason, and goes quiet once no refusal came for 2 hours (it otherwise kept
+      failing for a day after the fix).
+    status: fixed
+    resolved: "fix/timeline-card-guard and fix/checker-refusals, 2026-11-01: images/swarm/ledger.py CARD_RE and
+      refusal_causes; ops/checker.py signals; tests/test_swarm_ledger.py, tests/test_checker.py"
+  - id: FND-94
+    title: A repository with only a tests folder ran no checks and passed
+    finding: "The builder's default check ran `ls tests test_*.py */test_*.py`, which fails when any one of them is
+      missing, so a repository with a tests folder but no test_*.py at its top said \"no automatic checks in this repo\"
+      and passed: trial semver's 114 tests never ran in the stack, and the Conductor's fix loop (TRL-08) could never fire
+      on a trial's code."
+    evidence: ["builds.checks of build #13 (task #91), 1 Nov 2026: \"no automatic checks in this repo / ALL CHECKS PASSED\""]
+    severity: high
+    kind: defect
+    affects: [BLD-24, TRL-08, TRL-03]
+    recommendation: Find tests as pytest does; run pytest from the sandbox's tools.
+    status: fixed
+    resolved: "night/w1, 2026-11-01: ops/builds.py DEFAULT_CHECK; tests/test_builds.py"
+  - id: FND-95
+    title: A page that loaded slowly was drawn over the page the owner had moved to
+    finding: "The owner saw the Wiki page with the Agents tab lit: the wiki index waited for its list, the owner tapped
+      Agents meanwhile, and the wiki was drawn over the Agents page when its list came. Chat, Share and the AI phone's page
+      drew the same way after a wait."
+    evidence: ["owner's screenshot, 1 Nov 2026 21:04", "app.js vWiki: await api('/api/wiki/roots') then view.innerHTML, no check"]
+    severity: medium
+    kind: defect
+    affects: [APP-35]
+    recommendation: Every page that waits for data checks it is still the page before it draws.
+    status: fixed
+    resolved: "night/w1, 2026-11-01: app.js vWiki, vShare, vChat, vPhone; tests/test_app_routes.py"
+  - id: FND-96
+    title: The Agents page still jumped up while the owner read it
+    finding: "After the fix of APP-32 the Agents page still jumped: each redraw centred its view tabs (Overview, Activity,
+      Team, Ideas) with scrollIntoView, which also scrolls the page itself to the tab row when the owner has scrolled past
+      it. Measured in the browser: 1400 px to 126 px on a redraw."
+    evidence: ["owner, 1 Nov 2026: Scrolling jump issue still present on agents page", "app.js agentViews()"]
+    severity: medium
+    kind: defect
+    affects: [APP-32]
+    recommendation: Move only the tab row (its scrollLeft).
+    status: fixed
+    resolved: "night/w1, 2026-11-01: app.js agentViews(); tests/test_app_routes.py"
+  - id: FND-97
+    title: A task its agent could not do was reported done
+    finding: "Task #104 (install Reddit on the AI phone and find a post) went to the mission agent, which has no phone
+      tools: the intake saw each agent's purpose but not what it can reach. Both steps answered that they were blocked;
+      the Conductor counted them done, the judge rated the result met (its definition of done allowed naming a blocker),
+      and the owner was told the task was done. Its notification linked to the task board, where a finished task sat in a
+      closed section, so the link opened another task."
+    evidence: ["task_steps of task 104 (outputs: Step 1 blocked, Step 2 blocked)", "owner's screenshot, 1 Nov 2026 20:59"]
+    severity: high
+    kind: defect
+    affects: [TSK-35, APP-35, TSK-17]
+    recommendation: The intake sees each agent's tools; a step that says it is blocked fails its task with the reason;
+      every task link opens the task's own page.
+    status: fixed
+    resolved: "night/w1, 2026-11-01: ops/tasks.py cards(), ops/conductor.py BLOCKED, prompts/shared.md TASK_STEP, task.js; tests/test_conductor.py, tests/test_tasks.py, tests/test_task_page.py"
+  - id: FND-98
+    title: A failed task's page showed only its error
+    finding: "The task page took the task's own error field for an error of the API and drew only that line, so a failed
+      task (the ones that most need explaining) had no answer, steps or agents on its page. Found the same evening by
+      the route journey (#/task/88, an empty state with no action)."
+    evidence: ["ops/journeys.py routes, 2026-11-01 22:5x: #/task/88"]
+    severity: medium
+    kind: defect
+    affects: [APP-35]
+    recommendation: An API error has no task id; a task's own error is drawn as its banner. The not-found state links back
+      to all tasks.
+    status: fixed
+    resolved: "night/w4, 2026-11-01: task.js vTask; the route journey (crew-journeys, nightly) checks it"
+

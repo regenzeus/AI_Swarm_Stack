@@ -3,8 +3,9 @@ definition of done, budget, deadline, autonomy and rhythm (once, on a schedule, 
 
 - A task given in one sentence (the app's composer, request task_create) goes to the intake agent, which writes its
   specification: a checkable definition of done, the plan with the agent for each step and why, and at most two
-  questions. Then it is handed to the door that does that kind of work: a mission (research, analysis, watching,
-  briefings, shopping; once, scheduled or on an event), a build (coding) or a Claude task (a question about code).
+  questions. Then the Conductor runs its plan (ops/conductor.py, TSK-21): once, on a schedule or each time its trigger
+  fires, a briefing as the Topic Desk's plan, a price watch as checks of its shopping agent, coding as a build step.
+  A plan the Conductor cannot run goes to its door: a mission, a build (coding) or a Claude task (a question about code).
 - Work started at a door directly (a new mission, build, Claude task or chat) becomes a task too (sync), so the board
   shows every piece of work of the last 7 days.
 - The door keeps its own approvals (deploy taps, purchases, the AI phone); the task's autonomy decides only whether
@@ -30,13 +31,14 @@ KINDS = {"coding": "build", "code_question": "claude", "research": "mission", "a
 MISSION_TYPE = {"briefing": "briefing", "shopping": "shopping"}           # every other mission kind is a task mission
 EFFORTS = ("light", "standard", "deep")
 AUTONOMY = ("auto", "ask")                        # auto: start when planned (TSK-20's proposal); ask: the plan waits for the owner
+RUNS = 10                                          # runs of a recurring task its card lists (newest first)
 OPEN = ("intake", "needs_answer", "waiting_approval", "running", "waiting_owner", "scheduled", "after")
 DONE_OF = {"briefing": "Each briefing is delivered with the sources it used", "task": "The report answers the goal, with its sources",
            "shopping": "A proposal within the owner's limits, or a price alert", "cleanup": "A ranked cleanup report the owner can act on",
            "build": "The change is merged and deployed with its checks passing", "claude": "The question is answered",
            "chat": "The question is answered in the chat"}
 QUESTIONS = 2                                     # TSK-03: at most two questions, only when the goal cannot be planned without them
-STEPS = 6                                         # a plan of more steps is a task for the Conductor's plan graph (phase 2)
+STEPS = 8                                         # cap: list (a plan of more steps is a task for the Conductor's plan graph; 8 holds the spec roles, TRL-07)
 M = None                                          # ops/missions.py, set by its main()
 lock = threading.Lock()
 
@@ -105,14 +107,15 @@ def discover(c, missions, now_ts=None):
     """New missions, builds, Claude tasks and chats of the last 7 days that no task holds yet become tasks."""
     now_ts = now_ts or time.time()
     for m in missions.values():
-        if _recent(m.get("created"), now_ts):
+        if _recent(m.get("created"), now_ts) and not m.get("task"):        # a task's own shopping agent is that task
             register(c, "mission", m["slug"], m.get("goal") or m["title"], m["title"], done=[DONE_OF.get(m.get("type"), DONE_OF["task"])],
                      rhythm=rhythm_of_mission(m), created=m.get("created"))
+    held = {(r["kind"], r["ref"]) for r in c.execute("select kind, ref from step_refs")} if _has(c, "step_refs") else set()   # FND-91
     for b in c.execute("select id, title, description, created from builds").fetchall() if _has(c, "builds") else []:
-        if _recent(b["created"], now_ts):
+        if _recent(b["created"], now_ts) and ("build", str(b["id"])) not in held:
             register(c, "build", b["id"], b["description"] or b["title"], b["title"], done=[DONE_OF["build"]], created=b["created"])
     for q in c.execute("select id, question, created from claude_tasks").fetchall() if _has(c, "claude_tasks") else []:
-        if _recent(q["created"], now_ts):
+        if _recent(q["created"], now_ts) and ("claude", str(q["id"])) not in held:
             register(c, "claude", q["id"], q["question"], q["question"][:80], done=[DONE_OF["claude"]], created=q["created"])  # cap: id
     for f in CHATS.glob("*.json") if CHATS.exists() else []:
         if now_ts - f.stat().st_mtime < WINDOW and not c.execute("select 1 from tasks where door='chat' and ref=?", (f.stem,)).fetchone():
@@ -169,7 +172,10 @@ def sync(c, missions):
     with lock:
         discover(c, missions)
         for r in c.execute(f"select id from tasks where status in ({','.join('?' * len(OPEN))})", OPEN).fetchall():
-            t = row(c, r["id"])
+            try:
+                t = row(c, r["id"])
+            except ValueError:                         # a dispatch earlier in this pass removed it (its door's duplicate)
+                continue
             if t["status"] == "after":
                 a = c.execute("select status from tasks where id=?", (t["after"],)).fetchone()
                 if a and a["status"] == "done":
@@ -196,6 +202,16 @@ def preset_of(req):
         p["kind"] = req["kind"]
     if req.get("effort") in EFFORTS:
         p["effort"] = req["effort"]
+    import conductor as CD
+    cards = CD.cards()
+    picked = [a for a in dict.fromkeys(str(x) for x in req.get("agents") or []) if a in cards and CD.runs_steps(cards[a])][:6]  # cap: list
+    if picked:                                         # TSK-30: the owner's own agents for this task
+        p["agents"] = picked
+    if req.get("model"):
+        import prices as PR
+        if req["model"] not in PR.load().get("models", {}):
+            raise ValueError(f"{req['model']!r} is no model the gateway serves")
+        p["model"] = req["model"]
     if re.fullmatch(r"\d{4}-\d{2}-\d{2}", str(req.get("deadline") or "")):
         p["deadline"] = req["deadline"]
     r = req.get("rhythm") or {}
@@ -205,6 +221,9 @@ def preset_of(req):
         p["rhythm"] = {"type": "once"}
     elif r.get("type") == "after" and str(r.get("task", "")).isdigit():
         p["rhythm"] = {"type": "after", "task": int(r["task"])}
+    b = req.get("budget") or {}                       # TRL-11: hours and tokens the task's run may use
+    if isinstance(b, dict) and (b.get("hours") or b.get("tokens")):
+        p["budget"] = {k: v for k, v in (("hours", min(float(b.get("hours") or 0), 24.0)), ("tokens", int(b.get("tokens") or 0))) if v}
     done = [d.strip() for d in req.get("done") or [] if str(d).strip()]
     if done:
         p["done"] = done[:8]                                  # cap: list (a definition of done of more points is a plan)
@@ -227,7 +246,12 @@ def create(req, c):
     if len(text) > 4000:
         raise ValueError(f"the task is {len(text):,} characters; keep it under 4,000 and put the rest in a document")
     autonomy = req.get("autonomy") if req.get("autonomy") in AUTONOMY else "auto"
+    if str(req.get("source") or "").startswith("a2a:"):     # TSK-19: an outside agent's task always waits for the owner's OK
+        autonomy = "ask"
     p = preset_of(req)
+    w = wiki_target(req["wiki"]) if req.get("wiki") else None
+    if w:                                              # a refinement: the intake reads which wiki (and page) it is about
+        text += f" (On the wiki “{w['title']}”" + (f", its page “{w['page_title']}”" if w.get("page") else "") + ": what is found is written into it.)"
     after = p.get("rhythm", {}).get("task") if p.get("rhythm", {}).get("type") == "after" else None
     if after and not c.execute("select 1 from tasks where id=?", (after,)).fetchone():
         raise ValueError(f"there is no task #{after} to wait for")
@@ -235,16 +259,58 @@ def create(req, c):
     cur = c.execute("insert into tasks (text, title, goal, kind, door, ref, done, effort, deadline, autonomy, rhythm, after, spec, questions, "
                     "answers, status, source, created, updated) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                     (text, text[:80], text, p.get("kind"), None, None, json.dumps(p.get("done") or []), p.get("effort", "standard"),  # cap: id
-                     p.get("deadline"), autonomy, json.dumps(p.get("rhythm") or {"type": "once"}), after, json.dumps({"preset": p}),
+                     p.get("deadline"), autonomy, json.dumps(p.get("rhythm") or {"type": "once"}), after,
+                     json.dumps({"preset": p, **({"wiki": w} if w else {})}),
                      "[]", "[]", "intake", req.get("source") or "app", t, t))
     c.commit()
     M.event("task", "", f"Task #{cur.lastrowid}: {text[:120]}", title="Tasks")  # cap: list (the feed line; the task holds all of it)
     return {"task": cur.lastrowid}
 
 
+def wiki_target(w):
+    """A refinement's wiki (and page): one that exists and still grows -> {root, title, page, page_title}."""
+    import wikis as W
+    roots = dict(W.roots())
+    root, page = str(w.get("root") or ""), str(w.get("page") or "").strip()
+    if root not in roots:
+        raise ValueError(f"there is no wiki {root!r} to improve")
+    out = {"root": root, "title": roots[root]}
+    if page:
+        f = M.VAULT / root / f"{page}.md"
+        if not re.fullmatch(r"[a-z0-9][a-z0-9_./-]{0,120}", page) or ".." in page or not f.is_file():
+            raise ValueError(f"the wiki {roots[root]!r} has no page {page!r}")
+        meta, _ = M.split_front(f.read_text(errors="replace"))
+        out.update(page=page, page_title=str(meta.get("title") or page.split("/")[-1]))
+    return out
+
+
+def wiki_plan(c, t):
+    """A refinement task (TSK-34): the intake's research steps, then the wiki's writer folds what they found into the
+    wiki (the page first), correcting what the findings contradict and keeping the superseded facts."""
+    plan, w = list(t["spec"].get("plan") or []), t["spec"]["wiki"]
+    if not plan:
+        plan = [{"step": "Research what the owner asked", "agent": "scout", "why": "reads the web", "after": []}]
+    leaves = [i for i in range(1, len(plan) + 1) if not any(i in (p.get("after") or []) for p in plan)]
+    plan.append({"step": f"Write it into the wiki “{w['title']}”" + (f", page “{w['page_title']}” first" if w.get("page") else ""),
+                 "agent": "mission", "harness": "wiki", "after": leaves,
+                 "why": "the wiki's writer folds the findings in: corrects what they contradict, keeps the old fact as superseded, adds what is new"})
+    s = {**t["spec"], "plan": plan, "intake_plan": t["spec"].get("intake_plan") or t["spec"].get("plan") or []}
+    put(c, t["id"], spec=s)
+    return row(c, t["id"])
+
+
+TOOL_WORDS = {"phone": "the AI phone (open and install apps, tap, type, read the screen)", "house": "Home Assistant (lights, speakers)",
+              "mail": "e-mail", "research": "web research", "qmd": "the vault's search", "browser": "a web browser (shops)",
+              "fetch": "reading web pages", "jobs": "the federal job board", "claude": "Claude Code questions about code",
+              "graphify": "the code graph", "missions": "the stack's missions and builds"}
+
+
 def cards():
+    """Each agent with what it does and what it can reach, so the plan gives a step to an agent that can do it (task
+    #104 went to an agent without the phone, 1 Nov 2026)."""
     reg = yaml.safe_load((ROOT / "config/agents.yaml").read_text())
-    return {a["id"]: a["purpose"] for a in reg["agents"]}
+    return {a["id"]: a["purpose"] + (f" Its tools: {'; '.join(TOOL_WORDS[x] for x in a.get('tools') or [] if x in TOOL_WORDS)}."
+                                     if any(x in TOOL_WORDS for x in a.get("tools") or []) else "") for a in reg["agents"]}
 
 
 def intake_prompt(t, repos, agents):
@@ -268,10 +334,25 @@ def validate(spec, preset, repos, agents):
     for st in (s.get("plan") or [])[:STEPS]:
         a = str(st.get("agent", ""))
         named = a and a not in agents and a != "new"   # TSK-15: an agent the intake names that does not exist = no agent fits
-        plan.append({"step": str(st.get("step", "")).strip(), "agent": a if a in agents or a == "new" else "new" if named else "mission",
+        lp = st.get("loop") if isinstance(st.get("loop"), dict) else None   # TRL-08: a check's fix loop, checked by the graph
+        plan.append({**({"loop": {"to": lp.get("to"), "max": lp.get("max", 2)}} if lp else {}),
+                     "step": str(st.get("step", "")).strip(), "agent": a if a in agents or a == "new" else "new" if named else "mission",
                      "after": [int(x) for x in st.get("after") or [] if str(x).isdigit()],
+                     **({"each": [str(x).strip() for x in st["each"] if str(x).strip()][:8]} if st.get("each") else {}),   # cap: list (TSK-22's fan-out, as CD.EACH)
                      "why": str(st.get("why", "")).strip() + (f" (the intake named {a!r}, which is no agent: a temporary agent is written for it)" if named
                                                               else "" if a in agents or a == "new" else " (no agent named: the mission agent takes it)")})
+    chosen = preset.get("agents") or []
+    for i, st in enumerate(plan):                      # TSK-30: the owner's agents do the steps; the plan says so
+        if not chosen:
+            break
+        if st["agent"] in chosen:
+            st["why"] += " (your choice)"
+        else:
+            was, st["agent"] = st["agent"], chosen[i % len(chosen)]
+            st["why"] = f"{st['why']} (your choice: {st['agent']} instead of {was})".strip()
+    if preset.get("model"):
+        for st in plan:
+            st["model"] = preset["model"]
     if not plan and not qs:
         raise ValueError("the intake wrote no plan")
     r = s.get("rhythm") or {"type": "once"}
@@ -325,43 +406,115 @@ def intake(c, tid, ask=None):
         dispatch(c, row(c, tid))
 
 
-PLAN_KINDS = ("research", "analysis", "errand")          # one-off work the Conductor can run as a plan graph (phase 2)
-
-
 def conducted(t):
-    """TSK-05: a one-off research, analysis or errand task whose plan uses two or more agents that can do a step runs
-    as a plan graph under the Conductor; every other task goes to its door."""
+    """TSK-21: every planned task runs as a plan graph under the Conductor, one step or many, once, on a schedule or on
+    an event; coding work needs a builder step to change code; a briefing gets the desk's plan (TSK-22) and a price
+    watch its shopping agent's check. A plan with an agent that cannot do a step goes to its door."""
     import conductor as CD
+    if t["rhythm"].get("type") not in ("once", "after", "schedule", "event"):
+        return False
+    if t["kind"] in ("briefing", "shopping") or t["spec"].get("wiki"):
+        return True
     plan, agents = t["spec"].get("plan") or [], CD.cards()
-    return (t["kind"] in PLAN_KINDS and t["rhythm"].get("type") in ("once", "after") and len(plan) >= 2
-            and len({p["agent"] for p in plan}) >= 2 and all(p["agent"] == CD.NEW or (p["agent"] in agents and CD.runs_steps(agents[p["agent"]])) for p in plan))
+    return (bool(plan) and (t["kind"] != "coding" or any(p["agent"] == CD.BUILDER for p in plan))
+            and all(p["agent"] == CD.NEW or (p["agent"] in agents and CD.runs_steps(agents[p["agent"]])) for p in plan))
+
+
+def briefing_brief(t):
+    """FND-77: the desk drafts its writer's notes from this; a plan for agents only confused it."""
+    s = t["spec"]
+    return (f"{t['goal']}\n\nWhat each report must deliver:\n" + "\n".join(f"- {d}" for d in t["done"])
+            + ("\n\nThe owner's answers:\n" + "\n".join(f"- {q}: {a}" for q, a in s["answered"]) if s.get("answered") else "")
+            + "\n\nMission Control runs the schedule and delivers each report; the notes are about the content only.")
+
+
+def door_brief(t):
+    """What a door (a mission, a build, a Claude task) is given: the goal, the definition of done, the plan, the answers."""
+    s = t["spec"]
+    return (f"{t['goal']}\n\nDefinition of done:\n" + "\n".join(f"- {d}" for d in t["done"])
+            + ("\n\nPlan:\n" + "\n".join(f"{i + 1}. {p['step']} ({p['agent']}: {p['why']})" for i, p in enumerate(s.get("plan") or []))
+               if s.get("plan") else "")
+            + ("\n\nThe owner's answers:\n" + "\n".join(f"- {q}: {a}" for q, a in s["answered"]) if s.get("answered") else "")
+            + (f"\n\nDeadline: {t['deadline']}" if t["deadline"] else "") + f"\n\n(Task #{t['id']} in Mission Control)")
+
+
+def shop_agent(c, t, deliver):
+    """A price watch's shopping agent (ops/shopping.py: its limits, proposals, purchase approvals, order tracking), made
+    once and held by the task: the Conductor runs its checks, at once, on the schedule or on an event, and when a waiting
+    proposal reaches its price or date; buying and following an order stay the agent's own runs (TSK-21)."""
+    import conductor as CD
+    s = t["spec"]
+    if not s.get("shop"):
+        res = M.handle({"action": "create", "type": "shopping", "title": t["title"], "description": door_brief(t), "schedule": "manual",
+                        "triggers": [], "once": False, "run_now": False, "deliver": deliver, "task": t["id"]}, M.load_missions(), c)
+        m = M.load_missions().get(res.get("slug") or "")
+        if not m or m.get("task") != t["id"]:          # a shopping agent of the same name, made minutes ago, is not this one
+            raise ValueError(f"a shopping agent “{t['title']}” was made in the last 30 minutes: give the task another title")
+        s = {**s, "shop": m["slug"]}
+    s = {**s, "plan": CD.shop_plan(t), "intake_plan": s.get("intake_plan") or s.get("plan") or [], "deliver": deliver}
+    put(c, t["id"], spec=s)
+    return row(c, t["id"])
+
+
+def watchers(c):
+    """The event-triggered tasks under the Conductor, watched with the missions' triggers (ops/mission_extras.py)."""
+    table(c)
+    out = []
+    for r in c.execute("select id from tasks where door='plan' and status in ('scheduled', 'running')").fetchall():
+        t = row(c, r["id"])
+        if t["rhythm"].get("type") == "event" and t["rhythm"].get("triggers"):
+            out.append({"slug": f"task-{t['id']}", "title": t["title"], "task": t["id"], "status": "active", "triggers": t["rhythm"]["triggers"]})
+    return out
+
+
+def briefing_topic(c, t, deliver):
+    """A briefing task's topic (topics/<slug>/TOPIC.md, drafted and its sources checked once) and the desk's plan, which
+    replaces the intake's: the plan the owner sees is the plan that runs (TSK-22)."""
+    import conductor as CD
+    s = t["spec"]
+    if not s.get("topic"):
+        slug, n = M.slugify(t["title"], M.load_missions()), 2
+        while (M.VAULT / "topics" / slug).exists():      # a topic of another task or mission keeps its name
+            slug, n = f"{M.slugify(t['title'], {})}-{n}", n + 1
+        M.create_briefing({"slug": slug, "schedule": t["rhythm"].get("schedule") or "manual"}, {"title": t["title"], "description": briefing_brief(t)})
+        M.vault_commit([f"topics/{slug}"], f"task {t['id']}: the briefing's topic {slug}")
+        s = {**s, "topic": slug}
+    (meta, _), _ = M.topic_of({"slug": s["topic"], "topic": s["topic"]})
+    plan = CD.alert_plan(t) if t["rhythm"].get("type") == "event" else CD.briefing_plan(t, meta)     # on an event: an alert
+    s = {**s, "plan": plan, "intake_plan": s.get("intake_plan") or s.get("plan") or [], "deliver": deliver}
+    put(c, t["id"], spec=s)
+    return row(c, t["id"])
 
 
 def dispatch(c, t):
     """Hand the task to its door; the door keeps its own approvals (deploy taps, purchases, the AI phone)."""
     s, door = t["spec"], KINDS.get(t["kind"])
-    if conducted(t):
-        import conductor as CD
-        try:
-            ref = CD.start(c, t)
-        except ValueError as e:                          # a plan with a cycle or a step nobody can do is refused (TSK-05)
-            put(c, t["id"], status="failed", door="plan", error=f"plan: {e}")
-            M.event("task", "", f"Task #{t['id']} could not start: {e}", title="Tasks")
-            return
-        put(c, t["id"], door="plan", ref=ref, status="running")
-        M.event("task", "", f"Task #{t['id']} started: {len(s.get('plan') or [])} steps under the Conductor: {t['title']}", title="Tasks")
-        return
-    brief = (f"{t['goal']}\n\nDefinition of done:\n" + "\n".join(f"- {d}" for d in t["done"])
-             + ("\n\nPlan:\n" + "\n".join(f"{i + 1}. {p['step']} ({p['agent']}: {p['why']})" for i, p in enumerate(s.get("plan") or []))
-                if s.get("plan") else "")
-             + ("\n\nThe owner's answers:\n" + "\n".join(f"- {q}: {a}" for q, a in s["answered"]) if s.get("answered") else "")
-             + (f"\n\nDeadline: {t['deadline']}" if t["deadline"] else "") + f"\n\n(Task #{t['id']} in Mission Control)")
-    if t["kind"] == "briefing":     # FND-77: the desk drafts its writer's notes from this; a plan for agents only confused it
-        brief = (f"{t['goal']}\n\nWhat each report must deliver:\n" + "\n".join(f"- {d}" for d in t["done"])
-                 + ("\n\nThe owner's answers:\n" + "\n".join(f"- {q}: {a}" for q, a in s["answered"]) if s.get("answered") else "")
-                 + "\n\nMission Control runs the schedule and delivers each report; the notes are about the content only.")
     asked = " ".join([t["text"] or "", t["goal"] or "", *t["done"]])
     deliver = ["telegram", "app"] + (["email"] if re.search(r"\be-?mail", asked, re.I) else [])   # the task asked for e-mail
+    if conducted(t):
+        import conductor as CD
+        on_event = t["rhythm"].get("type") == "event"
+        try:
+            if t["kind"] == "briefing":
+                t = briefing_topic(c, t, deliver)
+            elif t["kind"] == "shopping":
+                t = shop_agent(c, t, deliver)
+            elif t["spec"].get("wiki"):
+                t = wiki_plan(c, t)
+            CD.graph(t["spec"].get("plan") or [])         # refused now, not when the first event comes
+            ref = str(t["id"]) if on_event else CD.start(c, t)
+        except Exception as e:                           # a plan with a cycle or a step nobody can do is refused (TSK-05);
+            put(c, t["id"], status="failed", door="plan", error=f"plan: {e}")   # a topic whose sources fail is said why
+            M.event("task", "", f"Task #{t['id']} could not start: {e}", title="Tasks")
+            return
+        put(c, t["id"], door="plan", ref=ref, status="scheduled" if on_event else "running")   # a scheduled task's first run starts now
+        if on_event:                                     # an event-triggered one waits for its first event
+            M.event("task", "", f"Task #{t['id']} waits for its trigger ({len(t['spec']['plan'])} steps each time under the Conductor): {t['title']}", title="Tasks")
+            return
+        sched = f"; then {t['rhythm']['schedule']}" if t["rhythm"].get("type") == "schedule" else ""
+        M.event("task", "", f"Task #{t['id']} started: {len(CD.steps(c, t['id']))} steps under the Conductor{sched}: {t['title']}", title="Tasks")
+        return
+    brief = door_brief(t)
     try:
         if door == "build":
             import builds as B
@@ -391,7 +544,37 @@ def dispatch(c, t):
     M.event("task", "", f"Task #{t['id']} started as {door} {ref}: {t['title']}", title="Tasks")
 
 
-ACTIONS = {"task_create", "task_answer", "task_approve", "task_cancel", "task_retry"}
+ACTIONS = {"task_create", "task_answer", "task_approve", "task_cancel", "task_retry", "task_run", "task_conduct"}
+
+
+def conduct(c, t):
+    """task_conduct (TSK-21, DEC-37): a briefing or price watch that runs as its mission moves under the Conductor. The
+    mission keeps what it holds (the topic, its wiki and the articles it has seen; or the proposals, limits and price
+    history) but runs no more by itself; the task runs it on the mission's schedule (or trigger), the next run when it
+    is due. A briefing's event alerts stay the mission's while the task runs its schedule."""
+    import conductor as CD
+    m = M.load_missions().get(t["ref"] or "")
+    if t["door"] != "mission" or not m or m.get("type") not in ("briefing", "shopping") or m.get("status") != "active":
+        raise ValueError("only an active briefing or price watch that runs as its mission can move to the Conductor")
+    sched = m.get("schedule") if m.get("schedule") not in (None, "", "manual") and not m.get("once") else None
+    rhythm = ({"type": "schedule", "schedule": sched} if sched else {"type": "event", "triggers": m["triggers"]} if m.get("triggers")
+              else {"type": "once"})
+    s = {**t["spec"], "deliver": m.get("deliver") or ["telegram", "app"], "moved_from": m["slug"],
+         "intake_plan": t["spec"].get("intake_plan") or t["spec"].get("plan") or []}
+    if m["type"] == "briefing":
+        (meta, _), _ = M.topic_of(m)
+        s.update(topic=m.get("topic") or m["slug"], plan=CD.alert_plan(t) if rhythm["type"] == "event" else CD.briefing_plan(t, meta))
+    else:
+        s.update(shop=m["slug"], plan=CD.shop_plan(t))
+    CD.graph(s["plan"])                                    # refused before anything changes
+    m.update(task=t["id"], schedule="manual", triggers=m.get("triggers") if sched else [])
+    M.save_mission(m)
+    M.vault_commit([f"missions/{m['slug']}"], f"mission: {m['slug']} runs as task {t['id']} under the Conductor")
+    put(c, t["id"], door="plan", ref=str(t["id"]), kind=m["type"], rhythm=rhythm, spec=s, status="scheduled", error=None)
+    M.event("task", m["slug"], f"Task #{t['id']} now runs under the Conductor ({len(CD.graph(s['plan']))} steps"
+            + (f", {sched}" if sched else "") + f"); the mission {m['title']} keeps its {'topic and wiki' if m['type'] == 'briefing' else 'proposals and limits'}",
+            title="Tasks")
+    return {"task": t["id"], "steps": len(CD.graph(s["plan"]))}
 
 
 def handle(req, c):
@@ -432,6 +615,15 @@ def handle(req, c):
             raise ValueError("only a task that failed before it started can be planned again")
         put(c, t["id"], status="intake", error=None, spec={**t["spec"], "retried": (t["spec"].get("retried") or 0) + 1})
         return {"task": t["id"]}
+    if a == "task_conduct":
+        return conduct(c, t)
+    if a == "task_run":                                  # TSK-22: run a plan task again now, outside its schedule
+        if t["door"] != "plan" or t["status"] not in ("scheduled", "done", "failed"):
+            raise ValueError("it is running now" if t["status"] == "running" else "only a planned task that is not running can run again")
+        import conductor as CD
+        put(c, t["id"], status="running", error=None)
+        CD.start(c, row(c, t["id"]), trigger="owner")
+        return {"task": t["id"], "run": CD.occ_of(c, t["id"])}
     raise ValueError("unknown task action")
 
 
@@ -454,8 +646,44 @@ def worker():
         M.stop.wait(3)
 
 
+FIELDS = ("id", "title", "goal", "text", "kind", "door", "ref", "done", "effort", "deadline", "autonomy", "rhythm", "after", "questions",
+          "answers", "status", "source", "created", "updated", "error", "verdict", "tokens", "cost")
+_published = {}                                       # task id -> the text last written (a file is rewritten only when it changes)
+
+
+def detail(c, tid):
+    """APP-35: a task page's data: the task as the board shows it, every run (occurrence) with its verdict, and the steps of
+    every run with their full results. The app adds what the run record holds (agents, actions, memory)."""
+    import conductor as CD
+    t = row(c, tid)
+    occs = CD.occurrences(c, tid) if t["door"] == "plan" else []
+    sp = t["spec"]
+    return ({k: t.get(k) for k in FIELDS} | {"judgement": sp.get("judgement"), "plan": sp.get("plan") or [], "result": sp.get("result"),
+                                           "repo": sp.get("repo"), "budget": sp.get("budget"), "shop": sp.get("shop"), "topic": sp.get("topic"),
+                                           "wiki": sp.get("wiki"), "runs": occs, "checkpoints": sp.get("checkpoints") or [],
+                                           "steps": {str(o["occ"]): CD.steps(c, tid, o["occ"]) for o in occs}})
+
+
+def publish(c, ids):
+    """Write the task pages' files of these tasks (public/tasks/<id>.json); a broken one is logged, never raised."""
+    if getattr(M, "PUBLIC", None) is None:            # a runner without its public folder (tests): nothing to write
+        return
+    d = M.PUBLIC / "tasks"
+    d.mkdir(parents=True, exist_ok=True)
+    for tid in ids:
+        try:
+            text = json.dumps(detail(c, tid), ensure_ascii=False, default=str)
+            if _published.get(tid) != text:
+                (d / f"{tid}.json.tmp").write_text(text)
+                (d / f"{tid}.json.tmp").replace(d / f"{tid}.json")
+                _published[tid] = text
+        except Exception as e:
+            M.log(f"tasks: task {tid}: page data not written: {type(e).__name__}: {e}")
+
+
 def state(c):
-    """The task board: every open task and every task of the last 7 days, newest first (TSK-04)."""
+    """The task board: every open task and every task of the last 7 days, newest first (TSK-04). Each also gets its task
+    page's file; the first call writes every older task's once (APP-35)."""
     table(c)
     since = (dt.datetime.now().astimezone() - dt.timedelta(seconds=WINDOW)).isoformat(timespec="seconds")
     rows = c.execute(f"select id from tasks where status in ({','.join('?' * len(OPEN))}, 'planning') or updated >= ? order by id desc",
@@ -475,12 +703,26 @@ def state(c):
             m = missions.get(t["ref"]) or {}
             due = m.get("status") == "active" and M.next_due(m.get("schedule"), M.now())
             nxt = due.isoformat(timespec="minutes") if due else None
-        out.append({k: t.get(k) for k in ("id", "title", "goal", "text", "kind", "door", "ref", "done", "effort", "deadline", "autonomy",
-                                          "rhythm", "after", "questions", "answers", "status", "source", "created", "updated", "error",
-                                          "verdict", "tokens")} | {"judgement": t["spec"].get("judgement")}
+        runs = []
+        if t["door"] == "plan":                       # the Conductor's: its latest occurrence, and the next on its schedule
+            runs = CD.occurrences(c, t["id"])
+            occ = (runs or [None])[0]
+            if occ:
+                res = occ["result"] or ""
+                last = {"id": occ["occ"], "status": {"done": "ok"}.get(occ["status"], occ["status"]), "started": occ["started"],
+                        "ended": occ["ended"], "live": occ["live"], "output": res if res.startswith("tasks/") else None,
+                        "summary": (f"Run {occ['occ']}: " if occ["occ"] > 1 else "") + (("failed: " + res) if occ["status"] == "failed" else
+                                                                                         "found nothing new" if occ["verdict"] == "quiet" else
+                                                                                         "done" if occ["status"] == "done" else occ["status"] or "")}
+            if t["rhythm"].get("type") == "schedule" and t["status"] in ("scheduled", "running"):
+                nxt = CD.next_run(c, t)
+            runs = runs[:RUNS]                            # cap: list (the card's run history; every run stays in task_occ)
+        out.append({k: t.get(k) for k in FIELDS} | {"judgement": t["spec"].get("judgement")}
                    | {"plan": t["spec"].get("plan") or [], "steps": stepped.get(t["id"], []), "result": t["spec"].get("result"),
-                      "last_run": last, "next_run": nxt})
-    return {"tasks": out}
+                      "last_run": last, "next_run": nxt, "runs": runs, "shop": t["spec"].get("shop"), "topic": t["spec"].get("topic")})
+    agents = [{k: a.get(k) for k in ("id", "purpose", "harness", "model")} for a in CD.cards().values() if CD.runs_steps(a)]
+    publish(c, [t["id"] for t in out] if _published else [r["id"] for r in c.execute("select id from tasks")])
+    return {"tasks": out, "task_agents": agents}                 # TSK-30: the agents the composer offers
 
 
 def gate(path=None):

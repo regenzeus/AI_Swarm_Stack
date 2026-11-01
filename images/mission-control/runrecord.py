@@ -35,18 +35,29 @@ MAX_DETAIL = 20000
 OTEL = {"run": "invoke_agent", "llm": "chat", "call": "execute_tool", "result": "execute_tool", "error": "execute_tool",
         "mcp": "execute_tool", "say": "chat", "think": "chat", "stage": "invoke_workflow", "end": "invoke_agent"}
 
-_lock = threading.Lock()
-_db = None
+_lock = threading.Lock()                 # one writer at a time
+_open = threading.Lock()                 # opening connections
+_db = None                               # {thread id: its connection}; None opens fresh ones (tests point DB elsewhere)
+
+
+def _connect():
+    c = sqlite3.connect(DB, check_same_thread=False, timeout=10)
+    c.row_factory = sqlite3.Row
+    c.execute("pragma journal_mode=wal")
+    return c
 
 
 def db():
+    """This thread's own connection (FND-88): one connection shared by the server's request threads mixed up the reads
+    of requests that came together (sqlite's "bad parameter or other API misuse", a run read back as None), which an
+    agent's page, asking for its runs and its room at once, hit every time."""
     global _db
-    if _db is None:
-        DB.parent.mkdir(parents=True, exist_ok=True)
-        c = sqlite3.connect(DB, check_same_thread=False, timeout=10)
-        c.row_factory = sqlite3.Row
-        c.execute("pragma journal_mode=wal")
-        c.executescript("""
+    me = threading.get_ident()
+    with _open:
+        if _db is None:
+            DB.parent.mkdir(parents=True, exist_ok=True)
+            c = _connect()
+            c.executescript("""
           create table if not exists runs (run text primary key, ref text, agent text, source text, title text,
             started real, last real, ended real, end_state text, manifest text, drift text, box text, summary text);
           create table if not exists events (id integer primary key, run text, ts real, kind text, title text,
@@ -55,8 +66,10 @@ def db():
           create index if not exists runs_ref on runs(ref);
           create index if not exists runs_open on runs(ended);
         """)
-        _db = c
-    return _db
+            _db = {me: c}
+        if me not in _db:
+            _db[me] = _connect()
+        return _db[me]
 
 
 CHAT_TITLE = None              # set by server.py: chat id → its title
@@ -167,10 +180,31 @@ def tokens_by_agent(days=30):
     return out
 
 
+TASK_RUN = re.compile(r"^task:\d+(\.\d+)?$")       # a task's run under the Conductor (TSK-26)
+TREE_DELAY = 60                                    # seconds before a task's run is exported: its agents' last events arrive
+
+
+def tree_of(run):
+    """TSK-26: a task's run and every run inside it, with their events -> (runs, {run: events})."""
+    c = db()
+    rows = c.execute("""with recursive t(run) as (select ? union select r.run from runs r join t on r.ref = t.run)
+                        select run, ref, agent, title, started, ended from runs where run in (select run from t)""", (run,)).fetchall()
+    runs, evs = [dict(r) for r in rows], {}
+    for r in runs:
+        evs[r["run"]] = [{"ts": e["ts"], "kind": e["kind"], "title": e["title"], "detail": e["detail"],
+                          "tokens": json.loads(e["data"] or "{}").get("tokens"), "status": json.loads(e["data"] or "{}").get("status")}
+                         for e in c.execute("select ts, kind, title, detail, data from events where run=? order by id", (r["run"],))]
+    return runs, evs
+
+
 def trace(run):
-    """A Claude Code run (outside the gateway, so LiteLLM never traced it) goes to Phoenix as one trace (otlp.py, SWM-79)."""
+    """A Claude Code run (outside the gateway, so LiteLLM never traced it) goes to Phoenix as one trace (otlp.py, SWM-79);
+    a task's run under the Conductor as one trace tree of its steps and their agents, a minute after it ends (TSK-26)."""
     try:
         import otlp
+        if TASK_RUN.match(run):
+            otlp.export_later(lambda: otlp.tree_spans(run, *tree_of(run)), delay=TREE_DELAY)
+            return True
         c = db()
         r = c.execute("select * from runs where run=?", (run,)).fetchone()
         if not r or r["source"] != "claude":
@@ -292,9 +326,13 @@ def summarise(run):
         db().commit()
 
 
-def runs(live=None, agent=None, ref=None, limit=60):
+def runs(live=None, agent=None, ref=None, limit=60, since=None, until=None):
     c = db()
     where, args = ["1=1"], []
+    if since is not None:                                 # TSK-25: a telemetry number opens the runs that ended in its days
+        where.append("ended >= ?"); args.append(since)
+    if until is not None:
+        where.append("ended < ?"); args.append(until)
     if live is not None:
         where.append("ended is null" if live else "ended is not null")
     if agent:
@@ -520,6 +558,156 @@ WIKI_REFS = [(re.compile(r"qmd://vault-wiki/"), lambda m: "wiki"),
              (re.compile(r"(?:qmd://)?(?<![\w.-])(missions|topics)/([a-z0-9][a-z0-9-]*)/wiki/"), lambda m: f"{m.group(1)}/{m.group(2)}/wiki"),
              (re.compile(r"(?<![\w/.-])wiki/[a-z0-9]"), lambda m: "wiki")]
 WIKI_WRITES = ("write_file", "patch", "edit_file")
+
+
+TASK_ROOT = re.compile(r"^task(?:-intake)?:(\d+)")
+STEP_OF = re.compile(r"^task:\d+(?:\.(\d+))?:step:(\d+)$")
+ACTS = ("run", "call", "say", "error", "stage", "propose", "read", "wait", "end")
+MEM_READ = re.compile(r"qmd_|wiki_search|memory_recall|recall|reflect|swarm_context|ledger_(find|get)|board_read")
+MEM_WRITE = re.compile(r"journal_write|agent_note|swarm_finish|ledger_(upsert|evidence|transition|link)|retain|vault_add|wiki_write")
+MEM_PATH = re.compile(r"/vault/|(^|[\s\"'/])(wiki|journals?|missions/[^/\s]+/wiki|topics/[^/\s]+/wiki)/|MEMORY\.md")
+ACTIONS = 1500                                         # cap: list (a task's actions on its page; the run view has every one)
+LANES = 200                                            # cap: list (bars on a task's timeline; a trial's builds stay well under it)
+
+
+def mem_kind(e):
+    """A call's part in memory: "read" (searching or reading notes, wikis, journals, long-term memory, the ledger),
+    "write" (keeping something there), or None (other work)."""
+    t = (e.get("title") or "").split("__")[-1]
+    if MEM_WRITE.search(t) or (t in ("write_file", "patch", "edit_file") and MEM_PATH.search(e.get("detail") or "")):
+        return "write"
+    if MEM_READ.search(t) or (t in ("read_file", "read") and MEM_PATH.search(e.get("detail") or "")):
+        return "read"
+    return None
+
+
+def task_activity(tid):
+    """APP-35: everything the run record holds about task <tid> (its planning, every run, every step and every agent called
+    in): {agents: [{agent, name, roles, runs, calls, model_calls, tokens, first, last, states}], actions: [...], memory:
+    {read: [...], write: [...]}, runs: n, actions_total: n}."""
+    c = db()
+    roots = [r["run"] for r in c.execute("select run from runs where run=? or run like ? or run like ?", (f"task:{tid}", f"task:{tid}.%", f"task-intake:{tid}-%"))]
+    seen, todo = set(roots), list(roots)
+    while todo and len(seen) < 400:
+        todo = [r["run"] for r in c.execute(f"select run from runs where ref in ({','.join('?' * len(todo))})", todo) if r["run"] not in seen]
+        seen |= set(todo)
+    if not seen:
+        return {"agents": [], "actions": [], "memory": {"read": [], "write": []}, "runs": 0, "actions_total": 0}
+    q = ",".join("?" * len(seen))
+    runs = {r["run"]: dict(r) for r in c.execute(f"select run, ref, agent, title, started, ended, end_state from runs where run in ({q})", tuple(seen))}
+    agents, actions, mem = {}, [], {"read": [], "write": []}
+    for run, r in runs.items():
+        a = agents.setdefault(r["agent"] or "?", {"agent": r["agent"] or "?", "name": AGENT_NAME.get(r["agent"] or "", r["agent"] or "?"), "roles": set(),
+                                                  "runs": 0, "calls": 0, "model_calls": 0, "tokens": 0, "first": r["started"], "last": r["ended"] or r["started"], "states": {}})
+        a["runs"] += 1
+        a["first"], a["last"] = min(a["first"], r["started"]), max(a["last"], r["ended"] or time.time())
+        a["states"][r["end_state"] or "running"] = a["states"].get(r["end_state"] or "running", 0) + 1
+        m = STEP_OF.match(run)
+        if m:
+            a["roles"].add(f"step {m.group(2)}" + (f" of run {m.group(1)}" if m.group(1) else ""))
+        elif run.startswith("task-intake:"):
+            a["roles"].add("planned it")
+        elif ":checkpoint:" in run:
+            a["roles"].add("checked the plan between waves")
+        elif r["ref"] in runs and run not in roots:
+            p = runs[r["ref"]]
+            if (p["agent"] or "") != (r["agent"] or ""):
+                a["roles"].add(f"called in by {AGENT_NAME.get(p['agent'] or '', p['agent'] or '?')}")
+        elif run in roots and run.startswith("task:"):
+            a["roles"].add("ran the plan")
+    total = 0
+    for e in c.execute(f"select e.run, e.ts, e.kind, e.title, e.detail, e.data, r.agent from events e join runs r on r.run=e.run "
+                       f"where e.run in ({q}) order by e.ts, e.id", tuple(seen)):
+        a = agents[e["agent"] or "?"]
+        d = json.loads(e["data"] or "{}")
+        if e["kind"] == "llm":
+            a["model_calls"] += 1
+            tk = d.get("tokens") or {}
+            a["tokens"] += (tk.get("in") or 0) + (tk.get("out") or 0) if isinstance(tk, dict) else int(tk or 0)
+            continue
+        if e["kind"] not in ACTS:
+            continue
+        if e["kind"] == "call":
+            a["calls"] += 1
+            k = mem_kind(dict(e))
+            if k:
+                mem[k].append({"ts": e["ts"], "agent": e["agent"], "run": e["run"], "tool": e["title"], "detail": _clip(e["detail"] or "")})
+        total += 1
+        actions.append({"ts": e["ts"], "agent": e["agent"], "run": e["run"], "kind": e["kind"], "title": e["title"], "detail": _clip(e["detail"] or ""),
+                        "status": d.get("status")})
+    out = sorted(({**a, "roles": sorted(a["roles"])} for a in agents.values()), key=lambda x: x["first"])
+
+    def depth(run, n=0):
+        r = runs.get(run)
+        return n if not r or run in roots or r["ref"] not in runs or n > 6 else depth(r["ref"], n + 1)
+    def role(run, r):
+        m, p = STEP_OF.match(run), runs.get(r["ref"] or "")
+        return (f"step {m.group(2)}" if m else "planning" if run.startswith("task-intake:") else "checkpoint" if ":checkpoint:" in run else
+                "its session" if p and p["agent"] == r["agent"] else "called in")
+    lanes = [{"run": run, "agent": r["agent"], "started": r["started"], "ended": r["ended"], "state": r["end_state"],
+              "depth": max(0, depth(run) - 1), "role": role(run, r)}     # the task's own run is not drawn: its steps start the lanes
+             for run, r in sorted(runs.items(), key=lambda x: x[1]["started"]) if not (run in roots and run.startswith("task:"))]
+    return {"agents": out, "actions": actions[-ACTIONS:], "actions_total": total, "memory": mem, "runs": len(runs), "lanes": lanes[:LANES]}
+
+
+def agent_tasks(agent, days=90, now=None):
+    """APP-35: the tasks an agent worked on (a step of its own, called in by another agent, or planning), newest first:
+    [{task, roles, runs, last}]."""
+    c, now = db(), now or time.time()
+    mine = [dict(r) for r in c.execute("select run, ref, agent, started, ended from runs where started>=?", (now - days * 86400,))
+            if lane_of(r["agent"]) == agent or r["agent"] == agent]
+    parent, out = {}, {}
+
+    def root(run, depth=0):
+        m = TASK_ROOT.match(run or "")
+        if m or depth > 8 or not run:
+            return (int(m.group(1)), run) if m else None
+        if run not in parent:
+            p = c.execute("select ref from runs where run=?", (run,)).fetchone()
+            parent[run] = p["ref"] if p else None
+        return root(parent[run], depth + 1)
+    for r in mine:
+        hit = root(r["run"])
+        if not hit:
+            continue
+        tid, top = hit
+        x = out.setdefault(tid, {"task": tid, "roles": set(), "runs": 0, "last": 0})
+        x["runs"] += 1
+        x["last"] = max(x["last"], r["ended"] or r["started"])
+        m = STEP_OF.match(r["run"])
+        if m or r["run"].startswith("task-intake:"):
+            x["roles"].add(f"step {m.group(2)}" if m else "planned it")
+        elif (c.execute("select agent from runs where run=?", (r["ref"] or "",)).fetchone() or {"agent": None})["agent"] != r["agent"]:
+            x["roles"].add("called in")                    # its own session inside its step is that step, not a call
+    return sorted(({**v, "roles": sorted(v["roles"])} for v in out.values()), key=lambda v: -v["last"])
+
+
+ENGINE_OF = (("claude", "Claude"), ("gpt", "ChatGPT"), ("chatgpt", "ChatGPT"))   # a model call's title -> its subscription
+
+
+def usage(now=None):
+    """OBS: how much each subscription carried lately, from the model calls in the run record: tokens and calls in the
+    last 5 hours (ChatGPT's usage window) and 24 hours, and the agents that used most in the 5 hours.
+    -> [{engine, tokens_5h, calls_5h, tokens_24h, calls_24h, top: [[agent, tokens]]}]"""
+    c, now = db(), now or time.time()
+    out = {}
+    for e in c.execute("select e.ts, e.title, e.data, r.agent from events e join runs r on r.run=e.run where e.kind='llm' and e.ts>=?",
+                       (now - 86400,)):
+        eng = next((n for k, n in ENGINE_OF if str(e["title"] or "").lower().startswith(k)), None)
+        if not eng:
+            continue
+        tk = json.loads(e["data"] or "{}").get("tokens") or {}
+        n = (tk.get("in") or 0) + (tk.get("out") or 0) if isinstance(tk, dict) else int(tk or 0)
+        u = out.setdefault(eng, {"engine": eng, "tokens_5h": 0, "calls_5h": 0, "tokens_24h": 0, "calls_24h": 0, "by": {}})
+        u["tokens_24h"] += n
+        u["calls_24h"] += 1
+        if e["ts"] >= now - 5 * 3600:
+            u["tokens_5h"] += n
+            u["calls_5h"] += 1
+            a = lane_of(e["agent"])
+            u["by"][a] = u["by"].get(a, 0) + n
+    return [{**{k: v for k, v in u.items() if k != "by"}, "top": sorted(u["by"].items(), key=lambda x: -x[1])[:3]}  # cap: list (the three that used most)
+            for u in sorted(out.values(), key=lambda u: u["engine"])]
 
 
 def wiki_roots_in(text):

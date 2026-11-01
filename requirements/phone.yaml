@@ -18,14 +18,14 @@ items:
   - id: PHN-02
     title: A time window the owner opens
     statement: Where the owner opened a time window (minutes, or until he stops it), the AI phone service shall run
-      ordinary actions without asking until it ends, still logging each one; typing, opening a web address or an app,
-      spending money, settings and deletions shall ask each time (DEC-23).
+      ordinary actions without asking until it ends, still logging each one; spending money, settings and deletions
+      shall ask each time, and typing or a web address only when it holds private data (DEC-38, PHN-19).
     type: functional
     priority: must
     status: implemented
     parents: [SN-02, SN-11]
     sources: [images/mission-control/guide/17-ai-phone.md]
-    verify: {method: test, by: [tests/test_phone.py::test_typing_urls_and_apps_always_ask_even_in_a_time_window, tests/test_phone.py::test_allow_for_a_few_minutes, tests/test_phone.py::test_allowance_any_length_or_until_stopped]}
+    verify: {method: test, by: [tests/test_phone.py::test_in_free_mode_only_an_address_or_text_with_private_data_asks, tests/test_phone.py::test_allow_for_a_few_minutes, tests/test_phone.py::test_allowance_any_length_or_until_stopped]}
     findings: [FND-02, FND-13]
   - id: PHN-03
     title: Money and destructive steps always ask
@@ -132,8 +132,8 @@ items:
     verify: {method: inspection, by: [images/mission-control/web/static/app.js]}
   - id: PHN-13
     title: The screen sleeps
-    statement: The AI phone service shall let the screen sleep after 30 seconds and not keep it on while charging, and
-      wake it before each action.
+    statement: The AI phone service shall let the screen sleep after 30 seconds when idle and not keep it on while
+      charging, and wake it before each action (while the agents work it stays on, PHN-17).
     type: functional
     priority: must
     status: implemented
@@ -171,3 +171,87 @@ items:
     parents: [SN-04]
     sources: [images/phone/AGENTS.md]
     verify: {method: inspection, by: [images/phone/phone.py]}
+  - id: PHN-17
+    title: The owner sees the AI phone work; idle, its screen is off
+    statement: While the agents act on the AI phone, its screen shall stay on until two minutes after the last action and
+      while an action waits for the owner's OK (up to 15 minutes); then it shall go off at once with the 30 s timeout
+      back. The Phone page shall show the screen's state and let the owner keep it on to watch (up to an hour) or turn
+      it off.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-11]
+    sources: [images/mission-control/guide/17-ai-phone.md]
+    verify: {method: test, by: [tests/test_phone.py::test_the_screen_stays_on_while_working_or_waiting_and_goes_off_when_idle, tests/test_server.py::test_the_owner_keeps_the_phone_screen_on_for_an_hour_at_most]}
+    trace: [images/phone/phone.py, images/mission-control/server.py, images/mission-control/web/static/app.js]
+  - id: PHN-18
+    title: One OK for a whole phone task
+    statement: An agent shall ask the owner once for a phone task, naming its apps, the exact texts it will type and how
+      long (at most an hour); after one Allow, taps, swipes and keys in those apps and on the home screen, opening them
+      and typing those texts shall run without asking, counted on the task; anything else shall still ask, money always;
+      the task shall end with phone_done (its summary says how many actions ran) or the owner's End task.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-02, SN-11]
+    sources: [requirements/decisions.yaml]
+    verify: {method: test, by: ['tests/test_phone.py::test_one_ok_covers_a_whole_task_and_money_still_asks']}
+    trace: [images/phone/phone.py, images/mission-control/server.py, images/mission-control/web/static/app.js]
+  - id: PHN-19
+    title: Free mode asks only for private data
+    statement: Inside the owner's time window (free mode), typing and opening an app or a web address shall run without
+      asking unless the text or address holds an e-mail address, a phone number, an IBAN, a key or an IP address.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-04, SN-11]
+    sources: [requirements/decisions.yaml]
+    verify: {method: test, by: ['tests/test_phone.py::test_free_mode_types_freely_but_private_text_asks', 'tests/test_phone.py::test_in_free_mode_only_an_address_or_text_with_private_data_asks']}
+    trace: [images/phone/phone.py]
+  - id: PHN-20
+    title: A waiting request goes ahead when the permission comes
+    statement: A request waiting for the owner's OK shall run as soon as the owner opens free mode or approves a task that
+      covers it, without a second tap.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-02]
+    sources: [requirements/decisions.yaml]
+    verify: {method: test, by: ['tests/test_phone.py::test_a_waiting_request_goes_ahead_when_the_owner_opens_free_mode']}
+    trace: [images/phone/phone.py]
+  - id: PHN-21
+    title: The owner's permission outlives a restart
+    statement: The owner's free mode and an approved task shall stay in force across a restart of the AI phone service
+      (every deploy) until they run out, unless the owner pressed Stop.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-02]
+    sources: [requirements/decisions.yaml]
+    verify: {method: test, by: [tests/test_phone.py::test_free_mode_and_a_task_outlive_a_restart_but_not_stop]}
+    trace: [images/phone/phone.py]
+  - id: PHN-22
+    title: The AI phone becomes Hermes' speaker after one Allow
+    statement: On the owner's request (the House page), the AI phone service shall make Home Assistant the phone's
+      default digital assistant, grant it the microphone and exempt it from battery saving (so it hears its wake word
+      when locked), all on one card that only the owner's Allow applies
+      (never free mode or a task), report whether both are in place, and ask nothing once they are.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-11, SN-02]
+    sources: [docs/HOME-VOICE.md]
+    verify: {method: test, by: [tests/test_phone.py::test_home_assistant_becomes_the_phone_s_voice_assistant_after_one_allow]}
+    trace: [images/phone/phone.py, images/mission-control/server.py, images/mission-control/web/static/app.js]
+  - id: PHN-23
+    title: An app opens fresh when a blocked screen sits on top of it
+    statement: When opening an app brings up a blocked screen that app had opened (Android's settings), the AI phone
+      service shall open the app fresh at its start screen instead.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-11]
+    sources: [docs/HOME-VOICE.md]
+    verify: {method: test, by: [tests/test_phone.py::test_an_app_opens_fresh_when_a_blocked_screen_sits_on_top_of_it]}
+    trace: [images/phone/phone.py]
+

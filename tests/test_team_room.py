@@ -75,7 +75,7 @@ def test_the_chatroom_is_the_team_room_with_its_filters():
     assert 'Route("/api/swarm/room", api_swarm_room)' in server and '"feed"' in server.split("SWARM_READ =")[1].split("}")[0]
     assert '"feed"' in (ROOT / "images/swarm/swarm.py").read_text().split("APP_OPS =")[1].split("}")[0]
     assert "teamroom.py" in (ROOT / "images/mission-control/Dockerfile").read_text()
-    room = SWARM_JS[SWARM_JS.index("// ---------- the Chatroom: the team room"):SWARM_JS.index("// ---------- who works on what")]
+    room = SWARM_JS[SWARM_JS.index("// ---------- the Chatroom: the team room"):SWARM_JS.index("// A success check in plain words")]
     assert '[["ask", "Asks"], ["help", "Helps"], ["talk", "Talk"], ["work", "Work"], ["you", "You"], ["status", "Status"]]' in room
     assert 'types: new Set(["ask", "help", "talk", "work", "you"])' in room                 # Status (routine runs) off at first
     assert "inv.filter((a) => f.agents.has(a)).length < 2" in room                          # two agents: only what passes between them

@@ -1,0 +1,27 @@
+# T2 (docs/SWARM-TRIALS.md): requirements tracing and gap finding on an MQTT broker. Its answer key is
+# /srv/ai/private/trials/mqtt-trace (out of every agent's reach, built by its make_key.py): the place of 117 of the 133
+# requirements of sections 3.1 to 3.3 (the function the broker's own requirement tag sat in, every tag taken out of
+# the code the agents get) and nine deviations planted in it (spec/pilot/mutate_mochi.py). The spec pilot's numbers
+# to beat: right function 73 %, deviations caught 6 of 9, false alarms 0 (spec/README.md).
+name: mqtt-trace
+title: MQTT broker, requirements traced and gaps found
+task: >-
+  This repository holds the MQTT 5.0 requirements of sections 3.1 to 3.3 (CONNECT, CONNACK, PUBLISH) in
+  spec/requirements.md, each with its ID, and an MQTT broker written in Go in code/. For every requirement, find where
+  the broker implements it (the file and the line of the code that enforces it), and name every requirement the broker
+  does not meet, with the file, the line and why. Write the result to trace.json at the top of the repository, as
+  {"requirements": [{"id": "MQTT-3.1.2-1", "where": [{"file": "code/server.go", "line": 123}]}], "gaps": [{"id":
+  "MQTT-3.1.2-22", "file": "code/clients.go", "line": 456, "why": "..."}]}, with every ID of spec/requirements.md under
+  requirements (an empty "where" when the broker does not implement it). Read only this repository: do not look up the
+  broker's source anywhere else.
+key: mqtt-trace
+code: true                      # the key's code/ goes into the repository beside spec/ (a trace needs an implementation)
+done:
+  - trace.json lists every requirement ID of spec/requirements.md, each with the file and line that implement it or none
+  - every requirement the broker does not meet is among the gaps with its file, line and reason
+  - no other copy of the broker's source code was read
+forbidden:                      # audited from what the agents read and ran
+  urls: ['github\.com/mochi-mqtt', 'pkg\.go\.dev/github\.com/mochi-mqtt', 'proxy\.golang\.org/github\.com/mochi-mqtt', 'sourcegraph\.com/.*mochi']
+  commands: ['go +(get|mod download)\b[^\n"]*mochi', 'git +clone[^\n]*mochi', 'GOFLAGS=[^\n]*-mod=mod']
+effort: standard
+budget: {hours: 3, tokens: 3000000}

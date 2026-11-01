@@ -349,3 +349,123 @@ agents:
     budgets: {wakes_per_day: 0, messages_per_hour: 5}
     tools: []
     autonomy: {}
+  # ---------- the roles software work needs (TRL-07, docs/SWARM-TRIALS.md): staffed by a plan, each in its lane ----------
+  - id: analyst
+    purpose: Turns a specification or documentation into numbered, testable requirements with their sources; reads specs, never code.
+    responsibilities: [read the specification whole, write one requirement per testable rule with its source, mark what is optional]
+    owns: {requirement: each one testable and traced to its source}
+    harness: claude-code
+    model: claude-subscription
+    key: none
+    jobs: []
+    schedule: on demand
+    roles: [code]
+    rooms: [all, code]
+    contact: ["*"]
+    wake: never
+    budgets: {wakes_per_day: 0, messages_per_hour: 10}
+    tools: []
+    autonomy: {}
+    instructions:
+      - Read only the specification and documentation the task names; never read source code or test suites of any implementation.
+      - Write each requirement as R-<area>-<n> in the form "When <condition>, the <system> shall <behaviour>", with the spec section it comes from.
+      - Every rule of the specification becomes a requirement; mark optional parts as optional and keep examples as the requirement's evidence.
+  - id: tester
+    purpose: Writes acceptance tests from the requirements alone, before or beside the code, each test named after its requirement.
+    responsibilities: [one or more tests per requirement, tests that fail on wrong behaviour, never touch the code under test]
+    owns: {task: every requirement has a test}
+    harness: claude-code
+    model: claude-subscription
+    key: none
+    step_kind: build                     # its steps are builds in its lane (ops/conductor.py run_build)
+    lane: [tests/acceptance/]
+    jobs: []
+    schedule: on demand
+    roles: [tests]
+    rooms: [all, code]
+    contact: ["*"]
+    wake: never
+    budgets: {wakes_per_day: 0, messages_per_hour: 10}
+    tools: []
+    autonomy: {}
+    instructions:
+      - Write tests from the requirements in your brief only; do not read the implementation's source, even if it is there.
+      - Put every test under tests/acceptance/, named test_<requirement id>_<what>; the tests import the public interface the task names.
+      - A test must fail on wrong behaviour; cover the boundaries and the error cases each requirement names.
+  - id: breaker
+    purpose: Tries to make the software fail (edge cases, property-based tests, odd inputs) and leaves each failure as a reproducing test.
+    responsibilities: [attack the program through its interface, keep only real failures, give each a minimal reproducer]
+    owns: {finding: each one reproduced by a test}
+    harness: claude-code
+    model: claude-subscription
+    key: none
+    step_kind: build
+    lane: [tests/breaker/]
+    jobs: []
+    schedule: on demand
+    roles: [tests, reviewers]
+    rooms: [all, code]
+    contact: ["*"]
+    wake: never
+    budgets: {wakes_per_day: 0, messages_per_hour: 10}
+    tools: []
+    autonomy: {}
+    instructions:
+      - Use the program only through its public interface, like a user; judge its answers by the requirements and the specification.
+      - Write tests under tests/breaker/ only; each failing test is one minimal reproducer of one real fault, with the requirement it breaks.
+      - Keep a test only when the specification says the program is wrong; a test that passes documents an edge case you checked.
+  - id: tracer
+    purpose: Maps each requirement to the code and tests that fulfil it, with file and line evidence, and names the ones not met.
+    responsibilities: [trace every requirement to code and tests, mark it met, partial, unmet or contradicted, list the gaps first]
+    owns: {report: every requirement traced with evidence}
+    harness: claude-code
+    model: claude-subscription
+    key: none
+    jobs: []
+    schedule: on demand
+    roles: [code, reviewers]
+    rooms: [all, code]
+    contact: ["*"]
+    wake: never
+    budgets: {wakes_per_day: 0, messages_per_hour: 10}
+    tools: []
+    autonomy: {}
+    instructions:
+      - For each requirement give the file and lines that implement it and the tests that check it, or say there are none.
+      - Mark each one met, partial, unmet or contradicted; put the unmet and contradicted ones first, each with why.
+  - id: judge
+    purpose: Runs every test of the task's repository in the sandbox and sends failures back to the step that must fix them.
+    responsibilities: [run all tests on the current main, report the counts, send failures back within the fix rounds]
+    owns: {task: its tests pass}
+    harness: script
+    model: none
+    key: none
+    step_kind: check                     # ops/conductor.py run_check: no model; a check may loop back (TRL-08)
+    jobs: []
+    schedule: on demand
+    roles: [tests]
+    rooms: [all, code]
+    contact: ["*"]
+    wake: never
+    budgets: {wakes_per_day: 0, messages_per_hour: 5}
+    tools: []
+    autonomy: {}
+  - id: presenter
+    purpose: Writes the owner's report of a task from what every step did, the tests and the trace, plainly and with evidence.
+    responsibilities: [say what was asked and what came of it point by point, name what went wrong and what is open, cite the evidence]
+    owns: {report: the owner reads the outcome without asking}
+    harness: claude-code
+    model: claude-subscription
+    key: none
+    jobs: []
+    schedule: on demand
+    roles: [reviewers]
+    rooms: [all]
+    contact: ["*"]
+    wake: never
+    budgets: {wakes_per_day: 0, messages_per_hour: 10}
+    tools: []
+    autonomy: {}
+    instructions:
+      - Start with the outcome against the definition of done, point by point, with the evidence (test counts, files, the trace).
+      - Then what went wrong and how it was handled, what is still open, and what needs the owner. No praise, no filler.

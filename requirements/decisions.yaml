@@ -184,3 +184,29 @@ items:
     a finished step again. The trace is the runtime record''s (one run per task, a run per step inside it). A one-off
     research, analysis or errand task whose plan uses two or more agents goes to the Conductor; every other task keeps
     its door.'
+- id: DEC-36
+  date: '2026-10-31'
+  title: Every planned task goes to the Conductor
+  decision: 'The owner asked for every task through the Conductor, recurring ones included ("Implement all properly",
+    docs/SWARM-DESIGN.md). Since phase 6a every task the intake plans runs as a plan graph, one step or many, once or on
+    a schedule, with a coding task''s builder step as a build assignment and a code question as a Claude step; it
+    replaces DEC-35''s last sentence (only multi-agent one-off work went to the Conductor). Briefings, price watches and
+    event-triggered tasks keep their mission until phase 6b, because the Topic Desk and the price watch are not yet steps.'
+- id: DEC-37
+  date: '2026-11-01'
+  title: A price watch is its shopping agent's check; purchases stay the agent's runs
+  decision: 'The owner asked for price watches and event-triggered tasks under the Conductor ("Please do these two
+    properly"). A price watch task holds its shopping agent (ops/shopping.py: limits, proposals, approvals, the order''s
+    tracking), made once with no schedule of its own; each occurrence of the task is one check of that agent (offers, a
+    proposal or watching), and a waiting proposal that reaches its price or date starts the task''s next occurrence. The
+    purchase after the owner''s tap and the order tracking stay the agent''s own runs: they are the narrow deterministic
+    path of docs/SHOPPING.md, with its own approval, and a plan step must not be able to start them. An event-triggered
+    task runs each firing as an occurrence (its event in every step''s prompt; events that come meanwhile wait, at most
+    five); a briefing on an event is the desk''s alert, then its delivery. Completes DEC-36''s last sentence.'
+- {id: DEC-38, date: 2026-11-01, title: One OK per phone task; free mode asks only for private data, decision: 'The owner found
+    an approval for every tap too much ("I want to give it permission to use the phone"). An agent asks once for a whole
+    task (its apps, the exact texts it types, up to an hour); the owner''s time window becomes a free mode where typing and
+    opening apps and addresses run without asking unless the text holds an e-mail address, phone number, IBAN or key; a
+    request already waiting goes ahead when the permission comes. Money, passwords, blocked apps and Stop are unchanged.',
+  supersedes: DEC-23}
+

@@ -137,6 +137,27 @@ def test_a_replay_the_judge_prefers_the_old_text_on_fails_and_the_gate_stays_shu
         P.replay("inbox", "PICK", ask=lambda t: "", judge_ask=lambda t: "")
 
 
+def test_an_agent_s_standing_brief_is_replayed_on_the_requests_its_cases_bring(repo):
+    """A raw brief (the scout's system message) is nothing to answer alone: each case brings a request, and the dry run
+    asks for the tool calls the agent would make, so the judge sees whether the brief changes them (FND-80)."""
+    f = repo / "prompts/scout.md"
+    f.write_text("<!-- prompt: BRIEF · raw: sent as written, never filled -->\nSearch the web.\n<!-- end -->\n")
+    rec = json.loads((repo / "prompts/replays.json").read_text())
+    rec["scout/BRIEF"] = [{"sha": P.sha("Search the web."), "baseline": "seed", "at": "2026-10-30"}]
+    (repo / "prompts/replays.json").write_text(json.dumps(rec))
+    subprocess.run(["git", "add", "-A"], cwd=repo, check=True); subprocess.run(["git", "commit", "-qm", "brief"], cwd=repo, check=True)
+    f.write_text(f.read_text().replace("Search the web.", "For jobs in Germany use jobs_search first. Search the web."))
+    P._cache.clear()
+    (repo / "prompts/cases").mkdir()
+    (repo / "prompts/cases/scout.BRIEF.json").write_text(json.dumps([{"fills": {}, "user": f"AUTOSAR jobs near Heilbronn {i}"} for i in range(3)]))
+    asked = []
+    r = P.replay("scout", "BRIEF", ask=lambda t: asked.append(t) or ("jobs_search(...)" if "jobs_search first" in t else "web_search(...)"),
+                 judge_ask=lambda t: '{"better": "equal"}')
+    assert r["passed"] and r["valid"] == [3, 3] and len(asked) == 6
+    assert all("AUTOSAR jobs near Heilbronn" in t and "the tool calls you would make" in t and "do not apologise" in t for t in asked)
+    assert P.task_of("inbox", "PICK", "Pick from {rows}.", {"fills": {"rows": "- 1"}, "user": "ignored"}) == "Pick from - 1."
+
+
 def test_the_desk_and_the_scout_read_their_prompts_from_the_mount_and_the_desk_hands_back_its_cases(desk, tmp_path, monkeypatch):
     for f in ("images/desk/desk.py", "images/research/server.py"):                  # one section format for every loader
         assert f"SECTION = re.compile(r\"{P.SECTION.pattern}\", re.M | re.S)" in (ROOT / f).read_text(), f
@@ -188,3 +209,13 @@ def test_the_deploy_hands_each_configure_script_its_soul_text_from_the_prompts_f
     t = (ROOT / "config/hermes/configure.sh").read_text()
     assert "for r in web missions shopping language phone claude; do" in t and 'printenv "SOUL_' in t and "rule kept: no SOUL_" in t
     assert "cat -s /opt/data/SOUL.md" in t                                          # no blank lines piling up with every run
+
+
+def test_a_filled_prompt_that_drives_tools_is_replayed_as_a_dry_run():
+    """main/VOICE starts missions: replayed without tools it could only say it cannot act (counted as no answer); its
+    cases say dry_run, so both texts are asked for the tool calls they would make."""
+    import prompts as P
+    out = P.task_of("main", "X", "Spoken in the {room}: {question}", {"fills": {"room": "office", "question": "research X"}, "dry_run": True})
+    assert out.startswith("Spoken in the office: research X") and P.DRY_RUN in out
+    assert all(c.get("dry_run") for c in json.loads((ROOT / "prompts/cases/main.VOICE.json").read_text()))
+

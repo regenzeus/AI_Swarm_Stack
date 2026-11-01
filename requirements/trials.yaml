@@ -1,0 +1,164 @@
+# Trials: the swarm gets better by being used (docs/SWARM-TRIALS.md, phase 10).
+area: Trials
+prefix: TRL
+items:
+  - id: TRL-01
+    title: A trial goes through the front door
+    statement: A trial shall be a task in the owner's words with what is forbidden and a budget (eval/trials), given
+      through the runner's inbox like the app gives it, into a fresh repository holding only its specification, watched
+      to its end or its budget, an intake question answered for the unattended run and counted.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-19, SN-17]
+    sources: [docs/SWARM-TRIALS.md]
+    verify: {method: test, by: ['tests/test_trials.py::test_a_trial_is_checked_before_it_runs', 'tests/test_trials.py::test_a_task_given_straight_to_the_builder_is_followed_through_its_build',
+      'tests/test_trials.py::test_the_runner_s_answer_is_read_in_both_of_its_shapes']}
+    trace: [ops/trials.py, eval/trials/semver.yaml, Makefile]
+  - id: TRL-02
+    title: An answer key no agent reaches, proved before it scores
+    statement: A trial's answer key shall live where no container is given it (/srv/ai/private/trials) and shall score
+      its own reference solution fully before a run starts; a key that cannot is refused.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-19, SN-16]
+    sources: [docs/SWARM-TRIALS.md]
+    verify: {method: test, by: ['tests/test_trials.py::test_the_answer_key_must_score_its_own_reference_fully_and_scores_by_area',
+      'tests/test_trials.py::test_a_trial_s_build_ends_at_review_and_is_never_merged_and_the_judge_scores_it_too']}
+    trace: [ops/trials.py]
+  - id: TRL-03
+    title: Scored by a program, in a sandbox
+    statement: The delivered code shall be scored by the answer key's own program in a container with no network,
+      read-only, as nobody, with limited memory, per area of the specification; the model judge's verdict is kept beside it.
+    type: functional
+    priority: must
+    status: implemented
+    findings: [FND-92, FND-94]
+    parents: [SN-19]
+    sources: [docs/SWARM-TRIALS.md]
+    verify: {method: test, by: ['tests/test_trials.py::test_the_answer_key_must_score_its_own_reference_fully_and_scores_by_area']}
+    trace: [ops/trials.py, ops/staffing.py]
+  - id: TRL-04
+    title: The clean room is audited
+    statement: Each run shall be audited for forbidden reads (the pages its agents read) and actions (the commands and
+      files of its builds and steps, not the prompts that name what is forbidden) and the delivered code, and its code's
+      similarity to the upstream implementation measured with normalised token fingerprints and flagged above the
+      trial's threshold.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-19]
+    sources: [docs/SWARM-TRIALS.md]
+    verify: {method: test, by: ['tests/test_trials.py::test_the_clean_room_audit_catches_forbidden_reads_and_actions_but_not_the_trial_s_own_names',
+      'tests/test_trials.py::test_similarity_tells_copied_code_from_independent_code']}
+    trace: [ops/trials.py]
+  - id: TRL-05
+    title: A trial's build is scored, never merged
+    statement: A trial's build step shall end when its build reaches review, giving the branch and head the key scores;
+      the run then archives the code, closes the build and removes the clone, so nothing of a trial is merged, deployed
+      or left waiting for the owner.
+    type: constraint
+    priority: must
+    status: implemented
+    findings: [FND-91]
+    parents: [SN-19, SN-05]
+    sources: [docs/SWARM-TRIALS.md]
+    verify: {method: test, by: ['tests/test_conductor.py::test_a_build_or_claude_task_a_step_started_is_not_a_task_of_its_own', 'tests/test_conductor.py::test_a_trial_s_build_step_ends_at_review_and_is_scored_not_merged',
+      'tests/test_trials.py::test_a_trial_s_build_ends_at_review_and_is_never_merged_and_the_judge_scores_it_too']}
+    trace: [ops/conductor.py, ops/trials.py]
+  - id: TRL-06
+    title: Every run reported and kept
+    statement: Each run shall be reported in the vault (score by area, every failed case, the clean room, the plan,
+      builds, time, tokens, questions) and kept as a result for the scoreboard, and the owner told.
+    type: functional
+    priority: should
+    status: implemented
+    findings: [FND-90]
+    parents: [SN-19]
+    sources: [docs/SWARM-TRIALS.md]
+    verify: {method: test, by: ['tests/test_trials.py::test_the_report_says_the_score_the_clean_room_and_how_it_went']}
+    trace: [ops/trials.py]
+  - id: TRL-07
+    title: The roles software work needs
+    statement: The swarm shall staff an Analyst, a Tester, a Tracer, a Breaker and a Presenter beside the coder, the
+      reviewers and the judge, each with what it may and may not read enforced by its key, network and workspace.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-19, SN-17]
+    sources: [docs/SWARM-TRIALS.md]
+    verify: {method: test, by: ['tests/test_conductor.py::test_a_role_s_build_stays_in_its_lane', 'tests/test_registry.py::test_the_repo_cards_pass_the_registry_check']}
+    trace: [config/agents.yaml, ops/conductor.py, prompts/intake.md]
+  - id: TRL-08
+    title: The Orchestrator loops and re-plans
+    statement: The Conductor shall run bounded loops (code, test, fix until it passes or the budget ends) and, after each
+      wave, let the Orchestrator change the plan with the change shown to the owner.
+    type: functional
+    priority: should
+    status: implemented
+    findings: [FND-94]
+    parents: [SN-19]
+    sources: [docs/SWARM-TRIALS.md]
+    rationale: The checkpoint is the intake agent on its own key (one model call); it never touches a finished step, adds
+      at most three steps a look and looks at most three times a run, so a run's cost stays bounded.
+    verify: {method: test, by: ['tests/test_conductor.py::test_between_waves_the_orchestrator_keeps_or_changes_the_rest_of_the_plan',
+      'tests/test_conductor.py::test_a_recurring_or_fixed_plan_gets_no_checkpoint', 'tests/test_conductor.py::test_a_check_sends_failures_back_to_the_builder_until_they_pass', 'tests/test_conductor.py::test_a_check_out_of_fix_rounds_reports_what_still_fails_and_the_plan_goes_on', 'tests/test_conductor.py::test_only_a_check_loops_and_only_back_and_a_fold_keeps_the_loop_on_its_build', 'tests/test_tasks.py::test_the_intake_keeps_a_check_s_fix_loop_and_a_budget_preset']}
+    trace: [ops/conductor.py, ops/tasks.py, ops/builds.py, prompts/shared.md, images/mission-control/web/static/task.js]
+    acceptance: "Test: a re-plan after a wave is recorded and shown on the task."
+  - id: TRL-09
+    title: A scoreboard across versions
+    statement: The app shall show every trial's runs side by side, with score, cost, time, interventions and the
+      coordination numbers, per version of the agents and the code.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-19]
+    sources: [docs/SWARM-TRIALS.md]
+    acceptance: "Test: two runs of one trial on different versions show side by side with the change between them named."
+    verify: {method: test, by: [tests/test_trials.py::test_the_scoreboard_holds_every_run_side_by_side_with_its_version]}
+    trace: [ops/trials.py, images/mission-control/server.py, images/mission-control/web/static/task.js, images/mission-control/web/static/app.js]
+  - id: TRL-10
+    title: A builder's work is one build
+    statement: Consecutive builder steps of a plan (a builder step whose only predecessor is a builder step nothing else
+      waits for) shall become one build whose brief lists them as stages, so a stage that plans or checks without
+      committing does not fail the task.
+    type: functional
+    priority: must
+    status: implemented
+    findings: [FND-90]
+    parents: [SN-19]
+    sources: [docs/SWARM-TRIALS.md]
+    rationale: The first trial run (semver, 1 Nov 2026) failed in 3 minutes because its plan's first builder step read and
+      planned, committed nothing, and a build without a commit fails; its retry did the same.
+    verify: {method: test, by: ['tests/test_conductor.py::test_consecutive_builder_steps_become_one_build_with_stages']}
+    trace: [ops/conductor.py]
+  - id: TRL-11
+    title: A task stops at its budget
+    statement: A task may carry a budget of hours and tokens (its run's model calls and its builds' tokens); once it is
+      spent, no further step shall start, and the task shall fail saying which budget ran out.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-19, CST-02]
+    sources: [docs/SWARM-TRIALS.md]
+    verify: {method: test, by: ['tests/test_conductor.py::test_a_spent_budget_stops_the_next_step', 'tests/test_tasks.py::test_the_intake_keeps_a_check_s_fix_loop_and_a_budget_preset']}
+    trace: [ops/conductor.py, ops/tasks.py, ops/trials.py]
+  - id: TRL-12
+    title: Requirements traced and gaps found, scored
+    statement: A trace trial (T2) shall give the swarm a specification's requirements and an implementation with every
+      requirement ID taken out of its code, ask for each requirement's file and line and for every requirement the code
+      does not meet, and score the answer against where the IDs sat (the function) and the deviations planted in the
+      code, a gap the key does not know counting as a false alarm; on an open-source broker (mqtt-trace) and on the
+      stack's own code against its own requirements (stack-trace).
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-19]
+    sources: ['chat 2026-11-01: take the existing implementation and the requirements ... map where in the code requirements
+      are fullfilled ... detect which requirements are unfullfilled', docs/SWARM-TRIALS.md]
+    rationale: The MQTT spec pilot (spec/README.md) gives the key and the numbers to beat; the key and its make_key.py live
+      under /srv/ai/private/trials/mqtt-trace, out of every agent's reach.
+    verify: {method: test, by: [tests/test_trials.py::test_the_trace_trial_gets_the_implementation_beside_its_specification]}
+    trace: [eval/trials/mqtt-trace.yaml, eval/trials/stack-trace.yaml, ops/trials.py]
+

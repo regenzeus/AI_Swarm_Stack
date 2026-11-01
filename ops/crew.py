@@ -67,6 +67,8 @@ CREW = [
      "what": "Daily, while you grant Gmail read: files the newsletters and updates worth keeping into your vault (the curator makes wiki pages). Never archives or deletes mail."},
     {"id": "coach", "name": "Coach", "unit": "crew-coach", "area": "ops", "agent": True,
      "what": "Monthly: reads every agent's scorecard and turns a real problem (many declined ideas, duplicates, refused writes) into an agent change with its evidence and a target score. Each change is replayed on the agent's past runs first; you tap Build it only after it passed."},
+    {"id": "journeys", "name": "Journey checks", "unit": "crew-journeys", "area": "ops", "agent": True,
+     "what": "Nightly, without a model: follows your journeys end to end. A task given in a sentence to its result (on replayed answers), every screen of the app at phone width, the newest briefing's e-mail on a phone, every make target dry-run. A failure is an alert here."},
     {"id": "checker", "name": "Checker", "unit": "crew-checker", "area": "ops", "agent": True,
      "what": "Every hour, without a model: checks whether each shipped idea worked (its health issue stays away, CI is green, a log line is gone) and marks it proved, or reopens it with the evidence. Starts ideas your autonomy rules allow, pauses an agent whose runs keep failing."},
     {"id": "swarm-sync", "name": "Swarm sync", "unit": "swarm-sync", "area": "ops",
@@ -412,7 +414,7 @@ def mission_health(c, m):
 # human; everything else is a note on the card and in the run log. A good next run clears an issue; Acknowledge
 # hides it until it happens again (health-ack.json, logged in the activity feed).
 ALERTS = {"failing", "overdue", "stalled", "limit-long", "drift", "over-limit", "app-error", "drill-old", "memory-low",
-          "network-cut"}
+          "network-cut", "journey"}
 CURATOR_ITEM = {"wiki-curator": "curator"}           # a memory store's curator -> its crew item (the vault lint runs in curate)
 ENGINES = {"main": "Hermes (chat)", "mission": "Hermes (missions)", "scout": "Research (scout)", "curator": "Wiki curator",
            "builder": "Builder", "claude-builder": "Builder", "claude-task": "Claude worker", "claude-review": "Claude worker",
@@ -502,6 +504,35 @@ def app_errors(now=None, path=None):
              "success_7d": None, "issues": [{"kind": "app-error", "text": text, "at": max(float(r.get("ts") or 0) for r in rows)}], "payoff": ""}]
 
 
+JOURNEYS = OUT / "journeys.json"                  # the journey checks' last report (ops/journeys.py)
+
+
+def journey_issues(path=None):
+    """TSK-32: the last journey check's failures as one alert on "Journey checks", naming the first ones; [] when they
+    all passed (the next good night clears it)."""
+    try:
+        rep = json.loads((path or JOURNEYS).read_text())
+    except (OSError, ValueError):
+        return []
+    fails = [f"{j['name']}: {f}" for j in rep.get("journeys", []) for f in j.get("failures", [])]
+    if not fails:
+        return []
+    more = f" and {len(fails) - 3} more" if len(fails) > 3 else ""
+    return [{"kind": "journey", "at": rep.get("at") or 0,
+             "text": f"{len(fails)} journey check{'s' if len(fails) != 1 else ''} failed: " + "; ".join(fails[:3]) + more + " (make journeys shows them all)"}]
+
+
+def journeys(c):
+    """The nightly journey checks (ops/journeys.py), saved like any crew job's result; their failures are the alert."""
+    import journeys as JY
+    t0 = time.time()
+    save("journeys", result="checking…", started=t0)
+    rep = JY.run_all()
+    save("journeys", result=JY.summary(rep), findings=[{"kind": j["name"], "issue": f} for j in rep["journeys"] for f in j["failures"]],
+         seconds=round(time.time() - t0), last=time.time())
+    return 0
+
+
 def health(c, missions):
     """The Agent health board: every active mission, crew agent and engine; new alerts go out once (push + Telegram)."""
     import observe as O
@@ -512,6 +543,8 @@ def health(c, missions):
     for a in status():
         hc = _hist.get(a["id"])
         iss = [{**i, "at": i.get("at") or a.get("last") or 0} for i in (hc or {}).get("issues", [])] if a.get("enabled", True) else []
+        if a["id"] == "journeys":
+            iss += journey_issues()
         items.append({"name": a["name"], "kind": "crew", "id": a["id"], "status": a.get("state"), "last": a.get("last"),
                       "runs_7d": (hc or {}).get("runs_7d"), "success_7d": (hc or {}).get("success_7d"),
                       "issues": iss, "payoff": (hc or {}).get("payoff", "")})
@@ -979,7 +1012,7 @@ def run(name):
     CK.M = M
     import coach as COACH
     fn = {"maintainability": maintainability, "tests": tests, "memory": memory, "doctor": D.doctor,
-          "phone-cleanup": PA.cleanup, "phone-check": PA.check, "inbox": INB.digest, "checker": CK.run, "coach": COACH.run}[name]
+          "phone-cleanup": PA.cleanup, "phone-check": PA.check, "inbox": INB.digest, "checker": CK.run, "coach": COACH.run, "journeys": journeys}[name]
     import registry as REG
     import swarm_client as SW
     if SW.paused(name):                                   # SWM-26: the owner paused this agent (or all) in the app

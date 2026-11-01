@@ -197,7 +197,9 @@ SECRET_RES = [re.compile(p) for p in (
     r"\bsk-[A-Za-z0-9_-]{16,}", r"\bgh[pousr]_[A-Za-z0-9]{20,}", r"\bglpat-[A-Za-z0-9_-]{16,}", r"\bAKIA[0-9A-Z]{16}\b",
     r"\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}", r"(?i)\bbearer\s+[A-Za-z0-9._~+/-]{16,}",
     r"(?i)\b(password|passwd|pwd|secret|token|api[_-]?key)\s*[:=]\s*\S{6,}", r"-----BEGIN [A-Z ]*PRIVATE KEY-----")]
-CARD_RE = re.compile(r"\b(?:\d[ -]?){13,19}\b")
+# a card is written as one run of digits or in groups of 3 to 6 (4-4-4-4, 4-6-5); a stamp like 20261031-140852 in a
+# file name is neither, though its 14 digits pass the Luhn check (FND-93)
+CARD_RE = re.compile(r"\b(?:\d{13,19}|\d{3,6}(?:[ -]\d{3,6}){1,5})\b")
 
 
 def luhn(digits):
@@ -287,6 +289,8 @@ def gate(baseline, candidate, target):
     """SWM-18: an agent change ships only when no replay score drops and its target score rises. -> (passed, why)."""
     drops = [f"{m} {baseline[m]:.2f} -> {candidate[m]:.2f}" for m in METRICS
              if baseline.get(m) is not None and candidate.get(m) is not None and candidate[m] < baseline[m]]
+    if target is None:                                 # TSK-28: the owner's own change (a model, tools): nothing may get worse
+        return (False, "a score dropped: " + "; ".join(drops)) if drops else (True, "no replay score dropped")
     b, c = baseline.get(target), candidate.get(target)
     if b is None or c is None:
         return False, f"the target score {target} has no replay examples to measure it"
@@ -1536,6 +1540,16 @@ class Ledger:
 
     def refusals_since(self, hours=24):
         return dict(self.db.execute("select actor, count(*) from refusals where ts>? group by actor", (self.now() - hours * 3600,)).fetchall())
+
+    def refusal_causes(self, hours=24):
+        """Per actor, its refused writes grouped by operation and reason, the most frequent first, each with its last time:
+        the health signal names the cause and goes quiet once it stops."""
+        out = {}
+        for actor, op, reason, n, last in self.db.execute(
+                "select actor, op, reason, count(*), max(ts) from refusals where ts>? group by actor, op, reason order by 4 desc",
+                (self.now() - hours * 3600,)):
+            out.setdefault(actor, []).append({"op": op, "reason": reason, "n": n, "last": last})
+        return out
 
     def guard_trips(self, hours=24):
         """SWM-71, SWM-80: messages the Board's guards refused (loops, floods, repeats, contact policy), per agent."""

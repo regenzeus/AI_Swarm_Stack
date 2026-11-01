@@ -256,7 +256,7 @@ def research(m, logf, ev=None):
     Path(logf).write_text(out)
     best = best_price(out)
     dropped = bool(best and prev and pct and best <= prev * (1 - pct / 100))
-    quiet = bool(pct and prev and not dropped and not ev)        # price watch: only news is worth a message
+    quiet = is_quiet(m, prev, best, ev)                          # price watch: only news is worth a message
     status, summary, rel = M.file_task_result(m, out, "price check" if quiet else "run", deliver=not quiet)
     if status == "ok" and best:
         m.update(best_price_eur=best, best_price_at=M.now().isoformat(timespec="minutes"))
@@ -273,6 +273,22 @@ def research(m, logf, ev=None):
             p = propose(m, d, rel, open_p)
             app_check(m, p)
     return status, summary, rel
+
+
+def is_quiet(m, prev, best, ev=None):
+    """A scheduled price check that found no drop of at least the watch's percentage: kept, not sent."""
+    pct = float(m.get("watch_pct") or 0)
+    return bool(pct and prev and not (best and best <= prev * (1 - pct / 100)) and not ev)
+
+
+def recheck(c, m, ev):
+    """Check the offers again: the shopping agent's next run, or, when a task holds the agent (TSK-21), the task's next
+    occurrence under the Conductor. Buying and following an order stay the agent's own runs."""
+    if m.get("task"):
+        import conductor as CD
+        CD.fire(c, m["task"], ev)
+    else:
+        M.enqueue(c, m["slug"], "event", event=ev)
 
 
 def propose(m, d, rel, open_p=None):
@@ -638,14 +654,14 @@ def tick(c):
                 if caps and total <= min(caps) and (p.get("alerted_total") is None or total < p["alerted_total"] - 0.005):
                     p["alerted_total"] = total                    # told once: the same price does not propose again (SN-18)
                     note(p, f"Target reached: {total:.2f} € (≤ {min(caps):.2f} €): proposing again")
-                    M.enqueue(c, p["slug"], "event", event={"trigger": "price target reached", "summary": f"{p['item']} now {total:.2f} € at {p['shop']}"})
+                    recheck(c, m, {"trigger": "price target reached", "summary": f"{p['item']} now {total:.2f} € at {p['shop']}"})
                     save(p)
                     continue
             until = (p.get("verdict") or {}).get("until")
             if until and M.now().date().isoformat() >= until:
                 note(p, f"Waited until {until}: checking the offers again")
                 save(p)
-                M.enqueue(c, p["slug"], "event", event={"trigger": "waited until the planned date", "summary": f"re-check {p['item']}"})
+                recheck(c, m, {"trigger": "waited until the planned date", "summary": f"re-check {p['item']}"})
         elif p.get("status") in ("bought", "shipped") and t >= (p.get("track_next") or 0) and granted():
             if (M.now() - dt.datetime.fromisoformat(p.get("bought_at") or M.now().isoformat())).days > 30:
                 p["status"] = "delivered"

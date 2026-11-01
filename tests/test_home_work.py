@@ -9,8 +9,9 @@ ROOT = Path(__file__).resolve().parent.parent
 MC = ROOT / "images/mission-control"
 APP_JS = (MC / "web/static/app.js").read_text()
 GUIDE = (MC / "guide/01-welcome.md").read_text()
-FUNCS = ("needsItems", "needsHtml", "nowHtml", "upkeepHtml", "feedItems", "feedHtml", "workBuildRow", "statusPill", "runningCard", "stepsHtml", "rel", "dayOf")
-CONSTS = ("esc", "BSTATUS", "bcls", "VERDICT", "STATUS", "typeIcon", "toIso", "gbOf", "clockOf", "dur", "nf", "tok", "CREW_IC", "TRIG", "firstLine", "ctAsker", "ctTitle", "ideasWaiting")
+FUNCS = ("needsItems", "needsHtml", "nowHtml", "upkeepHtml", "feedItems", "feedHtml", "workBuildRow", "statusPill", "runningCard", "stepsHtml", "dayOf")
+CONSTS = ("esc", "BSTATUS", "bcls", "VERDICT", "STATUS", "typeIcon", "toIso", "gbOf", "clockOf", "CREW_IC", "TRIG", "firstLine", "ctAsker", "ctTitle", "ideasWaiting")
+FORMAT = re.search(r"// ---------- formatting \(TSK-31\).*?// ---------- end of formatting ----------", APP_JS, re.S)[0]   # the app's own helpers
 
 
 def run(state, expr):
@@ -18,8 +19,8 @@ def run(state, expr):
     constants = [m[0] for name in CONSTS if (m := re.search(rf"^const {name} = .*?;$", APP_JS, re.M | re.S))]
     script = "\n".join([
         'const ic = new Proxy({}, {get: (_, key) => `<svg data-icon="${key}"></svg>`});',
-        "const eur = (v) => `${v} EUR`, SHOP_STATE = {watching: ['paused', 'Watching'], proposed: ['ok', 'Proposed']};",
-        "const dt = (x) => x; let homeFilter = 'all', homeShow = 40; const homeEx = new Map();",
+        FORMAT, "const SHOP_STATE = {watching: ['paused', 'Watching'], proposed: ['ok', 'Proposed']};",
+        "let homeFilter = 'all', homeShow = 40; const homeEx = new Map();",
         f"let S = {json.dumps({'missions': [], **state})};",
         "const shopProposals = () => (S.shopping || {}).proposals || [];",
         *constants, *functions, f"process.stdout.write(String({expr}));"])

@@ -7,7 +7,6 @@ const SHOP_STATE = {
   buying: ["run", "Buying on the AI phone"], needs_owner: ["failed", "Stopped before buying: needs you"], bought: ["ok", "Ordered"],
   shipped: ["ok", "Shipped"], delivered: ["ok", "Delivered"], over_limit: ["paused", "Over your limits"], superseded: ["paused", "Replaced"],
 };
-const eur = (v) => (v == null ? "?" : `${(+v).toFixed(2).replace(".", ",")} €`);
 
 function shopProposals(slug) {
   return (S.shopping?.proposals || []).filter((p) => !slug || p.slug === slug);
@@ -25,7 +24,7 @@ function shopCard(p, m) {
   const gm = S.connections?.gmail?.grants?.read;
   const shot = (sid) => (sid ? `<a class="btn sm ghost" href="/api/phone/shot/${encodeURIComponent(sid)}" target="_blank" rel="noopener">Screenshot</a>` : "");
   return `<div class="card pad-l shopcard" id="shop-${p.id}" style="margin-bottom:14px">
-    <div class="row between wrap" style="gap:8px;align-items:center"><span class="pill ${pill}">${esc(label)}</span><span class="tiny faint">${esc(p.id)} · ${esc((p.updated || p.created || "").slice(0, 16).replace("T", " "))}</span></div>
+    <div class="row between wrap" style="gap:8px;align-items:center"><span class="pill ${pill}">${esc(label)}</span><span class="tiny faint">${esc(p.id)} · ${dt(p.updated || p.created)}</span></div>
     <h2 style="margin:10px 0 2px">${esc(p.item)}</h2>
     <div class="small">${esc(p.variant || "")}</div>
     <div class="small muted" style="margin-top:4px">${esc(p.shop)} · seller ${esc(p.seller || "?")}${p.rating ? " · ★ " + esc(p.rating) : ""}</div>
@@ -36,7 +35,7 @@ function shopCard(p, m) {
     ${p.why_now ? `<div class="small" style="margin-top:4px"><b>${p.status === "watching" ? "Why wait" : "Why now"}:</b> ${esc(p.why_now)}</div>` : ""}
     ${p.status === "watching" ? `<div class="small" style="margin-top:4px"><b>Waiting for:</b> ≤ ${eur(v.target_eur)} or ${esc(v.until || "?")} · keeps watching and proposes again</div>` : ""}
     ${p.trend || p.price_history ? `<div class="tiny muted" style="margin-top:6px">${esc(p.price_history || "")}${p.trend ? " · trend: " + esc(p.trend) : ""}</div>` : ""}
-    ${p.app_check ? `<div class="tiny muted" style="margin-top:4px">Checked in the ${esc(p.shop)} app on the AI phone ${esc((p.app_check.at || "").slice(5, 16).replace("T", " "))}: ${p.app_check.price_eur ? "first price " + eur(p.app_check.price_eur) : "no price read"} ${shot(p.app_check.shot)}</div>` : ""}
+    ${p.app_check ? `<div class="tiny muted" style="margin-top:4px">Checked in the ${esc(p.shop)} app on the AI phone ${dt(p.app_check.at)}: ${p.app_check.price_eur ? "first price " + eur(p.app_check.price_eur) : "no price read"} ${shot(p.app_check.shot)}</div>` : ""}
     ${p.over ? `<div class="banner" style="margin-top:10px">${ic.alert}<span class="grow">${esc(p.over)}. Only a buy-it-yourself link.</span></div>` : ""}
     ${p.status === "needs_owner" ? `<div class="banner" style="margin-top:10px">${ic.alert}<span class="grow">Nothing was bought: ${esc(p.stopped_reason || "")}</span>${shot(p.stopped_shot)}</div>` : ""}
     ${p.order ? `<div class="small" style="margin-top:8px"><b>Order</b> ${esc(p.order)}${p.shipping?.status ? ` · ${esc(p.shipping.status)}${p.shipping.carrier ? " · " + esc(p.shipping.carrier) : ""}${p.shipping.eta ? " · expected " + esc(p.shipping.eta) : ""}` : ""} ${shot(p.order_shot)}</div>` : ""}
@@ -49,7 +48,7 @@ function shopCard(p, m) {
     ${["proposed", "bought", "shipped"].includes(p.status) ? `<div style="margin-top:12px"><div class="tiny faint" style="margin-bottom:6px">To follow the order (confirmation and shipping mails) it needs Gmail read access:</div>${grantRow("gmail", "read", "read the order's mails", gm, m.slug)}</div>` : ""}
     ${p.status === "proposed" ? `<div class="tiny faint" style="margin-top:8px">Approving lets the AI phone put exactly this in the cart and go to checkout. It taps the final buy button once, only if the final screen shows this item, variant and seller, a total of at most ${eur(Math.min((p.total_eur || 0) * 1.03 + 1, S.shopping?.limits?.per_purchase_eur || 150))} and your address; otherwise it stops and asks you. It never types payment data or passwords and never changes the address or payment method.</div>` : ""}
     ${p.offers?.length > 1 ? `<details style="margin-top:10px"><summary class="small muted">All offers compared · ${p.offers.length}</summary><div class="tablewrap"><table class="tbl small"><tr><th>Product</th><th>Shop · seller</th><th>Total</th><th>Delivery</th></tr>${p.offers.map((o) => `<tr><td>${o.url ? `<a href="${esc(o.url)}" target="_blank" rel="noopener">${esc(o.product)}</a>` : esc(o.product)}<div class="tiny faint">${esc(o.variant || "")}</div></td><td>${esc(o.shop)} · ${esc(o.seller || "?")}${o.rating ? `<div class="tiny faint">★ ${esc(o.rating)}</div>` : ""}</td><td>${eur(o.total_eur)}</td><td>${esc(o.delivery || "")}</td></tr>`).join("")}</table></div></details>` : ""}
-    ${p.journal?.length ? `<details style="margin-top:6px"><summary class="small muted">What happened · ${p.journal.length}</summary><ul class="phlog">${p.journal.slice().reverse().map((j) => `<li><span class="tiny faint">${esc((j.at || "").slice(5, 16).replace("T", " "))}</span> ${esc(j.text)}</li>`).join("")}</ul></details>` : ""}
+    ${p.journal?.length ? `<details style="margin-top:6px"><summary class="small muted">What happened · ${p.journal.length}</summary><ul class="phlog">${p.journal.slice().reverse().map((j) => `<li><span class="tiny faint">${dt(j.at)}</span> ${esc(j.text)}</li>`).join("")}</ul></details>` : ""}
   </div>`;
 }
 
@@ -103,7 +102,7 @@ function shopDeepLink() {                     // from Telegram: #/mission/<slug>
   if (el) el.scrollIntoView({ block: "center" });
   if (id && ["approve", "not_now", "change"].includes(d)) {
     route.q.delete("do");
-    history.replaceState(null, "", location.hash.replace(/&do=[a-z_]+/, ""));
+    history.replaceState(history.state, "", location.hash.replace(/&do=[a-z_]+/, ""));
     shopDecide(d, id);
   }
 }

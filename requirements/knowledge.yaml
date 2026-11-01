@@ -118,7 +118,7 @@ items:
     status: implemented
     parents: [SN-05, SN-09]
     sources: [images/mission-control/guide/09-wikis.md]
-    verify: {method: test, by: [tests/test_wikis.py::test_delete_removes_a_mission_wiki_in_one_restorable_commit_and_stops_it_growing, tests/test_wikis.py::test_the_vault_wiki_and_paths_outside_wikis_cannot_be_deleted, tests/test_wikis.py::test_wiki_delete_is_wired_for_the_app_only]}
+    verify: {method: test, by: [tests/test_server.py::test_every_action_a_button_sends_is_one_the_app_lets_through, tests/test_wikis.py::test_delete_removes_a_mission_wiki_in_one_restorable_commit_and_stops_it_growing, tests/test_wikis.py::test_the_vault_wiki_and_paths_outside_wikis_cannot_be_deleted, tests/test_wikis.py::test_wiki_delete_is_wired_for_the_app_only]}
     trace: [ops/wikis.py]
   - id: KNW-12
     title: Browsing a wiki

@@ -54,7 +54,8 @@ is needed; the work is joining them.
 - **Crew pages** — every crew agent: its runs over 30 days with their log, stats (success, duration), payoff
   (proposals made and their fate: accepted, built, dismissed), and **settings**: schedule presets or custom
   (`OnCalendar` or an interval, applied as a systemd drop-in), on/off, Run now.
-- **Payoff** — missions: reports, runs, tokens; crew: proposals and their fate, or successful runs.
+- **Results** — missions: what it delivered (each result opens), then runs and tokens; crew: proposals and their fate, or successful runs.
+- **Tasks** — the tasks the agent worked on and its part in each; each opens its task's page (APP-35).
 
 ## The runtime record: one stream, every agent, live
 
@@ -130,3 +131,46 @@ box a Claude task or build already has is shown).
 - Export the runtime record as OTLP spans (the names are mapped already) if a trace viewer should show it.
 
 Not planned: the fence (optional in the Atlas design, off by default) and the steering/harness ideas.
+
+## What each task run used and made (TSK-23, TSK-24)
+
+`ops/provenance.py` records, for every step of a Conductor task's run, the artifacts it used and generated as W3C PROV
+links (`used`, `generated`, `derived`, `cited`) in the runner's database (`artifacts`, `prov`). They come from where
+the work happened: the agents' tool calls in the runtime record (fetch, web search, the browser, the job board, the
+vault, memory; a helper agent's calls count for the step that called it in), the Topic Desk's chosen items, the
+step's own answer (a finding, derived from the pages it names and from the findings it waited for), the report, the
+wiki pages and the deliveries. When the run ends, the steps are recorded again (tool events arrive late) and every
+source whose address the report or the answer links is marked `cited`. Each change writes the run's map,
+`public/maps/<task>.<occ>.json`, which the app draws (Tasks → Swarm map) and `/api/task/map` serves.
+`python3 ops/provenance.py backfill` records and draws the runs that finished before.
+
+## Telemetry history, list prices and task traces (TSK-25 to TSK-27)
+
+- **History:** `ops/history.py` rolls the runtime record up every hour into `agent_days` (runner database): one row
+  a day per agent, model, harness and kind of work (the task's kind, or mission, build, chat, crew, intake), with runs,
+  ended well, failed, the judge's met/partly/not met (`task_metrics`), tokens in/out/cached, median and p95 time and the
+  cost at list price. A day is written again whole; 365 days are kept (the runtime record's events stay 90).
+  `public/telemetry.json` → `/api/telemetry` → Stack → Telemetry, whose agent rows open their runs
+  (`/api/rt/runs?agent=&since=&until=`).
+- **List prices:** `config/prices.json` from the gateway's own table (`python3 ops/prices.py refresh`), each alias
+  priced as the provider's model behind it. Shown as "$x if paid" on runs, tasks, steps, map lanes and the dashboard;
+  `upgrade_check.py` says when it is behind the pinned LiteLLM.
+- **Phoenix:** a task's run (`task:<id>`, `task:<id>.<n>`) is exported a minute after it ends as one trace
+  (`otlp.tree_spans`): the run as root, its steps, the agent runs inside them, their model and tool calls.
+
+## Journey checks (TSK-32)
+
+Unit tests check parts; the owner uses journeys. `ops/journeys.py` follows them end to end every night at 04:10 (the
+Journey checks crew job) and on `make journeys`, without a model and without changing anything live:
+
+| Journey | What it proves |
+|---|---|
+| task | a task given in a sentence goes through the real intake check, the Conductor, the result file, the done message, the judge and the Tasks board, on the newest finished task's recorded answers, in a sandbox database |
+| routes | every route opens at 375 px in headless Chromium (the scout's browser image) on the live data and with an emptied state: no sideways scrolling, script error or empty screen; a card opens its page; an empty state offers an action; dates and numbers the app's way. Writes are answered in the browser, never sent; no other host is reached |
+| email | the newest briefing rendered as its e-mail: the headline once in the header, no Markdown marks or twice-escaped text, nothing wider than a phone |
+| make | every make target dry-runs and every script its recipe names exists |
+| selftest | a page, an e-mail and a Makefile with each of those faults are caught |
+
+The report is `/srv/ai/missions/crew/journeys.json`; any failure is one alert on **Journey checks** on the health
+board, naming the first ones, until a night passes.
+

@@ -5,6 +5,9 @@ events (the hooks in config/hermes/claude-hooks: llm with tokens, call/result pe
   invoke_agent <agent>      the run (gen_ai.agent.name, aistack.run.id, the ref it belongs to, token totals)
     chat <model>            one per model call, with gen_ai.usage.* and OpenInference's llm.token_count.*
     execute_tool <tool>     one per tool call, from its call to its result, input and output truncated
+A task's run under the Conductor (task:<id>, task:<id>.<n>) goes as one trace too (TSK-26, tree_spans): the run is the
+root (invoke_agent conductor), each step a child (invoke_agent <agent>), the agent runs a step started under it, and
+their model and tool calls under them.
 The names follow the OpenTelemetry GenAI conventions (development status) and Phoenix's OpenInference span kinds.
 Phoenix takes OTLP over HTTP as protobuf only; this module writes the few messages a trace needs by hand.
 Never raises: tracing must not break a run.
@@ -89,18 +92,20 @@ def _id(seed, n):
     return hashlib.sha256(seed.encode()).hexdigest()[:n * 2]
 
 
-def spans_of(run, agent, events, title="", ref=None):
-    """The runtime record's events of one run -> spans of one trace (ids derived from the run: re-export is idempotent)."""
+def spans_of(run, agent, events, title="", ref=None, trace=None, parent=None, start=None, end=None, system="anthropic"):
+    """The runtime record's events of one run -> spans (ids derived from the run: re-export is idempotent). Its own trace,
+    or inside `trace` under the span `parent` (tree_spans); `start`/`end` bound a run whose events say little."""
     ev = sorted(events, key=lambda e: e.get("ts") or 0)
-    if not ev:
+    if not ev and start is None:
         return []
-    tid, root = _id(run, 16), _id(run + ":root", 8)
-    t0, t1 = ev[0]["ts"], ev[-1]["ts"]
+    tid, root = trace or _id(run, 16), _id(run + ":root", 8)
+    t0 = min([e["ts"] for e in ev if e.get("ts")] + ([start] if start is not None else []))
+    t1 = max([e["ts"] for e in ev if e.get("ts")] + ([end] if end is not None else []) + [t0])
     tin = sum((e.get("tokens") or {}).get("in", 0) for e in ev if e.get("kind") == "llm")
     tout = sum((e.get("tokens") or {}).get("out", 0) for e in ev if e.get("kind") == "llm")
     end = next((e for e in reversed(ev) if e.get("kind") == "end"), {})
-    out = [{"trace_id": tid, "span_id": root, "name": f"invoke_agent {agent}", "kind": 1, "start": t0, "end": t1,
-            "attrs": {"gen_ai.operation.name": "invoke_agent", "gen_ai.agent.name": agent, "gen_ai.system": "anthropic",
+    out = [{"trace_id": tid, "span_id": root, "parent_id": parent, "name": f"invoke_agent {agent}", "kind": 1, "start": t0, "end": t1,
+            "attrs": {"gen_ai.operation.name": "invoke_agent", "gen_ai.agent.name": agent, "gen_ai.system": system,
                       "openinference.span.kind": "AGENT", "aistack.run.id": run, "aistack.ref": ref or "", "input.value": title[:MAX],
                       "gen_ai.usage.input_tokens": tin, "gen_ai.usage.output_tokens": tout,
                       "llm.token_count.prompt": tin, "llm.token_count.completion": tout, "llm.token_count.total": tin + tout},
@@ -134,6 +139,19 @@ def spans_of(run, agent, events, title="", ref=None):
     return out
 
 
+def tree_spans(root, runs, events):
+    """TSK-26: a task's run and every run inside it -> one trace. runs: [{run, ref, agent, title, started, ended}];
+    events: {run: [event]}. Each run sits under the run it belongs to (a step under the task's run, an agent's run under
+    its step), one whose parent is not in the tree under the root."""
+    tid, by = _id(root, 16), {r["run"]: r for r in runs}
+    out = []
+    for r in runs:
+        parent = None if r["run"] == root else _id((r["ref"] if r.get("ref") in by else root) + ":root", 8)
+        out += spans_of(r["run"], r.get("agent") or "agent", events.get(r["run"], []), r.get("title") or "", r.get("ref"),
+                        trace=tid, parent=parent, start=r.get("started"), end=r.get("ended"), system="aistack")
+    return out
+
+
 def export(spans, url=None, timeout=10):
     """POST the spans to Phoenix. -> True when Phoenix took them."""
     if not spans:
@@ -147,5 +165,10 @@ def export(spans, url=None, timeout=10):
         return False
 
 
-def export_later(spans):
-    threading.Thread(target=export, args=(spans,), daemon=True).start()
+def export_later(spans, delay=0):
+    """In the background; `delay` seconds first (a task's run: its agents' last events may still be on their way)."""
+    def go():
+        if delay:
+            threading.Event().wait(delay)
+        export(spans() if callable(spans) else spans)
+    threading.Thread(target=go, daemon=True).start()

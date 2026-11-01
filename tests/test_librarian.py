@@ -227,3 +227,23 @@ def test_a_memory_over_its_limit_for_eight_days_alerts_its_curator(monkeypatch):
                                    "text": "Search index (qmd) has been over its limit since 2026-10-26: 750 embedding chunks (44%) belong to files that are gone"}]
     assert "over-limit" in crew.ALERTS
     crew.M = None
+
+
+def test_a_refinement_writes_the_pages_it_is_given_in_the_wiki_s_own_folders_and_leaves_the_vault_index(L, monkeypatch):
+    """TSK-34: compile_into takes the pages a refinement names (in groups) and the folders that wiki has (the vault
+    wiki's howto, answers ...); the vault wiki's index stays its curator's; a folder the wiki has not is refused."""
+    import mission_extras as X
+    import swarm_client as SW
+    monkeypatch.setattr(SW, "wiki_helps", lambda root, title="", send=None: [])
+    page(L.M.VAULT, "wiki/howto/flash-bios", {"title": "Flash the BIOS", "summary": "how"}, "## Steps\n- old step")
+    page(L.M.VAULT, "wiki/howto/other", {"title": "Other", "summary": "x"}, "## Steps\n- other")
+    (L.M.VAULT / "wiki/index.md").write_text("the curator's index")
+    seen = []
+    L.M.ask_json = lambda p, key, timeout=0: seen.append(p) or {"pages": [
+        {"path": "howto/flash-bios", "title": "Flash the BIOS", "body": "## Steps\n- new step [[tasks/1-wiki-findings-1]]"},
+        {"path": "zzz/elsewhere", "title": "No", "body": "x"}]}
+    out = X.compile_into("wiki", "Vault wiki", "tasks/1-wiki-findings-1.md", "Fix the BIOS steps", "k", touched=["howto/flash-bios"])
+    assert out == ["howto/flash-bios"] and "=== howto/flash-bios" in seen[0] and "=== howto/other" not in seen[0]
+    meta, body = meta_of(L, "wiki/howto/flash-bios")
+    assert "- new step" in body and "tasks/1-wiki-findings-1" in meta["sources"]
+    assert (L.M.VAULT / "wiki/index.md").read_text() == "the curator's index"

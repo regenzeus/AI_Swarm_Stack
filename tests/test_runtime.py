@@ -225,3 +225,38 @@ def test_hermes_runs_without_a_ref_are_tied_to_the_live_mission(RT):
     assert [c["run"] for c in v["children"]] == ["hermes:mission:a:1"]
     assert any(e["run"] == "hermes:scout:b:1" and e["kind"] == "say" for e in v["events"])    # the scout's work shows in the mission
     assert RT.view("hermes:scout:b:1")["ref"] == "hermes:mission:a:1"
+
+
+def test_requests_that_come_together_each_read_their_own_runs(RT):
+    """FND-88: one connection shared by the server's request threads mixed up the reads of requests that came together
+    (an agent's page asks for its runs and its room at once): sqlite's "bad parameter or other API misuse", or a run
+    read back as None. Each thread now reads on its own connection."""
+    import threading
+    t0 = time.time() - 3000
+    for i in range(40):
+        RT.ingest([ev(f"r{i}", "run", t0 + i * 60, run_title=f"Run {i}", ref=f"r{i - 1}" if i else None),
+                   ev(f"r{i}", "llm", t0 + i * 60 + 1, title="gpt", tokens={"in": 10, "out": 2}),
+                   ev(f"r{i}", "end", t0 + i * 60 + 5, status="done")])
+    errors = []
+
+    def read():
+        try:
+            for _ in range(15):
+                assert len([r for r in RT.timeline(hours=2)["runs"] if r["run"].startswith("r")]) == 40
+                assert len([r for r in RT.runs(limit=100) if r["run"].startswith("r")]) == 40
+        except Exception as e:                        # every failure of every thread is kept and shown
+            errors.append(f"{type(e).__name__}: {e}")
+
+    def write():
+        try:
+            for j in range(30):
+                RT.ingest([ev("w", "llm", time.time() - 5 + j / 100, title="gpt", tokens={"in": 1, "out": 1})])
+        except Exception as e:
+            errors.append(f"{type(e).__name__}: {e}")
+    threads = [threading.Thread(target=read) for _ in range(8)] + [threading.Thread(target=write)]
+    for x in threads:
+        x.start()
+    for x in threads:
+        x.join()
+    assert errors == []
+

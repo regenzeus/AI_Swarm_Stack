@@ -2,7 +2,8 @@
 import re
 from pathlib import Path
 
-APP_JS = (Path(__file__).resolve().parent.parent / "images/mission-control/web/static/app.js").read_text()
+STATIC = Path(__file__).resolve().parent.parent / "images/mission-control/web/static"
+APP_JS = (STATIC / "app.js").read_text()
 
 
 def names(pattern):
@@ -54,3 +55,27 @@ def test_view_scripts_load_before_app_js_and_take_no_arguments():
     code = "".join(f.read_text() for f in (web / "static").glob("*.js"))
     for v in views:
         assert re.search(rf"^(async )?function {v}\(\)", code, re.M), f"{v} is missing or takes arguments"
+
+
+def test_a_page_that_loads_draws_only_while_you_are_still_on_it():
+    """FND-95: the wiki's index loaded slowly and was drawn over the Agents page you had moved to (the Agents tab lit,
+    the Wiki on screen). Every page that waits for data checks, after its first wait, that it is still the page."""
+    for f in ("app.js", "swarm.js", "guide.js", "task.js"):
+        src = (STATIC / f).read_text()
+        for m in re.finditer(r"^async function (v[A-Z]\w*)\(\) \{\n(.*?)^\}", src, re.S | re.M):
+            body = m.group(2)
+            first = body.find("await ")
+            draw = body.find("view.innerHTML", first) if first >= 0 else -1
+            if draw < 0:
+                continue
+            assert re.search(r"route\.(name|args|q)|mountRun|swAgents|swActivity|loadGuide", body[first:draw]), \
+                f"{f}: {m.group(1)} draws after a wait without checking it is still the page"
+
+
+def test_a_live_redraw_never_scrolls_the_page():
+    """FND-96: the Agents page jumped up while you read it: a redraw centred its view tabs with scrollIntoView, which
+    scrolled the whole page to the row. Code that runs on every redraw moves only its own row (scrollLeft)."""
+    i = APP_JS.index("function agentViews(")
+    body = APP_JS[i:APP_JS.index("\n}\n", i)]
+    assert "scrollIntoView" not in body and "scrollLeft" in body
+

@@ -4,11 +4,16 @@
 # files the briefing into the workbook (topics/<slug>/reports/YYYY/MM/YYYY-MM-DD.md), commits the vault, re-indexes
 # search, sends the short version to Telegram (DESK_TELEGRAM=0: not).
 #   ops/desk.sh [slug] [--date YYYY-MM-DD]       (needs VK_DESK and SEC_CONTACT: run via make desk / Mission Control)
+# DESK_MODE=collect: only the first step of a briefing task (collect, choose, read; out/<date>.collected.json), nothing
+# filed; DESK_MODE=write: its writing step (the collected events and out/findings.json, the scouts' research), filed as
+# usual (TSK-22, ops/conductor.py). Without DESK_MODE the whole pipeline runs, as for a briefing mission.
 set -uo pipefail
 PROMPTS="$(cd "$(dirname "$0")/.." && pwd)/prompts"     # prompts/desk.md, mounted read-only (MEM-13)
 export DOCKER_HOST=${DOCKER_HOST:-unix:///run/user/1000/docker.sock}
 V=/srv/vault; ONLY=${1:-}; DATE=$(date +%F)
 [ "${2:-}" = "--date" ] && DATE=$3
+MODE=${DESK_MODE:-full}
+case "$MODE" in collect) ARGS=(--collect) ;; write) ARGS=(--write) ;; *) ARGS=() ;; esac
 notify() { [ "${DESK_TELEGRAM:-1}" = 0 ] || NOTIFY_CATEGORY=result "$(dirname "$0")/notify.sh" "$1" >/dev/null 2>&1 || true; }
 
 for t in "$V"/topics/*/TOPIC.md; do
@@ -19,11 +24,16 @@ for t in "$V"/topics/*/TOPIC.md; do
   S=/srv/ai/desk/$slug; mkdir -p "$S/state" "$S/out"
   docker run --rm -u 0 -v "$S":/d alpine sh -c "chown 0:0 /d; chown -R 10005 /d/state /d/out"   # container writes only these
   if ! docker run --rm --network aistack_webonly -e VK_DESK -e SEC_CONTACT -v "$V/topics/$slug":/topic:ro -v "$S/state":/state \
-       -v "$S/out":/out -v "$PROMPTS":/prompts:ro aistack/desk:1 --topic /topic --state /state --out /out --date "$DATE" 2>"$S/last.log"; then
+       -v "$S/out":/out -v "$PROMPTS":/prompts:ro aistack/desk:1 --topic /topic --state /state --out /out --date "$DATE" "${ARGS[@]}" 2>"$S/last.log"; then
     notify "Topic Desk ($slug): the briefing for $DATE failed. $(tail -1 "$S/last.log")"
+    echo "$(date '+%F %T') $slug $DATE failed: $(tail -1 "$S/last.log")"
     continue
   fi
   python3 "$(dirname "$0")/prompts.py" keep "$S/out/prompt-cases.jsonl" || true   # the run's calls become replay cases (MEM-11)
+  if [ "$MODE" = collect ]; then
+    echo "$(date '+%F %T') $slug $DATE collected: $(grep -m1 '^collected:' "$S/last.log" | cut -d' ' -f2-)"
+    continue
+  fi
   dest="topics/$slug/reports/${DATE:0:4}/${DATE:5:2}/$DATE.md"
   if ! { docker exec -u hermes aistack-hermes-1 mkdir -p "/vault/$(dirname "$dest")" &&
          docker exec -i -u hermes aistack-hermes-1 sh -c "cat > /vault/$dest" < "$S/out/$DATE.md"; }; then

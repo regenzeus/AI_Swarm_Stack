@@ -104,6 +104,28 @@ Progress:
   idea for a permanent agent after three met tasks (TSK-13 to TSK-17). Security review: docs/SECURITY.md. Whether routing
   beats the fixed assignment needs enough judged tasks to measure.
 
+- **Phase 6a (31 Oct 2026):** every task the intake plans runs under the Conductor (DEC-36): one step or many, once or
+  on a schedule (each run an occurrence with its own steps and trace), steps that fan out per item, coding work as a
+  build step that waits for the owner's tap, and "Run again now".
+- **Phase 6b (1 Nov 2026):** a briefing task runs collect, a scout per key question in parallel, write and deliver; a
+  task on an event runs each firing as an occurrence (a briefing's is the desk's alert); a price watch is its shopping
+  agent's check, purchases staying the agent's runs (DEC-37); every run of a recurring task is judged on its own.
+- **Phase 7 (1 Nov 2026):** what every step used and made (W3C PROV, ops/provenance.py) and each run's swarm map (flow
+  and timeline); the telemetry history and dashboard, list-price costs, one Phoenix trace per task run (TSK-23 to TSK-27).
+- **Phase 8a (1 Nov 2026):** agent settings in the app as replayed agent changes, tools as grants, the composer's agents
+  and model (TSK-28 partial, TSK-29, TSK-30).
+- **Phase 8b (1 Nov 2026):** one look and wording across the app (formatting helpers only, cards open their page,
+  empty states offer their action, every action says what happens next; TSK-31) and the journey checks, nightly and
+  on demand, failures on the health board (TSK-32). Their first run found a run page wider than the phone (FND-86).
+- **Phase 10 (1 Nov 2026, 10a built):** trials, so the swarm gets better by being used: clean-room reimplementation
+  from a specification with its official test suite as the hidden answer key, requirements tracing and gap finding,
+  a Breaker; the roles software work needs (Analyst, Tester, Tracer, Breaker, Presenter), loops and checkpoints in the
+  Orchestrator, a scoreboard across versions ([SWARM-TRIALS.md](SWARM-TRIALS.md); the owner decides its open points).
+- **Phase 9 (1 Nov 2026):** OpenCode steps, the calendar as an event source, outside agents over A2A, off by default
+  (TSK-07, TSK-33, TSK-19; Codex CLI, TSK-18, not yet).
+- **Next (31 Oct 2026):** the owner asked for every task through the Conductor, the swarm map, telemetry, customisation,
+  a UX pass and more reach. Their design is [SWARM-DESIGN.md](SWARM-DESIGN.md), phases 6 to 9 (TSK-21 to TSK-33).
+
 ## Built here, and what is not
 
 - **The plan graph and the step journal live with the tasks** (the runner's task database, DEC-35) instead of

@@ -19,6 +19,7 @@ function setup(clipboard) {
     document: { querySelector: (id) => elements.get(id), addEventListener() {} },
     window: { addEventListener() {}, scrollTo() {} },
     location: { hash: "", hostname: "localhost" },
+    history: { state: null, replaceState() {} },
     navigator: { clipboard },
     URLSearchParams,
     EventSource: class {},
@@ -27,6 +28,7 @@ function setup(clipboard) {
     marked: { parse: () => "<p>Rendered content, not markdown</p>" },
     vGuide() {},
     loadGuide: async () => {},
+    explain: (key, html) => html,                         // guide.js: a folded explanation
     fetch: async (url) => ({ ok: true, headers: { get: () => "application/json" }, json: async () => url === "/api/version" ? { version: "test" } : pages.shift() }),
   });
   vm.runInContext(source, context);
@@ -40,10 +42,10 @@ function setup(clipboard) {
   };
 }
 
-test("wiki title has a small copy button with the existing document icon", async () => {
+test("wiki title has Correct or research and a small copy button with the existing document icon", async () => {
   const app = setup({ writeText: async () => {} });
   await app.render();
-  assert.match(app.body.innerHTML, /class="row wrap wtitle"><h1>Original &lt;title&gt;<\/h1><button type="button" class="btn sm" data-copy-markdown><svg[^]*?<\/svg>Copy markdown<\/button>/);
+  assert.match(app.body.innerHTML, /class="row wrap wtitle"><h1>Original &lt;title&gt;<\/h1><button type="button" class="btn sm primary" id="wrefb">[^]*?Correct or research<\/button><button type="button" class="btn sm" data-copy-markdown><svg[^]*?<\/svg>Copy markdown<\/button>/);
   assert.match(app.body.innerHTML, /Linked mentions/);
   assert.match(app.body.innerHTML, /Local graph/);
 });

@@ -39,9 +39,16 @@ Rules:
   shop and delivery date".
 - Ask a question only when the task cannot be planned without the answer. At most two. Prefer a sensible default and
   say it in the plan. Never ask about things listed under "already decided".
-- The plan has 1 to 6 steps; each names one agent from the list above and why that agent fits, and "after": the
+- The plan has 1 to 8 steps; each names one agent from the list above and why that agent fits, and "after": the
   numbers of the earlier steps whose results it needs (an empty list if none). Steps that need nothing from each other
   run at the same time, so only list a step when its result is really needed.
+- The builder's work is one step: it plans, codes and tests in one go (consecutive builder steps become one anyway).
+- Building software from a specification or documentation (a new library, a reimplementation) uses the software roles,
+  in this shape: 1 analyst (the requirements); 2 tester and 3 builder, both after 1 and at the same time (the tests and
+  the code, each from the requirements alone); 4 judge after 2 and 3, with "loop": {{"to": 3, "max": 3}} (it runs every
+  test and sends failures back to the builder); 5 breaker after 4; 6 judge after 5 with "loop": {{"to": 3, "max": 2}};
+  7 tracer after 6 (which requirements the code meets); 8 presenter after 7 (the owner's report). A smaller coding change
+  needs only the builder.
 - The rhythm: "once" unless the owner asks for something regular or for a reaction to events. A schedule is one of
   "daily HH:MM", "weekdays HH:MM", "weekly mon,thu HH:MM" or "every Nh". An event is a list of triggers:
   {{"type": "news", "query": "..."}}, {{"type": "price_move", "symbol": "<Yahoo symbol>", "pct": <1-50>}} or
@@ -51,7 +58,7 @@ Rules:
 
 Answer only JSON: {{"title": "3-80 characters, what the task is", "goal": "one or two sentences",
 "kind": "coding|code_question|research|analysis|watching|briefing|shopping|errand", "done": ["..."],
-"plan": [{{"step": "...", "agent": "<agent name>", "why": "...", "after": [<step numbers>]}}], "questions": [],
+"plan": [{{"step": "...", "agent": "<agent name>", "why": "...", "after": [<step numbers>]}}] (a judge step may add "loop"), "questions": [],
 "rhythm": {{"type": "once"}}, "effort": "light|standard|deep", "deadline": "YYYY-MM-DD or null", "repo": "<repository or null>"}}
 <!-- end -->
 
