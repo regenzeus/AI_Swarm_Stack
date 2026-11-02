@@ -124,12 +124,14 @@ items:
   status: partial
   parents: [SN-19, SN-17]
   sources: [SWM-02, SWM-28]
+  findings: [FND-99]
   acceptance: 'Test: one task whose steps run on Hermes, Claude Code and OpenCode finishes, each step through its adapter.'
   gap: Hermes, Claude Code, Python and OpenCode have adapters (OpenCode since 2026-11-01, one `opencode run` per
     step, read only, run for real on a repository question); the phase 2 gate ran one task across Hermes, Claude Code and
     Python, and one task across Hermes, Claude Code and OpenCode has not run yet.
   verify: {method: test, by: ['tests/test_conductor.py::test_a_step_on_opencode_reads_only_and_records_its_tool_and_model_calls',
     'tests/test_conductor.py::test_each_step_s_prompt_carries_the_results_it_waits_for',
+    'tests/test_conductor.py::test_a_long_requirements_list_reaches_the_builder_apart_from_its_brief',
     'tests/test_conductor.py::test_a_claude_step_waits_for_its_claude_task_also_across_a_restart']}
   trace: [config/opencode-step.json, ops/conductor.py, prompts/shared.md]
 - id: TSK-08
@@ -160,6 +162,7 @@ items:
   type: quality
   priority: must
   status: implemented
+  findings: [FND-101]
   parents: [SN-07]
   sources: ['OpenTelemetry GenAI semantic conventions (development status, 2026)', docs/SWARM-ROADMAP.md]
   acceptance: 'Test: a task with steps on two harnesses yields one trace whose spans name every agent run, model call and
@@ -301,7 +304,7 @@ items:
   type: quality
   priority: must
   status: implemented
-  findings: [FND-97, FND-92]
+  findings: [FND-97, FND-92, FND-102]
   parents: [SN-07, SN-08]
   sources: [MIS-16, docs/SWARM-ROADMAP.md]
   acceptance: 'Test: a finished task gets a verdict against its definition of done, and the day''s history row of each agent,

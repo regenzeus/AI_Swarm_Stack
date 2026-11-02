@@ -39,6 +39,7 @@ with an answer key no agent can read: *semver* and *Mustache* ask for a library 
 a trial stands beside the earlier ones, newest first: the answer key's cases passed (per area), the clean room (what
 the agents read and ran), how alike the code is to the upstream one, the time, the tokens, how many agents worked and
 how many at once, the questions the intake asked, and the model judge's verdict, marked when it disagrees with the key.
-Under each number: the change since the run before. **The report** opens the run's full report in the vault, **Its
-task** the task's page. Trials run at night, one at a time, each within its budget.
+Under each number: the change since the run before. A trace trial's gaps that the key does not know are listed for
+review, unscored: each may be a real defect the key has not recorded yet. **The report** opens the run's full report in
+the vault, **Its task** the task's page. Trials run at night, one at a time, each within its budget.
 

@@ -61,7 +61,7 @@ items:
     type: constraint
     priority: must
     status: implemented
-    findings: [FND-91]
+    findings: [FND-91, FND-99]
     parents: [SN-19, SN-05]
     sources: [docs/SWARM-TRIALS.md]
     verify: {method: test, by: ['tests/test_conductor.py::test_a_build_or_claude_task_a_step_started_is_not_a_task_of_its_own', 'tests/test_conductor.py::test_a_trial_s_build_step_ends_at_review_and_is_scored_not_merged',
@@ -97,13 +97,15 @@ items:
     type: functional
     priority: should
     status: implemented
-    findings: [FND-94]
+    findings: [FND-94, FND-100]
     parents: [SN-19]
     sources: [docs/SWARM-TRIALS.md]
     rationale: The checkpoint is the intake agent on its own key (one model call); it never touches a finished step, adds
-      at most three steps a look and looks at most three times a run, so a run's cost stays bounded.
+      at most three steps a look (each after finished or planned steps, and before steps not yet started that must wait
+      for it) and looks at most three times a run, so a run's cost stays bounded. It reads each result's first 6,000
+      characters, marked as cut where it is longer.
     verify: {method: test, by: ['tests/test_conductor.py::test_between_waves_the_orchestrator_keeps_or_changes_the_rest_of_the_plan',
-      'tests/test_conductor.py::test_a_recurring_or_fixed_plan_gets_no_checkpoint', 'tests/test_conductor.py::test_a_check_sends_failures_back_to_the_builder_until_they_pass', 'tests/test_conductor.py::test_a_check_out_of_fix_rounds_reports_what_still_fails_and_the_plan_goes_on', 'tests/test_conductor.py::test_only_a_check_loops_and_only_back_and_a_fold_keeps_the_loop_on_its_build', 'tests/test_tasks.py::test_the_intake_keeps_a_check_s_fix_loop_and_a_budget_preset']}
+      'tests/test_conductor.py::test_a_recurring_or_fixed_plan_gets_no_checkpoint', 'tests/test_conductor.py::test_the_checkpoint_reads_a_long_result_s_start_and_knows_it_is_cut', 'tests/test_conductor.py::test_a_check_sends_failures_back_to_the_builder_until_they_pass', 'tests/test_conductor.py::test_a_check_out_of_fix_rounds_reports_what_still_fails_and_the_plan_goes_on', 'tests/test_conductor.py::test_only_a_check_loops_and_only_back_and_a_fold_keeps_the_loop_on_its_build', 'tests/test_tasks.py::test_the_intake_keeps_a_check_s_fix_loop_and_a_budget_preset']}
     trace: [ops/conductor.py, ops/tasks.py, ops/builds.py, prompts/shared.md, images/mission-control/web/static/task.js]
     acceptance: "Test: a re-plan after a wave is recorded and shown on the task."
   - id: TRL-09
@@ -113,10 +115,11 @@ items:
     type: functional
     priority: should
     status: implemented
+    findings: [FND-101]
     parents: [SN-19]
     sources: [docs/SWARM-TRIALS.md]
     acceptance: "Test: two runs of one trial on different versions show side by side with the change between them named."
-    verify: {method: test, by: [tests/test_trials.py::test_the_scoreboard_holds_every_run_side_by_side_with_its_version]}
+    verify: {method: test, by: ['tests/test_trials.py::test_a_run_s_tokens_count_each_model_call_once', tests/test_trials.py::test_the_scoreboard_holds_every_run_side_by_side_with_its_version]}
     trace: [ops/trials.py, images/mission-control/server.py, images/mission-control/web/static/task.js, images/mission-control/web/static/app.js]
   - id: TRL-10
     title: A builder's work is one build
@@ -140,17 +143,19 @@ items:
     type: functional
     priority: should
     status: implemented
+    findings: [FND-101]
     parents: [SN-19, CST-02]
     sources: [docs/SWARM-TRIALS.md]
-    verify: {method: test, by: ['tests/test_conductor.py::test_a_spent_budget_stops_the_next_step', 'tests/test_tasks.py::test_the_intake_keeps_a_check_s_fix_loop_and_a_budget_preset']}
+    verify: {method: test, by: ['tests/test_conductor.py::test_a_build_inside_the_trace_counts_once_against_the_budget', 'tests/test_conductor.py::test_a_spent_budget_stops_the_next_step', 'tests/test_tasks.py::test_the_intake_keeps_a_check_s_fix_loop_and_a_budget_preset']}
     trace: [ops/conductor.py, ops/tasks.py, ops/trials.py]
   - id: TRL-12
     title: Requirements traced and gaps found, scored
     statement: A trace trial (T2) shall give the swarm a specification's requirements and an implementation with every
       requirement ID taken out of its code, ask for each requirement's file and line and for every requirement the code
-      does not meet, and score the answer against where the IDs sat (the function) and the deviations planted in the
-      code, a gap the key does not know counting as a false alarm; on an open-source broker (mqtt-trace) and on the
-      stack's own code against its own requirements (stack-trace).
+      does not meet, and score the answer against where the IDs sat (the function), the deviations planted in the code
+      and the code's own defects the key has confirmed, a gap the key has reviewed and rejected counting as a false
+      alarm (TRL-13 for one it does not know); on an open-source broker (mqtt-trace) and on the stack's own code
+      against its own requirements (stack-trace).
     type: functional
     priority: should
     status: implemented
@@ -161,4 +166,19 @@ items:
       under /srv/ai/private/trials/mqtt-trace, out of every agent's reach.
     verify: {method: test, by: [tests/test_trials.py::test_the_trace_trial_gets_the_implementation_beside_its_specification]}
     trace: [eval/trials/mqtt-trace.yaml, eval/trials/stack-trace.yaml, ops/trials.py]
+  - id: TRL-13
+    title: A gap beyond the key is for review, and a run can be scored again
+    statement: A trial's scorer shall list a gap its key does not know for review, unscored, with the agents' reason; the
+      report and the scoreboard shall name those gaps; and a recorded run shall be scored again with the key as it is
+      now, its tokens counted again from the run record, the record keeping what it said before.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-19]
+    sources: ['mqtt-trace run 2026-11-02 02:16: 25 gaps beyond the key, all counted as false alarms; of four read in the
+      code, three were real defects of mochi-mqtt (topics.go 615, packets.go 427, clients.go 537) and one a MAY']
+    rationale: The key of a trace trial is one reading of the code, not all of it; a trace that finds a real defect the
+      key does not know must not lose points for it, and the owner reviews such gaps into the key (real, or not).
+    verify: {method: test, by: [tests/test_trials.py::test_a_gap_beyond_the_key_is_for_review_and_a_run_can_be_scored_again]}
+    trace: [ops/trials.py, images/mission-control/web/static/task.js]
 

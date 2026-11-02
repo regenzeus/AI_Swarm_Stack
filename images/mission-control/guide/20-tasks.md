@@ -89,8 +89,10 @@ and kept in memory, and the verdict. Below, five tabs:
 An agent's page has the other side: its **Tasks** tab lists the tasks it worked on and its part in each.
 
 Between two waves of steps of a one-off task the **Orchestrator** looks at what the finished steps found and keeps or
-changes the rest of the plan: it may drop a step that is now pointless, rewrite one, or add up to three. It never
-touches a finished step, looks at most three times a run, and every look shows on the task's page under **The
+changes the rest of the plan: it may drop a step that is now pointless, rewrite one, or add up to three (an added step
+can come before steps that have not started; they then wait for it). It reads the start of each long result, marked
+as cut, while the next steps get the whole of it. It never touches a step that has started (one in a fix round
+included), looks at most three times a run, and every look shows on the task's page under **The
 Orchestrator's checkpoints** with its reason; a change also shows in the activity. A dropped step reads "dropped by the
 Orchestrator".
 

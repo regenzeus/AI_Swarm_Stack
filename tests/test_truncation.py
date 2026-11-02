@@ -62,6 +62,13 @@ def test_the_owner_s_long_input_is_refused_with_its_limit_not_cut(runner, ledger
     with pytest.raises(ValueError, match="the description is 20,001 characters; the limit is 20,000"):
         B.handle({"action": "build_assign", "repo": "ai-stack", "title": "A change", "description": "d" * 20001, "engine": "hermes"}, c)
     assert c.execute("select count(*) from builds").fetchone()[0] == 0             # nothing stored, not part of it
+    r = B.handle({"action": "build_assign", "repo": "ai-stack", "title": "A step", "description": "Write the tests.", "engine": "hermes",
+                  "context": "## Results\n" + "r" * 30000}, c)                   # a task step's earlier results: apart, whole
+    b = c.execute("select * from builds where id=?", (r["id"],)).fetchone()
+    assert B.brief(b) == "Write the tests.\n\n## Results\n" + "r" * 30000
+    with pytest.raises(ValueError, match="the results passed in is 80,001 characters; the limit is 80,000"):
+        B.handle({"action": "build_assign", "repo": "ai-stack", "title": "A step", "description": "Write the tests.", "engine": "hermes",
+                  "context": "r" * 80001}, c)
     import swarm_client as SW
     with pytest.raises(ValueError, match="your message is 4,001 characters"):
         SW.handle({"action": "swarm_post", "to": ["room:all"], "text": "t" * 4001})

@@ -91,7 +91,8 @@ SAMPLE = {"task": None, "text": "Find the newest stable Python release and the t
 
 def recorded_task(db=LIVE_DB):
     """The newest finished planned task that ran once, as its replay (read only): the owner's sentence, the intake's
-    answer, each step's result and the judge's verdict. None when there is none yet."""
+    answer, each step's result and the judge's verdict. Not a trial's, nor one in a repository: the sandbox has no
+    repositories (a coding task's intake would ask for one). None when there is none yet."""
     if not Path(db).exists():
         return None
     import conductor as CD
@@ -102,6 +103,8 @@ def recorded_task(db=LIVE_DB):
             spec, rhythm = json.loads(t["spec"] or "{}"), json.loads(t["rhythm"] or "{}")
             if rhythm.get("type") != "once" or not spec.get("plan") or not (spec.get("judgement") or {}).get("points"):
                 continue
+            if str(t["source"] or "").startswith("trial:") or spec.get("repo"):
+                continue                                  # 2 Nov: the Mustache trial's task was replayed and its intake asked for a repository
             outs = {r["idx"]: r["output"] for r in c.execute("select idx, output from task_steps where task=? and occ=1 and status='done'", (t["id"],))}
             if len(outs) != len(spec["plan"]) or any(CD.BLOCKED.match(o or "") for o in outs.values()):
                 continue                                  # a step that said it could not work fails its task now (TSK-35)

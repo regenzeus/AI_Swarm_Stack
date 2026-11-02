@@ -27,6 +27,7 @@ into `requirements/findings.yaml`.
 
 | Document | Date | What it records |
 |---|---|---|
+| [REVIEW-2026-11-01.md](REVIEW-2026-11-01.md) | 1-2 Nov 2026 | The overnight polish: answers to the owner's questions, blind spots, the trials (Mustache, mqtt-trace) and what each found, what is left and why |
 | [REVIEW-2026-10-30.md](REVIEW-2026-10-30.md) | 30 Oct 2026 | The wide review: its method, five sweeps, the ranked findings and the batches that fixed them |
 | [UX-REVIEW-2026-10-30.md](UX-REVIEW-2026-10-30.md) | 30 Oct 2026 | The UX review: the lint, the click-through of 70 screens and the fixes |
 | [TRUNCATION-AUDIT.md](TRUNCATION-AUDIT.md) | 30 Oct 2026 | Every place that cut text, and the rule that every cap names its reason |

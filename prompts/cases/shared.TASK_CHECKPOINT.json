@@ -1,0 +1,12 @@
+[
+ {
+  "fills": {
+   "goal": "Compare three open-source MQTT brokers (Mosquitto, EMQX, NanoMQ) for a home lab: memory at rest, TLS setup effort and persistence, and recommend one.",
+   "done": "- a table of the three brokers with memory at rest, TLS steps and persistence\n- one recommendation with its reason\n- every figure has its source",
+   "plan": "1. [done] Find each broker's documented memory use, TLS setup and persistence — scout\n2. [pending] Write the comparison table and the recommendation — desk (after 1)\n3. [pending] Check every figure against its source — scout (after 2)",
+   "found": "### Step 1 (scout)\nMosquitto: about 1 MB at rest (mosquitto.org/man); TLS through listener options; persistence to a file.\nEMQX: no memory figure found in the docs; the docs list TLS on listener 8883 and a built-in database.\nNanoMQ: about 2 MB at rest (nanomq.io docs); TLS through its conf; persistence through SQLite.\nOpen: EMQX's memory at rest was not found in its documentation.",
+   "agents": "- scout: researches the web and returns findings with their sources\n- desk: writes reports and summaries from the findings it is given\n- analyst: turns specifications into numbered, testable requirements"
+  },
+  "model": "gpt-sub"
+ }
+]

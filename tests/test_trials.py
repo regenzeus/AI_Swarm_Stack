@@ -146,6 +146,66 @@ def test_the_report_says_the_score_the_clean_room_and_how_it_went():
     assert "judged not met by the model judge (**it disagrees with the answer key**)" in T.report(t, r)
 
 
+def test_a_gap_beyond_the_key_is_for_review_and_a_run_can_be_scored_again(tmp_path, monkeypatch):
+    """TRL-13: the mqtt-trace run of 2 Nov reported 25 gaps the key did not know and the key called them all false
+    alarms; three a reading of the code confirmed were real defects of the broker. A gap the key does not know is
+    listed for review, unscored; a recorded run is scored again with the key as it is now, keeping what it said."""
+    t = T.load("mqtt-trace")
+    s = T.summarise({"cases": [{"id": "deviation A", "area": "deviations found", "ok": True, "detail": ""}], "error": None,
+                     "review": [{"id": "MQTT-9", "why": "inline subscribers on x/# are gathered from the wrong node"}]})
+    r = {"trial": "mqtt-trace", "run": "mqtt-trace-20261102-0216", "started_at": "2026-11-02 02:16", "task": 110, "repo": "trial-x", "dir": str(tmp_path / "run"),
+         "over_budget": False, "asked": 0, "builds": [], "build": None, "score": s, "audit": {"ok": True, "forbidden": []},
+         "similarity": {"share": 0.0, "files": []},
+         "metrics": {"status": "done", "error": None, "verdict": "partly", "minutes": 10, "steps": 2, "plan": [], "calls": 3, "tokens": 900, "builder_tokens": 0}}
+    md = T.report(t, r)
+    assert "**1 of 1 answer-key cases passed (100%)**" in md and "Gaps beyond the answer key, for review (1)" in md and "- MQTT-9: inline" in md
+    assert T.board_row(r)["review"] == 1
+    d = tmp_path / "runs" / r["run"]
+    (d / "code").mkdir(parents=True)
+    (d / "result.json").write_text(json.dumps(r))
+    monkeypatch.setattr(T, "RUNS", tmp_path / "runs")
+    monkeypatch.setattr(T, "VAULT", tmp_path / "vault")
+    monkeypatch.setattr(T, "score", lambda code, key: T.summarise({"cases": [{"id": "a", "area": "x", "ok": True, "detail": ""}] * 2, "error": None}))
+    monkeypatch.setattr(T, "tree", lambda tid: ([], []))
+    monkeypatch.setattr(T, "git", lambda *a: "e8ef489\n")
+    monkeypatch.setattr(T, "db", lambda: __import__("contextlib").nullcontext(None))
+    monkeypatch.setattr(T, "metrics", lambda c, tid, bids, rt: {"calls": 3, "tokens": 700, "builder_tokens": 0, "status": "x"})
+    n = T.rescore("mqtt-trace", r["run"], now=0)
+    assert (n["score"]["passed"], n["metrics"]["tokens"], n["metrics"]["status"]) == (2, 700, "done")
+    assert n["rescored"]["before"] == {"passed": 1, "total": 1, "tokens": 900}
+    assert json.loads((d / "result.json").read_text())["rescored"]["before"]["tokens"] == 900
+    assert "before, 1 of 1 and 900 tokens" in (tmp_path / "vault/trials/mqtt-trace" / f"{r['run']}.md").read_text()
+    assert T.rescore("mqtt-trace", r["run"], now=0)["rescored"]["before"]["tokens"] == 900                # again: still what it first said
+
+
+def test_a_run_s_tokens_count_each_model_call_once(tmp_path):
+    """FND-101: the Mustache run of 2 Nov added up its runs' summaries (5.2 million for about 2.3), and a summary taken
+    when its run ends misses a build that ends later; each model call in the run record counts once, and a build whose
+    run is outside the trace counts from the builds table."""
+    import sqlite3
+    rt = tmp_path / "runtime.db"
+    r = sqlite3.connect(rt)
+    r.execute("create table events (id integer primary key, run text, kind text, data text)")
+    tok = lambda n: json.dumps({"tokens": {"in": n, "out": 0, "cached": 0}})
+    r.executemany("insert into events (run, kind, data) values (?,?,?)", [("task:7:step:1", "llm", tok(700)), ("build:1:0:queued", "llm", tok(300)),
+                                                                        ("build:1:0:queued", "llm", tok(50)), ("build:1:0:queued", "call", "{}"),
+                                                                        ("task:8", "llm", tok(9999))])
+    r.commit(); r.close()
+    c = sqlite3.connect(":memory:")
+    c.row_factory = sqlite3.Row
+    c.execute("create table tasks (id integer primary key, status text, error text, verdict text, created text, updated text)")
+    c.execute("create table task_steps (task integer, occ integer, idx integer, title text, agent text, status text)")
+    c.execute("create table builds (id integer primary key, tokens integer)")
+    c.execute("insert into tasks values (7, 'done', null, 'met', '2026-11-02T01:20:00+01:00', '2026-11-02T01:33:00+01:00')")
+    c.executemany("insert into builds values (?, ?)", [(1, 300), (2, 40)])
+    sm = lambda n, k: json.dumps({"tokens_in": n, "tokens_out": 0, "model_calls": k})
+    runs = [{"run": "task:7", "ref": "task-intake:7-0", "summary": sm(1000, 10)},
+            {"run": "task:7:step:1", "ref": "task:7", "summary": sm(700, 6)},
+            {"run": "build:1:0:queued", "ref": "task:7:step:1", "summary": sm(300, 3)}]
+    m = T.metrics(c, 7, [1, 2], (runs, []), rt_db=rt)
+    assert (m["tokens"], m["calls"], m["builder_tokens"], m["minutes"]) == (1090, 3, 340, 13)   # 700 + 300 + 50, and build 2 outside
+
+
 def test_a_task_given_straight_to_the_builder_is_followed_through_its_build(tmp_path, monkeypatch):
     import sqlite3
     f = tmp_path / "m.sqlite"

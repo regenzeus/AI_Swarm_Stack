@@ -80,6 +80,7 @@ EACH = 8                                          # cap: list (a fan-out's copie
 WAITS = ("claude-code", "build")                  # adapters whose steps wait for work elsewhere and are looked at again
 STEP_KINDS = ("build", "check")                   # TRL-07, TRL-08: a card's steps are builds in its lane, or the judge's checks
 LOOP_MAX = 4                                      # fix rounds a check may send back (TRL-08)
+SEEN = 6000                                       # of each finished step's result, the checkpoint reads (its prompt stays small)
 CHECKPOINTS = 3                                   # the Orchestrator's looks at one run's plan between waves (TRL-08)
 ADDS = 3                                          # steps one look may add; a run's plan stays within MAX_STEPS
 MAX_STEPS = 12
@@ -347,6 +348,18 @@ def prompt_of(t, s, all_steps, agents, purpose=None):
     return p
 
 
+BEFORE = "\n\n## Results of the steps before yours\n"
+OWN_RULES = "\n\n## Your standing instructions"
+
+
+def split_brief(prompt):
+    """A step's prompt as (its brief, the earlier steps' results): the results can be long (a whole requirements list) and
+    go where the harness takes long text; the standing instructions stay in the brief (FND-99)."""
+    head, _, rest = prompt.partition(BEFORE)
+    results, _, rules = rest.partition(OWN_RULES)
+    return head + (OWN_RULES + rules if rules else ""), (BEFORE.lstrip("\n") + results) if rest else ""
+
+
 def run_hermes(c, t, s, prompt, card):
     import runtime as RTM
     import swarm_client as SW
@@ -364,9 +377,9 @@ def run_claude(c, t, s, prompt, card):
     import claude_tasks as CT
     tid = s["resume"].get("claude_task")
     if not tid:
-        head, _, context = prompt.partition("\n\n## Results of the steps before yours\n")
+        head, context = split_brief(str(prompt))
         tid = CT.handle({"action": "claude_task", "question": head[:19000], "mode": "ask", "repo": t["spec"].get("repo") or "",  # cap: api (its question limit)
-                         "context": ("## Results of the steps before yours\n" + context) if context else "",
+                         "context": context,
                          "source": f"{run_of(t['id'], s.get('occ') or 1)}:step:{s['idx']}"}, c)["id"]   # TSK-09: its run sits in the step's
         put(c, s["id"], resume={"claude_task": tid})
         step_ref(c, "claude", tid, t["id"])
@@ -391,13 +404,15 @@ def run_build(c, t, s, prompt, card):
     if not bid:
         if not t["spec"].get("repo"):
             raise RuntimeError("a build step needs the task's repository; the intake asks for it")
+        prompt, context = split_brief(str(prompt))       # FND-99: the earlier results apart, past the description's limit
         fb = s["resume"].get("feedback")                 # TRL-08: a check sent this back with what failed
         if fb:
             prompt += ("\n\n## Fix round " + str(s["resume"].get("round", 1)) + ": the checks failed after the last build\n"
                        "Make the failing tests pass without weakening or deleting them; then run them all.\n\n```\n" + fb + "\n```")
         if card.get("lane"):
             prompt += ("\n\n## Your lane\nChange only files under: " + ", ".join(card["lane"]) + ". A change anywhere else fails this step.")
-        res = B.handle({"action": "build_assign", "repo": t["spec"]["repo"], "title": f"{s['agent']}: {t['title']}"[:80], "description": prompt}, c)  # cap: id
+        res = B.handle({"action": "build_assign", "repo": t["spec"]["repo"], "title": f"{s['agent']}: {t['title']}"[:80], "description": prompt, "context": context,  # cap: id
+                         "source": f"{run_of(t['id'], s.get('occ') or 1)}:step:{s['idx']}"}, c)       # FND-101: its run nests in the step's
         bid = res.get("build") or res.get("id")
         put(c, s["id"], resume={"build": bid})
         step_ref(c, "build", bid, t["id"])
@@ -458,13 +473,16 @@ def run_check(c, t, s, prompt, card):
 
 
 def spent(c, t, s):
-    """TRL-11: what the task's run has used: hours since it started, and tokens (its trace's model calls and its builds')."""
+    """TRL-11: what the task's run has used: hours since it started, and tokens (its trace's model calls, and the builds'
+    whose runs are not in the trace)."""
     import staffing as ST
     occ = s.get("occ") or 1
     o = c.execute("select started from task_occ where task=? and occ=?", (t["id"], occ)).fetchone()
     hours = (dt.datetime.now().astimezone() - dt.datetime.fromisoformat(o["started"])).total_seconds() / 3600 if o and o["started"] else 0
     tokens = sum(u["in"] + u["out"] for u in ST.usage_of(run_of(t["id"], occ)).values())
-    refs = [r["ref"] for r in c.execute("select ref from step_refs where kind='build' and task=?", (t["id"],))]
+    inside = ST.runs_of(run_of(t["id"], occ))           # FND-101: a build whose run is in the trace is counted there, once
+    refs = [r["ref"] for r in c.execute("select ref from step_refs where kind='build' and task=?", (t["id"],))
+            if not any(x.startswith(f"build:{r['ref']}:") for x in inside)]
     if refs:
         tokens += sum(r[0] or 0 for r in c.execute(f"select tokens from builds where id in ({','.join('?' * len(refs))})", refs))
     return hours, tokens
@@ -822,6 +840,11 @@ def between_waves(t, ss):
     return bool(done) and len(seen) < CHECKPOINTS and (not seen or seen[-1]["after"] != done)
 
 
+def again(s):
+    """A pending step that ran before: a check sent it back for a fix round, or it waits for its next attempt."""
+    return s["status"] == "pending" and bool(s.get("started"))
+
+
 def checkpoint(c, t, ss, ask=None):
     """TRL-08: after a wave, the Orchestrator (the intake agent, on its own key) reads what the finished steps found and
     may drop a step not yet started, rewrite one, or add up to ADDS; every look is kept on the task (spec.checkpoints)
@@ -829,12 +852,14 @@ def checkpoint(c, t, ss, ask=None):
     import prompts as P
     import runtime as RTM
     import tasks as TK
+    import textcap as TC
     occ = ss[0].get("occ") or 1
     done = sorted(s["idx"] for s in ss if s["status"] == "done")
     agents = cards()
-    plan = "\n".join(f"{s['idx']}. [{s['status']}] {s['title']} — {s['agent']}" + (f" (after {', '.join(map(str, s['after']))})" if s["after"] else "")
-                     for s in ss)
-    found = "\n\n".join(f"### Step {s['idx']} ({s['agent']})\n{(s['output'] or '')[:4000]}" for s in ss if s["status"] == "done")  # cap: prompt (each step's start; the task page has all)
+    plan = "\n".join(f"{s['idx']}. [{'running again' if again(s) else s['status']}] {s['title']} — {s['agent']}"
+                     + (f" (after {', '.join(map(str, s['after']))})" if s["after"] else "") for s in ss)
+    found = "\n\n".join(f"### Step {s['idx']} ({s['agent']})\n" + TC.cut(s["output"] or "", SEEN, "shown here only; the steps after it get the whole result")
+                          for s in ss if s["status"] == "done")  # cap: prompt (each step's start, marked; the task page has all)
     p = P.text("shared", "TASK_CHECKPOINT").format(goal=t["goal"], done="\n".join(f"- {d}" for d in t["done"]), plan=plan, found=found,
                                                   agents="\n".join(f"- {k}: {v}" for k, v in TK.cards().items() if runs_steps(agents.get(k) or {})))
     run = f"{run_of(t['id'], occ)}:checkpoint:{len(t['spec'].get('checkpoints') or []) + 1}"
@@ -848,7 +873,7 @@ def checkpoint(c, t, ss, ask=None):
         raise
     changes = []
     if not d.get("keep", True):
-        pend = {s["idx"]: s for s in ss if s["status"] == "pending"}
+        pend = {s["idx"]: s for s in ss if s["status"] == "pending" and not again(s)}   # not yet started: a fix round is held
         for n in [int(x) for x in d.get("drop") or [] if str(x).isdigit()][:len(pend)]:
             if n in pend:
                 put(c, pend[n]["id"], status="skipped", why=f"{pend[n]['why']} (dropped at the checkpoint: {d.get('why', '')})".strip())
@@ -869,11 +894,14 @@ def checkpoint(c, t, ss, ask=None):
             except (ValueError, IndexError):
                 continue                                  # no such agent, or one that cannot do a step: not added
             after = sorted({int(x) for x in a.get("after") or [] if str(x).isdigit() and int(x) in idxs})
+            before = sorted({int(x) for x in a.get("before") or [] if str(x).isdigit() and int(x) in pend and int(x) not in after})
             c.execute("insert into task_steps (task, occ, idx, title, item, agent, harness, model, after, why, status, attempts, loop) "
                       "values (?,?,?,?,?,?,?,?,?,?,?,0,null)", (t["id"], occ, nxt, node["title"], None, node["agent"], node["harness"],
                                                                  node["model"], json.dumps(after), f"added at the checkpoint: {d.get('why', '')}", "pending"))
+            for n in before:                              # the steps it must come first for wait for it too
+                put(c, pend[n]["id"], after=json.dumps(sorted(set(pend[n]["after"]) | {nxt})))
             c.commit()
-            changes.append(f"added step {nxt}: {node['title']} ({node['agent']})")
+            changes.append(f"added step {nxt}: {node['title']} ({node['agent']})" + (f", before step {', '.join(map(str, before))}" if before else ""))
             idxs.add(nxt)
             nxt += 1
     rec = {"occ": occ, "after": done, "at": now(), "kept": not changes, "why": str(d.get("why", "")).strip(), "changes": changes}

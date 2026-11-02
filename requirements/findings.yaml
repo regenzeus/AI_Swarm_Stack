@@ -1248,4 +1248,66 @@ items:
       to all tasks.
     status: fixed
     resolved: "night/w4, 2026-11-01: task.js vTask; the route journey (crew-journeys, nightly) checks it"
-
+  - id: FND-99
+    title: A long requirements list stopped the trial's builders before they started
+    finding: "The Mustache trial of 2 November (task 107) failed four minutes in. The analyst's numbered requirements
+      (about 26,000 characters) went into the tester's and the builder's brief, and the builder refuses a description
+      over 20,000 characters (the owner's limit, APP-20), so both build steps failed twice with that error and the task
+      failed with 0 of 0 points. The Orchestrator's checkpoint between the waves had run and kept the plan."
+    evidence: ["task 107 steps 2 and 3, 2026-11-02 01:03: the description is 28,389 characters; the limit is 20,000"]
+    severity: high
+    kind: defect
+    affects: [TSK-07, TRL-05]
+    recommendation: A step's brief and the earlier steps' results travel apart, as they already did for a Claude task;
+      the builder takes the results as the build's context (80,000 characters, under the one-argument limit of the
+      engine's command line) and the owner's description keeps its limit.
+    status: fixed
+    resolved: "night/w7, 2026-11-02: conductor.split_brief, builds context and brief(); the Mustache trial ran again"
+  - id: FND-100
+    title: The checkpoint took a cut result for a broken one
+    finding: "In the Mustache trial's second run (task 108) the Orchestrator's checkpoint read only the first 4,000
+      characters of the analyst's requirements, with no sign that the rest was cut, judged the list broken off and
+      added a step to finish it. It also rewrote the tester's and the builder's briefs to wait for that step, but an
+      added step could only follow other steps, so they ran beside it instead. Its third look dropped the builder's step
+      while a check had sent it back for a fix round (a pending step that had run), and the run ended over its
+      token budget (3.4 of 3 million) with the code at 136 of 136 on the key."
+    evidence: ["task 108 checkpoint 1, 2026-11-02 01:22: the visible analyst result ends mid-requirement; step 9 added after step 1"]
+    severity: medium
+    kind: defect
+    affects: [TRL-08]
+    recommendation: The checkpoint reads each result's start with the cut marker (how much is missing, and that the
+      next steps get it whole); an added step can name the steps not yet started that wait for it (before); a step
+      that ran before (a fix round, a next attempt) is shown as running again and is never dropped or rewritten. The
+      prompt's replay passed (new 2, old 0, equal 2).
+    status: fixed
+    resolved: "night/w8, 2026-11-02: conductor.checkpoint (SEEN, before), TASK_CHECKPOINT"
+  - id: FND-101
+    title: A task's builds were counted twice and nested by guess
+    finding: "The Mustache trial's second run (task 108) was stopped at 3.4 of its 3 million tokens while it had used
+      about 2.3 million, and its record said 5.2 million. A build's run took its parent by agent name (the live step of
+      the builder), so the tester's build sat under the builder's step and three builds under no step; the budget then
+      counted the nested builds in the trace and again from the builds table, and the trial added up runs whose
+      parents' summaries already held them."
+    evidence: ["task 108, 2026-11-02 01:33: its budget of 3,000,000 tokens is spent (3,418,180); recount 2,266,180", "runtime record: build:14 under task:108:step:3, builds 16, 17, 19 without a parent"]
+    severity: high
+    kind: defect
+    affects: [TRL-11, TRL-09, TSK-09]
+    recommendation: A build a step starts names the step's run as its parent; the budget counts a build from the builds
+      table only when its run is outside the trace; a trial counts each model call of the run record once (adding
+      runs' summaries counts some twice, and a summary taken when its run ends misses a build that ends later).
+    status: fixed
+    resolved: "night/w9, 2026-11-02: builds source, staffing.runs_of, conductor.spent, trials.metrics; the recount gives 2,266,180 for task 108"
+  - id: FND-102
+    title: The judge could not see what the agents read
+    finding: "The Mustache trial's third run (task 109) scored 136 of 136 with a clean audit, and the judge rated its
+      clean-room point not met: it rested on the builder's word, as the judge saw no record of what was read. The run
+      record had every command and file read of the task's agents."
+    evidence: ["task 109 judgement, 2026-11-02 02:04: without a verifiable file-access record"]
+    severity: medium
+    kind: defect
+    affects: [TSK-17]
+    recommendation: The judge's measured section lists the run record's tool calls of the task's runs (agent, tool,
+      the start of its argument; 80 named, the task page has all); re-judged with it, the clean-room point was met.
+      TASK_JUDGE says so; replay passed (equal 3).
+    status: fixed
+    resolved: "night/w10, 2026-11-02: staffing.calls_of and evidence_of, TASK_JUDGE"

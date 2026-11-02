@@ -72,7 +72,7 @@ grows without more always-on agents and without more RAM. The rules every role f
 
 | Role | Does | May read | May not | Exists |
 |---|---|---|---|---|
-| **Orchestrator** | plans, staffs, runs, checks each wave, re-plans, stops at the budget | everything of the task | do the steps itself | half (intake + Conductor; no checkpoints) |
+| **Orchestrator** | plans, staffs, runs, checks each wave, re-plans, stops at the budget | everything of the task | do the steps itself | yes (intake, Conductor, the checkpoint after each wave) |
 | **Scout** | research on the web | the web | the owner's private data | yes |
 | **Analyst** | writes numbered, testable requirements from specs and documentation, with their sources (EARS form: "When X, the parser shall Y") | specs, docs, manuals | source code, test suites of the target | new |
 | **Architect** | modules, interfaces, the task graph for parallel coders | requirements | - | yes (planner) |

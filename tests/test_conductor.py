@@ -354,6 +354,19 @@ def test_each_step_s_prompt_carries_the_results_it_waits_for():
     assert p.ref.startswith("shared/TASK_STEP@")
 
 
+def test_a_long_requirements_list_reaches_the_builder_apart_from_its_brief():
+    """FND-99: the analyst's 28,000-character list put the tester's brief over the builder's 20,000; the results now
+    travel apart, and the step's own brief and standing instructions stay in the description."""
+    t = {"goal": "Build mustachelib", "done": ["every rule"]}
+    ss = [{"idx": 1, "title": "Requirements", "agent": "analyst", "after": [], "output": "R-1 a rule.\n" * 2500},
+          {"idx": 2, "title": "Acceptance tests", "agent": "tester", "after": [1], "output": None}]
+    head, results = CD.split_brief(str(CD.prompt_of(t, ss[1], ss, CD.cards())))
+    assert len(head) < 20000 < len(results) and "Your step (2 of 2): Acceptance tests" in head
+    assert "standing instructions (tester's card)" in head and "standing instructions" not in results
+    assert results.startswith("## Results of the steps before yours\n### Step 1: Requirements (analyst)\nR-1 a rule.")
+    assert CD.split_brief("Just a brief") == ("Just a brief", "")
+
+
 def on_event(K, plan, kind="research"):
     K.c.execute("update tasks set kind=?, rhythm=?, spec=?, status='scheduled' where id=?",
                 (kind, json.dumps({"type": "event", "triggers": [{"type": "news", "query": "Cameco"}]}), json.dumps({"plan": plan}), K.tid))
@@ -654,10 +667,25 @@ def test_a_role_s_build_stays_in_its_lane(K, monkeypatch):
     CD.start(K.c, TK.row(K.c, K.tid))
     tick(K)
     assert "Change only files under: tests/acceptance/" in asked[0]["description"] and "standing instructions (tester's card)" in asked[0]["description"]
+    assert "## Results of the steps before yours" not in asked[0]["description"] and asked[0]["context"].startswith("## Results")
+    assert asked[0]["source"] == f"task:{K.tid}:step:1"                              # FND-101: its run nests in the step's
     K.c.execute("update builds set status='review', files=? where id=1", (json.dumps([["M", "tests/acceptance/test_r1.py"], ["M", "semverlib/__init__.py"]]),)); K.c.commit()
     tick(K)
     s = CD.steps(K.c, K.tid)[0]
     assert rejected == [1] and "outside its lane" in s["error"] and "semverlib/__init__.py" in s["error"] and s["status"] == "pending"
+
+
+def test_a_build_inside_the_trace_counts_once_against_the_budget(K, monkeypatch):
+    """FND-101: task 108 was stopped at 3.4 of 3 million tokens while it had used about 2.3: the builds whose runs sit in
+    the step's trace were counted there and again from the builds table."""
+    import staffing as ST
+    K.c.execute("create table builds (id integer primary key, status text, tokens integer)")
+    K.c.executemany("insert into builds (id, status, tokens) values (?, 'merged', ?)", [(1, 900), (2, 50)])
+    CD.step_ref(K.c, "build", 1, K.tid); CD.step_ref(K.c, "build", 2, K.tid)
+    monkeypatch.setattr(ST, "usage_of", lambda run, db=None, tree=True: {"claude": {"in": 1000, "out": 100, "cached": 800}})
+    monkeypatch.setattr(ST, "runs_of", lambda run, db=None: {run, f"{run}:step:1", "build:1:0:queued"})   # build 2's run is not in it
+    _, tokens = CD.spent(K.c, TK.row(K.c, K.tid), {"occ": 1})
+    assert tokens == 1150
 
 
 def test_a_spent_budget_stops_the_next_step(K, monkeypatch):
@@ -710,25 +738,42 @@ def test_between_waves_the_orchestrator_keeps_or_changes_the_rest_of_the_plan(K,
     def orchestrator(prompt):
         looks.append(str(prompt))
         if len(looks) == 1:
-            return {"keep": False, "why": "step 1 already names the risk", "drop": [3], "edit": [{"step": 2, "text": "List the three changes"}],
-                    "add": [{"step": "Check the summary's facts", "agent": "scout", "after": [4]}, {"step": "x", "agent": "nobody"}]}
+            return {"keep": False, "why": "step 1 already names the risk", "drop": [3, 4], "edit": [{"step": 2, "text": "List the three changes"}],
+                    "add": [{"step": "Check the summary's facts", "agent": "scout", "after": [4]}, {"step": "x", "agent": "nobody"},
+                            {"step": "Gather the sources first", "agent": "scout", "after": [1], "before": [2, 1, 9]}]}
         return {"keep": True, "why": "the plan fits"}
     monkeypatch.setattr(CD, "checkpoint_ask", orchestrator)
     tick(K)                                                    # wave 1: step 1
+    K.c.execute("update task_steps set started=? where task=? and idx=4", (CD.now(), K.tid)); K.c.commit()   # step 4: in a fix round
     tick(K)                                                    # the checkpoint, no step starts meanwhile
-    assert len(looks) == 1 and "result of step 1" in looks[0] and "Find the facts" in looks[0]
+    assert len(looks) == 1 and "result of step 1" in looks[0] and "Find the facts" in looks[0] and "4. [running again]" in looks[0]
     st = {s["idx"]: s for s in CD.steps(K.c, K.tid)}
     assert st[3]["status"] == "skipped" and st[2]["title"] == "List the three changes" and st[2]["status"] == "pending"
-    assert st[5]["agent"] == "scout" and st[5]["after"] == [4] and "added at the checkpoint" in st[5]["why"] and 6 not in st
+    assert st[4]["status"] == "pending"                       # a step in a fix round is not dropped (task 108's builder was)
+    assert st[5]["agent"] == "scout" and st[5]["after"] == [4] and "added at the checkpoint" in st[5]["why"]
+    assert st[6]["after"] == [1] and st[2]["after"] == [1, 6] and 7 not in st      # FND-100: it comes before step 2; a finished step or none is not held
     cp = TK.row(K.c, K.tid)["spec"]["checkpoints"]
-    assert cp[0]["after"] == [1] and not cp[0]["kept"] and len(cp[0]["changes"]) == 3 and cp[0]["why"] == "step 1 already names the risk"
+    assert cp[0]["after"] == [1] and not cp[0]["kept"] and len(cp[0]["changes"]) == 4 and cp[0]["why"] == "step 1 already names the risk"
+    assert cp[0]["changes"][-1].endswith("(scout), before step 2")
     assert any("changed the plan after step 1" in e[2] for e in K.events)
-    for _ in range(12):
+    for _ in range(14):
         tick(K)
-    assert TK.row(K.c, K.tid)["status"] == "done" and status(K) == {1: "done", 2: "done", 3: "skipped", 4: "done", 5: "done"}
+    assert TK.row(K.c, K.tid)["status"] == "done" and status(K) == {1: "done", 2: "done", 3: "skipped", 4: "done", 5: "done", 6: "done"}
     cp = TK.row(K.c, K.tid)["spec"]["checkpoints"]
     assert 2 <= len(cp) <= CD.CHECKPOINTS and all(x["kept"] for x in cp[1:])
     assert len({tuple(x["after"]) for x in cp}) == len(cp)    # once per wave
+
+
+def test_the_checkpoint_reads_a_long_result_s_start_and_knows_it_is_cut():
+    """FND-100: a silent cut at 4,000 characters made the Orchestrator think the analyst's list was broken off, and it
+    added a step to finish it; the start it reads now says how much is missing and that the next steps get it whole."""
+    seen = []
+    t = {"id": 1, "goal": "Build it", "done": ["every rule"], "spec": {}}
+    ss = [{"idx": 1, "occ": 1, "title": "Requirements", "agent": "analyst", "after": [], "status": "done", "output": "R-1 a rule. " * 1000},
+          {"idx": 2, "occ": 1, "title": "Build", "agent": "builder", "after": [1], "status": "pending", "output": None}]
+    with pytest.raises(RuntimeError):                    # its answer is not used here: only what it was shown
+        CD.checkpoint(None, t, ss, ask=lambda p: seen.append(str(p)) or (_ for _ in ()).throw(RuntimeError("stop")))
+    assert f"[… {12000 - CD.SEEN:,} more characters cut: shown here only; the steps after it get the whole result]" in seen[0]
 
 
 def test_a_recurring_or_fixed_plan_gets_no_checkpoint():

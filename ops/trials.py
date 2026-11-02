@@ -6,6 +6,7 @@ a program against an answer key no agent can reach, audited for the clean room, 
   python3 ops/trials.py run NAME     one run: a fresh repository with the specification, the task through intake as
                                      the owner would give it, watched to its end or its budget, scored, audited, reported
   python3 ops/trials.py follow NAME RUN TASK   pick up a run whose harness stopped (its task goes on meanwhile)
+  python3 ops/trials.py rescore NAME RUN       score a recorded run again with today's key, recount its tokens (kept: before)
   make trial NAME=…                  the same run in the background (a transient systemd unit); make trial-check NAME=…
 
 A trial is eval/trials/<name>.yaml (the task, what is forbidden, the budget); its answer key is
@@ -333,6 +334,15 @@ def report(t, r):
     if fails:
         lines += [f"Failed cases ({len(fails)}):", ""] + [f"- {c['id']}: {c['detail']}" for c in fails[:40]]   # cap: list (all of them are in the run's result.json)
         lines += [f"- … and {len(fails) - 40} more, in {r['dir']}/result.json" if len(fails) > 40 else "", ""]
+    rev = s.get("review") or []
+    if rev:                                              # TRL-13: the key is a reading of the code, not all of it
+        lines += [f"Gaps beyond the answer key, for review ({len(rev)}): unscored; each may be a real defect the key does not know yet.", ""]
+        lines += [f"- {g['id']}: {g.get('why') or ''}" for g in rev[:60]]   # cap: list (all of them are in the run's result.json)
+        lines += [f"- … and {len(rev) - 60} more, in {r['dir']}/result.json" if len(rev) > 60 else "", ""]
+    if r.get("rescored"):
+        b = r["rescored"]
+        lines += [f"Rescored {b['at']} with the key and code of {b['version']}: before, {b['before']['passed']} of {b['before']['total']}"
+                  f" and {b['before']['tokens']:,} tokens.", ""]
     lines += ["## Clean room", "",
               "No forbidden read or action found." if a["ok"] else f"**{len(a['forbidden'])} forbidden reads or actions:**",
               *[f"- {h['where']}: `{h['pattern']}`: …{h['excerpt']}…" for h in a["forbidden"]],
@@ -360,6 +370,7 @@ def board_row(r):
             "similarity": (r.get("similarity") or {}).get("share"), "minutes": m.get("minutes"), "tokens": m.get("tokens"),
             "builder_tokens": m.get("builder_tokens"), "steps": m.get("steps"), "asked": r.get("asked"), "over_budget": r.get("over_budget"),
             "verdict": m.get("verdict"), "attempts": (r.get("build") or {}).get("attempts"), "builds": len(r.get("builds") or []),
+            "review": len(s.get("review") or []), "rescored": (r.get("rescored") or {}).get("at"),
             "report": f"trials/{r['trial']}/{r['run']}.md"}
 
 
@@ -382,19 +393,35 @@ def publish(runs=RUNS, out=PUBLIC, log=print):
     return rows
 
 
-def metrics(c, tid, bids, rt):
+def model_calls(runs, rt_db=None):
+    """(calls, tokens) of the runs' own model calls in the run record, each call once (FND-101: a run's summary is taken
+    when it ends, so a parent that ended before its build holds part of it, and adding summaries counts some twice)."""
+    import sqlite3
+    names = [r["run"] for r in runs]
+    if not names or not Path(rt_db or RT_DB).exists():
+        return 0, 0
+    c = sqlite3.connect(f"file:{rt_db or RT_DB}?mode=ro", uri=True, timeout=10)
+    rows = c.execute(f"select data from events where kind='llm' and run in ({','.join('?' * len(names))})", names).fetchall()
+    c.close()
+    tokens = 0
+    for (data,) in rows:
+        try:
+            tok = json.loads(data or "{}").get("tokens") or {}
+        except ValueError:
+            tok = {}
+        tokens += int(tok.get("in") or 0) + int(tok.get("out") or 0)
+    return len(rows), tokens
+
+
+def metrics(c, tid, bids, rt, rt_db=None):
     row = dict(c.execute("select * from tasks where id=?", (tid,)).fetchone())
     steps = [dict(s) for s in c.execute("select idx, title, agent, status from task_steps where task=? order by occ, idx", (tid,))]
     runs, _ = rt
-    tokens = calls = 0
-    for r in runs:
-        try:
-            sm = json.loads(r.get("summary") or "{}")
-        except ValueError:
-            sm = {}
-        tokens += (sm.get("tokens_in") or 0) + (sm.get("tokens_out") or 0)
-        calls += sm.get("model_calls") or 0
+    inside = {r["run"] for r in runs}
+    calls, tokens = model_calls(runs, rt_db)
     btok = sum((c.execute("select tokens from builds where id=?", (b,)).fetchone() or {"tokens": 0})["tokens"] or 0 for b in bids)
+    tokens += sum((c.execute("select tokens from builds where id=?", (b,)).fetchone() or {"tokens": 0})["tokens"] or 0
+                  for b in bids if not any(x.startswith(f"build:{b}:") for x in inside))   # a build outside the trace
     import datetime as dt
     mins = round((dt.datetime.fromisoformat(row["updated"]) - dt.datetime.fromisoformat(row["created"])).total_seconds() / 60)
     return {"status": row["status"], "error": row.get("error"), "verdict": row.get("verdict"), "minutes": mins, "steps": len(steps),
@@ -481,6 +508,27 @@ def follow(t, run_id, repo, tid, started, log=print):
     return r
 
 
+def rescore(name, run_id, now=None):
+    """A recorded run scored again with the key as it is now (a reviewed gap added, a scorer fixed) and its tokens
+    counted again from the run record; the record keeps what it said before (TRL-13). -> the new record."""
+    t, d = load(name), RUNS / run_id
+    r = json.loads((d / "result.json").read_text())
+    before = (r.get("rescored") or {}).get("before") or {          # a second rescore keeps what the run first said
+        "passed": r["score"].get("passed"), "total": r["score"].get("total"), "tokens": (r.get("metrics") or {}).get("tokens") or 0}
+    r["score"] = score(d / "code", key_dir(t)) if (d / "code").exists() else r["score"]
+    if r.get("task"):
+        with db() as c:
+            r["metrics"] = {**r["metrics"], **{k: v for k, v in metrics(c, r["task"], r.get("builds") or [], tree(r["task"]) or ([], [])).items()
+                                               if k in ("calls", "tokens", "builder_tokens")}}
+    r["rescored"] = {"at": time.strftime("%Y-%m-%d %H:%M", time.localtime(now)), "version": git(ROOT, "rev-parse", "--short", "HEAD").strip(),
+                     "before": before}
+    (d / "result.json").write_text(json.dumps(r, indent=1, ensure_ascii=False))
+    rel = VAULT / f"trials/{name}/{run_id}.md"
+    rel.parent.mkdir(parents=True, exist_ok=True)
+    rel.write_text(report(t, r))
+    return r
+
+
 if __name__ == "__main__":
     if len(sys.argv) == 5 and sys.argv[1] == "follow":            # a run already under way: NAME RUN TASK
         import datetime as dt
@@ -488,6 +536,12 @@ if __name__ == "__main__":
         with db() as c:
             created = c.execute("select created from tasks where id=?", (task,)).fetchone()["created"]
         follow(tr, rid, f"trial-{rid}", task, dt.datetime.fromisoformat(created).timestamp())
+        sys.exit(0)
+    if len(sys.argv) == 4 and sys.argv[1] == "rescore":
+        r = rescore(sys.argv[2], sys.argv[3])
+        print(f"{sys.argv[3]}: {r['score']['passed']} of {r['score']['total']} (before {r['rescored']['before']['passed']} of "
+              f"{r['rescored']['before']['total']}), {r['metrics']['tokens']:,} tokens; {len(r['score'].get('review') or [])} gaps for review")
+        publish()
         sys.exit(0)
     if sys.argv[1:] == ["publish"]:
         print(f"{len(publish())} runs on the scoreboard")

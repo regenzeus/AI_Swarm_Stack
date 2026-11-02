@@ -500,6 +500,23 @@
    "at": "2026-11-01",
    "baseline": "new: the Orchestrator looks at a running plan between waves (TRL-08)",
    "sha": "136c5455bc2a"
+  },
+  {
+   "at": "2026-11-02",
+   "cases": 4,
+   "from": "136c5455bc2a",
+   "judge": {
+    "equal": 2,
+    "new": 2,
+    "old": 0
+   },
+   "model": "gpt-sub",
+   "passed": true,
+   "sha": "283cf1107db4",
+   "valid": [
+    4,
+    4
+   ]
   }
  ],
  "shared/TASK_JUDGE": [
@@ -520,6 +537,23 @@
    "model": "gpt-sub",
    "passed": true,
    "sha": "7966c0c60490",
+   "valid": [
+    3,
+    3
+   ]
+  },
+  {
+   "at": "2026-11-02",
+   "cases": 3,
+   "from": "7966c0c60490",
+   "judge": {
+    "equal": 3,
+    "new": 0,
+    "old": 0
+   },
+   "model": "gpt-sub",
+   "passed": true,
+   "sha": "ace66415df3e",
    "valid": [
     3,
     3

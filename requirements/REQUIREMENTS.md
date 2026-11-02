@@ -27,11 +27,11 @@ Method, statuses and rules: [README.md](README.md). Names of the parts: [glossar
 | [Shopping](#shp-shopping) (SHP) | 12 | 12 | 0 | 0 | 0 | 0 | 0 |
 | [Agent swarm](#swm-agent-swarm) (SWM) | 109 | 96 | 9 | 0 | 2 | 0 | 2 |
 | [Task engine](#tsk-task-engine) (TSK) | 35 | 29 | 6 | 0 | 0 | 0 | 0 |
-| [Trials](#trl-trials) (TRL) | 12 | 12 | 0 | 0 | 0 | 0 | 0 |
+| [Trials](#trl-trials) (TRL) | 13 | 13 | 0 | 0 | 0 | 0 | 0 |
 | [Voice](#voi-voice) (VOI) | 8 | 8 | 0 | 0 | 0 | 0 | 0 |
-| **All** | **454** | **424** | **22** | **1** | **2** | **1** | **4** |
+| **All** | **455** | **425** | **22** | **1** | **2** | **1** | **4** |
 
-Unit tests claimed by a requirement: 680 of 680.
+Unit tests claimed by a requirement: 685 of 685.
 
 ## Findings
 
@@ -40,6 +40,7 @@ Unit tests claimed by a requirement: 680 of 680.
 | [FND-18](#fnd-18) Memory is the top risk and nothing budgets it | medium | open | yes | [CST-14](#cst-14), [SWM-74](#swm-74) |
 | [FND-01](#fnd-01) The phone check still expects the screen to stay awake | high | fixed | - | [CRW-12](#crw-12), [PHN-13](#phn-13), [APP-14](#app-14) |
 | [FND-02](#fnd-02) Hermes main has a way out through the AI phone | high | fixed | yes | [SEC-04](#sec-04), [PHN-02](#phn-02) |
+| [FND-101](#fnd-101) A task's builds were counted twice and nested by guess | high | fixed | - | [TRL-11](#trl-11), [TRL-09](#trl-09), [TSK-09](#tsk-09) |
 | [FND-22](#fnd-22) Agents talking to each other would cross the trust boundaries | high | fixed | - | [SWM-09](#swm-09), [SWM-10](#swm-10), [SWM-15](#swm-15), [SWM-67](#swm-67), [SEC-04](#sec-04) |
 | [FND-37](#fnd-37) A deployed agent change did not reach its agent | high | fixed | - | [SWM-18](#swm-18), [SWM-102](#swm-102), [PLT-08](#plt-08) |
 | [FND-38](#fnd-38) Text the owner reads or types was cut silently all over the stack | high | fixed | - | [APP-19](#app-19), [APP-20](#app-20), [QA-16](#qa-16) |
@@ -55,10 +56,13 @@ Unit tests claimed by a requirement: 680 of 680.
 | [FND-90](#fnd-90) The first trial failed in 3 minutes on a builder step that only planned | high | fixed | - | [TRL-10](#trl-10), [TRL-06](#trl-06) |
 | [FND-94](#fnd-94) A repository with only a tests folder ran no checks and passed | high | fixed | - | [BLD-24](#bld-24), [TRL-08](#trl-08), [TRL-03](#trl-03) |
 | [FND-97](#fnd-97) A task its agent could not do was reported done | high | fixed | - | [TSK-35](#tsk-35), [APP-35](#app-35), [TSK-17](#tsk-17) |
+| [FND-99](#fnd-99) A long requirements list stopped the trial's builders before they started | high | fixed | - | [TSK-07](#tsk-07), [TRL-05](#trl-05) |
 | [FND-03](#fnd-03) One key, many agents | medium | fixed | - | [SEC-07](#sec-07), [MIS-16](#mis-16), [SWM-23](#swm-23) |
 | [FND-04](#fnd-04) A second, undocumented delivery path | medium | fixed | yes | [CST-07](#cst-07), [PLT-10](#plt-10), [BLD-20](#bld-20) |
 | [FND-05](#fnd-05) "Everything goes to the ChatGPT subscription" is no longer true | medium | fixed | - | [SEC-18](#sec-18), [CST-02](#cst-02) |
 | [FND-10](#fnd-10) The scout's web search package is not where the scout looks | medium | fixed | - | [RES-02](#res-02) |
+| [FND-100](#fnd-100) The checkpoint took a cut result for a broken one | medium | fixed | - | [TRL-08](#trl-08) |
+| [FND-102](#fnd-102) The judge could not see what the agents read | medium | fixed | - | [TSK-17](#tsk-17) |
 | [FND-12](#fnd-12) Caps the owner rejected are still in the code | medium | fixed | - | [CRW-06](#crw-06), [SWM-08](#swm-08), [SWM-35](#swm-35) |
 | [FND-14](#fnd-14) The mail connector can strand an approval like the phone did | medium | fixed | - | [CNX-06](#cnx-06), [SWM-19](#swm-19) |
 | [FND-17](#fnd-17) Seven ways to send a Telegram message | medium | fixed | - | [OBS-16](#obs-16), [SWM-59](#swm-59) |
@@ -167,6 +171,17 @@ The security model keeps untrusted input, private data and a way out apart, and 
 - Affects: [SEC-04](#sec-04), [PHN-02](#phn-02)
 - Recommendation: Decide one of (a) phone_url, phone_type and phone_open always ask like money, (b) a time window does not cover them after the session read mail or research results, (c) accept it as a known risk in SECURITY.md. (a) is the safest and costs a tap per URL or text.
 - Resolved: feat/swarm-phase3, 2026-10-29 (DEC-23: typing, URLs and apps always ask; tests/test_phone.py)
+
+### FND-101
+
+**A task's builds were counted twice and nested by guess** (high defect, fixed)
+
+The Mustache trial's second run (task 108) was stopped at 3.4 of its 3 million tokens while it had used about 2.3 million, and its record said 5.2 million. A build's run took its parent by agent name (the live step of the builder), so the tester's build sat under the builder's step and three builds under no step; the budget then counted the nested builds in the trace and again from the builds table, and the trial added up runs whose parents' summaries already held them.
+
+- Evidence: `task 108, 2026-11-02 01:33: its budget of 3,000,000 tokens is spent (3,418,180); recount 2,266,180`; `runtime record: build:14 under task:108:step:3, builds 16, 17, 19 without a parent`
+- Affects: [TRL-11](#trl-11), [TRL-09](#trl-09), [TSK-09](#tsk-09)
+- Recommendation: A build a step starts names the step's run as its parent; the budget counts a build from the builds table only when its run is outside the trace; a trial counts each model call of the run record once (adding runs' summaries counts some twice, and a summary taken when its run ends misses a build that ends later).
+- Resolved: night/w9, 2026-11-02: builds source, staffing.runs_of, conductor.spent, trials.metrics; the recount gives 2,266,180 for task 108
 
 ### FND-22
 
@@ -333,6 +348,17 @@ Task #104 (install Reddit on the AI phone and find a post) went to the mission a
 - Recommendation: The intake sees each agent's tools; a step that says it is blocked fails its task with the reason; every task link opens the task's own page.
 - Resolved: night/w1, 2026-11-01: ops/tasks.py cards(), ops/conductor.py BLOCKED, prompts/shared.md TASK_STEP, task.js; tests/test_conductor.py, tests/test_tasks.py, tests/test_task_page.py
 
+### FND-99
+
+**A long requirements list stopped the trial's builders before they started** (high defect, fixed)
+
+The Mustache trial of 2 November (task 107) failed four minutes in. The analyst's numbered requirements (about 26,000 characters) went into the tester's and the builder's brief, and the builder refuses a description over 20,000 characters (the owner's limit, APP-20), so both build steps failed twice with that error and the task failed with 0 of 0 points. The Orchestrator's checkpoint between the waves had run and kept the plan.
+
+- Evidence: `task 107 steps 2 and 3, 2026-11-02 01:03: the description is 28,389 characters; the limit is 20,000`
+- Affects: [TSK-07](#tsk-07), [TRL-05](#trl-05)
+- Recommendation: A step's brief and the earlier steps' results travel apart, as they already did for a Claude task; the builder takes the results as the build's context (80,000 characters, under the one-argument limit of the engine's command line) and the owner's description keeps its limit.
+- Resolved: night/w7, 2026-11-02: conductor.split_brief, builds context and brief(); the Mustache trial ran again
+
 ### FND-03
 
 **One key, many agents** (medium incoherence, fixed)
@@ -376,6 +402,28 @@ ddgs is installed into /opt/hermes/.venv, but the scout profile runs another int
 - Affects: [RES-02](#res-02)
 - Recommendation: Build proposal 27 (install into the interpreter Hermes uses, or point the search backend at it).
 - Resolved: fix/scout-search, 2026-10-30. Cause: on 2026-10-28 Hermes made its own dependency environment (/opt/data/installs/..., for the anthropic extra); a launch then uses only that environment and drops the image's .venv, where the Dockerfile installs ddgs (searches had worked until then, the last ddgs result on 2026-10-27). configure-scout.sh now installs Hermes' own ddgs extra into its environment (tests/test_scout_search.py)
+
+### FND-100
+
+**The checkpoint took a cut result for a broken one** (medium defect, fixed)
+
+In the Mustache trial's second run (task 108) the Orchestrator's checkpoint read only the first 4,000 characters of the analyst's requirements, with no sign that the rest was cut, judged the list broken off and added a step to finish it. It also rewrote the tester's and the builder's briefs to wait for that step, but an added step could only follow other steps, so they ran beside it instead. Its third look dropped the builder's step while a check had sent it back for a fix round (a pending step that had run), and the run ended over its token budget (3.4 of 3 million) with the code at 136 of 136 on the key.
+
+- Evidence: `task 108 checkpoint 1, 2026-11-02 01:22: the visible analyst result ends mid-requirement; step 9 added after step 1`
+- Affects: [TRL-08](#trl-08)
+- Recommendation: The checkpoint reads each result's start with the cut marker (how much is missing, and that the next steps get it whole); an added step can name the steps not yet started that wait for it (before); a step that ran before (a fix round, a next attempt) is shown as running again and is never dropped or rewritten. The prompt's replay passed (new 2, old 0, equal 2).
+- Resolved: night/w8, 2026-11-02: conductor.checkpoint (SEEN, before), TASK_CHECKPOINT
+
+### FND-102
+
+**The judge could not see what the agents read** (medium defect, fixed)
+
+The Mustache trial's third run (task 109) scored 136 of 136 with a clean audit, and the judge rated its clean-room point not met: it rested on the builder's word, as the judge saw no record of what was read. The run record had every command and file read of the task's agents.
+
+- Evidence: `task 109 judgement, 2026-11-02 02:04: without a verifiable file-access record`
+- Affects: [TSK-17](#tsk-17)
+- Recommendation: The judge's measured section lists the run record's tool calls of the task's runs (agent, tool, the start of its argument; 80 named, the task page has all); re-judged with it, the clean-room point was met. TASK_JUDGE says so; replay passed (equal 3).
+- Resolved: night/w10, 2026-11-02: staffing.calls_of and evidence_of, TASK_JUDGE
 
 ### FND-12
 
@@ -1235,7 +1283,7 @@ The trial's build #11 appeared on the Tasks board as task #89 (source door) besi
 | <a id="sn-16"></a>**SN-16** Known, current and checkable requirements: What the stack must do is written down properly, kept current with every change, and contradictions between the parts are found and shown. | must | [APP-14](#app-14), [APP-18](#app-18), [MEM-02](#mem-02), [MEM-11](#mem-11), [MEM-13](#mem-13), [QA-06](#qa-06), [QA-08](#qa-08), [QA-09](#qa-09), [QA-10](#qa-10), [QA-11](#qa-11), [QA-12](#qa-12), [QA-13](#qa-13), [QA-14](#qa-14), [QA-15](#qa-15), [SWM-03](#swm-03), [SWM-20](#swm-20), [SWM-35](#swm-35), [SWM-55](#swm-55), [SWM-88](#swm-88), [TRL-02](#trl-02) |
 | <a id="sn-17"></a>**SN-17** Agents that work together over time: Agents keep working on the same topics over many runs, refine and reopen each other's work, see each other's artifacts and talk to each other directly, to groups or to all, with the owner reading along. | should | [CRW-05](#crw-05), [MEM-03](#mem-03), [MIS-18](#mis-18), [MIS-19](#mis-19), [MIS-20](#mis-20), [OBS-13](#obs-13), [SWM-01](#swm-01), [SWM-02](#swm-02), [SWM-03](#swm-03), [SWM-04](#swm-04), [SWM-05](#swm-05), [SWM-07](#swm-07), [SWM-08](#swm-08), [SWM-09](#swm-09), [SWM-10](#swm-10), [SWM-100](#swm-100), [SWM-101](#swm-101), [SWM-102](#swm-102), [SWM-103](#swm-103), [SWM-104](#swm-104), [SWM-105](#swm-105), [SWM-106](#swm-106), [SWM-107](#swm-107), [SWM-108](#swm-108), [SWM-109](#swm-109), [SWM-11](#swm-11), [SWM-12](#swm-12), [SWM-13](#swm-13), [SWM-16](#swm-16), [SWM-17](#swm-17), [SWM-18](#swm-18), [SWM-20](#swm-20), [SWM-21](#swm-21), [SWM-22](#swm-22), [SWM-27](#swm-27), [SWM-28](#swm-28), [SWM-32](#swm-32), [SWM-33](#swm-33), [SWM-34](#swm-34), [SWM-37](#swm-37), [SWM-41](#swm-41), [SWM-48](#swm-48), [SWM-49](#swm-49), [SWM-50](#swm-50), [SWM-51](#swm-51), [SWM-52](#swm-52), [SWM-54](#swm-54), [SWM-56](#swm-56), [SWM-60](#swm-60), [SWM-62](#swm-62), [SWM-63](#swm-63), [SWM-64](#swm-64), [SWM-65](#swm-65), [SWM-75](#swm-75), [SWM-86](#swm-86), [SWM-90](#swm-90), [SWM-97](#swm-97), [SWM-98](#swm-98), [SWM-99](#swm-99), [TRL-01](#trl-01), [TRL-07](#trl-07), [TSK-05](#tsk-05), [TSK-07](#tsk-07), [TSK-18](#tsk-18), [TSK-19](#tsk-19) |
 | <a id="sn-18"></a>**SN-18** Told once, not spammed: the owner hears about what needs him or went wrong once, on his phone, and is not flooded with repeats or noise. | should | [CRW-12](#crw-12), [OBS-10](#obs-10), [OBS-11](#obs-11), [OBS-12](#obs-12), [OBS-16](#obs-16), [OBS-17](#obs-17), [SHP-04](#shp-04), [SWM-100](#swm-100), [SWM-14](#swm-14), [SWM-39](#swm-39), [SWM-50](#swm-50), [SWM-56](#swm-56), [SWM-59](#swm-59), [SWM-71](#swm-71), [SWM-80](#swm-80) |
-| <a id="sn-19"></a>**SN-19** Give a task, the stack does the rest: The owner gives any task (coding, research, analysis, watching, errands) in one sentence, or with details preset when wanted; the stack works out what done means, plans it, chooses or creates the agents, models and harnesses, runs it once, on a schedule, on an event or after other work, for minutes or for months, and asks only the real decisions. | must | [TRL-01](#trl-01), [TRL-02](#trl-02), [TRL-03](#trl-03), [TRL-04](#trl-04), [TRL-05](#trl-05), [TRL-06](#trl-06), [TRL-07](#trl-07), [TRL-08](#trl-08), [TRL-09](#trl-09), [TRL-10](#trl-10), [TRL-11](#trl-11), [TRL-12](#trl-12), [TSK-01](#tsk-01), [TSK-02](#tsk-02), [TSK-03](#tsk-03), [TSK-04](#tsk-04), [TSK-05](#tsk-05), [TSK-06](#tsk-06), [TSK-07](#tsk-07), [TSK-11](#tsk-11), [TSK-13](#tsk-13), [TSK-14](#tsk-14), [TSK-15](#tsk-15), [TSK-16](#tsk-16), [TSK-21](#tsk-21), [TSK-22](#tsk-22), [TSK-23](#tsk-23), [TSK-24](#tsk-24), [TSK-25](#tsk-25), [TSK-26](#tsk-26), [TSK-27](#tsk-27), [TSK-28](#tsk-28), [TSK-29](#tsk-29), [TSK-30](#tsk-30), [TSK-31](#tsk-31), [TSK-32](#tsk-32), [TSK-33](#tsk-33), [TSK-34](#tsk-34) |
+| <a id="sn-19"></a>**SN-19** Give a task, the stack does the rest: The owner gives any task (coding, research, analysis, watching, errands) in one sentence, or with details preset when wanted; the stack works out what done means, plans it, chooses or creates the agents, models and harnesses, runs it once, on a schedule, on an event or after other work, for minutes or for months, and asks only the real decisions. | must | [TRL-01](#trl-01), [TRL-02](#trl-02), [TRL-03](#trl-03), [TRL-04](#trl-04), [TRL-05](#trl-05), [TRL-06](#trl-06), [TRL-07](#trl-07), [TRL-08](#trl-08), [TRL-09](#trl-09), [TRL-10](#trl-10), [TRL-11](#trl-11), [TRL-12](#trl-12), [TRL-13](#trl-13), [TSK-01](#tsk-01), [TSK-02](#tsk-02), [TSK-03](#tsk-03), [TSK-04](#tsk-04), [TSK-05](#tsk-05), [TSK-06](#tsk-06), [TSK-07](#tsk-07), [TSK-11](#tsk-11), [TSK-13](#tsk-13), [TSK-14](#tsk-14), [TSK-15](#tsk-15), [TSK-16](#tsk-16), [TSK-21](#tsk-21), [TSK-22](#tsk-22), [TSK-23](#tsk-23), [TSK-24](#tsk-24), [TSK-25](#tsk-25), [TSK-26](#tsk-26), [TSK-27](#tsk-27), [TSK-28](#tsk-28), [TSK-29](#tsk-29), [TSK-30](#tsk-30), [TSK-31](#tsk-31), [TSK-32](#tsk-32), [TSK-33](#tsk-33), [TSK-34](#tsk-34) |
 | <a id="sn-20"></a>**SN-20** Work that starts when the world changes: Tasks start by themselves when something happens, such as a news story breaking, mail arriving, code changing, a price moving, a device changing state or another task finishing. | should | [TSK-10](#tsk-10), [TSK-11](#tsk-11), [TSK-12](#tsk-12), [TSK-21](#tsk-21), [TSK-22](#tsk-22), [TSK-23](#tsk-23), [TSK-24](#tsk-24), [TSK-25](#tsk-25), [TSK-26](#tsk-26), [TSK-27](#tsk-27), [TSK-28](#tsk-28), [TSK-29](#tsk-29), [TSK-30](#tsk-30), [TSK-31](#tsk-31), [TSK-32](#tsk-32), [TSK-33](#tsk-33) |
 
 ## APP App
@@ -6055,11 +6103,12 @@ The Conductor shall run each step on the harness and model its plan names, throu
 
 - Parents: [SN-19](#sn-19), [SN-17](#sn-17)
 - Sources: [SWM-02](#swm-02), [SWM-28](#swm-28)
-- Verified by: test: `tests/test_conductor.py::test_a_step_on_opencode_reads_only_and_records_its_tool_and_model_calls`, `tests/test_conductor.py::test_each_step_s_prompt_carries_the_results_it_waits_for`, `tests/test_conductor.py::test_a_claude_step_waits_for_its_claude_task_also_across_a_restart`
+- Verified by: test: `tests/test_conductor.py::test_a_step_on_opencode_reads_only_and_records_its_tool_and_model_calls`, `tests/test_conductor.py::test_each_step_s_prompt_carries_the_results_it_waits_for`, `tests/test_conductor.py::test_a_long_requirements_list_reaches_the_builder_apart_from_its_brief`, `tests/test_conductor.py::test_a_claude_step_waits_for_its_claude_task_also_across_a_restart`
 - Phase: 2 Plan graph and durable steps
 - Acceptance: Test: one task whose steps run on Hermes, Claude Code and OpenCode finishes, each step through its adapter.
 - Trace: `config/opencode-step.json`, `ops/conductor.py`, `prompts/shared.md`
 - Gap: Hermes, Claude Code, Python and OpenCode have adapters (OpenCode since 2026-11-01, one `opencode run` per step, read only, run for real on a repository question); the phase 2 gate ran one task across Hermes, Claude Code and Python, and one task across Hermes, Claude Code and OpenCode has not run yet.
+- Findings: [FND-99](#fnd-99)
 
 #### TSK-08
 
@@ -6088,6 +6137,7 @@ Every agent run, model call and tool call of a task shall be part of one trace f
 - Acceptance: Test: a task with steps on two harnesses yields one trace whose spans name every agent run, model call and tool call.
 - Trace: `ops/conductor.py`, `ops/runtime.py`, `images/mission-control/runrecord.py`, `images/mission-control/otlp.py`
 - Rationale: The task is one run in the runtime record, each step a run inside it and the agents' own runs and model calls inside the steps (#/live/task:<id>, Live trace and the task's page); a Hermes run, which can't carry its parent in, joins the live step of its agent; a Claude step's Claude task runs inside its step (since 2026-11-01); a minute after the run ends the tree goes to Phoenix as one trace (otlp.tree_spans, TSK-26).
+- Findings: [FND-101](#fnd-101)
 
 ### Event fabric
 
@@ -6197,7 +6247,7 @@ The Checker shall judge each finished task against its definition of done, readi
 - Phase: 4 Self-staffing
 - Acceptance: Test: a finished task gets a verdict against its definition of done, and the day's history row of each agent, model and task type it used changes.
 - Trace: `ops/staffing.py`, `prompts/shared.md`
-- Findings: [FND-97](#fnd-97), [FND-92](#fnd-92)
+- Findings: [FND-97](#fnd-97), [FND-92](#fnd-92), [FND-102](#fnd-102)
 
 ### Reach
 
@@ -6513,7 +6563,7 @@ A trial's build step shall end when its build reaches review, giving the branch 
 - Sources: `docs/SWARM-TRIALS.md`
 - Verified by: test: `tests/test_conductor.py::test_a_build_or_claude_task_a_step_started_is_not_a_task_of_its_own`, `tests/test_conductor.py::test_a_trial_s_build_step_ends_at_review_and_is_scored_not_merged`, `tests/test_trials.py::test_a_trial_s_build_ends_at_review_and_is_never_merged_and_the_judge_scores_it_too`
 - Trace: `ops/conductor.py`, `ops/trials.py`
-- Findings: [FND-91](#fnd-91)
+- Findings: [FND-91](#fnd-91), [FND-99](#fnd-99)
 
 ### TRL-06
 
@@ -6546,11 +6596,11 @@ The Conductor shall run bounded loops (code, test, fix until it passes or the bu
 
 - Parents: [SN-19](#sn-19)
 - Sources: `docs/SWARM-TRIALS.md`
-- Verified by: test: `tests/test_conductor.py::test_between_waves_the_orchestrator_keeps_or_changes_the_rest_of_the_plan`, `tests/test_conductor.py::test_a_recurring_or_fixed_plan_gets_no_checkpoint`, `tests/test_conductor.py::test_a_check_sends_failures_back_to_the_builder_until_they_pass`, `tests/test_conductor.py::test_a_check_out_of_fix_rounds_reports_what_still_fails_and_the_plan_goes_on`, `tests/test_conductor.py::test_only_a_check_loops_and_only_back_and_a_fold_keeps_the_loop_on_its_build`, `tests/test_tasks.py::test_the_intake_keeps_a_check_s_fix_loop_and_a_budget_preset`
+- Verified by: test: `tests/test_conductor.py::test_between_waves_the_orchestrator_keeps_or_changes_the_rest_of_the_plan`, `tests/test_conductor.py::test_a_recurring_or_fixed_plan_gets_no_checkpoint`, `tests/test_conductor.py::test_the_checkpoint_reads_a_long_result_s_start_and_knows_it_is_cut`, `tests/test_conductor.py::test_a_check_sends_failures_back_to_the_builder_until_they_pass`, `tests/test_conductor.py::test_a_check_out_of_fix_rounds_reports_what_still_fails_and_the_plan_goes_on`, `tests/test_conductor.py::test_only_a_check_loops_and_only_back_and_a_fold_keeps_the_loop_on_its_build`, `tests/test_tasks.py::test_the_intake_keeps_a_check_s_fix_loop_and_a_budget_preset`
 - Acceptance: Test: a re-plan after a wave is recorded and shown on the task.
 - Trace: `ops/conductor.py`, `ops/tasks.py`, `ops/builds.py`, `prompts/shared.md`, `images/mission-control/web/static/task.js`
-- Rationale: The checkpoint is the intake agent on its own key (one model call); it never touches a finished step, adds at most three steps a look and looks at most three times a run, so a run's cost stays bounded.
-- Findings: [FND-94](#fnd-94)
+- Rationale: The checkpoint is the intake agent on its own key (one model call); it never touches a finished step, adds at most three steps a look (each after finished or planned steps, and before steps not yet started that must wait for it) and looks at most three times a run, so a run's cost stays bounded. It reads each result's first 6,000 characters, marked as cut where it is longer.
+- Findings: [FND-94](#fnd-94), [FND-100](#fnd-100)
 
 ### TRL-09
 
@@ -6560,9 +6610,10 @@ The app shall show every trial's runs side by side, with score, cost, time, inte
 
 - Parents: [SN-19](#sn-19)
 - Sources: `docs/SWARM-TRIALS.md`
-- Verified by: test: `tests/test_trials.py::test_the_scoreboard_holds_every_run_side_by_side_with_its_version`
+- Verified by: test: `tests/test_trials.py::test_a_run_s_tokens_count_each_model_call_once`, `tests/test_trials.py::test_the_scoreboard_holds_every_run_side_by_side_with_its_version`
 - Acceptance: Test: two runs of one trial on different versions show side by side with the change between them named.
 - Trace: `ops/trials.py`, `images/mission-control/server.py`, `images/mission-control/web/static/task.js`, `images/mission-control/web/static/app.js`
+- Findings: [FND-101](#fnd-101)
 
 ### TRL-10
 
@@ -6585,20 +6636,33 @@ A task may carry a budget of hours and tokens (its run's model calls and its bui
 
 - Parents: [SN-19](#sn-19), [CST-02](#cst-02)
 - Sources: `docs/SWARM-TRIALS.md`
-- Verified by: test: `tests/test_conductor.py::test_a_spent_budget_stops_the_next_step`, `tests/test_tasks.py::test_the_intake_keeps_a_check_s_fix_loop_and_a_budget_preset`
+- Verified by: test: `tests/test_conductor.py::test_a_build_inside_the_trace_counts_once_against_the_budget`, `tests/test_conductor.py::test_a_spent_budget_stops_the_next_step`, `tests/test_tasks.py::test_the_intake_keeps_a_check_s_fix_loop_and_a_budget_preset`
 - Trace: `ops/conductor.py`, `ops/tasks.py`, `ops/trials.py`
+- Findings: [FND-101](#fnd-101)
 
 ### TRL-12
 
 **Requirements traced and gaps found, scored** · should · functional · **implemented**
 
-A trace trial (T2) shall give the swarm a specification's requirements and an implementation with every requirement ID taken out of its code, ask for each requirement's file and line and for every requirement the code does not meet, and score the answer against where the IDs sat (the function) and the deviations planted in the code, a gap the key does not know counting as a false alarm; on an open-source broker (mqtt-trace) and on the stack's own code against its own requirements (stack-trace).
+A trace trial (T2) shall give the swarm a specification's requirements and an implementation with every requirement ID taken out of its code, ask for each requirement's file and line and for every requirement the code does not meet, and score the answer against where the IDs sat (the function), the deviations planted in the code and the code's own defects the key has confirmed, a gap the key has reviewed and rejected counting as a false alarm (TRL-13 for one it does not know); on an open-source broker (mqtt-trace) and on the stack's own code against its own requirements (stack-trace).
 
 - Parents: [SN-19](#sn-19)
 - Sources: `chat 2026-11-01: take the existing implementation and the requirements ... map where in the code requirements are fullfilled ... detect which requirements are unfullfilled`, `docs/SWARM-TRIALS.md`
 - Verified by: test: `tests/test_trials.py::test_the_trace_trial_gets_the_implementation_beside_its_specification`
 - Trace: `eval/trials/mqtt-trace.yaml`, `eval/trials/stack-trace.yaml`, `ops/trials.py`
 - Rationale: The MQTT spec pilot (spec/README.md) gives the key and the numbers to beat; the key and its make_key.py live under /srv/ai/private/trials/mqtt-trace, out of every agent's reach.
+
+### TRL-13
+
+**A gap beyond the key is for review, and a run can be scored again** · should · functional · **implemented**
+
+A trial's scorer shall list a gap its key does not know for review, unscored, with the agents' reason; the report and the scoreboard shall name those gaps; and a recorded run shall be scored again with the key as it is now, its tokens counted again from the run record, the record keeping what it said before.
+
+- Parents: [SN-19](#sn-19)
+- Sources: `mqtt-trace run 2026-11-02 02:16: 25 gaps beyond the key, all counted as false alarms; of four read in the code, three were real defects of mochi-mqtt (topics.go 615, packets.go 427, clients.go 537) and one a MAY`
+- Verified by: test: `tests/test_trials.py::test_a_gap_beyond_the_key_is_for_review_and_a_run_can_be_scored_again`
+- Trace: `ops/trials.py`, `images/mission-control/web/static/task.js`
+- Rationale: The key of a trace trial is one reading of the code, not all of it; a trace that finds a real defect the key does not know must not lose points for it, and the owner reviews such gaps into the key (real, or not).
 
 ## VOI Voice
 
@@ -6826,6 +6890,7 @@ The House page shall show Home Assistant's main menus whenever it is reachable, 
 | `tests/test_cleanup.py::test_uninstall_always_asks_even_inside_the_time_window` | [PHN-03](#phn-03) |
 | `tests/test_cleanup.py::test_uninstall_refuses_blocked_and_system_apps` | [PHN-15](#phn-15) |
 | `tests/test_conductor.py::test_a_briefing_runs_collect_scouts_write_and_deliver_and_each_desk_step_hands_on_its_work` | [TSK-22](#tsk-22) |
+| `tests/test_conductor.py::test_a_build_inside_the_trace_counts_once_against_the_budget` | [TRL-11](#trl-11) |
 | `tests/test_conductor.py::test_a_build_or_claude_task_a_step_started_is_not_a_task_of_its_own` | [TRL-05](#trl-05) |
 | `tests/test_conductor.py::test_a_build_step_waits_for_its_build_and_the_owner_s_tap_and_a_task_runs_again_on_request` | [TSK-21](#tsk-21) |
 | `tests/test_conductor.py::test_a_check_out_of_fix_rounds_reports_what_still_fails_and_the_plan_goes_on` | [TRL-08](#trl-08) |
@@ -6833,6 +6898,7 @@ The House page shall show Home Assistant's main menus whenever it is reachable, 
 | `tests/test_conductor.py::test_a_claude_step_waits_for_its_claude_task_also_across_a_restart` | [TSK-06](#tsk-06), [TSK-07](#tsk-07), [TSK-09](#tsk-09) |
 | `tests/test_conductor.py::test_a_claude_task_cut_off_by_the_runner_stopping_is_queued_again` | [TSK-06](#tsk-06) |
 | `tests/test_conductor.py::test_a_delivered_briefing_grows_its_topic_wiki_and_a_deleted_one_stays_deleted` | [TSK-22](#tsk-22) |
+| `tests/test_conductor.py::test_a_long_requirements_list_reaches_the_builder_apart_from_its_brief` | [TSK-07](#tsk-07) |
 | `tests/test_conductor.py::test_a_price_watch_runs_its_shopping_agent_s_check_and_a_reached_target_starts_its_next_run` | [TSK-21](#tsk-21) |
 | `tests/test_conductor.py::test_a_recurring_or_fixed_plan_gets_no_checkpoint` | [TRL-08](#trl-08) |
 | `tests/test_conductor.py::test_a_restart_runs_the_interrupted_step_again_and_no_finished_step_twice` | [TSK-06](#tsk-06) |
@@ -6855,6 +6921,7 @@ The House page shall show Home Assistant's main menus whenever it is reachable, 
 | `tests/test_conductor.py::test_each_step_s_prompt_carries_the_results_it_waits_for` | [TSK-07](#tsk-07) |
 | `tests/test_conductor.py::test_one_trace_the_task_s_run_holds_each_step_s_run` | [TSK-09](#tsk-09) |
 | `tests/test_conductor.py::test_only_a_check_loops_and_only_back_and_a_fold_keeps_the_loop_on_its_build` | [TRL-08](#trl-08) |
+| `tests/test_conductor.py::test_the_checkpoint_reads_a_long_result_s_start_and_knows_it_is_cut` | [TRL-08](#trl-08) |
 | `tests/test_conductor.py::test_the_owner_can_cancel_and_every_planned_task_goes_to_the_conductor` | [TSK-05](#tsk-05), [TSK-21](#tsk-21) |
 | `tests/test_conductor.py::test_the_worker_starts_an_event_s_and_a_schedule_s_run_while_it_holds_its_lock_and_heals_a_half_start` | [TSK-21](#tsk-21) |
 | `tests/test_crew.py::test_crew_actions_are_validated` | [CRW-02](#crw-02), [SEC-11](#sec-11) |
@@ -7358,6 +7425,8 @@ The House page shall show Home Assistant's main menus whenever it is reachable, 
 | `tests/test_tools.py::test_a_tool_link_that_does_not_open_is_a_journey_failure` | [APP-30](#app-30) |
 | `tests/test_tools.py::test_every_tool_has_its_menus_and_every_page_exists` | [APP-30](#app-30) |
 | `tests/test_tools.py::test_go_to_finds_menus_and_pages_by_their_words` | [APP-30](#app-30) |
+| `tests/test_trials.py::test_a_gap_beyond_the_key_is_for_review_and_a_run_can_be_scored_again` | [TRL-13](#trl-13) |
+| `tests/test_trials.py::test_a_run_s_tokens_count_each_model_call_once` | [TRL-09](#trl-09) |
 | `tests/test_trials.py::test_a_task_given_straight_to_the_builder_is_followed_through_its_build` | [TRL-01](#trl-01) |
 | `tests/test_trials.py::test_a_trial_is_checked_before_it_runs` | [TRL-01](#trl-01) |
 | `tests/test_trials.py::test_a_trial_s_build_ends_at_review_and_is_never_merged_and_the_judge_scores_it_too` | [TRL-02](#trl-02), [TRL-05](#trl-05) |

@@ -86,16 +86,18 @@ def test_the_replay_is_the_newest_finished_planned_task(tmp_path):
     TK.table(c)
     CD.table(c)
     spec = {"plan": JY.SAMPLE["answer"]["plan"], "judgement": JY.SAMPLE["judgement"]}
-    for tid, rhythm in ((1, "once"), (2, "schedule")):
+    for tid, rhythm, source, sp in ((1, "once", "app", spec), (2, "schedule", "app", spec), (3, "once", "trial:mustache", spec),
+                                    (4, "once", "app", {**spec, "repo": "trial-x"})):
         c.execute("insert into tasks (id, text, title, goal, kind, door, done, effort, autonomy, rhythm, spec, questions, answers, status, source, created, updated) "
-                  "values (?, 'x y z', 'T', 'G', 'research', 'plan', '[\"a b c\"]', 'light', 'auto', ?, ?, '[]', '[]', 'done', 'app', 'x', 'x')",
-                  (tid, json.dumps({"type": rhythm}), json.dumps(spec)))
+                  "values (?, 'x y z', 'T', 'G', 'research', 'plan', '[\"a b c\"]', 'light', 'auto', ?, ?, '[]', '[]', 'done', ?, 'x', 'x')",
+                  (tid, json.dumps({"type": rhythm}), json.dumps(sp), source))
         for i in (1, 2):
             c.execute("insert into task_steps (task, idx, title, agent, harness, after, why, status, output, occ) values (?,?,?,?,?,?,?,?,?,1)",
                       (tid, i, "s", "scout", "hermes", "[]", "w", "done", f"answer {i}"))
     c.commit()
     rec = JY.recorded_task(tmp_path / "m.sqlite")
     assert rec["task"] == 1 and rec["outputs"] == {1: "answer 1", 2: "answer 2"} and rec["answer"]["plan"] == spec["plan"]   # a schedule's is not a once-task
+    # 3 and 4, newer, are a trial's and one in a repository: the sandbox has no repositories to give them
     assert JY.recorded_task(tmp_path / "none.sqlite") is None
 
 

@@ -217,6 +217,18 @@ def test_the_judge_reads_what_the_stack_measured_not_only_the_summary(tmp_path, 
               "(91, 1, 2, 'Run every test', 'judge', 'check', '[1]', 'done', 'All checks pass: 114 passed.')")
     c.execute("insert into artifacts values (1, 'https://semver.org/')")
     c.execute("insert into prov values (91, 1)")
+    rt = tmp_path / "runtime.db"                                    # the run record: the task's run, a step's, the agent's inside it
+    r = sqlite3.connect(rt)
+    r.execute("create table runs (run text primary key, ref text, agent text)")
+    r.execute("create table events (id integer primary key, run text, ts real, kind text, title text, detail text, data text)")
+    r.executemany("insert into runs values (?,?,?)", [("task:91", None, "conductor"), ("task:91:step:1", "task:91", "builder"),
+                                                      ("claude:builder:1", "task:91:step:1", "builder"), ("task:92", None, "conductor")])
+    r.executemany("insert into events (run, ts, kind, title, detail) values (?,?,?,?,?)", [
+        ("claude:builder:1", 1.0, "call", "Bash", json.dumps({"command": "cat  spec/sections.md\nls tests"})),
+        ("claude:builder:1", 2.0, "call", "Read", json.dumps({"file_path": "/work/x/semverlib/__init__.py"})),
+        ("claude:builder:1", 3.0, "llm", "claude", "{}"), ("task:92", 1.0, "call", "Bash", json.dumps({"command": "pip install semver"}))])
+    r.commit(); r.close()
+    monkeypatch.setattr(ST, "RUNTIME_DB", rt)
     seen = []
     t = {"id": 91, "door": "plan", "goal": "a semver library", "done": ["every rule has a test"], "spec": {}}
     j = ST.judge(c, t, ask=lambda p: seen.append(p) or '{"points": [{"met": true, "why": "114 tests pass"}]}', text="Built it.", occ=1)
@@ -224,5 +236,7 @@ def test_the_judge_reads_what_the_stack_measured_not_only_the_summary(tmp_path, 
     p = seen[0]
     assert ST.MEASURED in p and "Build #13 (review)" in p and "114 passed" in p and "semverlib/__init__.py" in p
     assert "All checks pass: 114 passed." in p and "https://semver.org/" in p
+    assert "### What the agents ran and read (2 tool calls in the run record)" in p and "- builder: Bash cat spec/sections.md ls tests" in p
+    assert "- builder: Read /work/x/semverlib/__init__.py" in p and "pip install semver" not in p     # another task's call is not its
     assert ST.evidence_of(c, {**t, "id": 5}, 1) == ""                 # nothing measured: nothing added
 

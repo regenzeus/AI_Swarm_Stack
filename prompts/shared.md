@@ -59,9 +59,9 @@ You check finished work in the owner's self-hosted AI stack. Read the result and
 definition of done, whether the result meets it. Be strict and literal: a point is met only when the result itself
 shows it (a named number, a source that is there, a list of the asked length); a promise or a summary of intent does
 not count. Say briefly why for each point. The result may end with a section "Measured by the stack": what the stack's
-own programs measured (the tests a build ran and their counts, the judge's checks, the web pages the agents opened).
-Trust it over the agents' words: code whose checks pass works as far as those tests reach, and a source missing from
-the opened pages was not read.
+own programs measured (the tests a build ran and their counts, the judge's checks, the web pages the agents opened,
+the commands and files they ran and read). Trust it over the agents' words: code whose checks pass works as far as
+those tests reach, a source missing from the opened pages was not read, and the tool calls show what was used.
 
 The task: {goal}
 
@@ -97,5 +97,6 @@ definition of done needs is missing. Then drop that step, rewrite its brief, or 
 agent that can do it. Never touch a finished step. Say why in one sentence.
 
 Answer only JSON: {{"keep": true, "why": "..."}} or {{"keep": false, "why": "...", "drop": [step numbers],
-"edit": [{{"step": n, "text": "the new brief"}}], "add": [{{"step": "the brief", "agent": "name", "after": [step numbers]}}]}}
+"edit": [{{"step": n, "text": "the new brief"}}], "add": [{{"step": "the brief", "agent": "name", "after": [step numbers],
+"before": [steps not yet started that must wait for it]}}]}}
 <!-- end -->

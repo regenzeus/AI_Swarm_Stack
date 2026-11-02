@@ -82,7 +82,8 @@ def table(c):
     cols = {r[1] for r in c.execute("pragma table_info(builds)")}
     for col, typ in (("retry_at", "text"), ("pr", "text"), ("pr_number", "integer"), ("engine", "text"), ("ai_review", "text"), ("cached", "integer"),
                      ("approve_on_ci", "integer"), ("idea", "integer"), ("task", "integer"), ("slot", "integer"), ("approved_at", "text"),
-                     ("files_plan", "text"), ("requirements", "text"), ("proof", "text"), ("note", "text"), ("override", "text")):
+                     ("files_plan", "text"), ("requirements", "text"), ("proof", "text"), ("note", "text"), ("override", "text"),
+                     ("context", "text"), ("source", "text")):
         if col not in cols:
             c.execute(f"alter table builds add column {col} {typ}")
 
@@ -106,6 +107,15 @@ def swarm(op, args, actor="system"):
         return None
 
 
+CONTEXT = 80000      # the results a task step builds on: the whole prompt goes to the engine as one argument (128 KiB at most)
+
+
+def brief(b):
+    """What the engine is asked: the description, then the results it builds on (a task's earlier steps, FND-99)."""
+    ctx = b["context"] if "context" in b.keys() else None
+    return b["description"] + (f"\n\n{ctx}" if ctx else "")
+
+
 def place(repo, slot=None):
     """The clone a build works in: its slot's (repo.<n>), or the main clone the merge queue uses."""
     return f"{repo}.{slot}" if slot else repo
@@ -120,6 +130,8 @@ def handle(req, c):
             raise ValueError(f"repo must be one of: {', '.join(repos())}")
         if len(title) < 3 or len(desc) < 10:
             raise ValueError("give a title and a description of what to build")
+        ctx = limit(str(req.get("context") or "").strip(), CONTEXT, "the results passed in") or None   # FND-99: a task step's earlier results
+        src = str(req.get("source") or "")[:200] or None  # cap: id (the run that started it: its run nests there, FND-101)
         engine = str(req.get("engine") or ("claude" if claude_ready() else "hermes"))     # code work: Claude Code when connected
         if engine not in ENGINES:
             raise ValueError(f"engine must be one of: {', '.join(ENGINES)}")
@@ -128,9 +140,9 @@ def handle(req, c):
         t = M.now().isoformat(timespec="seconds")
         idea = int(req["idea"]) if str(req.get("idea") or "").isdigit() else None    # an idea's build is planned first (SWM-91)
         files = [str(f) for f in req.get("files") or [] if str(f).strip()][:40]  # cap: untrusted
-        cur = c.execute("insert into builds (repo, title, description, status, created, updated, attempts, engine, idea, files_plan) "
-                        "values (?,?,?,?,?,?,0,?,?,?)", (repo, title, desc, "planning" if idea else "queued", t, t, engine, idea,
-                                                         json.dumps(files) if files else None))
+        cur = c.execute("insert into builds (repo, title, description, status, created, updated, attempts, engine, idea, files_plan, context, source) "
+                        "values (?,?,?,?,?,?,0,?,?,?,?,?)", (repo, title, desc, "planning" if idea else "queued", t, t, engine, idea,
+                                                             json.dumps(files) if files else None, ctx, src))
         c.commit()
         bid = cur.lastrowid
         slug = re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")[:40]  # cap: id
@@ -637,7 +649,7 @@ def run(c, b, slot=None):
                "tree (see git status / git diff): continue from there instead of starting over.\n")
     import codegraph as CG
     ctx = CG.text(context_pack(path, repo, files_of(b), bid, "planned")) if files_of(b) else ""
-    prompt = PROMPT.format(id=bid, repo=repo, place=place(repo, slot), branch=b["branch"], title=b["title"], description=b["description"],
+    prompt = PROMPT.format(id=bid, repo=repo, place=place(repo, slot), branch=b["branch"], title=b["title"], description=brief(b),
                            feedback=fb, scope=scope_of(b) + idea_context(b), context=f"\n{ctx}\n" if ctx else "",
                            reqline=REQLINE if (path / "ops/req.py").exists() else "",
                            checks=checks.replace(" && echo ALL CHECKS PASSED", ""))
@@ -1171,7 +1183,8 @@ def job(b, slot, kind):
         RTM.set_ref(rid)
         RTM.start(rid, "builder", f"Build #{b['id']}: {b['title']}" + {"approved": " (deploy)", "recheck": " (re-check)", "planning": " (plan)"}.get(b["status"], ""),
                   data={"manifest": {"agent": "planner" if kind == "plan" else "builder", "engine": b["engine"] or "hermes", "repo": b["repo"],
-                                     "step": b["status"], "slot": slot, "task": b["task"], "idea": b["idea"]}})
+                                     "step": b["status"], "slot": slot, "task": b["task"], "idea": b["idea"]}},
+                  ref=b["source"] if "source" in b.keys() else None)   # FND-101: in its step's trace, not a guess by agent name
         t0 = time.time()
         try:
             fn(c, b) if kind in ("plan", "deploy") else fn(c, b, slot)

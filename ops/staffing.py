@@ -90,6 +90,18 @@ def usage_of(run, db=None, tree=True):
     return out
 
 
+def runs_of(run, db=None):
+    """The run and every run inside it (FND-101: what a count over the tree already holds)."""
+    try:
+        c = sqlite3.connect(f"file:{db or RUNTIME_DB}?mode=ro", uri=True)
+        out = {r[0] for r in c.execute("with recursive t(run) as (select ? union select r.run from runs r join t on r.ref = t.run) "
+                                       "select run from t", (run,))}
+        c.close()
+        return out
+    except sqlite3.Error:
+        return set()
+
+
 def cost_of(run, db=None):
     """USD at list price of a run's tokens (None when none of its models has a price)."""
     import prices as PR
@@ -121,13 +133,38 @@ def result_of(c, t):
 
 MEASURED = "## Measured by the stack (its own programs, not the agents' words)"
 PAGES = 40                                         # cap: list (pages named for the judge; the run's map has every one)
+CALLS = 80                                         # cap: list (tool calls named for the judge; the task page's timeline has every one)
+
+
+def calls_of(run, db=None):
+    """The tool calls of a run and every run inside it, in order -> [(agent, tool, its first argument)]."""
+    q = ("with recursive t(run) as (select ? union select r.run from runs r join t on r.ref = t.run) "
+         "select r.agent, e.title, e.detail from events e join runs r on r.run = e.run "
+         "where e.run in (select run from t) and e.kind = 'call' order by e.ts, e.id")
+    try:
+        c = sqlite3.connect(f"file:{db or RUNTIME_DB}?mode=ro", uri=True)
+        rows = c.execute(q, (run,)).fetchall()
+        c.close()
+    except sqlite3.Error:
+        return []
+    out = []
+    for agent, tool, detail in rows:
+        try:
+            d = json.loads(detail or "{}")
+        except ValueError:
+            d = detail
+        arg = next(iter(d.values()), "") if isinstance(d, dict) and d else d
+        out.append((agent or "", tool or "", " ".join(str(arg or "").split())))
+    return out
 
 
 def evidence_of(c, t, occ=None):
     """FND-92: what the stack's own programs measured about a task's work, for the judge: each build's checks (the
     tests it ran), each check step's result and the pages its agents opened. A judge that reads only the agents' words
-    cannot tell working code from a modest report. -> markdown, or "" when nothing was measured."""
+    cannot tell working code from a modest report. The run record's tool calls show what the agents ran and read.
+    -> markdown, or "" when nothing was measured."""
     import conductor as CD
+    import textcap as TC
     out = []
     for r in c.execute("select ref from step_refs where kind='build' and task=? order by ref", (t["id"],)).fetchall():
         b = c.execute("select id, status, checks, files from builds where id=?", (int(r["ref"]),)).fetchone()
@@ -144,9 +181,14 @@ def evidence_of(c, t, occ=None):
                                              "where p.task=? and a.uri like 'http%' order by a.uri", (t["id"],))]
     except Exception:                                  # no provenance tables yet (a fresh database)
         pages = []
-    if out or pages:
+    calls = calls_of(CD.run_of(t["id"], occ or 1))       # what the agents ran and read: a clean room is shown, not claimed
+    if out or pages or calls:
         out.append(f"### Web pages the agents opened ({len(pages)})\n" + ("\n".join(f"- {u}" for u in pages[:PAGES]) or "none")
                    + (f"\n- … and {len(pages) - PAGES} more" if len(pages) > PAGES else ""))
+    if calls:
+        out.append(f"### What the agents ran and read ({len(calls)} tool calls in the run record)\n"
+                   + "\n".join(f"- {a}: {tool} {TC.cut(arg, 160)}" for a, tool, arg in calls[:CALLS])  # cap: prompt (each call's start)
+                   + (f"\n- … and {len(calls) - CALLS} more (the task's page has every one)" if len(calls) > CALLS else ""))
     return f"{MEASURED}\n\n" + "\n\n".join(out) if out else ""
 
 
