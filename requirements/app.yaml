@@ -63,7 +63,7 @@ items:
     parents: [SN-01, SN-02]
     sources: [images/mission-control/guide/01-welcome.md]
     findings: [FND-57]
-    verify: {method: test, by: [tests/test_home_work.py::test_home_is_needs_now_and_a_live_feed_with_an_ask_bar, tests/test_home_work.py::test_now_shows_work_in_progress_and_whats_next, tests/test_home_work.py::test_the_feed_has_results_first_class_and_leaves_out_noise]}
+    verify: {method: test, by: [tests/test_home_work.py::test_home_is_needs_now_and_a_live_feed_with_an_ask_bar, tests/test_home_work.py::test_now_shows_work_in_progress_and_whats_next, tests/test_home_work.py::test_home_s_results_are_one_card_per_outcome_named_by_what_it_is_about]}
     trace: [images/mission-control/web/static/app.js]
   - id: APP-06
     title: Needs you is only the owner's decisions
@@ -147,7 +147,7 @@ items:
     status: implemented
     parents: [SN-02, SN-15]
     sources: [images/mission-control/guide/AGENTS.md]
-    verify: {method: test, by: [tests/test_guide.py::test_chapters_are_well_formed, tests/test_guide.py::test_every_app_screen_has_a_chapter, tests/test_guide.py::test_every_make_target_is_explained, tests/test_guide.py::test_examples_and_live_blocks_point_at_real_things, tests/test_guide.py::test_guide_api]}
+    verify: {method: test, by: [tests/test_guide.py::test_chapters_are_well_formed, tests/test_guide.py::test_every_app_screen_has_a_chapter, tests/test_guide.py::test_every_screen_s_how_this_page_works_opens_the_chapter_about_it, tests/test_guide.py::test_every_make_target_is_explained, tests/test_guide.py::test_examples_and_live_blocks_point_at_real_things, tests/test_guide.py::test_guide_api]}
   - id: APP-14
     title: The guide says what is true
     statement: Every statement in the guide shall match the current behaviour; when behaviour changes, the guide shall
@@ -304,7 +304,7 @@ items:
     findings: [FND-55, FND-56, FND-57, FND-58, FND-59]
     verify: {method: test, by: [tests/test_ux_review.py::test_a_mission_card_shows_its_result_not_a_note_for_the_health_doctor,
       tests/test_ux_review.py::test_the_latest_result_comes_before_the_run_s_log_unless_a_run_is_live,
-      tests/test_ux_review.py::test_the_home_feed_shows_the_owner_s_things_first_and_the_stack_s_on_their_chips,
+      tests/test_ux_review.py::test_the_home_feed_filters_by_kind_and_each_card_names_its_kind,
       tests/test_ux_review.py::test_a_copy_button_says_copied_only_when_it_copied,
       tests/test_ux_review.py::test_the_stack_page_names_each_failed_job_and_links_it_and_the_crawl_is_kept]}
     trace: [images/mission-control/web/static/app.js, images/mission-control/web/static/app.css]
@@ -410,3 +410,63 @@ items:
       tests/test_app_routes.py::test_a_live_redraw_never_scrolls_the_page]}
     trace: [images/mission-control/web/static/task.js, images/mission-control/runrecord.py, images/mission-control/server.py,
       ops/tasks.py, images/mission-control/web/static/app.js, images/mission-control/web/static/app.css]
+  - id: APP-36
+    title: A task's page tells its whole story, the result first
+    statement: "A task's page shall open on its result and then tell how it was done, most important first, each part
+      opening a tab with the whole of it: who worked on it as a map of the agents (each agent a bubble coloured by its part
+      and sized by its own tokens, joined by its hand-offs, calls and starts, each tappable for its part, runs, tokens,
+      cost, models, tools and memory use, and the same in words); the definition of done with the verdict; what went wrong
+      (failed steps, retries, failed or silent runs, errors, points not met); its sources (read, cited, by site, by step and
+      agent); its memory use by store (wikis, notes, journals, long-term memory, the swarm's board, lessons) with what was
+      read and kept, including what the stack read or kept around the agents (a refinement's wiki, a briefing's topic wiki
+      pages, the answer); what it made (the answer, reports, wiki pages, files, findings, deliveries); its cost and time by
+      agent and model; and the plan. A recurring task shall show one run at a time (its newest, or the one picked), and a
+      task handed to Claude Code, a build, a chat or a mission shall show its agents too. The map's colours shall pass the
+      colour-blind check on both themes."
+    type: functional
+    priority: must
+    status: implemented
+    parents: [APP-35, SN-07]
+    findings: [FND-111, FND-115]
+    sources: ['chat 2026-11-02: the tasks pages do not have what i requested ... Is our current task page basically just
+      the result? ... we should also show which agents contributed in such a bubble chart. Memories accessed or created.
+      Think of all the useful task scoped data we could display.']
+    verify: {method: test, by: [tests/test_task_page.py::test_the_page_says_where_each_memory_call_went_who_started_whom_and_what_failed,
+      tests/test_task_page.py::test_a_door_task_s_page_finds_its_own_run_and_a_recurring_task_shows_one_run,
+      tests/test_task_page.py::test_the_page_shows_one_run_s_answer_its_sources_and_what_it_made,
+      tests/test_provenance.py::test_the_desk_s_chosen_items_are_read_and_a_delivery_comes_from_the_report,
+      tests/test_conductor.py::test_a_delivered_briefing_grows_its_topic_wiki_and_a_deleted_one_stays_deleted]}
+    trace: [images/mission-control/web/static/task.js, images/mission-control/runrecord.py, images/mission-control/server.py,
+      images/mission-control/web/static/app.css, ops/provenance.py, ops/conductor.py, images/mission-control/guide/20-tasks.md]
+  - id: APP-37
+    title: A card on Home opens its subject
+    statement: Each card of Home's feed shall open its subject (the task it names, the mission, the agent a health
+      note concerns, the Ledger item, the list of changes for a deploy), the end of every task shall be a card on it (the
+      owner's own and the owner's rules' as results, trials' and probes' as upkeep), and the Tasks board and a task's page shall
+      light Home in the tab bar, where tasks are given.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [APP-35, SN-06]
+    sources: ['chat 2026-11-02: These cards if i click them i land on random spots in Stack. We did not solve task pages.
+        ... task pages are part of home']
+    verify: {method: test, by: [tests/test_home_work.py::test_home_s_results_are_one_card_per_outcome_named_by_what_it_is_about]}
+    trace: [images/mission-control/web/static/app.js, images/mission-control/guide/01-welcome.md]
+  - id: APP-38
+    title: "Home is your desk: one result per outcome, and it never moves under your finger"
+    statement: "Home shall hold, in this order, the box to give a task or ask, what needs the owner, what is at work now
+      (tasks among it, with their steps and agents), and Results: one card per outcome the owner asked for or the owner's
+      rules started (a briefing, a task's answer, an alert's answer, research, a shopping step, a failure), each with its
+      kind, its headline, who made it, its first lines and its page; a rule that fires and the task it starts are one
+      Alert card. The stack's own work (health, deploys, the Ledger, crew jobs, trials, probes) shall not be among the
+      results. While the owner is scrolled down or touching the screen, Home's updates shall wait behind a button."
+    type: functional
+    priority: must
+    status: implemented
+    parents: [APP-37, SN-06, SN-18]
+    sources: ['chat 2026-11-02: We have tasks triggers and agents here ... jumps 2 links ... Its very weak difference what
+        is what visually ... If task produces result will there be 2 entries? ... This is home tab. What should actually be
+        here? Do we need a tasks tab like agents? Can you please make it make sense?']
+    verify: {method: test, by: [tests/test_home_work.py::test_home_s_results_are_one_card_per_outcome_named_by_what_it_is_about,
+      tests/test_home_work.py::test_home_holds_its_updates_while_you_scroll_or_touch]}
+    trace: [images/mission-control/web/static/app.js, images/mission-control/web/static/app.css, images/mission-control/guide/01-welcome.md]

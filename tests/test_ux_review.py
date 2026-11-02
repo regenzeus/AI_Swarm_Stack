@@ -40,19 +40,21 @@ def test_the_latest_result_comes_before_the_run_s_log_unless_a_run_is_live():
     assert now.index('m?.outputs?.length && !A.live ? `<div class="card pad-l" id="latest"') < now.index('<div id="agrun">') < now.index("m?.outputs?.length && A.live")
 
 
-def test_the_home_feed_shows_the_owner_s_things_first_and_the_stack_s_on_their_chips():
-    assert 'let homeFilter = "mine"' in APP
-    js = "\n".join(["let homeFilter = 'mine', homeShow = 40; const homeEx = new Map();", "const esc = (s) => String(s ?? '');",
-        "const toIso = (x) => x, dayOf = () => 'Today', clockOf = () => '10:00';",
-        "const items = [{ ts: '3', cat: 'results', agent: 'Job report', head: 'the answer', href: '#' }, { ts: '2', cat: 'code', agent: 'Session deploy', head: 'deployed x', href: '#' },",
-        "  { ts: '1', cat: 'code', agent: 'Session deploy', head: 'DEPLOY FAILED', tone: 'err', href: '#' }, { ts: '0', cat: 'housekeeping', agent: 'Swarm', head: 'proposed wiki #417', href: '#' }];",
+def test_the_home_feed_filters_by_kind_and_each_card_names_its_kind():
+    """APP-38: the stack's own work left Home (it was there under its chips); the results filter by what they are."""
+    assert 'let homeFilter = "all"' in APP
+    js = "\n".join(["let homeFilter = 'all', homeShow = 40; const homeEx = new Map(); const ic = new Proxy({}, {get: () => '<svg></svg>'});",
+        "const esc = (s) => String(s ?? '');", "const toIso = (x) => x, dayOf = () => 'Today', clockOf = () => '10:00';",
+        re.search(r"^const RKIND = .*?;$", APP, re.M | re.S)[0],
+        "const items = [{ ts: '3', kind: 'briefing', agent: 'Uranium', head: 'the briefing', href: '#' }, { ts: '2', kind: 'alert', agent: 'Task #113', head: 'the alert', href: '#' },",
+        "  { ts: '1', kind: 'failed', agent: 'Task #121', head: 'did not finish', tone: 'err', href: '#' }];",
         "const feedItems = () => items;", fn("feedHtml"),
-        "const mine = feedHtml(); homeFilter = 'all'; const every = feedHtml();",
-        "process.stdout.write(JSON.stringify([mine, every]));"])
-    mine, every = node(js)
-    assert "the answer" in mine and "DEPLOY FAILED" in mine and "deployed x" not in mine and "proposed wiki" not in mine
-    assert "deployed x" in every and "proposed wiki" in every and ">For you<" in mine and ">Everything<" in mine
-
+        "const every = feedHtml(); homeFilter = 'alert'; const alerts = feedHtml();",
+        "process.stdout.write(JSON.stringify([every, alerts]));"])
+    every, alerts = node(js)
+    assert "the briefing" in every and "the alert" in every and "did not finish" in every and ">Alerts<" in every and ">Briefings<" in every
+    assert "the alert" in alerts and "the briefing" not in alerts and '<span class="fkind k-alert">Alert</span>' in alerts
+    assert not any(f'data-hf="{k}"' in every for k in ("mine", "housekeeping", "code"))   # the stack's own work is not a filter here
 
 def test_a_copy_button_says_copied_only_when_it_copied():
     js = fn("copyText") + """

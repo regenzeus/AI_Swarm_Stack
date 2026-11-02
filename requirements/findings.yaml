@@ -1413,3 +1413,143 @@ items:
     status: fixed
     resolved: "night/w16, 2026-11-02: textcap fit, more, first, answer; builds.claude_text; about 200 cuts marked, 6 removed,
       4 refused instead; ops/truncation.py sees slices from 20 and by constant, shell, SQL and model answers"
+  - id: FND-110
+    title: A compiled wiki page lost the day it was made
+    finding: "The second truncation audit (827455e) put a cap's reason comment in the middle of the wiki compile's page
+      metadata, so the key after it, created, became part of the comment: every page a mission, a briefing or a refinement
+      compiled from then on was written without its created date (24 pages on 2 Nov, three wikis). No test read created
+      back; found while building the task page."
+    evidence: ["ops/mission_extras.py compile_into: '\"sources\": sorted(...),   # every source stays (it was the newest 30)
+        \"created\": old.get(\"created\", today),'", "vault: 24 pages of the RAM, voice speaker and China automotive wikis
+        without created after 06:00 on 2 Nov"]
+    severity: medium
+    kind: defect
+    affects: [MEM-14]
+    recommendation: Put the key back before the comment, test that a compiled page keeps its created date, and restore the
+      24 pages' dates from the vault's history.
+    status: fixed
+    resolved: "task/pages, 2026-11-02: created back in compile_into; tests/test_librarian.py checks it; the 24 pages' dates
+      restored from their earlier versions (or the day the page was first committed)"
+  - id: FND-111
+    title: A mission's research was filed under another task's scout step
+    finding: "Hermes runs its agents in one resident process, so a scout run cannot be told who started it and the run record
+      guessed: a live Conductor step of the same agent first. On 2 Nov the RAM mission asked the scout three questions
+      while the China automotive briefing's scout steps 6 and 7 ran: the answers were filed under those steps, so the
+      briefing's page and swarm map listed geizhals.de RAM searches as its top source and counted their tokens. Of 35
+      scout runs on record that answered a research call, 3 sat under the wrong task, 7 under no run and 24 under the
+      other of two parallel sessions of the same mission run."
+    evidence: ["runtime.db: hermes:scout:8033d389..., f1f1afa9..., aad86ca4... ref task:79:step:6/7, titled with questions
+        the RAM mission's hermes:mission:077ce7f5... asked through research_research seconds before",
+      "images/mission-control/runrecord.py _infer_ref: the live task step of the same agent first"]
+    severity: medium
+    kind: defect
+    affects: [OBS-18, APP-36]
+    recommendation: Match a scout run to the research call that asked its question; re-file the runs on record; redraw the
+      briefing's map and recount its tokens.
+    status: fixed
+    resolved: "task/scout-ref, 2026-11-02: runrecord._asked_by and reparent_research; the 35 runs re-filed, task 79's map
+      and tokens recounted"
+  - id: FND-112
+    title: The checker reports a fault it found as its own failure
+    finding: "The crew's checker ends its run as failed whenever the swarm shows a fault (ops/checker.py run raises), so the
+      health board's alert reaches the owner. From 31 Oct 15:24 to 1 Nov 14:36 it failed 25 of its runs because the Ledger
+      refused the requirements sync 1,128 times (the card-number guard's false positive on a file name's stamp, FND-93,
+      fixed 1 Nov). The alarm was right, but the job's failure count mixes a broken job with a faithful report: its page
+      showed one run in four failed, and failure rates are what the planned licences (AUT-02) and the self-pause after
+      three failed runs read."
+    evidence: ["runtime.db crew:checker: 95 runs, 25 failed, each ending 'system had N refused swarm writes in 24 h'",
+      "swarm.db refusals: system requirements_sync 1,128, 31 Oct 13:13 to 1 Nov 12:22", "docs/PROBES.md P1"]
+    severity: low
+    kind: incoherence
+    affects: [AUT-02]
+    recommendation: End the run as done with the signals as its result and raise them through the health board's alert
+      (crew.ALERTS), so a failed run means the job itself broke.
+    status: fixed
+    resolved: "fix/p6, 2026-11-02: the checker's run ends done with its faults kept; crew.checker_faults raises each as
+      a swarm-fault alert on its card, cleared by its next clean run"
+  - id: FND-113
+    title: Every nightly journey check left a swarm run "never finished"
+    finding: "The crew wrapper opens a swarm run for every crew job (as system) and finishes it as the job. The journeys
+      have no swarm card, so the Ledger refused each finish (\"no card for 'journeys'\") without a trace in its refusals,
+      and every night's run stayed open: the health board said a run of the journey checks never finished and the Ledger
+      labelled it failed (FC1), though the runs passed (186 checks on 2 Nov)."
+    evidence: ["swarm.db runs: crew:journeys:20261101-084733 and crew:journeys:20261102-041227 unfinished, labelled failed",
+      "swarm_client finish as journeys: {'ok': False, 'refused': \"no card for 'journeys'\"}"]
+    severity: low
+    kind: defect
+    affects: [SWM-64]
+    recommendation: Open a swarm run only for a crew job with a swarm card; close the two runs on record.
+    status: fixed
+    resolved: "ops/battle, 2026-11-02: crew.run opens and finishes a swarm run only when the job has a card; the two runs
+      closed with their results"
+  - id: FND-114
+    title: Two Conductor scout steps that start together can be filed under each other
+    finding: "A Conductor step's own scout run cannot be told its step (Hermes runs in one resident process), so the run
+      record files it under the live step of that agent most recently active. Probe P2 ran two tasks' scout steps in
+      parallel and each went under its own task, partly because they started 10 s apart; two that start within the same
+      second can be swapped, moving one task's sources and tokens to the other."
+    evidence: ["docs/PROBES.md P2: tasks 116 and 117", "images/mission-control/runrecord.py _infer_ref"]
+    severity: low
+    kind: defect
+    affects: [OBS-18]
+    recommendation: Put the step's run id at the head of its prompt so the run record matches it exactly, through the
+      prompt replay gate.
+    status: fixed
+    resolved: "fix/step-ref, 2026-11-02: a Hermes step's prompt starts with [run: task:N:step:i]; the run record
+      files a run whose title names a known run under it exactly, before any guess by time"
+  - id: FND-115
+    title: A task's own words could widen its page on a phone
+    finding: "The task page and the task card quote the owner's words (\"You wrote: ...\") on a line that could not break:
+      task 113's words held a 350-character link, the phone widened the page to fit and the agents' map drew to that
+      width, so the page scrolled sideways by 2,417 px at 375 px. Found by the journey checks' route check."
+    evidence: ["python3 ops/journeys.py: #/task/113 scrolls sideways at 375 px by 2417 px", "docs/PROBES.md, the sweep"]
+    severity: medium
+    kind: defect
+    affects: [APP-36]
+    recommendation: Let the line wrap anywhere, as every line of the owner's or an agent's text does.
+    status: fixed
+    resolved: "ops/battle2, 2026-11-02: the line wraps; the route check passes all 115 routes"
+  - id: FND-116
+    title: One unreadable request stopped the AI phone for a day
+    finding: "At 08:20 on 2 Nov the RAM upgrade's shopping agent asked the AI phone to look the kit up in the Amazon app.
+      It wrote the request with the helper it uses for proposals and purchase approvals, readable by its own user only;
+      the phone's service runs as another user, could not read it, and its control loop read every request inside one
+      error handler, so each pass stopped there: the phone stayed disconnected, did nothing and kept no state for
+      eight and a half hours (Home showed 'AI phone · Not connected'; no alert). A purchase on the phone would have failed
+      the same way. The service could not even remove the file (another user's, in a sticky folder)."
+    evidence: ["/srv/ai/phone/state.json: connected False, error Permission denied: /phone/control/f31b6883f88646de.json",
+      "ops/shopping.py save_json: tmp.chmod(0o600) for every file, the phone's control requests included",
+      "the journey checks' route check: the card AI phone did not open its page on a tap"]
+    severity: high
+    kind: defect
+    affects: [SHP-07]
+    recommendation: Write the phone's requests readable by the phone; read each request on its own, report one it cannot
+      read once and go on; alert when the AI phone stays disconnected.
+    status: fixed
+    resolved: "fix/phone-control, 2026-11-02: shopping.to_phone (0644) for shop_look and shop_open; phone.take skips and
+      reports what it cannot read or delete; the stuck request moved aside and the phone reconnected at 16:55. The alert for
+      a long disconnection: crew.phone_down (fix/p6), an alert after 30 min disconnected or 10 min silent unless stopped"
+  - id: FND-117
+    title: A task whose planning a restart cut off waited forever
+    finding: "Task 93 (the Cameco rule's alert of 1 Nov) sat in 'planning' for 27 hours: the planner marks a task planning
+      before its model call, a runner restart (a deploy) cut the call off, and the worker only looks for new tasks."
+    evidence: ["missions.sqlite tasks 93: status planning since 2026-11-01 13:32", "docs/PROBES.md P6"]
+    severity: medium
+    kind: defect
+    affects: [TSK-03]
+    recommendation: At the worker's start plan such a task again, or fail it with the reason when it is too old to matter.
+    status: fixed
+    resolved: "fix/p6, 2026-11-02: tasks.recover at the worker's start: within 6 h planned again, older failed with Plan it
+      again"
+  - id: FND-118
+    title: A breaking story reaches the stack about 80 minutes after it is published
+    finding: "The Macusani story was published by three outlets between 12:00 and 12:01 on 2 Nov; the stack raised it at
+      13:21. The web is looked at every 10 minutes, so the lag is the news search's (Google News) listing. From the raised
+      event the stack took 3 to 4.5 minutes to the answer on the owner's phone, whose message carried only the title."
+    evidence: ["missions.sqlite bus 262 and firings 3", "notifications.jsonl 152 and 153", "docs/PROBES.md P6"]
+    severity: medium
+    kind: risk
+    affects: [TSK-12]
+    recommendation: Add the issuers' own feeds (press-release wires such as GlobeNewswire, the companies' news pages) for the
+      watched subjects, raising a story from one primary source; the answer goes in the alert's message (done).
+    status: open

@@ -1059,9 +1059,11 @@ items:
   status: implemented
   parents: [SN-07, SN-17]
   sources: [DEC-15, OBS-07, DEC-25]
+  findings: [FND-113]
   verify:
     method: test
-    by: ['tests/test_swarm_phase4.py::test_a_finish_is_checked_first_and_a_run_without_one_is_a_health_note']
+    by: ['tests/test_swarm_phase4.py::test_a_finish_is_checked_first_and_a_run_without_one_is_a_health_note',
+      'tests/test_crew.py::test_a_crew_job_without_a_swarm_card_opens_no_swarm_run']
   trace: [images/swarm/ledger.py, ops/crew.py]
 - id: SWM-21
   group: Run contract
@@ -1370,7 +1372,7 @@ items:
   acceptance: 'Test: an upsert and a message from a run show in that run''s view and on the activity feed.'
   verify:
     method: test
-    by: ['tests/test_home_work.py::test_the_swarm_and_session_deploys_are_on_the_home_timeline', 'tests/test_swarm_client.py::test_ledger_changes_reach_the_activity_feed_once']
+    by: ['tests/test_swarm_client.py::test_ledger_changes_reach_the_activity_feed_once']
   trace: [images/mission-control/web/static/app.js, ops/swarm_client.py, ops/systemd/swarm-sync.timer]
 - id: SWM-79
   group: Observability
@@ -1406,7 +1408,7 @@ items:
   sources: [DEC-05]
   verify:
     method: test
-    by: ['tests/test_checker.py::test_refused_writes_become_a_health_signal_and_scorecards_add_up', 'tests/test_swarm_phase4.py::test_guard_trips_pause_an_agent_and_expired_requests_and_refused_wakes_are_signals']
+    by: ['tests/test_recoverable.py::test_a_fault_the_checker_finds_is_an_alert_not_its_failed_run', 'tests/test_checker.py::test_refused_writes_become_a_health_signal_and_scorecards_add_up', 'tests/test_swarm_phase4.py::test_guard_trips_pause_an_agent_and_expired_requests_and_refused_wakes_are_signals']
   trace: [images/swarm/swarm.py, ops/checker.py, ops/swarm_client.py]
 - id: SWM-17
   group: Observability

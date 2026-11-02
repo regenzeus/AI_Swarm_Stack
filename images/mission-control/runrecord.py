@@ -127,7 +127,7 @@ def ingest(batch):
             row = c.execute("select ended, end_state, manifest from runs where run=?", (run,)).fetchone()
             if not row:
                 c.execute("insert into runs (run, ref, agent, source, title, started, last) values (?,?,?,?,?,?,?)",
-                          (run, e.get("ref") or _infer_ref(c, e.get("agent")), e.get("agent"), e.get("source"), (e.get("run_title") or "")[:1000], ts, ts))  # cap: id
+                          (run, e.get("ref") or _infer_ref(c, e.get("agent"), e.get("run_title"), ts), e.get("agent"), e.get("source"), (e.get("run_title") or "")[:1000], ts, ts))  # cap: id
             elif row["ended"] and row["end_state"] == "stalled" and e.get("source") != "watchdog":
                 if kind == "end":                         # the watchdog only guessed: the source's own end replaces "stalled"
                     c.execute("update runs set ended=null, end_state=null where run=?", (run,))
@@ -220,11 +220,62 @@ def trace(run):
         return False
 
 
-def _infer_ref(c, agent):
+ASKED_S = 1800                                         # a research question's scout run starts within 30 min of the call that asked it
+QUESTION = re.compile(r'"question":\s*"((?:[^"\\]|\\.)*)')
+STEP_HEAD = re.compile(r"^\[run: (task:\d+(?:\.\d+)?:step:\d+)\]")   # a Conductor step's Hermes prompt starts with its run
+
+
+def _words(s, n=100):
+    return " ".join(str(s or "").split())[:n]           # cap: id (the question's start is enough to tell two apart)
+
+
+def _asked_by(c, title, ts):
+    """The run whose research call asked exactly this question (a scout run's title is the question it was given), or
+    None. Exact where a guess by time is not: a mission's research that started while a task's scout step was live went
+    under that step (FND-111)."""
+    head = _words(title)
+    if len(head) < 20:
+        return None
+    for r in c.execute("select run, detail from events where kind='call' and title like '%research_research' and ts>=? and ts<=? "
+                       "order by ts desc", (ts - ASKED_S, ts + 5)):
+        try:
+            q = (json.loads(r["detail"] or "{}") or {}).get("question")
+        except (ValueError, AttributeError):         # a long call's arguments are kept cut: the question's start is there
+            m = QUESTION.search(r["detail"] or "")
+            q = json.loads(f'"{m.group(1)}"') if m else ""
+        if _words(q) == head:
+            return r["run"]
+    return None
+
+
+def reparent_research(since):
+    """Put each scout run since <since> that answered a research call under the run that asked it (FND-111: the guess had
+    filed some under another task's live scout step). -> [(run, old ref, new ref)]."""
+    c, moved = db(), []
+    with _lock:
+        for r in c.execute("select run, ref, title, started from runs where agent='scout' and started>=?", (since,)).fetchall():
+            asker = _asked_by(c, r["title"], r["started"])
+            if asker and asker != r["ref"] and asker != r["run"]:
+                c.execute("update runs set ref=? where run=?", (asker, r["run"]))
+                moved.append((r["run"], r["ref"], asker))
+        c.commit()
+    return moved
+
+
+def _infer_ref(c, agent, title="", ts=None):
     """`hermes -z` runs inside Hermes' resident process, so AISTACK_REF from `docker exec` doesn't reach the plugin.
-    Missions run one at a time, so a mission-profile run belongs to the live mission run, and a scout run (research)
-    to the live mission agent, else the live mission run, else the live chat turn that asked for it.
-    A live Conductor step of the same agent comes first: the step started the run, so its tokens count to the task."""
+    A scout run that answers a research call belongs to the run that asked (exact, by its question). Otherwise: missions
+    run one at a time, so a mission-profile run belongs to the live mission run, and a scout run (research) to the live
+    mission agent, else the live mission run, else the live chat turn that asked for it; a live Conductor step of the
+    same agent comes first: the step started the run, so its tokens count to the task. A step's prompt that names its run
+    (FND-114: two scout steps started together could be swapped by the guess) is exact and comes before all of it."""
+    m = STEP_HEAD.match(title or "")
+    if m and c.execute("select 1 from runs where run=?", (m[1],)).fetchone():
+        return m[1]
+    if agent == "scout":
+        asker = _asked_by(c, title, ts or time.time())
+        if asker:
+            return asker
     r = c.execute("select run from runs where ended is null and run like 'task:%:step:%' and agent=? order by last desc limit 1",
                   (agent or "",)).fetchone()
     if r:
@@ -582,24 +633,76 @@ def mem_kind(e):
     return None
 
 
-def task_activity(tid):
+ARG = re.compile(r'"(path|file|file_path|query|q|question|key|title|summary|text|kind)":\s*"((?:[^"\\]|\\.)*)')
+TARGET_KEYS = ("path", "file", "file_path", "query", "q", "question", "key", "title", "summary", "text")
+
+
+def mem_store(tool, detail):
+    """Where a memory call reads or writes, and what (the task page groups them, APP-36): (store, target).
+    store: wiki, notes (the vault: search and files), journal, long-term (Hindsight), board (the swarm's ledger), lessons."""
+    t = tool.split("__")[-1]
+    try:
+        a = json.loads(detail or "{}")
+        a = a if isinstance(a, dict) else {}
+    except ValueError:                               # a cut argument list: what can be read of it
+        a = dict(ARG.findall(detail or ""))
+    target = next((str(a[k]) for k in TARGET_KEYS if a.get(k)), "")
+    p = target.removeprefix("/vault/")
+    if re.search(r"swarm_|ledger_|board_read", t):
+        return "board", ("the task's context: the ledger's ideas, findings and messages for it" if "swarm_context" in t else p)
+    if re.search(r"memory_recall|recall|reflect|retain", t):
+        return "long-term", p
+    if "journal" in t or re.search(r"(^|/)journals?/", p):
+        return "journal", p
+    if "agent_note" in t or "MEMORY.md" in p:
+        return "lessons", p
+    if "wiki" in t or re.search(r"(^|/)wiki/", p):
+        return "wiki", p
+    return "notes", p
+
+
+def task_roots(c, tid, door=None, ref=None, since=None, occ=None):
+    """The runs a task's work starts from: the Conductor's (planning, each run, its steps) for a planned task, the door's
+    own run for a task handed to Claude, a build, a chat or a mission (APP-36: a door task's page shows its agents too)."""
+    if door == "claude" and ref:
+        q, a = "select run from runs where run=?", (f"claude-task:{ref}",)
+    elif door == "build" and ref:
+        q, a = "select run from runs where run like ?", (f"build:{ref}:%",)
+    elif door == "chat" and ref:
+        q, a = "select run from runs where ref=?", (f"chat:{ref}",)
+    elif door == "mission" and ref:
+        q, a = "select run from runs where agent=? and started>=?", (f"mission:{ref}", since or 0)
+    elif occ:                                        # one run of a recurring task, and the planning it ran on
+        q, a = "select run from runs where run=? or run like ?", (f"task:{tid}" if occ <= 1 else f"task:{tid}.{occ}", f"task-intake:{tid}-%")
+    else:
+        q, a = "select run from runs where run=? or run like ? or run like ?", (f"task:{tid}", f"task:{tid}.%", f"task-intake:{tid}-%")
+    return [r["run"] for r in c.execute(q, a)]
+
+
+EMPTY_ACTIVITY = {"agents": [], "actions": [], "memory": {"read": [], "write": []}, "runs": 0, "actions_total": 0, "edges": [], "errors": [], "errors_total": 0}
+ERRORS = 300                                           # cap: list (a task's errors on its page; errors_total counts all, the run view has each)
+
+
+def task_activity(tid, door=None, ref=None, since=None, occ=None):
     """APP-35: everything the run record holds about task <tid> (its planning, every run, every step and every agent called
-    in): {agents: [{agent, name, roles, runs, calls, model_calls, tokens, first, last, states}], actions: [...], memory:
-    {read: [...], write: [...]}, runs: n, actions_total: n}."""
+    in; or one run of it, occ): {agents: [{agent, name, roles, runs, calls, model_calls, tokens, first, last, states,
+    tools}], actions: [...], memory: {read: [...], write: [...]} (each with its store and target), edges: [{from, to,
+    kind, n}] (who started, called in or planned for whom), errors: [...], runs: n, actions_total: n}."""
     c = db()
-    roots = [r["run"] for r in c.execute("select run from runs where run=? or run like ? or run like ?", (f"task:{tid}", f"task:{tid}.%", f"task-intake:{tid}-%"))]
+    roots = task_roots(c, tid, door, ref, since, occ)
     seen, todo = set(roots), list(roots)
     while todo and len(seen) < 400:
         todo = [r["run"] for r in c.execute(f"select run from runs where ref in ({','.join('?' * len(todo))})", todo) if r["run"] not in seen]
         seen |= set(todo)
     if not seen:
-        return {"agents": [], "actions": [], "memory": {"read": [], "write": []}, "runs": 0, "actions_total": 0}
+        return json.loads(json.dumps(EMPTY_ACTIVITY))
     q = ",".join("?" * len(seen))
     runs = {r["run"]: dict(r) for r in c.execute(f"select run, ref, agent, title, started, ended, end_state from runs where run in ({q})", tuple(seen))}
     agents, actions, mem = {}, [], {"read": [], "write": []}
     for run, r in runs.items():
         a = agents.setdefault(r["agent"] or "?", {"agent": r["agent"] or "?", "name": AGENT_NAME.get(r["agent"] or "", r["agent"] or "?"), "roles": set(),
-                                                  "runs": 0, "calls": 0, "model_calls": 0, "tokens": 0, "first": r["started"], "last": r["ended"] or r["started"], "states": {}})
+                                                  "runs": 0, "calls": 0, "model_calls": 0, "tokens": 0, "first": r["started"], "last": r["ended"] or r["started"],
+                                                  "states": {}, "tools": {}})
         a["runs"] += 1
         a["first"], a["last"] = min(a["first"], r["started"]), max(a["last"], r["ended"] or time.time())
         a["states"][r["end_state"] or "running"] = a["states"].get(r["end_state"] or "running", 0) + 1
@@ -616,7 +719,21 @@ def task_activity(tid):
                 a["roles"].add(f"called in by {AGENT_NAME.get(p['agent'] or '', p['agent'] or '?')}")
         elif run in roots and run.startswith("task:"):
             a["roles"].add("ran the plan")
-    total = 0
+        elif run in roots:
+            a["roles"].add("did it")                 # a door task's own run: the Claude task, the build, the chat
+    edges = {}
+    for run, r in runs.items():                      # who started, called in or checked whom
+        p = runs.get(r["ref"] or "")
+        if not p or (p["agent"] or "?") == (r["agent"] or "?"):
+            continue
+        k = (p["agent"] or "?", r["agent"] or "?", "checked" if ":checkpoint:" in run else "started" if STEP_OF.match(run) else "called")
+        edges[k] = edges.get(k, 0) + 1
+    plan = {r["agent"] for run, r in runs.items() if run.startswith("task-intake:")}
+    for a_ in plan:                                  # the plan the intake made is what the Conductor runs
+        for run, r in runs.items():
+            if run in roots and run.startswith("task:") and r["agent"] != a_:
+                edges[(a_, r["agent"] or "?", "planned")] = 1
+    total, errors = 0, []
     for e in c.execute(f"select e.run, e.ts, e.kind, e.title, e.detail, e.data, r.agent from events e join runs r on r.run=e.run "
                        f"where e.run in ({q}) order by e.ts, e.id", tuple(seen)):
         a = agents[e["agent"] or "?"]
@@ -630,25 +747,35 @@ def task_activity(tid):
             continue
         if e["kind"] == "call":
             a["calls"] += 1
+            short = re.sub(r"^([a-z]+)_\1_", r"\1_", (e["title"] or "?").split("__")[-1])     # mcp__vault__swarm_swarm_context -> swarm_context
+            a["tools"][short] = a["tools"].get(short, 0) + 1
             k = mem_kind(dict(e))
             if k:
-                mem[k].append({"ts": e["ts"], "agent": e["agent"], "run": e["run"], "tool": e["title"], "detail": _clip(e["detail"] or "")})
+                store, target = mem_store(e["title"] or "", e["detail"] or "")
+                mem[k].append({"ts": e["ts"], "agent": e["agent"], "run": e["run"], "tool": e["title"], "detail": _clip(e["detail"] or ""),
+                               "store": store, "target": target})
+        elif e["kind"] == "error":
+            errors.append({"ts": e["ts"], "agent": e["agent"], "run": e["run"], "title": e["title"], "detail": _clip(e["detail"] or "")})
         total += 1
         actions.append({"ts": e["ts"], "agent": e["agent"], "run": e["run"], "kind": e["kind"], "title": e["title"], "detail": _clip(e["detail"] or ""),
                         "status": d.get("status")})
-    out = sorted(({**a, "roles": sorted(a["roles"])} for a in agents.values()), key=lambda x: x["first"])
+    out = sorted(({**a, "roles": sorted(a["roles"]), "tools": dict(sorted(a["tools"].items(), key=lambda x: -x[1]))} for a in agents.values()),
+                 key=lambda x: x["first"])
 
     def depth(run, n=0):
         r = runs.get(run)
         return n if not r or run in roots or r["ref"] not in runs or n > 6 else depth(r["ref"], n + 1)
+    off = 1 if any(x.startswith("task:") for x in roots) else 0     # a door task's own run is drawn; a planned task's is not
     def role(run, r):
         m, p = STEP_OF.match(run), runs.get(r["ref"] or "")
         return (f"step {m.group(2)}" if m else "planning" if run.startswith("task-intake:") else "checkpoint" if ":checkpoint:" in run else
-                "its session" if p and p["agent"] == r["agent"] else "called in")
+                "its run" if run in roots else "its session" if p and p["agent"] == r["agent"] else "called in")
     lanes = [{"run": run, "agent": r["agent"], "started": r["started"], "ended": r["ended"], "state": r["end_state"],
-              "depth": max(0, depth(run) - 1), "role": role(run, r)}     # the task's own run is not drawn: its steps start the lanes
+              "depth": max(0, depth(run) - off), "role": role(run, r)}  # the task's own run is not drawn: its steps start the lanes
              for run, r in sorted(runs.items(), key=lambda x: x[1]["started"]) if not (run in roots and run.startswith("task:"))]
-    return {"agents": out, "actions": actions[-ACTIONS:], "actions_total": total, "memory": mem, "runs": len(runs), "lanes": lanes[:LANES]}  # cap: list (actions_total and runs count what is not shown)
+    return {"agents": out, "actions": actions[-ACTIONS:], "actions_total": total, "memory": mem, "runs": len(runs), "lanes": lanes[:LANES],  # cap: list (actions_total and runs count what is not shown)
+            "edges": [{"from": f, "to": t, "kind": k, "n": n} for (f, t, k), n in sorted(edges.items())],
+            "errors": errors[-ERRORS:], "errors_total": len(errors)}  # cap: list (errors_total counts all)
 
 
 def agent_tasks(agent, days=90, now=None):

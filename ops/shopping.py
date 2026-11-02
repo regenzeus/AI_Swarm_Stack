@@ -168,6 +168,17 @@ def save_json(path, d):
     tmp.replace(path)
 
 
+def to_phone(name, d):
+    """A request in the AI phone's control folder, readable by the phone's service, which runs as another user (FND-116:
+    written for this user only, like the proposals, it stopped the phone for a day)."""
+    path = PHONE / "control" / f"{name}.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(".tmp")
+    tmp.write_text(json.dumps(d, ensure_ascii=False))
+    tmp.chmod(0o644)
+    tmp.replace(path)
+
+
 def load(pid):
     try:
         return json.loads((HOME / "proposals" / f"{pid}.json").read_text()) if re.fullmatch(r"p-[a-f0-9]{8}", str(pid)) else None
@@ -408,8 +419,8 @@ def app_check(m, p):
     words = " ".join((p.get("match") or {}).get("item") or [p["item"]])[:80]  # cap: id
     rid = uuid.uuid4().hex[:16]
     (PHONE / "research").mkdir(exist_ok=True)
-    save_json(PHONE / "control" / f"{rid}.json", {"do": "shop_look", "id": rid, "pkg": pkg, "query": words, "expires": time.time() + 600,
-                                                  "url": f"https://www.{p['shop']}/s?k={urllib.parse.quote_plus(words)}"})
+    to_phone(rid, {"do": "shop_look", "id": rid, "pkg": pkg, "query": words, "expires": time.time() + 600,
+                    "url": f"https://www.{p['shop']}/s?k={urllib.parse.quote_plus(words)}"})
     res = PHONE / "research" / f"{rid}.json"
     if not M.park(f"the AI phone ({p['shop']} app search: {words})", res.exists, timeout=660, every=5):
         step("AI phone app check: no answer", "the owner did not allow it in time, or the phone was busy", kind="stage")
@@ -549,7 +560,7 @@ def buy(m, logf, pid):
     note(p, "Buying on the AI phone")
     save(p)
     step(f"purchase {pid}: approved by {pa['approved_by']}, ceiling {pa['max_total_eur']:.2f} €", json.dumps(pa, ensure_ascii=False), kind="read")
-    save_json(PHONE / "control" / f"{uuid.uuid4().hex[:16]}.json", {"do": "shop_open", "purchase": pid})
+    to_phone(uuid.uuid4().hex[:16], {"do": "shop_open", "purchase": pid})
     M.park("the AI phone to open the product in the shop app", lambda: not any((PHONE / "control").glob("*.json")), timeout=60, every=2)
     out = hermes_main(BUY_PROMPT.format(item=p["item"], variant=p.get("variant") or "-", shop=p["shop"], seller=p.get("seller") or "?",
                                         ceiling=pa["max_total_eur"]))

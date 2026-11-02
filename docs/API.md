@@ -63,6 +63,8 @@ Every `/api/` and `/share` route needs the `Tailscale-User-Login` header that `t
 | `/api/shop/decide` | POST | The owner's answer to a purchase proposal: approve, not_now or change (with a note). Only from his own device in this app: refused from the AI phone, and not an MCP tool, so no agent can approve a purchase (ops/shopping.py). |
 | `/api/shop/limits` | POST | The shopping limits (per purchase, per month, shops, the address check): the owner only, never the AI phone. |
 | `/api/clienterror` | POST | An error the app hit in the browser: logged and kept (newest 500) for the health board (APP-24). |
+| `/api/view` | POST | PLT-26: the app says a screen was opened (its route name and tab only). |
+| `/api/views` | GET | PLT-26: the screens opened in the last 30 days (or ?days=), most opened first. |
 | `/api/phone/decide` | POST | The owner's answer to the AI phone's approval card (a documented exception, SEC-12); never from the AI phone itself. |
 | `/api/phone/control` | POST | Stop, resume, open the free mode, end a task or keep the screen on for the AI phone (a documented exception, SEC-12); the phone may only stop itself. |
 | `/api/phone/shot/{sid}` | GET | A screenshot the AI phone took, for the owner. |

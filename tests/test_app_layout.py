@@ -32,7 +32,8 @@ def test_an_icon_in_text_is_one_line_high_and_no_page_has_an_app_top_bar():
 
 def test_the_swarm_s_views_are_under_agents_on_every_screen():
     assert '["swarm", "#/swarm"' not in JS                                              # no section of its own, hidden on a phone
-    assert '"new", "swarm", "tasks", "task", "taskmap"].includes(route.name)' in JS     # Agents lights up on them and on tasks
+    assert '(k === "missions" && ["mission", "crew", "new", "swarm"].includes(route.name))' in JS   # Agents lights up on them
+    assert '(k === "home" && ["tasks", "task", "taskmap", "decide"].includes(route.name))' in JS   # tasks are given on Home (APP-37), and decided there (AUT-05)
     assert '"read", "swarm"' not in JS                    # a result opened from the Wiki or Home is no Agents page (FND-95)
     views = re.search(r"^const AGENT_VIEWS = .*?;$", JS, re.M | re.S)[0]
     for label in ("Overview", "Activity", "Team", "Ideas"):                          # four views (1 Nov 2026)

@@ -16,6 +16,8 @@ qmd collection list 2>/dev/null | grep -q "^topics " || qmd collection add /vaul
 qmd context add qmd://topics "Focus topics of the Topic Desk: each topic's brief (TOPIC.md) and its daily news briefings (reports/YYYY/MM/DATE.md) with numbered sources. Use for questions about recent news on a topic; say the briefing date." 2>/dev/null || true
 qmd collection list 2>/dev/null | grep -q "^missions " || qmd collection add /vault/missions --name missions --mask "**/*.md"
 qmd context add qmd://missions "Missions (agents) the owner set up: each mission's brief (MISSION.md), working notes, its results (log/YYYY/MM/*.md: research reports, shopping and cleanup analyses) and its LLM wiki (wiki/entities, concepts, projects, events). Use for questions about what a mission found; say the result's date." 2>/dev/null || true
+qmd collection list 2>/dev/null | grep -q "^tasks " || qmd collection add /vault/tasks --name tasks --mask "**/*.md"
+qmd context add qmd://tasks "The answers of the tasks given in the app or started by the owner's rules (tasks/<id>-<name>.md, one per run of a recurring task): what was asked, the answer with its sources. Use for questions about something a task found or an alert said; give the task number and date." 2>/dev/null || true
 qmd collection list 2>/dev/null | grep -q "^agents " || qmd collection add /vault/agents --name agents --mask "**/*.md"
 qmd context add qmd://agents "Each agent's own memory journal (agents/<agent>/MEMORY.md): standing notes and dated entries of what it found, what failed and what is still open." 2>/dev/null || true
 qmd collection list 2>/dev/null | grep -q "^specs " || qmd collection add /specs --name specs --mask "*/model/pages/*.md"

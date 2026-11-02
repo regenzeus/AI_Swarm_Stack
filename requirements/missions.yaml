@@ -257,3 +257,13 @@ items:
       tests/test_jobs.py::test_the_scout_alone_gets_the_jobs_tools_on_the_isolated_fetch_container,
       tests/test_jobs.py::test_a_job_hunt_brief_collects_each_opening_once_as_its_own_event]}
     trace: [images/fetch/jobs.py, images/fetch/entrypoint.sh, images/desk/desk.py, ops/missions.py, prompts/desk.md, config/litellm/config.yaml, ops/keys.sh]
+  - id: MIS-22
+    title: A briefing is rated by what the owner did with it
+    statement: "Each briefing shall offer Acted on it, Useful and Noise in the mail, the app and Telegram; its page shall
+      show the share acted on or useful; an item kind rated noise three times is dropped and a briefing rated noise three
+      weeks running asks whether to stop."
+    type: functional
+    priority: should
+    status: proposed
+    parents: [SN-01, SN-18]
+    sources: ['chat 2026-11-02: Briefings that change a decision', docs/NEXT-PHASE.md]

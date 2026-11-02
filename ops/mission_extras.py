@@ -389,7 +389,7 @@ def compile_into(root, title, source_rel, text, key, touched=None):
         body = keep_unseen(before, keep_superseded(before, str(pg["body"])), PAGE_SEEN)   # MEM-12: a superseded fact stays
         meta = {"title": TC.cut(str(pg.get("title") or path.split("/")[-1]), 100), "type": KIND.get(path.split("/")[0]) or old.get("type") or "page",  # cap: untrusted
                 "summary": str(pg.get("summary", "")), "aliases": [TC.cut(str(a), 60) for a in pg.get("aliases") or []][:8],  # cap: untrusted
-                "sources": sorted(set((old.get("sources") or []) + [src])),   # every source stays (it was the newest 30) "created": old.get("created", today),
+                "sources": sorted(set((old.get("sources") or []) + [src])), "created": old.get("created", today),   # every source stays (it was the newest 30)
                 "last_validated": today, "trust": "contested" if "[!contradiction]" in body else "news"}
         M.write_front(M.VAULT / root / f"{path}.md", meta, body)
         M.RTM.touched(f"{root}/{path}.md", changed=True, note="wiki page compiled from the result")   # MEM-10: the access map sees it

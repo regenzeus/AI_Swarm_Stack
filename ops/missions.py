@@ -50,6 +50,7 @@ import a2a as A2                                  # TSK-19: outside agents over 
 from textcap import limit, limit_items, tail as tailcut                    # visible caps and input limits (AGENTS.md, truncation)
 import textcap as TC
 import prompts as P                               # MEM-11: the agent prompts live in prompts/<owner>.md
+import decisions as DQ                            # AUT-05: everything that waits for the owner, one ranked list, and its shadow
 
 OPS = Path(__file__).resolve().parent
 VAULT = Path("/srv/vault")
@@ -114,6 +115,7 @@ def db():
 
 
 EVENTS_LOCK = threading.Lock()                     # the event log's writer and its daily pruning (ops/prune.py)
+EVENT_DAYS, EVENTS = 3, 200                        # Home's feed: three days of events, at most 200 (the newest 80 lost a morning's alerts by evening, APP-37)
 
 
 def event(kind, slug="", text="", push=False, title="", category=None):
@@ -1212,12 +1214,17 @@ def write_state(c, missions):
         log(f"health: {type(e).__name__}: {e}")
         health = {}
     try:
-        ev = [json.loads(ln) for ln in (PUBLIC / "events.jsonl").read_text().splitlines()[-80:]][::-1]  # cap: list
+        since = (now() - dt.timedelta(days=EVENT_DAYS)).isoformat(timespec="seconds")
+        ev = [e for e in (json.loads(ln) for ln in (PUBLIC / "events.jsonl").read_text().splitlines()[-EVENTS:]) if e.get("ts", "") >= since][::-1]  # cap: list (Home's feed: three days, at most EVENTS)
     except FileNotFoundError:
         ev = []
     state = {"generated": t.isoformat(timespec="seconds"), "missions": out, "running": run or None, "queue": queue,
              "activity": ev, "calls": recent_calls(), "system": system_info(), "resources": RES, **B.state(c), **I.state(c), **R.state(), **CT.state(c), **CR.state(), **SH.state(), **H.state(), **SW.state(), **MEM.state(CR.status()), **N.state(), **TK.state(c), **EV.state(c), **ST.state(c), "health": health,
              "prices": PR.load().get("models", {}), **A2.state()}                  # TSK-27: the app prices tokens with the same table
+    try:
+        state.update(DQ.state(state))
+    except Exception as e:
+        log(f"decisions: {type(e).__name__}: {e}")
     tmp = PUBLIC / "state.json.tmp"
     tmp.write_text(json.dumps(state, ensure_ascii=False, default=str))
     tmp.replace(PUBLIC / "state.json")

@@ -69,6 +69,7 @@ QUEUE = 5                                         # cap: list (events waiting fo
 BLOCKED = re.compile(r"\A\s*(?:\**\s*)?(?:step \d+ (?:is )?)?BLOCKED\**\s*:\s*\**\s*(.+)", re.I)         # a step that could not do its work says so first (TASK_STEP): it fails,
 WRITTEN = ("hermes", "python", "temp", "opencode")   # it is not done (task #104 "done" with no phone tool, 1 Nov 2026)
 QUIET = ("Nothing new was chosen", "No price drop")   # a run whose answer starts so found nothing to send: kept, not judged
+ALERT_CHARS = 1500                                     # cap: preview (an alert's answer in its message: three lines fit; the task page has all of it)
 DESK = Path("/srv/ai/desk")                       # the desk's per-topic folders (ops/desk.sh)
 NEW = "new"                                       # TSK-15: the intake's word for "no agent fits": a temporary agent is written
 STEP_TIMEOUT = 40 * 60
@@ -401,6 +402,8 @@ def run_hermes(c, t, s, prompt, card):
     import runtime as RTM
     import swarm_client as SW
     prof = SW.PROFILE.get(s["agent"])
+    prompt = f"[run: {run_of(t['id'], s.get('occ') or 1)}:step:{s.get('idx')}]\n{prompt}"   # FND-114: Hermes' resident
+    # gateway gets no AISTACK_REF from `docker exec`; the run's title (the prompt's head) names its step exactly
     if len(str(prompt).encode()) > ARG_BYTES:            # FND-104: refused with its size, not lost to "argument list too long"
         raise RuntimeError(f"the step's prompt is {len(str(prompt).encode()):,} bytes; one command-line argument holds "
                            f"{ARG_BYTES:,}: its brief or the standing instructions are too long")
@@ -682,16 +685,19 @@ def run_wiki(c, t, s, prompt, card):
 
 def topic_wiki(t, slug, rel, text, card):
     """The topic's wiki grows with each report, as a briefing mission's does (missions.run_briefing), unless the owner
-    deleted it (wiki_off on the mission that holds the topic)."""
+    deleted it (wiki_off on the mission that holds the topic). The pages it wrote, for the step's answer (its task page
+    and swarm map list them, APP-36)."""
     import mission_extras as X
     try:                                                  # nothing here can fail the delivery
         if any(m.get("wiki_off") and (m.get("topic") or m["slug"]) == slug for m in M.load_missions().values()):
-            return
+            return []
         n = X.compile_into(f"topics/{slug}/wiki", t["title"], rel, text, os.environ["VK_" + card["key"][3:].upper().replace("-", "_")])
         M.vault_commit([f"topics/{slug}/wiki"], f"wiki: {slug} from {rel}")
         M.log(f"conductor: task {t['id']}: wiki {slug}: {len(n)} pages updated")
+        return list(n)
     except Exception as e:                                # the report is delivered all the same; logged
         M.log(f"conductor: task {t['id']}: the wiki of {slug} not updated: {type(e).__name__}: {e}")
+        return []
 
 
 def run_deliver(c, t, s, prompt, card):
@@ -709,13 +715,13 @@ def run_deliver(c, t, s, prompt, card):
         tg = DESK / slug / "out" / f"{w['resume']['date']}.telegram.txt"
         sent = M.X.deliver({"slug": slug, "title": t["title"], "deliver": ways}, title, tg.read_text() if tg.exists() else "", rel,
                            f"{M.period({'schedule': t['rhythm'].get('schedule')})} briefing · {M.now():%d %b %Y}", text, empty=M.X.briefing_empty(text))
-        if sent:
-            topic_wiki(t, slug, rel, text, card)
+    pages = topic_wiki(t, slug, rel, text, card) if sent and w["harness"] != "desk-alert" else []
     how = " and ".join({"telegram": "Telegram", "email": "e-mail"}[x] for x in ways if x in ("telegram", "email"))
     body = re.sub(r"^---\n.*?\n---\n", "", text, flags=re.S).strip()
     said = ("Nothing new was chosen: kept in the app, not sent" if not sent else
             f"Delivered by {how} and kept in the app" if how else "Kept in the app")
-    return f"{said} ({rel}).\n\n{body}"
+    wiki = f" Topic wiki pages updated: {', '.join(pages)}." if pages else ""
+    return f"{said} ({rel}).{wiki}\n\n{body}"
 
 
 def run_opencode(c, t, s, prompt, card, run=subprocess.run):
@@ -1035,7 +1041,9 @@ def finish(c, t, ss, ok):
     RTM.end(run_of(t["id"], occ), "conductor", "done" if ok else "failed", TC.cut(result, 2000), None)  # cap: preview (the vault file keeps all of it)
     EV.task_done(c, t, "done" if ok else "failed")      # TSK-10: a finished task is an event
     run = f" run {occ}" if recurring else ""
+    alert = ok and not quiet and str(t.get("source") or "").startswith("rule:")      # P6: an alert's answer is read on the phone, not opened
     N.send(f"Task #{t['id']}{run} {'found nothing new' if quiet else 'is done' if ok else 'failed'}: {t['title']}"
+           + (f"\n\n{textcap.cut(re.sub(r'(?m)^#+ .*\n?', '', result).strip(), ALERT_CHARS)}" if alert else "")  # cap: preview (the task page has all of it)
            + ("" if ok else f"\n{textcap.cut(result, 600)}"), "result", title="Tasks",  # cap: preview (why it failed; the task page has all of it)
            push_on=not quiet, event_kind="task",
            buttons=[[("🔍 Open the task", f"{M.X.APP}/#/task/{t['id']}")]])

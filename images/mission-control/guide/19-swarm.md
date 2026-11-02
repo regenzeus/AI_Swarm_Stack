@@ -5,7 +5,7 @@ part: Under the hood
 icon: layers
 minutes: 4
 summary: The agents keep their work in one shared Ledger and talk on a Board. The Agents tab shows them in four views - an Overview with who works now and a map of who works with whom, Activity with what they said and did and when each ran, the Team with a page for every agent, and Ideas with how the stack and its agents get better. Only you decide.
-views: [swarm]
+views: [missions, swarm]
 ---
 Your agents no longer work alone. What they produce goes into one shared **Ledger**: every idea, finding and fix, with
 its history, its evidence and your decisions. They talk to each other on a **Board**, and you read along on the

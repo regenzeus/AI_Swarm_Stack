@@ -87,3 +87,35 @@ def test_forget_soft_retires_only_the_given_facts(C, monkeypatch, tmp_path):
     assert C.forget(["1234abcd"]) == {"forgotten": 1}
     assert "'state':'invalidated'" in seen[0][5] and json.loads(seen[0][6]) == ["1234abcd"]       # PATCH, never DELETE
     assert [s["id"] for s in json.loads((tmp_path / "memory.json").read_text())["suggestions"]] == ["5678efab"]
+
+
+def test_a_crew_job_without_a_swarm_card_opens_no_swarm_run(monkeypatch):
+    """FND-113: the journeys have no swarm card; their run was started (as system) but its finish was refused ("no card
+    for 'journeys'"), so every night left a run "never finished" on the health board. A job without a card now opens no
+    swarm run; a job with one opens and finishes it."""
+    import crew as C
+    import inbox as INB
+    import missions
+    import registry as REG
+    import runtime as RTM
+    import swarm_client as SW
+    calls = []
+    monkeypatch.setattr(SW, "paused", lambda n: False)
+    monkeypatch.setattr(SW, "run_start", lambda agent, run, **k: calls.append(("start", agent)))
+    monkeypatch.setattr(SW, "run_finish", lambda agent, run, summary, **k: calls.append(("finish", agent)))
+    for f in ("start", "end", "emit", "set_ref"):
+        monkeypatch.setattr(RTM, f, lambda *a, **k: None)
+    monkeypatch.setattr(missions, "db", lambda: None)
+    monkeypatch.setattr(missions, "event", lambda *a, **k: None)
+    monkeypatch.setattr(C, "journeys", lambda c: 0)
+    monkeypatch.setattr(INB, "digest", lambda c: 0)
+    monkeypatch.setattr(C, "agent_file", lambda n: {"result": "ok"})
+    monkeypatch.setattr(C, "answer_requests", lambda n, r: 0)
+    monkeypatch.setattr(C, "_journal", lambda *a, **k: None)
+    monkeypatch.setattr(C.J, "begin", lambda *a, **k: None)
+    monkeypatch.setattr(C.J, "end", lambda *a, **k: None)
+    monkeypatch.setattr(REG, "hash_of", lambda n, *a: None if n == "journeys" else "h")
+    C.run("journeys")
+    assert calls == []
+    C.run("inbox")
+    assert calls == [("start", "inbox"), ("finish", "inbox")]

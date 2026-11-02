@@ -71,7 +71,7 @@ items:
     parents: [SN-13, CST-03]
     sources: [ops/windows/AGENTS.md]
     verify: {method: inspection, by: [ops/windows/disk-heal.ps1, ops/disk-state.sh]}
-    trace: [ops/windows/disk-heal.ps1]
+    trace: [ops/windows/disk-heal.ps1, ops/windows/hide-tasks.ps1, ops/windows/hidden.vbs]
   - id: PLT-08
     title: Deploy rebuilds what changed
     statement: When a change is deployed, ops/deploy.py shall rebuild the changed images, recreate their services,
@@ -263,3 +263,59 @@ items:
     findings: [FND-74]
     verify: {method: test, by: [tests/test_recoverable.py::test_a_container_cut_off_from_the_network_it_shares_is_an_alert_until_it_is_recreated]}
     trace: [ops/crew.py]
+  - id: PLT-24
+    title: One kind of job
+    statement: Missions, crew jobs and planned work shall all be tasks with a rhythm, a door, a definition of done and a
+      page; machine upkeep stays on system timers but reports each run as a task run, so that one list and one audit
+      show everything that runs.
+    type: functional
+    priority: should
+    status: proposed
+    parents: [SN-15, SN-07]
+    sources: ['chat 2026-11-02: fold missions and crew jobs into tasks with schedules', docs/NEXT-PHASE.md]
+  - id: PLT-25
+    title: No source file over 1,500 lines
+    statement: server.py shall be split into routers by area and app.js into one file per area, and a test shall fail
+      when any source file passes 1,500 lines.
+    type: quality
+    priority: should
+    status: proposed
+    parents: [SN-15]
+    sources: [docs/NEXT-PHASE.md]
+  - id: PLT-26
+    title: What nobody uses is found and offered for retirement
+    statement: The app shall count which screens are opened (route, day, count, nothing else), and from 30 days of data a
+      monthly report shall list agents with no run, screens with no visit and services with no call, each offered to the
+      owner for retirement with what it costs and what goes with it.
+    type: functional
+    priority: should
+    status: partial
+    parents: [SN-15, SN-03]
+    sources: ['chat 2026-11-02: Retire what nobody uses', docs/NEXT-PHASE.md]
+    gap: The monthly report of unused agents, screens and services and its retirement decisions; the first is due from
+      2 Dec, when 30 days are counted.
+    rationale: Counting started 2 Nov (the screens; agents' runs were already in the run record); the first report is due
+      from 2 Dec.
+    verify: {method: test, by: [tests/test_screen_views.py::test_views_are_counted_per_day_by_name_and_tab_and_old_days_roll_off,
+      tests/test_screen_views.py::test_the_endpoint_takes_a_screen_s_name_only_and_skips_the_ai_phone]}
+    trace: [images/mission-control/server.py, images/mission-control/web/static/app.js]
+  - id: PLT-27
+    title: The stack keeps a memory budget
+    statement: WSL shall have a swap of 16 GB on an SSD with room for it, so the memory of idle services moves to disk
+      instead of crowding the work (the stack waits on model calls, not on memory); the services that grow while idle (qmd,
+      Phoenix, Open WebUI) shall be restarted each night while the stack is idle, with their memory before and after
+      logged; each container shall have a memory budget the doctor checks; and services only trials and builds use shall
+      start on demand and stop when idle.
+    type: constraint
+    priority: must
+    status: partial
+    gap: The doctor's check of each container against its budget, and on-demand services for trials and builds.
+    parents: [SN-13, SN-03]
+    sources: ['chat 2026-11-02: you need to make due with small ram ... it forces us to optimize', 'chat 2026-11-02: Can we
+        not use ssd memory as ram? ... We could make space in ssd and give generous capa. ... Do both.', docs/NEXT-PHASE.md]
+    rationale: On 2 Nov the 3 GB swap was full, held mostly by idle qmd, Hindsight, Open WebUI and Phoenix; Open WebUI was
+      back at 655 MB an hour after a restart.
+    verify: {method: test, by: [tests/test_recycle.py::test_busy_names_what_runs_and_ignores_a_stale_task,
+      tests/test_recycle.py::test_an_idle_night_restarts_the_three_and_logs_memory_before_and_after,
+      tests/test_recycle.py::test_a_busy_hour_skips_the_night_without_restarting]}
+    trace: [ops/recycle.py, ops/systemd/recycle.timer, ops/systemd/recycle.service, ops/windows/host-setup.ps1]

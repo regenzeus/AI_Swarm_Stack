@@ -78,7 +78,9 @@ items:
     status: implemented
     parents: [SN-05, CST-11]
     sources: [docs/SHOPPING.md]
-    verify: {method: test, by: [tests/test_shopping.py::test_only_the_owner_approves_and_the_phone_gets_exactly_that, tests/test_server.py::test_purchases_are_decided_only_by_the_owner]}
+    findings: [FND-116]
+    verify: {method: test, by: ['tests/test_recoverable.py::test_an_ai_phone_down_for_half_an_hour_is_an_alert_unless_the_owner_stopped_it', tests/test_shopping.py::test_only_the_owner_approves_and_the_phone_gets_exactly_that, tests/test_server.py::test_purchases_are_decided_only_by_the_owner,
+      tests/test_phone.py::test_the_shopping_agent_s_phone_requests_are_readable_by_the_phone, tests/test_phone.py::test_one_unreadable_request_never_stops_the_phone]}
   - id: SHP-08
     title: Not now and Change
     statement: Not now shall keep watching and propose again when the price is at most 95 % of the proposal's total or
@@ -130,3 +132,12 @@ items:
     parents: [SN-13]
     sources: [ops/shopping.py]
     verify: {method: test, by: [tests/test_shopping.py::test_a_run_cut_off_by_a_runner_restart_starts_again_once]}
+  - id: SHP-13
+    title: A wish ends delivered, and scored
+    statement: A shopping task shall track its delivery, ask the owner once that the item arrived and works, and close
+      with the price paid against the lowest valid offer seen in its window and the days from wish to delivery.
+    type: functional
+    priority: should
+    status: proposed
+    parents: [SN-11, SN-01]
+    sources: [docs/NEXT-PHASE.md]

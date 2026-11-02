@@ -53,7 +53,8 @@ items:
   sources: [docs/SWARM-ROADMAP.md, 'Blitzy: requirements into a specification and an action plan, checked against the result']
   acceptance: 'Replay: 20 recorded one-sentence tasks (coding, research, analysis, watching) each get a specification with
     a checkable definition of done; no task gets more than two questions.'
-  verify: {method: test, by: ['tests/test_tasks.py::test_at_most_two_questions_and_answers_plan_it_again',
+  findings: [FND-117]
+  verify: {method: test, by: ['tests/test_conductor.py::test_a_planning_a_restart_cut_off_is_planned_again_or_failed_when_old', 'tests/test_tasks.py::test_at_most_two_questions_and_answers_plan_it_again',
     'tests/test_tasks.py::test_a_coding_task_without_a_repository_asks_which_one',
     'tests/test_tasks.py::test_a_failed_intake_says_why_and_can_be_planned_again',
     'tests/test_tasks.py::test_the_intake_prompt_names_every_agent_and_repository_and_the_app_cannot_be_used_from_the_ai_phone',
@@ -224,7 +225,8 @@ items:
   sources: ['owner 2026-10-31: like a particular news event breaking']
   acceptance: 'Test: three sources on one story within 30 minutes raise one event, a fourth attaches to it, and two sources
     raise none.'
-  verify: {method: test, by: ['tests/test_events.py::test_breaking_news_is_three_publishers_on_one_new_story_within_30_minutes']}
+  findings: [FND-118]
+  verify: {method: test, by: ['tests/test_conductor.py::test_an_alert_s_answer_is_in_its_message', 'tests/test_events.py::test_breaking_news_is_three_publishers_on_one_new_story_within_30_minutes']}
   trace: [ops/events.py]
 - id: TSK-13
   group: Self-staffing

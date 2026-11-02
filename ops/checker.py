@@ -397,7 +397,9 @@ def watch_changes(send=None, now=None):
 
 
 def run(c):
-    """The crew job. Fails (and so raises a health alert once) only when the swarm itself shows a fault."""
+    """The crew job. A fault the swarm shows is its finding, kept as `faults` and raised as an alert on its card
+    (crew.checker_faults); the run fails only when the job itself breaks (FND-112: 25 runs counted failed for a fault
+    they had found and reported)."""
     import crew as C
     import observe as O
     import registry
@@ -408,8 +410,6 @@ def run(c):
     bad = signals() + watch_changes()
     SW.publish()
     res = (f"{done} proven, {reopened} reopened, {waiting} still being checked" + (f" · started {len(started)} by your rules" if started else "")
-           + (f" · paused {', '.join(paused)} (3 failed runs)" if paused else ""))
-    C.save("checker", result=res, last=time.time())
-    if bad:
-        raise RuntimeError("; ".join(bad))
+           + (f" · paused {', '.join(paused)} (3 failed runs)" if paused else "") + (f" · {len(bad)} fault{'s' if len(bad) != 1 else ''} in the swarm" if bad else ""))
+    C.save("checker", result=res, last=time.time(), faults=bad)
     return done + reopened

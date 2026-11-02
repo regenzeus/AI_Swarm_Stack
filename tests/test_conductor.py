@@ -404,6 +404,16 @@ def test_a_result_too_long_for_a_prompt_goes_by_reference_through_every_adapter(
         CD.run_hermes(None, t, {"agent": "scout"}, "x" * 130000, {})
 
 
+def test_a_hermes_step_s_prompt_starts_with_its_run(monkeypatch):
+    """FND-114: Hermes' resident gateway does not get AISTACK_REF, so the step's run is the head of its prompt, which
+    the run record reads from the run's title."""
+    sent = []
+    monkeypatch.setattr(CD, "M", types.SimpleNamespace(HERMES="aistack-hermes-1"))
+    monkeypatch.setattr(CD.subprocess, "run", lambda args, **kw: sent.append(args) or types.SimpleNamespace(returncode=0, stdout="found it", stderr=""))
+    assert CD.run_hermes(None, {"id": 7}, {"agent": "scout", "idx": 2, "occ": 3}, "You are scout", {}) == "found it"
+    assert sent[0][-1] == "[run: task:7.3:step:2]\nYou are scout"
+
+
 def on_event(K, plan, kind="research"):
     K.c.execute("update tasks set kind=?, rhythm=?, spec=?, status='scheduled' where id=?",
                 (kind, json.dumps({"type": "event", "triggers": [{"type": "news", "query": "Cameco"}]}), json.dumps({"plan": plan}), K.tid))
@@ -554,10 +564,10 @@ def test_a_delivered_briefing_grows_its_topic_wiki_and_a_deleted_one_stays_delet
     monkeypatch.setenv("VK_DESK", "kd")
     CD.M.load_missions, CD.M.vault_commit = (lambda: {}), (lambda paths, msg: commits.append(paths))
     t = {"id": 5, "title": "China auto"}
-    CD.topic_wiki(t, "china-auto", "topics/china-auto/reports/x.md", "text", {"key": "vk-desk"})
+    assert CD.topic_wiki(t, "china-auto", "topics/china-auto/reports/x.md", "text", {"key": "vk-desk"}) == ["entities/byd"]   # for the step's answer
     assert calls == [("topics/china-auto/wiki", "topics/china-auto/reports/x.md", "kd")] and commits == [["topics/china-auto/wiki"]]
     CD.M.load_missions = lambda: {"c": {"slug": "c", "topic": "china-auto", "wiki_off": True}}
-    CD.topic_wiki(t, "china-auto", "topics/china-auto/reports/y.md", "text", {"key": "vk-desk"})
+    assert CD.topic_wiki(t, "china-auto", "topics/china-auto/reports/y.md", "text", {"key": "vk-desk"}) == []
     assert len(calls) == 1
 
 
@@ -826,3 +836,29 @@ def test_a_recurring_or_fixed_plan_gets_no_checkpoint():
     finally:
         CD.checkpoint_ask = None
 
+
+
+def test_an_alert_s_answer_is_in_its_message(K):
+    """P6 (2 Nov): the uranium rule's alert reached the phone as "Task #113 is done: <title>" and the three lines were only
+    in the app. A task a rule fired carries its answer in the message (cut visibly when long); the owner's own does not."""
+    K.c.execute("update tasks set source='rule:2' where id=?", (K.tid,))
+    K.c.commit()
+    for _ in range(12):
+        tick(K)
+    assert TK.row(K.c, K.tid)["status"] == "done"
+    msg = K.sent[-1]
+    assert msg.startswith(f"Task #{K.tid} is done: RAM check\n\n") and "result of step" in msg
+
+
+def test_a_planning_a_restart_cut_off_is_planned_again_or_failed_when_old(K):
+    """P6: task 93, an alert, sat in "planning" for 27 h after a restart cut off its intake; the worker only looked for
+    new tasks. At the worker's start a recent one is planned again; an older one fails and says why."""
+    import datetime as dt
+    now = dt.datetime.now().astimezone()
+    for tid, h in ((201, 1), (202, 30)):
+        K.c.execute("insert into tasks (id, text, title, goal, kind, door, done, effort, autonomy, rhythm, spec, questions, answers, status, source, created, updated) "
+                    "values (?,'x','t','g','research',null,'[]','standard','auto','{\"type\":\"once\"}','{}','[]','[]','planning','rule:1',?,?)",
+                    (tid, (now - dt.timedelta(hours=h)).isoformat(timespec="seconds"), (now - dt.timedelta(hours=h)).isoformat(timespec="seconds")))
+    K.c.commit()
+    assert TK.recover(K.c, now) == {201: "replanned", 202: "failed"}
+    assert TK.row(K.c, 201)["status"] == "intake" and "Plan it again" in TK.row(K.c, 202)["error"]

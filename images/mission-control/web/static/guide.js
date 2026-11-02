@@ -327,5 +327,5 @@ const slugH = (s) => "s-" + String(s).toLowerCase().replace(/[^a-z0-9]+/g, "-").
 // contextual help: the chapter about the current screen
 function helpHref() {
   const c = chapterFor(route.name);
-  return c ? `#/guide/${c.id}` : "#/system";
+  return c ? `#/guide/${c.id}` : "#/guide";                 // no chapter: the guide's contents, not the Stack page
 }

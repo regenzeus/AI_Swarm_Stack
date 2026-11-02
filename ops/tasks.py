@@ -31,7 +31,8 @@ KINDS = {"coding": "build", "code_question": "claude", "research": "mission", "a
          "watching": "mission", "briefing": "mission", "shopping": "mission"}
 MISSION_TYPE = {"briefing": "briefing", "shopping": "shopping"}           # every other mission kind is a task mission
 EFFORTS = ("light", "standard", "deep")
-AUTONOMY = ("auto", "ask")                        # auto: start when planned (TSK-20's proposal); ask: the plan waits for the owner
+REPLAN_H = 6                                       # a planning a restart cut off is planned again within this; older, it fails and says why
+AUTONOMY = ("auto", "ask")                       # auto: start when planned (TSK-20's proposal); ask: the plan waits for the owner
 RUNS = 10                                          # runs of a recurring task its card lists (newest first)
 OPEN = ("intake", "needs_answer", "waiting_approval", "running", "waiting_owner", "scheduled", "after")
 DONE_OF = {"briefing": "Each briefing is delivered with the sources it used", "task": "The report answers the goal, with its sources",
@@ -54,6 +55,16 @@ def table(c):
 
 def now():
     return dt.datetime.now().astimezone().isoformat(timespec="seconds")
+
+
+TITLE = 80                                         # cap: preview (a task's name in lists and messages; its words are whole on its page)
+
+
+def title_of(text):
+    """A task's name from its words: whole up to TITLE characters, else cut at a word with a visible "…" (task 93 showed
+    "... estimates as s", cut mid-word without a mark)."""
+    s = re.sub(r"\s+", " ", str(text or "")).strip()
+    return s if len(s) <= TITLE else s[:TITLE - 2].rsplit(" ", 1)[0].rstrip(" ,.;:") + " …"
 
 
 def put(c, tid, **kw):
@@ -83,7 +94,7 @@ def register(c, door, ref, goal, title="", *, done=None, rhythm=None, status="ru
     t = created or now()
     cur = c.execute("insert into tasks (text, title, goal, kind, door, ref, done, effort, deadline, autonomy, rhythm, spec, questions, "
                     "answers, status, source, created, updated) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-                    (goal, (title or goal)[:80], goal, None, door, str(ref), json.dumps(done or []), "standard", None,  # cap: id
+                    (goal, title_of(title or goal), goal, None, door, str(ref), json.dumps(done or []), "standard", None,
                      "door", json.dumps(rhythm or {"type": "once"}), "{}", "[]", "[]", status, source, t, t))
     c.commit()
     return cur.lastrowid
@@ -117,7 +128,7 @@ def discover(c, missions, now_ts=None):
             register(c, "build", b["id"], b["description"] or b["title"], b["title"], done=[DONE_OF["build"]], created=b["created"])
     for q in c.execute("select id, question, created from claude_tasks").fetchall() if _has(c, "claude_tasks") else []:
         if _recent(q["created"], now_ts) and ("claude", str(q["id"])) not in held:
-            register(c, "claude", q["id"], q["question"], q["question"][:80], done=[DONE_OF["claude"]], created=q["created"])  # cap: id
+            register(c, "claude", q["id"], q["question"], title_of(q["question"]), done=[DONE_OF["claude"]], created=q["created"])
     for f in CHATS.glob("*.json") if CHATS.exists() else []:
         if now_ts - f.stat().st_mtime < WINDOW and not c.execute("select 1 from tasks where door='chat' and ref=?", (f.stem,)).fetchone():
             try:
@@ -259,7 +270,7 @@ def create(req, c):
     t = now()
     cur = c.execute("insert into tasks (text, title, goal, kind, door, ref, done, effort, deadline, autonomy, rhythm, after, spec, questions, "
                     "answers, status, source, created, updated) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-                    (text, text[:80], text, p.get("kind"), None, None, json.dumps(p.get("done") or []), p.get("effort", "standard"),  # cap: id
+                    (text, title_of(text), text, p.get("kind"), None, None, json.dumps(p.get("done") or []), p.get("effort", "standard"),
                      p.get("deadline"), autonomy, json.dumps(p.get("rhythm") or {"type": "once"}), after,
                      json.dumps({"preset": p, **({"wiki": w} if w else {})}),
                      "[]", "[]", "intake", req.get("source") or "app", t, t))
@@ -364,7 +375,7 @@ def validate(spec, preset, repos, agents):
     repo = s.get("repo") if s.get("repo") in repos else None
     if KINDS[s["kind"]] in ("build",) and not repo and not qs:
         qs = ["Which repository should this change go into: " + ", ".join(repos) + "?"]
-    title = re.sub(r"\s+", " ", str(s.get("title") or s.get("goal") or "")).strip()[:80] or "Task"  # cap: id
+    title = title_of(s.get("title") or s.get("goal")) or "Task"
     return {"title": title if len(title) >= 3 else "Task " + title, "goal": str(s.get("goal") or title).strip(), "kind": s["kind"],
             "done": done, "plan": plan, "questions": qs, "rhythm": r, "repo": repo,
             "effort": s.get("effort") if s.get("effort") in EFFORTS else "standard",
@@ -628,10 +639,28 @@ def handle(req, c):
     raise ValueError("unknown task action")
 
 
+def recover(c, now=None):
+    """P6: a planning a restart cut off (task 93 waited 27 h in "planning") is planned again; one older than REPLAN_H
+    fails and says why (a day-old alert is not worth starting unasked). -> {task: "replanned" | "failed"}."""
+    old = ((now or dt.datetime.now().astimezone()) - dt.timedelta(hours=REPLAN_H)).isoformat(timespec="seconds")
+    out = {}
+    for r in c.execute("select id, updated from tasks where status='planning'").fetchall():
+        if (r["updated"] or "") >= old:
+            put(c, r["id"], status="intake")
+            out[r["id"]] = "replanned"
+        else:
+            put(c, r["id"], status="failed", error=f"its planning was cut off by a restart over {REPLAN_H} h ago; Plan it again if it still matters")
+            out[r["id"]] = "failed"
+        M.log(f"tasks: task {r['id']} was being planned when the runner stopped: {out[r['id']]}")
+    return out
+
+
 def worker():
     """Tasks waiting for the intake, one at a time (one model call each); the runner's main loop never waits on it."""
     c = M.db()
     table(c)
+    with lock:
+        recover(c)
     while not M.stop.is_set():
         try:
             r = c.execute("select id from tasks where status='intake' order by id limit 1").fetchone()

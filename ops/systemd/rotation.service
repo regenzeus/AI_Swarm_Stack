@@ -1,0 +1,8 @@
+[Unit]
+Description=Start tonight's trial of the weekly rotation when the stack is idle (TRL-14)
+[Service]
+Type=oneshot
+Environment=DOCKER_HOST=unix:///run/user/1000/docker.sock
+WorkingDirectory=/home/owner/ai-stack
+ExecStart=/usr/bin/python3 ops/rotation.py
+TimeoutStartSec=150min

@@ -84,3 +84,13 @@ items:
     parents: [SN-13]
     sources: [images/litellm/AGENTS.md]
     verify: {method: inspection, by: [ops/probe_tool_calls.py, ops/deploy.py]}
+  - id: GW-09
+    title: A critical-call model with a fallback and a budget meter
+    statement: The gateway shall serve claude-critical (Claude Opus 5.5) with the ChatGPT subscription as its fallback on an
+      error, a refusal or a spent budget; the Stack page shall show the month's spend on it against the credits; a test
+      shall fail when code other than the named critical calls asks for it.
+    type: functional
+    priority: should
+    status: proposed
+    parents: [SN-03, SN-08]
+    sources: [docs/NEXT-PHASE.md]

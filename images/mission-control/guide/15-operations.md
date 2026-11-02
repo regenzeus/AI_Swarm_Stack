@@ -76,3 +76,11 @@ decrypts the secrets it needs for itself and never prints them.
 
 > [!note] Changes to the stack itself go through git: commit, push to Forgejo, the automatic checks run, then
 > deploy. The builder does all of this for you, with your tap at the end.
+
+## Memory
+
+WSL has 10 of the PC's 16 GB of RAM and a 16 GB swap on the F: SSD: what idle services hold moves to disk instead of
+crowding the work, which matters little because the stack mostly waits on model calls. Three services grow while idle
+(qmd, Phoenix, Open WebUI); every night at 03:50, once nothing is running, they are restarted (their data is on disk)
+and their memory before and after goes to `/srv/ai/state/recycle.jsonl` (`python3 ops/recycle.py` does it now). The
+Stack page shows RAM and swap; the doctor warns when swap runs full.

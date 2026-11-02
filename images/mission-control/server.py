@@ -102,6 +102,22 @@ def display_name(name, login):
     return "" if not name or "@" in name or name.lower() == local or name.split(" ")[0].lower() == local else name
 
 
+def owner_decisions(s):
+    """AUT-05: the two waits only the server sees (the AI phone's approval requests, Gmail's first-Trash batch), in the
+    shape of ops/decisions.py, before the runner's ranked list: both are floor classes, never licensed."""
+    out, ph, cs = [], s.get("phone") or {}, s.get("connections") or {}
+    if ph.get("pending"):
+        n = ph["pending"]
+        out.append({"id": "phone-ask", "cls": "phone", "what": f"The AI phone asks for {n} approval{'s' if n > 1 else ''}", "why": "it waits for your tap",
+                    "href": "#/phone", "recommend": None, "unanswered": "the phone's step does not run", "expires": None,
+                    "answers": [{"label": "Look", "href": "#/phone"}], "created": None, "weight": 2, "routine": False})
+    if cs.get("pending"):
+        out.append({"id": "gmail-trash", "cls": "delete", "what": "Gmail: a Trash batch waits for your OK", "why": "nothing is moved without it",
+                    "href": "#/system?conn=1", "recommend": None, "unanswered": "the mail stays where it is", "expires": None,
+                    "answers": [{"label": "Look", "href": "#/system?conn=1"}], "created": None, "weight": 1, "routine": False})
+    return out + list(s.get("decisions") or [])
+
+
 async def api_state(request):
     """The runner's whole state (missions, runs, builds, crew, health, system …) plus the phone, the connections and who is viewing."""
     s = state()
@@ -109,6 +125,7 @@ async def api_state(request):
     s["connections"] = conn_summary()
     s["viewer"] = request.headers.get("tailscale-user-name") or request.headers.get("tailscale-user-login", "")
     s["viewer_name"] = display_name(request.headers.get("tailscale-user-name", ""), request.headers.get("tailscale-user-login", ""))
+    s["decisions"] = owner_decisions(s)
     return JSONResponse(s)
 
 
@@ -127,7 +144,9 @@ async def api_stream(request):
             sig = (mt, json.dumps(ph, sort_keys=True, default=str), json.dumps(cs, sort_keys=True, default=str))
             if sig != last:
                 last = sig
-                yield f"data: {json.dumps({**state(), 'phone': ph, 'connections': cs}, ensure_ascii=False)}\n\n"
+                full = {**state(), 'phone': ph, 'connections': cs}
+                full["decisions"] = owner_decisions(full)
+                yield f"data: {json.dumps(full, ensure_ascii=False)}\n\n"
             else:
                 yield ": ping\n\n"
             await asyncio.sleep(1.5)
@@ -1213,14 +1232,66 @@ async def api_a2a_token(request):
     return JSONResponse({"ok": True, "name": r["result"]["name"], "token": tok, "card": f"https://{request.headers.get('host', '')}/.well-known/agent-card.json"})
 
 
-def task_page(tid):
+PROV_READ = ("page", "item", "job", "note", "memory", "search")    # what a step used (provenance.READ, and its searches)
+
+
+def task_prov(tid, occ):
+    """APP-36: one run's sources and what it made, from its swarm map (public/maps/<task>.<occ>.json, ops/provenance.py):
+    {sources: [{id, kind, title, uri, site, cited, steps, agents}], made: [...], numbers, by_agent: {agent: {cost, models}}}."""
+    f = MAPS / f"{tid}.{occ}.json"
+    if not occ or not f.exists():
+        return None
+    m = json.loads(f.read_text())
+    arts = {a["id"]: a for a in m.get("artifacts") or []}
+    step_agent = {s["idx"]: s["agent"] for s in m.get("steps") or []}
+    run_agent = {x["run"]: x["agent"] for x in m.get("lanes") or []}
+    used, made, cited = {}, {}, set()
+    for x in m.get("links") or []:
+        a = arts.get(x["artifact"])
+        if not a:
+            continue
+        if x["rel"] == "cited":
+            cited.add(a["id"])
+            continue
+        if x["rel"] not in ("used", "generated") or (x["rel"] == "used" and a["kind"] not in PROV_READ):
+            continue
+        y = (used if x["rel"] == "used" else made).setdefault(a["id"], {**a, "steps": set(), "agents": set()})
+        if x["step"]:
+            y["steps"].add(x["step"])
+        who = run_agent.get(x["run"]) or step_agent.get(x["step"])
+        if who:
+            y["agents"].add(who)
+    by_agent = {}
+    for x in m.get("lanes") or []:
+        b = by_agent.setdefault(x["agent"], {"cost": 0.0, "models": set()})
+        b["cost"] += x.get("cost") or 0
+        b["models"] |= set(x.get("models") or [])
+    flat = lambda d: [{**v, "steps": sorted(v["steps"]), "agents": sorted(v["agents"]), "cited": v["id"] in cited} for v in d.values()]
+    return {"sources": flat(used), "made": flat(made), "numbers": m.get("numbers") or {},
+            "by_agent": {k: {"cost": round(v["cost"], 6), "models": sorted(v["models"])} for k, v in by_agent.items()}}
+
+
+def task_page(tid, occ=None):
+    """The task's data (the runner's file) with one run's activity, answer, sources and what it made: the run asked for,
+    else its newest (APP-36); a task with one run shows everything it did."""
     f = TASK_PAGES / f"{tid}.json"
     if not f.exists():
         return None
     d = json.loads(f.read_text())
-    d["activity"] = RT.task_activity(tid)
-    res = VAULT / (d.get("result") or "")
-    d["answer"] = res.read_text(errors="replace") if d.get("result") and res.is_file() else None
+    runs = d.get("runs") or []
+    occ = occ if any(r["occ"] == occ for r in runs) else (runs[0]["occ"] if runs else None)
+    run = next((r for r in runs if r["occ"] == occ), None)
+    try:
+        since = dt.datetime.fromisoformat(d.get("created") or "").timestamp()
+    except ValueError:
+        since = None
+    d["occ"] = occ
+    d["activity"] = RT.task_activity(tid, door=d.get("door"), ref=d.get("ref"), since=since, occ=occ if len(runs) > 1 else None)
+    d["prov"] = task_prov(tid, occ)
+    result = (run or {}).get("result") if str((run or {}).get("result") or "").startswith("tasks/") else d.get("result")
+    res = VAULT / (result or "")
+    d["result"] = result
+    d["answer"] = res.read_text(errors="replace") if result and res.is_file() else None
     return d
 
 
@@ -1229,9 +1300,10 @@ async def api_task(request):
     actions and what they read from and kept in memory (the run record), and its answer."""
     try:
         tid = int(request.path_params["tid"])
+        occ = int(request.query_params.get("o") or 0) or None
     except ValueError:
         return JSONResponse({"error": "no such task"}, status_code=400)
-    d = await asyncio.to_thread(task_page, tid)
+    d = await asyncio.to_thread(task_page, tid, occ)
     if d is None:
         return JSONResponse({"error": f"There is no task #{tid}."}, status_code=404)
     return JSONResponse(d)
@@ -1708,6 +1780,67 @@ async def api_clienterror(request):
     return JSONResponse({"ok": True})
 
 
+SCREEN_VIEWS = DATA / "screen-views.json"
+VIEWS_DAYS = 120                                     # cap: rotate (the unused report reads 30 days; four months show a trend)
+VIEW_NAME = re.compile(r"[a-z][a-z-]{0,23}")
+
+
+def count_view(name, tab="", day=None, path=None):
+    """PLT-26: one opened screen, counted per day by its route name and tab (no address, no ids): {day: {name[:tab]: n}}."""
+    f, day = path or SCREEN_VIEWS, day or dt.date.today().isoformat()
+    key = f"{name}:{tab}" if tab else name
+    d = json.loads(f.read_text()) if f.exists() else {}
+    d.setdefault(day, {})[key] = d.get(day, {}).get(key, 0) + 1
+    for old in sorted(d)[:-VIEWS_DAYS]:                   # cap: rotate (the newest VIEWS_DAYS days)
+        del d[old]
+    tmp = f.with_suffix(".tmp")
+    tmp.write_text(json.dumps(d, sort_keys=True))
+    tmp.replace(f)
+    return d
+
+
+def screen_views(days=30, path=None, today=None):
+    """The screens opened in the last `days` days: {name[:tab]: n} (PLT-26's monthly report reads it)."""
+    f = path or SCREEN_VIEWS
+    d = json.loads(f.read_text()) if f.exists() else {}
+    since = ((today or dt.date.today()) - dt.timedelta(days=days - 1)).isoformat()
+    out = {}
+    for day, counts in d.items():
+        if day >= since:
+            for k, n in counts.items():
+                out[k] = out.get(k, 0) + n
+    return dict(sorted(out.items(), key=lambda x: -x[1]))
+
+
+async def api_view(request):
+    """PLT-26: the app says a screen was opened (its route name and tab only)."""
+    raw = await request.body()
+    if len(raw) > 200:                                    # the app sends a name and a tab: anything longer is refused, not cut
+        return JSONResponse({"error": f"the report is {len(raw):,} bytes; the limit is 200"}, status_code=413)
+    try:
+        b = json.loads(raw or b"{}")
+    except ValueError:
+        b = {}
+    name, tab = str(b.get("name") or ""), str(b.get("tab") or "")
+    if not VIEW_NAME.fullmatch(name) or (tab and not VIEW_NAME.fullmatch(tab)):
+        return JSONResponse({"error": "not a screen of the app"}, status_code=400)
+    if from_ai_phone(request):                            # the AI phone's visits are its work, not the owner's use
+        return JSONResponse({"ok": True, "counted": False})
+    async with VIEWS_LOCK:
+        await asyncio.to_thread(count_view, name, tab)
+    return JSONResponse({"ok": True})
+
+
+async def api_views(request):
+    """PLT-26: the screens opened in the last 30 days (or ?days=), most opened first."""
+    try:
+        days = max(1, min(VIEWS_DAYS, int(request.query_params.get("days") or 30)))
+    except ValueError:
+        return JSONResponse({"error": "days must be a number"}, status_code=400)
+    return JSONResponse({"days": days, "views": await asyncio.to_thread(screen_views, days)})
+
+
+VIEWS_LOCK = asyncio.Lock()
 CLIENT_ERRORS = DATA / "client-errors.jsonl"
 CLIENT_ERRORS_KEEP = 500                         # the newest app errors kept (the container's log is gone at every deploy)  # cap: store
 
@@ -2111,7 +2244,7 @@ app = Starlette(routes=[
     Route("/api/connections/decide", api_connections_decide, methods=["POST"]),
     Route("/api/phone", api_phone), Route("/api/whoami", api_whoami), Route("/api/forgejo/connect", api_forgejo_connect, methods=["POST"]),
     Route("/api/house/connect", api_house_connect), Route("/api/house/callback", api_house_callback), Route("/api/house", api_house, methods=["POST"]),
-    Route("/api/shop/decide", api_shop_decide, methods=["POST"]), Route("/api/shop/limits", api_shop_limits, methods=["POST"]), Route("/api/clienterror", api_clienterror, methods=["POST"]), Route("/api/phone/decide", api_phone_decide, methods=["POST"]),
+    Route("/api/shop/decide", api_shop_decide, methods=["POST"]), Route("/api/shop/limits", api_shop_limits, methods=["POST"]), Route("/api/clienterror", api_clienterror, methods=["POST"]), Route("/api/view", api_view, methods=["POST"]), Route("/api/views", api_views), Route("/api/phone/decide", api_phone_decide, methods=["POST"]),
     Route("/api/phone/control", api_phone_control, methods=["POST"]), Route("/api/phone/shot/{sid}", api_phone_shot), Route("/api/share/{sid}", api_share),
     Route("/api/share/{sid}/save", api_share_save, methods=["POST"]),
     Route("/api/repo/{name}/graph", api_repo_graph), Route("/api/repo/{name}/overview", api_repo_overview),

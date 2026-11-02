@@ -1,0 +1,24 @@
+# Action classes (docs/NEXT-PHASE.md Part 1, AUT-01 to AUT-05): each kind of thing that can wait for the owner, its
+# exam, how high its licence may go, and its level now. ops/decisions.py reads this; a class marked floor stays at ask
+# by construction (money, people, irreversible acts, security), whatever its exam or shadow says.
+#
+# level: 0 ask (a decision in the queue), 1 do and tell (an undo window), 2 do quietly. Promotion needs the exam, the
+# shadow's agreement and the owner's tap; nothing here promotes on its own.
+classes:
+  memory:          {title: Memory,             level: 2, highest: 2, exam: memory,          what: "retire, translate or merge long-term facts; settle disputes"}
+  wiki:            {title: Wiki,               level: 2, highest: 2, exam: memory,          what: "fold findings into a wiki, mark contradictions"}
+  research:        {title: Research,           level: 0, highest: 1, exam: research-accuracy, what: "start a research or refresh task it proposed itself"}
+  task-start:      {title: Start a task,       level: 0, highest: 0, exam: null,            what: "start a task that waits for the owner's OK"}
+  task-questions:  {title: A task's questions, level: 0, highest: 0, exam: null,            what: "answers only the owner can give", words: true}
+  briefing:        {title: Briefing,           level: 0, highest: 1, exam: briefing-ratings, what: "drop noise, re-time a briefing, add a source"}
+  shopping-pick:   {title: Offer picking,      level: 0, highest: 2, exam: offer-picking,   what: "choose which offer to propose"}
+  shopping-buy:    {title: Buying,             level: 0, highest: 0, exam: null, floor: money, what: "buy something: always the owner's tap"}
+  coding-low-risk: {title: Low-risk code,      level: 0, highest: 1, exam: coding,          what: "deploy a small change after both reviews"}
+  coding:          {title: Code,               level: 0, highest: 0, exam: null, floor: security, what: "deploy a change outside the low-risk rule"}
+  phone-routine:   {title: Phone routine,      level: 0, highest: 1, exam: phone-routine,   what: "the listed routines: storage cleanup steps, app updates, reading a screen"}
+  phone:           {title: The AI phone,       level: 0, highest: 0, exam: null, floor: people, what: "anything on the phone outside the routines"}
+  delete:          {title: Deleting,           level: 0, highest: 0, exam: null, floor: irreversible, what: "delete data that has no undo (Gmail Trash)"}
+  access:          {title: Access,             level: 0, highest: 0, exam: null, floor: security, what: "grant an agent access to an account"}
+  agent-change:    {title: Agent change,       level: 0, highest: 1, exam: replay,          what: "take an agent change whose experiment passed"}
+  ideas:           {title: Ideas,              level: 0, highest: 1, exam: null,            what: "turn an agent's idea into a task"}
+  agent-request:   {title: An agent asks,      level: 0, highest: 0, exam: null,            what: "what an agent asks of the owner", words: true}

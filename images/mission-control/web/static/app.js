@@ -200,7 +200,8 @@ const NAV = [["home", "#/", "Home", ic.home], ["missions", "#/missions", "Agents
 function navHtml(bottom) {
   const pend = S?.system?.pending_memory?.length || 0;
   return NAV.map(([k, href, label, icon]) => {
-    const on = route.name === k || (k === "missions" && ["mission", "crew", "new", "swarm", "tasks", "task", "taskmap"].includes(route.name)) || (k === "system" && ["guide", "telemetry", "trials"].includes(route.name)) || (k === "build" && route.name === "repo");
+    const on = route.name === k || (k === "home" && ["tasks", "task", "taskmap", "decide"].includes(route.name))   // tasks are given on Home ("Do it")
+      || (k === "missions" && ["mission", "crew", "new", "swarm"].includes(route.name)) || (k === "system" && ["guide", "telemetry", "trials"].includes(route.name)) || (k === "build" && route.name === "repo");
     const toReview = (S?.builds || []).filter((b) => b.status === "review").length;        // the badge = what waits for you
     const n = k === "system" && pend ? `<span class="tab-n">${pend}</span>` : k === "build" && toReview ? `<span class="tab-n">${toReview}</span>`
       : k === "system" ? `<span class="tab-dot ${liveState()}" title="${liveState() === "run" ? "An agent is running" : liveState() === "ok" ? "Ready" : "Not connected"}"></span>` : "";
@@ -269,10 +270,17 @@ window.addEventListener("hashchange", () => {
   const saved = scrollAt[location.hash || "#/"];
   restoreTo = navStep() === "history" && saved ? saved : null;
   const prev = route.name + route.args[0]; parseRoute(); if (route.name + route.args[0] !== prev) { tab = "overview"; atab = "now"; } if (route.name !== "wiki") wikiBack = ""; render(true);
+  countView();
 });
+// PLT-26: which screens are opened, counted per day for the monthly unused report: the route's name and tab only (no
+// address, no ids). The automated browser (the nightly route check opens every screen) is not counted.
+function countView() {
+  if (navigator.webdriver) return;
+  try { navigator.sendBeacon("/api/view", JSON.stringify({ name: route.name, tab: route.q.get("tab") || "" })); } catch (_) {}
+}
 
 // views that re-render on every state update (forms, chat and wiki do not, so nothing is lost while you work)
-const LIVE = new Set(["home", "missions"]);
+const LIVE = new Set(["home", "missions", "decide"]);
 const typing = () => document.activeElement && ["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement.tagName);
 function render(force = false) {
   chrome();
@@ -284,9 +292,10 @@ function render(force = false) {
   // views that load their own data draw at once; the others wait for the first state (they are drawn when it comes)
   if (!S && !["chat", "wiki", "read", "guide", "phone", "share", "live", "swarm", "taskmap", "telemetry", "task", "trials"].includes(route.name)) { view.innerHTML = noLink() ? offlineHtml() : `<div class="stack"><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div></div>`; return; }
   const y = window.scrollY;
+  if (force) $("#homenew")?.remove();                  // Home's waiting updates belong to Home only
   if (force) { document.body.classList.add("anim"); clearTimeout(render.anim); render.anim = setTimeout(() => document.body.classList.remove("anim"), 600); }
   const open = force ? [] : [...view.querySelectorAll("details[open][id], details[open][data-keep]")].map((d) => d.id || d.dataset.keep);
-  const fn = { tasks: vTasks, task: vTask, trials: vTrials, home: vHome, missions: vMissions, mission: vMission, new: vNew, chat: vChat, system: vSystem, read: vRead, wiki: vWiki, build: vBuild, repo: vRepo, guide: vGuide, share: vShare, phone: vPhone, house: vHouse, crew: vCrew, live: vLive, swarm: vSwarm, taskmap: vTaskMap, telemetry: vTelemetry }[route.name] || vHome;
+  const fn = { decide: vDecide, tasks: vTasks, task: vTask, trials: vTrials, home: vHome, missions: vMissions, mission: vMission, new: vNew, chat: vChat, system: vSystem, read: vRead, wiki: vWiki, build: vBuild, repo: vRepo, guide: vGuide, share: vShare, phone: vPhone, house: vHouse, crew: vCrew, live: vLive, swarm: vSwarm, taskmap: vTaskMap, telemetry: vTelemetry }[route.name] || vHome;
   fn();
   for (const k of open) {                          // a live redraw keeps what you opened open
     const d = view.querySelector(`details#${CSS.escape(k)}`) || view.querySelector(`details[data-keep="${CSS.escape(k)}"]`);
@@ -758,7 +767,7 @@ function taskCard(t) {
       <div class="grow" style="min-width:0"><div class="ttl">${esc(t.title)}</div><div class="sub">#${t.id} · ${esc(tstat(t))}${t.kind ? ` · ${esc(TKINDS[t.kind] || t.kind)}` : ""} · ${esc(rhythmText(t.rhythm, t.after))} · ${rel(t.created)}</div></div></div></summary>
     <div class="tbody small">
       ${t.goal && t.goal !== t.title ? `<p>${esc(t.goal)}</p>` : ""}
-      ${t.text !== t.goal ? `<p class="faint">You wrote: “${esc(t.text)}”</p>` : ""}
+      ${t.text !== t.goal ? `<p class="faint wrap">You wrote: “${esc(t.text)}”</p>` : ""}
       ${t.error ? `<div class="banner" style="padding:8px 12px">${ic.alert}<span>${esc(t.error)}</span></div>` : ""}
       ${lastRunHtml(t)}
       ${t.judgement?.points?.length ? `<div class="tlabel">Done when · ${t.judgement.run && (t.runs || []).length > 1 ? `run ${t.judgement.run} ` : ""}judged: ${esc(t.verdict)}</div><ul class="tjudge">${t.judgement.points.map((p) => `<li class="${p.met ? "" : "err-t"}">${p.met ? "✓" : "✗"} ${esc(p.point)}<div class="faint">${esc(p.why)}</div></li>`).join("")}</ul>`
@@ -947,7 +956,7 @@ function tasksUpdate() {
 // Three questions, in this order: does anything need me (decisions only, each one tap away), what is happening right now,
 // and what did my agents produce (a live feed of results, newest first). Live updates replace only the parts that changed
 // (homeUpdate), so nothing twitches. Starting things is the ask bar at the top: Hermes can start agents itself.
-let homeFilter = "mine", homeShow = 12;                 // the feed opens on 12 (U2: 40 made Home 13 phone screens); "Show older" adds 40
+let homeFilter = "all", homeShow = 12;                  // the feed opens on 12 (U2: 40 made Home 13 phone screens); "Show older" adds 40
 // a long text's first line, marked when more follows (the rest is on its page)
 const firstLine = (s) => { const l = String(s || "").split("\n"); return l[0] + (l.slice(1).join("").trim() ? " …" : ""); };
 // who asked Claude: a crew agent's task is named after it (its question is a long standing prompt, shown when opened)
@@ -983,17 +992,65 @@ function needsItems() {
 function needsHtml() {
   const it = needsItems();
   if (!it.length) return `<div id="homeneeds" class="needs-calm">${ic.check}<span>Nothing needs you right now.</span></div>`;
-  return `<div id="homeneeds"><div class="section-h"><h2>Needs you <span class="hcount">${it.length}</span></h2></div>
+  return `<div id="homeneeds"><div class="section-h"><h2>Needs you <span class="hcount">${it.length}</span></h2>${(S.decisions || []).length ? `<a class="tiny" href="#/decide">All decisions</a>` : ""}</div>
     <div class="card list hneeds">${it.map((x) => x.build ? workBuildRow(x.build) : `<a href="${x.href}"><div class="ic ${x.cls || "warn"}">${x.icon}</div><div class="grow" style="min-width:0"><div class="ttl">${esc(x.title)}</div><div class="sub wrap">${esc(x.sub || "")}</div></div>${ic.next}</a>`).join("")}</div></div>`;
+}
+
+// AUT-05, AUT-07: every decision that waits for you in one ranked list (ops/decisions.py and the server's two), each
+// with what, why, what the stack would decide, what happens without an answer, and its answers; routine ones of a
+// class are answered together. Under it, the queue's numbers against the target and the shadow's agreement per class.
+function decideGroups(ds) {
+  const out = [], routine = new Map();
+  for (const d of ds) {
+    if (!d.routine) { out.push({ one: d }); continue; }
+    if (!routine.has(d.cls)) { routine.set(d.cls, { cls: d.cls, items: [] }); out.push(routine.get(d.cls)); }
+    routine.get(d.cls).items.push(d);
+  }
+  return out.map((g) => (g.items && g.items.length === 1 ? { one: g.items[0] } : g));
+}
+
+function decideCard(d, cls) {
+  const r = d.recommend, c = cls[d.cls] || {};
+  return `<div class="card pad dcard"><div class="row between" style="gap:8px"><span class="tiny faint">${esc(c.title || d.cls)}${c.floor ? " · always yours" : ""}</span>${d.expires ? `<span class="tiny">answer by ${dt(d.expires)}</span>` : ""}</div>
+    <div class="ttl wrap" style="margin-top:4px">${esc(d.what)}</div>${d.why ? `<div class="sub wrap">${esc(d.why)}</div>` : ""}
+    ${r ? `<div class="small" style="margin-top:6px">The stack would say <b>${r.answer === "yes" ? "yes" : "no"}</b>${r.why ? `: ${esc(r.why)}` : ""}</div>` : ""}
+    ${d.unanswered ? `<div class="tiny muted">Without an answer: ${esc(d.unanswered)}</div>` : ""}
+    <div class="row wrap" style="gap:8px;margin-top:10px">${(d.answers || []).map((a, i) => a.act ? `<button class="btn sm${i ? " ghost" : ""}" data-dact='${esc(JSON.stringify(a.act))}'>${esc(a.label)}</button>` : `<a class="btn sm${i ? " ghost" : ""}" href="${esc(a.href)}">${esc(a.label)}</a>`).join("")}</div></div>`;
+}
+
+function vDecide() {
+  const ds = S.decisions || [], st = S.decide || {}, cls = st.classes || {}, tg = st.target || {};
+  const groups = decideGroups(ds);
+  const agree = Object.entries(st.agreement || {});
+  view.innerHTML = `<div class="hero heading"><h1>Decisions</h1><p>Everything that waits for you, in one list: what expires first and what costs most to wait comes first. Each says what the stack would decide; nothing happens without your answer.</p></div>
+  <div class="card pad small"><b>${nf(ds.length)}</b> waiting · ${st.per_day ?? "–"} a day (target at most ${tg.per_day ?? 5}) · answered in ${st.median_h != null ? `${st.median_h} h` : "–"} at the median (target ${tg.answer_h ?? 12} h) · ${nf(st.expired || 0)} expired, over ${st.days ?? 0} day${st.days === 1 ? "" : "s"}</div>
+  ${groups.length ? `<div class="stack" style="margin-top:12px">${groups.map((g) => g.one ? decideCard(g.one, cls) : `<div class="card pad dcard"><div class="tiny faint">${esc((cls[g.cls] || {}).title || g.cls)} · routine, answered together</div>
+      <details data-keep="dg-${esc(g.cls)}"><summary class="ttl">${g.items.length} ${esc(((cls[g.cls] || {}).title || g.cls).toLowerCase())} decisions</summary><div class="stack" style="margin-top:8px">${g.items.map((d) => decideCard(d, cls)).join("")}</div></details>
+      ${g.items.every((d) => (d.answers || [])[0]?.act?.action === "phone_cleanup_do_all") ? `<button class="btn sm" style="margin-top:10px" data-dact='${esc(JSON.stringify({ action: "phone_cleanup_do_all", ids: g.items.map((d) => d.answers[0].act.ids[0]) }))}'>Approve all ${g.items.length}</button>` : ""}</div>`).join("")}</div>`
+    : `<div class="needs-calm" style="margin-top:12px">${ic.check}<span>Nothing needs you right now.</span></div>`}
+  <div class="section-h" style="margin-top:18px"><h2>The shadow</h2></div>
+  <div class="card pad small">For every yes-or-no decision the stack records what it would have decided, then what you decided. A kind of action may only ever act on its own after it agreed with you on 20 decisions in a row (at least 90 %), passed its exam, and you allowed it; money, people, deleting and security never do.
+    ${agree.length ? `<div class="list" style="margin-top:8px">${agree.map(([k, a]) => `<div class="row between"><span>${esc((cls[k] || {}).title || k)}</span><span class="tiny">${a.agreed} of ${a.n} agreed${a.unsafe ? ` · <span class="err-t">${a.unsafe} said yes where you said no</span>` : ""}</span></div>`).join("")}</div>` : `<div class="tiny muted" style="margin-top:8px">No answers recorded yet: the shadow started on 2 Nov 2026.</div>`}</div>`;
+  $$("[data-dact]").forEach((b) => (b.onclick = async () => { b.disabled = true; if (!(await act(JSON.parse(b.dataset.dact), "Done: it leaves the list once the stack has it"))) b.disabled = false; }));
+}
+
+// each agent with a health alert, named, with its first alert and its page
+function healthAlerts() {
+  return (S.health?.items || []).map((h) => [h, (h.issues || []).find((i) => i.severity === "alert")]).filter(([, i]) => i).map(([h, i]) => {
+    const m = h.kind === "mission" && (S.missions || []).find((x) => x.slug === h.slug), c = h.kind === "crew" && (S.crew || []).find((x) => x.id === h.id);
+    return { name: m?.title || c?.name || h.name || h.id || h.slug || "an agent", text: i.text || i.kind || "",
+      href: m ? `#/mission/${encodeURIComponent(m.slug)}` : c ? `#/crew/${encodeURIComponent(c.id)}` : "#/missions?f=problems" };
+  });
 }
 
 // the stack's own upkeep (health alerts the doctor looks at, its improvement ideas): visible, but not "Needs you"
 function upkeepHtml() {
   const props = ideasWaiting(), alerts = S.health?.alerts || 0;
   if (!props && !alerts) return "";
-  const failed = (S.crew || []).filter((x) => x.state === "failed").map((x) => x.name);
+  const bad = healthAlerts();                         // the owner's review of 2 Nov: the row opened the Agents overview, not the problem
+  const href = bad.length === 1 ? bad[0].href : "#/missions?f=problems";
   return `<div class="hsub">Stack upkeep</div><div class="card list">
-    ${alerts ? `<a href="#/missions"><div class="ic">${ic.pulse}</div><div class="grow" style="min-width:0"><div class="ttl">${alerts} health alert${alerts > 1 ? "s" : ""}</div><div class="sub wrap">${esc(failed.join(", ") || "the Health doctor looks at them")}</div></div>${ic.next}</a>` : ""}
+    ${alerts ? `<a href="${href}"><div class="ic">${ic.pulse}</div><div class="grow" style="min-width:0"><div class="ttl">${alerts} health alert${alerts > 1 ? "s" : ""}</div><div class="sub wrap">${esc(bad.map((b) => `${b.name}: ${b.text}`).join(" · ") || "the Health doctor looks at them")}</div></div>${ic.next}</a>` : ""}
     ${props ? `<a href="#/swarm?tab=improve"><div class="ic">${ic.rocket}</div><div class="grow" style="min-width:0"><div class="ttl">${props} improvement idea${props > 1 ? "s" : ""}</div><div class="sub wrap">the stack's own fixes and changes to its agents, in Agents → Ideas</div></div>${ic.next}</a>` : ""}</div>`;
 }
 
@@ -1002,8 +1059,11 @@ function nowHtml() {
   const queued = (S.queue || []).filter((q) => q.status === "queued").map((q) => (S.missions || []).find((m) => m.slug === q.slug)).filter(Boolean);
   const tasks = (S.claude_tasks || []).filter((t) => ["running", "queued"].includes(t.status));
   const next = (S.missions || []).filter((m) => m.status === "active" && m.next_run).sort((a, b) => a.next_run.localeCompare(b.next_run)).slice(0, 3);
-  const busy = S.running || builds.length || tasks.length;
-  const rows = [...builds.map(workBuildRow),
+  const working = (S.tasks || []).filter((t) => ["running", "planning", "intake"].includes(t.status) && Date.now() - Date.parse(t.updated || 0) < 6 * 3600e3);   // APP-38: a task at work (a leftover is not)
+  const busy = S.running || builds.length || tasks.length || working.length;
+  const rows = [...working.map((t) => { const st = t.steps || [], on = st.filter((s) => s.status === "running");
+      return `<a href="#/task/${t.id}"><div class="ic run">${ic.target}</div><div class="grow"><div class="ttl wrap">${esc(t.title)}</div><div class="sub wrap">Task #${t.id} · ${t.status === "running" ? `${st.filter((s) => s.status === "done").length} of ${st.length} steps done${on.length ? ` · ${on.map((s) => esc(taskWho(s.agent))).join(", ")} at work` : ""}` : "being planned"}</div></div><span class="pill running"><span class="dot run"></span>${t.status === "running" ? "Working" : "Planning"}</span></a>`; }),
+    ...builds.map(workBuildRow),
     ...queued.map((m) => `<a href="#/mission/${encodeURIComponent(m.slug)}"><div class="ic">${typeIcon(m.type)}</div><div class="grow"><div class="ttl wrap">${esc(m.title)}</div><div class="sub">waits for the run slot</div></div><span class="pill queued">Queued</span></a>`),
     ...tasks.map((t) => `<a href="#/build"><div class="ic ${t.status === "running" ? "run" : ""}">${ic.code}</div><div class="grow"><div class="ttl wrap">Claude task #${t.id}</div><div class="sub wrap">${esc(ctTitle(t))}</div></div><span class="pill ${t.status === "running" ? "running" : "queued"}">${t.status === "running" ? "Running" : "Queued"}</span></a>`)];
   return `<div id="homenow"><div class="section-h"><h2>Now</h2>${busy ? `<span class="pill running"><span class="dot run"></span>working</span>` : `<span class="tiny faint">all quiet</span>`}</div>
@@ -1013,42 +1073,39 @@ function nowHtml() {
     ${next.length ? `<div class="hsub">Up next</div><div class="card list">${next.map((m) => `<a href="#/mission/${encodeURIComponent(m.slug)}"><div class="ic">${typeIcon(m.type)}</div><div class="grow"><div class="ttl wrap">${esc(m.title)}</div><div class="sub">${dt(m.next_run)}</div></div><div class="tiny faint">${rel(m.next_run)}</div></a>`).join("")}</div>` : ""}</div>`;
 }
 
-// every result, decision and finished job of the agents, newest first
+// APP-38: Home's Results: one card per outcome you asked for or your rules started (a briefing, a task's answer, an
+// alert's answer, research, a shopping step), named by what it is about: its headline first, a kind, who made it, the
+// first lines, one tap to its page. A rule that fires and the task it starts are one Alert card; a running task is on
+// Now and becomes a result when it ends. The stack's own machinery is not here: health in Now's Stack upkeep, deploys
+// under Code, the Ledger and the crew under Agents, trials and probes on their own pages (the owner's review of 2 Nov:
+// "Tasks", "Triggers" and "Agent health" cards, two cards for one outcome, and what is what hard to tell).
+const RKIND = { briefing: ["Briefing", "doc"], alert: ["Alert", "bolt"], task: ["Task", "target"], research: ["Research", "doc"],
+  shopping: ["Shopping", "coin"], failed: ["Failed", "x"] };
+// a task the stack gave itself (a trial, a probe, a crew job, a gate): on its own pages, not in your results
+const NOT_YOURS = /^(trial|probe|crew|gate)/;
 function feedItems() {
   const out = [];
   for (const m of S.missions || []) for (const r of m.runs || []) {
-    const ts = r.ended || r.started;
-    if (r.status === "ok" && r.summary) out.push({ ts, cat: m.type === "shopping" ? "shopping" : "results", agent: m.title, icon: typeIcon(m.type), head: r.summary, path: r.output, big: true,
+    const ts = r.ended || r.started, kind = m.type === "shopping" ? "shopping" : m.type === "briefing" ? "briefing" : "research";
+    if (r.status === "ok" && r.summary) out.push({ id: `m:${m.slug}:${r.id || ts}`, ts, kind, agent: m.title, head: r.summary, path: r.output, big: true,
       href: r.output ? `#/read?path=${encodeURIComponent(r.output)}&m=${encodeURIComponent(m.slug)}` : `#/mission/${encodeURIComponent(m.slug)}`,
       meta: [r.trigger === "event" ? "after an event" : r.trigger === "schedule" ? "scheduled" : "on request", dur(r.seconds), r.calls ? `${r.calls} model calls` : ""] });
-    else if (r.status === "failed") out.push({ ts, cat: m.type === "shopping" ? "shopping" : "results", agent: m.title, icon: ic.x, tone: "err", head: `Run failed${r.summary ? `: ${r.summary}` : ""}`, href: `#/mission/${encodeURIComponent(m.slug)}?tab=history` });
+    else if (r.status === "failed") out.push({ id: `m:${m.slug}:${r.id || ts}`, ts, kind: "failed", agent: m.title, tone: "err", head: `Did not finish${r.summary ? `: ${r.summary}` : ""}`,
+      href: `#/mission/${encodeURIComponent(m.slug)}?tab=history` });
   }
   for (const p of typeof shopProposals === "function" ? shopProposals() : [])
     if (["proposed", "needs_owner", "approved", "buying", "bought", "shipped", "delivered", "failed"].includes(p.status))
-      out.push({ ts: p.updated || p.created, cat: "shopping", agent: p.mission || "Shopping", icon: ic.coin, tone: p.status === "failed" ? "err" : "",
+      out.push({ id: `p:${p.id}`, ts: p.updated || p.created, kind: "shopping", agent: p.mission || "Shopping", tone: p.status === "failed" ? "err" : "",
         head: `${p.item}: ${eur(p.total_eur)} · ${(SHOP_STATE[p.status] || [, p.status])[1]}`, href: `#/mission/${encodeURIComponent(p.slug)}?shop=${p.id}` });
-  for (const c of S.crew || []) {
-    if (!c.last || !c.result) continue;
-    if (/^every \d+\s*(min|h)/.test(c.schedule || "") && c.state !== "failed") continue;    // every few minutes: not news
-    out.push({ ts: toIso(c.last), cat: "housekeeping", agent: c.name, icon: ic[CREW_IC[c.area]] || ic.layers, tone: c.state === "failed" ? "err" : "",
-      head: String(c.result).replace(/^failed: (\w+Error: )?/, c.state === "failed" ? "Failed: " : ""), href: `#/crew/${encodeURIComponent(c.id)}` });
+  for (const t of S.tasks || []) {
+    if (t.door === "mission" || NOT_YOURS.test(t.source || "") || /^You are the Health doctor/.test(t.text || t.title || "")) continue;
+    const run = (t.runs || [])[0], failed = t.status === "failed" || run?.status === "failed";
+    if (!["done", "failed"].includes(t.status) && !(t.status === "scheduled" && run?.ended)) continue;   // still going: on Now
+    const kind = failed ? "failed" : /^rule:/.test(t.source || "") ? "alert" : t.kind === "briefing" ? "briefing" : t.kind === "research" ? "research" : "task";
+    out.push({ id: `t:${t.id}:${run?.occ || 1}`, ts: run?.ended || t.updated, kind, agent: `Task #${t.id}${(t.runs || []).length > 1 ? ` · run ${run.occ}` : ""}`,
+      head: t.title, path: !failed && String(t.result || "").startsWith("tasks/") ? t.result : "", big: !failed, tone: failed ? "err" : "",
+      sub: failed ? t.error || "" : "", href: `#/task/${t.id}` });
   }
-  for (const b of S.builds || []) {
-    const done = ["deployed", "merged"].includes(b.status), bad = ["failed", "rolled_back", "stopped"].includes(b.status);
-    if (done || bad || b.status === "review")
-      out.push({ ts: toIso(b.updated), cat: "code", agent: `Build #${b.id}`, icon: ic.rocket, tone: bad ? "err" : "",
-        head: `${done ? "Deployed" : bad ? (b.status === "rolled_back" ? "Rolled back" : "Failed") : "Ready for your review"}: ${b.title}`, href: `#/build/${b.id}` });
-  }
-  for (const t of S.claude_tasks || [])
-    if (t.status === "done" && !/^You are the Health doctor/.test(t.question || ""))
-      out.push({ ts: toIso(t.ended || t.updated || t.created), cat: "code", agent: `Claude task #${t.id}`, icon: ic.code, head: `Answered: ${firstLine(t.question)}`, href: "#/build" });
-  const KEEP = { triggered: ic.bolt, email: ic.mail || ic.doc, created: ic.plus, system: ic.pulse, wiki: ic.wiki, understand: ic.code, archive: ic.archive,
-    swarm: ic.radar, deploy: ic.rocket };                             // swarm: the Ledger's changes; deploy: a session's deploy
-  for (const e of S.activity || [])
-    if (KEEP[e.kind] || (e.kind === "health" && e.push))
-      out.push({ ts: e.ts, cat: ["understand", "system", "deploy"].includes(e.kind) ? "code" : e.kind === "swarm" ? "housekeeping" : e.kind === "health" ? "housekeeping" : "results", agent: e.title || "System",
-        icon: KEEP[e.kind] || ic.alert, tone: e.kind === "health" || /^DEPLOY FAILED/.test(e.text || "") ? "err" : "", head: e.text,
-        href: e.slug ? `#/mission/${encodeURIComponent(e.slug)}` : e.kind === "health" ? "#/missions" : e.kind === "swarm" ? "#/swarm?tab=improve" : "#/system" });
   return out.filter((x) => x.ts).sort((a, b) => new Date(toIso(b.ts)) - new Date(toIso(a.ts)));
 }
 
@@ -1061,26 +1118,24 @@ const clockOf = clock;
 
 function feedHtml() {
   const all = feedItems();
-  // "For you": your results and shopping, and whatever failed; the stack's deploys and bookkeeping only under their own chips
-  // (UX review 2026-10-30: a day of deploys filled the feed)
-  const forYou = (x) => ["results", "shopping"].includes(x.cat) || x.tone === "err";
-  const cats = [["mine", "For you"], ["results", "Results"], ["shopping", "Shopping"], ["housekeeping", "Housekeeping"], ["code", "Code"], ["all", "Everything"]]
-    .filter(([k]) => k === "all" || k === "mine" || all.some((x) => x.cat === k));
-  if (!cats.some(([k]) => k === homeFilter)) homeFilter = "mine";
-  const mine = all.filter((x) => homeFilter === "all" || (homeFilter === "mine" ? forYou(x) : x.cat === homeFilter)), items = mine.slice(0, homeShow);   /* cap: list: "Show older" shows the rest */
+  const kinds = [["all", "All"], ["briefing", "Briefings"], ["alert", "Alerts"], ["task", "Tasks"], ["research", "Research"], ["shopping", "Shopping"], ["failed", "Failed"]]
+    .filter(([k]) => k === "all" || all.some((x) => x.kind === k));
+  if (!kinds.some(([k]) => k === homeFilter)) homeFilter = "all";
+  const mine = all.filter((x) => homeFilter === "all" || x.kind === homeFilter), items = mine.slice(0, homeShow);   /* cap: list: "Show older" shows the rest */
   let day = "";
   const rows = items.map((x) => {
     const d = dayOf(toIso(x.ts)), head = d !== day ? `<div class="fday">${esc((day = d))}</div>` : "";
-    const ex = x.path ? homeEx.get(x.path) : "";
-    return `${head}<a class="fitem ${x.big ? "big" : ""} ${x.tone || ""}" href="${x.href}"><div class="fi-ic">${x.icon}</div>
-      <div class="grow" style="min-width:0"><div class="fi-top"><b class="wrap">${esc(x.agent)}</b><span class="tiny faint">${clockOf(toIso(x.ts))}</span></div>
-        <div class="fi-h">${esc(x.head)}</div>${x.path ? `<div class="fi-x small muted" data-ex="${esc(x.path)}">${ex ? esc(ex) : ""}</div>` : ""}
+    const ex = x.path ? homeEx.get(x.path) : "", [label, icon] = RKIND[x.kind] || RKIND.task;
+    return `${head}<a class="fitem ${x.big ? "big" : ""} ${x.tone || ""}" href="${x.href}" data-fid="${esc(x.id)}"><div class="fi-ic k-${x.kind}">${ic[icon] || ic.doc}</div>
+      <div class="grow" style="min-width:0"><div class="fi-top"><span class="fkind k-${x.kind}">${label}</span><span class="tiny faint wrap grow">${esc(x.agent)}</span><span class="tiny faint">${clockOf(toIso(x.ts))}</span></div>
+        <div class="fi-h">${esc(x.head)}</div>${x.sub ? `<div class="fi-x small muted wrap">${esc(x.sub)}</div>` : ""}${x.path ? `<div class="fi-x small muted" data-ex="${esc(x.path)}">${ex ? esc(ex) : ""}</div>` : ""}
         ${(x.meta || []).filter((v) => v && v !== "–").length ? `<div class="tiny faint" style="margin-top:4px">${x.meta.filter((v) => v && v !== "–").map(esc).join(" · ")}</div>` : ""}</div></a>`;
   }).join("");
-  return `<div id="homefeed"><div class="section-h"><h2>Latest from your agents</h2><span class="tiny faint"><span class="dot ok" style="display:inline-block;margin-right:5px"></span>live</span></div>
-    <div class="chips scroll-x" style="margin-bottom:6px">${cats.map(([k, l]) => `<button type="button" class="tag hf ${homeFilter === k ? "on" : ""}" data-hf="${k}">${l}</button>`).join("")}</div>
+  return `<div id="homefeed"><div class="section-h"><h2>Results</h2><span class="tiny faint">what your agents finished for you</span></div>
+    <div class="chips scroll-x" style="margin-bottom:6px">${kinds.map(([k, l]) => `<button type="button" class="tag hf ${homeFilter === k ? "on" : ""}" data-hf="${k}">${l}</button>`).join("")}</div>
     ${rows || `<div class="card empty small">Nothing here yet. A result shows up the moment an agent finishes.</div>`}
-    ${mine.length > items.length ? `<button type="button" class="btn sm ghost" id="hfmore" style="margin-top:8px">Show older (${mine.length - items.length} more)</button>` : ""}</div>`;
+    ${mine.length > items.length ? `<button type="button" class="btn sm ghost" id="hfmore" style="margin-top:8px">Show older (${mine.length - items.length} more)</button>` : ""}
+    <div class="tiny faint" style="margin-top:10px">The stack's own work is not here: its health under Now, deploys under <a href="#/build">Code</a>, the agents' activity under <a href="#/swarm?tab=activity">Agents</a>.</div></div>`;
 }
 
 // the first lines of a result under its headline, fetched once per file
@@ -1150,14 +1205,30 @@ function bindHome() {
 }
 
 // a live update on Home: only the parts whose content changed are replaced (no full redraw, no twitch)
-function homeUpdate() {
+// APP-38: Home never moves under your finger. While you are scrolled down or touching it, its updates wait behind a
+// "New on Home" button at the top; at the top of the page it updates in place (the owner's review of 2 Nov: a new
+// card came in above the one tapped and the tap opened another)
+let homeTouch = 0;
+window.addEventListener("touchstart", () => { homeTouch = Date.now(); }, { passive: true });
+window.addEventListener("scroll", () => {                 // back at the top: what waited comes in
+  if (window.scrollY < 60 && $("#homenew")) { $("#homenew").remove(); if (route.name === "home") homeUpdate(true); }
+}, { passive: true });
+function homeUpdate(force) {
   const parts = [["homehead", homeHeadHtml], ["homeneeds", needsHtml], ["homenow", nowHtml], ["homedev", devicesHtml], ["homestats", homeStatsHtml], ["homefeed", feedHtml]];
+  const hold = !force && (window.scrollY > 120 || Date.now() - homeTouch < 2500);
+  let held = false;
   for (const [id, fn] of parts) {
     const el = document.getElementById(id), html = fn();
     if (!el || homeLast[id] === html) continue;
+    if (hold) { held = true; continue; }
     el.outerHTML = html;
     homeLast[id] = html;
   }
+  const pill = $("#homenew");
+  if (held && !pill) {
+    document.body.insertAdjacentHTML("beforeend", `<button type="button" id="homenew" class="btn sm primary homenew">${ic.next}New on Home</button>`);
+    $("#homenew").onclick = () => { $("#homenew").remove(); window.scrollTo(0, 0); homeUpdate(true); };
+  } else if (!held && pill && !hold) pill.remove();
   bindHome();
 }
 
@@ -1209,11 +1280,11 @@ const CREW_PRESETS = [["every", "5min", "every 5 minutes"], ["every", "10min", "
 // ("Yours") or a crew job that keeps it in shape ("Housekeeping"). "Mission" stays the word for the job; health is a
 // colour on the card, not a second list. #/mission/<slug> and #/crew/<id> both open the same agent page.
 let agentFilter = "all", atab = "now", showArchived = false;
-const AGENT_FILTERS = [["all", "All"], ["yours", "Yours"], ["housekeeping", "Housekeeping"], ["live", "Live"]];
+const AGENT_FILTERS = [["all", "All"], ["yours", "Yours"], ["housekeeping", "Housekeeping"], ["live", "Live"], ["problems", "With problems"]];
 const AGENT_TABS = [["now", "Now"], ["history", "History"], ["tasks", "Tasks"], ["memory", "Memory"], ["payoff", "Results"], ["settings", "Settings"]];
 const OLD_TAB = { overview: "now", outputs: "history", runs: "history" };            // links from before the agent page
 const CREW_IC = { memory: "brain", skills: "tune", code: "code", ops: "pulse" };
-const IN_FILTER = { all: () => true, yours: (a) => a.group === "yours", housekeeping: (a) => a.group === "housekeeping", live: (a) => a.live || a.queued };
+const IN_FILTER = { all: () => true, yours: (a) => a.group === "yours", housekeeping: (a) => a.group === "housekeeping", live: (a) => a.live || a.queued, problems: (a) => agentHealth(a) === "bad" };
 
 function missionAgent(m) {
   const h = (S.health?.items || []).find((i) => i.kind === "mission" && i.slug === m.slug);
@@ -1287,12 +1358,12 @@ function vMissions() {                     // the Agents tab (the route keeps it
   const need = cur.filter((a) => a.needs.length).length, live = cur.filter((a) => a.live).length, bad = cur.filter((a) => agentHealth(a) === "bad").length;
   const keys = issueKeys(cur);
   view.innerHTML = `<div class="hero"><div><h1>Agents</h1>
-      <p class="agtop">${need ? `<b class="warn-t">${need} need${need > 1 ? "" : "s"} you</b>` : "Nothing needs you"}${live ? ` · <span class="run-t">${live} live</span>` : ""}${bad ? ` · <span class="err-t">${bad} with problems</span>` : ""} · ${cur.length} agents${keys.length ? ` · <button class="linkbtn" id="ackall">acknowledge all ${keys.length}</button>` : ""}</p></div></div>
+      <p class="agtop">${need ? `<b class="warn-t">${need} need${need > 1 ? "" : "s"} you</b>` : "Nothing needs you"}${live ? ` · <span class="run-t">${live} live</span>` : ""}${bad ? ` · <a class="err-t" href="#/missions?f=problems">${bad} with problems</a>` : ""} · ${cur.length} agents${keys.length ? ` · <button class="linkbtn" id="ackall">acknowledge all ${keys.length}</button>` : ""}</p></div></div>
     ${agentViews("list")}
     <div id="ovnow"></div>
     <div id="ovmap"><div class="card pad-l section"><div class="skeleton" style="height:320px"></div></div></div>
     <div class="section-h section wrap"><h2>Missions and housekeeping</h2><a class="btn sm" href="#/new">${ic.plus}New mission</a></div>
-    <div class="agf">${AGENT_FILTERS.map(([k, l]) => `<button class="fchip ${agentFilter === k ? "on" : ""}" data-af="${k}">${l}<span>${cur.filter(IN_FILTER[k]).length}</span></button>`).join("")}</div>
+    <div class="agf">${AGENT_FILTERS.filter(([k]) => k !== "problems" || bad || agentFilter === k).map(([k, l]) => `<button class="fchip ${agentFilter === k ? "on" : ""}" data-af="${k}">${l}<span>${cur.filter(IN_FILTER[k]).length}</span></button>`).join("")}</div>
     <div class="aglist">${list.map(agentCard).join("") || emptyState(`${ic.target}<div>${agentFilter === "live" ? "Nothing is running right now: an agent shows here while it works." : "No agents here."}</div>`, `<a class="btn sm" href="#/missions?f=all">All agents</a><a class="btn sm ghost" href="#/new">${ic.plus}New mission</a>`, "card")}</div>
     ${arch.length && agentFilter !== "housekeeping" && agentFilter !== "live" ? `<details class="agarch" ${showArchived ? "open" : ""}><summary class="small muted">Archived missions · ${arch.length}</summary><div class="aglist">${arch.map(agentCard).join("")}</div></details>` : ""}
     <div class="section">${explain("missions-list", `Yours: the missions you gave the stack. Housekeeping: the crew that keeps it in shape; it proposes, nothing changes without your tap. <a href="#/swarm?tab=agents">The team behind them</a> · ${how("missions")}`)}</div>`;
@@ -4035,6 +4106,7 @@ checkVersion();
 
 parseRoute();
 render(true);
+countView();
 connect();
 loadGuide().then(() => { chrome(); const l = $("#learn"); if (l) { l.innerHTML = learnHtml(); bindLearn(); } });   // chapters: each page's "How this page works", Stack page
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => {});

@@ -108,3 +108,19 @@ def test_live_map_boxes_point_at_real_sections():
         f = next((MC / "guide").glob(f"[0-9][0-9]-{chapter}.md"), None)
         assert f, f"map box {name}: no chapter {chapter}"
         assert re.search(rf"^## {re.escape(section)}$", f.read_text(), re.M), f"map box {name}: no section '{section}' in {f.name}"
+
+
+def test_every_screen_s_how_this_page_works_opens_the_chapter_about_it():
+    """The owner's review of 2 Nov: the Agents tab opened the Missions chapter and a task page the Stack page. Every
+    screen a person reaches is in some chapter's views; one with none opens the guide's contents."""
+    js = (Path(__file__).resolve().parent.parent / "images/mission-control/web/static/app.js").read_text()
+    screens = {k.split(":")[0].strip() for k in re.search(r"const fn = \{(.*?)\}\[route\.name\]", js, re.S)[1].split(",")}
+    covered = {v for _, meta, _ in ALL for v in meta["views"]}
+    assert screens - covered <= {"guide", "share"}, f"screens without a chapter: {screens - covered - {'guide', 'share'}}"
+    first = {}
+    for _, meta, _ in ALL:
+        for v in meta["views"]:
+            first.setdefault(v, meta["title"])
+    assert first["missions"].startswith("The swarm") and first["task"].startswith("Tasks") and first["mission"].startswith("Missions")
+    gjs = (Path(__file__).resolve().parent.parent / "images/mission-control/web/static/guide.js").read_text()
+    assert ': "#/guide";' in gjs and '"#/system";' not in re.search(r"function helpHref\(\).*?\n\}", gjs, re.S)[0]

@@ -1,13 +1,25 @@
-// APP-35: a task's own page (#/task/<id>), like an agent's: what it is and where it stands, its answer, who worked on
-// it and what each of them did, what they read from and kept in memory, and every run. The runner writes the task's
-// data (public/tasks/<id>.json, ops/tasks.py publish); the run record adds the agents, their actions and memory use.
+// APP-35, APP-36: a task's own page (#/task/<id>), like an agent's. It opens on the result and then tells how it came
+// about, most important first: the answer, who worked on it (a map of the agents, their part and their hand-offs), whether
+// it met its definition of done, what went wrong, what it read (its sources), what it read from and kept in memory, what
+// it made, what it cost and how long it took, and the plan. Each part opens its own tab for the whole of it.
+// The runner writes the task's data (public/tasks/<id>.json, ops/tasks.py publish); the run record adds the agents, their
+// actions, hand-offs and memory use (runrecord.task_activity); the run's swarm map adds its sources and what it made
+// (server.task_prov). A recurring task shows one run at a time: its newest, or the one you pick.
 // Loaded before app.js: it uses app.js's helpers only when a page is drawn.
-let taskData = {}, ttab = "overview", taskTimer = null, taskAgent = "";
-const TTABS = [["overview", "Overview"], ["timeline", "Timeline"], ["agents", "Agents"], ["memory", "Memory"], ["runs", "Runs"]];
+let taskData = {}, ttab = "overview", taskTimer = null, taskAgent = "", taskOcc = {}, taskSrc = "all", taskUnfold = false;
+const TTABS = [["overview", "Overview"], ["agents", "Agents"], ["timeline", "Timeline"], ["sources", "Sources"], ["memory", "Memory"], ["runs", "Runs"]];
 const TPILL = { done: "ok", failed: "failed", cancelled: "archived", running: "running", scheduled: "active", needs_answer: "paused",
   waiting_approval: "paused", waiting_owner: "paused", intake: "running", planning: "running", after: "queued" };
 const TACT = { run: "started", call: "used", say: "said", error: "error", stage: "stage", propose: "proposed", read: "read", wait: "waits", end: "ended" };
 const LIVE_T = ["intake", "planning", "running", "needs_answer", "waiting_approval", "waiting_owner", "after"];
+// an agent's part in the task, as the map colours it (validated: blue, orange, aqua; dark and light, all pairs)
+const TPART = { coord: ["var(--tp-coord)", "planned it or ran the plan"], step: ["var(--tp-step)", "did a step"], call: ["var(--tp-call)", "called in by another agent"] };
+const TVERB = { started: "gave a step to", called: "called in", handed: "handed its results to", planned: "made the plan for", checked: "had the plan checked by" };
+const MSTORE = { wiki: ["Wikis", "the topic's, the missions' and your vault's wiki pages"], notes: ["Your notes", "the vault: its searches and files"],
+  journal: ["Journals", "the agents' work journals"], "long-term": ["Long-term memory", "Hindsight's facts about you and the stack"],
+  board: ["The swarm's board", "the ledger: the ideas, findings and messages agents share"], lessons: ["Lessons", "the agents' notes to themselves"] };
+const TSKIND = { page: "web page", item: "news item", job: "job ad", note: "note", memory: "memory", search: "search" };
+const TMADE = { result: "The answer", report: "Reports", wiki: "Wiki pages", file: "Files written", delivery: "Delivered", finding: "Step findings" };
 
 function taskAgentHref(a) {                       // a run's agent -> its page in the app, where it has one
   const s = String(a || "");
@@ -34,19 +46,23 @@ function taskRow(e, what) {
   return `<a class="tact k-${esc(e.kind)}" href="#/live/${encodeURIComponent(e.run)}"><div class="tact-h"><span class="tiny faint mono">${esc(clock(new Date(e.ts * 1000).toISOString(), true))}</span>
     <span class="tag">${esc(taskWho(e.agent))}</span><b>${esc(what || (title.toLowerCase() === label ? label : `${label} ${title}`))}</b></div>${det ? `<div class="tact-d tiny faint wrap">${esc(det)}</div>` : ""}</a>`;
 }
+const taskMemHref = (p) => (/^[\w.-]+(\/[\w.-]+)*\.md$/.test(p || "") ? `#/read?path=${encodeURIComponent(p)}` : "");
+const taskSrcHref = (s) => (/^https?:/.test(s.uri) ? s.uri : s.uri.startsWith("vault:") ? taskMemHref(s.uri.slice(6)) : "");
+const taskLink = (href, html) => (!href ? html : /^https?:/.test(href) ? `<a href="${esc(href)}" target="_blank" rel="noopener noreferrer">${html}</a>` : `<a href="${esc(href)}">${html}</a>`);
 
 async function vTask() {
   clearTimeout(taskTimer);
   const id = +route.args[0];
   if (!id) { view.innerHTML = `<a class="back" href="#/tasks">${ic.back}Tasks</a><div class="card empty">No task named. <a href="#/tasks">All tasks</a></div>`; return; }
   if (route.q.get("tab")) { ttab = TTABS.some(([k]) => k === route.q.get("tab")) ? route.q.get("tab") : "overview"; route.q.delete("tab"); }
+  if (+route.q.get("o")) { taskOcc[id] = +route.q.get("o"); route.q.delete("o"); }
   if (!taskData[id]) view.innerHTML = `<a class="back" href="#/tasks">${ic.back}Tasks</a><div class="stack"><div class="skeleton" style="height:120px"></div><div class="skeleton" style="height:320px"></div></div>`;
-  const d = await api(`/api/task/${id}`).catch((e) => ({ error: e.message }));
+  const d = await api(`/api/task/${id}${taskOcc[id] ? `?o=${taskOcc[id]}` : ""}`).catch((e) => ({ error: e.message }));
   if (route.name !== "task" || +route.args[0] !== id) return;
   if (d.error && !d.id) {                                 // the API's error; a failed task has an error of its own and is drawn
     view.innerHTML = `<a class="back" href="#/tasks">${ic.back}Tasks</a><div class="card empty">${esc(d.error)} <a href="#/tasks">All tasks</a></div>`; return;
   }
-  const sig = JSON.stringify([d.status, d.updated, d.activity?.actions_total, (d.runs || []).map((r) => [r.status, r.verdict]), ttab, taskAgent]);
+  const sig = JSON.stringify([d.status, d.updated, d.occ, d.activity?.actions_total, d.prov?.numbers, (d.runs || []).map((r) => [r.status, r.verdict]), ttab, taskAgent, taskSrc]);
   if (taskData[id]?.sig !== sig || !$("#taskpage")) {
     taskData[id] = { ...d, sig };
     const y = window.scrollY, redraw = !!$("#taskpage");
@@ -57,15 +73,21 @@ async function vTask() {
 }
 
 function taskPage(t) {
-  const a = t.activity || { agents: [], actions: [], memory: { read: [], write: [] }, lanes: [] };
-  const steps = (t.steps || {})[String(t.runs?.[0]?.occ || 1)] || [];
+  const a = t.activity || { agents: [], actions: [], memory: { read: [], write: [] }, lanes: [], edges: [], errors: [] };
+  const run = (t.runs || []).find((r) => r.occ === t.occ) || t.runs?.[0];
+  const steps = (t.steps || {})[String(run?.occ || 1)] || [];
   const done = steps.filter((s) => s.status === "done").length;
-  const occ = t.runs?.[0];
-  const secs = occ?.started ? ((occ.ended ? Date.parse(occ.ended) : Date.now()) - Date.parse(occ.started)) / 1000 : null;
-  const v = t.verdict && (VWORD[t.verdict] || [t.verdict, ""]);
+  const secs = run?.started ? ((run.ended ? Date.parse(run.ended) : Date.now()) - Date.parse(run.started)) / 1000 : null;
+  const verdict = (t.runs || []).length > 1 ? run?.verdict : t.verdict, v = verdict && (VWORD[verdict] || [verdict, ""]);
   const blocked = steps.find((s) => (s.error || "").startsWith("blocked:"));
-  const tabs = TTABS.filter(([k]) => k !== "runs" || (t.runs || []).length > 1);
+  const n = t.prov?.numbers || {};
+  t.numbers = [[nf(a.agents.length), "agents worked on it"], [steps.length ? `${done} of ${steps.length}` : "–", "steps done"],   // the Overview shows them under the answer
+    [secs != null ? dur(secs) : "–", run?.ended ? "from start to end" : run ? "running so far" : "time"], [tok(a.agents.reduce((x, g) => x + g.tokens, 0)), `tokens${n.cost != null ? ` · ${ifPaid(n.cost)}` : t.cost != null && (t.runs || []).length <= 1 ? ` · ${ifPaid(t.cost)}` : ""}`],
+    ...(t.prov ? [[`${nf(n.read || 0)} · ${nf(n.cited || 0)}`, "sources read · cited"]] : []),
+    [`${a.memory.read.length} · ${a.memory.write.length}`, "memory read · kept"], [v ? v[0] : t.status === "done" ? "not judged yet" : "–", "against done when"]];
+  const tabs = TTABS.filter(([k]) => (k !== "runs" || (t.runs || []).length > 1) && (k !== "sources" || t.prov));
   if (!tabs.some(([k]) => k === ttab)) ttab = "overview";
+  const many = (t.runs || []).length > 1;
   view.innerHTML = `<a class="back" href="#/tasks">${ic.back}Tasks</a><div id="taskpage">
   <div class="aghead h-${["failed", "cancelled"].includes(t.status) ? "bad" : t.status === "done" ? "ok" : "warn"}"><div class="agic lg">${ic.target}</div><div class="grow" style="min-width:0">
     <h1 class="agh1">${esc(t.title)}</h1>
@@ -73,26 +95,25 @@ function taskPage(t) {
       <span>#${t.id}${t.kind ? ` · ${esc(TKINDS[t.kind] || t.kind)}` : ""} · ${esc(rhythmText(t.rhythm, t.after))}</span><span>${ic.clock}given ${rel(t.created)}${t.source === "app" ? " by you" : t.source ? ` · from ${esc(t.source)}` : ""}</span></div>
     ${t.goal && t.goal !== t.title ? `<div class="small muted agwhat">${esc(t.goal)}</div>` : ""}
   </div></div>
+  ${many ? `<label class="row small" style="gap:8px;margin-top:12px"><span class="muted">Showing</span><select class="input sm" id="tocc" style="width:auto;max-width:100%">${t.runs.map((r) => `<option value="${r.occ}" ${r.occ === run.occ ? "selected" : ""}>Run ${r.occ} of ${t.runs.length} · ${esc(day(r.started))}${r.verdict ? ` · ${esc((VWORD[r.verdict] || [r.verdict])[0])}` : r.status ? ` · ${esc(r.status)}` : ""}</option>`).join("")}</select></label>` : ""}
   ${blocked ? `<div class="banner" style="margin-top:12px">${ic.alert}<span class="grow wrap"><b>Not done: step ${blocked.idx} (${esc(taskWho(blocked.agent))}) was blocked.</b> ${esc(blocked.error.slice(9))}</span></div>`
     : t.error ? `<div class="banner" style="margin-top:12px">${ic.alert}<span class="grow wrap">${esc(t.error)}</span></div>` : ""}
   ${t.status === "needs_answer" ? `<form class="card pad tans" data-tans="${t.id}" style="margin-top:12px"><b>It asks you</b>${(t.questions || []).map((q, i) => `<label><span>${esc(q)}</span><input class="input" name="a${i}" required></label>`).join("")}<div class="row" style="justify-content:flex-end"><button class="btn sm primary">${ic.check}Answer</button></div></form>` : ""}
-  <div class="tmnums" style="margin-top:14px">${[[nf(a.agents.length), "agents worked on it"], [steps.length ? `${done} of ${steps.length}` : "–", "steps done"],
-    [secs != null ? dur(secs) : "–", occ?.ended ? "from start to end" : "running so far"], [t.tokens ? tok(t.tokens) : tok(a.agents.reduce((n, x) => n + x.tokens, 0)), t.cost != null ? `tokens · ${ifPaid(t.cost)}` : "tokens"],
-    [`${a.memory.read.length} · ${a.memory.write.length}`, "memory read · kept"], [v ? v[0] : t.status === "done" ? "not judged yet" : "–", "against done when"]]
-    .map(([x, l]) => `<div class="card pad tmnum"><b>${esc(x)}</b><span class="tiny faint">${esc(l)}</span></div>`).join("")}</div>
-  <div class="actions">${t.answer ? `<button class="btn primary" data-tgo="answer">${ic.doc}The answer</button>` : ""}
-    ${String(t.source || "").startsWith("trial:") ? `<a class="btn" href="#/trials?t=${encodeURIComponent(t.source.slice(6))}">${ic.target}Trial scoreboard</a>` : ""}
-    ${t.door === "plan" && (t.runs || []).length ? `<a class="btn" href="#/taskmap?t=${t.id}">${ic.wiki}Swarm map</a><a class="btn" href="#/live/${encodeURIComponent(`task:${t.id}`)}">${ic.pulse}Live trace</a>` : ""}
+  <div class="actions">${String(t.source || "").startsWith("trial:") ? `<a class="btn" href="#/trials?t=${encodeURIComponent(t.source.slice(6))}">${ic.target}Trial scoreboard</a>` : ""}
+    ${t.door === "plan" && (t.runs || []).length ? `<a class="btn" href="#/taskmap?t=${t.id}${many ? `&o=${run.occ}` : ""}">${ic.wiki}Swarm map</a><a class="btn" href="#/live/${encodeURIComponent(`task:${t.id}${run && run.occ > 1 ? `.${run.occ}` : ""}`)}">${ic.pulse}Live trace</a>` : ""}
     ${t.door && t.ref && TDOOR[t.door] && t.door !== "plan" ? (([h, l]) => `<a class="btn" href="${h}">${ic.next}${esc(l)}</a>`)(TDOOR[t.door](t.ref)) : ""}
     ${t.status === "waiting_approval" ? `<button class="btn primary" data-tok="${t.id}">${ic.check}Start it</button>` : ""}
     ${["failed", "cancelled"].includes(t.status) && t.door === "plan" ? `<button class="btn" data-tretry="${t.id}">${ic.repeat}Plan it again</button>` : ""}
     ${!["done", "failed", "cancelled"].includes(t.status) && (t.door === "plan" || !t.ref) ? `<button class="btn ghost danger" data-tcancel="${t.id}">${ic.x}Cancel</button>` : ""}</div>
-  <div class="seg agtabs">${tabs.map(([k, l]) => `<button data-tt="${k}" class="${ttab === k ? "on" : ""}">${l}${k === "agents" ? ` · ${a.agents.length}` : k === "memory" ? ` · ${a.memory.read.length + a.memory.write.length}` : k === "runs" ? ` · ${t.runs.length}` : ""}</button>`).join("")}</div>
+  <div class="seg agtabs">${tabs.map(([k, l]) => `<button data-tt="${k}" class="${ttab === k ? "on" : ""}">${l}${k === "agents" ? ` · ${a.agents.length}` : k === "memory" ? ` · ${a.memory.read.length + a.memory.write.length}` : k === "sources" ? ` · ${(t.prov?.sources || []).filter((s) => s.kind !== "search").length}` : k === "runs" ? ` · ${t.runs.length}` : ""}</button>`).join("")}</div>
   <div id="ttbody" class="section" style="margin-top:14px"></div></div>`;
+  const go = (k) => { ttab = k; history.replaceState(history.state, "", `#/task/${t.id}?tab=${ttab}`); taskPage(t); window.scrollTo(0, $("#ttbody").offsetTop - 80); };
   $$("[data-tt]").forEach((b) => (b.onclick = () => { ttab = b.dataset.tt; history.replaceState(history.state, "", `#/task/${t.id}?tab=${ttab}`); taskPage(t); }));
-  $$("[data-tgo]").forEach((b) => (b.onclick = () => { ttab = "overview"; taskPage(t); $("#tanswer")?.scrollIntoView({ block: "start" }); }));
+  if ($("#tocc")) $("#tocc").onchange = (e) => { taskOcc[t.id] = +e.target.value; vTask(); };
   if (typeof bindTasks === "function") bindTasks();
-  ({ overview: taskOverview, timeline: taskTimeline, agents: taskAgents, memory: taskMemory, runs: taskRuns })[ttab]($("#ttbody"), t, a, steps);
+  const body = $("#ttbody");
+  ({ overview: taskOverview, timeline: taskTimeline, agents: taskAgents, sources: taskSources, memory: taskMemory, runs: taskRuns })[ttab](body, t, a, steps);
+  $$("[data-tab-go]", body).forEach((b) => (b.onclick = (e) => { e.preventDefault(); go(b.dataset.tabGo); }));
 }
 
 function taskStepList(steps) {
@@ -103,19 +124,193 @@ function taskStepList(steps) {
     <a class="tiny" href="#/live/${encodeURIComponent(`task:${s.task}${(s.occ || 1) > 1 ? "." + s.occ : ""}:step:${s.idx}`)}">how it ran</a></li>`; }).join("")}</ol>`;
 }
 
+// ---------- who worked on it: the agents as bubbles, their part as colour, their own tokens as size ----------
+function taskPart(g) {
+  const r = g.roles || [];
+  if (r.some((x) => x.startsWith("step") || x === "did it")) return "step";
+  if (r.some((x) => ["planned it", "ran the plan", "checked the plan between waves"].includes(x))) return "coord";
+  return "call";
+}
+function taskLinks(a, steps) {                    // who worked with whom: the run record's starts and calls, and the plan's hand-offs
+  const by = {}, ids = new Set(a.agents.map((g) => g.agent));
+  const put = (from, to, kind, n, what) => {
+    if (!from || !to || from === to || !ids.has(from) || !ids.has(to)) return;
+    const e = (by[`${from}>${to}>${kind}`] = by[`${from}>${to}>${kind}`] || { from, to, kind, n: 0, what: [] });
+    e.n += n;
+    if (what) e.what.push(what);
+  };
+  for (const e of a.edges || []) put(e.from, e.to, e.kind, e.n);
+  const ag = Object.fromEntries(steps.map((s) => [s.idx, s]));
+  for (const s of steps) for (const i of s.after || []) if (ag[i]) put(ag[i].agent, s.agent, "handed", 1, `step ${i} (${ag[i].title}) → step ${s.idx} (${s.title})`);
+  return Object.values(by);
+}
+const taskLinkWords = (l) => `${taskWho(l.from)} ${TVERB[l.kind] || l.kind} ${taskWho(l.to)}${l.n > 1 ? ` · ${l.n} times` : ""}`;
+
+function taskAgentCard(g, t, a) {
+  const h = taskAgentHref(g.agent), b = t.prov?.by_agent?.[g.agent], part = taskPart(g);
+  const [r, w] = ["read", "write"].map((k) => a.memory[k].filter((m) => m.agent === g.agent).length);
+  const src = (t.prov?.sources || []).filter((s) => s.kind !== "search" && s.agents.includes(g.agent)).length;
+  const tools = Object.entries(g.tools || {});
+  return `<div class="card pad"><div class="row between wrap" style="gap:8px"><b class="row" style="gap:6px"><i class="tsw" style="background:${TPART[part][0]}"></i>${h ? `<a href="${h}">${esc(taskWho(g.agent))}</a>` : esc(taskWho(g.agent))}</b>
+      <span class="tiny faint">${esc(Object.entries(g.states).map(([k, n]) => `${n} ${k}`).join(" · "))}</span></div>
+    <div class="small">${esc(g.roles.join(" · ") || "worked on it")}</div>
+    <div class="tiny faint" style="margin-top:4px">${[`${nf(g.runs)} run${g.runs === 1 ? "" : "s"}`, `${nf(g.calls)} tool calls`, `${nf(g.model_calls)} model calls`, `${tok(g.tokens)} tokens`,
+      b?.cost ? ifPaid(b.cost) : "", `${clock(new Date(g.first * 1000).toISOString())}–${clock(new Date(g.last * 1000).toISOString())} · ${dur(g.last - g.first)}`].filter(Boolean).map(esc).join(" · ")}</div>
+    ${b?.models?.length ? `<div class="tiny faint">${esc(b.models.join(", "))}</div>` : ""}
+    <div class="tiny faint">memory: read ${r} · kept ${w}${t.prov ? ` · sources read ${src}` : ""}</div>
+    ${tools.length ? `<div class="chips" style="margin-top:6px">${tools.map(([k, n]) => `<span class="tag">${esc(k)} ${n}</span>`).join("")}</div>` : ""}
+    <div class="row wrap" style="gap:6px;margin-top:8px"><button class="btn sm ghost" data-tsee="${esc(g.agent)}">${ic.pulse}Its actions here</button>${h ? `<a class="btn sm ghost" href="${h}">${ic.next}Its page</a>` : ""}</div></div>`;
+}
+function taskBindSee(box, t) {
+  $$("[data-tsee]", box).forEach((b) => (b.onclick = () => { taskAgent = b.dataset.tsee; ttab = "timeline"; history.replaceState(history.state, "", `#/task/${t.id}?tab=timeline`); taskPage(t); }));
+}
+
+function taskBubbles(box, t, a, steps, H) {
+  if (!a.agents.length) { box.innerHTML = `<div class="small muted">No agent has worked on it yet${LIVE_T.includes(t.status) ? ": they show here as they start" : ""}.</div>`; return; }
+  const links = taskLinks(a, steps);
+  const words = `<details class="swmapwords" style="margin-top:10px"><summary class="small"><b>Who did what, in words</b> <span class="muted">${a.agents.length} agents · ${links.length} connections</span></summary>
+    <div class="list" style="margin-top:6px">${a.agents.map((g) => `<div><div class="grow"><div class="ttl row" style="gap:6px"><i class="tsw" style="background:${TPART[taskPart(g)][0]}"></i>${esc(taskWho(g.agent))}</div><div class="sub">${esc(g.roles.join(" · ") || "worked on it")} · ${tok(g.tokens)} tokens · ${nf(g.calls)} tool calls</div></div></div>`).join("")}</div>
+    ${links.length ? `<ul class="small" style="margin-top:8px">${links.map((l) => `<li>${esc(taskLinkWords(l))}${l.what.length ? `<div class="tiny faint">${l.what.map(esc).join("<br>")}</div>` : ""}</li>`).join("")}</ul>` : `<div class="small muted" style="margin-top:6px">No agent started, called in or handed results to another.</div>`}</details>`;
+  box.innerHTML = `<div class="tbub" style="height:${H}px"></div><div class="tiny faint" style="margin-top:4px">${CHART_HINT} or a line</div>
+    <div class="tkey tiny faint">${Object.values(TPART).map(([c, l]) => `<span><i class="tsw" style="background:${c}"></i>${l}</span>`).join("")}
+      <span><i class="tline" style="border-color:var(--accent)"></i>handed its results on</span><span><i class="tline"></i>called in</span><span><i class="tline dash"></i>gave a step, planned, checked</span>
+      <span>a bubble's size: the tokens of its own model calls</span></div><div class="tbsel"></div>${words}`;
+  const el = $(".tbub", box), sel = $(".tbsel", box);
+  if (!window.d3) { el.innerHTML = `<div class="small muted pad">The chart library did not load: the agents are listed in words below.</div>`; return; }
+  const W = el.clientWidth || 340, max = Math.max(1, ...a.agents.map((g) => g.tokens));
+  const nodes = a.agents.map((g) => ({ id: g.agent, g, r: 9 + 22 * Math.sqrt(g.tokens / max), part: taskPart(g) }));
+  const L = links.map((l) => ({ ...l, source: l.from, target: l.to }));
+  const sim = d3.forceSimulation(nodes).force("link", d3.forceLink(L).id((d) => d.id).distance((l) => l.source.r + l.target.r + 52).strength(0.5))
+    .force("charge", d3.forceManyBody().strength(-340)).force("x", d3.forceX(W / 2).strength(0.06)).force("y", d3.forceY(H / 2).strength(0.1))
+    .force("collide", d3.forceCollide((d) => d.r + 26)).stop();
+  for (let i = 0; i < 400; i++) sim.tick();                // laid out once: nothing drifts under a finger
+  const svg = d3.select(el).append("svg").attr("width", W).attr("height", H), root = svg.append("g");
+  const look = (l) => (l.kind === "handed" ? ["var(--accent)", null] : l.kind === "called" ? ["var(--muted)", null] : ["var(--border-2)", "5 5"]);
+  const end = (l) => { const dx = l.target.x - l.source.x, dy = l.target.y - l.source.y, d = Math.hypot(dx, dy) || 1;
+    return { x: l.target.x - (dx / d) * (l.target.r + 5), y: l.target.y - (dy / d) * (l.target.r + 5), a: (Math.atan2(dy, dx) * 180) / Math.PI }; };
+  root.append("g").selectAll("line").data(L).join("line").attr("x1", (l) => l.source.x).attr("y1", (l) => l.source.y).attr("x2", (l) => end(l).x).attr("y2", (l) => end(l).y)
+    .attr("stroke", (l) => look(l)[0]).attr("stroke-dasharray", (l) => look(l)[1]).attr("stroke-width", (l) => Math.min(6, 1.5 + Math.log2(l.n))).attr("stroke-linecap", "round").attr("vector-effect", "non-scaling-stroke");
+  root.append("g").selectAll("path").data(L).join("path").attr("d", "M-7,-4.5 L1,0 L-7,4.5 Z").attr("fill", (l) => look(l)[0])
+    .attr("transform", (l) => { const e = end(l); return `translate(${e.x},${e.y}) rotate(${e.a})`; }).style("pointer-events", "none");
+  const showLink = (l) => {
+    sel.innerHTML = `<div class="card pad"><b>${esc(taskLinkWords(l))}</b>${l.what.length ? `<ul class="tiny" style="margin:6px 0 0">${l.what.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}
+      <div class="row wrap" style="gap:6px;margin-top:8px">${[l.from, l.to].map((x) => `<button class="btn sm ghost" data-tsee="${esc(x)}">${ic.pulse}${esc(taskWho(x))}'s actions</button>`).join("")}</div></div>`;
+    taskBindSee(sel, t);
+  };
+  root.append("g").selectAll("line").data(L).join("line").attr("x1", (l) => l.source.x).attr("y1", (l) => l.source.y).attr("x2", (l) => l.target.x).attr("y2", (l) => l.target.y)
+    .attr("stroke", "transparent").attr("stroke-width", 18).attr("vector-effect", "non-scaling-stroke").style("cursor", "pointer")
+    .on("click", (_, l) => showLink(l)).append("title").text(taskLinkWords);
+  const node = root.append("g").selectAll("g").data(nodes).join("g").attr("transform", (d) => `translate(${d.x},${d.y})`).style("cursor", "pointer")
+    .on("click", (_, d) => { sel.innerHTML = taskAgentCard(d.g, t, a); taskBindSee(sel, t); });
+  node.append("title").text((d) => `${taskWho(d.id)}: ${d.g.roles.join(", ") || "worked on it"} · ${tok(d.g.tokens)} tokens`);
+  node.filter((d) => d.g.states.failed || d.g.states.stalled || d.g.states.running).append("circle").attr("r", (d) => d.r + 4).attr("fill", "none")
+    .attr("stroke", (d) => (d.g.states.failed || d.g.states.stalled ? "var(--err)" : "var(--run)")).attr("stroke-width", 2.5).attr("vector-effect", "non-scaling-stroke")
+    .attr("class", (d) => (d.g.states.running ? "swlive" : ""));
+  node.append("circle").attr("r", (d) => d.r).attr("fill", (d) => TPART[d.part][0]).attr("stroke", "var(--surface-2)").attr("stroke-width", 2).attr("vector-effect", "non-scaling-stroke");
+  node.append("text").attr("class", "tblbl").attr("y", (d) => d.r + 13).text((d) => taskWho(d.id));
+  node.append("text").attr("class", "tblbl tbsub").attr("y", (d) => d.r + 25).text((d) => (d.g.tokens ? `${tok(d.g.tokens)} tokens` : d.g.roles[0] || ""));
+  const pts = nodes.flatMap((d) => [{ x: d.x - d.r - 34, y: d.y - d.r }, { x: d.x + d.r + 34, y: d.y + d.r + 28 }]);
+  const fit = (anim) => (anim ? svg.transition().duration(250) : svg).call(zoom.transform, chartFit(pts, W, H, 8, 1.3, 0));
+  const zoom = chartZoom(el, svg, root, { fit });
+  fit(false);
+}
+
+// ---------- the overview: the result first, then how it came about ----------
+function taskProblems(t, a, steps) {             // what went wrong, each with where to look
+  const out = [], j = t.judgement;
+  for (const s of steps.filter((x) => x.status === "failed" && !(x.error || "").startsWith("blocked:")))
+    out.push([`Step ${s.idx} (${taskWho(s.agent)}) failed${s.error ? `: ${s.error}` : ""}`, `#/live/${encodeURIComponent(`task:${t.id}${(s.occ || 1) > 1 ? "." + s.occ : ""}:step:${s.idx}`)}`]);
+  for (const s of steps.filter((x) => x.attempts > 1)) out.push([`Step ${s.idx} (${taskWho(s.agent)}) took ${s.attempts} attempts`, ""]);
+  for (const l of (a.lanes || []).filter((x) => ["failed", "stalled"].includes(x.state)))
+    out.push([`${taskWho(l.agent)}'s run (${l.role}) ${l.state === "stalled" ? "went silent and was closed" : "failed"}`, `#/live/${encodeURIComponent(l.run)}`]);
+  if (a.errors_total) out.push([`${nf(a.errors_total)} error${a.errors_total === 1 ? "" : "s"} in its agents' runs: ${[...new Set(a.errors.map((e) => e.title))].join("; ")}`, ""]);
+  const unmet = (j?.points || []).filter((p) => !p.met);
+  if (unmet.length) out.push([`${unmet.length} of ${j.points.length} points of done when not met`, ""]);
+  return out;
+}
+function taskMem(t, a) {                         // every memory use, by store: [{store, read: [...], kept: [...]}], each grouped by what
+  const g = {};
+  const add = (store, op, target, agent, ts, run, note) => {
+    const s = (g[store] = g[store] || { read: {}, kept: {} }), k = target || "(not named)";
+    const x = (s[op][k] = s[op][k] || { target: k, n: 0, agents: new Set(), last: 0, run: "", note: "" });
+    x.n++; x.agents.add(agent);
+    if (ts >= x.last) { x.last = ts; x.run = run || x.run; }
+    if (note) x.note = note;
+  };
+  for (const m of a.memory.read) add(m.store || "notes", "read", m.target, m.agent, m.ts, m.run);
+  for (const m of a.memory.write) add(m.store || "notes", "kept", m.target, m.agent, m.ts, m.run);
+  if (t.wiki?.root) add("wiki", "read", t.wiki.page ? `${t.wiki.root}/${t.wiki.page}.md` : t.wiki.root, "conductor", 0, "", "given to its research steps as it stood");
+  for (const x of (t.prov?.made || []).filter((y) => y.kind === "wiki")) add("wiki", "kept", x.uri.replace(/^vault:/, ""), x.agents[0] || "conductor", 0, "", "updated from its findings");
+  if (t.result && t.answer) add("notes", "kept", t.result, "conductor", 0, "", "the answer, where search finds it");
+  return Object.keys(MSTORE).filter((k) => g[k]).map((k) => ({ store: k, read: Object.values(g[k].read), kept: Object.values(g[k].kept) }));
+}
+function taskBars(rows, fmt) {                    // [label, value, extra] as horizontal bars, longest first
+  const max = Math.max(1, ...rows.map((r) => r[1]));
+  return `<div class="tbars">${rows.map(([l, x, extra]) => `<div class="tbar"><span class="wrap">${l}</span><span class="tr-b"><span class="tr" style="width:${Math.max(1, (100 * x) / max).toFixed(1)}%"></span></span><span class="tv">${esc(fmt(x))}${extra ? ` · ${esc(extra)}` : ""}</span></div>`).join("")}</div>`;
+}
+const taskSites = (src) => Object.entries(src.filter((s) => s.kind !== "search").reduce((o, s) => ((o[s.site || "?"] = (o[s.site || "?"] || 0) + 1), o), {})).sort((x, y) => y[1] - x[1]);
+
 function taskOverview(box, t, a, steps) {
-  const j = t.judgement;
-  box.innerHTML = `${t.text && t.text !== t.goal ? `<p class="faint small">You wrote: “${esc(t.text)}”</p>` : ""}
-    ${t.answer ? `<div class="card pad-l section" id="tanswer"><div class="row between wrap" style="gap:8px"><h2>The answer</h2><a class="btn sm ghost" href="#/read?path=${encodeURIComponent(t.result)}">${ic.doc}Open as a page</a></div><div class="md" style="margin-top:8px">${md(t.answer.replace(/^---[\s\S]*?---\s*/, ""))}</div></div>`
-      : `<div class="card pad small muted section">${LIVE_T.includes(t.status) ? "No answer yet: it comes when the last step is done." : t.status === "failed" ? "No answer: the task did not finish. The steps below say why." : "This task has no written answer."}</div>`}
+  const j = t.judgement, n = t.prov?.numbers || {}, mem = taskMem(t, a), probs = taskProblems(t, a, steps), links = taskLinks(a, steps);
+  const src = t.prov?.sources || [], sites = taskSites(src), made = t.prov?.made || [];
+  const words = (s) => (s.match(/\S+/g) || []).length;
+  const body = (t.answer || "").replace(/^---[\s\S]*?---\s*/, "");
+  const SITES = 6;                                 // cap: preview (the Sources tab lists every site and every source)
+  box.innerHTML = `${t.answer ? `<div class="card pad-l" id="tanswer"><div class="row between wrap" style="gap:8px"><h2>The answer${(t.runs || []).length > 1 ? ` · run ${t.occ}` : ""}</h2><a class="btn sm ghost" href="#/read?path=${encodeURIComponent(t.result)}">${ic.doc}Open as a page</a></div>
+        <div class="tfold${taskUnfold ? " open" : ""}" id="tfold"><div class="md" style="margin-top:8px">${md(body)}</div></div>
+        <button class="btn sm ghost" id="tunfold" hidden>${taskUnfold ? "Fold it again" : `Show the whole answer · ${nf(words(body))} words`}</button></div>`
+      : `<div class="card pad small muted">${LIVE_T.includes(t.status) ? "No answer yet: it comes when the last step is done." : t.status === "failed" ? "No answer: the task did not finish. Its problems and steps below say why." : "This task has no written answer."}</div>`}
+    <div class="tmnums section">${(t.numbers || []).map(([x, l]) => `<div class="card pad tmnum"><b>${esc(x)}</b><span class="tiny faint">${esc(l)}</span></div>`).join("")}</div>
+    ${t.text && t.text !== t.goal ? `<p class="faint small wrap section">You wrote: “${esc(t.text)}”</p>` : ""}
+    <div class="card pad-l section"><div class="row between wrap" style="gap:8px"><h2>Who worked on it</h2><a class="tiny" href="#" data-tab-go="agents">Each agent in full</a></div>
+      <div class="tiny faint">${[`${a.agents.length} agent${a.agents.length === 1 ? "" : "s"}`, steps.length && `${steps.length} step${steps.length === 1 ? "" : "s"}`, n.parallel > 1 && `${n.parallel} at once at most`,
+        links.filter((l) => l.kind === "handed").length && `${links.filter((l) => l.kind === "handed").reduce((x, l) => x + l.n, 0)} hand-offs`,
+        links.filter((l) => l.kind === "called").length && `${links.filter((l) => l.kind === "called").reduce((x, l) => x + l.n, 0)} called in`].filter(Boolean).join(" · ")}. Tap a bubble or a line for its part.</div>
+      <div id="tbubs"></div></div>
     <div class="card pad section"><h2>Done when</h2>${j?.points?.length ? `<div class="tiny faint">judged ${esc(t.verdict || "")}${j.run && (t.runs || []).length > 1 ? `, run ${j.run}` : ""}: each point against the answer and what the stack measured</div><ul class="tjudge">${j.points.map((p) => `<li class="${p.met ? "" : "err-t"}">${p.met ? "✓" : "✗"} ${esc(p.point)}<div class="faint">${esc(p.why)}</div></li>`).join("")}</ul>`
       : (t.done || []).length ? `<ul>${t.done.map((d) => `<li>${esc(d)}</li>`).join("")}</ul>` : `<div class="small muted">No definition of done.</div>`}</div>
+    ${probs.length ? `<div class="card pad section"><h2>What went wrong · ${probs.length}</h2><ul class="tjudge">${probs.map(([x, h]) => `<li class="warn-t">${h ? `<a href="${esc(h)}">${esc(x)}</a>` : esc(x)}</li>`).join("")}</ul></div>`
+      : a.agents.length ? `<div class="tiny faint section">No failed step, retry, failed run or error.</div>` : ""}
+    <div class="tgrid3 section">
+      ${t.prov ? `<div class="card pad"><div class="row between" style="gap:8px"><h2>What it read</h2><a class="tiny" href="#" data-tab-go="sources">All sources</a></div>
+        <div class="small">${nf(n.read || 0)} sources read · <b>${nf(n.cited || 0)}</b> cited in the answer · ${nf(src.filter((s) => s.kind === "search").length)} searches</div>
+        ${sites.length ? taskBars(sites.slice(0, SITES /* cap: preview: Sources lists every site */).map(([s, x]) => [esc(s), x]), (x) => `${x} read`) + (sites.length > SITES ? `<div class="tiny faint" style="margin-top:4px">and ${sites.length - SITES} more sites, <a href="#" data-tab-go="sources">all in Sources</a></div>` : "") : `<div class="small muted" style="margin-top:6px">It read no web page, note or job ad.</div>`}</div>` : ""}
+      <div class="card pad"><div class="row between" style="gap:8px"><h2>Memory</h2><a class="tiny" href="#" data-tab-go="memory">What exactly</a></div>
+        ${mem.length ? `<div class="tbars">${mem.map((m) => `<div class="row between small" style="gap:8px"><span>${esc(MSTORE[m.store][0])}</span><span class="muted">read ${m.read.length} · kept ${m.kept.length}</span></div>`).join("")}</div>` : `<div class="small muted">Its agents read nothing from memory and kept nothing there.</div>`}</div>
+      <div class="card pad"><h2>What it made</h2>${taskMadeHtml(t, made, steps)}</div>
+    </div>
+    ${a.agents.some((g) => g.tokens) ? `<div class="card pad section"><h2>Cost and time</h2><div class="tiny faint">${[taskSecs(t) != null && `${dur(taskSecs(t))} from start to end`, n.parallel && `${n.parallel} agent${n.parallel === 1 ? "" : "s"} at once at most`, n.cost != null && ifPaid(n.cost)].filter(Boolean).join(" · ")}</div>
+      ${taskBars(a.agents.filter((g) => g.tokens).sort((x, y) => y.tokens - x.tokens).map((g) => [esc(taskWho(g.agent)), g.tokens, (t.prov?.by_agent?.[g.agent]?.models || []).join(", ")]), (x) => `${tok(x)} tokens`)}
+      <div class="tiny faint" style="margin-top:6px">the tokens of each agent's own model calls; an agent that hands its work to Claude Code shows none, the run it called in carries them</div></div>` : ""}
     ${(t.checkpoints || []).length ? `<div class="card pad section"><h2>The Orchestrator's checkpoints · ${t.checkpoints.length}</h2><div class="tiny faint">after each wave of steps it reads what they found and keeps or changes the rest of the plan</div>
       <ul class="tjudge">${t.checkpoints.map((k) => `<li class="${k.kept ? "" : "warn-t"}">${k.kept ? "Kept the plan" : "Changed the plan"} after step ${esc(k.after.join(", "))} <span class="tiny faint">${rel(k.at)}${(t.runs || []).length > 1 ? ` · run ${k.occ}` : ""}</span>
         ${k.changes.length ? `<ul>${k.changes.map((c) => `<li>${esc(c)}</li>`).join("")}</ul>` : ""}${k.why ? `<div class="faint">${esc(k.why)}</div>` : ""}</li>`).join("")}</ul></div>` : ""}
-    ${steps.length ? `<div class="card pad section"><h2>Plan and steps${(t.runs || []).length > 1 ? ` · run ${t.runs[0].occ}` : ""}</h2>${taskStepList(steps.map((s) => ({ ...s, task: t.id })))}</div>`
+    ${steps.length ? `<div class="card pad section"><h2>Plan and steps${(t.runs || []).length > 1 ? ` · run ${t.occ}` : ""}</h2>${taskStepList(steps.map((s) => ({ ...s, task: t.id })))}</div>`
       : (t.plan || []).length ? `<div class="card pad section"><h2>Plan</h2><ol class="tplan">${t.plan.map((p) => `<li><b>${esc(p.step)}</b> <span class="agent">${esc(p.agent)}</span><div class="faint">${esc(p.why || "")}</div></li>`).join("")}</ol></div>` : ""}
     <div class="tiny faint section">${t.door === "plan" ? `<a href="#/live/${encodeURIComponent(`task-intake:${t.id}-${(t.answers || []).length}`)}">How it was planned</a> · ` : ""}updated ${rel(t.updated)}</div>`;
+  const f = $("#tfold", box), u = $("#tunfold", box);
+  if (f && u) {
+    if (f.scrollHeight > f.clientHeight + 40 || taskUnfold) u.hidden = false; else f.classList.add("open");
+    u.onclick = () => { taskUnfold = !taskUnfold; f.classList.toggle("open", taskUnfold); u.textContent = taskUnfold ? "Fold it again" : `Show the whole answer · ${nf(words(body))} words`; if (!taskUnfold) $("#tanswer").scrollIntoView({ block: "start" }); };
+  }
+  taskBubbles($("#tbubs", box), t, a, steps, Math.max(280, Math.min(380, 80 + 46 * a.agents.length)));
+}
+function taskSecs(t) {
+  const r = (t.runs || []).find((x) => x.occ === t.occ) || t.runs?.[0];
+  return r?.started ? ((r.ended ? Date.parse(r.ended) : Date.now()) - Date.parse(r.started)) / 1000 : null;
+}
+function taskMadeHtml(t, made, steps) {
+  const by = {};
+  for (const x of made) (by[x.kind] = by[x.kind] || []).push(x);
+  if (t.answer && !by.result) by.result = [{ kind: "result", title: "The answer", uri: `vault:${t.result}`, steps: [], agents: [] }];
+  const rows = Object.keys(TMADE).filter((k) => by[k]).map((k) => {
+    const xs = by[k];
+    if (k === "delivery") return `<div class="small"><b>${TMADE[k]}:</b> ${xs.map((x) => esc(x.title)).join(" · ")}</div>`;
+    if (k === "finding") return `<details class="small"><summary><b>${xs.length} step finding${xs.length === 1 ? "" : "s"}</b></summary><ul class="tiny">${xs.map((x) => `<li>${esc(x.title)}</li>`).join("")}</ul></details>`;
+    return `<div class="small"><b>${TMADE[k]}${xs.length > 1 ? ` · ${xs.length}` : ""}</b><ul class="tiny" style="margin:2px 0 0">${xs.map((x) => `<li class="wrap">${taskLink(taskSrcHref(x), esc(x.uri.replace(/^vault:/, "")))}</li>`).join("")}</ul></div>`;
+  });
+  const outs = steps.filter((s) => s.output).length;
+  return rows.length ? `<div class="stack" style="gap:6px;margin-top:6px">${rows.join("")}</div>` : outs ? `<div class="small muted">${outs} step result${outs === 1 ? "" : "s"}, under Plan and steps.</div>` : `<div class="small muted">Nothing yet.</div>`;
 }
 
 function taskTimeline(box, t, a) {
@@ -137,29 +332,47 @@ function taskTimeline(box, t, a) {
   $$("[data-tag]", box).forEach((b) => (b.onclick = () => { taskAgent = b.dataset.tag; taskTimeline(box, t, a); }));
 }
 
-function taskAgents(box, t, a) {
-  box.innerHTML = a.agents.length ? `<div class="stack">${a.agents.map((g) => { const h = taskAgentHref(g.agent); return `<div class="card pad">
-      <div class="row between wrap" style="gap:8px"><b>${h ? `<a href="${h}">${esc(taskWho(g.agent))}</a>` : esc(taskWho(g.agent))}</b><span class="tiny faint">${esc(Object.entries(g.states).map(([k, n]) => `${n} ${k}`).join(" · "))}</span></div>
-      <div class="small">${esc(g.roles.join(" · ") || "worked on it")}</div>
-      <div class="tiny faint" style="margin-top:4px">${nf(g.runs)} run${g.runs === 1 ? "" : "s"} · ${nf(g.calls)} tool calls · ${nf(g.model_calls)} model calls · ${tok(g.tokens)} tokens · ${clock(new Date(g.first * 1000).toISOString())}–${clock(new Date(g.last * 1000).toISOString())}</div>
-      <div class="row wrap" style="gap:6px;margin-top:8px"><button class="btn sm ghost" data-tsee="${esc(g.agent)}">${ic.pulse}Its actions here</button>${h ? `<a class="btn sm ghost" href="${h}">${ic.next}Its page</a>` : ""}</div></div>`; }).join("")}</div>`
+function taskAgents(box, t, a, steps) {
+  box.innerHTML = a.agents.length ? `<div class="card pad-l section"><h2>Who worked with whom</h2><div id="tbubs"></div></div>
+    <div class="stack section">${a.agents.map((g) => taskAgentCard(g, t, a)).join("")}</div>`
     : `<div class="card pad small muted">No agent has worked on it yet.</div>`;
-  $$("[data-tsee]", box).forEach((b) => (b.onclick = () => { taskAgent = b.dataset.tsee; ttab = "timeline"; taskPage(t); }));
+  if (a.agents.length) taskBubbles($("#tbubs", box), t, a, steps, Math.max(340, Math.min(480, 100 + 52 * a.agents.length)));
+  taskBindSee(box, t);
+}
+
+function taskSources(box, t) {
+  const all = t.prov?.sources || [], sites = taskSites(all);
+  const F = [["all", "Everything", () => true], ["cited", "Cited in the answer", (s) => s.cited], ["unused", "Read, not cited", (s) => !s.cited && s.kind !== "search"], ["search", "Searches", (s) => s.kind === "search"]];
+  const xs = all.filter((F.find(([k]) => k === taskSrc) || F[0])[2]).sort((x, y) => y.cited - x.cited || y.steps.length - x.steps.length || String(x.title).localeCompare(String(y.title)));
+  box.innerHTML = `<div class="card pad section"><h2>Its sources · ${nf(all.filter((s) => s.kind !== "search").length)}</h2>
+      <div class="tiny faint">every web page, news item, job ad, note and memory its agents read, and every search they made${(t.runs || []).length > 1 ? `, in run ${t.occ}` : ""}; cited: the answer links to it</div>
+      <div class="chips" style="margin:8px 0">${F.map(([k, l, f]) => `<button class="tag${taskSrc === k ? " on" : ""}" data-tsf="${k}">${l} ${all.filter(f).length}</button>`).join("")}</div>
+      <div class="tacts-list tsrc">${xs.map((s) => { const h = taskSrcHref(s);
+        return `<div class="tact"><div class="tact-h"><span class="tag">${esc(TSKIND[s.kind] || s.kind)}</span>${s.cited ? `<span class="tag ok">cited</span>` : ""}<b>${taskLink(h, esc(s.title || s.uri))}</b></div>
+          <div class="tact-d tiny faint wrap">${[s.site && s.site !== s.kind ? s.site : "", s.steps.length ? `step ${s.steps.join(", ")}` : "", s.agents.map(taskWho).join(", ")].filter(Boolean).map(esc).join(" · ")}</div></div>`; }).join("") || `<div class="small muted">None of this kind.</div>`}</div></div>
+    ${sites.length ? `<div class="card pad section"><h2>By site · ${sites.length}</h2>${taskBars(sites.map(([s, x]) => [esc(s), x]), (x) => `${x} read`)}</div>` : ""}`;
+  $$("[data-tsf]", box).forEach((b) => (b.onclick = () => { taskSrc = b.dataset.tsf; taskSources(box, t); }));
 }
 
 function taskMemory(box, t, a) {
-  const list = (xs, empty) => xs.length ? `<div class="tacts-list">${xs.map((e) => taskRow({ ...e, kind: "call", title: e.tool }, taskTool(e.tool))).join("")}</div>` : `<div class="small muted">${empty}</div>`;
-  box.innerHTML = `<div class="card pad section"><h2>Read from memory · ${a.memory.read.length}</h2><div class="tiny faint" style="margin-bottom:6px">searches of your notes and the wikis, journals, long-term memory and the swarm's ledger</div>${list(a.memory.read, "Its agents read nothing from memory.")}</div>
-    <div class="card pad section"><h2>Kept in memory · ${a.memory.write.length}</h2><div class="tiny faint" style="margin-bottom:6px">journal entries, lessons, ledger entries, wiki and vault writes</div>${list(a.memory.write, "Its agents kept nothing in memory.")}</div>
-    ${t.answer && t.result ? `<div class="tiny faint section">The answer itself is in the vault (${esc(t.result)}), where search finds it.</div>` : ""}`;
+  const mem = taskMem(t, a);
+  const item = (x) => `<li class="wrap">${taskLink(taskMemHref(x.target), esc(x.target))}<div class="tiny faint">${[x.n > 1 ? `${x.n} times` : "", [...x.agents].map(taskWho).join(", "), x.last ? clock(new Date(x.last * 1000).toISOString(), true) : "", x.note].filter(Boolean).map(esc).join(" · ")}</div></li>`;
+  const list = (xs, empty) => (xs.length ? `<ul class="tjudge">${xs.map(item).join("")}</ul>` : `<div class="tiny faint">${empty}</div>`);
+  box.innerHTML = `${mem.length ? mem.map((m) => `<div class="card pad section"><h2>${esc(MSTORE[m.store][0])} <span class="hcount">read ${m.read.length} · kept ${m.kept.length}</span></h2><div class="tiny faint">${esc(MSTORE[m.store][1])}</div>
+      <div class="tgrid2" style="margin-top:8px"><div><b class="small">Read</b>${list(m.read, "nothing read here")}</div><div><b class="small">Kept</b>${list(m.kept, "nothing kept here")}</div></div></div>`).join("")
+      : `<div class="card pad small muted">Its agents read nothing from memory and kept nothing there.</div>`}
+    ${a.memory.read.length + a.memory.write.length ? `<details class="card pad section"><summary><b>Every memory call · ${a.memory.read.length + a.memory.write.length}</b> <span class="tiny faint">as the agents made them, oldest first</span></summary>
+      <div class="tacts-list">${[...a.memory.read.map((e) => ({ ...e, op: "read" })), ...a.memory.write.map((e) => ({ ...e, op: "kept" }))].sort((x, y) => x.ts - y.ts)
+        .map((e) => taskRow({ ...e, kind: "call", title: e.tool }, `${e.op === "read" ? "read" : "kept"} · ${taskTool(e.tool)}`)).join("")}</div></details>` : ""}`;
 }
 
 function taskRuns(box, t) {
   box.innerHTML = `<div class="stack">${(t.runs || []).map((r) => { const v = r.verdict && (VWORD[r.verdict] || [r.verdict, ""]);
-    return `<details class="card pad"${r.occ === t.runs[0].occ ? " open" : ""}><summary><b>Run ${r.occ}</b> <span class="tiny faint">${esc(HOW?.[r.trigger] || r.trigger || "")} · ${rel(r.started)} · ${esc(r.status || "")}${v ? ` · <span class="${v[1]}">${esc(v[0])}</span>` : ""}${r.tokens ? ` · ${tok(r.tokens)} tokens` : ""}</span></summary>
+    return `<details class="card pad"${r.occ === t.occ ? " open" : ""}><summary><b>Run ${r.occ}</b>${r.occ === t.occ ? ` <span class="tag on">shown</span>` : ""} <span class="tiny faint">${esc(HOW?.[r.trigger] || r.trigger || "")} · ${rel(r.started)} · ${esc(r.status || "")}${v ? ` · <span class="${v[1]}">${esc(v[0])}</span>` : ""}${r.tokens ? ` · ${tok(r.tokens)} tokens` : ""}</span></summary>
       ${r.event ? `<div class="small faint">${esc(r.event.trigger || "an event")}: ${esc(r.event.summary || "")}</div>` : ""}
       ${taskStepList(((t.steps || {})[String(r.occ)] || []).map((s) => ({ ...s, task: t.id })))}
-      <div class="row wrap" style="gap:6px">${r.result?.startsWith?.("tasks/") ? `<a class="btn sm" href="#/read?path=${encodeURIComponent(r.result)}">${ic.doc}Its answer</a>` : ""}<a class="btn sm ghost" href="#/taskmap?t=${t.id}&o=${r.occ}">${ic.wiki}Its swarm map</a></div></details>`; }).join("")}</div>`;
+      <div class="row wrap" style="gap:6px">${r.occ !== t.occ ? `<button class="btn sm primary" data-tocc="${r.occ}">${ic.target}Show this run</button>` : ""}${r.result?.startsWith?.("tasks/") ? `<a class="btn sm" href="#/read?path=${encodeURIComponent(r.result)}">${ic.doc}Its answer</a>` : ""}<a class="btn sm ghost" href="#/taskmap?t=${t.id}&o=${r.occ}">${ic.wiki}Its swarm map</a></div></details>`; }).join("")}</div>`;
+  $$("[data-tocc]", box).forEach((b) => (b.onclick = () => { taskOcc[t.id] = +b.dataset.tocc; ttab = "overview"; vTask(); }));
 }
 
 // the agent's side (APP-35): the tasks it worked on, on its page

@@ -163,3 +163,16 @@ items:
     verify: {method: test, by: [tests/test_recoverable.py::test_full_swap_is_a_note_and_an_alert_when_ram_is_short_too]}
     trace: [compose/AGENTS.md, ops/windows/host-probe.ps1, ops/crew.py]
     findings: [FND-18]
+  - id: CST-15
+    title: The Max plan's API credits, capped, for critical calls only
+    statement: The gateway may serve one strong Claude model on the API key of the Console organisation linked to the Max
+      plan's monthly API credits, that organisation having no card and no auto-reload; only the calls of docs/NEXT-PHASE.md
+      Part 6 may use it, the stack shall move them back to the ChatGPT subscription at 80 % of the month's credits, and
+      no other per-token model shall be configured.
+    type: constraint
+    priority: must
+    status: proposed
+    parents: [SN-03]
+    sources: ['chat 2026-11-02: some agents with low token throughput but high criticality use stronger models', docs/NEXT-PHASE.md]
+    rationale: CST-02 allows subscription models only; the credits come with the Max subscription and stop when spent, so
+      they add no cost, but they change CST-02's wording, which is the owner's decision (D8).

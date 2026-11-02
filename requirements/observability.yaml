@@ -204,3 +204,18 @@ items:
     verify: {method: test, by: [tests/test_task_page.py::test_each_subscription_s_load_in_its_window_and_who_used_it]}
     trace: [images/mission-control/runrecord.py, images/mission-control/server.py, images/mission-control/web/static/app.js]
 
+  - id: OBS-18
+    title: A research run shows under the run that asked for it
+    statement: A scout run that answers a research call shall be recorded under the run whose call asked that question
+      (matched by the question), not under whichever run used the scout at the same time, so that a task's agents,
+      sources, tokens and cost hold only its own work.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-07, APP-36]
+    sources: ['chat 2026-11-02: the task page showed geizhals.de as the China briefing''s top source; the owner: Yes, fix it']
+    findings: [FND-111, FND-114]
+    verify: {method: test, by: [tests/test_task_page.py::test_a_scout_run_goes_under_the_run_that_asked_its_question_not_a_task_s_live_scout_step,
+        tests/test_runtime.py::test_two_scout_steps_started_together_each_get_their_own_run_by_its_prompt_s_head,
+        tests/test_conductor.py::test_a_hermes_step_s_prompt_starts_with_its_run]}
+    trace: [images/mission-control/runrecord.py, ops/conductor.py]

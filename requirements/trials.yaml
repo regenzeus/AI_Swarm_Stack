@@ -182,3 +182,58 @@ items:
     verify: {method: test, by: [tests/test_trials.py::test_a_gap_beyond_the_key_is_for_review_and_a_run_can_be_scored_again]}
     trace: [ops/trials.py, images/mission-control/web/static/task.js]
 
+  - id: TRL-14
+    title: The trials run as a weekly rotation with a trend
+    statement: One trial shall run each night at 01:00 in a weekly rotation (research accuracy, stack-trace, memory,
+      coding, review catch, offer picking, phone routine and the voice test), never two at once and skipped while a task
+      runs, and #/trials shall draw each trial's score, time and tokens over the weeks with the commits between points.
+    type: functional
+    priority: must
+    status: partial
+    parents: [SN-08, SN-16]
+    sources: ['chat 2026-11-02: Turn trials into a standing benchmark', docs/NEXT-PHASE.md]
+    verify: {method: test, by: [tests/test_rotation.py::test_each_night_has_its_trial_and_sunday_rests,
+        tests/test_rotation.py::test_it_starts_the_trial_only_when_the_stack_is_idle]}
+    trace: [ops/rotation.py, ops/systemd/rotation.timer, ops/systemd/rotation.service]
+    gap: "From 2 Nov 2026 rotation.timer starts one trial a night at 01:00 (research accuracy twice, stack-trace,
+      semver, mqtt-trace, Mustache; Sunday rests) when the stack is idle, else skips the night with why. #/trials
+      shows each run beside the one before (score, time, tokens, code version) but draws no trend over the weeks
+      yet; the memory trial runs on the Keeper's own path, and review catch, offer picking, the phone routine and the
+      voice test do not exist yet."
+
+  - id: TRL-15
+    title: A drop in score freezes what it examines
+    statement: A trial run that scores below its last good run by more than its noise band (the spread of its first three
+      runs) shall open a finding naming the commits since that run and hold the licences of the classes it examines at
+      ask until it scores again.
+    type: functional
+    priority: must
+    status: proposed
+    parents: [SN-08, SN-02]
+    sources: [docs/NEXT-PHASE.md]
+  - id: TRL-16
+    title: New exams for research, offers, reviews and the phone
+    statement: The trials shall include research accuracy (25 questions with known answers, claims and citations
+      checked), offer picking (30 recorded offer sets with the right pick and traps), review catch (10 seeded bugs the
+      reviews must find) and a phone routine with checks, each with its key out of every agent's reach.
+    type: functional
+    priority: must
+    status: partial
+    parents: [SN-08, SN-11]
+    sources: [docs/NEXT-PHASE.md]
+    verify: {method: test, by: [tests/test_rotation.py::test_the_research_exam_goes_in_as_research_and_hands_the_key_its_answer_and_the_pages_read]}
+    trace: [eval/trials/research-accuracy.yaml, ops/trials.py]
+    gap: "Research accuracy exists (2 Nov 2026): 25 questions with stable answers, each scored on its claim and on
+      whether a page cited for it was opened by the task's agents (the run record's provenance); its key in
+      /srv/ai/private/trials/research-accuracy scores its reference 50 of 50 and a wrong sheet 4 of 50. Offer picking,
+      review catch and the phone routine are not written yet."
+
+  - id: TRL-17
+    title: Probes look for what the trials do not
+    statement: Each probe of docs/NEXT-PHASE.md shall run as a task (source probe:<name>) with its question and measure
+      written before it runs, and its result and the change it led to shall go into docs/PROBES.md.
+    type: process
+    priority: should
+    status: proposed
+    parents: [SN-08, SN-16]
+    sources: ['chat 2026-11-02: we need to probe this AI Stack with experiments and tasks', docs/NEXT-PHASE.md]

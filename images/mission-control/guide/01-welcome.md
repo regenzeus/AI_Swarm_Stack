@@ -5,7 +5,7 @@ part: Get started
 icon: home
 minutes: 4
 summary: A private AI assistant that runs on your own PC, works while you sleep, and costs nothing to run.
-views: [home]
+views: [home, decide]
 ---
 The AI Stack is a personal AI team that lives on one Windows PC at home. It reads the news for you every morning,
 researches companies, watches the SEC and the markets, keeps a growing knowledge base, remembers what you told it,
@@ -57,15 +57,26 @@ Home answers three questions, in this order:
   AI phone cleanup steps, AI phone approval requests, Gmail Trash batches, agents that need access, memories to
   confirm, and setup steps only you can do. Review builds show their checks, CI status and AI-review verdict.
   When nothing waits, it says so in one green line. Nothing is approved or deployed just by opening a row.
+  **All decisions** opens the whole list (**Decisions**, `#/decide`): every decision ranked by what expires first and
+  what costs most to wait, each with why, what the stack would decide, what happens without an answer, and its
+  answers; alike routine ones (AI phone cleanup steps) are approved together. Under it are the list's numbers (how many
+  a day, how fast you answer, how many expired, against the target of at most five a day within twelve hours) and
+  **the shadow**: for every yes-or-no decision the stack records what it would have decided and then what you did. A
+  kind of action can only ever earn acting on its own from that agreement, its exam and your OK; money, people,
+  deleting and security never can.
 - **Now**: the run that is going (with its live log), builds and Claude tasks at work, agents queued for the run
   slot, and what comes up next. Under it, **Stack upkeep** counts the health alerts the Health doctor looks at and
   the stack's own improvement ideas: visible, but not waiting for you.
-- **Latest from your agents**: a live feed of results, newest first and grouped by day. Every finished run shows its
-  headline and the first lines of its report; tap it to read the whole result. Purchases, housekeeping results
-  (inbox digest, phone cleanup, health doctor), deployed builds, Claude answers and event alerts are in it too. Filter
-  with **Results**, **Shopping**, **Housekeeping** or **Code**.
+- **Results**: one card for each thing your agents finished for you, newest first and grouped by day: a briefing, a
+  task's answer, an alert (a rule that fired and the task it started are one card), research, a shopping step, or a
+  run that did not finish. Each card says its kind (Briefing, Alert, Task, Research, Shopping, Failed), its headline,
+  who made it and its first lines; a tap opens its page. Filter by kind with the chips. A task still at work is under
+  **Now**, with its steps and the agents on it, and becomes a result when it ends. The stack's own work is not here:
+  its health under Now (**Stack upkeep**), deploys under **Code**, the agents' activity under **Agents**, trials and
+  probes on their own pages. Tasks are given here ("Do it"), so the **Tasks** board and a task's page keep **Home**
+  lit in the bar below; there is no separate tab for them.
 
-Home updates in place while agents work, without redrawing the screen. To start something, type in the bar at the
+Home updates in place while agents work. While you are scrolled down or touching it, what is new waits behind a **New on Home** button at the top, so nothing moves under your finger. To start something, type in the bar at the
 top: Hermes answers, researches, or sets up a new agent for you. **New agent** and **New wiki** next to it open the
 forms directly.
 

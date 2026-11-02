@@ -97,3 +97,12 @@ items:
     verify: {method: test, by: ['tests/test_voice_setup.py::test_the_house_page_sets_up_the_ai_phone_step_by_step_and_ticks_what_it_sees', 'tests/test_house.py::test_snapshot_over_websocket']}
     trace: [images/mission-control/web/static/app.js, ops/house.py]
 
+  - id: VOI-09
+    title: Home voice is measured by use
+    statement: The Voice page shall show spoken questions answered a day and the share answered within 4 seconds, and the
+      speech test with the owner's recordings shall run weekly in the benchmark.
+    type: quality
+    priority: should
+    status: proposed
+    parents: [SN-01, SN-06]
+    sources: [docs/NEXT-PHASE.md]

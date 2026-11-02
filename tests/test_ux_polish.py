@@ -26,7 +26,7 @@ def test_the_stack_page_links_each_section_and_jobs_carry_their_names():
 
 
 def test_home_opens_short_and_the_code_tab_never_shows_an_empty_name():
-    assert re.search(r"let homeFilter = \"mine\", homeShow = 12;", APP) and "homeShow = 12; const el" in APP
+    assert re.search(r"let homeFilter = \"all\", homeShow = 12;", APP) and "homeShow = 12; const el" in APP
     assert 'if (!name) { location.hash = "#/build"; return; }' in APP
 
 

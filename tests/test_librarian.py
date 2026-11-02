@@ -216,12 +216,13 @@ def test_a_compile_sees_a_long_page_whole_and_keeps_the_lines_it_was_not_shown(L
     assert out.rstrip().endswith("## Open questions\n- Will the November sales bring an offer under EUR 150?")
     big = {"path": "projects/ram", "body": body}
     monkeypatch.setattr(X, "PAGE_SEEN", seen)
-    monkeypatch.setattr(X, "wiki_pages", lambda root: [{**big, "title": "RAM upgrade", "summary": "", "aliases": [], "meta": {}}])
+    monkeypatch.setattr(X, "wiki_pages", lambda root: [{**big, "title": "RAM upgrade", "summary": "", "aliases": [], "meta": {"created": "2026-10-28"}}])
     monkeypatch.setattr(X, "write_index", lambda root, title: None)
     X.compile_into("missions/ram/wiki", "RAM upgrade", "missions/ram/log/c.md", "RAM upgrade: still wait", "k")
     assert "more characters cut: the compile keeps the lines it did not see]" in asked[1]
-    _, written = meta_of(L, "missions/ram/wiki/projects/ram")
+    meta, written = meta_of(L, "missions/ram/wiki/projects/ram")
     assert all(ln in written for ln in kept) and "Will the November sales" in written
+    assert meta["created"] == "2026-10-28"                                      # FND-110: a compiled page keeps the day it was made
 
 
 def test_the_search_index_cleanup_is_measured_before_and_after(L, monkeypatch):

@@ -101,3 +101,42 @@ def test_broad_catches_that_drop_the_error_can_only_become_fewer():
     assert n <= SILENT_MAX, f"{n} broad excepts drop their error silently (at most {SILENT_MAX}): log it or catch the exact error"
     src = (ROOT / "images/mission-control/server.py").read_text() + (ROOT / "ops/builds.py").read_text()
     assert "not closed after the restart" in src and "CI status not read" in src
+
+
+def test_an_ai_phone_down_for_half_an_hour_is_an_alert_unless_the_owner_stopped_it(tmp_path, monkeypatch):
+    """FND-116: the AI phone stood still for 8.5 hours (a request it could not read) and nothing said so. Disconnected for
+    30 minutes, or its service silent for 10, it is an alert on This PC; switched off by the owner, it is not."""
+    import os
+    monkeypatch.setattr(crew, "_phone_down", {"since": None})
+    st = tmp_path / "state.json"
+    now = time.time()
+    st.write_text(json.dumps({"connected": False, "error": "Permission denied: /phone/control/x.json"}))
+    assert crew.phone_down(now, tmp_path) is None                             # just went down
+    os.utime(st, (now + 31 * 60, now + 31 * 60))                              # its service keeps writing its state, with the error
+    i = crew.phone_down(now + 31 * 60, tmp_path)
+    assert i["kind"] == "phone-down" and "disconnected for 31 min" in i["text"] and "Permission denied" in i["text"]
+    assert "phone-down" in crew.ALERTS
+    (tmp_path / "STOP").write_text("")
+    assert crew.phone_down(now + 40 * 60, tmp_path) is None                   # the owner switched it off
+    (tmp_path / "STOP").unlink()
+    st.write_text(json.dumps({"connected": True}))
+    os.utime(st, (now - 900, now - 900))
+    assert "has not reported for 15 min" in crew.phone_down(now, tmp_path)["text"]   # connected, but its service went silent
+    os.utime(st, (now, now))
+    assert crew.phone_down(now, tmp_path) is None and crew._phone_down["since"] is None
+    assert crew.phone_down(now, tmp_path / "none") is None                    # no AI phone here
+
+
+def test_a_fault_the_checker_finds_is_an_alert_not_its_failed_run(tmp_path):
+    """FND-112: the checker failed 25 runs for a fault it had found and reported (the Ledger refusing the requirements
+    sync), which made its failure rate mean two things. Its run ends done with the faults kept; each is an alert on its
+    card, and its next clean run clears them."""
+    f = tmp_path / "checker.json"
+    f.write_text(json.dumps({"last": 5, "faults": ["system had 64 refused swarm writes in 24 h"]}))
+    assert crew.checker_faults(f) == [{"kind": "swarm-fault", "at": 5, "text": "system had 64 refused swarm writes in 24 h"}]
+    assert "swarm-fault" in crew.ALERTS
+    f.write_text(json.dumps({"last": 6, "faults": []}))
+    assert crew.checker_faults(f) == [] and crew.checker_faults(tmp_path / "none.json") == []
+    src = (crew.Path(crew.__file__).parent / "checker.py").read_text()
+    run = src[src.index("def run(c):"):]
+    assert "raise RuntimeError" not in run and "faults=bad" in run

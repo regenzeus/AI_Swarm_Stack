@@ -321,6 +321,19 @@ def deliverable(c, repo, bids, dest):
     return None
 
 
+def answered(c, tid, opened, dest):
+    """A research exam's deliverable (TRL-16): the task's answer as answer.md and the pages its agents opened as
+    opened.txt, so the key checks each claim and that each cited page was read. -> {"id": task} or None."""
+    row = c.execute("select result from tasks where id=?", (tid,)).fetchone()
+    f = VAULT / str((row or {"result": ""})["result"] or "")
+    if not row or not str(row["result"] or "").startswith("tasks/") or not f.is_file():
+        return None
+    dest.mkdir(parents=True, exist_ok=True)
+    (dest / "answer.md").write_text(f.read_text(errors="replace"))
+    (dest / "opened.txt").write_text("\n".join(sorted(set(opened))) + "\n")
+    return {"id": tid, "status": "answered"}
+
+
 def report(t, r):
     """The run's report, for the owner (the vault) and for the scoreboard (the JSON is the record)."""
     s, a, sim, m = r["score"], r["audit"], r["similarity"], r["metrics"]
@@ -435,11 +448,12 @@ def run(name, log=print):
     run_id = f"{name}-{time.strftime('%Y%m%d-%H%M')}"
     d = RUNS / run_id
     d.mkdir(parents=True)
-    repo = make_repo(t, run_id)
-    log(f"{run_id}: repository {repo} with the specification; giving the task")
+    research = t.get("kind") == "research"              # TRL-16: an exam answered from the web, no repository
+    repo = "" if research else make_repo(t, run_id)
+    log(f"{run_id}: " + ("a research exam" if research else f"repository {repo} with the specification") + "; giving the task")
     started = time.time()
-    res = request({"action": "task_create", "text": t["task"].strip(), "kind": "coding", "repo": repo, "effort": t["effort"], "budget": t["budget"],
-                   **({"done": t["done"]} if t.get("done") else {}), "source": f"trial:{name}"})
+    res = request({"action": "task_create", "text": t["task"].strip(), "kind": "research" if research else "coding", **({} if research else {"repo": repo}),
+                   "effort": t["effort"], "budget": t["budget"], **({"done": t["done"]} if t.get("done") else {}), "source": f"trial:{name}"})
     tid = int(res["task"])
     return follow(t, run_id, repo, tid, started, log)
 
@@ -460,12 +474,14 @@ def follow(t, run_id, repo, tid, started, log=print):
             break
         time.sleep(15)
     with db() as c:
-        bids = build_ids(c, tid, repo)
-        b = deliverable(c, repo, bids, d / "code")
-        rt = tree(tid) or ([], [])
-        s = score(d / "code", key_dir(t)) if b else summarise({"cases": [], "error": "no build delivered code"})
-        srcs = [(f"task #{tid}: a page read", "url", r["uri"]) for r in c.execute(
+        research = t.get("kind") == "research"
+        bids = [] if research else build_ids(c, tid, repo)
+        opened = [r["uri"] for r in c.execute(
             "select a.uri from prov p join artifacts a on a.id = p.artifact where p.task=? and a.uri like 'http%'", (tid,))]
+        b = answered(c, tid, opened, d / "code") if research else deliverable(c, repo, bids, d / "code")
+        rt = tree(tid) or ([], [])
+        s = score(d / "code", key_dir(t)) if b else summarise({"cases": [], "error": "no answer delivered" if research else "no build delivered code"})
+        srcs = [(f"task #{tid}: a page read", "url", u) for u in opened]
         m = metrics(c, tid, bids, rt)
     for bid in bids:
         for ext in ("steps", "log"):
@@ -480,14 +496,14 @@ def follow(t, run_id, repo, tid, started, log=print):
     sim = similarity(d / "code", key_dir(t) / t["similar_to"]) if b and t.get("similar_to") else {"share": 0.0, "files": []}
     r = {"trial": name, "run": run_id, "dir": str(d), "repo": repo, "task": tid, "started_at": time.strftime("%Y-%m-%d %H:%M", time.localtime(started)),
          "version": git(ROOT, "rev-parse", "--short", "HEAD").strip(),
-         "over_budget": over, "asked": asked, "builds": bids, "build": b and {k: b[k] for k in ("id", "status", "branch", "head", "attempts")},
+         "over_budget": over, "asked": asked, "builds": bids, "build": b and {k: b[k] for k in ("id", "status", "branch", "head", "attempts") if k in b},
          "score": s, "audit": a, "similarity": sim, "metrics": m}
     (d / "result.json").write_text(json.dumps(r, indent=1, ensure_ascii=False))
     (ROOT / "eval/results" / f"{time.strftime('%Y%m%d-%H%M%S')}-trial-{name}.json").write_text(json.dumps({k: v for k, v in r.items() if k != "score"} | {"score": {k: v for k, v in s.items() if k != "cases"}}, indent=1))
     rel = f"trials/{name}/{run_id}.md"
     (VAULT / rel).parent.mkdir(parents=True, exist_ok=True)
     (VAULT / rel).write_text(report(t, r))
-    for act in ([{"action": "build_reject", "id": b["id"]}] if b and b["status"] == "review" else []) + [{"action": "repo_remove", "repo": repo}]:
+    for act in ([{"action": "build_reject", "id": b["id"]}] if b and b.get("status") == "review" else []) + ([{"action": "repo_remove", "repo": repo}] if repo else []):
         try:                                             # scored and archived: the build leaves Needs you, the clone the Code tab
             request(act, wait=300)
         except RuntimeError as e:

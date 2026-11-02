@@ -537,6 +537,27 @@ def pair(port, code):
     return ok
 
 
+_skip = set()                                             # control files read once that this service may not read or delete
+
+
+def take(f):
+    """A request from the control folder, or None. One it cannot read is reported once and left, and one it may not delete
+    (another user's, in the sticky folder) is taken once (FND-116: one unreadable request stopped every pass for a day)."""
+    if f.name in _skip:
+        return None
+    try:
+        req = json.loads(f.read_text())
+    except (OSError, ValueError) as e:
+        _skip.add(f.name)
+        log(tool="phone_control", result=f"skipped {f.name}: {type(e).__name__}: {e}")
+        return None
+    try:
+        f.unlink()
+    except OSError:
+        _skip.add(f.name)
+    return req
+
+
 async def control_loop():
     """Requests from the Phone page and the Stop switch; keeps state.json fresh and the screen on."""
     while True:
@@ -544,8 +565,9 @@ async def control_loop():
             if any(i.get("tool") == "phone_setting" for i in sweep_orphans()) and not stopped():
                 asyncio.create_task(boot_setup())          # "Start in AI mode" was mid-way: ask that card again
             for f in sorted(CONTROL.glob("*.json")):
-                req = json.loads(f.read_text())
-                f.unlink()
+                req = take(f)
+                if req is None:
+                    continue
                 if req.get("do") == "pair":
                     await asyncio.to_thread(pair, req.get("port", 0), req.get("code", ""))
                     await connect()

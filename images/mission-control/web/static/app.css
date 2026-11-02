@@ -1017,3 +1017,53 @@ h2 { font-size: 15px; font-weight: 650; text-transform: none; letter-spacing: -.
 .tact.k-error b { color: var(--err); }
 .tact .mono { font-variant-numeric: tabular-nums; flex: none; }
 
+/* APP-36: the task page's map of who worked on it, its bars and its folded answer. The three parts' colours are the
+   reference palette's first three slots, checked with the dataviz validator on both surfaces (all pairs, colour-blind) */
+:root { --tp-coord: #3987e5; --tp-step: #199e70; --tp-call: #d95926; }
+@media (prefers-color-scheme: light) { :root { --tp-coord: #2a78d6; --tp-step: #1baf7a; --tp-call: #eb6834; } }
+.tbub { position: relative; width: 100%; border-radius: 12px; background: var(--surface-2); overflow: hidden; margin-top: 8px; }
+.tblbl { fill: var(--text); font-size: 11px; font-weight: 600; text-anchor: middle; paint-order: stroke; stroke: var(--surface-2); stroke-width: 3px; pointer-events: none; }
+.tblbl.tbsub { fill: var(--muted); font-size: 10px; font-weight: 500; }
+.tbsel:not(:empty) { margin-top: 10px; }
+.tkey { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 6px; }
+.tkey span { display: inline-flex; align-items: center; gap: 5px; }
+.tsw { display: inline-block; width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.tline { display: inline-block; width: 18px; height: 0; border-top: 2px solid var(--muted); }
+.tline.dash { border-top: 2px dashed var(--border-2); }
+.tgrid3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.tgrid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.tbars { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.tbar { display: grid; grid-template-columns: minmax(80px, 32%) 1fr auto; gap: 8px; align-items: center; font-size: 13px; min-width: 0; }
+.tbar > span:first-child { overflow-wrap: anywhere; }
+.tr-b { display: block; min-width: 0; }
+.tr { display: block; height: 10px; border-radius: 0 4px 4px 0; background: var(--accent); min-width: 2px; }
+.tv { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; text-align: right; }
+.tfold { max-height: 420px; overflow: hidden; position: relative; }
+.tfold::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 64px; background: linear-gradient(transparent, var(--surface)); pointer-events: none; }
+.tfold.open { max-height: none; }
+.tfold.open::after { display: none; }
+#tunfold { margin-top: 8px; }
+/* on a phone the numbers take three across and little height, so the answer starts on the first screen (APP-36) */
+@media (max-width: 600px) {
+  #taskpage .tmnums { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  #taskpage .tmnum { padding: 8px 9px; }
+  #taskpage .tmnum b { font-size: 15px; }
+  #taskpage .tmnum .tiny { font-size: 11px; line-height: 1.25; }
+}
+.tsrc a { color: inherit; overflow-wrap: anywhere; }
+
+
+/* APP-38: a result's kind, so what is what shows at a glance; the button for what waited while you scrolled */
+.fkind { flex: none; font-size: 11px; font-weight: 700; letter-spacing: .02em; text-transform: uppercase; padding: 1px 7px; border-radius: 6px;
+  background: var(--surface-2); color: var(--muted); }
+.fkind.k-briefing { color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent); }
+.fkind.k-alert { color: var(--accent-2); background: color-mix(in srgb, var(--accent-2) 16%, transparent); }
+.fkind.k-research { color: var(--run); background: var(--run-bg); }
+.fkind.k-shopping { color: var(--ok); background: var(--ok-bg); }
+.fkind.k-failed { color: var(--err); background: var(--err-bg); }
+.fitem .fi-ic.k-alert { color: var(--accent-2); }
+.fitem .fi-ic.k-research { color: var(--run); }
+.fitem .fi-ic.k-shopping { color: var(--ok); }
+.fi-top { align-items: center; }
+.homenew { position: fixed; top: calc(env(safe-area-inset-top, 0px) + 10px); left: 50%; transform: translateX(-50%); z-index: 40;
+  box-shadow: 0 4px 14px rgba(0,0,0,.35); }

@@ -322,3 +322,11 @@ def test_the_plan_sees_what_each_agent_can_reach():
     assert "the AI phone" in agents["main"] and "the AI phone" not in agents["mission"]
     assert "web research" in agents["mission"] and "Its tools:" not in agents["judge"]
 
+
+
+def test_a_long_task_s_name_is_cut_at_a_word_and_marked():
+    """Task 93's name was its words cut at 80 characters mid-word ("... estimates as s"), without a mark."""
+    long = "A breaking story: Earnings call transcript: Cameco misses Q3 2026 estimates as shares fall, and more"
+    t = TK.title_of(long)
+    assert t.endswith(" …") and len(t) <= TK.TITLE and long.startswith(t[:-2]) and not t[:-2].endswith("as s")
+    assert TK.title_of("  Short   one ") == "Short one" and TK.title_of("") == ""

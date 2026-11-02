@@ -116,13 +116,14 @@ def test_the_desk_s_chosen_items_are_read_and_a_delivery_comes_from_the_report(P
     t = {**TK.row(P.c, 1), "spec": {"topic": "china"}}
     P.c.execute("insert into task_steps (task, occ, idx, title, agent, harness, after, status, output, resume) values "
                 "(1, 1, 3, 'Collect', 'desk', 'desk-collect', '[]', 'done', 'x', ?), (1, 1, 4, 'Write', 'desk', 'desk-write', '[3]', 'done', 'r', ?),"
-                "(1, 1, 5, 'Deliver it', 'desk', 'deliver', '[4]', 'done', 'Delivered by Telegram and e-mail and kept in the app (r).', '{}')",
+                "(1, 1, 5, 'Deliver it', 'desk', 'deliver', '[4]', 'done', 'Delivered by Telegram and e-mail and kept in the app (r). Topic wiki pages updated: entities/vw, concepts/nev-tax.\n\n## The report', '{}')",
                 (json.dumps({"date": "2026-11-02"}), json.dumps({"report": "topics/china/reports/2026/11/2026-11-02.md", "date": "2026-11-02"})))
     P.c.commit()
     for s in [x for x in CD.steps(P.c, 1) if x["idx"] >= 3]:
         PV.record_step(P.c, t, s)
     assert (3, "item", "https://caixin.com/1") in links(P, "used")
-    assert {(x[1], x[2]) for x in links(P, "generated") if x[0] == 5} == {("delivery", "delivery:1.1:telegram"), ("delivery", "delivery:1.1:email"), ("delivery", "delivery:1.1:app")}
+    assert {(x[1], x[2]) for x in links(P, "generated") if x[0] == 5} == {("delivery", "delivery:1.1:telegram"), ("delivery", "delivery:1.1:email"), ("delivery", "delivery:1.1:app"),
+                                                                          ("wiki", "vault:topics/china/wiki/entities/vw.md"), ("wiki", "vault:topics/china/wiki/concepts/nev-tax.md")}   # APP-36: the topic wiki it grew
     der = {tuple(x) for x in P.c.execute("select a.uri, s.uri from prov p join artifacts a on a.id=p.artifact join artifacts s on s.id=p.src where p.rel='derived'")}
     assert ("delivery:1.1:email", "vault:topics/china/reports/2026/11/2026-11-02.md") in der
 

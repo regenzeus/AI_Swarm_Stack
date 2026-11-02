@@ -5,7 +5,7 @@ part: Everyday use
 icon: target
 minutes: 7
 summary: Give the stack an ongoing job, such as a daily briefing or a research project, and it keeps working on it on a schedule.
-views: [missions, mission, new, read, live]
+views: [mission, new, read, live]
 ---
 A **mission** is a standing job. You describe it once, and an agent works on it on a schedule, on demand, or when
 something happens. "Mission" is the word for the job; the thing doing it is the **agent**. Each run's results, cost,

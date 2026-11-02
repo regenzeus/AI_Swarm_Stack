@@ -211,7 +211,7 @@ items:
     status: implemented
     parents: [SN-10, SN-09]
     sources: [DEC-31, docs/MEMORY.md]
-    findings: [FND-103]
+    findings: [FND-103, FND-110]
     verify: {method: test, by: [tests/test_librarian.py::test_a_compile_sees_a_long_page_whole_and_keeps_the_lines_it_was_not_shown]}
     trace: [ops/mission_extras.py]
   - id: MEM-15

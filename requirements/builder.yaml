@@ -267,3 +267,12 @@ items:
     findings: [FND-94]
     verify: {method: test, by: [tests/test_builds.py::test_a_repo_without_a_check_script_runs_its_tests]}
     trace: [ops/builds.py]
+  - id: BLD-25
+    title: The builder is measured on the owner's own projects
+    statement: The builder's page shall show the changes merged a week into the owner's own repositories and how many
+      were reverted, and one real change a week on such a repository shall be part of the probes.
+    type: quality
+    priority: should
+    status: proposed
+    parents: [SN-14, SN-01]
+    sources: ['chat 2026-11-02: The builder on your own projects', docs/NEXT-PHASE.md]

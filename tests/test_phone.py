@@ -445,3 +445,27 @@ def test_an_app_opens_fresh_when_a_blocked_screen_sits_on_top_of_it(P):
     assert ("shell", "am", "start", "--activity-clear-task", "-n", f"{HA}/.launch.LaunchActivity") in P.calls
     assert P.fg[0] == HA and "blocked" not in out
 
+
+
+def test_one_unreadable_request_never_stops_the_phone(P, tmp_path):
+    """FND-116: the shopping agent wrote a request readable only by itself; the phone's service could not read it and
+    every pass of its loop stopped there, for a day. A request it cannot read is reported once and skipped; one it may
+    not delete is taken once."""
+    bad, good = P.CONTROL / "a-bad.json", P.CONTROL / "b-good.json"
+    P.CONTROL.mkdir(parents=True, exist_ok=True)
+    bad.write_text("{not json")
+    good.write_text(json.dumps({"do": "trust", "minutes": 5}))
+    assert P.take(bad) is None and P.take(bad) is None                       # reported once, then left
+    assert P.take(good) == {"do": "trust", "minutes": 5} and not good.exists()
+    log = [json.loads(x) for x in (tmp_path / "log.jsonl").read_text().splitlines()]
+    assert [x["result"][:15] for x in log if x.get("tool") == "phone_control"] == ["skipped a-bad.j"]
+
+
+def test_the_shopping_agent_s_phone_requests_are_readable_by_the_phone(tmp_path, monkeypatch):
+    import shopping as SH
+    monkeypatch.setattr(SH, "PHONE", tmp_path)
+    SH.to_phone("abc", {"do": "shop_look", "id": "abc"})
+    f = tmp_path / "control/abc.json"
+    assert json.loads(f.read_text())["do"] == "shop_look" and f.stat().st_mode & 0o044 == 0o044   # group and others may read
+    src = (Path(__file__).resolve().parent.parent / "ops/shopping.py").read_text()
+    assert 'save_json(PHONE / "control"' not in src                         # no phone request is written this-user-only

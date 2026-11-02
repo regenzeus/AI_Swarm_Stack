@@ -9,8 +9,8 @@ ROOT = Path(__file__).resolve().parent.parent
 MC = ROOT / "images/mission-control"
 APP_JS = (MC / "web/static/app.js").read_text()
 GUIDE = (MC / "guide/01-welcome.md").read_text()
-FUNCS = ("needsItems", "needsHtml", "nowHtml", "upkeepHtml", "feedItems", "feedHtml", "workBuildRow", "statusPill", "runningCard", "stepsHtml", "dayOf")
-CONSTS = ("esc", "BSTATUS", "bcls", "VERDICT", "STATUS", "typeIcon", "toIso", "gbOf", "clockOf", "CREW_IC", "TRIG", "firstLine", "ctAsker", "ctTitle", "ideasWaiting")
+FUNCS = ("needsItems", "needsHtml", "nowHtml", "upkeepHtml", "healthAlerts", "feedItems", "feedHtml", "workBuildRow", "statusPill", "runningCard", "stepsHtml", "dayOf")
+CONSTS = ("RKIND", "NOT_YOURS", "esc", "BSTATUS", "bcls", "VERDICT", "STATUS", "typeIcon", "toIso", "gbOf", "clockOf", "CREW_IC", "TRIG", "firstLine", "ctAsker", "ctTitle", "ideasWaiting")
 FORMAT = re.search(r"// ---------- formatting \(TSK-31\).*?// ---------- end of formatting ----------", APP_JS, re.S)[0]   # the app's own helpers
 
 
@@ -18,7 +18,7 @@ def run(state, expr):
     functions = [m[0] for name in FUNCS if (m := re.search(rf"^function {name}\(.*?^\}}", APP_JS, re.M | re.S))]
     constants = [m[0] for name in CONSTS if (m := re.search(rf"^const {name} = .*?;$", APP_JS, re.M | re.S))]
     script = "\n".join([
-        'const ic = new Proxy({}, {get: (_, key) => `<svg data-icon="${key}"></svg>`});',
+        'const ic = new Proxy({}, {get: (_, key) => `<svg data-icon="${key}"></svg>`}); const taskWho = (a) => a;',
         FORMAT, "const SHOP_STATE = {watching: ['paused', 'Watching'], proposed: ['ok', 'Proposed']};",
         "let homeFilter = 'all', homeShow = 40; const homeEx = new Map();",
         f"let S = {json.dumps({'missions': [], **state})};",
@@ -36,7 +36,7 @@ def test_home_is_needs_now_and_a_live_feed_with_an_ask_bar():
     assert on_state.index('route.name === "home" && !first && $("#homefeed")') < on_state.index("render();")
     update = re.search(r"^function homeUpdate\(.*?^\}", APP_JS, re.M | re.S)[0]
     assert "homeLast[id] === html" in update                       # unchanged parts are not touched: no twitch
-    assert "## Home" in GUIDE and "Latest from your agents" in GUIDE and "Needs you" in GUIDE
+    assert "## Home" in GUIDE and "**Results**" in GUIDE and "Needs you" in GUIDE
 
 
 def test_needs_you_lists_only_decisions_and_says_so_when_there_are_none():
@@ -57,10 +57,16 @@ def test_needs_you_lists_only_decisions_and_says_so_when_there_are_none():
 
 
 def test_stack_upkeep_sits_under_now_not_needs_you():
-    html = run({"health": {"alerts": 2}, "swarm": {"board": {"open": [{"id": 3, "title": "Fix the watchdog", "state": "open"}],
-                                                          "recent": [{"id": 1, "state": "declined"}]}},
-                "crew": [{"name": "Backup", "state": "failed"}]}, "nowHtml()")
-    assert "Stack upkeep" in html and "2 health alerts" in html and "Backup" in html and "1 improvement idea" in html
+    html = run({"health": {"alerts": 2, "items": [{"kind": "crew", "id": "backup", "issues": [{"severity": "alert", "text": "failed 2 times"}]},
+                                                  {"kind": "crew", "id": "doctor", "issues": [{"severity": "note", "text": "slow"}]}]},
+                "swarm": {"board": {"open": [{"id": 3, "title": "Fix the watchdog", "state": "open"}], "recent": [{"id": 1, "state": "declined"}]}},
+                "crew": [{"id": "backup", "name": "Backup", "state": "failed"}]}, "nowHtml()")
+    assert "Stack upkeep" in html and "2 health alerts" in html and "Backup: failed 2 times" in html and "1 improvement idea" in html
+    assert 'href="#/crew/backup"' in html                       # one agent with an alert: its page, not the Agents overview
+    two = run({"health": {"alerts": 2, "items": [{"kind": "crew", "id": "a", "issues": [{"severity": "alert", "text": "x"}]},
+                                                 {"kind": "mission", "slug": "m", "issues": [{"severity": "alert", "text": "y"}]}]},
+               "crew": [{"id": "a", "name": "A"}], "missions": [{"slug": "m", "title": "M"}]}, "upkeepHtml()")
+    assert 'href="#/missions?f=problems"' in two and "A: x · M: y" in two   # several: the Agents list, only those with problems
 
 
 def test_now_shows_work_in_progress_and_whats_next():
@@ -70,33 +76,6 @@ def test_now_shows_work_in_progress_and_whats_next():
     for want in ('href="#/build/2"', "Queued one", "waits for the run slot", "Claude task #7", "Up next", "working"):
         assert want in html, want
     assert "all quiet" in run({}, "nowHtml()")
-
-
-def test_the_feed_has_results_first_class_and_leaves_out_noise():
-    state = {"missions": [{"slug": "uranium", "title": "Uranium", "type": "briefing", "runs": [
-                {"status": "ok", "summary": "Boss reports 359,000 lb", "output": "topics/uranium/reports/2026/10/2026-10-28.md",
-                 "started": "2026-10-28T06:33:34+01:00", "ended": "2026-10-28T06:37:54+01:00", "seconds": 260, "calls": 3, "trigger": "schedule"},
-                {"status": "failed", "summary": "no answer", "started": "2026-10-27T06:30:00+01:00"}]}],
-             "crew": [{"id": "inbox", "name": "Inbox digest", "area": "memory", "last": 1793219000, "result": "Filed 2 of 37", "schedule": "daily 07:15", "state": "ok"},
-                      {"id": "memory-review", "name": "Memory gatekeeper", "area": "memory", "last": 1793219100, "result": "ok", "schedule": "every 10min", "state": "ok"},
-                      {"id": "phone-check", "name": "Phone check", "area": "phone", "last": 1793219200, "result": "failed: RuntimeError: battery at 19 %", "schedule": "weekly", "state": "failed"}],
-             "builds": [{"id": 4, "status": "deployed", "title": "Work section", "updated": "2026-10-28T13:50:00+01:00"}, {"id": 5, "status": "working", "title": "x", "updated": 1}],
-             "activity": [{"ts": "2026-10-28T20:00:00+01:00", "kind": "run_started", "title": "Uranium", "text": "Run started"},
-                          {"ts": "2026-10-28T19:00:00+01:00", "kind": "triggered", "title": "ASPI", "text": "New SEC filing", "slug": "aspi"}]}
-    items = json.loads(run(state, "JSON.stringify(feedItems())"))
-    heads = [x["head"] for x in items]
-    assert "Boss reports 359,000 lb" in heads and "Run failed: no answer" in heads and "Filed 2 of 37" in heads
-    assert "Failed: battery at 19 %" in heads and "Deployed: Work section" in heads and "New SEC filing" in heads
-    assert "ok" not in heads and "Run started" not in heads and not any("x" == h.split(": ")[-1] for h in heads)
-    when = json.loads(run(state, "JSON.stringify(feedItems().map((x) => +new Date(toIso(x.ts))))"))
-    assert when == sorted(when, reverse=True)                      # newest first, across ISO times and epoch seconds
-    html = run(state, "feedHtml()")
-    assert 'href="#/read?path=topics%2Furanium%2Freports%2F2026%2F10%2F2026-10-28.md&amp;m=uranium"' in html or \
-           'href="#/read?path=topics%2Furanium%2Freports%2F2026%2F10%2F2026-10-28.md&m=uranium"' in html
-    assert 'data-ex="topics/uranium/reports/2026/10/2026-10-28.md"' in html and "scheduled · 4 min · 3 model calls" in html
-    assert 'data-hf="housekeeping"' in html and 'data-hf="code"' in html
-    only = run(state, "(homeFilter = 'housekeeping', feedHtml())")
-    assert "Filed 2 of 37" in only and "Boss reports" not in only
 
 
 def test_chats_from_tests_and_agents_are_kept_apart_from_yours():
@@ -113,9 +92,50 @@ def test_list_row_chevrons_have_a_size():
     assert ".list > a > svg {" in css and "width: 16px" in css.split(".list > a > svg {")[1].split("}")[0]   # unsized, one filled the card
 
 
-def test_the_swarm_and_session_deploys_are_on_the_home_timeline():
-    html = run({"activity": [{"ts": "2026-10-29T18:48:49+01:00", "kind": "swarm", "title": "Swarm", "text": "doctor proposed idea #28 Make swarm-sync tolerate a restart"},
-                             {"ts": "2026-10-29T18:47:09+01:00", "kind": "deploy", "title": "Session deploy", "text": "deployed: Swarm switch-over (2cea212c..d6e62a00)"}]},
-               "feedHtml()")
-    assert "doctor proposed idea #28" in html and 'href="#/swarm?tab=improve"' in html and "Session deploy" in html
+def test_home_s_results_are_one_card_per_outcome_named_by_what_it_is_about():
+    """APP-38 (the owner's review of 2 Nov: "Tasks", "Triggers" and "Agent health" cards, two cards for one outcome, what
+    is what hard to tell): one card per outcome you asked for or your rules started, with its kind, its headline and its
+    page; a running task is on Now; the stack's own machinery (health, deploys, the Ledger, crew jobs, trials, probes)
+    is not among your results."""
+    ts = "2026-11-02T13:25:00+01:00"
+    state = {"missions": [{"slug": "uranium", "title": "Uranium", "type": "briefing", "runs": [
+                {"status": "ok", "summary": "Boss reports 359,000 lb", "output": "topics/uranium/reports/2026/10/2026-10-28.md",
+                 "started": "2026-10-28T06:33:34+01:00", "ended": "2026-10-28T06:37:54+01:00", "seconds": 260, "calls": 3, "trigger": "schedule"},
+                {"status": "failed", "summary": "no answer", "started": "2026-10-27T06:30:00+01:00"}]}],
+             "tasks": [{"id": 113, "status": "done", "door": "plan", "source": "rule:2", "kind": "research", "title": "Macusani brief", "result": "tasks/113-macusani.md", "updated": ts, "runs": [{"occ": 1, "ended": ts, "status": "done"}]},
+                       {"id": 120, "status": "done", "door": "plan", "source": "app", "kind": "analysis", "title": "Compare two NAS", "result": "tasks/120-nas.md", "updated": ts, "runs": [{"occ": 1, "ended": ts, "status": "done"}]},
+                       {"id": 121, "status": "failed", "door": "plan", "source": "app", "kind": "research", "title": "Broken one", "error": "step 1 failed", "updated": ts, "runs": [{"occ": 1, "ended": ts, "status": "failed"}]},
+                       {"id": 79, "status": "scheduled", "door": "plan", "source": "app", "kind": "briefing", "title": "China weekly", "result": "tasks/79-china-1.md", "updated": ts, "runs": [{"occ": 1, "ended": ts, "status": "done"}]},
+                       {"id": 115, "status": "done", "door": "plan", "source": "probe:p4", "title": "Hermes version", "updated": ts},
+                       {"id": 109, "status": "done", "door": "plan", "source": "trial:mustache", "title": "Mustache", "updated": ts},
+                       {"id": 12, "status": "done", "door": "mission", "source": "app", "title": "Uranium mission", "updated": ts},
+                       {"id": 130, "status": "running", "door": "plan", "source": "app", "title": "Busy one", "updated": "2099-01-01T00:00:00+00:00",
+                        "steps": [{"status": "done", "agent": "scout"}, {"status": "running", "agent": "main"}]}],
+             "crew": [{"id": "inbox", "name": "Inbox digest", "last": 1793219000, "result": "Filed 2 of 37", "schedule": "daily 07:15", "state": "ok"}],
+             "builds": [{"id": 4, "status": "deployed", "title": "Work section", "updated": ts}],
+             "activity": [{"ts": ts, "kind": "triggered", "title": "Triggers", "text": "Rule fired on Macusani: task #113"},
+                          {"ts": ts, "kind": "health", "push": True, "title": "Agent health", "text": "Journey checks: 4 failed"},
+                          {"ts": ts, "kind": "deploy", "title": "Session deploy", "text": "deployed: Memory"}]}
+    items = json.loads(run(state, "JSON.stringify(feedItems().map((x) => [x.kind, x.head, x.href]))"))
+    assert ["alert", "Macusani brief", "#/task/113"] in items                          # the rule's alert and its task: one card
+    assert ["task", "Compare two NAS", "#/task/120"] in items and ["failed", "Broken one", "#/task/121"] in items
+    assert ["briefing", "China weekly", "#/task/79"] in items                          # a scheduled task's last run
+    assert ["briefing", "Boss reports 359,000 lb", "#/read?path=topics%2Furanium%2Freports%2F2026%2F10%2F2026-10-28.md&m=uranium"] in items
+    assert ["failed", "Did not finish: no answer", "#/mission/uranium?tab=history"] in items
+    heads = [h for _, h, _ in items]
+    for gone in ("Hermes version", "Mustache", "Uranium mission", "Busy one", "Filed 2 of 37", "Deployed: Work section", "Journey checks: 4 failed", "Rule fired on Macusani: task #113"):
+        assert not any(gone in h for h in heads), gone
+    when = json.loads(run(state, "JSON.stringify(feedItems().map((x) => +new Date(toIso(x.ts))))"))
+    assert when == sorted(when, reverse=True)
+    html = run(state, "feedHtml()")
+    assert '<span class="fkind k-alert">Alert</span>' in html and 'data-ex="tasks/113-macusani.md"' in html and "scheduled · 4 min · 3 model calls" in html
+    assert 'data-hf="alert"' in html and 'data-hf="housekeeping"' not in html and "<h2>Results</h2>" in html
+    assert "Compare two NAS" not in run(state, "(homeFilter = 'alert', feedHtml())")
+    now = run(state, "nowHtml()")
+    assert 'href="#/task/130"' in now and "1 of 2 steps done · main at work" in now   # a task at work is on Now
 
+
+def test_home_holds_its_updates_while_you_scroll_or_touch():
+    """APP-38: a card came in above the one tapped and the tap opened another; Home waits behind a button instead."""
+    fn = re.search(r"^function homeUpdate\(.*?^\}", APP_JS, re.M | re.S)[0]
+    assert "window.scrollY > 120 || Date.now() - homeTouch < 2500" in fn and 'id="homenew"' in fn and "homeUpdate(true)" in fn

@@ -1,0 +1,46 @@
+# The research-accuracy exam (TRL-16, docs/NEXT-PHASE.md Part 1: the research class's exam): 25 questions whose answers
+# are stable facts from stable sources, given through the front door as one research task. Its answer key is
+# /srv/ai/private/trials/research-accuracy (answers.json, score.py, reference/): each question scores twice, the claim
+# (the answer matches the key) and the citation (a page given for it is one the task's agents really opened, from the
+# run record's provenance). 50 cases; the questions are here, the answers are in no container.
+name: research-accuracy
+title: Research accuracy, 25 questions with known answers
+kind: research
+task: >-
+  Research and answer these 25 questions. For each, write one line: its number, the answer, and the web address of
+  the page you read it on (a page you opened, not one you remember). If you could not find an answer, say so on its
+  line instead of guessing.
+  1. In which year did CERN put the World Wide Web software in the public domain?
+  2. What is the atomic number of uranium?
+  3. What is the half-life of uranium-238, in years?
+  4. What is the melting point of tungsten, in degrees Celsius?
+  5. What is the exact speed of light in vacuum, in metres per second?
+  6. On which date did Linus Torvalds first announce Linux on the comp.os.minix newsgroup?
+  7. Which RFC number defines HTTP Semantics (published in 2022)?
+  8. Which height of Mount Everest, in metres, did China and Nepal announce jointly in 2020?
+  9. In which year did D. Richard Hipp begin the SQLite project?
+  10. What is the ISO 4217 currency code of the Swiss franc?
+  11. How many bones does a typical adult human skeleton have?
+  12. In which year was K2 first climbed?
+  13. Which RFC number is the current standard for UTF-8 (published in 2003)?
+  14. What is the largest moon of Saturn?
+  15. In which year was the Canadian uranium company Cameco formed?
+  16. In which city does Kazatomprom have its headquarters?
+  17. In which year did the Raspberry Pi 1 Model B go on sale?
+  18. What is PostgreSQL's default TCP port?
+  19. In which year did Home Assistant first appear (its first public code)?
+  20. How many Earth days is the orbital period of Mars?
+  21. In which year did the Treaty on the Non-Proliferation of Nuclear Weapons enter into force?
+  22. In which year did Tim Berners-Lee write "Information Management: A Proposal" at CERN?
+  23. How many people have walked on the Moon?
+  24. Which company makes the Ripjaws V line of DDR4 memory?
+  25. In which year was Python 1.0 released?
+key: research-accuracy
+done:
+  - each of the 25 questions has its own line with an answer, or says it could not be found
+  - each answer names the web address of a page that was opened for it
+effort: standard
+forbidden:
+  urls: ['chatgpt\.com', 'perplexity\.ai', 'gemini\.google\.com', 'claude\.ai']   # answer engines: the exam is about reading sources
+  commands: []
+budget: {hours: 2, tokens: 1500000}

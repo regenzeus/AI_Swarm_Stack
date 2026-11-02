@@ -191,6 +191,12 @@ def record_step(c, t, s, db=None):
             link(c, task, occ, idx, run, "generated", d)
             if rep:
                 link(c, task, occ, idx, run, "derived", d, rep[0])
+        wiki = re.search(r"Topic wiki pages updated: ([^\n]+?)\.(?:\n|$)", out.split("\n\n")[0])     # conductor.run_deliver
+        for p in (wiki.group(1).split(", ") if wiki and t["spec"].get("topic") else []):
+            w = art(c, "wiki", f"vault:topics/{t['spec']['topic']}/wiki/{p}.md", p)
+            link(c, task, occ, idx, run, "generated", w)
+            if rep:
+                link(c, task, occ, idx, run, "derived", w, rep[0])
     elif h == "wiki":
         root = (t["spec"].get("wiki") or {}).get("root", "")
         for p in re.findall(r"(?:entities|concepts|projects|events|howto|answers|comparisons|sources)/[a-z0-9-]+", out.split("(findings:")[0]):

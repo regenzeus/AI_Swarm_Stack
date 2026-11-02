@@ -5,7 +5,7 @@ part: Everyday use
 icon: target
 minutes: 3
 summary: Type what you want done. The stack writes what done means, plans it, picks the agents and starts it; you answer only real questions.
-views: [tasks]
+views: [tasks, task, taskmap]
 ---
 Every piece of work in the stack is a **task**: a briefing, a long research job, a build, a question to Claude, a
 chat. Most of the time you just say what you want, and the stack works out the rest.
@@ -72,19 +72,45 @@ when, its verdict and its answer.
 ## A task's own page
 
 Every task has its own page, like an agent: tap a task anywhere (a notification, Home, the board, an agent's
-**Tasks** tab) and it opens. On top: where it stands and why (a step that could not do its work says what was
-missing), and the numbers: how many agents worked on it, steps done, the time, the tokens, what its agents read from
-and kept in memory, and the verdict. Below, five tabs:
+**Tasks** tab) and it opens, with **Home** lit below, where tasks are given. On top: its name, where it stands and
+why (a step that could not do its work says what was missing). A recurring task shows one run at a time, its newest:
+pick another under **Showing**.
 
-- **Overview**: the answer itself, the definition of done with the judge's verdict and reason for each point, and the
-  plan with each step's agent, times and result.
+The **Overview** starts with the result and then tells how it came about, most important first:
+
+- **The answer**, folded after a screen; **Show the whole answer** opens all of it.
+- The numbers: how many agents worked on it, steps done, the time, the tokens, the sources read and cited, what its
+  agents read from and kept in memory, and the verdict; then your own words, as you gave the task.
+- **Who worked on it**: a map of the agents. A bubble is an agent, its colour its part (blue: planned it or ran the
+  plan; green: did a step; orange: called in by another agent), its size the tokens of its own model calls (an agent
+  that hands its work to Claude Code is small: the Claude run it called in carries the tokens). A line with an arrow is
+  a hand-off (teal: one step's results went on to the next) or a call (grey: one agent called another in); a dashed
+  line is a start (the Conductor gave it a step, the planner made the plan). Tap a bubble for that agent's part, runs, tokens, cost,
+  models, tools and memory use; tap a line for what passed along it. **Who did what, in words** says the same as a list.
+- **Done when**: the judge's verdict and its reason for each point.
+- **What went wrong**: failed steps, retries, runs that failed or went silent, errors in the agents' runs, points of
+  done when not met, each with a link to where it happened; or a line saying nothing did.
+- **What it read** (the sources, by site, how many the answer cites), **Memory** (each store, read and kept) and
+  **What it made** (the answer, reports, wiki pages, files, step findings, where it was delivered).
+- **Cost and time**: the tokens of each agent with its models, and the time from start to end.
+- Then the Orchestrator's checkpoints and the plan with each step's agent, times and result.
+
+Each part opens its own tab for the whole of it:
+
+- **Agents**: the map larger, and every agent with its part, runs, calls, tokens, cost, models, every tool it used and
+  how often, and its memory use.
 - **Timeline**: when each agent worked (indented: one another agent called in), then every action they took, newest
   last; tap an agent's name to see only its actions.
-- **Agents**: each agent that worked on it, with its part (planned it, a step, called in by another agent), its runs,
-  tool and model calls, tokens and time, and a link to its page.
-- **Memory**: what its agents read from memory (your notes, the wikis, journals, long-term memory, the swarm's ledger)
-  and what they kept there.
-- **Runs**: every run of a recurring task with its verdict, steps and answer.
+- **Sources**: every web page, news item, job ad, note and memory its agents read and every search they made, with the
+  step and agent that read it; filter to what the answer cites, what was read but not cited, or the searches. By site
+  below.
+- **Memory**: by store (wikis, your notes, journals, long-term memory, the swarm's board, lessons): what was read and
+  what was kept, each page or fact once with how often and by whom, linked where it is a page. It includes what the
+  stack did around the agents: the wiki a refinement's research was given, the topic wiki pages a briefing grew, and the
+  answer kept in your vault. **Every memory call** lists them as the agents made them.
+- **Runs**: every run of a recurring task with its verdict, steps and answer; **Show this run** opens it on the page.
+
+A task handed to Claude Code, a build, a chat or a mission shows its agents too: its own run and every run it called in.
 
 An agent's page has the other side: its **Tasks** tab lists the tasks it worked on and its part in each.
 

@@ -74,6 +74,20 @@ def test_a_hermes_run_without_a_ref_joins_the_live_step_of_its_agent(RT):
     assert RT.db().execute("select ref from runs where run='hermes:mission:c:1'").fetchone()["ref"] == "mission-run:7"   # no live step: as before
 
 
+def test_two_scout_steps_started_together_each_get_their_own_run_by_its_prompt_s_head(RT):
+    """FND-114: the guess files a run under the live step most recently active; the step's run named at the head of its
+    prompt (the run's title) is exact, and a head naming no known run falls back to the guess."""
+    t = time.time() - 100
+    RT.ingest([ev("task:3", "run", t, agent="conductor"), ev("task:4", "run", t, agent="conductor"),
+               ev("task:3:step:1", "run", t + 1, agent="scout", ref="task:3"), ev("task:4:step:1", "run", t + 1, agent="scout", ref="task:4")])
+    RT.ingest([ev("hermes:scout:a:1", "run", t + 2, agent="scout", run_title="[run: task:3:step:1]\nYou are scout in the owner's stack"),
+               ev("hermes:scout:b:1", "run", t + 2, agent="scout", run_title="[run: task:4:step:1]\nYou are scout in the owner's stack"),
+               ev("hermes:scout:c:1", "run", t + 3, agent="scout", run_title="[run: task:9:step:1]\nYou are scout")])
+    refs = {r["run"]: r["ref"] for r in RT.db().execute("select run, ref from runs")}
+    assert refs["hermes:scout:a:1"] == "task:3:step:1" and refs["hermes:scout:b:1"] == "task:4:step:1"
+    assert refs["hermes:scout:c:1"] in ("task:3:step:1", "task:4:step:1")       # no such run: the live step, as before
+
+
 def test_the_watchdog_closes_silent_runs_honestly(RT):
     t = time.time() - 5000
     RT.ingest([ev("m", "run", t), ev("phone:1", "run", t, agent="ai-phone", data={"manifest": {"agent": "ai-phone", "idle_end": True}})])

@@ -13,6 +13,8 @@ into `requirements/findings.yaml`.
 | [OBSERVABILITY.md](OBSERVABILITY.md) | The run record, the agent log, problems, the health board, notifications |
 | [SECURITY.md](SECURITY.md) | Trust boundaries, sign-in, egress, keys, and the accepted risks |
 | [MEMORY.md](MEMORY.md) | How the stack remembers: every store by kind, best practice and where we stand, the eight rules, what the trials taught, the plan and the owner's decisions |
+| [PROBES.md](PROBES.md) | The probes of the next phase: each experiment on the stack, its question and measure, what it found and the change it led to |
+| [NEXT-PHASE.md](NEXT-PHASE.md) | Proposed: the next phase. Earned autonomy (licences per kind of action, one decision queue), four flagships with an outcome number each, a weekly benchmark, one kind of job, the memory budget, and the probes |
 | [SWARM-ROADMAP.md](SWARM-ROADMAP.md) | Where the swarm goes next: give a task and the stack does the rest; the phases, gates and the owner's decisions |
 | [SWARM-TRIALS.md](SWARM-TRIALS.md) | Proposed (phase 10): trials with an answer key so the swarm gets better by being used; the roles software work needs; the improvement loop; the owner's open decisions |
 | [SWARM-DESIGN.md](SWARM-DESIGN.md) | How the swarm works after phase 4: every task a plan graph, fan-out, artifacts and the swarm map, telemetry, customisation, UX standards, reach (phases 6-9) |

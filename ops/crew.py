@@ -425,7 +425,7 @@ def mission_health(c, m):
 # human; everything else is a note on the card and in the run log. A good next run clears an issue; Acknowledge
 # hides it until it happens again (health-ack.json, logged in the activity feed).
 ALERTS = {"failing", "overdue", "stalled", "limit-long", "drift", "over-limit", "app-error", "drill-old", "memory-low",
-          "network-cut", "journey"}
+          "network-cut", "journey", "phone-down", "swarm-fault"}
 CURATOR_ITEM = {"wiki-curator": "curator"}           # a memory store's curator -> its crew item (the vault lint runs in curate)
 ENGINES = {"main": "Hermes (chat)", "mission": "Hermes (missions)", "scout": "Research (scout)", "curator": "Wiki curator",
            "builder": "Builder", "claude-builder": "Builder", "claude-task": "Claude worker", "claude-review": "Claude worker",
@@ -518,6 +518,16 @@ def app_errors(now=None, path=None):
 JOURNEYS = OUT / "journeys.json"                  # the journey checks' last report (ops/journeys.py)
 
 
+def checker_faults(f=None):
+    """FND-112: the faults the checker's last run found in the swarm, each an alert on its card ([] when it found none;
+    its next clean run clears them)."""
+    try:
+        cur = json.loads(f.read_text()) if f else agent_file("checker")
+    except (OSError, ValueError):
+        return []
+    return [{"kind": "swarm-fault", "at": cur.get("last") or 0, "text": x} for x in cur.get("faults") or []]
+
+
 def journey_issues(path=None):
     """TSK-32: the last journey check's failures as one alert on "Journey checks", naming the first ones; [] when they
     all passed (the next good night clears it)."""
@@ -556,6 +566,8 @@ def health(c, missions):
         iss = [{**i, "at": i.get("at") or a.get("last") or 0} for i in (hc or {}).get("issues", [])] if a.get("enabled", True) else []
         if a["id"] == "journeys":
             iss += journey_issues()
+        if a["id"] == "checker":
+            iss += checker_faults()
         items.append({"name": a["name"], "kind": "crew", "id": a["id"], "status": a.get("state"), "last": a.get("last"),
                       "runs_7d": (hc or {}).get("runs_7d"), "success_7d": (hc or {}).get("success_7d"),
                       "issues": iss, "payoff": (hc or {}).get("payoff", "")})
@@ -669,7 +681,32 @@ def cut_networks(run=None, now=None):
                         else "recreate it after the container whose network it shares")} for n in cut]
 
 
-def recovery_alarms(items, now=None, backups=None, meminfo=None, drift=None, nets=None):
+PHONE_DIR = Path("/srv/ai/phone")
+PHONE_DOWN_S, PHONE_SILENT_S = 1800, 600         # FND-116: disconnected 30 min, or its service silent 10 min, is an alert
+_phone_down = {"since": None}
+
+
+def phone_down(now, d=None):
+    """FND-116 (the AI phone stuck for 8.5 h, unnoticed): the phone disconnected for PHONE_DOWN_S, or its service not
+    writing its state for PHONE_SILENT_S, while the owner has not switched it off -> an issue, else None."""
+    d = d or PHONE_DIR
+    try:
+        f = d / "state.json"
+        st, age = json.loads(f.read_text()), now - f.stat().st_mtime
+    except (OSError, ValueError):
+        return None                                  # no AI phone here
+    if (d / "STOP").exists() or (st.get("connected") and age < PHONE_SILENT_S):
+        _phone_down["since"] = None
+        return None
+    since = _phone_down["since"] = _phone_down["since"] or now
+    if now - since < PHONE_DOWN_S and age < PHONE_SILENT_S:
+        return None
+    why = (f"its service has not reported for {round(age / 60)} min" if age >= PHONE_SILENT_S else
+           f"it has been disconnected for {round((now - since) / 60)} min" + (f" ({st['error']})" if st.get("error") else ""))
+    return {"kind": "phone-down", "at": now, "text": f"The AI phone: {why}; its page says what it needs"}
+
+
+def recovery_alarms(items, now=None, backups=None, meminfo=None, drift=None, nets=None, phone=None):
     """FND-66, FND-67, FND-74: an alert on the Restore drill when no drill has passed for 8 days; a note on This PC when
     swap is over 90 % full (an alert when RAM is short too, CST-14) and when the running images drifted from their tags
     or the lock file; an alert on This PC when a container is cut off from the network it shares (PLT-23).
@@ -703,6 +740,9 @@ def recovery_alarms(items, now=None, backups=None, meminfo=None, drift=None, net
     if d:
         pc.append({"kind": "image-drift", "at": now, "text": d})
     pc += cut_networks() if nets is None else nets
+    p = phone_down(now) if phone is None else phone
+    if p:
+        pc.append(p)
     return [{"name": "This PC", "kind": "engine", "id": "pc", "status": "issues", "last": None, "runs_7d": None,
              "success_7d": None, "issues": pc, "payoff": ""}] if pc else []
 
@@ -1015,9 +1055,12 @@ def run(name):
     c = M.db()
     rid, t0 = f"crew:{name}:{time.strftime('%Y%m%d-%H%M%S')}", time.time()
     RTM.set_ref(rid, f"crew:{name}")                      # a Claude review inside reports under this run
-    RTM.start(rid, f"crew:{name}", f"Crew · {BY_ID[name]['name']}", data={"manifest": {"agent": f"crew:{name}", "card": REG.hash_of(name), "prompts": P.version(name)}})
+    card = REG.hash_of(name)
+    RTM.start(rid, f"crew:{name}", f"Crew · {BY_ID[name]['name']}", data={"manifest": {"agent": f"crew:{name}", "card": card, "prompts": P.version(name)}})
     RUN["id"], RUN["signal"] = rid, ""
-    SW.run_start(name, rid)                              # SWM-64: a run that never finishes shows on the health board
+    swarm = card is not None                             # a job without a swarm card (the journeys) cannot finish a swarm run (FND-113)
+    if swarm:
+        SW.run_start(name, rid)                          # SWM-64: a run that never finishes shows on the health board
     J.begin(f"crew:{name}", BY_ID[name]["name"], run=rid, tools=False)        # its journal goes in front of its model prompt
     try:
         n = fn(c)
@@ -1032,13 +1075,15 @@ def run(name):
         J.end()
         _journal(name, rid, "done", str(res), time.time() - t0)
         RTM.end(rid, f"crew:{name}", "done", str(res), time.time() - t0)
-        SW.run_finish(name, rid, str(res), signal=RUN.get("signal"))
+        if swarm:
+            SW.run_finish(name, rid, str(res), signal=RUN.get("signal"))
     except Exception as e:
         J.end()
         _journal(name, rid, "limit" if "limit" in str(e).lower() else "failed", f"{type(e).__name__}: {str(e)}", time.time() - t0)
         save(name, result=f"failed: {type(e).__name__}: {str(e)}", last=time.time())
         RTM.end(rid, f"crew:{name}", "limit" if "limit" in str(e).lower() else "failed", f"{type(e).__name__}: {str(e)}", time.time() - t0)
-        SW.run_finish(name, rid, f"failed: {type(e).__name__}: {str(e)}")
+        if swarm:
+            SW.run_finish(name, rid, f"failed: {type(e).__name__}: {str(e)}")
         raise
 
 
