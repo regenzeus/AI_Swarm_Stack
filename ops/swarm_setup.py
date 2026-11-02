@@ -11,6 +11,7 @@
   SWM-89) are added here when the first agent calls the swarm through the gateway.
 """
 import hashlib
+import textcap as TC                              # visible caps (AGENTS.md, truncation)
 import json
 import os
 import secrets
@@ -53,7 +54,7 @@ def litellm(method, path, body=None, key=None):
             raw = r.read().decode()
             return r.status, json.loads(raw) if raw.strip().startswith(("{", "[")) else raw
     except urllib.error.HTTPError as e:
-        return e.code, e.read().decode()[:300]  # cap: untrusted
+        return e.code, TC.cut(e.read().decode(), 300)  # cap: untrusted
 
 
 def server_id():

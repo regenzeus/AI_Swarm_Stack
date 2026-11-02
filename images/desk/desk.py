@@ -10,6 +10,7 @@ language, citing only numbered sources) -> check citations.
 Runs on the "webonly" network: internet and LiteLLM only. Env: LITELLM_URL, VK_DESK.
 """
 import argparse, base64, datetime as dt, hashlib, html, ipaddress, json, os, re, socket, sqlite3, sys, time, urllib.parse, urllib.request
+import textcap as TC                              # visible caps (AGENTS.md, truncation)
 from pathlib import Path
 
 import feedparser
@@ -118,7 +119,7 @@ def from_feed(url, kind):
         if kind == "gnews" and " - " in title:
             title, source = title.rsplit(" - ", 1)
         items.append({"title": title, "url": e.get("link", ""), "source": source or urllib.parse.urlparse(url).hostname,
-                      "published": when(e), "summary": clean(e.get("summary"))[:600], "via": kind})  # cap: prompt
+                      "published": when(e), "summary": TC.cut(clean(e.get("summary")), 600), "via": kind})  # cap: prompt
     return items
 
 
@@ -201,7 +202,7 @@ def from_sec(tickers):
                             text = doc_text(get(url))
                     if len(text) < 300:
                         text = doc_text(get(url))
-                    summary = release_text(text)[:800] or summary  # cap: prompt
+                    summary = TC.cut(release_text(text), 800) or summary  # cap: prompt
                     desc = summary[:110] if desc == r["form"][i] else desc  # cap: id
                     time.sleep(0.3)
                 except Exception as e:
@@ -311,11 +312,11 @@ def ask(prompt, model, max_tokens=None, ref="", fills=None):
     err = None
     for attempt in range(4):
         try:
-            text = json.load(urllib.request.urlopen(req, timeout=300))["choices"][0]["message"]["content"]
+            text = TC.answer(json.load(urllib.request.urlopen(req, timeout=300)), model)
             out = json.loads(re.search(r"\{.*\}", text, re.S).group(0))
             if ref and fills is not None:
-                case = {"at": time.time(), "ref": ref, "model": model, "fills": {k: str(v)[:20000] for k, v in fills.items()},  # cap: store
-                        "out": text[:20000]}  # cap: store
+                case = {"at": time.time(), "ref": ref, "model": model, "fills": {k: TC.cut(str(v), 20000) for k, v in fills.items()},  # cap: store
+                        "out": TC.cut(text, 20000)}  # cap: store
                 CASES.append(case)
                 if CASE_FILE:
                     with open(CASE_FILE, "a") as f:
@@ -334,7 +335,7 @@ def triage(b, groups, keep=16):
         chunk = groups[start:start + 60]
         lines = "\n".join(
             f"[{start + i}] {g['items'][0]['title']} ({', '.join(sorted({x['source'] for x in g['items']})[:3])}"
-            f"{', +' + str(len(g['items']) - 3) if len(g['items']) > 3 else ''}) {g['items'][0]['summary'][:200]}"  # cap: prompt
+            f"{', +' + str(len(g['items']) - 3) if len(g['items']) > 3 else ''}) {TC.cut(g['items'][0]['summary'], 200)}"  # cap: prompt
             for i, g in enumerate(chunk))
         text, ref, fills = prompt("TRIAGE", topic=b["topic"], mission=b["mission"], questions=qs, prefer=", ".join(b["sources"].get("prefer", [])),
                                   avoid=", ".join(b["sources"].get("avoid", [])), items=lines)
@@ -368,10 +369,10 @@ def read(group):
         try:
             text = job_text(it["refnr"]) if it.get("via") == "jobs" else doc_text(get(it["url"]))   # a job page is a script app
             if len(text) > 300:
-                return text[:3500]  # cap: prompt
+                return TC.cut(text, 3500)  # cap: prompt
         except Exception as e:
             log(f"read failed {it['url']}: {e}")
-    return " ".join(x["summary"] for x in group["items"])[:1500]  # cap: prompt
+    return TC.cut(" ".join(x["summary"] for x in group["items"]), 1500)  # cap: prompt
 
 
 # ---------- prices: from data, never from the model ----------
@@ -415,7 +416,7 @@ def previous(topic_dir, date):
     if not reps:
         return ""
     t = reps[-1].read_text()
-    return t[:2500]  # cap: prompt
+    return TC.cut(t, 2500)  # cap: prompt
 
 
 
@@ -466,7 +467,7 @@ def watch(spec):
         except Exception as e:
             log(f"watch: sec index failed ({str(e)})")
             index = {}
-        for t in spec["sec"][:20]:
+        for t in TC.first(spec["sec"], 20, "SEC tickers of the topic"):  # cap: list (a briefing's fetch budget; the log names the rest)
             c = index.get(t)
             if not c:
                 continue
@@ -483,7 +484,7 @@ def watch(spec):
                            "url": f"https://www.sec.gov/Archives/edgar/data/{c['cik_str']}/{acc.replace('-', '')}/{r['primaryDocument'][i]}"})
             out["sec"][t] = fl
             time.sleep(0.3)
-    for sym in spec.get("prices", [])[:30]:
+    for sym in TC.first(spec.get("prices", []), 30, "price symbols of the topic"):  # cap: list (the log names the rest)
         try:
             res = json.loads(get(f"https://query1.finance.yahoo.com/v8/finance/chart/{urllib.parse.quote(sym)}?range=5d&interval=1d"))["chart"]["result"][0]
             bars = [(t, c) for t, c in zip(res["timestamp"], res["indicators"]["quote"][0]["close"]) if c is not None]
@@ -496,15 +497,15 @@ def watch(spec):
         except Exception as e:
             log(f"watch: price {sym} failed ({str(e)})")
         time.sleep(0.3)
-    for q in spec.get("news", [])[:20]:
+    for q in TC.first(spec.get("news", []), 20, "news searches of the topic"):  # cap: list (the log names the rest)
         u = gnews_url(q, 24)
         out["news"][q] = [{"id": key(it), "title": it["title"], "url": it["url"], "source": it["source"],
                            "published": it["published"].isoformat() if it["published"] else None} for it in from_feed(u, "gnews")[:15]]
         time.sleep(1)
     out["feeds"], out["github"] = {}, {}               # the event bus (ops/events.py, TSK-10): feeds and GitHub activity
-    for u in spec.get("feeds", [])[:20]:
+    for u in TC.first(spec.get("feeds", []), 20, "feeds of the topic"):  # cap: list (the log names the rest)
         out["feeds"][u] = [{"id": key(it), "title": it["title"], "url": it["url"], "source": it["source"],
-                            "published": it["published"].isoformat() if it["published"] else None} for it in from_feed(u, "feed")[:20]]
+                            "published": it["published"].isoformat() if it["published"] else None} for it in from_feed(u, "feed")[:20]]  # cap: list (a feed's 20 newest items; the feed has the rest)
     for r in spec.get("github", [])[:10]:
         if not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", r):
             continue
@@ -549,7 +550,7 @@ def alert(spec):
                 body = doc_text(get(article_url(it["url"])))
         except Exception as e:
             log(f"alert: could not read {it.get('url', '')} ({e})")
-        texts.append(f"ITEM: {it.get('title', '')}\nURL: {it.get('url', '')}\nTEXT: {body[:3500] or '(not readable)'}")  # cap: prompt
+        texts.append(f"ITEM: {it.get('title', '')}\nURL: {it.get('url', '')}\nTEXT: {TC.cut(body, 3500) or '(not readable)'}")  # cap: prompt
     text, ref, fills = prompt("ALERT", topic=b["topic"], mission=b["mission"], questions=json.dumps(b["key_questions"], ensure_ascii=False),
                               kind=ev["kind"], summary=ev["summary"], items="\n\n".join(texts))
     r = ask(text, "gpt-sub", ref=ref, fills=fills)
@@ -598,7 +599,7 @@ def fetch(spec):
     """--fetch: the readable text of one public page, for adding it to the vault. stdin {"url"} -> {"title", "text"}"""
     raw = get(spec["url"])
     meta = trafilatura.extract_metadata(raw.decode("utf-8", "replace"))
-    print(json.dumps({"title": (meta.title if meta else "") or "", "text": doc_text(raw)[:200000]}))  # cap: untrusted
+    print(json.dumps({"title": (meta.title if meta else "") or "", "text": TC.cut(doc_text(raw), 200000)}))  # cap: untrusted
 
 
 def check(spec):
@@ -660,8 +661,10 @@ def main():
     fresh, groups = events(items, db)
     log(f"{len(items)} items collected, {len(fresh)} new in {WINDOW_H} h, {len(groups)} events")
     if a.dry:
-        for g in groups[:40]:  # cap: list
-            log(f"  {len(g['items'])}x {g['items'][0]['source'][:20]:20} {g['items'][0]['title']}")
+        for g in groups[:40]:  # cap: list (a dry run's log; the next line counts the rest)
+            log(f"  {len(g['items'])}x {g['items'][0]['source'][:20]:20} {g['items'][0]['title']}")  # cap: id (a source's name in a 20-wide log column)
+        if len(groups) > 40:
+            log(f"  … and {len(groups) - 40} more events")
         return
     chosen = triage(b, groups) if groups else []
     log(f"triage kept {len(chosen)}")
@@ -707,7 +710,7 @@ def research_events(findings):
         items = [{"title": f"{urllib.parse.urlparse(u).hostname or u} (research: {f['question'][:80]})", "url": u.rstrip(".,;"),  # cap: id
                   "source": "scout research", "published": None, "summary": ""} for u in urls] or \
                 [{"title": f"Research: {f['question'][:80]}", "url": "", "source": "scout research", "published": None, "summary": ""}]  # cap: id
-        out.append(({"items": items, "text": (f.get("text") or "")[:6000]}, {"questions": []}))   # cap: prompt
+        out.append(({"items": items, "text": TC.cut((f.get("text") or ""), 6000)}, {"questions": []}))   # cap: prompt
     return out
 
 

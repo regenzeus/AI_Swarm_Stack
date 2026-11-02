@@ -15,7 +15,7 @@
   window.fetch = (url, o = {}) => {
     const m = (o.method || "GET").toUpperCase(), u = String(url);
     if (m !== "GET" && !(u === "/api/swarm" && m === "POST")) {          // /api/swarm takes read operations only (server SWARM_READ)
-      rec.posts.push({ route: location.hash, url: u, body: String(o.body || "").slice(0, 160) });   // cap: preview
+      rec.posts.push({ route: location.hash, url: u, body: String(o.body || "").slice(0, 160) + (String(o.body || "").length > 160 ? " …" : "") });   // cap: preview
       return Promise.resolve(new Response(JSON.stringify({ ok: true }), { headers: { "content-type": "application/json" } }));
     }
     return real(u, o).then((r) => { if (!r.ok && r.status !== 404) rec.errors.push({ route: location.hash, msg: `HTTP ${r.status} ${u}`, where: "fetch" }); return r; });

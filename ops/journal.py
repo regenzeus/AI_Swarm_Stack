@@ -24,6 +24,7 @@ an agent found is in its wiki and its journal, which the chat finds through the 
 top recall for its task, at most RECALL_CHARS. Hindsight is reachable only on memnet: the calls run in Hermes' container.
 """
 import datetime as dt
+import textcap as TC                              # visible caps (AGENTS.md, truncation)
 import json
 import os
 import re
@@ -236,7 +237,7 @@ def recall(agent, query, n=4):
 
 def memory_text(doc, cap=None):
     cap = cap or CAP_CHARS
-    entries = doc["entries"][-ENTRIES:]
+    entries = doc["entries"][-ENTRIES:]  # cap: list (the opening says how many earlier runs are in the journal)
     def build(es):
         parts = []
         if doc.get("state"):
@@ -244,7 +245,8 @@ def memory_text(doc, cap=None):
         if doc["notes"]:
             parts.append("Standing notes:\n" + "\n".join(f"- {n}" for n in doc["notes"]))
         if es:
-            parts.append("Your last runs (oldest first):\n" + "\n\n".join(e["head"] + "\n" + "\n".join(f"- {x}" for x in e["lines"]) for e in es))
+            older = len(doc["entries"]) - len(es)
+            parts.append(f"Your last {len(es)} runs (oldest first" + (f"; {older} earlier ones are in your journal" if older else "") + "):\n" + "\n\n".join(e["head"] + "\n" + "\n".join(f"- {x}" for x in e["lines"]) for e in es))
         return "\n\n".join(parts)
     text = build(entries)
     while len(text) > cap and entries:
@@ -394,8 +396,8 @@ def condense(v, title, run, state, summary, seconds, result):
     if os.environ.get("JOURNAL_MODEL", "1") == "0" or (not steps and not result) or (M and M.paused(summary)):
         return None                              # nothing to condense, or the model is limited: deterministic
     prompt = ENTRY_PROMPT.format(title=title, run=run, state=state, seconds=f"{round(seconds or 0)} s", summary=clip(summary, 600),
-                                 n=len(steps), steps="\n".join(steps[:40]) or "(none)", errors="; ".join(errors[:5] + probs[:5]) or "none",  # cap: prompt
-                                 result=str(result or "")[:3000] or "(none)")  # cap: prompt
+                                 n=len(steps), steps="\n".join(TC.more(steps, 40, "more steps")) or "(none)", errors="; ".join(TC.more(errors, 5, "more errors") + TC.more(probs, 5, "more problems")) or "none",  # cap: prompt
+                                 result=TC.cut(str(result or ""), 3000) or "(none)")  # cap: prompt
     P.record(prompt)                                  # MEM-11: the run records the prompt's version
     try:
         out = M.ask_text(prompt, os.environ["VK_JOURNAL"], model="gpt-sub-fast", timeout=90)
@@ -491,10 +493,10 @@ def curate():
         doc = load(a)
         if len(doc["entries"]) < FOLD_AT:
             continue
-        old, keep = doc["entries"][:-KEEP], doc["entries"][-KEEP:]
+        old, keep = doc["entries"][:-KEEP], doc["entries"][-KEEP:]  # cap: rotate (the older ones fold into standing notes)
         try:
             d = M.ask_json(FOLD_PROMPT.format(title=doc["title"], notes="\n".join(f"- {x}" for x in doc["notes"]) or "(none)",
-                                              entries="\n\n".join(e["head"] + "\n" + "\n".join(f"- {x}" for x in e["lines"]) for e in old)[:12000]),  # cap: prompt
+                                              entries=TC.cut("\n\n".join(e["head"] + "\n" + "\n".join(f"- {x}" for x in e["lines"]) for e in old), 12000)),  # cap: prompt
                            os.environ["VK_JOURNAL"], model="gpt-sub-fast", timeout=180)
             notes = [clip(x, 220) for x in d.get("notes") or [] if str(x).strip()][:12]
         except Exception as e:

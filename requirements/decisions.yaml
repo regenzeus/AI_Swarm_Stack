@@ -209,4 +209,12 @@ items:
     opening apps and addresses run without asking unless the text holds an e-mail address, phone number, IBAN or key; a
     request already waiting goes ahead when the permission comes. Money, passwords, blocked apps and Stop are unchanged.',
   supersedes: DEC-23}
-
+- {id: DEC-39, date: 2026-11-02, title: SQLite for the swarm, decision: 'The owner confirmed SQLite for the swarm''s Ledger ("keep
+    SQLite for the swarm database ... Yes do all"): one writer (the Swarm service), WAL, a nightly snapshot the restore drill
+    checks, 7 MB. Postgres would add a second failure point and buy nothing on one machine. Closes design decision 2 (SWM-73).'}
+- {id: DEC-40, date: 2026-11-02, title: The Memory Keeper fixes the memory by rules, decision: 'The owner asked for one dedicated
+    agent that runs periodically and fixes the memory systems, contradictions and false information included, designed
+    carefully to best practice, and answered D2 ("Yes do all"): the memory agent may retire duplicates, test noise and facts
+    on agents'' runs, translate facts into English and date passing states itself, softly and restorably, with each change
+    listed and undoable, while its answer-key trial passes; contradictions of his own facts stay his to decide; world
+    knowledge is corrected only through research with sources (docs/MEMORY.md, the Memory Keeper; MEM-21).', supersedes: DEC-32}

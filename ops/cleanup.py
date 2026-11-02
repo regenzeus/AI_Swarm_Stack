@@ -20,6 +20,7 @@ import subprocess
 import time
 from pathlib import Path
 from textcap import STORE, cut, tail                    # visible caps and input limits (AGENTS.md, truncation)
+import textcap as TC
 
 M = None                                    # ops/missions.py (set in its main)
 PHONE = "aistack-phone-1"
@@ -187,10 +188,10 @@ def phone_report(f, today=None):
         lines += ["", "WhatsApp's `Databases` folder holds its chat backups: only delete it if the chats don't matter."]
     if files.get("biggest"):
         lines += ["", "### Biggest files", "", "| File | Size | Date |", "|---|---|---|"]
-        lines += [f"| {x['path'].replace('/sdcard/', '')} | {gb(x['size'])} | {x['date']} |" for x in files["biggest"][:20]]
+        lines += [f"| {x['path'].replace('/sdcard/', '')} | {gb(x['size'])} | {x['date']} |" for x in files["biggest"][:20]] + ([f"(… and {len(files['biggest']) - 20} more big files)"] if len(files["biggest"]) > 20 else [])  # cap: list
     for k, v in (files.get("contents") or {}).items():
         if v:
-            lines += ["", f"In {k}: " + ", ".join(v[:30]) + ("…" if len(v) > 30 else "")]
+            lines += ["", f"In {k}: " + ", ".join(v[:30]) + ("…" if len(v) > 30 else "")]  # cap: list
     blocked = [a for a in apps if a["blocked"]]
     if blocked:
         lines += ["", f"Not looked at (block list: banking, payments, passwords): {', '.join(a['package'] for a in blocked)}."]
@@ -275,7 +276,7 @@ def run(m, logf, ev=None):
             t0 = time.time()
             note = M.ask_text("In 3 to 5 short bullet points in English, the most useful cleanup steps for the owner from this "
                               "report, biggest gain first, with the size; say which are safe and which need a look. No preamble.\n\n"
-                              + body[:12000], key, model="gpt-sub-fast", timeout=120).strip()  # cap: prompt
+                              + TC.cut(body, 12000), key, model="gpt-sub-fast", timeout=120).strip()  # cap: prompt
             step("say", "First steps (gpt-sub-fast)", note, int((time.time() - t0) * 1000))
         except Exception as e:
             M.log(f"cleanup summary skipped: {type(e).__name__}")

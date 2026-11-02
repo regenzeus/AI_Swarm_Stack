@@ -15,7 +15,7 @@ chat() { # key model -> http status
 [ "$(curl -s -o /dev/null -w '%{http_code}' $API/health/liveliness)" = 200 ] && ok "gateway alive" || bad "gateway alive"
 
 s=$(chat "$VK_SMOKE" smoke)
-[ "$s" = 200 ] && ok "vk-smoke reaches the local smoke model" || bad "vk-smoke -> smoke" "HTTP $s $(head -c 200 /tmp/smoke.out)"
+[ "$s" = 200 ] && ok "vk-smoke reaches the local smoke model" || bad "vk-smoke -> smoke" "HTTP $s $(head -c 200 /tmp/smoke.out)…"   # cap: preview (the reply's start; /tmp/smoke.out has all)
 
 s=$(chat "$VK_SMOKE" gpt-sub)
 [ "$s" != 200 ] && ok "vk-smoke is refused gpt-sub (HTTP $s)" || bad "vk-smoke must not reach gpt-sub"

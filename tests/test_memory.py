@@ -18,11 +18,12 @@ H = {"Tailscale-User-Login": "owner@test"}
 
 def test_every_memory_store_is_declared_with_its_kind_writers_readers_limit_and_curator():
     ids = [s["id"] for s in MEM.STORES]
-    assert ids == ["vault-notes", "vault-wiki", "agent-wikis", "journals", "mission-notes", "hindsight", "ledger", "skills", "run-records", "qmd"]
+    assert ids == ["vault-notes", "vault-wiki", "agent-wikis", "journals", "mission-notes", "hindsight", "ledger", "skills", "run-records", "qmd",
+                   "task-handoffs", "hermes-memory", "code-graphs", "chats"]                  # MEM-19: the four FND-108 found missing
     for s in MEM.STORES:
-        assert s["kind"] in ("episodic", "semantic", "procedural", "shared", "index"), s["id"]
+        assert s["kind"] in ("working", "episodic", "semantic", "procedural", "shared", "index"), s["id"]
         assert s["holds"] and s["writes"] and s["reads"] and len(s["limit"]) == 2 and "curator" in s, s["id"]
-    assert {s["id"] for s in MEM.STORES if s["curator"] is None} == {"vault-notes", "mission-notes", "run-records"}
+    assert {s["id"] for s in MEM.STORES if s["curator"] is None} == {"vault-notes", "mission-notes", "run-records", "task-handoffs", "code-graphs", "chats"}
     assert all(s.get("tidy") for s in MEM.STORES if s["curator"] is None)              # each says how it stays small without one
     assert {s["id"] for s in MEM.STORES if s["curator"] == "memory"} == {"agent-wikis", "journals", "hindsight", "qmd"}   # the Librarian
 
@@ -57,6 +58,18 @@ def test_the_inventory_measures_each_store_names_its_problems_and_reads_growth_f
             outs["skills"] if "skills" in j else outs["stat"]
     monkeypatch.setattr(MEM, "sh", fake)
     import swarm_client as SW
+    db = vault.parent / "missions.sqlite"                                             # MEM-19: the four new stores, measured
+    sc = sqlite3.connect(db)
+    sc.execute("create table task_steps(output text)")
+    sc.executemany("insert into task_steps values(?)", [("a" * 100,), ("b" * 50,), (None,)])
+    sc.commit()
+    (vault.parent / "chats" / "api").mkdir(parents=True)
+    (vault.parent / "chats" / "api" / "c1.json").write_text("{}")
+    (vault.parent / "code" / "repo" / "graphify-out").mkdir(parents=True)
+    (vault.parent / "code" / "repo" / "graphify-out" / "graph.json").write_text("x" * 300)
+    monkeypatch.setattr(MEM, "MISSIONS_DB", db)
+    monkeypatch.setattr(MEM, "CHATS", vault.parent / "chats")
+    monkeypatch.setattr(MEM, "CODE", vault.parent / "code")
     monkeypatch.setattr(SW, "call", lambda op, a, actor, **k: {"ok": True, "result": {"artifacts": 391, "events": 900}})
     MEM._cache.update(data=None)
     now = time.time()
@@ -68,7 +81,9 @@ def test_the_inventory_measures_each_store_names_its_problems_and_reads_growth_f
     assert st["vault-wiki"]["count"] == 1 and st["vault-wiki"]["curated"] and st["journals"]["curated"] == now - 86400
     assert st["journals"]["entries"] == 2 and any("over 20 KB" in p for p in st["journals"]["problems"])
     assert st["hindsight"]["count"] == 194 and st["hindsight"]["by_kind"]["world"] == 51
-    assert st["qmd"]["orphaned_share"] == 0.44 and any("44%" in p and "the Librarian cleans them" in p for p in st["qmd"]["problems"])
+    assert (st["task-handoffs"]["count"], st["task-handoffs"]["bytes"]) == (2, 150) and st["chats"]["count"] == 1
+    assert st["code-graphs"]["parts"] == [{"root": "repo", "bytes": 300}] and "count" in st["hermes-memory"] or "error" in st["hermes-memory"]
+    assert st["qmd"]["orphaned_share"] == 0.44 and any("44%" in p and "the Memory Keeper cleans them" in p for p in st["qmd"]["problems"])
     assert not any("nobody curates" in p for s in st.values() for p in s["problems"]) and st["ledger"]["count"] == 391
     assert st["qmd"]["over_since"] == now and st["agent-wikis"]["over_since"] is None and st["agent-wikis"]["curated"] == now - 86400
     (MEM.PUBLIC / "librarian.json").write_text(json.dumps({"at": now, "wikis": [], "read": {"x": {}}}))

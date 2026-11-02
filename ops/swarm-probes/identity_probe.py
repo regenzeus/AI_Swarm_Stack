@@ -2,7 +2,9 @@
 """Phase 0, proof 1: does LiteLLM carry each agent's own swarm token to an MCP server (BYOK per-user credentials)?
 Needs LITELLM_MASTER_KEY in the environment. Creates two throwaway users, keys and a DB-registered probe server,
 calls the probe as each user, and removes everything again. Prints no key or token, only hashes and results."""
-import hashlib, json, os, secrets, time, urllib.error, urllib.request
+import hashlib, json, os, secrets, sys, time, urllib.error, urllib.request
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+import textcap as TC  # noqa: E402  visible caps (AGENTS.md, truncation)
 
 API = "http://127.0.0.1:4000"
 M = os.environ["LITELLM_MASTER_KEY"]
@@ -17,7 +19,7 @@ def call(method, path, body=None, key=M, headers=None):
         with urllib.request.urlopen(req, timeout=60) as r:
             return r.status, r.read().decode(), dict(r.headers)
     except urllib.error.HTTPError as e:
-        return e.code, e.read().decode()[:400], dict(e.headers)  # cap: untrusted
+        return e.code, TC.cut(e.read().decode(), 400), dict(e.headers)  # cap: untrusted
 
 
 def mcp(key, tool, extra_headers=None):
@@ -35,19 +37,19 @@ def mcp(key, tool, extra_headers=None):
             pass
     target = next((n for n in names if n.endswith(tool)), None)
     if not target:
-        return {"listed": names, "status": st, "raw": body[:400]}  # cap: untrusted
+        return {"listed": names, "status": st, "raw": TC.cut(body, 400)}  # cap: untrusted
     st, body, _ = call("POST", "/mcp/", {"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": {"name": target, "arguments": {}}}, key, hh)
     for line in body.splitlines():
         if line.startswith("data:"):
             body = line[5:]
-    d = json.loads(body) if body.strip().startswith("{") else {"raw": body[:300]}  # cap: untrusted
+    d = json.loads(body) if body.strip().startswith("{") else {"raw": TC.cut(body, 300)}  # cap: untrusted
     if "result" in d:
         txt = "".join(c.get("text", "") for c in d["result"].get("content", []))
         try:
             return {"status": st, "seen": json.loads(txt)}
         except ValueError:
-            return {"status": st, "text": txt[:300], "isError": d["result"].get("isError")}  # cap: untrusted
-    return {"status": st, "error": str(d.get("error", d))[:300]}  # cap: untrusted
+            return {"status": st, "text": TC.cut(txt, 300), "isError": d["result"].get("isError")}  # cap: untrusted
+    return {"status": st, "error": TC.cut(str(d.get("error", d)), 300)}  # cap: untrusted
 
 
 def sha(token):
@@ -82,7 +84,7 @@ try:
         made["keys"].append(key)
         tokens[who] = (key, "swarm-" + secrets.token_hex(16))
         st, body, _ = call("POST", f"/v1/mcp/server/{made['server']}/user-credential", {"credential": tokens[who][1], "save": True}, key)
-        out[f"credential_{who}"] = (st, body[:200] if st >= 300 else "stored")  # cap: untrusted
+        out[f"credential_{who}"] = (st, TC.cut(body, 200) if st >= 300 else "stored")  # cap: untrusted
     time.sleep(2)
     for who in ("a", "b"):
         key, tok = tokens[who]

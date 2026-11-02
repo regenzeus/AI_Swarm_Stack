@@ -8,6 +8,7 @@
 Writes /srv/ai/state/token-probe.json. Usage (needs the keys): sops exec-env secrets/agent-keys.enc.yaml 'python3 ops/token_probe.py'
 """
 import json
+import textcap as TC                              # visible caps (AGENTS.md, truncation)
 import os
 import time
 import urllib.request
@@ -31,12 +32,12 @@ def call(messages, session=None, extra=None):
         with urllib.request.urlopen(req, timeout=120) as r:
             d = json.load(r)
     except urllib.error.HTTPError as e:
-        return {"error": e.read().decode(errors="replace")[:300]}  # cap: untrusted
+        return {"error": TC.cut(e.read().decode(errors="replace"), 300)}  # cap: untrusted
     u = d.get("usage") or {}
     msg = (d.get("choices") or [{}])[0].get("message") or {}
     return {"in": u.get("prompt_tokens"), "cached": (u.get("prompt_tokens_details") or {}).get("cached_tokens"),
             "reasoning_tokens": (u.get("completion_tokens_details") or {}).get("reasoning_tokens"), "seconds": round(time.time() - t, 1),
-            "thinking": (msg.get("reasoning_content") or "")[:300], "answer": (msg.get("content") or "")[:80]}  # cap: preview
+            "thinking": TC.cut((msg.get("reasoning_content") or ""), 300), "answer": TC.cut((msg.get("content") or ""), 80)}  # cap: preview
 
 
 def conversation(session_of):

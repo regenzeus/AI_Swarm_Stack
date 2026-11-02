@@ -16,6 +16,7 @@ A design that served three tasks that met their definition of done becomes an id
 which the owner reviews and the builder makes like any agent change (its prompt replay-tested).
 """
 import datetime as dt
+import textcap as TC                              # visible caps (AGENTS.md, truncation)
 import json
 import os
 import re
@@ -171,11 +172,11 @@ def evidence_of(c, t, occ=None):
         if b and b["checks"]:
             files = [f[-1] for f in json.loads(b["files"] or "[]")]
             out.append(f"### Build #{b['id']} ({b['status']}): its checks on the delivered code\n"
-                       + (f"Files: {', '.join(files)}\n" if files else "") + f"```\n{b['checks'][-3000:]}\n```")  # cap: prompt (the end names the counts)
+                       + (f"Files: {', '.join(files)}\n" if files else "") + f"```\n{TC.tail(b['checks'], 3000)}\n```")  # cap: prompt (the end names the counts)
     if t["door"] == "plan":
         for s in CD.steps(c, t["id"], occ):
             if s["harness"] == "check" and s["output"]:
-                out.append(f"### Step {s['idx']}: the judge's checks\n{s['output'][:3000]}")  # cap: prompt (verdict and counts come first)
+                out.append(f"### Step {s['idx']}: the judge's checks\n{TC.cut(s['output'], 3000)}")  # cap: prompt (verdict and counts come first)
     try:
         pages = [r["uri"] for r in c.execute("select distinct a.uri from prov p join artifacts a on a.id = p.artifact "
                                              "where p.task=? and a.uri like 'http%' order by a.uri", (t["id"],))]
@@ -183,11 +184,11 @@ def evidence_of(c, t, occ=None):
         pages = []
     calls = calls_of(CD.run_of(t["id"], occ or 1))       # what the agents ran and read: a clean room is shown, not claimed
     if out or pages or calls:
-        out.append(f"### Web pages the agents opened ({len(pages)})\n" + ("\n".join(f"- {u}" for u in pages[:PAGES]) or "none")
+        out.append(f"### Web pages the agents opened ({len(pages)})\n" + ("\n".join(f"- {u}" for u in pages[:PAGES]) or "none")  # cap: list (the next line says how many more)
                    + (f"\n- … and {len(pages) - PAGES} more" if len(pages) > PAGES else ""))
     if calls:
         out.append(f"### What the agents ran and read ({len(calls)} tool calls in the run record)\n"
-                   + "\n".join(f"- {a}: {tool} {TC.cut(arg, 160)}" for a, tool, arg in calls[:CALLS])  # cap: prompt (each call's start)
+                   + "\n".join(f"- {a}: {tool} {TC.cut(arg, 160)}" for a, tool, arg in calls[:CALLS])  # cap: list (each call's start, marked; the next line says how many more)
                    + (f"\n- … and {len(calls) - CALLS} more (the task's page has every one)" if len(calls) > CALLS else ""))
     return f"{MEASURED}\n\n" + "\n\n".join(out) if out else ""
 
@@ -203,7 +204,7 @@ def judge(c, t, ask=None, text=None, occ=None):
         return {"verdict": "not judged", "points": [], "why": "no result to read"}
     ev = evidence_of(c, t, occ)
     p = P.text("shared", "TASK_JUDGE").format(goal=t["goal"], done="\n".join(f"{i + 1}. {d}" for i, d in enumerate(t["done"])),
-                                              result=text[:30000] + (f"\n\n{ev}" if ev else ""))  # cap: prompt (the answer; the vault keeps all of it)
+                                              result=TC.cut(text, 30000) + (f"\n\n{ev}" if ev else ""))  # cap: prompt (the answer; the vault keeps all of it)
     raw = (ask or (lambda q: __import__("evals").ask({"id": "eval", "model": "gpt-sub"}, q, ref=f"judge task {t['id']}")))(p)
     d = json.loads(re.search(r"\{.*\}", raw, re.S).group(0)) if isinstance(raw, str) else raw
     pts = [{"point": t["done"][i] if i < len(t["done"]) else str(x.get("point", "")), "met": bool(x.get("met")), "why": str(x.get("why", ""))}
@@ -251,7 +252,7 @@ def judge_due(c, ask=None):
     CD.table(c)
     judge_runs(c, ask)
     rows = c.execute("select id from tasks where status in ('done', 'failed') and judged is null and (source in ('app', 'gate') or source like 'rule:%') "
-                     "and not (door = 'plan' and exists (select 1 from task_occ o where o.task = tasks.id)) order by id limit 5").fetchall()
+                     "and not (door = 'plan' and exists (select 1 from task_occ o where o.task = tasks.id)) order by id limit 5").fetchall()  # cap: parse (five a pass; the rest the next pass)
     for r in rows:
         t = TK.row(c, r["id"])
         try:
@@ -274,7 +275,7 @@ def judge_runs(c, ask=None):
     import tasks as TK
     rows = c.execute("""select o.task, o.occ, o.status, o.result from task_occ o join tasks t on t.id = o.task
                         where o.status in ('done', 'failed') and o.judged is null and t.door = 'plan'
-                        and (t.source in ('app', 'gate') or t.source like 'rule:%' or t.source like 'trial:%') order by o.ended limit 5""").fetchall()
+                        and (t.source in ('app', 'gate') or t.source like 'rule:%' or t.source like 'trial:%') order by o.ended limit 5""").fetchall()  # cap: parse (five a pass; the rest the next pass)
     for r in rows:
         t = TK.row(c, r["task"])
         f = M.VAULT / (r["result"] or "")

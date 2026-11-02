@@ -22,6 +22,7 @@ import time
 from pathlib import Path
 
 import yaml
+import textcap as TC                              # visible caps (AGENTS.md, truncation)
 
 ROOT = Path(__file__).resolve().parent.parent
 CHATS = Path("/srv/ai/missions/app/chats")       # the app's chats (images/mission-control/server.py)
@@ -329,9 +330,9 @@ def validate(spec, preset, repos, agents):
     done = [str(d).strip() for d in s.get("done") or [] if len(str(d).split()) >= 3]
     if not done:
         raise ValueError("the intake wrote no checkable definition of done")
-    qs = [str(q).strip() for q in s.get("questions") or [] if str(q).strip()][:QUESTIONS]
+    qs = TC.first([str(q).strip() for q in s.get("questions") or [] if str(q).strip()], QUESTIONS, "intake questions")  # cap: untrusted (its prompt names the limit)
     plan = []
-    for st in (s.get("plan") or [])[:STEPS]:
+    for st in TC.first(s.get("plan") or [], STEPS, "plan steps"):  # cap: untrusted (its prompt names the limit)
         a = str(st.get("agent", ""))
         named = a and a not in agents and a != "new"   # TSK-15: an agent the intake names that does not exist = no agent fits
         lp = st.get("loop") if isinstance(st.get("loop"), dict) else None   # TRL-08: a check's fix loop, checked by the graph

@@ -11,6 +11,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 import prompts as P  # noqa: E402
+import textcap as TC                              # visible caps (AGENTS.md, truncation)
 
 C = "aistack-hermes-1"
 STATE = Path("/srv/ai/state"); LOG = STATE / "approvals.jsonl"; SEEN = STATE / "memory-notified.json"
@@ -27,7 +28,7 @@ def judge(entry, known):
     body = json.dumps({"model": "gpt-sub-fast", "messages": [{"role": "user", "content": prompt}]}).encode()
     req = urllib.request.Request("http://127.0.0.1:4000/v1/chat/completions", data=body, headers={
         "Authorization": f"Bearer {os.environ['VK_CURATOR']}", "Content-Type": "application/json"})
-    text = json.load(urllib.request.urlopen(req, timeout=120))["choices"][0]["message"]["content"]
+    text = TC.answer(json.load(urllib.request.urlopen(req, timeout=120)), "the memory judge")
     return json.loads(re.search(r"\{.*\}", text, re.S).group(0))
 
 

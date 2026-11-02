@@ -32,6 +32,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "images/swarm"))
 import ledger as LG          # noqa: E402  the Ledger's similarity, metrics and gate (pure)
 import registry as REG       # noqa: E402
 from textcap import STORE, cut                    # visible caps and input limits (AGENTS.md, truncation)
+import textcap as TC
 import prompts as P                               # MEM-11: the agent prompts live in prompts/<owner>.md
 
 PHOENIX = os.environ.get("PHOENIX_HOST", "http://127.0.0.1:6006")
@@ -66,9 +67,9 @@ def input_of(ex):
     pack = {k: v for k, v in (inp.get("pack") or {}).items() if k not in ("instructions", "cut") and v}
     parts = []
     if inp.get("signal"):
-        parts.append("Signal:\n" + str(inp["signal"])[:3000])  # cap: prompt
+        parts.append("Signal:\n" + TC.cut(str(inp["signal"]), 3000))  # cap: prompt
     if pack:
-        parts.append("Context pack:\n" + json.dumps(pack, ensure_ascii=False, default=str)[:6000])  # cap: prompt
+        parts.append("Context pack:\n" + TC.cut(json.dumps(pack, ensure_ascii=False, default=str), 6000))  # cap: prompt
     return "\n\n".join(parts) or "(no input was recorded for this run)"
 
 
@@ -94,7 +95,8 @@ def ask(card, text, ref=""):
                             "--disallowedTools", "Bash,Edit,Write,NotebookEdit,WebFetch,WebSearch,Read,Grep,Glob,Task,TodoWrite",
                             "--settings", "/config/claude-hooks/claude-runtime-settings.json"],
                            capture_output=True, text=True, timeout=360, env={**os.environ})
-        out = json.loads(p.stdout).get("result", "") if p.stdout.strip().startswith("{") else p.stdout
+        import builds as B
+        out = B.claude_text(p.stdout)
         if re.search(r"usage limit|hit your limit", out or "", re.I):
             raise RuntimeError("Claude usage limit")
         return out
@@ -105,7 +107,7 @@ def ask(card, text, ref=""):
         body = json.dumps({"model": model, "messages": [{"role": "user", "content": text}], "metadata": {"tags": ["swarm-replay"]}}).encode()
         req = urllib.request.Request(LITELLM, data=body, headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"})
         with urllib.request.urlopen(req, timeout=300) as r:
-            return json.load(r)["choices"][0]["message"]["content"]
+            return TC.answer(json.load(r), model)
     raise RuntimeError(f"{card['id']} has no model to replay ({model})")
 
 

@@ -8,6 +8,7 @@ delete     wiki_delete (from the app only, never from the AI phone or an MCP too
            but stops compiling a wiki (wiki_off in MISSION.md). The vault wiki itself cannot be deleted.
 """
 import json
+import textcap as TC                              # visible caps (AGENTS.md, truncation)
 import os
 import re
 import subprocess
@@ -77,7 +78,7 @@ def pages_of(root):
         line = str(meta.get("summary") or "").strip()
         if not line:
             text = " ".join(x.strip() for x in body.splitlines() if x.strip() and not x.lstrip().startswith(("#", "---", "|")))
-            line = re.sub(r"\[\[([^\]|]+\|)?([^\]]+)\]\]", r"\2", text)[:220]  # cap: prompt
+            line = TC.cut(re.sub(r"\[\[([^\]|]+\|)?([^\]]+)\]\]", r"\2", text), 220)  # cap: prompt
         out.append((str(meta.get("title") or f.stem.replace("-", " ")), line))
     sig = f"{len(files)}:{int(max((f.stat().st_mtime for f in files), default=0))}"
     return out, sig
@@ -87,12 +88,12 @@ def summarize(root, title):
     pages, sig = pages_of(root)
     if not pages:
         return None, sig
-    lines = "\n".join(f"- {t}: {s}" if s else f"- {t}" for t, s in pages)[:7000]  # cap: prompt
+    lines = TC.cut("\n".join(f"- {t}: {s}" if s else f"- {t}" for t, s in pages), 7000)  # cap: prompt
     text = M.ask_text(SUMMARY.format(title=title, n=len(pages), pages=lines), os.environ["VK_WIKIS"], model="gpt-sub-fast", timeout=180)
     text = re.sub(r"\s+", " ", re.sub(r"[*_#`>]", "", text)).strip()
     if META.search(text) or len(text) < 40:
         raise ValueError(f"not a summary: {text}")
-    return text[:700], sig  # cap: untrusted
+    return TC.cut(text, 700), sig  # cap: untrusted
 
 
 def sweep(now=None):

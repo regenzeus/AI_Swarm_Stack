@@ -11,6 +11,7 @@ pipeline  the Assist pipeline "Hermes" in English: speech to text → Hermes (ho
           (the satellite listens for it itself); it is Home Assistant's preferred one, so the phone's app uses it
 """
 import json
+import textcap as TC                              # visible caps (AGENTS.md, truncation)
 import os
 import sys
 import urllib.error
@@ -33,7 +34,7 @@ def call(method, path, body=None, token=None):
         with urllib.request.urlopen(req, timeout=30) as r:
             return json.load(r)
     except urllib.error.HTTPError as e:
-        raise RuntimeError(f"Home Assistant {method} {path}: HTTP {e.code} {e.read().decode(errors='replace')[:300]}") from e   # cap: preview
+        raise RuntimeError(f"Home Assistant {method} {path}: HTTP {e.code} {TC.cut(e.read().decode(errors='replace'), 300)}") from e   # cap: preview
 
 
 def entries(domain, call=call):

@@ -66,14 +66,6 @@ def test_untested_functions(C, tmp_path):
     assert gaps == [("ops/x.py", "lonely", 4)]
 
 
-def test_memory_near_duplicates_keep_the_older(C):
-    facts = [{"id": "a" * 8, "text": "The owner prefers English for everything in the stack"},
-             {"id": "b" * 8, "text": "The owner prefers English for everything in the stack."},
-             {"id": "c" * 8, "text": "The NAS runs Forgejo on port 3000"}]
-    sug = C.near_duplicates(facts)
-    assert [s["id"] for s in sug] == ["b" * 8] and "duplicate of" in sug[0]["why"]
-
-
 def test_crew_actions_are_validated(C, monkeypatch):
     C.M = types.SimpleNamespace(now=lambda: __import__("datetime").datetime(2027, 1, 1), event=lambda *a, **k: None)
     with pytest.raises(ValueError):

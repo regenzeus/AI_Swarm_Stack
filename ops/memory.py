@@ -16,13 +16,16 @@ from pathlib import Path
 VAULT = Path(os.environ.get("MEMORY_VAULT", "/srv/vault"))
 PUBLIC = Path(os.environ.get("MISSIONS_PUBLIC", "/srv/ai/missions/public"))
 RUNTIME_DB = Path(os.environ.get("RUNTIME_DB_HOST", "/srv/ai/missions/app/runtime.db"))
+MISSIONS_DB = Path(os.environ.get("MISSIONS_DB", "/srv/ai/missions/missions.sqlite"))
+CHATS = Path(os.environ.get("MISSIONS_CHATS", "/srv/ai/missions/app/chats"))
+CODE = Path(os.environ.get("CODE_DIR", "/home/owner/code"))
 EVERY = 3600                  # an inventory is a dozen docker and file calls: once an hour is enough to see a trend
 HISTORY_DAYS = 120            # snapshots kept (one a day) for growth  # cap: store
 ORPHAN_SHARE = 0.10           # qmd: embedding chunks of files that are gone, above this share the index needs a cleanup
 ALARM_DAYS = 8                # over its limit this long, its weekly curator had its chance: an alert on the health board
 
-# kind: what the memory is for (CoALA): episodic = what happened, semantic = what is true, procedural = how to act,
-# shared = the team's shared work, index = the search over the others. limit: [number, unit] the store should stay under.
+# kind: what the memory is for (CoALA): working = what one task's steps hand on, episodic = what happened, semantic =
+# what is true, procedural = how to act, shared = the team's shared work, index = the search over the others. limit: [number, unit] the store should stay under.
 STORES = [
     {"id": "vault-notes", "name": "Vault notes", "kind": "semantic", "holds": "your sources and clippings, never rewritten",
      "writes": "you, imports", "reads": "search (qmd), the curator", "curator": None, "limit": [2000, "notes"],
@@ -51,6 +54,19 @@ STORES = [
      "tidy": "the run record drops a run's full events after 90 days; its summary stays"},
     {"id": "qmd", "name": "Search index (qmd)", "kind": "index", "holds": "the search over the vault, wikis, journals and specs",
      "writes": "qmd, from the vault", "reads": "every agent with vault search, a run's start", "curator": "memory", "limit": [ORPHAN_SHARE, "orphaned share"]},
+    # MEM-19: the four the first inventory did not have (FND-108)
+    {"id": "task-handoffs", "name": "Task hand-offs", "kind": "working", "holds": "each task step's result, which the steps after it build on (MEM-15)",
+     "writes": "every task step", "reads": "the steps after it, the Orchestrator's checkpoint, the judge, the task page", "curator": None,
+     "limit": [200, "MB"], "tidy": "kept with its task, whose page shows them; a long one is also a file in the vault (tasks/)"},
+    {"id": "hermes-memory", "name": "Hermes' own memory", "kind": "semantic", "holds": "Hermes' notes and your profile (USER.md, MEMORY.md), in every prompt",
+     "writes": "Hermes, each write approved by the memory gatekeeper or by you", "reads": "Hermes, every turn", "curator": "memory-review",
+     "limit": [4400, "characters"]},
+    {"id": "code-graphs", "name": "Code graphs", "kind": "index", "holds": "each repository's graph of files, symbols and calls (graphify)",
+     "writes": "graphify-sync, at each new commit", "reads": "the builder's context packs, the code map", "curator": None,
+     "limit": [1000, "MB"], "tidy": "rebuilt from the code at each commit: one graph per repository"},
+    {"id": "chats", "name": "Chats", "kind": "episodic", "holds": "your chats with Hermes in the app", "writes": "you and Hermes",
+     "reads": "you; long-term memory keeps what is worth keeping from them", "curator": None, "limit": [2000, "chats"],
+     "tidy": "you delete a chat; what matters lives on in long-term memory"},
 ]
 WIKI_CURATOR_AGENT = "curator"      # the Hermes curator profile in the run record: who curates the vault wiki
 
@@ -131,6 +147,21 @@ def measure(sid, now):
         share = re.search(r"Orphaned:\s+\d+ embedding chunks \((\d+)%\)", s)        # qmd's own share: orphaned of embedded
         return {"count": num(r"Total:\s+(\d+) files"), "unit": "files", "bytes": b, "vectors": num(r"Vectors:\s+(\d+)"),
                 "orphaned": num(r"Orphaned:\s+(\d+)"), "orphaned_share": int(share.group(1)) / 100 if share else 0.0}
+    if sid == "task-handoffs":
+        c = sqlite3.connect(f"file:{MISSIONS_DB}?mode=ro", uri=True)
+        n, b = c.execute("select count(*), coalesce(sum(length(output)), 0) from task_steps where output is not null").fetchone()
+        return {"count": n, "unit": "step results", "bytes": b}
+    if sid == "hermes-memory":
+        out = sh("docker", "exec", "aistack-hermes-1", "sh", "-c", "cat /opt/data/memories/*.md 2>/dev/null | wc -c")
+        n = int(out.strip() or 0)
+        return {"count": n, "unit": "characters", "bytes": n}
+    if sid == "code-graphs":
+        dirs = [d for d in CODE.glob("*/graphify-out") if d.is_dir()]
+        parts = [{"root": d.parent.name, "bytes": sum(p.stat().st_size for p in d.rglob("*") if p.is_file())} for d in dirs]
+        return {"count": len(parts), "unit": "graphs", "bytes": sum(p["bytes"] for p in parts), "parts": parts}
+    if sid == "chats":
+        f = [p for p in CHATS.rglob("*.json") if p.is_file()] if CHATS.exists() else []
+        return {"count": len(f), "unit": "chats", "bytes": sum(p.stat().st_size for p in f)}
     raise ValueError(sid)
 
 
@@ -152,7 +183,7 @@ def problems(store, m):
     if sid == "qmd":
         share = m.get("orphaned_share") or 0.0
         if share > lim[0]:
-            out.append(f"{m['orphaned']} embedding chunks ({share:.0%}) belong to files that are gone: the Librarian cleans them at its next pass")
+            out.append(f"{m['orphaned']} embedding chunks ({share:.0%}) belong to files that are gone: the Memory Keeper cleans them tonight")
     elif sid == "agent-wikis":
         big = [p["root"] for p in m.get("parts") or [] if p["pages"] > lim[0]]
         out += [f"{r} is over {lim[0]} pages" for r in big]
@@ -183,7 +214,7 @@ def over(store, m):
         return (m.get("orphaned_share") or 0.0) > lim
     if sid in ("agent-wikis", "journals"):
         return (m.get("largest") or 0) > lim
-    if sid in ("ledger", "run-records"):
+    if store["limit"][1] == "MB":
         return (m.get("bytes") or 0) > lim * 1e6
     return (m.get("count") or 0) > lim
 
@@ -252,7 +283,7 @@ def remember(inv):
     day = dt.date.fromtimestamp(inv["at"]).isoformat()
     hist = [h for h in history() if h["date"] != day]
     hist.append({"date": day, "stores": {s["id"]: {"count": s.get("count", 0), "bytes": s.get("bytes", 0)} for s in inv["stores"] if "error" not in s}})
-    (PUBLIC / "memory-history.json").write_text(json.dumps(hist[-HISTORY_DAYS:]))   # cap: store
+    (PUBLIC / "memory-history.json").write_text(json.dumps(hist[-HISTORY_DAYS:]))   # cap: rotate (one snapshot a day for HISTORY_DAYS)
 
 
 def refresh(crew=None):

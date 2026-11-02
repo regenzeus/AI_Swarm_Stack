@@ -42,7 +42,7 @@ def crew_history(unit, days=30, limit=40):
     out = sorted(runs.values(), key=lambda r: -r["start"])[:limit]
     for r in out:
         r["seconds"] = round(r["end"] - r["start"], 1)
-        r["log"] = r["log"][-60:]  # cap: store
+        r["log"] = ([f"({len(r['log']) - 60} earlier lines: the unit's journal has all)"] if len(r["log"]) > 60 else []) + r["log"][-60:]  # cap: list
     return out
 
 

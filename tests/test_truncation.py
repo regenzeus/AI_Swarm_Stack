@@ -33,11 +33,33 @@ def test_a_cut_says_what_it_cut_and_input_over_a_limit_is_refused():
     assert json.loads(TC.bounded_json({"a": 1}, 1000)) == {"a": 1}
 
 
+def test_a_cut_within_an_outside_limit_lists_and_model_answers_show_what_they_left(capsys):
+    """fit() stays within a hard limit with its mark; more() ends a list with how many follow; first() says on stderr
+    what it left; answer() refuses a model's answer that stopped at its output limit (2 Nov audit)."""
+    f = TC.fit("p" * 500, 180)
+    assert len(f) == 180 and f.endswith("[… 500 characters in all]") and TC.fit("short", 180) == "short"
+    assert TC.more(["a", "b", "c"], 2, "more steps") == ["a", "b", "(… and 1 more steps)"] and TC.more(["a"], 2) == ["a"]
+    assert TC.first(range(5), 3, "plan steps") == [0, 1, 2]
+    assert "cap: kept the first 3 of 5 plan steps" in capsys.readouterr().err
+    ok = {"choices": [{"finish_reason": "stop", "message": {"content": "{\"plan\": []}"}}]}
+    assert TC.answer(ok) == "{\"plan\": []}"
+    with pytest.raises(TC.Cut, match="the desk's answer stopped at its output limit \\(4,096 tokens\\); it was not used"):
+        TC.answer({"choices": [{"finish_reason": "length", "message": {"content": "{\"plan\": [{\"ste"}}], "usage": {"completion_tokens": 4096}}, "the desk")
+    import builds as B
+    assert B.claude_text(json.dumps({"subtype": "success", "result": "done"})) == "done"
+    with pytest.raises(TC.Cut, match="Claude stopped at its turn limit \\(20 turns\\)"):
+        B.claude_text(json.dumps({"subtype": "error_max_turns", "num_turns": 20, "result": "half"}))
+    log = json.dumps({"type": "result", "subtype": "error_max_turns", "num_turns": 30, "result": "half an answer"})
+    assert B.claude_result(log)["text"] == "" and B.claude_result(log)["stopped"] == "its turn limit"
+
+
 def test_the_image_copies_of_textcap_are_the_same_file():
-    for copy in ("images/mission-control/textcap.py", "images/swarm/textcap.py"):
-        assert filecmp.cmp(ROOT / "ops/textcap.py", ROOT / copy, shallow=False), copy
-    for df in ("images/mission-control/Dockerfile", "images/swarm/Dockerfile"):
-        assert "textcap.py" in (ROOT / df).read_text()
+    """Every image whose code imports textcap has the same file next to it, and its Dockerfile copies it."""
+    users = {p.parent for p in (ROOT / "images").glob("*/*.py") if re.search(r"^(import textcap|from textcap)", p.read_text(), re.M)}
+    assert len(users) >= 7
+    for d in users:
+        assert filecmp.cmp(ROOT / "ops/textcap.py", d / "textcap.py", shallow=False), d
+        assert "textcap.py" in (d / "Dockerfile").read_text(), d
 
 
 def test_every_cap_names_its_reason_and_an_unexplained_one_fails_the_check(tmp_path):
@@ -45,13 +67,25 @@ def test_every_cap_names_its_reason_and_an_unexplained_one_fails_the_check(tmp_p
     assert TR.problems() == [] and len(TR.caps()) > 250                         # the repository as it is (not an empty scan)
     (tmp_path / "ops").mkdir()
     (tmp_path / "ops/a.py").write_text("x = y[:200]\nz = y[:200]  # cap: prompt\n# cap: id\nw = y[-300:]\nv = y[:80]  # cap: because\n"
-                                       "u = cut(y, 100)\nshort = y[:8]\n")
+                                       "u = cut(y, 100)\nshort = y[:8]\n"
+                                       "m = y[:MAX]\n"                                         # 8: a limit by a name is a limit
+                                       "d = y[:25]\n"                                          # 9: from 20 on
+                                       "k = TC.cut(y, 300)  # cap: prompt\n"                   # marked: fine
+                                       "s = y[:300]  # cap: prompt (cut)\n"                    # 11: a mark in a comment is none
+                                       "o = y[:300] + ' …'  # cap: preview\n"                  # its own mark: fine
+                                       "ids = seen[-500:]  # cap: rotate\n"
+                                       "q = c.execute('select * from runs order by id desc limit 20')\n"   # 14: a list of rows
+                                       "one = c.execute('select * from runs order by id desc limit 1')\n"
+                                       "a = res['choices'][0]['message']['content']\n")        # 16: an answer read without its stop
     (tmp_path / "ops/b.css").write_text(".a { text-overflow: ellipsis; }\n")
+    (tmp_path / "ops/c.sh").write_text('grep x "$LOG" | tail -15\nhead -1 f\necho "${sha:0:7}"   # cap: id\n')
     subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
     subprocess.run(["git", "add", "-A"], cwd=tmp_path, check=True)
     bad = TR.problems(tmp_path)
-    assert [p.split(": ")[0] for p in bad] == ["ops/a.py:1", "ops/a.py:5", "ops/a.py:6", "ops/b.css:1"]
-    assert "an unknown reason 'because'" in bad[1] and "no reason" in bad[0]
+    assert [p.split(": ")[0] for p in bad] == ["ops/a.py:1", "ops/a.py:2", "ops/a.py:5", "ops/a.py:6", "ops/a.py:8", "ops/a.py:9",
+                                               "ops/a.py:11", "ops/a.py:14", "ops/b.css:1", "ops/c.sh:1", "ops/a.py:16"]
+    assert "no reason" in bad[0] and "without a mark" in bad[1] and "an unknown reason 'because'" in bad[2]
+    assert "without a mark" in bad[6] and "textcap.answer()" in bad[-1]
 
 
 def test_the_owner_s_long_input_is_refused_with_its_limit_not_cut(runner, ledger, monkeypatch):

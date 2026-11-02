@@ -25,6 +25,11 @@ from typing import Any
 INGEST = os.environ.get("RUNTIME_INGEST", "http://mission-control:8093/ingest")
 KEY = os.environ.get("API_SERVER_KEY", "")
 MAX = 20000
+
+def _cut(s):
+    """The run record's cap (MAX), marked like textcap.cut (this file runs where ops/textcap.py is not)."""
+    s = str(s)
+    return s if len(s) <= MAX else s[:MAX] + f" [… {len(s) - MAX:,} more characters cut]"  # cap: store
 _q: "queue.Queue[dict]" = queue.Queue(maxsize=20000)
 _runs: dict[str, str] = {}                 # session id → current run id
 _started: dict[str, float] = {}
@@ -71,7 +76,7 @@ def _run(session_id: str, title: str = "") -> str:
             _runs[sid] = run
             _started[run] = time.time()
     if new:
-        _emit(run, "run", title="started", run_title=title[:200], ref=_ref(sid), data={"manifest": _manifest(), "session": sid})
+        _emit(run, "run", title="started", run_title=title[:200], ref=_ref(sid), data={"manifest": _manifest(), "session": sid})  # cap: id (the run's title; the message is whole in its chat)
     return run
 
 
@@ -93,7 +98,7 @@ def _emit(run: str, kind: str, **kw: Any) -> None:
     if isinstance(e.get("detail"), (dict, list)):
         e["detail"] = json.dumps(e["detail"], ensure_ascii=False, default=str)
     if isinstance(e.get("detail"), str):
-        e["detail"] = e["detail"][:MAX]
+        e["detail"] = _cut(e["detail"])  # cap: store
     try:
         _q.put_nowait(e)
     except queue.Full:
@@ -174,7 +179,7 @@ def _ensure_sender() -> None:
 # ---------- hooks: observers only ----------
 def _on_pre_llm_call(session_id: str = "", user_message: str = "", is_first_turn: bool = False, model: str = "", **_: Any) -> None:
     try:
-        _run(session_id, str(user_message or "")[:200])
+        _run(session_id, str(user_message or "")[:200])  # cap: id (the run's title; the message is whole in its chat)
     except Exception:
         pass
 
@@ -205,7 +210,7 @@ def _on_api_request_error(session_id: str = "", model: str = "", error: Any = No
                           api_duration: float = 0.0, **_: Any) -> None:
     try:
         e = error if isinstance(error, dict) else {"message": str(error or "")}
-        msg = " ".join(str(x) for x in (status_code or "", e.get("type") or "", e.get("message") or "", reason or "") if x)[:2000]
+        msg = " ".join(str(x) for x in (status_code or "", e.get("type") or "", e.get("message") or "", reason or "") if x)   # an error is kept whole (AGENTS.md); the event's own cap marks it
         _emit(_run(session_id), "llm", title=model, status="failure", detail=msg, ms=int((api_duration or 0) * 1000),
               tokens={"in": 0, "out": 0, "cached": 0, "reasoning": 0},
               data={"limit": bool(LIMIT.search(msg))})
@@ -232,7 +237,7 @@ def _on_post_tool_call(tool_name: str = "", args: Any = None, result: Any = None
         err = (status or "").lower() in ("error", "failed", "failure") or bool(error_message)
         text = result if isinstance(result, str) else json.dumps(result, ensure_ascii=False, default=str)
         _emit(run, "error" if err else "result", title=tool_name, ms=int(duration_ms or 0), status="failure" if err else "success",
-              detail=(f"{error_type}: {error_message}\n" if err and error_message else "") + (text or "")[:MAX],
+              detail=(f"{error_type}: {error_message}\n" if err and error_message else "") + _cut(text or ""),  # cap: store
               data={"call_id": tool_call_id, "chars": len(text or "")})
     except Exception:
         pass

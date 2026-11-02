@@ -10,6 +10,7 @@ import datetime as dt, hashlib, html, json, os, re, smtplib, subprocess, time, u
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from textcap import cut, tail                    # visible caps and input limits (AGENTS.md, truncation)
+import textcap as TC
 import prompts as P                               # MEM-11: the agent prompts live in prompts/<owner>.md
 import notify as N                                # OBS-16: the one notification path
 
@@ -130,7 +131,7 @@ def clean_triggers(raw):
                 raise ValueError("price trigger needs a Yahoo symbol and a move of 1-50 %")
             out.append({"type": k, "symbol": sym.upper(), "pct": pct})
         elif k == "news":
-            q = str(t.get("query", "")).strip()[:120]  # cap: api
+            q = str(t.get("query", "")).strip()[:120]  # cap: api (a search query; a marker would be searched for)
             if len(q) < 3:
                 raise ValueError("news trigger needs a search query")
             out.append({"type": k, "query": q})
@@ -185,7 +186,7 @@ def check_events(missions, c):
                     if f["form"] in t["forms"] and not seen(c, k):
                         mark(c, k)
                         fire.append(f)
-            ev = fire and {"kind": "sec_filing", "summary": "; ".join(f["title"][:120] for f in fire[:3]), "items": fire[:4]}  # cap: preview
+            ev = fire and {"kind": "sec_filing", "summary": "; ".join(TC.cut(f["title"], 120) for f in fire[:3]), "items": fire[:4]}  # cap: preview
         elif t["type"] == "price_move":
             q = seen_now["prices"].get(t["symbol"])
             ev = None
@@ -202,7 +203,7 @@ def check_events(missions, c):
                 if not seen(c, k):
                     mark(c, k)
                     fire.append(n)
-            ev = fire and {"kind": "news", "summary": f"{len(fire)} new article(s) about “{t['query']}”: " + "; ".join(n["title"][:100] for n in fire[:3]),  # cap: preview
+            ev = fire and {"kind": "news", "summary": f"{len(fire)} new article(s) about “{t['query']}”: " + "; ".join(TC.cut(n["title"], 100) for n in fire[:3]),  # cap: preview
                            "items": fire[:4]}
         if first:
             mark(c, f"{m['slug']}|init|{tid}")
@@ -283,8 +284,8 @@ SYNTH = P.text("mission", "DEEP_SYNTH")
 def run_deep(m, logf, rid, c, ev=None):
     goal, notes = m.get("goal", ""), M.read_notes(m)
     evtext = f"Triggered by an event: {ev['trigger']}: {ev['summary']}" if ev else ""
-    plan = M.ask_json(PLAN.format(title=m["title"], goal=goal, notes=notes[:3000], event=evtext), os.environ["VK_MISSION"])  # cap: prompt
-    steps = [{"title": s.get("title", "")[:60], "question": s.get("question", "")[:500], "status": "pending"}  # cap: untrusted
+    plan = M.ask_json(PLAN.format(title=m["title"], goal=goal, notes=TC.cut(notes, 3000), event=evtext), os.environ["VK_MISSION"])  # cap: prompt
+    steps = [{"title": TC.cut(s.get("title", ""), 60), "question": TC.cut(s.get("question", ""), 500), "status": "pending"}  # cap: untrusted
              for s in plan.get("steps", [])[:5] if s.get("question")]
     if not steps:
         return "failed", "planning failed", ""
@@ -298,16 +299,16 @@ def run_deep(m, logf, rid, c, ev=None):
             f.write(f"## {s['title']}\n{s['question']}\n")
             f.flush()
             out = M.hermes_z(STEP.format(date=f"{M.now():%d %b %Y}", title=m["title"], goal=goal, step_title=s["title"],
-                                         question=s["question"], earlier="\n\n".join(found)[-6000:] or "(none yet)"), timeout=900)  # cap: prompt
+                                         question=s["question"], earlier=TC.tail("\n\n".join(found), 6000) or "(none yet)"), timeout=900)  # cap: prompt
             f.write(out + "\n\n")
             f.flush()
             s["status"] = "done" if out.strip() else "failed"
             s["finding"] = cut(out.strip(), 4000)  # cap: store
-            found.append(f"### {s['title']}\n{out.strip()[:2500]}")  # cap: prompt
+            found.append(f"### {s['title']}\n{TC.cut(out.strip(), 2500)}")  # cap: prompt
             save()
     if not any(s["status"] == "done" for s in steps):
         return "failed", "no step produced a finding", ""
-    final = M.ask_text(SYNTH.format(date=f"{M.now():%d %b %Y}", title=m["title"], goal=goal, notes=notes[:3000], event=evtext,  # cap: prompt
+    final = M.ask_text(SYNTH.format(date=f"{M.now():%d %b %Y}", title=m["title"], goal=goal, notes=TC.cut(notes, 3000), event=evtext,  # cap: prompt
                                     findings="\n\n".join(found)), os.environ["VK_MISSION"])
     return M.file_task_result(m, final, kind="deep research")
 
@@ -349,6 +350,10 @@ def mentioned(pages, text):
     return [p for p in pages if any(n and n.lower() in low for n in [p["title"], *p["aliases"]])]
 
 
+PAGE_SEEN = 12000      # a page the compile rewrites is shown whole up to this; past it, marked (FND-103)
+TEXT_SEEN = 14000      # the result's text the compile reads; the whole result stays in its file
+
+
 def compile_into(root, title, source_rel, text, key, touched=None):
     """A result folded into the wiki at root: the pages it names (or `touched`, a list of page paths) are rewritten,
     new pages made, superseded facts kept. -> the paths written. A refinement task's wiki step (ops/conductor.py
@@ -362,10 +367,15 @@ def compile_into(root, title, source_rel, text, key, touched=None):
         helps = SW.wiki_helps(root, title)
     except Exception:
         SW, helps = None, []
-    contrib = "\n".join(f"- from {h['helper']}: {h['text']} (why its owner would not see it, it says: {h['unseen']})" for h in helps) or "(none)"
-    r = M.ask_json(WIKI.format(title=title, source=src, index=index[:6000], contributions=contrib,  # cap: prompt
-                               pages="\n\n".join(f"=== {p['path']}\n{p['body'][:3000]}" for p in touched) or "(none)",  # cap: prompt
-                               text=re.sub(r"^---\n.*?\n---\n", "", text, flags=re.S)[:14000]), key, timeout=400)  # cap: prompt
+    contrib = "\n".join(f"- from {h['helper']}: {h['text']} (why its owner would not see it, it says: {h['unseen']})" for h in helps)
+    open_disputes = [f"- open dispute on {p['path']} (the Memory Keeper): {ln.strip()} — settle it only if the new result does, moving the claim that no longer holds under Superseded"
+                     for p in touched for ln in p["body"].splitlines() if "[!contradiction]" in ln]   # MEM-17: the writer is told
+    contrib = "\n".join([x for x in (contrib, *open_disputes) if x]) or "(none)"
+    shown = "\n\n".join(f"=== {p['path']}\n" + cut(p["body"], PAGE_SEEN, "the compile keeps the lines it did not see") for p in touched)  # cap: prompt
+    r = M.ask_json(WIKI.format(title=title, source=src, index=cut(index, 6000, "the other pages are in the wiki's folder"), contributions=contrib,  # cap: prompt
+                               pages=shown or "(none)",
+                               text=cut(re.sub(r"^---\n.*?\n---\n", "", text, flags=re.S), TEXT_SEEN, "the whole result is in its source file")),  # cap: prompt
+                   key, timeout=400)
     today = dt.date.today().isoformat()
     by_path = {p["path"]: p for p in pages}
     folders = "|".join(sorted({"entities", "concepts", "projects", "events"} | {p["path"].split("/")[0] for p in pages if "/" in p["path"]}))
@@ -375,10 +385,11 @@ def compile_into(root, title, source_rel, text, key, touched=None):
         if not (re.fullmatch(rf"({folders})/[a-z0-9][a-z0-9-]{{0,60}}", path) or path in by_path) or not pg.get("body"):
             continue                             # a folder the wiki has (the vault wiki's howto, answers ...) or a page it has
         old = by_path.get(path, {}).get("meta", {})
-        body = keep_superseded(by_path.get(path, {}).get("body", ""), str(pg["body"]))    # MEM-12: a superseded fact stays
-        meta = {"title": str(pg.get("title") or path.split("/")[-1])[:100], "type": KIND.get(path.split("/")[0]) or old.get("type") or "page",  # cap: untrusted
-                "summary": str(pg.get("summary", "")), "aliases": [str(a)[:60] for a in pg.get("aliases") or []][:8],  # cap: untrusted
-                "sources": sorted(set((old.get("sources") or []) + [src]))[-30:], "created": old.get("created", today),
+        before = by_path.get(path, {}).get("body", "")
+        body = keep_unseen(before, keep_superseded(before, str(pg["body"])), PAGE_SEEN)   # MEM-12: a superseded fact stays
+        meta = {"title": TC.cut(str(pg.get("title") or path.split("/")[-1]), 100), "type": KIND.get(path.split("/")[0]) or old.get("type") or "page",  # cap: untrusted
+                "summary": str(pg.get("summary", "")), "aliases": [TC.cut(str(a), 60) for a in pg.get("aliases") or []][:8],  # cap: untrusted
+                "sources": sorted(set((old.get("sources") or []) + [src])),   # every source stays (it was the newest 30) "created": old.get("created", today),
                 "last_validated": today, "trust": "contested" if "[!contradiction]" in body else "news"}
         M.write_front(M.VAULT / root / f"{path}.md", meta, body)
         M.RTM.touched(f"{root}/{path}.md", changed=True, note="wiki page compiled from the result")   # MEM-10: the access map sees it
@@ -410,6 +421,27 @@ def section(body, name):
     """The non-empty lines of one '## name' section of a page body."""
     m = re.search(rf"^## {re.escape(name)}\s*\n(.*?)(?=^## |\Z)", body, re.M | re.S)
     return [ln for ln in m.group(1).splitlines() if ln.strip()] if m else []
+
+
+def keep_unseen(old, new, seen):
+    """FND-103: a page's list lines past what the compile was shown (its first `seen` characters) were never in front of
+    the model, so its rewrite cannot have meant to drop them: each that the new body lacks comes back under its own
+    section, at that section's end (they are its oldest: a Timeline is newest first)."""
+    lost, head = {}, ""
+    for m in re.finditer(r"^(## .+|- .+)$", old, re.M):
+        ln = m.group(1)
+        if ln.startswith("## "):
+            head = ln.strip()
+        elif m.start() >= seen and ln not in new:
+            lost.setdefault(head, []).append(ln)
+    for head, lines in lost.items():
+        at = re.search(rf"^{re.escape(head)}\s*\n(.*?)(?=^## |\Z)", new, re.M | re.S) if head else None
+        if at:
+            end = at.start(1) + len(at.group(1).rstrip())
+            new = new[:end] + "\n" + "\n".join(lines) + new[end:]
+        else:
+            new = new.rstrip() + ("\n\n" + head if head else "\n") + "\n" + "\n".join(lines) + "\n"
+    return new
 
 
 def keep_superseded(old, new):

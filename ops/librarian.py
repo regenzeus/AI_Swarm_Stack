@@ -17,6 +17,7 @@ The commit holds exactly the files the pass wrote (WROTE), also when a step fail
 The vault wiki itself keeps its own curator (ops/vault-lint.sh); the Librarian only writes its hubs/ folder.
 """
 import datetime as dt
+import textcap as TC                              # visible caps (AGENTS.md, truncation)
 import difflib
 import fcntl
 import json
@@ -183,7 +184,7 @@ def mark_contradiction(root, by_path, c, today):
     src, osrc = (t[0] if (t := targets(str(c.get(k, "")))) else "" for k in ("source", "other_source"))
     if src not in targets(p["body"]) or osrc not in targets(q["body"]):
         return False                                       # an invented source: no callout
-    claim, other = (re.sub(r"\s+", " ", str(c.get(k, ""))).strip().rstrip(".")[:300] for k in ("claim", "other"))  # cap: untrusted
+    claim, other = (TC.cut(re.sub(r"\s+", " ", str(c.get(k, ""))).strip().rstrip("."), 300) for k in ("claim", "other"))  # cap: untrusted
     if not claim or not other or claim in p["body"]:
         return False
     where = "" if q is p else f" on [[{q['path']}]]"
@@ -201,7 +202,7 @@ def mark_contradiction(root, by_path, c, today):
 
 def judge(root, title, ps, pairs, fresh):
     def page(p):
-        return f"=== {p['path']} ({p['title']})\n{p['body'][:PAGE_CHARS]}"  # cap: prompt
+        return f"=== {p['path']} ({p['title']})\n{TC.cut(p['body'], PAGE_CHARS, 'the page goes on')}"  # cap: prompt
     return M.ask_json(JUDGE.format(title=title, pairs="\n\n".join(f"--- pair {i + 1}\n{page(a)}\n{page(b)}" for i, (a, b) in enumerate(pairs)) or "(no pairs this time)",
                                    pages="\n\n".join(page(p) for p in fresh) or "(no pages this time)"),
                       os.environ["VK_MEMORY"], model="gpt-sub-fast", timeout=600)
@@ -219,7 +220,7 @@ def tidy(root, title, today, read, apart=()):
             out["stale"].append(p["path"])
     pairs = candidates(ps, skip)
     out["waits"] = max(0, len(pairs) - PAIRS)
-    pairs = pairs[:PAIRS]
+    pairs = pairs[:PAIRS]  # cap: list (waits counts the pairs left for the next pass)
     unread = sorted((p for p in ps if not p["stub"] and read.get(p["path"]) != p["mtime"]), key=lambda p: -p["mtime"])
     fresh, size = [], 0
     for p in unread:
@@ -241,12 +242,12 @@ def tidy(root, title, today, read, apart=()):
             if frozenset((k, d)) not in asked or k == d or not str(mg.get("body", "")).strip() or by_path[k]["stub"] or by_path[d]["stub"]:
                 continue
             why = merge(root, ps, by_path[k], by_path[d], str(mg["body"]), today)
-            (out["refused"] if why else out["merged"]).append({"keep": k, "drop": d, "why": why or str(mg.get("why", ""))[:300]})  # cap: untrusted
+            (out["refused"] if why else out["merged"]).append({"keep": k, "drop": d, "why": why or TC.cut(str(mg.get("why", "")), 300)})  # cap: untrusted
             if not why:
                 by_path[d]["stub"] = True
         for x in r.get("distinct") or []:
             if frozenset((str(x.get("a", "")), str(x.get("b", "")))) in asked:
-                out["distinct"].append({"a": str(x["a"]), "b": str(x["b"]), "why": str(x.get("why", ""))[:300]})  # cap: untrusted
+                out["distinct"].append({"a": str(x["a"]), "b": str(x["b"]), "why": TC.cut(str(x.get("why", "")), 300)})  # cap: untrusted
         for c in r.get("contradictions") or []:
             if mark_contradiction(root, by_path, c, today):
                 out["contradictions"].append(str(c["page"]))

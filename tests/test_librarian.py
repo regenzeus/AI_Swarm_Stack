@@ -190,6 +190,40 @@ def test_a_compile_keeps_superseded_lines_and_a_contested_page_and_skips_merged_
     assert 'move the\nold fact to a "Superseded" section' in src and 'Keep a\n"Contradictions" section as it is' in src
 
 
+def test_a_compile_sees_a_long_page_whole_and_keeps_the_lines_it_was_not_shown(L, monkeypatch):
+    """FND-103: the compile showed each page's first 3,000 characters with no mark and wrote the model's text over the
+    whole page, so the oldest Timeline lines and the Open questions of a long page were lost at each compile. Now the
+    page goes whole (marked past PAGE_SEEN), and a list line past what the model saw comes back to its own section."""
+    import mission_extras as X
+    import swarm_client as SW
+    monkeypatch.setattr(SW, "wiki_helps", lambda root, title="", send=None: [])
+    old = [f"- {dt.date(2026, 10, 30) - dt.timedelta(days=i)}: price check {i} [[missions/ram/log/a]]" for i in range(80)]   # past 3,000
+    body = ("## Overview\nThe RAM upgrade.\n\n## Key facts\n- 2026-10-30: wait [[missions/ram/log/a]]\n\n## Timeline\n" + "\n".join(old)
+            + "\n\n## Open questions\n- Will the November sales bring an offer under EUR 150?")
+    page(L.M.VAULT, "missions/ram/wiki/projects/ram", {"title": "RAM upgrade", "last_validated": "2026-10-30"}, body)
+    asked = []
+    new = "## Overview\nThe RAM upgrade.\n\n## Key facts\n- 2026-11-01: still wait [[missions/ram/log/c]]\n\n## Timeline\n- 2026-11-01: price check [[missions/ram/log/c]]"
+    L.M.ask_json = lambda p, key, timeout=0: asked.append(p) or {"pages": [{"path": "projects/ram", "title": "RAM upgrade", "body": new}]}
+    X.compile_wiki({"slug": "ram", "type": "task", "title": "RAM upgrade"}, "missions/ram/log/c.md", "RAM upgrade: still wait", "k")
+    assert len(body) > 3000 and body in asked[0] and "more characters cut" not in asked[0]   # under PAGE_SEEN the model reads all of it
+    assert X.keep_unseen(body, new, X.PAGE_SEEN) == new                         # and may drop what it saw
+    seen = 200                                                                  # a page longer than the window: shown in part
+    out = X.keep_unseen(body, new, seen)
+    kept = [ln for ln in old if body.index(ln) >= seen]
+    assert kept and all(ln in out for ln in kept) and "- 2026-10-30: price check 0 " not in out   # seen and dropped stays dropped
+    tl = out.split("## Timeline\n")[1].split("\n\n")[0].splitlines()
+    assert tl == ["- 2026-11-01: price check [[missions/ram/log/c]]", *kept]    # back under Timeline, oldest last
+    assert out.rstrip().endswith("## Open questions\n- Will the November sales bring an offer under EUR 150?")
+    big = {"path": "projects/ram", "body": body}
+    monkeypatch.setattr(X, "PAGE_SEEN", seen)
+    monkeypatch.setattr(X, "wiki_pages", lambda root: [{**big, "title": "RAM upgrade", "summary": "", "aliases": [], "meta": {}}])
+    monkeypatch.setattr(X, "write_index", lambda root, title: None)
+    X.compile_into("missions/ram/wiki", "RAM upgrade", "missions/ram/log/c.md", "RAM upgrade: still wait", "k")
+    assert "more characters cut: the compile keeps the lines it did not see]" in asked[1]
+    _, written = meta_of(L, "missions/ram/wiki/projects/ram")
+    assert all(ln in written for ln in kept) and "Will the November sales" in written
+
+
 def test_the_search_index_cleanup_is_measured_before_and_after(L, monkeypatch):
     import memory as MEM
     ran = []

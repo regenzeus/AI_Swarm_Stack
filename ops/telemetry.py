@@ -14,6 +14,7 @@ import subprocess
 import time
 
 import observe as O
+import textcap as TC                              # visible caps (AGENTS.md, truncation)
 
 M = None                       # ops/missions.py, set by its main()
 SCOUT_KEY = "vk-scout"         # research() runs the scout profile on its own key
@@ -148,7 +149,7 @@ def conn_events(start, end):
                 if start - 5 <= e.get("ts", 0) <= end + 5:
                     detail = {k: v for k, v in e.items() if k not in ("ts", "at", "conn", "action")}
                     out.append({"ts": e["ts"], "agent": "mission", "kind": "conn", "title": f"{e.get('conn')} · {e.get('action')}",
-                                "detail": json.dumps(detail, ensure_ascii=False)[:DETAIL]})
+                                "detail": TC.cut(json.dumps(detail, ensure_ascii=False), DETAIL)})  # cap: store
     except (OSError, ValueError):
         pass
     return out

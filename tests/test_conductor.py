@@ -8,6 +8,7 @@ import time
 import types
 
 import pytest
+from pathlib import Path
 
 import conductor as CD
 import notify as N
@@ -365,6 +366,42 @@ def test_a_long_requirements_list_reaches_the_builder_apart_from_its_brief():
     assert "standing instructions (tester's card)" in head and "standing instructions" not in results
     assert results.startswith("## Results of the steps before yours\n### Step 1: Requirements (analyst)\nR-1 a rule.")
     assert CD.split_brief("Just a brief") == ("Just a brief", "")
+
+
+def test_a_result_too_long_for_a_prompt_goes_by_reference_through_every_adapter(tmp_path, monkeypatch):
+    """MEM-15 (FND-104), the size contract: a 150,000-character result reaches a Hermes step as its marked start and the
+    vault file with the whole of it, an OpenCode step as a file in its work folder, a Claude or build step whole apart
+    from its brief; a short one stays whole; no prompt is cut silently and none passes one command-line argument."""
+    monkeypatch.setattr(CD, "RESULTS", tmp_path / "tasks")
+    t = {"id": 7, "goal": "Build it", "done": ["every rule"]}
+    big = "R-1 a rule that matters.\n" * 6000                                         # 150,000 characters
+    prev = {"idx": 1, "title": "Requirements", "agent": "analyst", "after": [], "output": big, "occ": 1}
+    small = {"idx": 2, "title": "Notes", "agent": "analyst", "after": [], "output": "short notes", "occ": 1}
+    for harness in ("hermes", "opencode", "claude", "build"):
+        s = {"idx": 3, "title": "Tests", "agent": "tester", "after": [1, 2], "harness": harness, "output": None}
+        p = str(CD.prompt_of(t, s, [prev, small, s], CD.cards()))
+        if harness in ("claude", "build"):
+            assert big in CD.split_brief(p)[1]                                         # whole, apart from the brief
+            continue
+        assert big not in p and len(p) < CD.HANDOFF + 20000 and len(p.encode()) < CD.ARG_BYTES
+        assert "### Step 2: Notes (analyst)\nshort notes" in p and "R-1 a rule that matters." in p
+        where = "/step/results/7-1-step-1.md in your work folder" if harness == "opencode" else "the vault file tasks/7-1-step-1.md"
+        assert f"more characters cut: the whole result (150,000 characters) is {where}" in p, harness
+    assert (tmp_path / "tasks/7-1-step-1.md").read_text() == big
+    seen = {}
+
+    def run(cmd, **kw):                                                                # the OpenCode container: what it is given
+        d = cmd[cmd.index("-v") + 1].split(":")[0]
+        seen.update({f.name: f.read_text() for f in Path(d, "results").iterdir()})
+        raise RuntimeError("stop here")
+    monkeypatch.setattr(CD, "steps", lambda c, task, occ=None: [prev, small])
+    monkeypatch.setenv("VK_OPENCODE", "k")
+    s = {"idx": 3, "title": "Tests", "agent": "tester", "after": [1, 2], "harness": "opencode", "occ": 1}
+    with pytest.raises(RuntimeError, match="stop here"):
+        CD.run_opencode(None, {**t, "spec": {}}, s, "the prompt", {"key": "vk-opencode"}, run=run)
+    assert seen["7-1-step-1.md"] == big and seen["7-1-step-2.md"] == "short notes"
+    with pytest.raises(RuntimeError, match="one command-line argument holds 122,880"):
+        CD.run_hermes(None, t, {"agent": "scout"}, "x" * 130000, {})
 
 
 def on_event(K, plan, kind="research"):

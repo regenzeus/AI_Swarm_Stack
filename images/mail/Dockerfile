@@ -6,5 +6,6 @@ RUN apt-get update -qq && apt-get install -y -qq --no-install-recommends iptable
  && useradd -r -u 10008 -M conn
 COPY entrypoint.sh /entrypoint.sh
 COPY mail.py /app/mail.py
+COPY textcap.py /app/textcap.py
 EXPOSE 8000
 ENTRYPOINT ["sh", "/entrypoint.sh"]

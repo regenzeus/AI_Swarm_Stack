@@ -1276,16 +1276,15 @@ items:
     restore rehearsal shall restore it.
   type: constraint
   priority: must
-  status: partial
+  status: implemented
   parents: [SN-09, SN-13]
-  sources: [DEC-15, 'design: AI Stack Agent Swarm (claude.ai artifact 18fPjMRbQnxSVikesY8w6M)']
-  rationale: Design decision 2 (SQLite or a database on the stack's Postgres) waits for the owner.
+  sources: [DEC-15, DEC-39, 'design: AI Stack Agent Swarm (claude.ai artifact 18fPjMRbQnxSVikesY8w6M)']
+  rationale: Design decision 2 (SQLite or a database on the stack's Postgres) was decided by the owner on 2 Nov 2026 (DEC-39).
   acceptance: 'Inspection: no other process opens the database for writing; the rehearsal''s checklist includes it.'
   verify:
     method: test
     by: ['tests/test_swarm_service.py::test_the_snapshot_is_a_consistent_copy']
   trace: [images/swarm/swarm.py]
-  gap: One writer and SQLite WAL as proposed; the owner has not confirmed the storage choice (design decision 2).
 - id: SWM-74
   group: Reliability and resources
   phase: 0

@@ -13,6 +13,7 @@ import os
 import re
 import sys
 from pathlib import Path
+import textcap as TC                              # visible caps (AGENTS.md, truncation)
 
 GRAPH = Path(os.environ.get("CODE_GRAPH", str(Path.home() / "code/.graphify/merged-graph.json")))
 EDGES = {"calls", "imports", "imports_from", "references", "indirect_call", "uses", "inherits"}
@@ -79,7 +80,7 @@ def requirements_for(root, test_files, files):
 
 def pack(root, repo, files, graph=GRAPH):
     """The context pack: per file its callers, callees, tests and requirements, and the totals."""
-    files = [f for f in dict.fromkeys(str(x) for x in files or []) if f and f != "*"][:30]
+    files = TC.first([f for f in dict.fromkeys(str(x) for x in files or []) if f and f != "*"], 30, "files for a context pack")  # cap: untrusted
     edges = file_edges(repo, graph)
     tests = tests_for(root, files)
     alltests = sorted({t for v in tests.values() for t in v})
@@ -89,7 +90,7 @@ def pack(root, repo, files, graph=GRAPH):
         callers = sorted(((n, a) for (a, b), n in edges.items() if b == f), key=lambda x: (-x[0], x[1]))    # most edges first
         callees = sorted(((n, b) for (a, b), n in edges.items() if a == f), key=lambda x: (-x[0], x[1]))
         rs = sorted(set(reqs.get(f, [])) | {x for t in tests.get(f, []) for x in reqs.get(t, [])})
-        per[f] = {"callers": [p for _, p in callers[:TOP]], "callees": [p for _, p in callees[:TOP]], "tests": tests.get(f, []),
+        per[f] = {"callers": [p for _, p in callers[:TOP]], "callees": [p for _, p in callees[:TOP]], "tests": tests.get(f, []),  # cap: list (more_callers counts the rest)
                   "requirements": rs, "more_callers": max(0, len(callers) - TOP)}
     return {"repo": repo, "files": per, "tests": alltests, "requirements": sorted({x for v in per.values() for x in v["requirements"]}),
             "graph": bool(edges)}

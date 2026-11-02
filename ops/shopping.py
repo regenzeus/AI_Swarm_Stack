@@ -34,6 +34,7 @@ from pathlib import Path
 
 import pricewatch as PW
 from textcap import STORE, cut, limit, tail                    # visible caps and input limits (AGENTS.md, truncation)
+import textcap as TC
 import prompts as P                               # MEM-11: the agent prompts live in prompts/<owner>.md
 
 M = None                                   # ops/missions.py (set in its main)
@@ -114,10 +115,10 @@ def offers_json(out):
         total = num(o.get("total_eur")) or (round(price + ship, 2) if price else None)
         if not total:
             continue
-        offers.append({"product": str(o["product"])[:200], "variant": str(o.get("variant") or "")[:160],  # cap: untrusted
-                       "shop": shop_of(o.get("shop"), o.get("url")), "seller": str(o.get("seller") or "")[:80],  # cap: untrusted
-                       "rating": str(o.get("rating") or "")[:60], "price_eur": price, "shipping_eur": ship, "total_eur": total,  # cap: untrusted
-                       "delivery": str(o.get("delivery") or "")[:60], "url": str(o.get("url") or "")[:600]})  # cap: untrusted
+        offers.append({"product": TC.cut(str(o["product"]), 200), "variant": TC.cut(str(o.get("variant") or ""), 160),  # cap: untrusted
+                       "shop": shop_of(o.get("shop"), o.get("url")), "seller": TC.cut(str(o.get("seller") or ""), 80),  # cap: untrusted
+                       "rating": TC.cut(str(o.get("rating") or ""), 60), "price_eur": price, "shipping_eur": ship, "total_eur": total,  # cap: untrusted
+                       "delivery": TC.cut(str(o.get("delivery") or ""), 60), "url": str(o.get("url") or "")[:600]})  # cap: api (a URL; a marker would break it)
     if not offers:
         return None
     d["offers"] = offers
@@ -127,7 +128,7 @@ def offers_json(out):
     d["verdict"] = {"action": "wait" if str(v.get("action", "")).startswith("wait") else "buy_now",
                     "target_eur": num(v.get("target_eur")), "until": date_or_none(v.get("until")), "reason": cut(v.get("reason") or "", 2000)}  # cap: untrusted
     mt = d.get("match") if isinstance(d.get("match"), dict) else {}
-    d["match"] = {k: [str(w)[:40] for w in (mt.get(k) or []) if str(w).strip()][:4] for k in ("item", "variant", "seller")}  # cap: untrusted
+    d["match"] = {k: [str(w)[:40] for w in (mt.get(k) or []) if str(w).strip()][:4] for k in ("item", "variant", "seller")}  # cap: parse (words matched on the phone's screen; a marker would never match)
     return d
 
 
@@ -210,7 +211,7 @@ def over_limit(total, shop, lim=None):
 def note(p, text):
     """The proposal's own journal (shown on its card) and the activity feed."""
     p.setdefault("journal", []).append({"at": M.now().isoformat(timespec="minutes"), "text": text})
-    p["journal"] = p["journal"][-40:]  # cap: list
+    p["journal"] = p["journal"][-40:]  # cap: rotate (the card's newest 40 notes; the activity feed and the vault keep every one)
 
 
 def step(title, detail="", kind="stage", status=None):
@@ -221,7 +222,7 @@ def step(title, detail="", kind="stage", status=None):
 def state():
     """For state.json: open and recent proposals, the limits, this month's spending."""
     ps = [p for p in proposals() if p.get("status") in LIVE or p.get("updated", "") >= (M.now() - dt.timedelta(days=30)).isoformat()]
-    return {"shopping": {"proposals": ps[:30], "limits": limits(), "spent_month": spent_this_month()}}
+    return {"shopping": {"proposals": ps[:30], "more": max(0, len(ps) - 30), "limits": limits(), "spent_month": spent_this_month()}}  # cap: list
 
 
 # ---------- a run ----------
@@ -248,7 +249,7 @@ def research(m, logf, ev=None):
     evtext = f"\nThis run was triggered by an event: {ev['trigger']}: {ev['summary']}\n" if ev else ""
     phone = ""
     if open_p and open_p.get("app_check"):
-        phone = f"\nWhat the {open_p['shop']} app on the AI phone showed for your last top pick (read-only):\n{open_p['app_check']['text'][:1500]}\n"  # cap: prompt
+        phone = f"\nWhat the {open_p['shop']} app on the AI phone showed for your last top pick (read-only):\n{TC.cut(open_p['app_check']['text'], 1500)}\n"  # cap: prompt
     out = M.hermes_z(PROMPT.format(date=f"{M.now():%d %b %Y}", title=m["title"], goal=m.get("goal", ""), facts=facts,
                                    cap=lim["per_purchase_eur"], month=lim["per_month_eur"], spent=spent_this_month(),
                                    shops=", ".join(lim["shops"]), timing=timing, notes=M.read_notes(m),
@@ -315,11 +316,11 @@ def propose(m, d, rel, open_p=None):
     p.update(item=pick["product"], variant=pick["variant"], shop=pick["shop"], seller=pick["seller"], rating=pick["rating"],
              price_eur=pick["price_eur"], shipping_eur=pick["shipping_eur"], total_eur=pick["total_eur"], delivery=pick["delivery"],
              url=pick["url"], address=f"your {pick['shop']} account's default address (never changed)", why=cut(d.get("why") or "", 2000),  # cap: untrusted
-             why_now=cut(d.get("why_now") or v["reason"], 2000), verdict=v, need=str(d.get("need") or "")[:300],  # cap: untrusted
-             trend=str(d.get("trend") or "")[:200], price_history=str(d.get("price_history") or "")[:200], report=rel,  # cap: untrusted
+             why_now=cut(d.get("why_now") or v["reason"], 2000), verdict=v, need=TC.cut(str(d.get("need") or ""), 300),  # cap: untrusted
+             trend=TC.cut(str(d.get("trend") or ""), 200), price_history=TC.cut(str(d.get("price_history") or ""), 200), report=rel,  # cap: untrusted
              offers=d["offers"][:6], match=d["match"], budget_eur=num(d.get("budget_eur")), deadline=date_or_none(d.get("deadline")))
     p["history"] = (p.get("history") or []) + [{"at": M.now().isoformat(timespec="minutes"), "total_eur": pick["total_eur"], "source": "agent"}]
-    p["history"] = p["history"][-60:]  # cap: list
+    p["history"] = p["history"][-60:]  # cap: rotate (the newest 60 prices, for the trend line)
     over = over_limit(pick["total_eur"], pick["shop"], lim)
     if not over and p.get("budget_eur") and pick["total_eur"] > p["budget_eur"]:
         over = f"{pick['total_eur']:.2f} € is over your budget of {p['budget_eur']:.0f} €"
@@ -421,7 +422,7 @@ def app_check(m, p):
     lines = r.get("lines") or []
     price = next((PW.eur(a or b) for ln in lines for a, b in PW.PRICE.findall(ln)), None)
     p["app_check"] = {"at": M.now().isoformat(timespec="minutes"), "price_eur": price, "shot": r.get("shot"),
-                      "text": "\n".join(lines[:60]), "found": all(w.lower() in " ".join(lines).lower() for w in (p.get("match") or {}).get("item") or [])}  # cap: untrusted
+                      "text": "\n".join(TC.more(lines, 60, "more lines")), "found": all(w.lower() in " ".join(lines).lower() for w in (p.get("match") or {}).get("item") or [])}  # cap: untrusted
     note(p, f"Checked in the {p['shop']} app: " + (f"first price shown {price:.2f} €" if price else "no price read"))
     save(p)
     step("AI phone app check", cut(p["app_check"]["text"], STORE), kind="read")  # cap: store

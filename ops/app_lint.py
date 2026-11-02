@@ -55,7 +55,8 @@ def main():
     try:
         msgs = json.loads(p.stdout)[0]["messages"]
     except (ValueError, IndexError):
-        print(f"   ESLint did not answer: {(p.stderr or p.stdout).strip()[-500:]}")  # cap: preview
+        err = (p.stderr or p.stdout).strip()
+        print(f"   ESLint did not answer: {err if len(err) <= 500 else '… ' + err[-500:]}")  # cap: preview (its last lines; it runs alone, without ops/)
         return 1
     bad = []
     for m in msgs:

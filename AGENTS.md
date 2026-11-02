@@ -95,33 +95,52 @@ docs it points to. `README.md` is the product overview; `docs/` holds architectu
 
 ## Truncation (the owner's rule, DEC-27)
 
-Do not cut text by default. Shortening a string is a decision, and it needs a reason.
+Do not cut text by default. Coding agents cut text by reflex (`[:200]`, `.slice(0, 500)`, `| tail -20`, `limit 20`),
+and here such a cut is usually a bug: a model takes the start for the whole (FND-100), a wiki compile wrote over the
+parts of a page it was never shown (FND-103), a report past a `tail` vanished. Shortening is a decision, and it needs a
+reason. **Never cut silently, and never cut without a reason.**
 
+- **First ask whether the cap is needed at all.** Most are not: a list of 3 chats needs no `[:300]`, a page's sources
+  need no `[-30:]`. Remove an unneeded cap rather than justify it.
 - **Never cut what the owner reads.** That covers app pages, Telegram, push and e-mail, the activity feed, health
   alerts, error messages, logs shown in the app, Ledger text (bodies, evidence, reasons, messages), reviews and build
   output.
   - Text wraps: `.wrap`, `overflow-wrap: anywhere`. There is no `text-overflow: ellipsis` and no `line-clamp`.
   - Long text scrolls, or folds behind a visible "Show all".
-- **Never cut what the owner types.** Over a real limit, refuse it and name the limit: `textcap.limit()` or
-  `limit_items()`, for example "the description is 21,034 characters; the limit is 20,000". Never store or act on part
-  of it.
-- **When a cap is justified, the cut is visible.**
-  - Use `textcap.cut()` or `tail()` (copies in `images/mission-control/` and `images/swarm/`). They add
-    "[… N more characters cut …]", and where it helps, where the whole text is.
-  - Cut JSON with `bounded_json()` so it still parses.
-  - A list that shows part of itself says how many more there are, and gives a way to see them.
-- **Name the reason on the line:** `# cap: <reason>` in Python, `/* cap: <reason> */` in JS and CSS. Allowed:
-  - `prompt`: a model's context budget.
-  - `untrusted`: a bound on what other programs, agents, pages or models send.
-  - `api`: an outside limit (Telegram 4,096 characters, push, a URL, a subject, a file name).
-  - `id`: a title, key or slug, with the full text kept next to it.
-  - `parse`: a window code searches; nothing of it is shown.
+- **Never cut what the owner types, or a command.** Over a real limit, refuse it and name the limit: `textcap.limit()`
+  or `limit_items()`, for example "the description is 21,034 characters; the limit is 20,000". Never store or act on
+  part of it. The same holds for a command another agent sends (an Alexa command, a text to say aloud).
+- **A cut someone reads shows itself**: a person, or a model in a prompt. Use the `textcap` helpers (a copy sits next
+  to the code of every image that uses them; `app.js` has `clipped()` and `moreOf()`):
+  - `cut()` / `tail()`: "[… N more characters cut …]", and where it helps, where the whole text is;
+  - `fit()`: the same within an outside hard limit (a push body, a span attribute, a question limit);
+  - `bounded_json()`: cut JSON that still parses;
+  - `more()`: a list of lines that ends with "(… and N more)";
+  - `first()`: a list another program or model sent, bounded by the limit its prompt names, that says on stderr what
+    it left out.
+  A raw slice is allowed only where nobody reads the result as a whole: `id`, `parse`, `rotate`, a URL or a query
+  (`api`, where a marker would break the value), or a `list` that says how many more there are next to it.
+- **A model's answer that stopped at its output limit is never used as whole.** Read every chat-completions answer
+  with `textcap.answer()`, which refuses a `finish_reason` of "length". A Claude Code run that stopped at its turn
+  limit (`error_max_turns`) is no answer either (`builds.claude_text()`). The chat says so under the answer.
+- **Name the reason on the line:** `# cap: <reason>` in Python and shell, `/* cap: <reason> */` in JS and CSS. One
+  reason covers one cap: the line above lends its reason only when it is a comment. Allowed:
+  - `prompt`: a model's context budget (marked).
+  - `untrusted`: a bound on what other programs, agents, pages or models send (marked).
+  - `api`: an outside limit (Telegram 4,096 characters, push, a URL, a subject, a file name, a search query).
+  - `id`: a title, key, slug, short hash or date, with the full text kept next to it.
+  - `parse`: a window code searches or matches; nothing of it is shown.
   - `store`: a stored record, cut visibly. Stored text the owner may read keeps at least `textcap.STORE` (20,000).
-  - `preview`: a marked short form, one tap from the whole.
+  - `preview`: a marked short form, one tap from the whole (marked).
   - `list`: shows how many more, and a way to see them.
-- `ops/truncation.py check` (in `ops/check.sh`) fails on a cap of 40 or more without a known reason. Smaller slices
-  (short hashes, dates) are not checked, but the rules above still apply.
+  - `rotate`: a rolling window kept on purpose (ids already handled, a price history, the newest snapshots).
+- `ops/truncation.py check` (in `ops/check.sh`) finds every cap: slices of 20 or more and slices by an UPPERCASE
+  constant in Python and JS, the textcap helpers, ellipsis CSS, `head`/`tail`/`cut -c`/`${v:a:n}` in shell, and SQL
+  limits of 2 rows or more. It fails on a cap without a known reason, on an unmarked cut with a reason someone reads
+  (prompt, untrusted, store, preview: a mark written in a comment is no mark), and on a model answer read without
+  `textcap.answer()`. Smaller slices are not checked, but the rules above still apply to them.
 - An exception message is short: log and show it whole (`f"{e}"`, never `str(e)[:200]`).
+- The audits and what each found: `docs/TRUNCATION-AUDIT.md`.
 
 ## Architecture invariants (do not break)
 

@@ -23,6 +23,7 @@ publishers report the same new story within 30 minutes, one breaking event is ra
 to it. The owner rates each one (right / not news), the gate's measure.
 """
 import datetime as dt
+import textcap as TC                              # visible caps (AGENTS.md, truncation)
 import json
 import os
 import re
@@ -101,7 +102,7 @@ def record(c, source, kind, key, title, detail="", url="", param="", data=None, 
     """One event; the same (source, key) is recorded once. -> its id, or None when it was already there."""
     try:
         cur = c.execute("insert into bus (source, kind, key, ts, title, detail, url, param, data, baseline) values (?,?,?,?,?,?,?,?,?,?)",
-                        (source, kind, f"{source}|{key}", ts or iso(), str(title)[:500], str(detail)[:4000], url or "", param or "",  # cap: store
+                        (source, kind, f"{source}|{key}", ts or iso(), TC.cut(str(title), 500), TC.cut(str(detail), 4000), url or "", param or "",  # cap: store
                          json.dumps(data or {}), 1 if baseline else 0))
     except sqlite3.IntegrityError:               # seen before (by its unique key)
         return None
@@ -182,17 +183,17 @@ def matches(rule, ev):
 
 
 def fill(text, ev):
-    return (text.replace("{title}", ev["title"]).replace("{detail}", (ev.get("detail") or "")[:1500])  # cap: prompt
+    return (text.replace("{title}", ev["title"]).replace("{detail}", TC.cut((ev.get("detail") or ""), 1500))  # cap: prompt
             .replace("{url}", ev.get("url") or "").replace("{source}", ev["source"]))
 
 
 def check(rule, ev, ask=None):
     """The rule's model check: does the event mean what the rule describes? -> (bool, why)."""
     import prompts as P
-    p = P.text("intake", "RULE_CHECK").format(rule=rule["check_text"], title=ev["title"], detail=(ev.get("detail") or "")[:3000],  # cap: prompt
+    p = P.text("intake", "RULE_CHECK").format(rule=rule["check_text"], title=ev["title"], detail=TC.cut((ev.get("detail") or ""), 3000),  # cap: prompt
                                               source=SOURCES[ev["source"]], url=ev.get("url") or "")
     r = (ask or (lambda q: M.ask_json(q, os.environ["VK_INTAKE"], "gpt-sub-fast")))(p)
-    return bool(r.get("match")), str(r.get("why", ""))[:300]  # cap: store (one sentence on the firing)
+    return bool(r.get("match")), TC.cut(str(r.get("why", "")), 300)  # cap: store (one sentence on the firing)
 
 
 def fire(c, ev, ask=None, create=None):
@@ -217,7 +218,7 @@ def fire(c, ev, ask=None, create=None):
                 res = (create or TK.create)({"text": fill(r["task"], ev), "autonomy": "auto", "source": f"rule:{r['id']}"}, c)
                 tid = res["task"]
                 c.execute("update rules set last_fired=? where id=?", (iso(), r["id"]))
-                M.event("triggered", "", f"Rule “{r['name']}” fired on {ev['title'][:120]}: task #{tid}", push=True, title="Triggers")  # cap: preview
+                M.event("triggered", "", f"Rule “{r['name']}” fired on {TC.cut(ev['title'], 120)}: task #{tid}", push=True, title="Triggers")  # cap: preview
         c.execute("insert into firings (rule, event, ts, decision, task, why) values (?,?,?,?,?,?)", (r["id"], ev["id"], iso(), decision, tid, why))
         c.commit()
         out.append({"rule": r["id"], "decision": decision, "task": tid, "why": why})
@@ -301,7 +302,7 @@ def watch(spec):
     p = subprocess.run(["docker", "run", "--rm", "-i", "--network", "aistack_webonly", "-e", "SEC_CONTACT", "aistack/desk:1", "--watch"],
                        input=json.dumps(spec), capture_output=True, text=True, timeout=600)
     if p.returncode:
-        raise RuntimeError((p.stderr or "").strip()[-400:] or f"exit {p.returncode}")  # cap: preview
+        raise RuntimeError(TC.tail((p.stderr or "").strip(), 400) or f"exit {p.returncode}")  # cap: preview
     return json.loads(p.stdout)
 
 
@@ -474,7 +475,7 @@ def calendar(c, t=None, fetch=None, ask=None, create=None):
                     text = r.read(5_000_000).decode("utf-8", "replace")      # cap: api (a calendar file, 5 MB)
             _cal["events"], _cal["error"] = ics.parse(text), None
         except Exception as e:                       # the last good copy stays; the source says why
-            _cal["error"] = f"{type(e).__name__}: {str(e)[:120]}"  # cap: preview
+            _cal["error"] = f"{type(e).__name__}: {str(e)}"  # cap: preview
     if _cal["error"]:
         status("calendar", error=f"{calendar_host()}: {_cal['error']}")
     n = 0
@@ -488,7 +489,7 @@ def calendar(c, t=None, fetch=None, ask=None, create=None):
             if at <= t < at + dt.timedelta(seconds=CAL_WINDOW):
                 when = f"{o['start'].astimezone(t.tzinfo):%a %d %b %H:%M}–{o['end'].astimezone(t.tzinfo):%H:%M}"   # in the owner's time
                 n += bool(emit(c, "calendar", "event", f"{r['id']}|{o['uid']}|{o['start'].isoformat()}", o["summary"] or "(no title)", ask, create,
-                               param=f"rule {r['id']}", detail=" · ".join(x for x in (when, o["location"], o["description"][:500]) if x))[0])  # cap: preview
+                               param=f"rule {r['id']}", detail=" · ".join(x for x in (when, o["location"], TC.cut(o["description"], 500)) if x))[0])  # cap: preview
     if not _cal["error"]:
         status("calendar", found=n)
 

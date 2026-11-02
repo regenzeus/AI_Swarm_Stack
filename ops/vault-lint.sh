@@ -7,7 +7,7 @@ V=/srv/vault
 exec 9>/srv/ai/state/vault-ingest.lock; flock 9            # never run alongside an ingest
 check=$(docker exec -i -u hermes -e VAULT=/vault aistack-hermes-1 /opt/hermes/.venv/bin/python - --fix < "$(dirname "$0")/vault_check.py" 2>&1)
 prompt=$(python3 "$(dirname "$0")/prompts.py" render curator LINT time="$(date '+%Y-%m-%d %H:%M')" check="$check")   # MEM-11: prompts/curator.md
-out=$(docker exec -u hermes -w /vault aistack-hermes-1 hermes -p curator -z "$prompt" 2>&1 | tail -60)
+out=$(docker exec -u hermes -w /vault aistack-hermes-1 hermes -p curator -z "$prompt" 2>&1)   # whole: the REPORT section can be longer than any tail
 report=$(echo "$out" | sed -n '/REPORT:/,$p')
 find "$V/wiki" -type f ! -name "*.md" ! -name ".gitkeep" -exec sh -c 'mv "$1" "$1.md"' _ {} \;
 cd "$V" && git add -A && git commit -qm "lint: $(date +%F)" -m "${report:-REPORT: (none)}" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>" && git push -q 2>/dev/null

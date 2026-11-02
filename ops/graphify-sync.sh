@@ -28,9 +28,9 @@ for repo in "$CODE"/*/; do
   fi
   if { [ -f "$gj" ] && $G graphify update "/code/$name" >/dev/null 2>&1; } \
      || $G graphify extract "/code/$name" --code-only >/dev/null 2>&1; then
-    echo "$head" > "$STATE/$name.head"; rm -f "$STATE/$name.failed"; changed=1; echo "$(date '+%F %T') graph updated: $name @ ${head:0:7}"
+    echo "$head" > "$STATE/$name.head"; rm -f "$STATE/$name.failed"; changed=1; echo "$(date '+%F %T') graph updated: $name @ ${head:0:7}"   # cap: id (a short commit hash)
   else
-    echo "$head" > "$STATE/$name.failed"; echo "$(date '+%F %T') graph FAILED: $name @ ${head:0:7} (update and rebuild; next try at its next commit)" >&2
+    echo "$head" > "$STATE/$name.failed"; echo "$(date '+%F %T') graph FAILED: $name @ ${head:0:7} (update and rebuild; next try at its next commit)" >&2   # cap: id (a short commit hash)
   fi
 done
 if [ "$changed" = 1 ] || [ ! -f "$CODE/.graphify/merged-graph.json" ]; then

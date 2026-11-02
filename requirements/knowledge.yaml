@@ -74,17 +74,17 @@ items:
     sources: [images/mission-control/guide/08-knowledge.md]
     verify: {method: inspection, by: [ops/hindsight_forget.py, Makefile]}
   - id: KNW-08
-    title: The memory curator only proposes
-    statement: Every week the memory curator shall list duplicate, contradicted, stale and test-noise facts with a
-      reason, keep the older of near-duplicates, and retire a fact from recall only on the owner's Forget, softly and
-      restorably.
+    title: The memory curator asks before it decides for the owner
+    statement: The Memory Keeper shall keep the older of two facts that say the same, retire softly and restorably only the
+      classes the owner allowed (DEC-40) while its trial passes, and list every other doubtful fact with its reason for
+      the owner, whose Forget retires it, softly and restorably.
     type: functional
     priority: should
     status: implemented
     parents: [SN-08, SN-10]
-    sources: [images/mission-control/guide/18-crew.md]
-    verify: {method: test, by: [tests/test_crew.py::test_memory_near_duplicates_keep_the_older, tests/test_crew.py::test_forget_soft_retires_only_the_given_facts]}
-    trace: [ops/crew.py]
+    sources: [images/mission-control/guide/18-crew.md, DEC-40]
+    verify: {method: test, by: [tests/test_keeper.py::test_the_judgement_is_checked_before_it_counts_and_the_older_fact_stays, tests/test_crew.py::test_forget_soft_retires_only_the_given_facts]}
+    trace: [ops/crew.py, ops/keeper.py]
   - id: KNW-09
     title: Every result grows the mission's wiki
     statement: After every mission result, the runner shall fold it into the mission's wiki (entities, concepts,

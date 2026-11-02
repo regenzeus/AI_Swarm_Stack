@@ -243,8 +243,10 @@ services:
       # What to keep, and what never to keep (the curated MEMORY.md/USER.md core keeps its approval gate).
       HINDSIGHT_API_RETAIN_MISSION: >-
         Remember what helps a personal assistant serve the owner over time: his projects, decisions, preferences,
-        plans, tools, people he works with and what was concluded. Never store passwords, API keys, tokens,
-        account or ID numbers, health or medical details, or financial details; skip test or benchmark questions.
+        plans, tools, people he works with and what was concluded. Write every fact in English, whatever language was
+        spoken. Do not store a fact that is already known (it is confirmed, not repeated), nor facts about the assistant's
+        own runs, tools, errors or tests (the run record and the journals hold those). Never store passwords, API keys,
+        tokens, account or ID numbers, health or medical details, or financial details; skip test or benchmark questions.
       HINDSIGHT_API_ENABLE_BANK_CONFIG_API: "false"  # config comes from here only, not from API clients
       HINDSIGHT_API_ENABLE_DRY_RUN_EXTRACT: "false"
       # German + English: multilingual models instead of the English-only defaults, downloaded once into

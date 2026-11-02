@@ -49,7 +49,7 @@ if [ "$MODE" = drill ]; then
   for v in $VOLS; do docker volume rm drill_$v >/dev/null; done
   tar -tf $W/home.tar | grep -c . | xargs echo "4/4 home folders: files" ; tar -tf $W/vault.tar | grep -c "\.md$" | xargs echo "    vault markdown files:"
   python3 "$(dirname "$0")/restore_check.py" swarm "$W/srv-ai" || bad=1        # SWM-36: the swarm's ledger restores
-  [ -s $W/pg.err ] && { echo "postgres warnings:"; head -5 $W/pg.err; }
+  [ -s $W/pg.err ] && { echo "postgres warnings ($(wc -l < $W/pg.err) lines; the first 5):"; head -5 $W/pg.err; }   # cap: list
   [ "$keys" -gt 0 ] || bad=1
   if [ -n "${bad:-}" ]; then
     echo "{\"ts\": $(date +%s), \"kind\": \"restore-drill\", \"file\": \"$FILE\", \"result\": \"failed\"}" >> /srv/ai/state/backups.jsonl

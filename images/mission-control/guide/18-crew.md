@@ -23,7 +23,7 @@ note: A red edge means its last run failed: open it and look at Now or History. 
 | Agent | What it does | When |
 |---|---|---|
 | **Memory gatekeeper** | checks every fact Hermes wants to remember; sensitive ones wait for your OK | every 10 minutes |
-| **Librarian** | tidies every agent wiki (duplicates merged, contradictions and stale pages marked), writes the hub pages, cleans the search index, folds old journal entries, and finds duplicate or stale facts in the long-term memory for you to decide on | weekly |
+| **Memory Keeper** | looks after every memory: retires duplicates, test noise and agents' runs from the long-term memory and puts it into English (each change with Undo, only while its trial passes), asks you when two of your facts disagree, turns wiki contradictions into disputes a research task settles, re-checks stale pages, folds old journal entries, cleans the search index; on Wednesdays tidies every wiki | nightly |
 | **Skill keeper** | mirrors Hermes' skills to Forgejo, parks risky learned skills for your OK | every few minutes |
 | **Skill curator** | merges and tidies skills, kept only if the benchmark stays as good | Sundays |
 | **Self-review** | turns failures, errors, open work and new versions into ideas in the Ledger | weekly |
@@ -117,8 +117,8 @@ Your missions can use Gmail the same way: their mail tools work only under your 
 ## They propose, you decide
 
 The reviews end up as **ideas** under **Agents → Ideas**: tap *Build it* and the builder makes the
-change (with the usual review and your tap to deploy), or *Dismiss* it. The Librarian lists the facts it would
-forget, each with why (duplicate, contradicted, stale, test noise); **Forget** takes that one out of recall. It stays
+change (with the usual review and your tap to deploy), or *Dismiss* it. The Memory Keeper lists the facts it would not
+change itself, each with why (two facts that disagree, a doubtful duplicate); **Forget** takes that one out of recall. It stays
 in the memory's archive and can be restored, and nothing is forgotten without your tap. The same weekly run also
 tidies the **agents' journals** (their own memories): entries older than the last 8 fold into standing notes, the
 folded entries move to the journal's `ARCHIVE.md`, and stale lines go. It touches only the journals, and every change

@@ -57,7 +57,7 @@ def details(refnr, get=None):
     text = d.get("stellenangebotsBeschreibung") or ""
     return {**opening(d), "salary_given": d.get("verguetungsangabe") not in (None, "KEINE_ANGABEN"),
             "start": (d.get("eintrittszeitraum") or {}).get("von"),
-            "description": text[:MAX_TEXT] + (f"\n\n(cut at {MAX_TEXT} of {len(text)} characters)" if len(text) > MAX_TEXT else "")}
+            "description": text[:MAX_TEXT] + (f"\n\n(cut at {MAX_TEXT} of {len(text)} characters)" if len(text) > MAX_TEXT else "")}  # cap: prompt
 
 
 def _get(url, params):
@@ -76,7 +76,7 @@ def jobs_search(what: str, where: str = "", radius_km: int = 50, days: int = 30,
     try:
         r = search(what, where, radius_km, days, page)
     except Exception as e:
-        return f"job search failed: {type(e).__name__}: {str(e)[:200]}"   # cap: preview
+        return f"job search failed: {type(e).__name__}: {str(e)}"   # cap: preview
     return untrusted(json.dumps(r, ensure_ascii=False, indent=1))
 
 
@@ -87,7 +87,7 @@ def job_details(refnr: str) -> str:
     try:
         r = details(refnr.strip())
     except Exception as e:
-        return f"job details failed: {type(e).__name__}: {str(e)[:200]}"   # cap: preview
+        return f"job details failed: {type(e).__name__}: {str(e)}"   # cap: preview
     return untrusted(json.dumps(r, ensure_ascii=False, indent=1))
 
 

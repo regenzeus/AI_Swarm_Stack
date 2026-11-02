@@ -16,22 +16,22 @@ Method, statuses and rules: [README.md](README.md). Names of the parts: [glossar
 | [Gateway](#gw-gateway) (GW) | 8 | 8 | 0 | 0 | 0 | 0 | 0 |
 | [House](#hse-house) (HSE) | 9 | 9 | 0 | 0 | 0 | 0 | 0 |
 | [Knowledge](#knw-knowledge) (KNW) | 15 | 15 | 0 | 0 | 0 | 0 | 0 |
-| [Memory](#mem-memory) (MEM) | 13 | 13 | 0 | 0 | 0 | 0 | 0 |
+| [Memory](#mem-memory) (MEM) | 21 | 21 | 0 | 0 | 0 | 0 | 0 |
 | [Missions](#mis-missions) (MIS) | 21 | 19 | 1 | 0 | 0 | 0 | 1 |
 | [Observability](#obs-observability) (OBS) | 17 | 17 | 0 | 0 | 0 | 0 | 0 |
 | [AI phone](#phn-ai-phone) (PHN) | 23 | 23 | 0 | 0 | 0 | 0 | 0 |
 | [Platform](#plt-platform) (PLT) | 23 | 22 | 1 | 0 | 0 | 0 | 0 |
-| [Quality and process](#qa-quality-and-process) (QA) | 20 | 19 | 0 | 0 | 0 | 1 | 0 |
+| [Quality and process](#qa-quality-and-process) (QA) | 21 | 20 | 0 | 0 | 0 | 1 | 0 |
 | [Research](#res-research) (RES) | 7 | 6 | 1 | 0 | 0 | 0 | 0 |
 | [Security](#sec-security) (SEC) | 19 | 18 | 1 | 0 | 0 | 0 | 0 |
 | [Shopping](#shp-shopping) (SHP) | 12 | 12 | 0 | 0 | 0 | 0 | 0 |
-| [Agent swarm](#swm-agent-swarm) (SWM) | 109 | 96 | 9 | 0 | 2 | 0 | 2 |
+| [Agent swarm](#swm-agent-swarm) (SWM) | 109 | 97 | 8 | 0 | 2 | 0 | 2 |
 | [Task engine](#tsk-task-engine) (TSK) | 35 | 29 | 6 | 0 | 0 | 0 | 0 |
 | [Trials](#trl-trials) (TRL) | 13 | 13 | 0 | 0 | 0 | 0 | 0 |
 | [Voice](#voi-voice) (VOI) | 8 | 8 | 0 | 0 | 0 | 0 | 0 |
-| **All** | **455** | **425** | **22** | **1** | **2** | **1** | **4** |
+| **All** | **464** | **435** | **21** | **1** | **2** | **1** | **4** |
 
-Unit tests claimed by a requirement: 685 of 685.
+Unit tests claimed by a requirement: 695 of 695.
 
 ## Findings
 
@@ -41,6 +41,8 @@ Unit tests claimed by a requirement: 685 of 685.
 | [FND-01](#fnd-01) The phone check still expects the screen to stay awake | high | fixed | - | [CRW-12](#crw-12), [PHN-13](#phn-13), [APP-14](#app-14) |
 | [FND-02](#fnd-02) Hermes main has a way out through the AI phone | high | fixed | yes | [SEC-04](#sec-04), [PHN-02](#phn-02) |
 | [FND-101](#fnd-101) A task's builds were counted twice and nested by guess | high | fixed | - | [TRL-11](#trl-11), [TRL-09](#trl-09), [TSK-09](#tsk-09) |
+| [FND-103](#fnd-103) A wiki compile wrote over the parts of a page it never saw | high | fixed | - | [MEM-14](#mem-14) |
+| [FND-109](#fnd-109) Model answers cut at their output limit passed as whole, and cuts the check could not see | high | fixed | - | [QA-16](#qa-16), [QA-21](#qa-21) |
 | [FND-22](#fnd-22) Agents talking to each other would cross the trust boundaries | high | fixed | - | [SWM-09](#swm-09), [SWM-10](#swm-10), [SWM-15](#swm-15), [SWM-67](#swm-67), [SEC-04](#sec-04) |
 | [FND-37](#fnd-37) A deployed agent change did not reach its agent | high | fixed | - | [SWM-18](#swm-18), [SWM-102](#swm-102), [PLT-08](#plt-08) |
 | [FND-38](#fnd-38) Text the owner reads or types was cut silently all over the stack | high | fixed | - | [APP-19](#app-19), [APP-20](#app-20), [QA-16](#qa-16) |
@@ -63,6 +65,9 @@ Unit tests claimed by a requirement: 685 of 685.
 | [FND-10](#fnd-10) The scout's web search package is not where the scout looks | medium | fixed | - | [RES-02](#res-02) |
 | [FND-100](#fnd-100) The checkpoint took a cut result for a broken one | medium | fixed | - | [TRL-08](#trl-08) |
 | [FND-102](#fnd-102) The judge could not see what the agents read | medium | fixed | - | [TSK-17](#tsk-17) |
+| [FND-104](#fnd-104) Every step still gets earlier results copied whole | medium | fixed | - | [MEM-15](#mem-15) |
+| [FND-105](#fnd-105) Most cuts a model reads do not show themselves | medium | fixed | - | [MEM-16](#mem-16), [QA-16](#qa-16) |
+| [FND-107](#fnd-107) Long-term memory repeats itself and keeps what belongs elsewhere | medium | fixed | - | [MEM-18](#mem-18) |
 | [FND-12](#fnd-12) Caps the owner rejected are still in the code | medium | fixed | - | [CRW-06](#crw-06), [SWM-08](#swm-08), [SWM-35](#swm-35) |
 | [FND-14](#fnd-14) The mail connector can strand an approval like the phone did | medium | fixed | - | [CNX-06](#cnx-06), [SWM-19](#swm-19) |
 | [FND-17](#fnd-17) Seven ways to send a Telegram message | medium | fixed | - | [OBS-16](#obs-16), [SWM-59](#swm-59) |
@@ -114,6 +119,8 @@ Unit tests claimed by a requirement: 685 of 685.
 | [FND-07](#fnd-07) Approve before CI is green | low | fixed | - | [BLD-02](#bld-02), [APP-14](#app-14) |
 | [FND-08](#fnd-08) Needs you, as the guide describes it | low | fixed | - | [APP-06](#app-06), [APP-14](#app-14) |
 | [FND-09](#fnd-09) Five of ten tool servers documented | low | fixed | - | [QA-06](#qa-06), [APP-14](#app-14), [QA-13](#qa-13) |
+| [FND-106](#fnd-106) A marked contradiction waits for nobody | low | fixed | - | [MEM-17](#mem-17) |
+| [FND-108](#fnd-108) Four memory stores are not in the inventory | low | fixed | - | [MEM-19](#mem-19) |
 | [FND-11](#fnd-11) One bad wiki page stops every summary | low | fixed | - | [KNW-10](#knw-10) |
 | [FND-13](#fnd-13) "Every action waits for your OK" | low | fixed | - | [PHN-01](#phn-01), [PHN-02](#phn-02) |
 | [FND-15](#fnd-15) The test guide is out of date | low | fixed | - | [QA-04](#qa-04), [QA-06](#qa-06), [QA-13](#qa-13) |
@@ -182,6 +189,28 @@ The Mustache trial's second run (task 108) was stopped at 3.4 of its 3 million t
 - Affects: [TRL-11](#trl-11), [TRL-09](#trl-09), [TSK-09](#tsk-09)
 - Recommendation: A build a step starts names the step's run as its parent; the budget counts a build from the builds table only when its run is outside the trace; a trial counts each model call of the run record once (adding runs' summaries counts some twice, and a summary taken when its run ends misses a build that ends later).
 - Resolved: night/w9, 2026-11-02: builds source, staffing.runs_of, conductor.spent, trials.metrics; the recount gives 2,266,180 for task 108
+
+### FND-103
+
+**A wiki compile wrote over the parts of a page it never saw** (high defect, fixed)
+
+The compile showed the model the first 3,000 characters of each page it touches, with no mark, and wrote the model's text over the whole page. The model, told to return each page's full new text, could not keep what it had not seen: from 28 October to 1 November 14 pages of three wikis (the voice speaker, the RAM upgrade, ASP Isotopes) lost 142 Timeline lines, 264 Open-question lines, 33 Key facts and one contradiction mark, a page's oldest part at each compile. Only the Superseded lines were guarded.
+
+- Evidence: `vault 85d96c0 → f6e1b46 (1 Nov 08:13): projects/ram-upgrade-to-32-gb 6,843 → 4,787 characters; its October Timeline and all four Open questions gone`; `measured 2 Nov over every page's git history: 440 lines lost unseen`
+- Affects: [MEM-14](#mem-14)
+- Recommendation: Show each page whole up to 12,000 characters with a marked cut past it; a list line past what the model saw comes back under its section; restore the dated Timeline lines from the vault's history (the other sections may have changed since, so they stay in the history and the missions' logs).
+- Resolved: night/w14, 2026-11-02: mission_extras PAGE_SEEN and keep_unseen; from the vault's history one dated Timeline line per result a page no longer cited (61 on 9 pages, vault acbd58a; the other lost lines were rewordings of entries still there)
+
+### FND-109
+
+**Model answers cut at their output limit passed as whole, and cuts the check could not see** (high defect, fixed)
+
+No model call read the answer's finish_reason: an answer that stopped at the output limit was parsed (a plan or the desk's JSON cut halfway), stored as a mission result or shown in the chat as finished; a Claude Code run that stopped at its turn limit was read as an empty or partial answer. The truncation check saw only literal slices of 40 or more and only required a reason, so it missed slices by a constant (the Librarian's page and the doctor's evidence in their prompts), slices of 20 to 39 (a mail's date lost its time zone), shell tails (the curator's lint REPORT read through tail -60), SQL lists of the newest rows, and 250 raw slices with a reason someone reads. A reason on the line above also covered the next cap, which hid four.
+
+- Evidence: `ops/truncation.py report and a scan of 2 Nov: 250 raw read caps, 35 constant slices, 39 short slices, 20 shell and 25 SQL caps`; `ops/missions.py ask_text: res['choices'][0]['message']['content'] with no stop reason`
+- Affects: [QA-16](#qa-16), [QA-21](#qa-21)
+- Recommendation: Read every answer through textcap.answer(); refuse a Claude run stopped at its turn limit; mark every cut someone reads (cut, tail, fit, more, first); remove the caps nothing needs; have the check see every kind of cut, fail on an unmarked one and let one reason cover one cap.
+- Resolved: night/w16, 2026-11-02: textcap fit, more, first, answer; builds.claude_text; about 200 cuts marked, 6 removed, 4 refused instead; ops/truncation.py sees slices from 20 and by constant, shell, SQL and model answers
 
 ### FND-22
 
@@ -424,6 +453,39 @@ The Mustache trial's third run (task 109) scored 136 of 136 with a clean audit, 
 - Affects: [TSK-17](#tsk-17)
 - Recommendation: The judge's measured section lists the run record's tool calls of the task's runs (agent, tool, the start of its argument; 80 named, the task page has all); re-judged with it, the clean-room point was met. TASK_JUDGE says so; replay passed (equal 3).
 - Resolved: night/w10, 2026-11-02: staffing.calls_of and evidence_of, TASK_JUDGE
+
+### FND-104
+
+**Every step still gets earlier results copied whole** (medium risk, fixed)
+
+After FND-99 the earlier results travel apart from a step's brief, but still whole: 80,000 characters for a build, a Claude task's context, and for a Hermes step the whole prompt as one command-line argument, which Linux refuses past 128 KiB (MAX_ARG_STRLEN). A Claude step's brief is sliced at 19,000 characters without a mark.
+
+- Evidence: `ops/conductor.py run_hermes: hermes -z <prompt>`; `ops/conductor.py run_claude: head[:19000]`
+- Affects: [MEM-15](#mem-15)
+- Recommendation: Pass by reference past a budget (MEM-15), Hermes' prompt through a file, and a size contract test through every adapter.
+- Resolved: night/w17, 2026-11-02: conductor handoff and result_file (by reference past HANDOFF), the OpenCode step's results folder, run_hermes refuses a prompt over ARG_BYTES
+
+### FND-105
+
+**Most cuts a model reads do not show themselves** (medium risk, fixed)
+
+Of 96 places that cut text going to a model (cap: prompt), 92 slice it without a mark, so the model takes the start for the whole: the cause of FND-100 and FND-103. Among them the wiki context of a refinement (8,000), the mission plan's notes (3,000), a journal's result (3,000) and the inbox's mail body (20,000).
+
+- Evidence: `ops/truncation.py report, 2 Nov: 96 prompt caps, 4 through textcap`
+- Affects: [MEM-16](#mem-16), [QA-16](#qa-16)
+- Recommendation: A prompt cap goes through textcap.cut or tail, enforced by ops/truncation.py; the long ones first.
+- Resolved: night/w16, 2026-11-02: the second truncation audit; every prompt cap marked, the check refuses an unmarked one
+
+### FND-107
+
+**Long-term memory repeats itself and keeps what belongs elsewhere** (medium incoherence, fixed)
+
+Hindsight held 222 facts on 2 November, up from 120 on 30 October: the voice-reply preference up to five times, facts in Spanish and German, about 35 facts on agent runs (journals hold those, MEM-06), and passing states (a setup 'incomplete') with no end. The weekly curator's 55 forget suggestions of 30 October wait for the owner's tap; none was taken.
+
+- Evidence: `hindsight memory_units 2 Nov: 65 world, 74 experience, 83 observation`; `crew/memory.json: 55 suggestions, 30 Oct`
+- Affects: [MEM-18](#mem-18)
+- Recommendation: Reconcile at write (a repeat confirms, not adds), English facts, agent-run facts kept out; the owner decides whether exact duplicates and test noise may be retired softly without a tap (docs/MEMORY.md D2).
+- Resolved: night/w17, 2026-11-02: the Memory Keeper (ops/keeper.py) behind its trial; Hindsight's retain mission asks for English and no agents' runs; DEC-40
 
 ### FND-12
 
@@ -986,6 +1048,28 @@ The rule says every MCP server gets a row in the guide's technology chapter; the
 - Recommendation: Add the five rows, and a test that the table matches config.yaml (QA-13).
 - Resolved: feat/requirements, 2026-10-29 (docs and the phone check aligned with the requirements)
 
+### FND-106
+
+**A marked contradiction waits for nobody** (low incoherence, fixed)
+
+The Librarian marks a contradiction with both sources and the page becomes contested, but no agent is asked to settle it: the two on the voice-speaker wiki (entities/smartdomo, entities/smattex) have been open since 30 October, and a compile lost a third (FND-103).
+
+- Evidence: `public/memory.json librarian, 30 Oct: smartdomo 2 marked, unresolved`
+- Affects: [MEM-17](#mem-17)
+- Recommendation: Each mark a Ledger item for the wiki's writer; a refinement task after 14 days (MEM-17).
+- Resolved: night/w17, 2026-11-02: keeper.disputes (a memory_issue per mark, a refinement after 14 days, settled when the mark is gone, the owner asked after that), the compile told
+
+### FND-108
+
+**Four memory stores are not in the inventory** (low incoherence, fixed)
+
+The memory inventory (MEM-01) lists ten stores, but not a task's hand-offs (missions.sqlite task_steps), Hermes' own memory (USER.md, gated by memory_review), the builder's code graphs (graphify) or the chats; their size, growth and curator are not seen.
+
+- Evidence: `ops/memory.py STORES, 2 Nov`
+- Affects: [MEM-19](#mem-19)
+- Recommendation: Declare them in STORES with a measure each (MEM-19).
+- Resolved: night/w17, 2026-11-02: memory.STORES task-handoffs, hermes-memory, code-graphs, chats, each measured
+
 ### FND-11
 
 **One bad wiki page stops every summary** (low defect, fixed)
@@ -1268,18 +1352,18 @@ The trial's build #11 appeared on the Tasks board as task #89 (source door) besi
 | <a id="sn-01"></a>**SN-01** A personal AI team that works by itself: Agents read the news, research companies and topics, watch filings and prices, and deliver briefings, alerts and research results on their own, so that the owner mostly just reads results. | must | [APP-05](#app-05), [APP-25](#app-25), [APP-26](#app-26), [APP-30](#app-30), [APP-31](#app-31), [APP-32](#app-32), [APP-33](#app-33), [APP-34](#app-34), [APP-35](#app-35), [AST-01](#ast-01), [AST-05](#ast-05), [AST-07](#ast-07), [AST-13](#ast-13), [CST-01](#cst-01), [MIS-01](#mis-01), [MIS-02](#mis-02), [MIS-06](#mis-06), [MIS-08](#mis-08), [MIS-09](#mis-09), [MIS-10](#mis-10), [MIS-11](#mis-11), [MIS-13](#mis-13), [MIS-14](#mis-14), [MIS-15](#mis-15), [MIS-21](#mis-21), [RES-02](#res-02), [RES-03](#res-03), [RES-04](#res-04), [RES-05](#res-05) |
 | <a id="sn-02"></a>**SN-02** Out of the loop except for real decisions: the owner is asked only for decisions that are really his (approvals of spending, deploys, deletions, settings, grants), each one tap away with enough context to decide; no scripts to run, no busywork, nothing shown as needing him that does not. | must | [APP-04](#app-04), [APP-05](#app-05), [APP-06](#app-06), [APP-07](#app-07), [APP-13](#app-13), [APP-14](#app-14), [APP-21](#app-21), [APP-25](#app-25), [APP-26](#app-26), [APP-30](#app-30), [APP-31](#app-31), [AST-06](#ast-06), [AST-12](#ast-12), [CNX-02](#cnx-02), [CRW-02](#crw-02), [CRW-05](#crw-05), [CRW-06](#crw-06), [CST-03](#cst-03), [MIS-07](#mis-07), [MIS-20](#mis-20), [PHN-02](#phn-02), [PHN-11](#phn-11), [PHN-12](#phn-12), [PHN-18](#phn-18), [PHN-20](#phn-20), [PHN-21](#phn-21), [PHN-22](#phn-22), [SHP-01](#shp-01), [SHP-03](#shp-03), [SHP-08](#shp-08), [SWM-05](#swm-05), [SWM-06](#swm-06), [SWM-08](#swm-08), [SWM-33](#swm-33), [SWM-38](#swm-38), [SWM-39](#swm-39), [SWM-40](#swm-40), [SWM-42](#swm-42), [SWM-43](#swm-43), [SWM-44](#swm-44), [SWM-54](#swm-54), [SWM-55](#swm-55), [SWM-61](#swm-61), [SWM-87](#swm-87), [TSK-03](#tsk-03), [TSK-20](#tsk-20), [VOI-08](#voi-08) |
 | <a id="sn-03"></a>**SN-03** Costs nothing to run: Running the stack costs $0 beyond the subscriptions the owner already pays; nothing can spend money by accident. | must | [AST-02](#ast-02), [AST-08](#ast-08), [BLD-06](#bld-06), [CST-02](#cst-02), [GW-02](#gw-02), [GW-04](#gw-04), [MIS-04](#mis-04), [MIS-16](#mis-16), [PLT-11](#plt-11), [RES-07](#res-07), [SHP-05](#shp-05), [SWM-13](#swm-13), [SWM-14](#swm-14), [SWM-29](#swm-29), [SWM-40](#swm-40), [SWM-53](#swm-53), [SWM-60](#swm-60), [SWM-62](#swm-62), [SWM-81](#swm-81) |
-| <a id="sn-04"></a>**SN-04** Private data stays home: Notes, reports, memory, chats, mail and files stay on the PC and the NAS; only the model calls leave, and The owner knows which provider sees what. | must | [CST-04](#cst-04), [CST-06](#cst-06), [HSE-07](#hse-07), [KNW-05](#knw-05), [KNW-07](#knw-07), [MEM-06](#mem-06), [PHN-16](#phn-16), [PHN-19](#phn-19), [RES-01](#res-01), [SEC-03](#sec-03), [SEC-04](#sec-04), [SEC-06](#sec-06), [SEC-17](#sec-17), [SEC-18](#sec-18), [SEC-19](#sec-19), [SWM-67](#swm-67) |
+| <a id="sn-04"></a>**SN-04** Private data stays home: Notes, reports, memory, chats, mail and files stay on the PC and the NAS; only the model calls leave, and The owner knows which provider sees what. | must | [CST-04](#cst-04), [CST-06](#cst-06), [HSE-07](#hse-07), [KNW-05](#knw-05), [KNW-07](#knw-07), [MEM-06](#mem-06), [MEM-18](#mem-18), [PHN-16](#phn-16), [PHN-19](#phn-19), [RES-01](#res-01), [SEC-03](#sec-03), [SEC-04](#sec-04), [SEC-06](#sec-06), [SEC-17](#sec-17), [SEC-18](#sec-18), [SEC-19](#sec-19), [SWM-67](#swm-67) |
 | <a id="sn-05"></a>**SN-05** Agents cannot do damage: No agent can spend money, delete data for good, leak private data, change the NAS, the router or phone and PC security settings, or deploy code without the owner's approval; prompt injection from the web or mail cannot steer an agent into any of it. | must | [APP-10](#app-10), [APP-20](#app-20), [AST-08](#ast-08), [AST-09](#ast-09), [AST-10](#ast-10), [AST-14](#ast-14), [BLD-02](#bld-02), [BLD-07](#bld-07), [BLD-10](#bld-10), [BLD-13](#bld-13), [BLD-16](#bld-16), [BLD-18](#bld-18), [CNX-01](#cnx-01), [CNX-03](#cnx-03), [CNX-04](#cnx-04), [CNX-05](#cnx-05), [CRW-04](#crw-04), [CRW-10](#crw-10), [CRW-11](#crw-11), [CRW-13](#crw-13), [CST-04](#cst-04), [CST-05](#cst-05), [CST-06](#cst-06), [CST-07](#cst-07), [CST-10](#cst-10), [CST-11](#cst-11), [CST-12](#cst-12), [GW-05](#gw-05), [HSE-04](#hse-04), [HSE-05](#hse-05), [HSE-08](#hse-08), [HSE-09](#hse-09), [KNW-04](#knw-04), [KNW-06](#knw-06), [KNW-11](#knw-11), [MEM-04](#mem-04), [MIS-17](#mis-17), [PHN-01](#phn-01), [PHN-03](#phn-03), [PHN-04](#phn-04), [PHN-05](#phn-05), [PHN-06](#phn-06), [PHN-07](#phn-07), [PHN-08](#phn-08), [PHN-15](#phn-15), [PLT-02](#plt-02), [PLT-03](#plt-03), [PLT-09](#plt-09), [RES-01](#res-01), [RES-03](#res-03), [RES-04](#res-04), [RES-06](#res-06), [SEC-01](#sec-01), [SEC-02](#sec-02), [SEC-03](#sec-03), [SEC-04](#sec-04), [SEC-05](#sec-05), [SEC-06](#sec-06), [SEC-07](#sec-07), [SEC-08](#sec-08), [SEC-09](#sec-09), [SEC-10](#sec-10), [SEC-11](#sec-11), [SEC-12](#sec-12), [SEC-13](#sec-13), [SEC-14](#sec-14), [SEC-15](#sec-15), [SEC-16](#sec-16), [SHP-05](#shp-05), [SHP-06](#shp-06), [SHP-07](#shp-07), [SHP-09](#shp-09), [SHP-10](#shp-10), [SWM-06](#swm-06), [SWM-109](#swm-109), [SWM-11](#swm-11), [SWM-15](#swm-15), [SWM-23](#swm-23), [SWM-24](#swm-24), [SWM-26](#swm-26), [SWM-42](#swm-42), [SWM-43](#swm-43), [SWM-46](#swm-46), [SWM-51](#swm-51), [SWM-58](#swm-58), [SWM-66](#swm-66), [SWM-67](#swm-67), [SWM-68](#swm-68), [SWM-69](#swm-69), [SWM-70](#swm-70), [SWM-77](#swm-77), [SWM-89](#swm-89), [TRL-05](#trl-05), [TSK-15](#tsk-15), [TSK-20](#tsk-20), [VOI-01](#voi-01), [VOI-03](#voi-03), [VOI-07](#voi-07) |
-| <a id="sn-06"></a>**SN-06** Usable from the phone, anywhere, one sign-in: Everything is usable and decidable from the owner's phone (installable app, push, Telegram), from anywhere on his tailnet, with his Tailscale login as the only sign-in. | must | [APP-01](#app-01), [APP-02](#app-02), [APP-03](#app-03), [APP-04](#app-04), [APP-08](#app-08), [APP-09](#app-09), [APP-15](#app-15), [APP-17](#app-17), [APP-19](#app-19), [APP-20](#app-20), [AST-01](#ast-01), [AST-03](#ast-03), [MIS-15](#mis-15), [QA-16](#qa-16), [SEC-01](#sec-01), [SEC-02](#sec-02), [SWM-11](#swm-11), [SWM-57](#swm-57), [SWM-93](#swm-93), [SWM-95](#swm-95), [TSK-02](#tsk-02) |
-| <a id="sn-07"></a>**SN-07** See what every agent does: For every agent, mission, crew job, build and tool the owner can see what it did step by step, what it read and changed, what it produced, what it cost and when something went wrong, without having to look for it. | must | [APP-07](#app-07), [APP-11](#app-11), [APP-12](#app-12), [APP-16](#app-16), [APP-19](#app-19), [APP-22](#app-22), [APP-23](#app-23), [APP-24](#app-24), [APP-35](#app-35), [AST-04](#ast-04), [BLD-14](#bld-14), [BLD-20](#bld-20), [CRW-01](#crw-01), [CRW-02](#crw-02), [CRW-09](#crw-09), [CRW-12](#crw-12), [GW-01](#gw-01), [GW-07](#gw-07), [HSE-02](#hse-02), [MEM-01](#mem-01), [MEM-07](#mem-07), [MEM-09](#mem-09), [MEM-10](#mem-10), [MIS-16](#mis-16), [OBS-01](#obs-01), [OBS-02](#obs-02), [OBS-03](#obs-03), [OBS-04](#obs-04), [OBS-05](#obs-05), [OBS-06](#obs-06), [OBS-07](#obs-07), [OBS-08](#obs-08), [OBS-09](#obs-09), [OBS-10](#obs-10), [OBS-14](#obs-14), [OBS-15](#obs-15), [QA-17](#qa-17), [RES-05](#res-05), [SEC-07](#sec-07), [SHP-11](#shp-11), [SWM-103](#swm-103), [SWM-104](#swm-104), [SWM-105](#swm-105), [SWM-106](#swm-106), [SWM-107](#swm-107), [SWM-17](#swm-17), [SWM-23](#swm-23), [SWM-25](#swm-25), [SWM-30](#swm-30), [SWM-57](#swm-57), [SWM-58](#swm-58), [SWM-64](#swm-64), [SWM-78](#swm-78), [SWM-79](#swm-79), [SWM-80](#swm-80), [SWM-81](#swm-81), [SWM-82](#swm-82), [SWM-84](#swm-84), [SWM-90](#swm-90), [SWM-96](#swm-96), [SWM-99](#swm-99), [TSK-04](#tsk-04), [TSK-09](#tsk-09), [TSK-17](#tsk-17), [TSK-35](#tsk-35) |
-| <a id="sn-08"></a>**SN-08** The stack maintains and improves itself: Housekeeping agents keep the stack healthy, and the stack proposes and builds its own improvements; the owner approves what ships. | must | [APP-21](#app-21), [AST-11](#ast-11), [BLD-01](#bld-01), [BLD-03](#bld-03), [BLD-04](#bld-04), [BLD-05](#bld-05), [BLD-08](#bld-08), [BLD-10](#bld-10), [BLD-21](#bld-21), [BLD-22](#bld-22), [BLD-24](#bld-24), [CRW-01](#crw-01), [CRW-03](#crw-03), [CRW-04](#crw-04), [CRW-07](#crw-07), [CRW-08](#crw-08), [CRW-09](#crw-09), [CRW-10](#crw-10), [CST-07](#cst-07), [KNW-08](#knw-08), [MEM-11](#mem-11), [MEM-13](#mem-13), [OBS-13](#obs-13), [PLT-08](#plt-08), [PLT-19](#plt-19), [QA-07](#qa-07), [SEC-08](#sec-08), [SWM-07](#swm-07), [SWM-102](#swm-102), [SWM-18](#swm-18), [SWM-38](#swm-38), [SWM-44](#swm-44), [SWM-45](#swm-45), [SWM-46](#swm-46), [SWM-47](#swm-47), [SWM-61](#swm-61), [SWM-70](#swm-70), [SWM-82](#swm-82), [SWM-83](#swm-83), [SWM-84](#swm-84), [SWM-91](#swm-91), [SWM-92](#swm-92), [SWM-93](#swm-93), [SWM-94](#swm-94), [SWM-95](#swm-95), [SWM-96](#swm-96), [TSK-13](#tsk-13), [TSK-16](#tsk-16), [TSK-17](#tsk-17) |
-| <a id="sn-09"></a>**SN-09** Nothing is ever lost: Data and configuration are backed up, the backups are proven to restore, and the whole stack can move to a new PC. | must | [AST-10](#ast-10), [CNX-03](#cnx-03), [CST-05](#cst-05), [KNW-01](#knw-01), [KNW-11](#knw-11), [MEM-08](#mem-08), [MEM-12](#mem-12), [PLT-12](#plt-12), [PLT-13](#plt-13), [PLT-14](#plt-14), [PLT-15](#plt-15), [PLT-16](#plt-16), [PLT-17](#plt-17), [SWM-30](#swm-30), [SWM-35](#swm-35), [SWM-36](#swm-36), [SWM-73](#swm-73), [SWM-76](#swm-76) |
-| <a id="sn-10"></a>**SN-10** Knowledge that grows and answers with sources: Everything the owner and his agents write becomes a searchable, linked knowledge base (vault, wikis, long-term memory) that answers questions with citations. | must | [APP-15](#app-15), [CRW-13](#crw-13), [KNW-01](#knw-01), [KNW-02](#knw-02), [KNW-03](#knw-03), [KNW-04](#knw-04), [KNW-05](#knw-05), [KNW-06](#knw-06), [KNW-08](#knw-08), [KNW-09](#knw-09), [KNW-10](#knw-10), [KNW-12](#knw-12), [KNW-13](#knw-13), [KNW-14](#knw-14), [KNW-15](#knw-15), [MEM-01](#mem-01), [MEM-02](#mem-02), [MEM-03](#mem-03), [MEM-04](#mem-04), [MEM-05](#mem-05), [MEM-06](#mem-06), [MEM-09](#mem-09), [MEM-10](#mem-10), [MEM-12](#mem-12), [MIS-01](#mis-01), [MIS-11](#mis-11), [MIS-18](#mis-18), [MIS-19](#mis-19), [MIS-21](#mis-21), [SWM-66](#swm-66), [TSK-34](#tsk-34) |
+| <a id="sn-06"></a>**SN-06** Usable from the phone, anywhere, one sign-in: Everything is usable and decidable from the owner's phone (installable app, push, Telegram), from anywhere on his tailnet, with his Tailscale login as the only sign-in. | must | [APP-01](#app-01), [APP-02](#app-02), [APP-03](#app-03), [APP-04](#app-04), [APP-08](#app-08), [APP-09](#app-09), [APP-15](#app-15), [APP-17](#app-17), [APP-19](#app-19), [APP-20](#app-20), [AST-01](#ast-01), [AST-03](#ast-03), [MIS-15](#mis-15), [QA-16](#qa-16), [QA-21](#qa-21), [SEC-01](#sec-01), [SEC-02](#sec-02), [SWM-11](#swm-11), [SWM-57](#swm-57), [SWM-93](#swm-93), [SWM-95](#swm-95), [TSK-02](#tsk-02) |
+| <a id="sn-07"></a>**SN-07** See what every agent does: For every agent, mission, crew job, build and tool the owner can see what it did step by step, what it read and changed, what it produced, what it cost and when something went wrong, without having to look for it. | must | [APP-07](#app-07), [APP-11](#app-11), [APP-12](#app-12), [APP-16](#app-16), [APP-19](#app-19), [APP-22](#app-22), [APP-23](#app-23), [APP-24](#app-24), [APP-35](#app-35), [AST-04](#ast-04), [BLD-14](#bld-14), [BLD-20](#bld-20), [CRW-01](#crw-01), [CRW-02](#crw-02), [CRW-09](#crw-09), [CRW-12](#crw-12), [GW-01](#gw-01), [GW-07](#gw-07), [HSE-02](#hse-02), [MEM-01](#mem-01), [MEM-07](#mem-07), [MEM-09](#mem-09), [MEM-10](#mem-10), [MEM-19](#mem-19), [MIS-16](#mis-16), [OBS-01](#obs-01), [OBS-02](#obs-02), [OBS-03](#obs-03), [OBS-04](#obs-04), [OBS-05](#obs-05), [OBS-06](#obs-06), [OBS-07](#obs-07), [OBS-08](#obs-08), [OBS-09](#obs-09), [OBS-10](#obs-10), [OBS-14](#obs-14), [OBS-15](#obs-15), [QA-17](#qa-17), [RES-05](#res-05), [SEC-07](#sec-07), [SHP-11](#shp-11), [SWM-103](#swm-103), [SWM-104](#swm-104), [SWM-105](#swm-105), [SWM-106](#swm-106), [SWM-107](#swm-107), [SWM-17](#swm-17), [SWM-23](#swm-23), [SWM-25](#swm-25), [SWM-30](#swm-30), [SWM-57](#swm-57), [SWM-58](#swm-58), [SWM-64](#swm-64), [SWM-78](#swm-78), [SWM-79](#swm-79), [SWM-80](#swm-80), [SWM-81](#swm-81), [SWM-82](#swm-82), [SWM-84](#swm-84), [SWM-90](#swm-90), [SWM-96](#swm-96), [SWM-99](#swm-99), [TSK-04](#tsk-04), [TSK-09](#tsk-09), [TSK-17](#tsk-17), [TSK-35](#tsk-35) |
+| <a id="sn-08"></a>**SN-08** The stack maintains and improves itself: Housekeeping agents keep the stack healthy, and the stack proposes and builds its own improvements; the owner approves what ships. | must | [APP-21](#app-21), [AST-11](#ast-11), [BLD-01](#bld-01), [BLD-03](#bld-03), [BLD-04](#bld-04), [BLD-05](#bld-05), [BLD-08](#bld-08), [BLD-10](#bld-10), [BLD-21](#bld-21), [BLD-22](#bld-22), [BLD-24](#bld-24), [CRW-01](#crw-01), [CRW-03](#crw-03), [CRW-04](#crw-04), [CRW-07](#crw-07), [CRW-08](#crw-08), [CRW-09](#crw-09), [CRW-10](#crw-10), [CST-07](#cst-07), [KNW-08](#knw-08), [MEM-11](#mem-11), [MEM-13](#mem-13), [MEM-20](#mem-20), [OBS-13](#obs-13), [PLT-08](#plt-08), [PLT-19](#plt-19), [QA-07](#qa-07), [SEC-08](#sec-08), [SWM-07](#swm-07), [SWM-102](#swm-102), [SWM-18](#swm-18), [SWM-38](#swm-38), [SWM-44](#swm-44), [SWM-45](#swm-45), [SWM-46](#swm-46), [SWM-47](#swm-47), [SWM-61](#swm-61), [SWM-70](#swm-70), [SWM-82](#swm-82), [SWM-83](#swm-83), [SWM-84](#swm-84), [SWM-91](#swm-91), [SWM-92](#swm-92), [SWM-93](#swm-93), [SWM-94](#swm-94), [SWM-95](#swm-95), [SWM-96](#swm-96), [TSK-13](#tsk-13), [TSK-16](#tsk-16), [TSK-17](#tsk-17) |
+| <a id="sn-09"></a>**SN-09** Nothing is ever lost: Data and configuration are backed up, the backups are proven to restore, and the whole stack can move to a new PC. | must | [AST-10](#ast-10), [CNX-03](#cnx-03), [CST-05](#cst-05), [KNW-01](#knw-01), [KNW-11](#knw-11), [MEM-08](#mem-08), [MEM-12](#mem-12), [MEM-14](#mem-14), [MEM-17](#mem-17), [MEM-21](#mem-21), [PLT-12](#plt-12), [PLT-13](#plt-13), [PLT-14](#plt-14), [PLT-15](#plt-15), [PLT-16](#plt-16), [PLT-17](#plt-17), [SWM-30](#swm-30), [SWM-35](#swm-35), [SWM-36](#swm-36), [SWM-73](#swm-73), [SWM-76](#swm-76) |
+| <a id="sn-10"></a>**SN-10** Knowledge that grows and answers with sources: Everything the owner and his agents write becomes a searchable, linked knowledge base (vault, wikis, long-term memory) that answers questions with citations. | must | [APP-15](#app-15), [CRW-13](#crw-13), [KNW-01](#knw-01), [KNW-02](#knw-02), [KNW-03](#knw-03), [KNW-04](#knw-04), [KNW-05](#knw-05), [KNW-06](#knw-06), [KNW-08](#knw-08), [KNW-09](#knw-09), [KNW-10](#knw-10), [KNW-12](#knw-12), [KNW-13](#knw-13), [KNW-14](#knw-14), [KNW-15](#knw-15), [MEM-01](#mem-01), [MEM-02](#mem-02), [MEM-03](#mem-03), [MEM-04](#mem-04), [MEM-05](#mem-05), [MEM-06](#mem-06), [MEM-09](#mem-09), [MEM-10](#mem-10), [MEM-12](#mem-12), [MEM-14](#mem-14), [MEM-15](#mem-15), [MEM-16](#mem-16), [MEM-17](#mem-17), [MEM-18](#mem-18), [MEM-19](#mem-19), [MEM-20](#mem-20), [MEM-21](#mem-21), [MIS-01](#mis-01), [MIS-11](#mis-11), [MIS-18](#mis-18), [MIS-19](#mis-19), [MIS-21](#mis-21), [SWM-66](#swm-66), [TSK-34](#tsk-34) |
 | <a id="sn-11"></a>**SN-11** Hands in the real world, under control: Agents can act through the AI phone, Gmail, shopping and the House (lights, plugs, Echos), each only within grants and approvals the owner controls, with Stop and a log. | should | [CNX-01](#cnx-01), [CNX-02](#cnx-02), [CRW-11](#crw-11), [CST-12](#cst-12), [HSE-01](#hse-01), [HSE-02](#hse-02), [HSE-03](#hse-03), [HSE-05](#hse-05), [HSE-06](#hse-06), [HSE-07](#hse-07), [MIS-17](#mis-17), [PHN-01](#phn-01), [PHN-02](#phn-02), [PHN-05](#phn-05), [PHN-13](#phn-13), [PHN-14](#phn-14), [PHN-17](#phn-17), [PHN-18](#phn-18), [PHN-19](#phn-19), [PHN-22](#phn-22), [PHN-23](#phn-23), [PLT-22](#plt-22), [SHP-01](#shp-01), [SHP-02](#shp-02), [SHP-03](#shp-03), [SHP-04](#shp-04), [SHP-11](#shp-11), [SWM-26](#swm-26), [VOI-01](#voi-01), [VOI-02](#voi-02), [VOI-03](#voi-03), [VOI-04](#voi-04), [VOI-05](#voi-05), [VOI-06](#voi-06), [VOI-08](#voi-08) |
 | <a id="sn-12"></a>**SN-12** English everywhere: Chat, app, reports, wikis, Telegram, code, docs and commit messages are in English. | must | [CST-09](#cst-09), [MIS-12](#mis-12), [TSK-35](#tsk-35) |
-| <a id="sn-13"></a>**SN-13** Runs unattended for months: The stack keeps working through usage-limit pauses, restarts, deploys, reboots and power cuts, and recovers by itself; no work, approval or message is lost on a restart. | must | [APP-23](#app-23), [APP-24](#app-24), [AST-03](#ast-03), [AST-12](#ast-12), [BLD-03](#bld-03), [BLD-06](#bld-06), [BLD-09](#bld-09), [BLD-12](#bld-12), [CNX-06](#cnx-06), [CST-03](#cst-03), [CST-08](#cst-08), [CST-14](#cst-14), [GW-03](#gw-03), [GW-04](#gw-04), [GW-06](#gw-06), [GW-08](#gw-08), [MEM-05](#mem-05), [MEM-07](#mem-07), [MEM-08](#mem-08), [MIS-03](#mis-03), [MIS-04](#mis-04), [MIS-05](#mis-05), [MIS-10](#mis-10), [OBS-03](#obs-03), [OBS-04](#obs-04), [PHN-09](#phn-09), [PHN-10](#phn-10), [PHN-11](#phn-11), [PHN-14](#phn-14), [PLT-04](#plt-04), [PLT-05](#plt-05), [PLT-06](#plt-06), [PLT-07](#plt-07), [PLT-08](#plt-08), [PLT-09](#plt-09), [PLT-10](#plt-10), [PLT-11](#plt-11), [PLT-13](#plt-13), [PLT-18](#plt-18), [PLT-21](#plt-21), [PLT-23](#plt-23), [QA-17](#qa-17), [SHP-12](#shp-12), [SWM-12](#swm-12), [SWM-19](#swm-19), [SWM-31](#swm-31), [SWM-47](#swm-47), [SWM-52](#swm-52), [SWM-53](#swm-53), [SWM-63](#swm-63), [SWM-71](#swm-71), [SWM-72](#swm-72), [SWM-73](#swm-73), [SWM-76](#swm-76), [SWM-85](#swm-85), [SWM-87](#swm-87), [TSK-06](#tsk-06), [TSK-08](#tsk-08) |
+| <a id="sn-13"></a>**SN-13** Runs unattended for months: The stack keeps working through usage-limit pauses, restarts, deploys, reboots and power cuts, and recovers by itself; no work, approval or message is lost on a restart. | must | [APP-23](#app-23), [APP-24](#app-24), [AST-03](#ast-03), [AST-12](#ast-12), [BLD-03](#bld-03), [BLD-06](#bld-06), [BLD-09](#bld-09), [BLD-12](#bld-12), [CNX-06](#cnx-06), [CST-03](#cst-03), [CST-08](#cst-08), [CST-14](#cst-14), [GW-03](#gw-03), [GW-04](#gw-04), [GW-06](#gw-06), [GW-08](#gw-08), [MEM-05](#mem-05), [MEM-07](#mem-07), [MEM-08](#mem-08), [MEM-15](#mem-15), [MEM-16](#mem-16), [MEM-21](#mem-21), [MIS-03](#mis-03), [MIS-04](#mis-04), [MIS-05](#mis-05), [MIS-10](#mis-10), [OBS-03](#obs-03), [OBS-04](#obs-04), [PHN-09](#phn-09), [PHN-10](#phn-10), [PHN-11](#phn-11), [PHN-14](#phn-14), [PLT-04](#plt-04), [PLT-05](#plt-05), [PLT-06](#plt-06), [PLT-07](#plt-07), [PLT-08](#plt-08), [PLT-09](#plt-09), [PLT-10](#plt-10), [PLT-11](#plt-11), [PLT-13](#plt-13), [PLT-18](#plt-18), [PLT-21](#plt-21), [PLT-23](#plt-23), [QA-17](#qa-17), [SHP-12](#shp-12), [SWM-12](#swm-12), [SWM-19](#swm-19), [SWM-31](#swm-31), [SWM-47](#swm-47), [SWM-52](#swm-52), [SWM-53](#swm-53), [SWM-63](#swm-63), [SWM-71](#swm-71), [SWM-72](#swm-72), [SWM-73](#swm-73), [SWM-76](#swm-76), [SWM-85](#swm-85), [SWM-87](#swm-87), [TSK-06](#tsk-06), [TSK-08](#tsk-08) |
 | <a id="sn-14"></a>**SN-14** Understand and change any codebase: The stack can study any repository (code graph, code map), answer questions about it, change the owner's own repositories through the builder, and check code against large specifications. | should | [AST-09](#ast-09), [BLD-01](#bld-01), [BLD-11](#bld-11), [BLD-15](#bld-15), [BLD-17](#bld-17), [BLD-18](#bld-18), [BLD-19](#bld-19), [BLD-23](#bld-23), [QA-14](#qa-14) |
-| <a id="sn-15"></a>**SN-15** A codebase AI agents can develop safely: The repository is organised for coding agents (rules per directory, checks, tests, docs that stay true), so that agents can change it without breaking it. | must | [APP-13](#app-13), [AST-07](#ast-07), [AST-11](#ast-11), [CRW-07](#crw-07), [CRW-08](#crw-08), [CST-08](#cst-08), [CST-13](#cst-13), [KNW-13](#knw-13), [QA-01](#qa-01), [QA-02](#qa-02), [QA-03](#qa-03), [QA-04](#qa-04), [QA-05](#qa-05), [QA-06](#qa-06), [QA-07](#qa-07), [QA-13](#qa-13), [QA-16](#qa-16), [QA-18](#qa-18), [QA-19](#qa-19), [QA-20](#qa-20), [SEC-15](#sec-15), [SWM-01](#swm-01), [SWM-16](#swm-16), [SWM-22](#swm-22), [SWM-28](#swm-28), [SWM-37](#swm-37), [SWM-41](#swm-41), [SWM-85](#swm-85), [SWM-88](#swm-88) |
+| <a id="sn-15"></a>**SN-15** A codebase AI agents can develop safely: The repository is organised for coding agents (rules per directory, checks, tests, docs that stay true), so that agents can change it without breaking it. | must | [APP-13](#app-13), [AST-07](#ast-07), [AST-11](#ast-11), [CRW-07](#crw-07), [CRW-08](#crw-08), [CST-08](#cst-08), [CST-13](#cst-13), [KNW-13](#knw-13), [QA-01](#qa-01), [QA-02](#qa-02), [QA-03](#qa-03), [QA-04](#qa-04), [QA-05](#qa-05), [QA-06](#qa-06), [QA-07](#qa-07), [QA-13](#qa-13), [QA-16](#qa-16), [QA-18](#qa-18), [QA-19](#qa-19), [QA-20](#qa-20), [QA-21](#qa-21), [SEC-15](#sec-15), [SWM-01](#swm-01), [SWM-16](#swm-16), [SWM-22](#swm-22), [SWM-28](#swm-28), [SWM-37](#swm-37), [SWM-41](#swm-41), [SWM-85](#swm-85), [SWM-88](#swm-88) |
 | <a id="sn-16"></a>**SN-16** Known, current and checkable requirements: What the stack must do is written down properly, kept current with every change, and contradictions between the parts are found and shown. | must | [APP-14](#app-14), [APP-18](#app-18), [MEM-02](#mem-02), [MEM-11](#mem-11), [MEM-13](#mem-13), [QA-06](#qa-06), [QA-08](#qa-08), [QA-09](#qa-09), [QA-10](#qa-10), [QA-11](#qa-11), [QA-12](#qa-12), [QA-13](#qa-13), [QA-14](#qa-14), [QA-15](#qa-15), [SWM-03](#swm-03), [SWM-20](#swm-20), [SWM-35](#swm-35), [SWM-55](#swm-55), [SWM-88](#swm-88), [TRL-02](#trl-02) |
 | <a id="sn-17"></a>**SN-17** Agents that work together over time: Agents keep working on the same topics over many runs, refine and reopen each other's work, see each other's artifacts and talk to each other directly, to groups or to all, with the owner reading along. | should | [CRW-05](#crw-05), [MEM-03](#mem-03), [MIS-18](#mis-18), [MIS-19](#mis-19), [MIS-20](#mis-20), [OBS-13](#obs-13), [SWM-01](#swm-01), [SWM-02](#swm-02), [SWM-03](#swm-03), [SWM-04](#swm-04), [SWM-05](#swm-05), [SWM-07](#swm-07), [SWM-08](#swm-08), [SWM-09](#swm-09), [SWM-10](#swm-10), [SWM-100](#swm-100), [SWM-101](#swm-101), [SWM-102](#swm-102), [SWM-103](#swm-103), [SWM-104](#swm-104), [SWM-105](#swm-105), [SWM-106](#swm-106), [SWM-107](#swm-107), [SWM-108](#swm-108), [SWM-109](#swm-109), [SWM-11](#swm-11), [SWM-12](#swm-12), [SWM-13](#swm-13), [SWM-16](#swm-16), [SWM-17](#swm-17), [SWM-18](#swm-18), [SWM-20](#swm-20), [SWM-21](#swm-21), [SWM-22](#swm-22), [SWM-27](#swm-27), [SWM-28](#swm-28), [SWM-32](#swm-32), [SWM-33](#swm-33), [SWM-34](#swm-34), [SWM-37](#swm-37), [SWM-41](#swm-41), [SWM-48](#swm-48), [SWM-49](#swm-49), [SWM-50](#swm-50), [SWM-51](#swm-51), [SWM-52](#swm-52), [SWM-54](#swm-54), [SWM-56](#swm-56), [SWM-60](#swm-60), [SWM-62](#swm-62), [SWM-63](#swm-63), [SWM-64](#swm-64), [SWM-65](#swm-65), [SWM-75](#swm-75), [SWM-86](#swm-86), [SWM-90](#swm-90), [SWM-97](#swm-97), [SWM-98](#swm-98), [SWM-99](#swm-99), [TRL-01](#trl-01), [TRL-07](#trl-07), [TSK-05](#tsk-05), [TSK-07](#tsk-07), [TSK-18](#tsk-18), [TSK-19](#tsk-19) |
 | <a id="sn-18"></a>**SN-18** Told once, not spammed: the owner hears about what needs him or went wrong once, on his phone, and is not flooded with repeats or noise. | should | [CRW-12](#crw-12), [OBS-10](#obs-10), [OBS-11](#obs-11), [OBS-12](#obs-12), [OBS-16](#obs-16), [OBS-17](#obs-17), [SHP-04](#shp-04), [SWM-100](#swm-100), [SWM-14](#swm-14), [SWM-39](#swm-39), [SWM-50](#swm-50), [SWM-56](#swm-56), [SWM-59](#swm-59), [SWM-71](#swm-71), [SWM-80](#swm-80) |
@@ -2678,14 +2762,14 @@ When the owner asks to forget a text, the stack shall remove every stored conver
 
 ### KNW-08
 
-**The memory curator only proposes** · should · functional · **implemented**
+**The memory curator asks before it decides for the owner** · should · functional · **implemented**
 
-Every week the memory curator shall list duplicate, contradicted, stale and test-noise facts with a reason, keep the older of near-duplicates, and retire a fact from recall only on the owner's Forget, softly and restorably.
+The Memory Keeper shall keep the older of two facts that say the same, retire softly and restorably only the classes the owner allowed (DEC-40) while its trial passes, and list every other doubtful fact with its reason for the owner, whose Forget retires it, softly and restorably.
 
 - Parents: [SN-08](#sn-08), [SN-10](#sn-10)
-- Sources: `images/mission-control/guide/18-crew.md`
-- Verified by: test: `tests/test_crew.py::test_memory_near_duplicates_keep_the_older`, `tests/test_crew.py::test_forget_soft_retires_only_the_given_facts`
-- Trace: `ops/crew.py`
+- Sources: `images/mission-control/guide/18-crew.md`, [DEC-40](#dec-40)
+- Verified by: test: `tests/test_keeper.py::test_the_judgement_is_checked_before_it_counts_and_the_older_fact_stays`, `tests/test_crew.py::test_forget_soft_retires_only_the_given_facts`
+- Trace: `ops/crew.py`, `ops/keeper.py`
 
 ### KNW-09
 
@@ -2915,6 +2999,103 @@ When a compile changes a fact on an agent wiki's page, the old fact shall be kep
 - Sources: [DEC-31](#dec-31), [DEC-32](#dec-32)
 - Verified by: test: `tests/test_librarian.py::test_a_compile_keeps_superseded_lines_and_a_contested_page_and_skips_merged_stubs`, `tests/test_librarian.py::test_the_librarian_merges_marks_and_lints_every_agent_wiki_and_changes_only_what_the_vault_restores`
 - Trace: `ops/mission_extras.py`, `ops/librarian.py`
+
+### MEM-14
+
+**A compile sees what it rewrites** · must · functional · **implemented**
+
+A wiki compile shall show the model each page it may rewrite whole up to 12,000 characters (past that its start, with the cut marked), and every list line of the old page that the model was not shown shall stay on the page under its own section.
+
+- Parents: [SN-10](#sn-10), [SN-09](#sn-09)
+- Sources: [DEC-31](#dec-31), `docs/MEMORY.md`
+- Verified by: test: `tests/test_librarian.py::test_a_compile_sees_a_long_page_whole_and_keeps_the_lines_it_was_not_shown`
+- Trace: `ops/mission_extras.py`
+- Findings: [FND-103](#fnd-103)
+
+### MEM-15
+
+**Hand-offs by reference past a budget** · should · functional · **implemented**
+
+A task step shall get each earlier result it builds on whole while they fit a budget together, and past it each result's marked start, its size and where the whole result is (a file in an OpenCode step's work folder, a vault file for a Hermes step; a Claude or build step takes them whole apart from its brief), and a prompt too long for one command-line argument shall be refused with its size.
+
+- Parents: [SN-10](#sn-10), [SN-13](#sn-13)
+- Sources: `docs/MEMORY.md`
+- Verified by: test: `tests/test_conductor.py::test_a_result_too_long_for_a_prompt_goes_by_reference_through_every_adapter`
+- Trace: `ops/conductor.py`
+- Rationale: FND-99 moved the results out of the builder's brief, but every step still gets them copied whole; a Hermes step takes its prompt as one argument, which Linux refuses past 128 KiB. A size contract test pushes a 150,000-character result through every adapter.
+- Findings: [FND-104](#fnd-104)
+
+### MEM-16
+
+**A cut a model reads shows itself** · should · quality · **implemented**
+
+Every cut of text going to a model (cap reason prompt) shall carry the textcap marker with how much is missing, and ops/truncation.py shall refuse a prompt cap without it.
+
+- Parents: [SN-10](#sn-10), [SN-13](#sn-13)
+- Sources: `docs/MEMORY.md`, `docs/TRUNCATION-AUDIT.md`
+- Verified by: test: `tests/test_truncation.py::test_every_cap_names_its_reason_and_an_unexplained_one_fails_the_check`
+- Trace: `ops/truncation.py`, `ops/textcap.py`
+- Rationale: 92 of 96 prompt caps sliced without a mark; FND-100 and FND-103 showed that a model takes an unmarked cut for the whole text. All 98 prompt caps are marked since the audit of 2 November.
+- Findings: [FND-105](#fnd-105)
+
+### MEM-17
+
+**A contradiction is worked to an end** · should · functional · **implemented**
+
+A contradiction the Librarian marks shall become a Ledger item owned by its wiki's writer, the writer's next compile shall be told of it, a mark open for 14 days shall start a refinement task (TSK-34) that researches it, and a settled claim shall move under Superseded with the item closed.
+
+- Parents: [SN-10](#sn-10), [SN-09](#sn-09)
+- Sources: [DEC-31](#dec-31), [DEC-32](#dec-32), `docs/MEMORY.md`
+- Verified by: test: `tests/test_keeper.py::test_a_contradiction_on_a_wiki_becomes_a_dispute_a_task_researches_and_its_settling_closes`, `tests/test_keeper.py::test_a_dispute_its_research_could_not_settle_goes_to_the_owner`, `tests/test_keeper.py::test_the_compile_is_told_of_the_disputes_on_the_pages_it_rewrites`
+- Trace: `ops/keeper.py`, `ops/mission_extras.py`, `images/swarm/ledger.py`
+- Findings: [FND-106](#fnd-106)
+
+### MEM-18
+
+**Long-term memory holds each fact once** · should · functional · **implemented**
+
+Long-term memory shall keep one fact for one statement of the owner (a repeat confirms it, it is not added again), in English, with no facts on agents' runs, and a fact on a passing state shall carry the date it held; its retain mission shall ask for this at the source and the Memory Keeper (MEM-21) shall fix what still gets in.
+
+- Parents: [SN-10](#sn-10), [SN-04](#sn-04)
+- Sources: [DEC-31](#dec-31), `docs/MEMORY.md`
+- Verified by: test: `tests/test_keeper.py::test_the_judgement_is_checked_before_it_counts_and_the_older_fact_stays`, `tests/test_keeper.py::test_each_change_is_logged_with_what_was_there_and_undone`
+- Trace: `ops/keeper.py`, `compose/apps.yaml`
+- Rationale: Measured 2 Nov: the same voice preference up to five times, facts in Spanish and German, about 35 facts on agent runs, and 55 forget suggestions waiting since 30 October (KNW-08 retires only on the owner's tap; decision D2 in docs/MEMORY.md). The owner decided D2 on 2 Nov (DEC-40).
+- Findings: [FND-107](#fnd-107)
+
+### MEM-19
+
+**The inventory has every store** · should · functional · **implemented**
+
+The memory inventory (MEM-01) shall also declare a task's hand-offs (the steps' results), Hermes' own memory (USER.md), the code graphs and the chats, each with its kind, writer, reader, limit and curator.
+
+- Parents: [SN-10](#sn-10), [SN-07](#sn-07)
+- Sources: [DEC-31](#dec-31), `docs/MEMORY.md`
+- Verified by: test: `tests/test_memory.py::test_every_memory_store_is_declared_with_its_kind_writers_readers_limit_and_curator`, `tests/test_memory.py::test_the_inventory_measures_each_store_names_its_problems_and_reads_growth_from_daily_snapshots`
+- Trace: `ops/memory.py`, `images/mission-control/web/static/app.js`
+- Findings: [FND-108](#fnd-108)
+
+### MEM-20
+
+**A memory trial** · should · process · **implemented**
+
+The stack shall have a trial with an answer key for the Memory Keeper's judgement (eval/trials/memory.yaml) that plants faults among true facts and scores the changes it would make itself (precision, a true fact touched counts against it) and the faults it finds (recall), and contradictions of the owner's facts shall count only as questions; its last three runs on the current prompt shall gate the Keeper's automatic changes.
+
+- Parents: [SN-10](#sn-10), [SN-08](#sn-08)
+- Sources: `docs/MEMORY.md`, `docs/SWARM-TRIALS.md`
+- Verified by: test: `tests/test_keeper.py::test_the_trial_scores_the_automatic_changes_against_the_answer_key`, `tests/test_keeper.py::test_nothing_is_changed_while_the_trial_has_not_passed_three_times_on_the_current_prompt`
+- Trace: `ops/keeper.py`, `eval/trials/memory.yaml`
+
+### MEM-21
+
+**One Memory Keeper, by rules** · must · functional · **implemented**
+
+One agent, the Memory Keeper, shall look after every memory store every night (its judgement parts on Wednesdays) by these rules: it deletes nothing (a fact is soft-retired, rewritten with its old text kept, or moved under Superseded); it writes every change with what was there, why and how to undo it, and the owner can undo each from its page; it corrects world knowledge only through a research task's sourced findings; it makes no automatic change to the owner's facts beyond retiring duplicates, test noise and agents' runs, translating into English and dating passing states, and asks him when two of his facts disagree; it makes those changes only while its trial passes (MEM-20) and at most 40 a pass; and it says once a week what it changed.
+
+- Parents: [SN-10](#sn-10), [SN-09](#sn-09), [SN-13](#sn-13)
+- Sources: [DEC-31](#dec-31), [DEC-40](#dec-40), `docs/MEMORY.md`
+- Verified by: test: `tests/test_keeper.py::test_each_change_is_logged_with_what_was_there_and_undone`, `tests/test_keeper.py::test_nothing_is_changed_while_the_trial_has_not_passed_three_times_on_the_current_prompt`, `tests/test_keeper.py::test_the_crew_saves_the_keeper_s_report_and_undoes_a_change_on_the_owner_s_tap`
+- Trace: `ops/keeper.py`, `ops/crew.py`, `ops/missions.py`, `config/agents.yaml`, `ops/systemd/crew-memory.timer`, `prompts/memory.md`, `images/mission-control/server.py`, `images/mission-control/web/static/app.js`, `images/mission-control/guide/08-knowledge.md`
 
 ## MIS Missions
 
@@ -3999,15 +4180,27 @@ The checks shall refuse a planned requirement without an acceptance criterion, a
 
 ### QA-16
 
-**Every text cap names its reason** · must · process · **implemented**
+**Every text cap names its reason and shows itself** · must · process · **implemented**
 
-Every place in the code that cuts text (a slice of 40 or more, a textcap cut or tail, an ellipsis or line clamp) shall name its reason on its line (prompt, untrusted, api, id, parse, store, preview or list), and the checks shall fail on one that does not.
+Every place in the code that cuts text (a slice of 20 or more or by an UPPERCASE constant in Python or JS, a textcap helper, an ellipsis or line clamp, a shell head, tail or cut, a SQL limit of 2 rows or more) shall name its one reason on its line (prompt, untrusted, api, id, parse, store, preview, list or rotate); a cut with a reason someone reads (prompt, untrusted, store, preview) shall carry a visible marker; and the checks shall fail on one that does not.
 
 - Parents: [SN-15](#sn-15), [SN-06](#sn-06)
 - Sources: [DEC-27](#dec-27), `AGENTS.md`
 - Verified by: test: `tests/test_truncation.py::test_every_cap_names_its_reason_and_an_unexplained_one_fails_the_check`, `tests/test_truncation.py::test_the_image_copies_of_textcap_are_the_same_file`
-- Trace: `ops/truncation.py`, `ops/check.sh`, `images/mission-control/textcap.py`, `images/swarm/textcap.py`
-- Findings: [FND-38](#fnd-38)
+- Trace: `ops/truncation.py`, `ops/check.sh`, `images/mission-control/textcap.py`, `images/swarm/textcap.py`, `images/browser/textcap.py`, `images/desk/textcap.py`, `images/mail/textcap.py`, `images/phone/textcap.py`, `images/research/textcap.py`
+- Findings: [FND-38](#fnd-38), [FND-105](#fnd-105), [FND-109](#fnd-109)
+
+### QA-21
+
+**A model's answer cut at its output limit is not used** · must · quality · **implemented**
+
+Every model call shall read its answer's stop reason, and an answer that stopped at the model's output limit (finish_reason length) or a Claude Code run that stopped at its turn limit shall not be parsed, stored or delivered as a whole answer; the chat shall say so under such an answer.
+
+- Parents: [SN-15](#sn-15), [SN-06](#sn-06)
+- Sources: [DEC-27](#dec-27), `docs/TRUNCATION-AUDIT.md`
+- Verified by: test: `tests/test_truncation.py::test_a_cut_within_an_outside_limit_lists_and_model_answers_show_what_they_left`, `tests/test_truncation.py::test_every_cap_names_its_reason_and_an_unexplained_one_fails_the_check`
+- Trace: `ops/textcap.py`, `ops/missions.py`, `ops/builds.py`, `ops/claude_tasks.py`, `ops/truncation.py`, `images/mission-control/server.py`
+- Findings: [FND-109](#fnd-109)
 
 ### QA-17
 
@@ -5468,18 +5661,17 @@ If the Swarm service is unreachable, then an agent run shall do its own job, que
 
 #### SWM-73
 
-**One writer, one database, backed up** · must · constraint · **partial**
+**One writer, one database, backed up** · must · constraint · **implemented**
 
 The Swarm service shall be the only writer of the swarm database (SQLite in WAL mode under /srv/ai), and the restore rehearsal shall restore it.
 
 - Parents: [SN-09](#sn-09), [SN-13](#sn-13)
-- Sources: [DEC-15](#dec-15), `design: AI Stack Agent Swarm (claude.ai artifact 18fPjMRbQnxSVikesY8w6M)`
+- Sources: [DEC-15](#dec-15), [DEC-39](#dec-39), `design: AI Stack Agent Swarm (claude.ai artifact 18fPjMRbQnxSVikesY8w6M)`
 - Verified by: test: `tests/test_swarm_service.py::test_the_snapshot_is_a_consistent_copy`
 - Phase: 1 Ledger, registry and run contract
 - Acceptance: Inspection: no other process opens the database for writing; the rehearsal's checklist includes it.
 - Trace: `images/swarm/swarm.py`
-- Gap: One writer and SQLite WAL as proposed; the owner has not confirmed the storage choice (design decision 2).
-- Rationale: Design decision 2 (SQLite or a database on the stack's Postgres) waits for the owner.
+- Rationale: Design decision 2 (SQLite or a database on the stack's Postgres) was decided by the owner on 2 Nov 2026 (DEC-39).
 
 #### SWM-74
 
@@ -6796,6 +6988,8 @@ The House page shall show Home Assistant's main menus whenever it is reachable, 
 | <a id="dec-36"></a>**DEC-36** Every planned task goes to the Conductor | 2026-10-31 | The owner asked for every task through the Conductor, recurring ones included ("Implement all properly", docs/SWARM-DESIGN.md). Since phase 6a every task the intake plans runs as a plan graph, one step or many, once or on a schedule, with a coding task's builder step as a build assignment and a code question as a Claude step; it replaces DEC-35's last sentence (only multi-agent one-off work went to the Conductor). Briefings, price watches and event-triggered tasks keep their mission until phase 6b, because the Topic Desk and the price watch are not yet steps. | - |
 | <a id="dec-37"></a>**DEC-37** A price watch is its shopping agent's check; purchases stay the agent's runs | 2026-11-01 | The owner asked for price watches and event-triggered tasks under the Conductor ("Please do these two properly"). A price watch task holds its shopping agent (ops/shopping.py: limits, proposals, approvals, the order's tracking), made once with no schedule of its own; each occurrence of the task is one check of that agent (offers, a proposal or watching), and a waiting proposal that reaches its price or date starts the task's next occurrence. The purchase after the owner's tap and the order tracking stay the agent's own runs: they are the narrow deterministic path of docs/SHOPPING.md, with its own approval, and a plan step must not be able to start them. An event-triggered task runs each firing as an occurrence (its event in every step's prompt; events that come meanwhile wait, at most five); a briefing on an event is the desk's alert, then its delivery. Completes DEC-36's last sentence. | - |
 | <a id="dec-38"></a>**DEC-38** One OK per phone task; free mode asks only for private data | 2026-11-01 | The owner found an approval for every tap too much ("I want to give it permission to use the phone"). An agent asks once for a whole task (its apps, the exact texts it types, up to an hour); the owner's time window becomes a free mode where typing and opening apps and addresses run without asking unless the text holds an e-mail address, phone number, IBAN or key; a request already waiting goes ahead when the permission comes. Money, passwords, blocked apps and Stop are unchanged. | DEC-23 |
+| <a id="dec-39"></a>**DEC-39** SQLite for the swarm | 2026-11-02 | The owner confirmed SQLite for the swarm's Ledger ("keep SQLite for the swarm database ... Yes do all"): one writer (the Swarm service), WAL, a nightly snapshot the restore drill checks, 7 MB. Postgres would add a second failure point and buy nothing on one machine. Closes design decision 2 (SWM-73). | - |
+| <a id="dec-40"></a>**DEC-40** The Memory Keeper fixes the memory by rules | 2026-11-02 | The owner asked for one dedicated agent that runs periodically and fixes the memory systems, contradictions and false information included, designed carefully to best practice, and answered D2 ("Yes do all"): the memory agent may retire duplicates, test noise and facts on agents' runs, translate facts into English and date passing states itself, softly and restorably, with each change listed and undoable, while its answer-key trial passes; contradictions of his own facts stay his to decide; world knowledge is corrected only through research with sources (docs/MEMORY.md, the Memory Keeper; MEM-21). | DEC-32 |
 
 ## Test index
 
@@ -6902,6 +7096,7 @@ The House page shall show Home Assistant's main menus whenever it is reachable, 
 | `tests/test_conductor.py::test_a_price_watch_runs_its_shopping_agent_s_check_and_a_reached_target_starts_its_next_run` | [TSK-21](#tsk-21) |
 | `tests/test_conductor.py::test_a_recurring_or_fixed_plan_gets_no_checkpoint` | [TRL-08](#trl-08) |
 | `tests/test_conductor.py::test_a_restart_runs_the_interrupted_step_again_and_no_finished_step_twice` | [TSK-06](#tsk-06) |
+| `tests/test_conductor.py::test_a_result_too_long_for_a_prompt_goes_by_reference_through_every_adapter` | [MEM-15](#mem-15) |
 | `tests/test_conductor.py::test_a_role_s_build_stays_in_its_lane` | [TRL-07](#trl-07) |
 | `tests/test_conductor.py::test_a_scheduled_task_runs_at_once_then_each_time_from_its_template_with_its_own_trace` | [TSK-22](#tsk-22) |
 | `tests/test_conductor.py::test_a_spent_budget_stops_the_next_step` | [TRL-11](#trl-11) |
@@ -6926,7 +7121,6 @@ The House page shall show Home Assistant's main menus whenever it is reachable, 
 | `tests/test_conductor.py::test_the_worker_starts_an_event_s_and_a_schedule_s_run_while_it_holds_its_lock_and_heals_a_half_start` | [TSK-21](#tsk-21) |
 | `tests/test_crew.py::test_crew_actions_are_validated` | [CRW-02](#crw-02), [SEC-11](#sec-11) |
 | `tests/test_crew.py::test_forget_soft_retires_only_the_given_facts` | [KNW-08](#knw-08) |
-| `tests/test_crew.py::test_memory_near_duplicates_keep_the_older` | [KNW-08](#knw-08) |
 | `tests/test_crew.py::test_systemd_state_becomes_crew_cards` | [APP-11](#app-11), [CRW-01](#crw-01) |
 | `tests/test_crew.py::test_test_agent_finds_flaky_failing_and_slow` | [CRW-08](#crw-08) |
 | `tests/test_crew.py::test_text_times_and_intervals` | [CRW-02](#crw-02) |
@@ -7042,6 +7236,14 @@ The House page shall show Home Assistant's main menus whenever it is reachable, 
 | `tests/test_journeys.py::test_a_task_given_in_a_sentence_is_followed_to_its_result_and_a_broken_hand_over_fails_it` | [TSK-32](#tsk-32) |
 | `tests/test_journeys.py::test_the_browser_half_measures_what_the_owner_sees` | [TSK-32](#tsk-32) |
 | `tests/test_journeys.py::test_the_replay_is_the_newest_finished_planned_task` | [TSK-32](#tsk-32) |
+| `tests/test_keeper.py::test_a_contradiction_on_a_wiki_becomes_a_dispute_a_task_researches_and_its_settling_closes` | [MEM-17](#mem-17) |
+| `tests/test_keeper.py::test_a_dispute_its_research_could_not_settle_goes_to_the_owner` | [MEM-17](#mem-17) |
+| `tests/test_keeper.py::test_each_change_is_logged_with_what_was_there_and_undone` | [MEM-18](#mem-18), [MEM-21](#mem-21) |
+| `tests/test_keeper.py::test_nothing_is_changed_while_the_trial_has_not_passed_three_times_on_the_current_prompt` | [MEM-20](#mem-20), [MEM-21](#mem-21) |
+| `tests/test_keeper.py::test_the_compile_is_told_of_the_disputes_on_the_pages_it_rewrites` | [MEM-17](#mem-17) |
+| `tests/test_keeper.py::test_the_crew_saves_the_keeper_s_report_and_undoes_a_change_on_the_owner_s_tap` | [MEM-21](#mem-21) |
+| `tests/test_keeper.py::test_the_judgement_is_checked_before_it_counts_and_the_older_fact_stays` | [KNW-08](#knw-08), [MEM-18](#mem-18) |
+| `tests/test_keeper.py::test_the_trial_scores_the_automatic_changes_against_the_answer_key` | [MEM-20](#mem-20) |
 | `tests/test_keys_policy.py::test_background_jobs_use_their_own_keys` | [SEC-07](#sec-07) |
 | `tests/test_keys_policy.py::test_budget_mode_is_retired` | [GW-02](#gw-02) |
 | `tests/test_keys_policy.py::test_deploy_never_prints_a_key` | [CST-06](#cst-06) |
@@ -7055,6 +7257,7 @@ The House page shall show Home Assistant's main menus whenever it is reachable, 
 | `tests/test_lane_discipline.py::test_the_helped_agent_or_the_owner_judges_and_the_work_s_fate_does_otherwise` | [SWM-109](#swm-109) |
 | `tests/test_lane_discipline.py::test_the_room_shows_why_and_lets_the_owner_judge` | [SWM-109](#swm-109) |
 | `tests/test_librarian.py::test_a_compile_keeps_superseded_lines_and_a_contested_page_and_skips_merged_stubs` | [MEM-12](#mem-12) |
+| `tests/test_librarian.py::test_a_compile_sees_a_long_page_whole_and_keeps_the_lines_it_was_not_shown` | [MEM-14](#mem-14) |
 | `tests/test_librarian.py::test_a_memory_over_its_limit_for_eight_days_alerts_its_curator` | [MEM-08](#mem-08) |
 | `tests/test_librarian.py::test_a_merge_that_would_lose_a_link_is_refused_and_a_page_changed_meanwhile_is_left` | [MEM-08](#mem-08) |
 | `tests/test_librarian.py::test_a_pair_judged_two_subjects_is_not_asked_again_until_one_of_its_pages_changes` | [MEM-08](#mem-08) |
@@ -7074,9 +7277,9 @@ The House page shall show Home Assistant's main menus whenever it is reachable, 
 | `tests/test_mail.py::test_trash_asks_first_keeps_bank_mail_and_can_be_undone` | [CNX-03](#cnx-03) |
 | `tests/test_memory.py::test_a_store_that_cannot_be_measured_says_why_and_the_runner_never_waits` | [MEM-01](#mem-01) |
 | `tests/test_memory.py::test_an_archived_mission_s_wiki_is_listed_last_and_left_off_the_map` | [MEM-09](#mem-09) |
-| `tests/test_memory.py::test_every_memory_store_is_declared_with_its_kind_writers_readers_limit_and_curator` | [MEM-01](#mem-01), [MEM-02](#mem-02) |
+| `tests/test_memory.py::test_every_memory_store_is_declared_with_its_kind_writers_readers_limit_and_curator` | [MEM-01](#mem-01), [MEM-02](#mem-02), [MEM-19](#mem-19) |
 | `tests/test_memory.py::test_the_app_draws_the_map_the_access_and_the_memory_section` | [MEM-07](#mem-07), [MEM-09](#mem-09), [MEM-10](#mem-10) |
-| `tests/test_memory.py::test_the_inventory_measures_each_store_names_its_problems_and_reads_growth_from_daily_snapshots` | [MEM-07](#mem-07), [MEM-08](#mem-08) |
+| `tests/test_memory.py::test_the_inventory_measures_each_store_names_its_problems_and_reads_growth_from_daily_snapshots` | [MEM-07](#mem-07), [MEM-08](#mem-08), [MEM-19](#mem-19) |
 | `tests/test_memory.py::test_the_map_s_names_cover_no_other_name_or_bubble_and_stay_in_the_box` | [MEM-09](#mem-09) |
 | `tests/test_memory.py::test_the_wiki_map_has_every_wiki_and_the_subjects_they_share` | [MEM-09](#mem-09) |
 | `tests/test_memory.py::test_who_read_and_wrote_which_wiki_comes_from_the_run_record` | [MEM-10](#mem-10) |
@@ -7442,7 +7645,8 @@ The House page shall show Home Assistant's main menus whenever it is reachable, 
 | `tests/test_triggers.py::test_clean_triggers` | [MIS-09](#mis-09) |
 | `tests/test_triggers.py::test_clean_triggers_rejects` | [MIS-09](#mis-09) |
 | `tests/test_truncation.py::test_a_cut_says_what_it_cut_and_input_over_a_limit_is_refused` | [APP-19](#app-19), [APP-20](#app-20) |
-| `tests/test_truncation.py::test_every_cap_names_its_reason_and_an_unexplained_one_fails_the_check` | [QA-16](#qa-16) |
+| `tests/test_truncation.py::test_a_cut_within_an_outside_limit_lists_and_model_answers_show_what_they_left` | [QA-21](#qa-21) |
+| `tests/test_truncation.py::test_every_cap_names_its_reason_and_an_unexplained_one_fails_the_check` | [MEM-16](#mem-16), [QA-16](#qa-16), [QA-21](#qa-21) |
 | `tests/test_truncation.py::test_journal_lines_and_the_phone_s_approval_cards_are_shown_whole` | [APP-19](#app-19) |
 | `tests/test_truncation.py::test_run_inputs_stay_valid_json_however_long_they_are` | [SWM-82](#swm-82) |
 | `tests/test_truncation.py::test_the_app_wraps_text_and_shows_the_rest_of_a_list` | [APP-19](#app-19) |

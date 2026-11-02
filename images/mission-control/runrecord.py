@@ -15,6 +15,7 @@ an event for STALL_S is closed as "stalled" by the watchdog: every run ends exac
 stalled | limit).
 """
 import json
+import textcap as TC                              # visible caps (AGENTS.md, truncation)
 import os
 import re
 import sqlite3
@@ -109,7 +110,7 @@ def otel_name(e):
 
 def _clip(v):
     s = v if isinstance(v, str) else json.dumps(v, ensure_ascii=False, default=str)
-    return s[:MAX_DETAIL]
+    return TC.cut(s, MAX_DETAIL)  # cap: store (textcap.STORE; the app folds long ones)
 
 
 def ingest(batch):
@@ -119,7 +120,7 @@ def ingest(batch):
         c = db()
         for e in batch if isinstance(batch, list) else [batch]:
             run = str(e.get("run") or "")[:120]  # cap: id
-            kind = str(e.get("kind") or "")[:20]
+            kind = str(e.get("kind") or "")[:20]  # cap: id (an event kind is a short word)
             if not run or not kind:
                 continue
             ts = float(e.get("ts") or time.time())
@@ -143,7 +144,7 @@ def ingest(batch):
             data = {k: e[k] for k in ("tokens", "ms", "status") if e.get(k) is not None}
             data.update(e.get("data") or {})
             c.execute("insert into events (run, ts, kind, title, detail, data) values (?,?,?,?,?,?)",
-                      (run, ts, kind, (e.get("title") or "")[:200], _clip(e.get("detail") or ""), json.dumps(data, default=str)))  # cap: preview
+                      (run, ts, kind, TC.cut((e.get("title") or ""), 200), _clip(e.get("detail") or ""), json.dumps(data, default=str)))  # cap: preview
             c.execute("update runs set last=max(last, ?) where run=?", (ts, run))
             ref = c.execute("select ref from runs where run=?", (run,)).fetchone()["ref"]
             for _ in range(3):                            # the parents (mission run, build) are alive while their agents work
@@ -292,7 +293,7 @@ def view(run):
             "seconds": round((r["ended"] or time.time()) - r["started"]), "manifest": man,
             "drift": json.loads(r["drift"]) if r["drift"] else [], "box": json.loads(r["box"]) if r["box"] else None,
             "children": children, "touches": touches(ev), "problems": [p for p in O.problems(ev, finished=not live, final_status=r["end_state"]) if p["kind"] != "no-end"],   # every run here has an explicit end state
-            "stats": O.stats_of(ev, (r["ended"] or time.time()) - r["started"]), "events": ev[-1500:]}  # cap: list
+            "stats": O.stats_of(ev, (r["ended"] or time.time()) - r["started"]), "events": ev[-1500:], "events_total": len(ev)}  # cap: list (the app says how many earlier events are not shown)
 
 
 CONN = ("mail_", "phone_", "browser_", "research", "fetch", "web_search", "claude_task")
@@ -341,7 +342,7 @@ def runs(live=None, agent=None, ref=None, limit=60, since=None, until=None):
         where.append("ref=?"); args.append(ref)
     else:
         where.append("(ref is null or ref not in (select run from runs where ended is null))" if live else "1=1")
-    rows = c.execute(f"select * from runs where {' and '.join(where)} order by coalesce(ended, last) desc limit ?", (*args, limit)).fetchall()
+    rows = c.execute(f"select * from runs where {' and '.join(where)} order by coalesce(ended, last) desc limit ?", (*args, limit)).fetchall()  # cap: list (the caller's page; a larger limit= shows more)
     return [{"run": r["run"], "ref": r["ref"], "agent": r["agent"], "source": r["source"], "title": r["title"], "name": name_of(r, c),
              "started": r["started"], "last": r["last"], "ended": r["ended"], "end_state": r["end_state"],
              "summary": json.loads(r["summary"]) if r["summary"] else None, "drift": json.loads(r["drift"]) if r["drift"] else []} for r in rows]
@@ -647,7 +648,7 @@ def task_activity(tid):
     lanes = [{"run": run, "agent": r["agent"], "started": r["started"], "ended": r["ended"], "state": r["end_state"],
               "depth": max(0, depth(run) - 1), "role": role(run, r)}     # the task's own run is not drawn: its steps start the lanes
              for run, r in sorted(runs.items(), key=lambda x: x[1]["started"]) if not (run in roots and run.startswith("task:"))]
-    return {"agents": out, "actions": actions[-ACTIONS:], "actions_total": total, "memory": mem, "runs": len(runs), "lanes": lanes[:LANES]}
+    return {"agents": out, "actions": actions[-ACTIONS:], "actions_total": total, "memory": mem, "runs": len(runs), "lanes": lanes[:LANES]}  # cap: list (actions_total and runs count what is not shown)
 
 
 def agent_tasks(agent, days=90, now=None):

@@ -32,7 +32,8 @@ import time
 from pathlib import Path
 
 import journal as J
-from textcap import cut, limit, tail                    # visible caps and input limits (AGENTS.md, truncation)
+from textcap import limit, tail                    # visible caps and input limits (AGENTS.md, truncation)
+import textcap as TC
 import prompts as P                               # MEM-11: the agent prompts live in prompts/<owner>.md
 import notify as N                                # OBS-16: the one notification path
 
@@ -45,8 +46,8 @@ CI_IMAGE = "aistack/ci-runner:13.2.0"
 CREW = [
     {"id": "memory-review", "name": "Memory gatekeeper", "unit": "memory-review", "area": "memory",
      "what": "Checks every fact Hermes wants to remember: safe ones are kept, sensitive ones wait for your OK."},
-    {"id": "memory", "name": "Librarian", "unit": "crew-memory", "area": "memory", "agent": True,
-     "what": "Weekly, the memory curator: tidies every agent wiki (merges duplicate pages, marks contradictions and pages not confirmed for 90 days), writes the hub pages that join the wikis, cleans the search index, folds old journal entries into standing notes, and finds duplicate or stale facts in the long-term memory. It changes only what the vault's history restores; you decide what to forget."},
+    {"id": "memory", "name": "Memory Keeper", "unit": "crew-memory", "area": "memory", "agent": True,
+     "what": "Every night, the Memory Keeper looks after every memory: in the long-term memory it retires duplicates, test noise and facts about agents' runs, puts facts into English and dates passing states (only while its trial passes; each change has an Undo), and asks you when two of your facts disagree; a contradiction on a wiki becomes a dispute that a research task settles with sources; it re-checks stale pages agents still read, folds old journal entries and cleans the search index. On Wednesdays it also tidies every wiki (the Librarian: duplicates merged, contradictions marked, hub pages) and checks the subjects wikis share. Nothing is deleted."},
     {"id": "skills-sync", "name": "Skill keeper", "unit": "skills-sync", "area": "skills",
      "what": "Mirrors Hermes' skills to Forgejo, tags what each one may do, and parks risky learned skills for your OK."},
     {"id": "curator", "name": "Skill curator", "unit": "curate", "area": "skills",
@@ -298,6 +299,16 @@ def handle(req, c):
         return {"schedule": schedule_of(ag["unit"])}
     if a == "crew_memory_forget":
         return forget(req.get("ids") or [], limit(str(req.get("why", "")), 2000, "the reason"))
+    if a == "crew_memory_undo":                           # the owner's Undo of one Memory Keeper change (MEM-21)
+        import keeper as K
+        K.M = M
+        r = K.undo(str(req.get("change", "")))
+        cur = agent_file("memory")
+        if cur.get("keeper"):
+            save("memory", keeper={**cur["keeper"], "changes": K.changes(40)[::-1]})
+        _cache["t"] = 0
+        M.event("memory", "", f"Memory Keeper: undone, as you asked: “{r['fact']}”", title="Crew")
+        return r
     if a == "health_ack":
         return acknowledge([str(k)[:200] for k in (req.get("keys") or [])][:100])  # cap: id
     if a in ("phone_cleanup_do", "phone_cleanup_do_all", "phone_cleanup_dismiss"):
@@ -372,7 +383,7 @@ def mission_health(c, m):
     import observe as O
     runs = []
     for r in c.execute("select id, status, started, seconds, tokens, summary from runs where slug=? and status in ('ok','failed') "
-                       "order by id desc limit 21", (m["slug"],)).fetchall():
+                       "order by id desc limit 21", (m["slug"],)).fetchall():  # cap: parse (the last 20 runs give the usual)
         try:
             start = M.dt.datetime.fromisoformat(r["started"]).timestamp()
         except (TypeError, ValueError):
@@ -761,7 +772,7 @@ def propose(c, proposals, signal, source=None):
     """A crew agent's ideas go to the swarm's Ledger (ops/swarm_client.propose): by identity key, a near-copy becomes
     evidence on the idea it matches, no caps (DEC-10). Returns how many were new."""
     import swarm_client as SW
-    RUN["signal"] = (RUN.get("signal", "") + "\n" + str(signal or ""))[-8000:]     # the run's replay input (SWM-82)  # cap: prompt
+    RUN["signal"] = tail(RUN.get("signal", "") + "\n" + str(signal or ""), 8000)     # the run's replay input (SWM-82)  # cap: prompt
     new, _ = SW.propose(source or "self-review", proposals, signal, run=RUN.get("id") or "")
     return new
 
@@ -903,71 +914,53 @@ def tests(c):
     return new
 
 
-# ---------- memory curator ----------
-MEMORY_PROMPT = P.text("memory", "FACTS")
-
-
-def memory_facts():
-    q = ("select id, fact_type, replace(replace(left(text, 300), chr(10), ' '), '|', '/'), created_at from memory_units "
-         "where bank_id = 'owner' and fact_type in ('world', 'experience') order by created_at")
-    out = sh("docker", "exec", "aistack-hindsight-db-1", "psql", "-U", "hindsight", "-d", "hindsight", "-tAF", "|", "-c", q, timeout=60)
-    facts = []
-    for ln in out.splitlines():
-        parts = ln.split("|")
-        if len(parts) >= 4:
-            facts.append({"id": parts[0], "type": parts[1], "text": parts[2], "created": parts[3]})
-    return facts
-
-
-def near_duplicates(facts, threshold=0.8):
-    """Pairs of facts whose words overlap by `threshold` or more: the newer one is suggested for forgetting."""
-    sug, seen = [], set()
-    ws = [(f, {w for w in re.findall(r"[a-z0-9]+", f["text"].lower()) if len(w) > 2}) for f in facts]
-    for i, (a, wa) in enumerate(ws):
-        for b, wb in ws[i + 1:]:
-            if b["id"] in seen or not wa or not wb:
-                continue
-            if len(wa & wb) / len(wa | wb) >= threshold:
-                seen.add(b["id"])
-                sug.append({"id": b["id"], "text": b["text"], "why": f"duplicate of {a['id'][:8]}", "note": a["text"]})
-    return sug
-
-
+# ---------- the Memory Keeper ----------
 def memory(c):
+    """The Memory Keeper's night (ops/keeper.py, MEM-21): long-term memory, the wikis' disputes and re-checks, the agents'
+    journals, the search index; on Wednesdays its judgement parts and the Librarian's tidy of every wiki."""
+    import keeper as K
+    import librarian as LIB                               # MEM-08: every wiki and the search index
+    K.M, LIB.M = M, M
     t0 = time.time()
     save("memory", result="reading the memory…", started=t0)
-    facts = memory_facts()
-    sug = near_duplicates(facts)
-    known = {s["id"] for s in sug}
-    model_note = ""
-    if facts:
-        try:
-            lines = "\n".join(f"{f['id']} | {f['type']} | {f['text']}" for f in facts[-400:])  # cap: prompt
-            d = M.ask_json(MEMORY_PROMPT.format(facts=lines[:60000]), os.environ["VK_MEMORY"], model="gpt-sub-fast", timeout=600)  # cap: prompt
-            by_id = {f["id"]: f for f in facts}
-            for s in d.get("forget") or []:
-                fid = str(s.get("id", ""))
-                if fid in by_id and fid not in known:
-                    sug.append({"id": fid, "text": by_id[fid]["text"], "why": cut(s.get("why", ""), 2000), "note": cut(s.get("note", ""), 2000)[:200]})  # cap: untrusted
-                    known.add(fid)
-        except Exception as e:
-            model_note = " (the model check was skipped: " + ("ChatGPT usage limit" if M.paused(str(e)) else type(e).__name__) + ")"
-    tidied = J.curate()                                   # the agents' journals: old entries fold into standing notes
-    save("memory", result="tidying the wikis…")
-    import librarian as LIB                               # MEM-08: every wiki and the search index
-    LIB.M = M
     try:
-        lib = LIB.summary(LIB.run())
+        rep = K.run_pass(c)
+        res = K.summary(rep)
     except Exception as e:
-        lib = f"the wiki tidy failed: {type(e).__name__}: {str(e)}"
-    save("memory", result=f"{len(facts)} facts, {len(sug)} to look at{model_note}" + (f", {tidied} agent journal{'s' if tidied != 1 else ''} tidied" if tidied else "") + f" · {lib}",
-         suggestions=sug[:60], findings=[], seconds=round(time.time() - t0), last=time.time())  # cap: list
+        rep, res = {"suggestions": [], "changed": [], "gate": {"open": False, "why": "the pass failed"}}, f"the pass failed: {type(e).__name__}: {e}"
+    tidied = J.curate()                                   # the agents' journals: old entries fold into standing notes
+    lib = ""
+    if rep.get("deep"):
+        save("memory", result="tidying the wikis…")
+        try:
+            lib = LIB.summary(LIB.run())
+        except Exception as e:
+            lib = f"the wiki tidy failed: {type(e).__name__}: {e}"
+    else:
+        import memory as MEM
+        try:
+            if (MEM.measure("qmd", time.time()).get("orphaned_share") or 0) > MEM.ORPHAN_SHARE:
+                ix = LIB.clean_index()
+                lib = f"search index: {ix['before']['orphaned']} → {ix['after']['orphaned']} orphaned chunks"
+        except Exception as e:
+            lib = f"the search index cleanup failed: {type(e).__name__}: {e}"
+    sug = rep.get("suggestions") or []
+    if not rep.get("deep"):                               # a night without judgement keeps the last judgement's list
+        have = {x["id"] for x in sug} | {e["target"] for e in K.changes() if not e.get("undone")}
+        sug += [s for s in agent_file("memory").get("suggestions") or [] if s["id"] not in have]
+    result = res + (f", {tidied} agent journal{'s' if tidied != 1 else ''} tidied" if tidied else "") + (f" · {lib}" if lib else "")
+    save("memory", result=result, suggestions=sug[:60], more=max(0, len(sug) - 60), findings=[],  # cap: list
+         keeper={"gate": rep.get("gate"), "changes": K.changes(40)[::-1], "changes_total": len(K.changes()),
+                 "disputes": rep.get("disputes"), "rechecks": rep.get("rechecks"), "cross": rep.get("cross")},
+         seconds=round(time.time() - t0), last=time.time())
+    if rep.get("changed") or (rep.get("disputes") or {}).get("tasks"):
+        M.event("memory", "", f"Memory Keeper: {res} (its page under Agents lists each change with its Undo)", title="Crew")
     return len(sug)
 
 
 def forget(ids, why=""):
     """The owner's tap: soft-retire these facts in Hindsight (state 'invalidated': out of recall, kept for audit, reversible)."""
-    ids = [i for i in ids if re.fullmatch(r"[0-9a-f-]{8,64}", str(i))][:50]  # cap: untrusted
+    ids = TC.limit_items([i for i in ids if re.fullmatch(r"[0-9a-f-]{8,64}", str(i))], 50, "facts to forget at once")   # the owner's tap: refused, never cut
     if not ids:
         raise ValueError("no facts given")
     code = ("import json,sys,urllib.request as u\n"
@@ -1071,8 +1064,8 @@ def answer_requests(name, run, ask=None, send=None):
         art = ""
         if m.get("artifact_id"):
             a = send("get", {"id": m["artifact_id"]}, name).get("result") or {}
-            art = f"\n  about {a.get('kind')} #{a.get('id')} \"{a.get('title')}\" ({a.get('state')}, owner {a.get('owner')}): {(a.get('body') or '')[:600]}"  # cap: prompt
-        rows.append(f"- [{m['mid']}] from {m['sender']}: {m['text'][:1500]}{art}")  # cap: prompt
+            art = f"\n  about {a.get('kind')} #{a.get('id')} \"{a.get('title')}\" ({a.get('state')}, owner {a.get('owner')}): {TC.cut((a.get('body') or ''), 600)}"  # cap: prompt
+        rows.append(f"- [{m['mid']}] from {m['sender']}: {TC.cut(m['text'], 1500)}{art}")  # cap: prompt
     prompt = ANSWER_PROMPT.format(agent=name, purpose=card.get("purpose", ""), resp="; ".join(card.get("responsibilities") or []),
                                   requests="\n".join(rows))
     P.record(prompt)                                  # MEM-11: the run records the prompt's version

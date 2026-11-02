@@ -13,5 +13,6 @@ RUN apt-get update -qq && apt-get install -y -qq --no-install-recommends iptable
  && useradd -r -u 10007 phone && adb version
 COPY entrypoint.sh /entrypoint.sh
 COPY phone.py /app/phone.py
+COPY textcap.py /app/textcap.py
 EXPOSE 8000
 ENTRYPOINT ["sh", "/entrypoint.sh"]

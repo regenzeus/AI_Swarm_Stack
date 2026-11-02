@@ -13,6 +13,7 @@ ai-stack itself is studied through a read-only mirror clone in ~/code/ai-stack (
 import json, os, re, subprocess, time
 from pathlib import Path
 from textcap import tail                    # visible caps and input limits (AGENTS.md, truncation)
+import textcap as TC
 
 M = B = None
 CODE = Path.home() / "code"
@@ -103,7 +104,7 @@ def handle(req, c):
         name = str(req.get("name", "")).strip().lower()
         if not NAME.match(name) or (CODE / name).exists() or name == "ai-stack":
             raise ValueError("give a new name: lowercase letters, digits, . _ - (2-41 characters)")
-        desc = re.sub(r"\s+", " ", str(req.get("description", ""))).strip()[:200]  # cap: api
+        desc = TC.fit(re.sub(r"\s+", " ", str(req.get("description", ""))).strip(), 200)  # cap: api
         B.forgejo("POST", "/user/repos", {"name": name, "description": desc, "private": True, "auto_init": True,
                                           "default_branch": "main", "readme": "Default"})
         subprocess.run(["git", "clone", "-q", f"forgejo:{owner}/{name}.git", str(CODE / name)], check=True, capture_output=True, timeout=300)

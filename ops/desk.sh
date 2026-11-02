@@ -34,7 +34,7 @@ for t in "$V"/topics/*/TOPIC.md; do
     echo "$(date '+%F %T') $slug $DATE collected: $(grep -m1 '^collected:' "$S/last.log" | cut -d' ' -f2-)"
     continue
   fi
-  dest="topics/$slug/reports/${DATE:0:4}/${DATE:5:2}/$DATE.md"
+  dest="topics/$slug/reports/${DATE:0:4}/${DATE:5:2}/$DATE.md"   # cap: id (the year and month of the date)
   if ! { docker exec -u hermes aistack-hermes-1 mkdir -p "/vault/$(dirname "$dest")" &&
          docker exec -i -u hermes aistack-hermes-1 sh -c "cat > /vault/$dest" < "$S/out/$DATE.md"; }; then
     notify "Topic Desk ($slug): the briefing for $DATE was written but could not be filed into the vault ($dest)."

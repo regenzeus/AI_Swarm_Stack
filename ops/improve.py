@@ -14,6 +14,7 @@ from pathlib import Path
 
 import swarm_client as SW
 from textcap import limit                    # visible caps and input limits (AGENTS.md, truncation)
+import textcap as TC
 import prompts as P                               # MEM-11: the agent prompts live in prompts/<owner>.md
 
 M = B = None
@@ -60,16 +61,16 @@ def since(days):
 
 def signals(c):
     out = []
-    runs = c.execute("select slug, started, summary from runs where status='failed' and started >= ? order by started desc limit 15",
+    runs = c.execute("select slug, started, summary from runs where status='failed' and started >= ? order by started desc limit 15",  # cap: list (the self-review's sample: the newest 15)
                      (since(7),)).fetchall()
     for r in runs:
         if not M.paused(r["summary"] or ""):                  # usage-limit pauses are normal, not a defect
-            out.append(f"failed mission run {r['slug']} {r['started'][:16]}: {(r['summary'] or '')[:200]}")  # cap: prompt
+            out.append(f"failed mission run {r['slug']} {r['started'][:16]}: {TC.cut((r['summary'] or ''), 200)}")  # cap: prompt
     for u in M.sh("systemctl", "--user", "list-units", "--failed", "--plain", "--no-legend").split():
         if u.endswith((".service", ".timer")):
             out.append(f"failed systemd job: {u}")
     try:
-        lines = (M.PUBLIC / "events.jsonl").read_text().splitlines()[-2000:]  # cap: prompt
+        lines = (M.PUBLIC / "events.jsonl").read_text().splitlines()[-2000:]  # cap: parse (the newest 2,000 events are searched for signals)
     except Exception:
         lines = []
     seen = set()
@@ -83,9 +84,9 @@ def signals(c):
         key = re.sub(r"\d+", "#", e.get("text", ""))[:120]  # cap: id
         if key not in seen and not M.paused(e.get("text", "")):
             seen.add(key)
-            out.append(f"event {e.get('ts', '')[:16]} {e.get('kind')}: {e.get('text', '')[:200]}")  # cap: prompt
+            out.append(f"event {e.get('ts', '')[:16]} {e.get('kind')}: {TC.cut(e.get('text', ''), 200)}")  # cap: prompt
     for b in c.execute("select id, title, status, error from builds where status in ('failed','rolled_back') and updated >= ?", (since(30),)):
-        out.append(f"build #{b['id']} {b['status']}: {b['title']} ({(b['error'] or '')[:160]})")  # cap: prompt
+        out.append(f"build #{b['id']} {b['status']}: {b['title']} ({TC.cut((b['error'] or ''), 160)})")  # cap: prompt
     try:
         for ci in M.stack_info().get("ci", []):
             if ci.get("status") == "failure":
@@ -98,12 +99,12 @@ def signals(c):
         for head in ("Half-built or not thought to the end", "Technical debt", "Recommended next steps"):
             m = re.search(rf"^## {re.escape(head)}[^\n]*\n(.*?)(?=^## |\Z)", text, re.S | re.M)
             if m:
-                out.append(f"review {reviews[-1].name}, {head}:\n{m[1].strip()[:2500]}")  # cap: prompt
+                out.append(f"review {reviews[-1].name}, {head}:\n{TC.cut(m[1].strip(), 2500)}")  # cap: prompt
     try:
         p = subprocess.run(["python3", str(STACK / "ops/upgrade_check.py")], capture_output=True, text=True, timeout=180)
         newer = [ln for ln in p.stdout.splitlines() if re.search(r"newer|->|→", ln)]
         if newer:
-            out.append("newer releases of pinned components:\n" + "\n".join(newer[:20]))
+            out.append("newer releases of pinned components:\n" + "\n".join(TC.more(newer, 20, "more")))  # cap: prompt
     except Exception:
         pass
     return out
@@ -113,7 +114,7 @@ def signals(c):
 def known(c):
     """What is already open or decided in the Ledger, and recent builds: the model must not repeat them."""
     rows = [SW.lessons_text("self-review"), SW.known()]
-    rows += [f"- build ({b['status']}): {b['title']}" for b in c.execute("select title, status from builds where created >= ? order by id desc limit 40",
+    rows += [f"- build ({b['status']}): {b['title']}" for b in c.execute("select title, status from builds where created >= ? order by id desc limit 40",  # cap: list (the self-review's sample: the newest 40)
                                                                         (since(60),))]
     return "\n".join(x for x in rows if x) or "(nothing yet)"
 
@@ -126,11 +127,11 @@ def scan(c, trigger="weekly"):
         save_scan(result="no signals: nothing to improve this week", new=0)
         return 0
     amap = re.search(r"## Repository map\n(.*?)\n## ", (STACK / "AGENTS.md").read_text(), re.S)
-    prompt = PROMPT.format(max=MAX, map=amap[1].strip() if amap else "", signals="\n".join(f"- {s}" for s in sig)[:14000],  # cap: prompt
-                           known=known(c)[:4000])  # cap: prompt
+    prompt = PROMPT.format(max=MAX, map=amap[1].strip() if amap else "", signals=TC.cut("\n".join(f"- {s}" for s in sig), 14000),  # cap: prompt
+                           known=TC.cut(known(c), 4000))  # cap: prompt
     P.record(prompt)                                  # MEM-11: the run records the prompt's version
     d = M.ask_json(prompt, os.environ["VK_REVIEW"], timeout=600)
-    new, refined = SW.propose("self-review", (d.get("proposals") or [])[:MAX], "weekly self-review")
+    new, refined = SW.propose("self-review", TC.first(d.get("proposals") or [], MAX, "proposals"), "weekly self-review")  # cap: untrusted (its prompt names the limit)
     save_scan(result=f"{new} new idea{'s' if new != 1 else ''} from {len(sig)} signals" + (f", {refined} known ones refined" if refined else ""), new=new)
     if new:
         M.event("build", "", f"The stack proposes {new} improvement{'s' if new > 1 else ''}: review them in Build", push=True, title="Improvements")

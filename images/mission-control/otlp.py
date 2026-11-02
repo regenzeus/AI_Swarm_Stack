@@ -13,6 +13,7 @@ Phoenix takes OTLP over HTTP as protobuf only; this module writes the few messag
 Never raises: tracing must not break a run.
 """
 import os
+import textcap as TC                              # visible caps (AGENTS.md, truncation)
 import struct
 import threading
 import urllib.request
@@ -79,7 +80,7 @@ def encode(spans, service="aistack"):
               + _fixed64(7, s["start"] * 1e9) + _fixed64(8, max(s["end"], s["start"]) * 1e9)
               + b"".join(_msg(9, _kv(k, v)) for k, v in s.get("attrs", {}).items() if v not in (None, "")))
         if s.get("error"):
-            sp += _msg(15, _str(2, s["error"][:500]) + _field(3, 0, _varint(2)))   # STATUS_CODE_ERROR  # cap: api
+            sp += _msg(15, _str(2, TC.fit(s["error"], 500)) + _field(3, 0, _varint(2)))   # STATUS_CODE_ERROR  # cap: api
         body += _msg(2, sp)
     scope = _msg(1, _str(1, "aistack.runtime"))
     resource = _msg(1, _msg(1, _kv("service.name", service)))
@@ -106,7 +107,7 @@ def spans_of(run, agent, events, title="", ref=None, trace=None, parent=None, st
     end = next((e for e in reversed(ev) if e.get("kind") == "end"), {})
     out = [{"trace_id": tid, "span_id": root, "parent_id": parent, "name": f"invoke_agent {agent}", "kind": 1, "start": t0, "end": t1,
             "attrs": {"gen_ai.operation.name": "invoke_agent", "gen_ai.agent.name": agent, "gen_ai.system": system,
-                      "openinference.span.kind": "AGENT", "aistack.run.id": run, "aistack.ref": ref or "", "input.value": title[:MAX],
+                      "openinference.span.kind": "AGENT", "aistack.run.id": run, "aistack.ref": ref or "", "input.value": TC.fit(title, MAX),  # cap: api (a Phoenix span attribute; the run record keeps all)
                       "gen_ai.usage.input_tokens": tin, "gen_ai.usage.output_tokens": tout,
                       "llm.token_count.prompt": tin, "llm.token_count.completion": tout, "llm.token_count.total": tin + tout},
             "error": end.get("detail") if end.get("status") in ("failed", "failure") else None}]
@@ -132,8 +133,8 @@ def spans_of(run, agent, events, title="", ref=None, trace=None, parent=None, st
             out.append({"trace_id": tid, "span_id": _id(f"{run}:{cn}", 8), "parent_id": root, "name": f"execute_tool {c.get('title') or 'tool'}",
                         "kind": 1, "start": c["ts"], "end": e["ts"],
                         "attrs": {"gen_ai.operation.name": "execute_tool", "gen_ai.tool.name": c.get("title") or "", "openinference.span.kind": "TOOL",
-                                  "tool.name": c.get("title") or "", "input.value": (c.get("detail") or "")[:MAX], "output.value": (e.get("detail") or "")[:MAX]},
-                        "error": (e.get("detail") or "error")[:500] if k == "error" else None})  # cap: api
+                                  "tool.name": c.get("title") or "", "input.value": TC.fit(c.get("detail") or "", MAX), "output.value": TC.fit(e.get("detail") or "", MAX)},  # cap: api
+                        "error": TC.fit(e.get("detail") or "error", 500) if k == "error" else None})  # cap: api
         if e.get("ts"):
             last = e["ts"]
     return out

@@ -24,6 +24,7 @@ import sys
 import time
 import tokenize
 import uuid
+import textcap as TC                              # visible caps (AGENTS.md, truncation)
 from pathlib import Path
 
 import yaml
@@ -83,7 +84,7 @@ def score(code, key, run=subprocess.run, timeout=300):
     try:
         d = json.loads(p.stdout)
     except ValueError:
-        d = {"cases": [], "error": f"the scorer gave no result (exit {p.returncode}): {(p.stderr or p.stdout)[-400:]}"}  # cap: preview
+        d = {"cases": [], "error": f"the scorer gave no result (exit {p.returncode}): {TC.tail(p.stderr or p.stdout, 400)}"}  # cap: preview
     return summarise(d)
 
 

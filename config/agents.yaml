@@ -251,15 +251,15 @@ agents:
     tools: []
     autonomy: {}
   - id: memory
-    purpose: The Librarian, the memory curator; keeps every memory under its limit and tidy.
-    responsibilities: [keep each agent's journal short and true, tidy every agent wiki and add no facts, write the hub pages, clean the search index, leave forgetting to the owner]
+    purpose: The Memory Keeper; looks after every memory store, fixes its faults within its rules and keeps each change undoable (docs/MEMORY.md).
+    responsibilities: [retire duplicates, test noise and agents' runs from the long-term memory and put its facts into English while its trial passes, ask the owner when two of his facts disagree, turn each wiki contradiction into a dispute a research task settles with sources, re-check stale pages agents still read, tidy every agent wiki and add no facts, keep each agent's journal short and true, clean the search index, delete nothing]
     owns: {}
     harness: python
     model: gpt-sub-fast
     key: vk-memory
     prompts: prompts/memory.md           # MEM-11: its prompts, each change replay-tested
     jobs: [crew-memory]
-    schedule: weekly
+    schedule: daily
     roles: [memory]
     rooms: [all]
     contact: ["*"]

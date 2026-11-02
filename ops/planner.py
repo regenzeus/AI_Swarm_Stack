@@ -7,6 +7,7 @@ answers JSON; anything it gets wrong (no files, a dependency on a later task, to
 An area is images/<x>/ or config/<x>/, else the first folder; tests/, requirements/ and docs/ go with the code.
 """
 import json
+import textcap as TC                              # visible caps (AGENTS.md, truncation)
 import re
 import prompts as P                               # MEM-11: the agent prompts live in prompts/<owner>.md
 
@@ -32,7 +33,7 @@ def areas(files):
 
 
 def one(idea, files):
-    return [{"title": idea["title"][:120], "body": idea.get("body") or idea["title"], "files": list(files),  # cap: untrusted
+    return [{"title": TC.cut(idea["title"], 120), "body": idea.get("body") or idea["title"], "files": list(files),  # cap: untrusted
              "depends_on": [], "requirements": sorted(set(REQ_ID.findall(f"{idea['title']} {idea.get('body') or ''}")))}]
 
 
@@ -46,9 +47,9 @@ def valid(tasks):
         deps = [d for d in t.get("depends_on") or [] if isinstance(d, int)]
         if any(not 0 <= d < n for d in deps):
             return None
-        out.append({"title": str(t["title"]).strip()[:120], "body": str(t.get("body") or t["title"]).strip()[:4000],  # cap: untrusted
-                    "files": [str(f) for f in t["files"] if str(f).strip()][:30], "depends_on": sorted(set(deps)),
-                    "requirements": [str(x) for x in t.get("requirements") or [] if REQ_ID.fullmatch(str(x))][:20]})
+        out.append({"title": TC.cut(str(t["title"]).strip(), 120), "body": TC.cut(str(t.get("body") or t["title"]).strip(), 4000),  # cap: untrusted
+                    "files": TC.first([str(f) for f in t["files"] if str(f).strip()], 30, "files of a task"), "depends_on": sorted(set(deps)),  # cap: untrusted
+                    "requirements": TC.first([str(x) for x in t.get("requirements") or [] if REQ_ID.fullmatch(str(x))], 20, "requirements of a task")})  # cap: untrusted
     seen = {}                                       # the same file in two tasks: the later one waits for the earlier
     for n, t in enumerate(out):
         for f in t["files"]:
@@ -64,8 +65,8 @@ def split(idea, ask=None, context=""):
     files = [str(f) for f in plan.get("files") or []]
     if len(areas(files)) <= 1 or ask is None:
         return one(idea, files), "one area" if len(areas(files)) <= 1 else "no planner model"
-    prompt = PROMPT.format(max=MAX_TASKS, id=idea["id"], title=idea["title"], body=(idea.get("body") or "")[:4000],  # cap: prompt
-                           files=", ".join(files) or "none", context=context[:6000])  # cap: prompt
+    prompt = PROMPT.format(max=MAX_TASKS, id=idea["id"], title=idea["title"], body=TC.cut((idea.get("body") or ""), 4000),  # cap: prompt
+                           files=", ".join(files) or "none", context=TC.cut(context, 6000))  # cap: prompt
     P.record(prompt)                                  # MEM-11: the run records the prompt's version
     try:
         raw = ask(prompt)

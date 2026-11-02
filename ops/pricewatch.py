@@ -7,6 +7,7 @@ itself. Shops that block plain fetches (Amazon, idealo, geizhals) simply give no
 its next run covers those. Every call here may fail; callers treat None / [] as "not readable".
 """
 import json
+import textcap as TC                              # visible caps (AGENTS.md, truncation)
 import re
 import urllib.request
 from pathlib import Path
@@ -73,7 +74,7 @@ def watch(url, title):
     structured data (schema.org Product/Offer), which most shops embed."""
     try:
         tidy()
-        r = _call("POST", "/watch", {"url": url, "title": title[:120], "processor": "restock_diff", "tag": TAG,  # cap: api
+        r = _call("POST", "/watch", {"url": url, "title": TC.fit(title, 120), "processor": "restock_diff", "tag": TAG,  # cap: api
                                      "time_between_check": {"hours": 6}})
         return r.get("uuid") if isinstance(r, dict) else None
     except Exception:

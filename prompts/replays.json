@@ -335,11 +335,18 @@
    "sha": "f324883e303f"
   }
  ],
- "memory/FACTS": [
+ "memory/CROSS_CHECK": [
   {
-   "at": "2026-10-30",
-   "baseline": "moved verbatim from ops/crew.py MEMORY_PROMPT",
-   "sha": "08ca86ca85ca"
+   "at": "2026-11-02",
+   "baseline": "new prompt: one subject across wikis (MEM-17); tried on the 4 hub subjects of 2 Nov (dry): no contradiction claimed",
+   "sha": "8c86e610026d"
+  }
+ ],
+ "memory/KEEPER_FACTS": [
+  {
+   "at": "2026-11-02",
+   "baseline": "new prompt: the Memory Keeper’s look at the owner’s long-term facts (MEM-21, replaces FACTS); tried 3 times in the memory trial (eval/trials/memory.yaml, 32 planted facts): precision 1.0 each time, recall 0.87 to 1.0, no true fact touched",
+   "sha": "304b84691fa0"
   }
  ],
  "memory/WIKI_JUDGE": [

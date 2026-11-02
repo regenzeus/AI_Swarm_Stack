@@ -6,5 +6,6 @@ RUN pip install --no-cache-dir feedparser==6.0.12 trafilatura==2.0.0 pyyaml==6.0
       googlenewsdecoder==0.1.7 selectolax==0.4.13 \
  && useradd -r -u 10005 desk
 COPY desk.py /app/desk.py
+COPY textcap.py /app/textcap.py
 USER desk
 ENTRYPOINT ["python", "/app/desk.py"]

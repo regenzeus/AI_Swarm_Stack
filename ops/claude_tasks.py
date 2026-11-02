@@ -28,6 +28,7 @@ from pathlib import Path
 
 import runtime as RTM
 from textcap import STORE, cut, limit, tail                    # visible caps and input limits (AGENTS.md, truncation)
+import textcap as TC
 import prompts as P                               # MEM-11: the agent prompts live in prompts/<owner>.md
 
 M = None                                   # ops/missions.py, set by its main()
@@ -239,7 +240,8 @@ def run(c, t):
             M.event("claude", "", f"Claude task #{tid} answered ({res['turns']} turns)", title="Claude Code")
         else:
             put(c, tid, status="failed", ended=M.now().isoformat(timespec="seconds"),
-                error=(re.sub(r"\s+", " ", tail(log, 4000)) or "no answer").strip())  # cap: store
+                error=(f"stopped at {res['stopped']} after {res['turns']} turns; " if res.get("stopped") else "")
+                + (re.sub(r"\s+", " ", tail(log, 4000)) or "no answer").strip())  # cap: store
         write(c, tid, steps, tokens)
     except Exception as e:
         put(c, tid, status="failed", ended=M.now().isoformat(timespec="seconds"), error=f"{type(e).__name__}: {str(e)}")
@@ -251,10 +253,10 @@ def run(c, t):
 def state(c):
     table(c)
     rows = [dict(r) for r in c.execute("select id, question, repo, mode, status, answer, error, created, started, ended, turns, tokens, "
-                                       "cached, retry_at, source, evidence from claude_tasks order by id desc limit 15")]
+                                       "cached, retry_at, source, evidence from claude_tasks order by id desc limit 15")]  # cap: list (the 15 newest on the board; each has its own page)
     for r in rows:
-        r["question"] = (r["question"] or "")[:300]  # cap: preview
-        r["answer"] = (r["answer"] or "")[:400]  # cap: preview
+        r["question"] = TC.cut((r["question"] or ""), 300)  # cap: preview
+        r["answer"] = TC.cut((r["answer"] or ""), 400)  # cap: preview
     return {"claude_tasks": rows}
 
 

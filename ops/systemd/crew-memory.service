@@ -1,5 +1,5 @@
 [Unit]
-Description=Crew: the Librarian: every wiki and the search index tidied, journals folded, long-term facts -> suggestions
+Description=Crew: the Memory Keeper: long-term memory, wiki disputes and re-checks, journals, the search index (its judgement and the wiki tidy on Wednesdays)
 [Service]
 Type=oneshot
 TimeoutStartSec=2h

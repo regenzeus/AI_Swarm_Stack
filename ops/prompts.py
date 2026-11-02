@@ -15,6 +15,7 @@ The desk's and the research scout's containers read prompts/ through a read-only
 format; they log each version, and the desk hands its calls back as cases (/out/prompt-cases.jsonl, an alert's JSON).
 """
 import datetime as dt
+import textcap as TC                              # visible caps (AGENTS.md, truncation)
 import hashlib
 import json
 import os
@@ -147,9 +148,9 @@ def add_case(ref, fills, out, at=None, model=None):
         at = at or time.time()
         if any(json.loads(r).get("at") == at and json.loads(r).get("ref") == ref for r in rows if r.strip()):
             return
-        rows.append(json.dumps({"at": at, "ref": ref, "model": model, "fills": {k: str(v)[:FILL_CHARS] for k, v in fills.items()},  # cap: store
-                                "out": str(out)[:FILL_CHARS]}, ensure_ascii=False))  # cap: store
-        f.write_text("\n".join(rows[-KEEP:]) + "\n")
+        rows.append(json.dumps({"at": at, "ref": ref, "model": model, "fills": {k: TC.cut(str(v), FILL_CHARS) for k, v in fills.items()},  # cap: store
+                                "out": TC.cut(str(out), FILL_CHARS)}, ensure_ascii=False))  # cap: store
+        f.write_text("\n".join(rows[-KEEP:]) + "\n")  # cap: rotate (the newest cases of a prompt)
         os.chmod(f, 0o600)
     except Exception:
         pass                                         # a case is a help for later, never a reason to fail the run
@@ -205,7 +206,7 @@ def cases_of(owner, name):
     fx = FIXTURES / f"{owner}.{name}.json"
     if fx.exists():
         rows += json.loads(fx.read_text())
-    return rows[-REPLAY_CASES:]
+    return rows[-REPLAY_CASES:]  # cap: rotate (a replay runs the newest cases)
 
 
 def model_of(owner):
@@ -255,8 +256,8 @@ def replay(owner, name, ask=None, judge_ask=None, now=None):
         score["valid"][1] += valid(a_new, wants_json)
         flip = rnd.random() < 0.5
         first, second = (a_new, a_old) if flip else (a_old, a_new)
-        v = re.search(r"\{.*\}", str(judge_ask(text("eval", "JUDGE").format(task=task[:12000], a=str(first)[:8000],  # cap: prompt
-                                                                               b=str(second)[:8000]))), re.S)  # cap: prompt
+        v = re.search(r"\{.*\}", str(judge_ask(text("eval", "JUDGE").format(task=TC.cut(task, 12000), a=TC.cut(str(first), 8000),  # cap: prompt
+                                                                               b=TC.cut(str(second), 8000)))), re.S)  # cap: prompt
         try:
             better = json.loads(v.group(0)).get("better") if v else "equal"
         except ValueError:

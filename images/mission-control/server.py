@@ -25,6 +25,7 @@ from starlette.responses import FileResponse, JSONResponse, PlainTextResponse, R
 from starlette.routing import Mount, Route
 from starlette.staticfiles import StaticFiles
 from textcap import cut, tail                    # visible caps and input limits (AGENTS.md, truncation)
+import textcap as TC
 
 M = Path("/missions")
 STATE, EVENTS = M / "public/state.json", M / "public/events.jsonl"
@@ -38,7 +39,7 @@ PHOENIX_PORT = 8443                                       # tailscale serve: htt
 HERMES_KEY = os.environ.get("API_SERVER_KEY", "")
 ACTIONS = {"claude_task", "forgejo_connect", "create", "run", "pause", "resume", "archive", "update", "memory", "email", "vault_add", "understand",
            "forget", "memory_search", "build_assign", "build_revise", "build_approve", "build_approve_all", "build_reject", "build_revert",
-           "improve_scan", "proposal_accept", "proposal_dismiss", "build_recheck", "build_switch_engine", "codemap", "repo_create", "repo_buildable", "repo_remove", "crew_run", "crew_memory_forget", "crew_schedule",
+           "improve_scan", "proposal_accept", "proposal_dismiss", "build_recheck", "build_switch_engine", "codemap", "repo_create", "repo_buildable", "repo_remove", "crew_run", "crew_memory_forget", "crew_memory_undo", "crew_schedule",
            "journal_note", "journal_edit", "health_ack", "swarm_pause", "swarm_confirm", "swarm_reopen", "swarm_autonomy", "swarm_post", "swarm_help_verdict", "swarm_agent_change", "phone_cleanup_do", "phone_cleanup_do_all", "phone_cleanup_dismiss",
            "shop_decide", "shop_limits",           # shop_*: only through /api/shop/* (the owner, never the AI phone or an agent)
            "house_connect", "house_switch", "house_alexa", "house_say", "house_settings", "house_status",   # house_*: /api/house* and the house MCP tools
@@ -507,7 +508,7 @@ async def api_chats(request):
         if q and q not in (c.get("title") or "").lower() and not any(q in m.get("content", "").lower() for m in c.get("messages", [])):
             continue
         out.append(chat_summary(c))
-    return JSONResponse(sorted(out, key=lambda c: (not c.get("pinned"), -c["updated"]))[:300])  # cap: list
+    return JSONResponse(sorted(out, key=lambda c: (not c.get("pinned"), -c["updated"])))
 
 
 async def api_chat_one(request):
@@ -550,7 +551,7 @@ def mission_context(slug):
             "it should track, then apply agreed changes with mission_update (briefings: key_questions, searches, watchlist, "
             "notes; tasks: goal) or mission_set_triggers, using this slug, and say exactly what you changed. To answer "
             "questions about its results, search the vault (its reports, alerts and wiki).\nCurrent mission:\n"
-            + json.dumps(d, ensure_ascii=False)[:6000])  # cap: prompt
+            + TC.cut(json.dumps(d, ensure_ascii=False), 6000))  # cap: prompt
 
 
 def doc_text(path, name):
@@ -560,7 +561,7 @@ def doc_text(path, name):
         if n.endswith(".pdf"):
             from pypdf import PdfReader
             r = PdfReader(str(path))
-            return "\n\n".join(f"--- page {i} ---\n{(pg.extract_text() or '').strip()}" for i, pg in enumerate(r.pages[:300], 1))  # cap: prompt
+            return "\n\n".join(f"--- page {i} ---\n{(pg.extract_text() or '').strip()}" for i, pg in enumerate(r.pages[:300], 1)) + (f"\n\n(only the first 300 of {len(r.pages)} pages)" if len(r.pages) > 300 else "")  # cap: prompt
         if n.endswith(".docx"):
             import docx
             d = docx.Document(str(path))
@@ -619,8 +620,8 @@ URL_IN_TEXT = re.compile(r"https?://[^\s<>\"]+")
 async def share(request):
     """The PWA share target: keeps what was shared (link, text, pictures, files) for 14 days and opens it in the app (APP-15)."""
     form = await request.form(max_files=6, max_fields=10)
-    rec = {"id": uuid.uuid4().hex[:16], "at": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "title": str(form.get("title") or "")[:300].strip(),  # cap: untrusted
-           "text": cut(str(form.get("text") or "").strip(), 200000), "url": str(form.get("url") or "")[:2000].strip(),  # cap: untrusted
+    rec = {"id": uuid.uuid4().hex[:16], "at": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "title": TC.cut(str(form.get("title") or ""), 300).strip(),  # cap: untrusted
+           "text": cut(str(form.get("text") or "").strip(), 200000), "url": str(form.get("url") or "")[:2000].strip(),  # cap: api (a URL; a marker would break it)
            "files": [], "errors": []}
     if not rec["url"] and (m := URL_IN_TEXT.search(rec["text"])):     # Android apps usually put the link in the text
         rec["url"] = m.group(0).rstrip(").,;")
@@ -715,7 +716,7 @@ def build_request(c, model, effort):
         earlier = msgs[:-1][-12:]
         if earlier:
             system.append("Earlier in this conversation (context; these turns are already answered):\n\n" +
-                          "\n\n".join(f"{m['role']}: {m['content'][:4000]}" for m in earlier))  # cap: prompt
+                          "\n\n".join(f"{m['role']}: {TC.cut(m['content'], 4000)}" for m in earlier))  # cap: prompt
     payload = {"model": model, "provider": "custom", "model_options": {"reasoning_effort": effort}, "stream": True,
                "messages": [{"role": "system", "content": "\n\n".join(system)}, to_hermes(msgs[-1], True)]}
     return payload, {"X-Hermes-Session-Id": c["hsid"]}
@@ -790,8 +791,11 @@ async def run_chat(c, payload, headers=None, retry=False):
                             elif not same or t["detail"] != same["detail"]:
                                 live["tools"].append(t)
                             continue
-                        delta = (j.get("choices") or [{}])[0].get("delta", {})
+                        ch = (j.get("choices") or [{}])[0]
+                        delta = ch.get("delta", {})
                         live["text"] += delta.get("content") or ""
+                        if ch.get("finish_reason") in ("length", "max_tokens"):
+                            live["cut"] = True                # the model stopped at its output limit: said under the answer
                         live["reasoning"] += delta.get("reasoning_content") or delta.get("reasoning") or ""
     except asyncio.CancelledError:
         live["stopped"] = True
@@ -815,8 +819,9 @@ async def run_chat(c, payload, headers=None, retry=False):
             LIMITED[c["id"]] = at
         else:
             c["messages"].append({"role": "assistant", "ts": time.time(),
-                                  "content": (live["text"] or ("_(stopped)_" if live["stopped"] else "(no answer)")) + ("\n\n_(stopped)_" if live["stopped"] and live["text"] else ""),
-                                  "reasoning": tail(live["reasoning"], 200000), "tools": live["tools"][-400:],  # cap: store
+                                  "content": (live["text"] or ("_(stopped)_" if live["stopped"] else "(no answer)")) + ("\n\n_(stopped)_" if live["stopped"] and live["text"] else "")
+                                  + ("\n\n_(The answer stopped at the model's output limit. Ask it to go on.)_" if live.get("cut") else ""),
+                                  "reasoning": tail(live["reasoning"], 200000), "tools": live["tools"][-400:],  # cap: list (the newest 400 tool calls; the run record keeps every one)
                                   "model": payload.get("model"), "effort": effort})
             if c.pop("limit", None) is not None:
                 LIMITED.pop(c["id"], None)
@@ -1126,7 +1131,7 @@ def a2a_task(t):
            "status": {"state": st, "timestamp": t.get("updated"), **({"message": {"role": "agent", "parts": [{"kind": "text", "text": note}]}} if note else {})}}
     if st == "completed" and t.get("result"):
         try:
-            text = (VAULT / t["result"]).read_text()[:40000]   # cap: api (the answer; the vault keeps all of it)
+            text = TC.fit((VAULT / t["result"]).read_text(), 40000)   # cap: api (the answer; the vault keeps all of it)
             out["artifacts"] = [{"artifactId": "answer", "name": t.get("title") or "answer", "parts": [{"kind": "text", "text": text}]}]
         except OSError:
             pass
@@ -1166,7 +1171,7 @@ async def api_a2a(request):
     mine = [t for t in state().get("tasks") or [] if t.get("source") == f"a2a:{name}"]
     if method in ("message/send", "SendMessage"):
         parts = (params.get("message") or {}).get("parts") or []
-        text = " ".join(str(p.get("text") or "") for p in parts if p.get("kind", p.get("type", "text")) == "text").strip()[:4000]  # cap: api
+        text = TC.fit(" ".join(str(p.get("text") or "") for p in parts if p.get("kind", p.get("type", "text")) == "text").strip(), 4000)  # cap: api
         if len(text) < 8:
             return err(-32602, "send the task as a text part of at least a few words")
         hour_ago = (dt.datetime.now().astimezone() - dt.timedelta(hours=1)).isoformat()
@@ -1346,7 +1351,7 @@ async def api_wiki_search(request):
             i = txt.find(q)
             hits.append({"id": p["id"], "title": p["title"], "score": (q in p["title"].lower()) * 10 + txt.count(q),
                          "snippet": re.sub(r"\s+", " ", txt[max(0, i - 60):i + 100])})
-    return JSONResponse(sorted(hits, key=lambda h: -h["score"])[:30])
+    return JSONResponse(sorted(hits, key=lambda h: -h["score"])[:30])  # cap: list (the 30 best hits; a narrower search finds the rest)
 
 
 # ---------- push notifications (Web Push, VAPID keys made once) ----------
@@ -1566,13 +1571,13 @@ async def push_conn():
                 if p["id"] not in seen:
                     seen.add(p["id"])
                     if subs():
-                        await asyncio.to_thread(send_push, "Gmail: OK to move to Trash?", f"{p.get('count')} mails · {p.get('reason', '')}"[:180], "/#/system?conn=1")  # cap: api
+                        await asyncio.to_thread(send_push, "Gmail: OK to move to Trash?", TC.fit(f"{p.get('count')} mails · {p.get('reason', '')}", 180), "/#/system?conn=1")  # cap: api
         except Exception as ex:
             print("connections watcher:", ex, flush=True)
 
 
 def phone_seen(request, what):
-    print(f"phone {what}: {request.headers.get('tailscale-user-login', '?')} {request.headers.get('user-agent', '')[:80]}", flush=True)  # cap: untrusted
+    print(f"phone {what}: {request.headers.get('tailscale-user-login', '?')} {TC.cut(request.headers.get('user-agent', ''), 80)}", flush=True)  # cap: untrusted
 
 
 AI_PHONE_IP = os.environ.get("PHONE_HOST", "100.64.0.10")
@@ -1689,14 +1694,17 @@ async def api_whoami(request):
 
 async def api_clienterror(request):
     """An error the app hit in the browser: logged and kept (newest 500) for the health board (APP-24)."""
+    raw = await request.body()
+    if len(raw) > 4000:                                   # a report this long is not one the app sends: refused, not cut
+        return JSONResponse({"error": f"the report is {len(raw):,} bytes; the limit is 4,000"}, status_code=413)
     try:
-        b = json.loads((await request.body())[:4000] or b"{}")  # cap: untrusted
+        b = json.loads(raw or b"{}")
     except Exception:
         b = {}
-    print(f"client error ({request.headers.get('tailscale-user-login', '?')}): {str(b.get('msg'))[:300]} at {str(b.get('where'))[:200]} "  # cap: untrusted
-          f"[{str(b.get('url'))[:60]}] {str(b.get('ua'))[:100]}", flush=True)  # cap: untrusted
-    keep_client_error({"ts": time.time(), "msg": str(b.get("msg"))[:300], "where": str(b.get("where"))[:200], "url": str(b.get("url"))[:120],  # cap: untrusted
-                       "ua": str(b.get("ua"))[:120]})  # cap: untrusted
+    print(f"client error ({request.headers.get('tailscale-user-login', '?')}): {TC.cut(str(b.get('msg')), 300)} at {TC.cut(str(b.get('where')), 200)} "  # cap: untrusted
+          f"[{TC.cut(str(b.get('url')), 60)}] {TC.cut(str(b.get('ua')), 100)}", flush=True)  # cap: untrusted
+    keep_client_error({"ts": time.time(), "msg": TC.cut(str(b.get("msg")), 300), "where": TC.cut(str(b.get("where")), 200), "url": TC.cut(str(b.get("url")), 120),  # cap: untrusted
+                       "ua": TC.cut(str(b.get("ua")), 120)})  # cap: untrusted
     return JSONResponse({"ok": True})
 
 
@@ -1709,7 +1717,7 @@ def keep_client_error(e):
     try:
         rows = CLIENT_ERRORS.read_text().splitlines() if CLIENT_ERRORS.exists() else []
         rows.append(json.dumps(e, ensure_ascii=False))
-        CLIENT_ERRORS.write_text("\n".join(rows[-CLIENT_ERRORS_KEEP:]) + "\n")  # cap: store
+        CLIENT_ERRORS.write_text("\n".join(rows[-CLIENT_ERRORS_KEEP:]) + "\n")  # cap: rotate (the newest for the health board; the app's log has every one)
     except OSError:
         pass
 
@@ -1803,7 +1811,7 @@ async def push_phone():
                 if p["id"] not in seen:
                     seen.add(p["id"])
                     if subs():
-                        await asyncio.to_thread(send_push, "AI phone: OK?", f"{p.get('text', '')} · {p.get('why', '')}"[:180], "/#/phone")  # cap: api
+                        await asyncio.to_thread(send_push, "AI phone: OK?", TC.fit(f"{p.get('text', '')} · {p.get('why', '')}", 180), "/#/phone")  # cap: api
         except Exception as ex:
             print("phone watcher:", ex, flush=True)
 
@@ -2218,7 +2226,7 @@ async def agent_note(agent: str, text: str) -> str:
     """Keep a standing note in your own memory (your journal, agents/<agent>/MEMORY.md in the vault): one short line
     that every future run of yours reads first, e.g. "check the board manual before searching shops". agent: your agent
     id, as your memory block names it (e.g. 'mission-ram-upgrade'). Only lasting lessons, never secrets or personal data."""
-    r = await submit({"action": "journal_note", "agent": agent[:140], "text": text[:300], "by": "agent"}, wait=20)  # cap: untrusted
+    r = await submit({"action": "journal_note", "agent": TC.cut(agent, 140), "text": TC.cut(text, 300), "by": "agent"}, wait=20)  # cap: untrusted
     if r.get("pending"):
         return "Saving..."
     return f"Noted ({r.get('notes')} standing notes)." if r.get("ok") else f"Error: {r.get('error')}"
@@ -2263,7 +2271,7 @@ def line(m):
             f"{m.get('schedule_text')}" + (f" · triggers: {'; '.join(t['text'] for t in m['triggers'])}" if m.get("triggers") else "")
             + f" · next run {m.get('next_run') or '-'} · runs 30 d: {st.get('runs', 0)} ({st.get('failed', 0)} failed), "
             f"{st.get('tokens', 0)} tokens, ${st.get('spend', 0):.4f} · last run: {last.get('status', '-')} {last.get('started', '')} "
-            f"{str(last.get('summary') or '')[:120]}")  # cap: prompt
+            f"{TC.cut(str(last.get('summary') or ''), 120)}")  # cap: prompt
 
 
 @mcp.tool(name="health_issues", description=HEALTH_DOC)
@@ -2382,7 +2390,7 @@ async def mission_set_triggers(slug: str, triggers: list[dict]) -> str:
 async def send_email(subject: str, markdown: str) -> str:
     """Send the owner an e-mail (to his own address only) in the designed report layout. markdown: the full content, starting
     with '# Headline'; use headings, bullets, tables and source links. Use it when he asks to get something by e-mail."""
-    r = await submit({"action": "email", "subject": subject[:150], "markdown": markdown[:100000], "source": "chat"}, wait=60)  # cap: untrusted
+    r = await submit({"action": "email", "subject": TC.fit(subject, 150), "markdown": TC.cut(markdown, 100000), "source": "chat"}, wait=60)  # cap: untrusted
     if r.get("pending"):
         return "Sending..."
     return "E-mail sent." if r.get("ok") else f"Error: {r.get('error')}"
@@ -2427,7 +2435,7 @@ async def builds_overview() -> str:
     the AI review's verdict."""
     b = state().get("builds") or []
     return "\n".join(f"#{x['id']} [{x['status']}] {x['repo']}: {x['title']} · checks {'ok' if x['checks_ok'] else '-'} · CI {x['ci'] or '-'}"
-                      f" · AI review {review_line(x)} · {tokens_line(x)}" for x in b[:20]) or "(no builds yet)"
+                      f" · AI review {review_line(x)} · {tokens_line(x)}" for x in b[:20]) + (f"\n(… and {len(b) - 20} older builds)" if len(b) > 20 else "") or "(no builds yet)"  # cap: prompt
 
 
 def tokens_line(x):
@@ -2445,16 +2453,16 @@ async def build_details(id: int, diff: bool = False) -> str:
         return f"No build #{id}."
     r = x.get("ai_review") or {}
     out = [f"Build #{x['id']} [{x['status']}] in {x['repo']} ({'Claude Code' if x.get('engine') == 'claude' else 'ChatGPT'}): {x['title']}",
-           f"Assignment: {x.get('description') or ''}"[:3000],  # cap: prompt
+           TC.cut(f"Assignment: {x.get('description') or ''}", 3000),  # cap: prompt
            f"Checks: {'passed' if x['checks_ok'] else 'not passed' if x.get('checks') else 'not run'} · CI: {x.get('ci') or '-'}",
            f"Files: {', '.join(f[-1] if isinstance(f, list) else str(f) for f in (x.get('files') or [])) or '-'}",
-           f"Builder's summary: {x.get('summary') or '-'}"[:3000],  # cap: prompt
+           TC.cut(f"Builder's summary: {x.get('summary') or '-'}", 3000),  # cap: prompt
            f"AI review ({'Claude Code' if r.get('engine') == 'claude' else 'ChatGPT'}): {review_line(x)}. {r.get('summary') or r.get('error') or ''}"]
     out += [f"  [{f.get('severity')}] {f.get('file')}:{f.get('line')} {f.get('issue')} Fix: {f.get('fix') or '-'}" for f in r.get("findings") or []]
     if x.get("feedback"):
         out.append(f"Changes the owner requested last time: {x['feedback']}")
     if diff and (BUILDS / f"{x['id']}.diff").exists():
-        out.append("Diff:\n" + (BUILDS / f"{x['id']}.diff").read_text(errors="replace")[:30000])  # cap: prompt
+        out.append("Diff:\n" + TC.cut((BUILDS / f"{x['id']}.diff").read_text(errors="replace"), 30000))  # cap: prompt
     return "\n".join(out)
 
 
@@ -2495,8 +2503,9 @@ async def improvement_proposals(scan_now: bool = False) -> str:
     b = (s.get("swarm") or {}).get("board") or {}
     ps = (b.get("open") or []) + (b.get("recent") or [])
     head = f"Last self-review: {(s.get('improve') or {}).get('last', 'never')[:16]} · {(s.get('improve') or {}).get('result', '')}"
-    return head + "\n" + ("\n".join(f"#{p['id']} [{p['state']}, {p['owner']}] {p['title']}" + (f" ({p['decision']['reason']})" if (p.get('decision') or {}).get('reason') else "")
-                                    for p in ps[:20]) or "(no ideas yet)") + \
+    rows = TC.more([f"#{p['id']} [{p['state']}, {p['owner']}] {p['title']}" + (f" ({p['decision']['reason']})" if (p.get('decision') or {}).get('reason') else "")  # cap: prompt
+                    for p in ps], 20, "more")
+    return head + "\n" + ("\n".join(rows) or "(no ideas yet)") + \
         ("\nA new self-review has started; ask again in a few minutes." if scan_now else "")
 
 

@@ -12,6 +12,7 @@ Dangerous skills never get this far: skills.guard_agent_created blocks them when
 import hashlib, io, json, subprocess, sys, tarfile, tempfile, time
 from pathlib import Path
 from textcap import cut                    # visible caps and input limits (AGENTS.md, truncation)
+import textcap as TC
 
 C = "aistack-hermes-1"
 REPO = Path.home() / "hermes-skills"
@@ -117,7 +118,7 @@ def main(note=()):
     run("git", "add", "-A", "skills", cwd=REPO)
     msg = "skills: " + ("; ".join(lines) if lines else f"{len(status)} file(s) changed") + \
           ("".join(f"\n- removed {g}" for g in gone[:10]))
-    run("git", "commit", "-q", "-m", msg[:3000], cwd=REPO)  # cap: api
+    run("git", "commit", "-q", "-m", TC.fit(msg, 3000), cwd=REPO)  # cap: api
     push = run("git", "push", "-q", "origin", "HEAD", cwd=REPO)
     sha = run("git", "rev-parse", "--short", "HEAD", cwd=REPO).stdout.strip()
     print(f"committed {sha}: {msg.splitlines()[0]}" + ("" if push.returncode == 0 else " (push failed)"))

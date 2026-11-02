@@ -51,6 +51,7 @@ from pathlib import Path
 import yaml
 
 import textcap
+import textcap as TC
 
 ROOT = Path(__file__).resolve().parent.parent
 SLOTS = 2                                         # steps at once: RAM (16 GB) and the subscriptions decide, as for builds (DEC-24)
@@ -224,7 +225,7 @@ def graph(plan, agents=None):
             card = {"harness": "temp", "model": "gpt-sub"}
         elif not card or not runs_steps(card):
             raise ValueError(f"step {i}: {a!r} is no agent that can do a step (one on {', '.join(HARNESSES)})")
-        items = [str(x).strip() for x in p.get("each") or [] if str(x).strip()][:EACH]
+        items = TC.first([str(x).strip() for x in p.get("each") or [] if str(x).strip()], EACH, "items to fan out")  # cap: untrusted (the plan's prompt names the limit)
         harness = (p["harness"] if p.get("harness") in OWN_STEPS.get(a, ()) else "build" if a == BUILDER
                    else card["step_kind"] if card.get("step_kind") in STEP_KINDS else card["harness"])
         lp = p.get("loop")
@@ -332,6 +333,42 @@ def headroom(step, free=None, limited=None):
 
 
 # ---------- the harness adapters (TSK-07) ----------
+HANDOFF = 60000        # cap: prompt (the earlier results in one step's prompt; past it each is cut, marked, with where the whole is)
+HANDOFF_MIN = 4000     # the least of one result a step sees before its reference
+ARG_BYTES = 120 * 1024                 # one command-line argument holds 128 KiB (Linux MAX_ARG_STRLEN): a prompt is refused before that
+WHOLE_CONTEXT = {"claude", "build"}    # these take the earlier results apart from the brief (FND-99), whole
+
+
+def result_file(t, x):
+    """An earlier step's whole result as a vault file (tasks/), for a step that reads it by reference (MEM-15)."""
+    RESULTS.mkdir(parents=True, exist_ok=True)
+    f = RESULTS / f"{t['id']}-{x.get('occ') or 1}-step-{x['idx']}.md"
+    if not f.exists() or f.stat().st_size != len((x["output"] or "").encode()):
+        f.write_text(x["output"] or "")
+    return f
+
+
+def handoff(t, s, prev):
+    """MEM-15: the results a step builds on. Each whole while they fit HANDOFF together; past it each gets its share,
+    marked, with where the whole result is: a file in its work folder (OpenCode) or in the vault (/vault/tasks/, read
+    with the vault tools). A Claude or build step takes them whole apart from its brief."""
+    whole = lambda x: f"### Step {x['idx']}: {x['title']} ({x['agent']})\n{x['output']}"   # noqa: E731
+    if s.get("harness") in WHOLE_CONTEXT or sum(len(x["output"] or "") for x in prev) <= HANDOFF:
+        return "\n\n".join(whole(x) for x in prev)
+    share = max(HANDOFF_MIN, HANDOFF // len(prev))
+    parts = []
+    for x in prev:
+        out = x["output"] or ""
+        if len(out) <= share:
+            parts.append(whole(x))
+            continue
+        f = result_file(t, x)
+        where = (f"/step/results/{f.name} in your work folder" if s.get("harness") == "opencode"
+                 else f"the vault file tasks/{f.name} (/vault/tasks/{f.name}): read it whole with your vault tools before you rely on its end")
+        parts.append(f"### Step {x['idx']}: {x['title']} ({x['agent']})\n" + TC.cut(out, share, f"the whole result ({len(out):,} characters) is {where}"))  # cap: prompt
+    return "\n\n".join(parts)
+
+
 def prompt_of(t, s, all_steps, agents, purpose=None):
     import prompts as P
     prev = [x for x in all_steps if x["idx"] in s["after"]]
@@ -339,7 +376,7 @@ def prompt_of(t, s, all_steps, agents, purpose=None):
     p = P.text("shared", "TASK_STEP").format(
         agent=s["agent"], purpose=purpose or (agents.get(s["agent"]) or {}).get("purpose", "a temporary agent written for this step"), goal=t["goal"], n=len(all_steps), i=s["idx"], step=s["title"],
         done="\n".join(f"- {d}" for d in t["done"]),
-        before="\n\n".join(f"### Step {x['idx']}: {x['title']} ({x['agent']})\n{x['output']}" for x in prev) or "(this step waits for none)",
+        before=handoff(t, s, prev) or "(this step waits for none)",
         last="yes" if not any(s["idx"] in x["after"] for x in all_steps) else "no")
     if ins:                                              # TRL-07: a role's rules travel with every step it does
         q = P.Prompt(p + f"\n\n## Your standing instructions ({s['agent']}'s card)\n" + "\n".join(f"- {x}" for x in ins))
@@ -364,11 +401,14 @@ def run_hermes(c, t, s, prompt, card):
     import runtime as RTM
     import swarm_client as SW
     prof = SW.PROFILE.get(s["agent"])
+    if len(str(prompt).encode()) > ARG_BYTES:            # FND-104: refused with its size, not lost to "argument list too long"
+        raise RuntimeError(f"the step's prompt is {len(str(prompt).encode()):,} bytes; one command-line argument holds "
+                           f"{ARG_BYTES:,}: its brief or the standing instructions are too long")
     p = subprocess.run(["docker", "exec", "-u", "hermes", *RTM.env_args(), M.HERMES, "timeout", str(STEP_TIMEOUT), "hermes",
                         *(["-p", prof] if prof else []), "-z", prompt], capture_output=True, text=True, timeout=STEP_TIMEOUT + 60)
     out = p.stdout.strip()
     if p.returncode or not out:
-        raise RuntimeError(f"Hermes ({prof or 'main'}) ended with exit {p.returncode}: {(p.stderr or out).strip()[-600:]}")  # cap: preview
+        raise RuntimeError(f"Hermes ({prof or 'main'}) ended with exit {p.returncode}: {TC.tail((p.stderr or out).strip(), 600)}")  # cap: preview
     return out
 
 
@@ -378,7 +418,7 @@ def run_claude(c, t, s, prompt, card):
     tid = s["resume"].get("claude_task")
     if not tid:
         head, context = split_brief(str(prompt))
-        tid = CT.handle({"action": "claude_task", "question": head[:19000], "mode": "ask", "repo": t["spec"].get("repo") or "",  # cap: api (its question limit)
+        tid = CT.handle({"action": "claude_task", "question": TC.fit(head, 19000), "mode": "ask", "repo": t["spec"].get("repo") or "",  # cap: api (its question limit)
                          "context": context,
                          "source": f"{run_of(t['id'], s.get('occ') or 1)}:step:{s['idx']}"}, c)["id"]   # TSK-09: its run sits in the step's
         put(c, s["id"], resume={"claude_task": tid})
@@ -462,14 +502,14 @@ def run_check(c, t, s, prompt, card):
     if not ok and lp and rounds < lp["max"]:
         target = next((x for x in steps(c, t["id"], s.get("occ")) if x["idx"] == lp["to"]), None)
         if target:
-            tail = out[-6000:]  # cap: prompt (the end of the test run names what fails)
+            tail = TC.tail(out, 6000)  # cap: prompt (the end of the test run names what fails)
             put(c, target["id"], status="pending", attempts=0, error=None, waiting_for=None, resume={"feedback": tail, "round": rounds + 1})
             put(c, s["id"], status="pending", attempts=0, waiting_for=None, resume={"rounds": rounds + 1},
                 after=json.dumps(sorted(set(s["after"]) | {lp["to"]})))
             M.event("task", "", f"Task #{t['id']}: the checks fail ({counts}); step {lp['to']} fixes it, round {rounds + 1} of {lp['max']}", title="Tasks")
             raise Reopened(f"sent back to step {lp['to']} (round {rounds + 1} of {lp['max']}): {counts}")
     verdict = "All checks pass" if ok else f"The checks still fail after {rounds} fix round{'s' if rounds != 1 else ''}"
-    return f"{verdict}: {counts}.\n\n```\n{out[-4000:]}\n```"  # cap: preview (the step's output; the run's log keeps all of it)
+    return f"{verdict}: {counts}.\n\n```\n{TC.tail(out, 4000)}\n```"  # cap: preview (the step's output; the run's log keeps all of it)
 
 
 def spent(c, t, s):
@@ -540,7 +580,7 @@ def desk_run(slug, mode, date, findings=None):
     lines = p.stdout.strip().splitlines()
     last = lines[-1] if lines else ""
     if p.returncode or not last or " failed: " in last or " NOT filed: " in last:
-        raise RuntimeError(f"Topic Desk ({mode}): {last or p.stderr.strip()[-400:] or 'no output'}")  # cap: preview
+        raise RuntimeError(f"Topic Desk ({mode}): {last or TC.tail(p.stderr.strip(), 400) or 'no output'}")  # cap: preview
     return last
 
 
@@ -607,9 +647,9 @@ def wiki_context(w):
     import mission_extras as X
     if w.get("page"):
         _, body = M.split_front((M.VAULT / w["root"] / f"{w['page']}.md").read_text(errors="replace"))
-        return f"The page “{w['page_title']}” of the wiki “{w['title']}” as it stands now:\n\n{body[:8000]}"  # cap: prompt
+        return f"The page “{w['page_title']}” of the wiki “{w['title']}” as it stands now:\n\n{TC.cut(body, 8000)}"  # cap: prompt
     idx = "\n".join(f"- {p['title']}: {p['summary']}" for p in X.wiki_pages(w["root"]))
-    return f"The wiki “{w['title']}” as it stands now (every page and its line):\n{idx[:8000]}"  # cap: prompt
+    return f"The wiki “{w['title']}” as it stands now (every page and its line):\n{TC.cut(idx, 8000)}"  # cap: prompt
 
 
 def run_wiki(c, t, s, prompt, card):
@@ -627,7 +667,7 @@ def run_wiki(c, t, s, prompt, card):
     src = str(f.relative_to(M.VAULT))
     names = [p["path"] for p in X.mentioned(X.wiki_pages(w["root"]), text)]
     order = ([w["page"]] if w.get("page") else []) + [n for n in names if n != w.get("page")]
-    groups = [order[i:i + WIKI_GROUP] for i in range(0, len(order), WIKI_GROUP)][:WIKI_GROUPS] or [[]]
+    groups = [order[i:i + WIKI_GROUP] for i in range(0, len(order), WIKI_GROUP)][:WIKI_GROUPS] or [[]]  # cap: list (the step's answer names the pages left)
     key = os.environ["VK_" + card["key"][3:].upper().replace("-", "_")]    # the writer's own key (its card), as a python step's
     written = []
     for g in groups:
@@ -691,6 +731,10 @@ def run_opencode(c, t, s, prompt, card, run=subprocess.run):
     model = s.get("model") or card.get("model") or "gpt-sub"
     with tempfile.TemporaryDirectory(prefix="opencode-step-") as d:
         (Path(d) / "task.md").write_text(prompt)
+        (Path(d) / "results").mkdir()                     # MEM-15: the earlier results whole, where its prompt points
+        for x in steps(c, t["id"], s.get("occ") or 1):
+            if x["idx"] in s["after"] and x["output"]:
+                (Path(d) / "results" / result_file(t, x).name).write_text(x["output"])
         (Path(d) / "oc.json").write_text(OPENCODE_CFG.read_text())
         cmd = (["docker", "run", "--rm", "--network", "aistack_backend", "--memory", "1g", "--name", f"step-{t['id']}-{s.get('occ') or 1}-{s['idx']}",
                 "-e", "LITELLM_API_KEY", "-e", "HOME=/root", "-e", "OPENCODE_CONFIG=/step/oc.json", "-v", f"{d}:/step:ro"]
@@ -719,7 +763,7 @@ def run_opencode(c, t, s, prompt, card, run=subprocess.run):
             texts.append(part["text"])
     out = "\n\n".join(texts).strip()
     if p.returncode or not out:
-        raise RuntimeError(f"OpenCode ended with exit {p.returncode}: {(p.stderr or '').strip()[-600:] or 'no answer'}")  # cap: preview
+        raise RuntimeError(f"OpenCode ended with exit {p.returncode}: {TC.tail((p.stderr or '').strip(), 600) or 'no answer'}")  # cap: preview
     return out
 
 
@@ -819,7 +863,7 @@ def _run_step(c, t, s, all_steps, agents):
         M.event("task", "", f"Task #{t['id']}: step {s['idx']} ({s['agent']}) is {why}", title="Tasks")
         return
     put(c, s["id"], status="done", output=out, ended=now(), waiting_for=None, error=None)
-    RTM.end(run, s["agent"], "done", out[:2000], time.time() - t0)  # cap: preview (the step keeps all of it)
+    RTM.end(run, s["agent"], "done", TC.cut(out, 2000), time.time() - t0)  # cap: preview (the step keeps all of it)
 
 
 # ---------- the Orchestrator's checkpoint between waves (TRL-08) ----------
@@ -858,7 +902,7 @@ def checkpoint(c, t, ss, ask=None):
     agents = cards()
     plan = "\n".join(f"{s['idx']}. [{'running again' if again(s) else s['status']}] {s['title']} — {s['agent']}"
                      + (f" (after {', '.join(map(str, s['after']))})" if s["after"] else "") for s in ss)
-    found = "\n\n".join(f"### Step {s['idx']} ({s['agent']})\n" + TC.cut(s["output"] or "", SEEN, "shown here only; the steps after it get the whole result")
+    found = "\n\n".join(f"### Step {s['idx']} ({s['agent']})\n" + TC.cut(s["output"] or "", SEEN, "shown here only; the steps after it get the whole result")  # cap: prompt
                           for s in ss if s["status"] == "done")  # cap: prompt (each step's start, marked; the task page has all)
     p = P.text("shared", "TASK_CHECKPOINT").format(goal=t["goal"], done="\n".join(f"- {d}" for d in t["done"]), plan=plan, found=found,
                                                   agents="\n".join(f"- {k}: {v}" for k, v in TK.cards().items() if runs_steps(agents.get(k) or {})))
@@ -886,7 +930,7 @@ def checkpoint(c, t, ss, ask=None):
                 changes.append(f"rewrote step {n}: {text}")
         idxs = {s["idx"] for s in ss}
         nxt = max(idxs) + 1
-        for a in (d.get("add") or [])[:ADDS]:
+        for a in TC.first(d.get("add") or [], ADDS, "steps a checkpoint added"):  # cap: untrusted (its prompt names the limit)
             if nxt > MAX_STEPS:
                 break
             try:
@@ -980,7 +1024,7 @@ def finish(c, t, ss, ok):
         result = f"step {bad['idx']} ({bad['agent']}) failed: {bad['error']}"
         TK.put(c, t["id"], status="scheduled" if recurring else "failed", error=result)   # a failed run; the schedule goes on
     c.execute("update task_occ set status=?, ended=?, result=?, verdict=?, judged=? where task=? and occ=?",   # a quiet run is not judged
-              ("done" if ok else "failed", now(), path or result[:500], "quiet" if quiet else None, now() if quiet else None, t["id"], occ))  # cap: preview
+              ("done" if ok else "failed", now(), path or TC.cut(result, 500), "quiet" if quiet else None, now() if quiet else None, t["id"], occ))  # cap: preview
     c.commit()
     try:                                                  # TSK-23: late tool events, the answer and its citations
         import provenance as PV
@@ -988,7 +1032,7 @@ def finish(c, t, ss, ok):
     except Exception as e:
         M.log(f"conductor: task {t['id']} run {occ}: provenance not recorded: {type(e).__name__}: {e}")
     mapped(c, t["id"], occ)
-    RTM.end(run_of(t["id"], occ), "conductor", "done" if ok else "failed", result[:2000], None)  # cap: preview (the vault file keeps all of it)
+    RTM.end(run_of(t["id"], occ), "conductor", "done" if ok else "failed", TC.cut(result, 2000), None)  # cap: preview (the vault file keeps all of it)
     EV.task_done(c, t, "done" if ok else "failed")      # TSK-10: a finished task is an event
     run = f" run {occ}" if recurring else ""
     N.send(f"Task #{t['id']}{run} {'found nothing new' if quiet else 'is done' if ok else 'failed'}: {t['title']}"
@@ -1035,7 +1079,7 @@ def tick(c, start_thread=None):
         TK.put(c, r["task"], status="running")
         c.execute("update task_events set occ=? where id=?", (occ_of(c, r["task"]), e["id"]))
         c.commit()
-        M.event("task", "", f"Task #{r['task']} run {occ_of(c, r['task'])} started by an event: {ev.get('trigger', '')}: {ev.get('summary', '')}"[:300],  # cap: preview
+        M.event("task", "", TC.cut(f"Task #{r['task']} run {occ_of(c, r['task'])} started by an event: {ev.get('trigger', '')}: {ev.get('summary', '')}", 300),  # cap: preview
                 title="Tasks")
     for r in c.execute("select id from tasks where door='plan' and status='scheduled'").fetchall():   # TSK-22: on its schedule
         t = TK.row(c, r["id"])

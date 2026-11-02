@@ -17,7 +17,7 @@ def pdf_text(data: bytes) -> str:
     from pypdf import PdfReader
     reader = PdfReader(io.BytesIO(data))
     pages = []
-    for i, page in enumerate(reader.pages[:MAX_PAGES], 1):
+    for i, page in enumerate(reader.pages[:MAX_PAGES], 1):  # cap: list (the text ends by saying how many pages were left)
         try:
             t = (page.extract_text() or "").strip()
         except Exception:

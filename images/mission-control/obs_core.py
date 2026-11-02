@@ -201,7 +201,7 @@ def judge(name, kind, runs, now=None, interval=None, enabled=True):
         issues.append({"kind": "failed", "text": "the last run failed" + (f": {runs[0]['error']}" if runs[0].get("error") else "")})
     if enabled and interval and runs and now - runs[0].get("start", now) > 2.5 * interval + 3600:
         issues.append({"kind": "overdue", "text": "did not run when scheduled"})
-    hist = [r for r in runs[1:21] if r.get("state") == "ok"]
+    hist = [r for r in runs[1:21] if r.get("state") == "ok"]  # cap: parse (the last 20 runs give the usual duration)
     last = runs[0] if runs else None
     if last and last.get("state") == "ok" and len(hist) >= 3:
         med_s = statistics.median([r.get("seconds") or 0 for r in hist])
@@ -305,8 +305,9 @@ def ledger(events, manifest=None):
     allowed = sorted(set((manifest or {}).get("tools") or []))
     return {"allowed_tools": allowed, "grants": (manifest or {}).get("grants", []), "used_tools": used,
             "skipped_tools": [t for t in allowed if base(t) not in used], "files": files_of(events),
-            "urls": list(dict.fromkeys(urls))[:200], "searches": list(dict.fromkeys(s for s in searches if s))[:100],  # cap: list
-            "mails_read": len(set(mails)), "phone_screens": screens, "partial": partial[:50], "refused": refused[:50]}  # cap: list
+            "urls": list(dict.fromkeys(urls))[:200], "searches": list(dict.fromkeys(s for s in searches if s))[:100],  # cap: list (the totals below count all)
+            "urls_total": len(set(urls)), "searches_total": len({s for s in searches if s}), "partial_total": len(partial), "refused_total": len(refused),
+            "mails_read": len(set(mails)), "phone_screens": screens, "partial": partial[:50], "refused": refused[:50]}  # cap: list (the totals above count all)
 
 
 def _args_of(e):

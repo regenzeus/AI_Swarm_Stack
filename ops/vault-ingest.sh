@@ -32,7 +32,7 @@ for f in "$INBOX"/*; do
   rel="raw/articles/$(basename "$dest")"
   log "ingest start: $rel"
   prompt=$(python3 "$(dirname "$0")/prompts.py" render curator INGEST time="$(date "+%Y-%m-%d %H:%M")" rel="$rel")   # MEM-11: prompts/curator.md
-  out=$(docker exec -u hermes -w /vault aistack-hermes-1 hermes -p curator -z "$prompt" 2>&1 | tail -40)
+  out=$(docker exec -u hermes -w /vault aistack-hermes-1 hermes -p curator -z "$prompt" 2>&1)
   pages=$(echo "$out" | grep -oE 'PAGES:.*' | tail -1)
   # Guard: every wiki page must end in .md (a model once named the qmd page "qmd", reading "md" as the extension)
   find "$V/wiki" -type f ! -name "*.md" ! -name ".gitkeep" | while read -r bad; do mv "$bad" "$bad.md"; log "renamed to .md: ${bad#$V/}"; done

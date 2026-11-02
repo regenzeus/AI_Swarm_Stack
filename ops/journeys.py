@@ -46,7 +46,7 @@ PHONE = 375
 # the routes a sweep starts from; it follows every link it finds (two screens of each kind)
 SEEDS = ["#/", "#/tasks", "#/missions", "#/new", "#/chat", "#/system", "#/wiki", "#/build", "#/guide", "#/share", "#/phone",
          "#/house", "#/telemetry", *[f"#/swarm?tab={t}" for t in ("activity", "agents", "improve")], "#/swarm/agent/scout",
-         "#/crew/doctor?tab=team", "#/swarm?tab=activity&agents=mission,scout&h=168", "#/swarm?tab=chat&ctx=calls:mission+scout"]
+         "#/crew/doctor?tab=team", "#/crew/memory", "#/swarm?tab=activity&agents=mission,scout&h=168", "#/swarm?tab=chat&ctx=calls:mission+scout"]
 MAKE_VARS = {"REPO": "example", "NAME": "example", "TEXT": "example", "MISSION": "example", "TOPIC": "example", "FILE": "example"}
 PATHS = re.compile(r"(?<![\w./-])((?:ops|images|eval|nas|compose|config|scripts)/[\w./-]+\.(?:py|sh|mjs|js|yaml|yml|json))\b")
 
@@ -99,7 +99,7 @@ def recorded_task(db=LIVE_DB):
     c = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
     c.row_factory = sqlite3.Row
     try:
-        for t in c.execute("select * from tasks where door='plan' and status='done' order by id desc limit 20"):
+        for t in c.execute("select * from tasks where door='plan' and status='done' order by id desc limit 20"):  # cap: parse (the newest replayable task is among them)
             spec, rhythm = json.loads(t["spec"] or "{}"), json.loads(t["rhythm"] or "{}")
             if rhythm.get("type") != "once" or not spec.get("plan") or not (spec.get("judgement") or {}).get("points"):
                 continue
@@ -187,7 +187,7 @@ def check_task(rec=None):
                 fails.append(f"the steps that ran were {ran}, not each of the {len(plan)} once")
             for i, s in enumerate(plan, 1):
                 for a in s.get("after") or []:
-                    if outputs[a][:200] not in prompts.get(i, ""):  # cap: preview (enough to know the result is there)
+                    if outputs[a][:200] not in prompts.get(i, ""):  # cap: parse (its start is enough to know the result is there)
                         fails.append(f"step {i} did not get the result of step {a}, which it waits for")
             f = d / (t["spec"].get("result") or "-")
             leaves = [i for i in range(1, len(plan) + 1) if not any(i in (s.get("after") or []) for s in plan)]
@@ -321,7 +321,7 @@ def seeds(db=LIVE_DB):
     out = list(SEEDS)
     try:
         c = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
-        for (tid,) in c.execute("select id from tasks where door='plan' order by id desc limit 2"):
+        for (tid,) in c.execute("select id from tasks where door='plan' order by id desc limit 2"):  # cap: parse (two tasks' pages are enough to try)
             out += [f"#/task/{tid}", f"#/taskmap?t={tid}"]
         c.close()
     except sqlite3.Error:

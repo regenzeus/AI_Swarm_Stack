@@ -58,8 +58,8 @@ conversation with that text is removed from long-term memory.
 
 ## All your memory in one view
 
-The stack keeps ten kinds of memory, and **Stack → Memory** shows them all in one list: what each holds, what it is for
-(*what happened*, *what is true*, *how to act*, *shared work*, *search*), who writes and who reads it, how big it is, how
+The stack keeps fourteen kinds of memory, and **Stack → Memory** shows them all in one list: what each holds, what it is for
+(*what a task hands on*, *what happened*, *what is true*, *how to act*, *shared work*, *search*), who writes and who reads it, how big it is, how
 much it grew this week, how full it is against its limit, who keeps it tidy and when that last ran, and what is wrong with
 it. It refreshes every hour.
 
@@ -67,41 +67,56 @@ it. It refreshes every hour.
 |---|---|---|
 | Vault notes | your sources, never rewritten | (nothing to tidy) |
 | Vault wiki | knowledge compiled from your notes | the wiki curator |
-| Agent wikis | one per mission or topic | the Librarian |
-| Agent journals | each agent's own runs (its Memory tab) | the Librarian |
+| Agent wikis | one per mission or topic | the Memory Keeper |
+| Agent journals | each agent's own runs (its Memory tab) | the Memory Keeper |
 | Old mission notes | NOTES.md files not moved yet (a mission's working state is now in its journal) | moved at its next run |
-| Long-term memory | facts about you; what agents found stays in their wikis and journals | the memory gatekeeper and the Librarian |
+| Long-term memory | facts about you; what agents found stays in their wikis and journals | the memory gatekeeper and the Memory Keeper |
 | The Ledger | ideas, findings, your decisions | the Checker |
 | Skills | how Hermes does things | the skill curator |
 | Run records | every run's steps | a run's full steps go after 90 days; its summary stays |
-| Search index | the search over all of it | the Librarian |
+| Search index | the search over all of it | the Memory Keeper |
+| Task hand-offs | each task step's result, which the steps after it build on | kept with its task |
+| Hermes' own memory | Hermes' notes and your profile, in every prompt | the memory gatekeeper |
+| Code graphs | each repository's files, symbols and calls, for the builder | rebuilt at each commit |
+| Chats | your chats with Hermes | you; what matters lives on in long-term memory |
 
 An agent's **Memory** tab is its own diary: what it did in its runs, what it found, what failed. A wiki is shared knowledge
 about the world, with sources. A problem the list shows (a full store, an index full of chunks of files that are gone)
 says who fixes it. A memory that stays over its limit for 8 days becomes an alert on its curator in Agent health.
 
-## The Librarian
+## The Memory Keeper
 
-Once a week (Wednesdays) the **Librarian** tidies the memory: it folds old journal entries into standing notes, lists
-long-term facts that look duplicate or stale for you to decide on, and tidies every agent wiki and the search index:
+Every night one agent, the **Memory Keeper**, looks after all of it. It works by rules that keep your memory yours:
+nothing is deleted, every change can be undone, the world is corrected only from sources, and your own facts are
+never decided for you.
 
-- **Lint**: links to pages that don't exist, pages no other page links to, a wiki over 200 pages, the same subject on two
-  pages, contradictions not yet settled.
-- **Stale**: a page no result has confirmed for 90 days is marked *stale*; the next result that confirms it clears the mark.
-- **Duplicates**: two pages about the very same thing become one page with every fact and source of both. The other page
-  stays as a short note pointing to it, so no link breaks. A merge that would lose or add a single link is refused.
-- **Contradictions**: two claims that can't both be true for the same date get a *contradiction* callout on the page, each
-  with its source. The Librarian never picks a winner; a later result settles it.
-- **Hub pages**: a subject two or more wikis have a page on gets a hub page in the vault wiki (under *hubs*) that links
-  each wiki's page. That is the top layer joining the wikis, instead of one wiki holding all the others.
-- **Search index**: it drops the chunks of files that are gone, so search stops finding them.
+- **Long-term memory.** It retires a fact you already have (the older one stays), test or benchmark noise, and facts
+  about the agents' own runs (their journals keep those). It puts a fact into English and gives a passing state the
+  date it held. It does these itself only while its **trial** passes: 32 planted facts, true ones among them, which it
+  must sort without touching a true one, three times on its current prompt. Otherwise it only suggests. When two of
+  your facts disagree, it asks you which holds now.
+- **Contradictions on a wiki** become a *dispute* (Agents → Ideas shows them) owned by the wiki's writer. The writer's
+  next update is told of it. After 14 days a research task looks for current sources, and the writer folds them in: the
+  claim that no longer holds moves to *Superseded* with its date. If research cannot settle it, you decide.
+- **Stale pages** (not confirmed for 90 days) that agents still read get a research task that checks them.
+- **The same subject in two wikis** (the hub pages): claims that disagree are marked on both pages with both sources.
+- On **Wednesdays** it also does the weekly tidy that was the Librarian's:
+  - **Lint**: links to pages that don't exist, pages no other page links to, a wiki over 200 pages, the same subject on
+    two pages.
+  - **Duplicates**: two pages about the very same thing become one with every fact and source of both. The other stays
+    as a short note pointing to it. A merge that would lose or add a single link is refused.
+  - **Contradictions**: two claims that can't both be true for the same date get a *contradiction* callout, each with
+    its source.
+  - **Hub pages**: a subject two or more wikis have a page on gets a hub page in the vault wiki (under *hubs*).
+- **Every night** it folds old journal entries into standing notes and cleans the search index when chunks of files
+  that are gone pile up.
 
-It adds no facts of its own and forgets nothing: each pass is one vault commit you can undo, and forgetting stays yours.
-**Stack → Memory** shows its last pass, wiki by wiki, with the commit.
+Its page under **Agents** (*Memory Keeper*) shows what it changed, each change with **Undo**, whether its trial lets it
+change anything itself, and the open disputes. Each week's changes are one line in the activity feed.
 
 ```try
-label: See the Librarian's last pass
-open: "#/system"
-note: Scroll to Memory, then The Librarian: each wiki's checks, what it merged or marked, and the vault commit.
+label: See what the Memory Keeper changed
+open: "#/crew/memory"
+note: Each change shows the fact, what was done and why, with Undo; above them, whether its trial lets it change anything itself.
 ```
 

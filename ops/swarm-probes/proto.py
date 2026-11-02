@@ -89,7 +89,7 @@ async def find(req):
     q = req.query_params.get("q", "")
     kind = req.query_params.get("kind")
     rows = db().execute("select a.id, a.kind, a.key, a.title, a.state, a.score from artifacts_fts f join artifacts a on a.id=f.rowid "
-                        "where artifacts_fts match ? " + ("and a.kind=? " if kind else "") + "order by bm25(artifacts_fts) limit 20",
+                        "where artifacts_fts match ? " + ("and a.kind=? " if kind else "") + "order by bm25(artifacts_fts) limit 20",  # cap: list (a phase 0 probe)
                         (q, kind) if kind else (q,)).fetchall()
     sim = []
     if kind:
@@ -103,15 +103,15 @@ async def find(req):
 async def get(req):
     i = int(req.path_params["id"])
     a = dict(db().execute("select * from artifacts where id=?", (i,)).fetchone())
-    a["events"] = [dict(r) for r in db().execute("select * from events where artifact_id=? order by seq desc limit 50", (i,))]
-    a["thread"] = [dict(r) for r in db().execute("select * from messages where context=? order by seq desc limit 50", (f"artifact:{i}",))]
+    a["events"] = [dict(r) for r in db().execute("select * from events where artifact_id=? order by seq desc limit 50", (i,))]  # cap: list (a phase 0 probe)
+    a["thread"] = [dict(r) for r in db().execute("select * from messages where context=? order by seq desc limit 50", (f"artifact:{i}",))]  # cap: list (a phase 0 probe)
     return JSONResponse(a)
 
 
 async def inbox(req):
     agent = req.path_params["agent"]
     rows = db().execute("select m.* from messages m where m.recipients like ? and not exists (select 1 from receipts r where r.mid=m.mid "
-                        "and r.agent=?) order by m.seq desc limit 50", (f'%"{agent}"%', agent)).fetchall()
+                        "and r.agent=?) order by m.seq desc limit 50", (f'%"{agent}"%', agent)).fetchall()  # cap: list (a phase 0 probe)
     return JSONResponse({"unread": [dict(r) for r in rows]})
 
 

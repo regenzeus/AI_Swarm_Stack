@@ -22,6 +22,7 @@ import subprocess
 import time
 from pathlib import Path
 from textcap import cut, tail                    # visible caps and input limits (AGENTS.md, truncation)
+import textcap as TC
 import prompts as P                               # MEM-11: the agent prompts live in prompts/<owner>.md
 
 C = M = None                                   # ops/crew.py and ops/missions.py (set by crew.run)
@@ -184,14 +185,14 @@ def mission_run(slug):
 def journal(since, until, unit="missions.service", n=40):
     out = C.sh("journalctl", "--user", "-u", unit, "--since", f"@{int(since)}", "--until", f"@{int(until)}", "-o", "short-iso",
                "--no-pager", "-n", "2000", timeout=30)
-    return squash([ln[:400] for ln in out.splitlines() if ERRORISH.search(ln)], n)  # cap: prompt
+    return squash([cut(ln, 400) for ln in out.splitlines() if ERRORISH.search(ln)], n)  # cap: prompt
 
 
 def docker_logs(container, since, until, n=40):
     p = subprocess.run(["docker", "logs", "--since", str(int(since)), "--until", str(int(until)), "--tail", "3000", container],
                        capture_output=True, text=True, timeout=60)
     import observe as O
-    return squash([ln[:400] + (" (the deploy smoke test: expected)" if O.SMOKE_ERR.search(ln) else "")  # cap: prompt
+    return squash([cut(ln, 400) + (" (the deploy smoke test: expected)" if O.SMOKE_ERR.search(ln) else "")  # cap: prompt
                    for ln in (p.stdout + p.stderr).splitlines() if ERRORISH.search(ln)], n)
 
 
@@ -210,7 +211,7 @@ def gateway_errors(since, until, n=30):
     try:
         rows = json.loads(p.stdout.strip() or "[]")
     except ValueError:
-        return [f"(spend logs unreadable: {p.stderr.strip()[:200]})"]  # cap: prompt
+        return [f"(spend logs unreadable: {TC.cut(p.stderr.strip(), 200)})"]  # cap: prompt
     out = []
     for r in rows:
         err = re.sub(r"\s+", " ", r.get("error") or "")
@@ -236,7 +237,7 @@ def evidence(i):
                 if tl.get("problems"):
                     parts.append("Problems the detector found: " + json.dumps(tl["problems"], ensure_ascii=False))
                 if tl.get("warnings"):
-                    parts.append("Warnings: " + json.dumps(tl["warnings"], ensure_ascii=False)[:1500])  # cap: prompt
+                    parts.append("Warnings: " + TC.cut(json.dumps(tl["warnings"], ensure_ascii=False), 1500))  # cap: prompt
                 parts.append("Timeline (t = seconds into the run):\n" + event_lines(tl.get("events") or []))
                 since, until = tl.get("start"), tl.get("end")
                 i = {**i, "run": i.get("run") or f"mission-run:{r['id']}"}
@@ -267,11 +268,11 @@ def evidence(i):
             parts.append("docker logs aistack-litellm-1 (error-like lines in the window):\n" + ("\n".join(docker_logs("aistack-litellm-1", s, u)) or "(none)"))
             parts.append("Gateway calls that did not succeed (LiteLLM spend logs):\n" + ("\n".join(gateway_errors(s, u)) or "(none)"))
     except Exception as e:                       # evidence is best effort: say what could not be read
-        parts.append(f"(evidence incomplete: {type(e).__name__}: {str(e)[:200]})")  # cap: prompt
+        parts.append(f"(evidence incomplete: {type(e).__name__}: {str(e)})")  # cap: prompt
     det = DETECTORS.get(i["issue"])
     head = (f"## {i['id']} · {i['name']} · {i['issue']}\nBoard text ({i.get('severity', 'note')}): {i['text']}\nSource: {i['kind']}"
             + (f" (run {i['run']})" if i.get("run") else "") + (f"\nRaised by: {det}" if det else ""))
-    return redact(head + "\n\n" + "\n\n".join(parts))[:PER_ISSUE]
+    return TC.cut(redact(head + "\n\n" + "\n\n".join(parts)), PER_ISSUE)  # cap: prompt
 
 
 def window_evidence(minutes, budget=PER_ISSUE):
@@ -288,7 +289,7 @@ def window_evidence(minutes, budget=PER_ISSUE):
         try:
             parts.append(f"{title}, error-like lines:\n" + ("\n".join(fn()) or "(none)"))
         except Exception as e:
-            parts.append(f"{title}: (unreadable: {type(e).__name__}: {str(e)[:150]})")  # cap: prompt
+            parts.append(f"{title}: (unreadable: {type(e).__name__}: {str(e)})")  # cap: prompt
     return redact("\n\n".join(parts))[:budget]
 
 
@@ -335,7 +336,7 @@ def ask(issues, ctx):
             return None, "none", "", []
         q = QUESTION.format(issues="\n".join(f"- {i['id']} [{i.get('severity', 'note')}]: {i['name']} · {i['issue']}: {i['text']}" for i in issues))
         P.record(q)                                  # MEM-11: the run records the prompt's version
-        tid = CT.handle({"question": q[:20000], "mode": "ask" if len(issues) <= 4 else "analyse", "repo": "ai-stack",  # cap: prompt
+        tid = CT.handle({"question": TC.fit(q, 20000), "mode": "ask" if len(issues) <= 4 else "analyse", "repo": "ai-stack",  # cap: prompt
                          "context": ctx, "source": "crew:doctor"}, c)["id"]
         C.save("doctor", pending={"task": tid, "issues": issues})
     else:
@@ -380,7 +381,7 @@ def outcome(issues, d):
                       "signal": f"health doctor ({kind}): " + ", ".join(f"{by[x]['name'][:60]} · {by[x]['issue']}" for x in ids),  # cap: id
                       "description": desc})
         for x in ids:
-            titled[x] = str(p.get("title", ""))[:100]  # cap: untrusted
+            titled[x] = TC.cut(str(p.get("title", "")), 100)  # cap: untrusted
     findings = []
     for i in issues:
         x = diag.get(i["id"])
@@ -392,7 +393,7 @@ def outcome(issues, d):
         fl = next((FILELINE.search(v) for v in ev if FILELINE.search(v)), None)
         conf = x.get("confidence") if x.get("confidence") in ("high", "medium", "low") else "low"
         findings.append({"kind": cls, "file": fl[1] if fl else None, "line": int(fl[2]) if fl else None,
-                         "issue": f"{i['name'][:80]} · {i['issue']}: {str(x.get('cause', ''))[:400]} Fix: {str(x.get('fix', ''))[:300]} ({conf} confidence)",  # cap: untrusted
+                         "issue": f"{TC.cut(i['name'], 80)} · {i['issue']}: {TC.cut(str(x.get('cause', '')), 400)} Fix: {TC.cut(str(x.get('fix', '')), 300)} ({conf} confidence)",  # cap: untrusted
                          "key": i["key"], "name": i["name"], "issue_kind": i["issue"], "class": cls, "cause": cut(x.get("cause", ""), 4000),  # cap: untrusted
                          "evidence": ev, "fix": cut(x.get("fix", ""), 4000), "confidence": conf, "proposal": titled.get(i["id"]),  # cap: untrusted
                          "acknowledge": cls in ("expected", "noise")})

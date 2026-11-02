@@ -11,5 +11,6 @@ RUN apt-get update -qq && apt-get install -y -qq --no-install-recommends iptable
  && useradd -r -u 10008 -m browser && chmod -R a+rX /ms-playwright
 COPY entrypoint.sh /entrypoint.sh
 COPY guard.py /app/guard.py
+COPY textcap.py /app/textcap.py
 EXPOSE 8000
 ENTRYPOINT ["sh", "/entrypoint.sh"]

@@ -40,15 +40,15 @@ def test_no_agent_prompt_is_left_in_ops_or_a_configure_script():
 
 
 def test_every_prompt_loads_from_its_file_with_its_version_and_keeps_it_through_format():
-    import crew
     import mission_extras as X
-    p = crew.MEMORY_PROMPT
-    assert isinstance(p, P.Prompt) and p.ref == f"memory/FACTS@{P.sha(P.sections('memory')['FACTS'])}"
-    f = p.format(facts="a | world | b")
-    assert f.ref == p.ref and f.fills == {"facts": "a | world | b"} and "a | world | b" in f
+    import keeper
+    p = keeper.KEEPER
+    assert isinstance(p, P.Prompt) and p.ref == f"memory/KEEPER_FACTS@{P.sha(P.sections('memory')['KEEPER_FACTS'])}"
+    f = p.format(facts="a | world | b", today="2026-11-02")
+    assert f.ref == p.ref and f.fills == {"facts": "a | world | b", "today": "2026-11-02"} and "a | world | b" in f
     assert str(X.WIKI) == P.sections("mission")["WIKI"] and P.version("mission") == P.sha((ROOT / "prompts/mission.md").read_text())
     assert P.check() == [] and len(P.load_replays()) == sum(len(P.sections(o)) for o in P.owners()) >= 38
-    assert P.raw("maintainability", "REVIEW") and not P.raw("memory", "FACTS")
+    assert P.raw("maintainability", "REVIEW") and not P.raw("memory", "KEEPER_FACTS")
     missions = (ROOT / "ops/missions.py").read_text()
     assert missions.count("P.record(src)") == 2 and missions.count("P.case(src, ") == 2                # ask_text and hermes_z
     assert '"prompts": P.version(name)' in (ROOT / "ops/crew.py").read_text() and '"prompts": P.version("mission")' in missions

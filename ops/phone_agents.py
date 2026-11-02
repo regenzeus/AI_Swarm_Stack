@@ -86,7 +86,7 @@ def steps_of(facts, today=None):
     cutoff = (today - dt.timedelta(days=UNUSED_DAYS)).isoformat()
     unused = [x for x in facts.get("apps") or [] if not x["blocked"] and x["total"] >= MIN_APP and not x["package"].startswith(KEEP_APPS)
               and (not x["last_used"] or x["last_used"] < cutoff)]
-    for x in sorted(unused, key=lambda x: -x["total"])[:MAX_APPS]:
+    for x in sorted(unused, key=lambda x: -x["total"])[:MAX_APPS]:  # cap: list (the biggest unused apps, a few at a time)
         out.append({"id": item_id("uninstall", x["package"]), "kind": "uninstall", "size": x["total"],
                     "title": f"Uninstall {x['package']}",
                     "why": f"No recorded use {'since ' + x['last_used'] if x['last_used'] else 'in the last year'}; installed {x['installed'] or '?'}. Its data goes with it.",
@@ -109,8 +109,9 @@ def merge(old, new):
         else:
             out.append({**s, "status": "open", **({"result": prev["result"], "attempt": prev.get("attempt", 0)} if prev and prev.get("status") == "failed" else {})})
     out += [s for s in by.values() if s.get("status") in ("approved", "done", "dismissed")]   # history stays
+    # cap: rotate (the newest 20 done and 60 dismissed, so a dismissed one is not proposed again)
     keep = [s for s in out if s["status"] in ("open", "approved", "failed")] + [s for s in out if s["status"] == "done"][-20:] \
-        + [s for s in out if s["status"] == "dismissed"][-60:]  # cap: list
+        + [s for s in out if s["status"] == "dismissed"][-60:]  # cap: rotate (the newest 20 done and 60 dismissed, so a dismissed one is not proposed again)
     return keep
 
 

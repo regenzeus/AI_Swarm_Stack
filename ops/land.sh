@@ -28,16 +28,16 @@ APPROVAL=${2:?name the owner\'s approval (where and when he approved it)}
 git rev-parse -q --verify "refs/heads/$BRANCH" >/dev/null || { echo "no branch $BRANCH" >&2; exit 2; }
 TIP=$(git rev-parse "refs/heads/$BRANCH")
 
-echo "== checks on $BRANCH (${TIP:0:8})"
+echo "== checks on $BRANCH (${TIP:0:8})"   # cap: id (a short commit hash)
 LOG=$(mktemp)
 if ! git archive --format=tar "$TIP" | docker exec -i aistack-builder-1 sh -c \
     'rm -rf /tmp/land && mkdir -p /tmp/land && tar -xf - -C /tmp/land && cd /tmp/land && PATH=/opt/tools/bin:$PATH PYTEST=/opt/tools/bin/pytest bash ops/check.sh' >"$LOG" 2>&1 \
    || ! grep -q "ALL CHECKS PASSED" "$LOG"; then
-  grep -E "FAILED|failed|^E " "$LOG" | tail -15
+  grep -E "FAILED|failed|^E " "$LOG" | tail -15   # cap: list (the last 15 failure lines; the next line names the full log)
   echo "NOT LANDED: the checks failed (full log: $LOG)" >&2
   exit 1
 fi
-grep -E "passed in|ALL CHECKS" "$LOG" | tail -2
+grep -E "passed in|ALL CHECKS" "$LOG" | tail -2   # cap: list (the summary lines)
 
 export LAND_TIP=$TIP LAND_BRANCH=$BRANCH
 OUT=$(flock ~/.aistack-land.lock bash -c '
@@ -51,7 +51,7 @@ OUT=$(flock ~/.aistack-land.lock bash -c '
   DEPLOY_SOURCE=session sops exec-env secrets/secrets.enc.yaml "sops exec-env secrets/agent-keys.enc.yaml \"python3 ops/deploy.py $OLD $NEW\""
 ' 2>&1)
 rc=$?
-echo "$OUT" | grep -E "LANDED|passed, |FAIL|DEPLOY|RESTART_RUNNER|health" | tail -8
+echo "$OUT" | grep -E "LANDED|passed, |FAIL|DEPLOY|RESTART_RUNNER|health" | tail -8   # cap: list (the landing's summary lines; its log has all)
 read -r _ OLD NEW <<<"$(echo "$OUT" | grep '^LANDED' | tail -1)"
 [ -n "${NEW:-}" ] || { echo "NOT LANDED: merge or push failed" >&2; exit 1; }
 

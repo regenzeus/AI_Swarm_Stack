@@ -15,6 +15,7 @@ Shared folder /srv/ai/connections (/connections here, Mission Control writes gra
 status.json, log.jsonl, pending/, decisions/, batches/.
 """
 import asyncio, email, email.header, email.policy, imaplib, json, os, re, time, uuid
+import textcap as TC                              # visible caps (AGENTS.md, truncation)
 from pathlib import Path
 
 import uvicorn
@@ -76,7 +77,7 @@ def rt_emit(log_entry):
         kind = "result" if e.get("result") is not None else "stage" if e.get("decision") else "call"
         out.append({"run": _rt["run"], "kind": kind, "agent": "mail", "source": "mail", "ts": t,
                     "title": str(e.get("tool") or e.get("action") or e.get("op") or "action")[:120],  # cap: id
-                    "detail": json.dumps(e, ensure_ascii=False, default=str)[:20000],  # cap: store
+                    "detail": TC.cut(json.dumps(e, ensure_ascii=False, default=str), 20000),  # cap: store
                     "status": "failure" if str(e.get("result", "")).startswith(("refused", "error", "Refused")) else None})
         with open(d / f"mail-{time.strftime('%Y%m%d')}.jsonl", "a") as f:
             for x in out:
@@ -195,8 +196,8 @@ def do_search(query, folder, limit):
         total = len(uids)
         info = fetch_headers(m, uids[-max(1, min(int(limit), 100)):][::-1])
         rows = sorted(info.values(), key=lambda r: r["id"], reverse=True)
-        log(action="search", folder=folder, query=query[:200], found=total, shown=len(rows))  # cap: untrusted
-        lines = [f"- id {r['id']} · {r['date'][:25]} · {r['from'][:60]} · {r['subject'][:90]}"  # cap: prompt
+        log(action="search", folder=folder, query=TC.cut(query, 200), found=total, shown=len(rows))  # cap: untrusted
+        lines = [f"- id {r['id']} · {r['date']} · {TC.cut(r['from'], 60)} · {TC.cut(r['subject'], 90)}"  # cap: prompt
                  f"{' · unread' if r['unread'] else ''}{' · newsletter' if r['newsletter'] else ''} · {r['size_kb']} KB"
                  f"{' · PROTECTED (bank/security)' if protected(r) else ''}" for r in rows]
         return untrusted(f"{total} messages match in {folder}; newest {len(rows)}:\n" + "\n".join(lines))
@@ -227,14 +228,14 @@ def do_read(msgid):
                 text = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", re.sub(r"(?is)<(script|style).*?</\1>", "", part.get_content())))
         log(action="read", id=str(msgid), folder=key)
         head = f"From: {hdr(msg.get('From'))}\nTo: {hdr(msg.get('To'))}\nDate: {msg.get('Date')}\nSubject: {hdr(msg.get('Subject'))}\nFolder: {key}"
-        return untrusted(f"{head}\nAttachments: {', '.join(files) or 'none'}\n\n{text[:BODY_CAP]}")
+        return untrusted(f"{head}\nAttachments: {', '.join(files) or 'none'}\n\n{TC.cut(text, BODY_CAP, 'Gmail keeps the whole mail')}")  # cap: prompt
     finally:
         m.logout()
 
 
 def resolve(m, f, ids, where=("all", "spam")):
     out = []
-    for i in ids[:MAX_BATCH]:
+    for i in TC.first(ids, MAX_BATCH, "mail ids in one call"):  # cap: untrusted
         if not str(i).isdigit():
             continue
         key, uid = locate(m, f, i, where)
@@ -449,7 +450,7 @@ async def mail_read(id: str) -> str:
 async def mail_label(ids: list[str], label: str) -> str:
     if not granted("organize"):
         return refuse("organize")
-    return await asyncio.to_thread(do_organize, ids, "label", label[:60])  # cap: untrusted
+    return await asyncio.to_thread(do_organize, ids, "label", label[:60])  # cap: api (a Gmail label name; a marker would rename it)
 
 
 @mcp.tool(description="Archive messages (take them out of the inbox; nothing is deleted). Needs 'organize'. "

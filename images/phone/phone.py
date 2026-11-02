@@ -25,6 +25,7 @@ State for the app: /phone/state.json; pending approvals /phone/pending; decision
 the app (pair, connect) /phone/control.
 """
 import asyncio, io, json, os, re, subprocess, time, uuid, xml.etree.ElementTree as ET
+import textcap as TC                              # visible caps (AGENTS.md, truncation)
 from pathlib import Path
 
 import uvicorn
@@ -250,7 +251,7 @@ def rt_emit(log_entry):
         kind = "result" if e.get("result") is not None else "stage" if e.get("decision") else "call"
         out.append({"run": _rt["run"], "kind": kind, "agent": "ai-phone", "source": "ai-phone", "ts": t,
                     "title": str(e.get("tool") or e.get("action") or e.get("op") or "action")[:120],  # cap: id
-                    "detail": json.dumps(e, ensure_ascii=False, default=str)[:20000],  # cap: store
+                    "detail": TC.cut(json.dumps(e, ensure_ascii=False, default=str), 20000),  # cap: store
                     "status": "failure" if str(e.get("result", "")).startswith(("refused", "error", "Refused")) else None})
         with open(d / f"phone-{time.strftime('%Y%m%d')}.jsonl", "a") as f:
             for x in out:
@@ -569,7 +570,7 @@ async def control_loop():
                     pa = active_purchase()
                     if pa and pa["id"] == req.get("purchase") and (await guard("phone_shop_open", {}, "", acting=False)) is None:
                         adb("shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", pa["url"], pa["pkg"])
-                        log(tool="phone_shop_open", args={"url": pa["url"][:300], "app": pa["pkg"]}, result=f"opened for purchase {pa['id']} (approved by the owner)")  # cap: untrusted
+                        log(tool="phone_shop_open", args={"url": TC.cut(pa["url"], 300), "app": pa["pkg"]}, result=f"opened for purchase {pa['id']} (approved by the owner)")  # cap: untrusted
             for f in sorted(CLEANUP.glob("c-*.json")) if CLEANUP.exists() and not _cleaning else []:
                 cid = f.stem                               # one step at a time: Approve all hands over many at once
                 if CLEANUP_ID.match(cid) and not (CLEANUP / f"{cid}.result.json").exists():
@@ -679,7 +680,7 @@ def screenshot(mark=None):
     im.thumbnail((540, 1200))
     sid = uuid.uuid4().hex[:16]
     im.save(SHOTS / f"{sid}.jpg", quality=70)
-    for old in sorted(SHOTS.glob("*.jpg"), key=lambda p: p.stat().st_mtime)[:-300]:   # keep the last 300  # cap: store
+    for old in sorted(SHOTS.glob("*.jpg"), key=lambda p: p.stat().st_mtime)[:-300]:   # keep the last 300  # cap: rotate (the newest 300 screenshots)
         old.unlink(missing_ok=True)
     return sid
 
@@ -703,7 +704,7 @@ def read_screen(limit=80):
         x1, y1, x2, y2 = map(int, b)
         if x2 - x1 < 4 or y2 - y1 < 4:
             continue
-        label = (text or desc or n.get("hint") or n.get("resource-id", "").split("/")[-1] or n.get("class", "").split(".")[-1])[:80]  # cap: prompt
+        label = TC.cut(text or desc or n.get("hint") or n.get("resource-id", "").split("/")[-1] or n.get("class", "").split(".")[-1], 80)  # cap: prompt
         if secret:
             label = "(secret field: the owner types this himself)"   # never shown or typed by the model
         out.append({"label": label, "kind": "secret" if secret else "field" if edit else "button" if click else "text",
@@ -773,7 +774,7 @@ def covered(tool, fg):
         return "the owner's free mode"
     t = active_task()
     if t and tool in ("phone_tap", "phone_swipe", "phone_key", "phone_type", "phone_open", "phone_url") and (fg in t["apps"] or fg in HOMES):
-        return f"task “{t['task'][:60]}”"  # cap: preview
+        return f"task “{TC.cut(t['task'], 60)}”"  # cap: preview
     return ""
 
 
@@ -943,7 +944,7 @@ def _stat_lines(cmd):
 def files_report():
     """Biggest files, and per area how much is how old (by year), so old personal data can be cleared by age."""
     files = _stat_lines("find /sdcard/ -type f -size +20000k")          # /sdcard is a link: the slash makes find enter it
-    biggest = [{"path": p, "size": n, "date": time.strftime("%Y-%m-%d", time.localtime(t))} for n, t, p in sorted(files, reverse=True)[:40]]  # cap: list
+    biggest = [{"path": p, "size": n, "date": time.strftime("%Y-%m-%d", time.localtime(t))} for n, t, p in sorted(files, reverse=True)[:40]]  # cap: list (the 40 biggest; files_total counts all)
     areas = []
     for a in FILE_AREAS:
         entries = _stat_lines(f"find '/sdcard/{a}' -type f")
@@ -1091,7 +1092,7 @@ async def shop_look(req):
     out = RESEARCH / f"{req.get('id', 'x')}.json"
     try:
         RESEARCH.mkdir(exist_ok=True)
-        pkg, url, q = str(req.get("pkg", "")), str(req.get("url", "")), str(req.get("query", ""))[:80]  # cap: untrusted
+        pkg, url, q = str(req.get("pkg", "")), str(req.get("url", "")), str(req.get("query", ""))[:80]  # cap: api (a search typed on the phone; a marker would be searched for)
         if not re.fullmatch(r"[a-zA-Z0-9_.]+", pkg) or not url.startswith("https://") or not re.fullmatch(r"[a-f0-9]{16}", str(req.get("id", ""))):
             return
         args = {"query": q, "app": pkg}
@@ -1108,7 +1109,7 @@ async def shop_look(req):
         await asyncio.sleep(2)
         lines += [x for x in (e["label"] for e in await asyncio.to_thread(read_screen, 200) if e["kind"] in ("text", "button")) if x not in lines]
         shot = await asyncio.to_thread(screenshot)
-        out.write_text(json.dumps({"lines": lines[:150], "shot": shot, "app": pkg}, ensure_ascii=False))  # cap: prompt
+        out.write_text(json.dumps({"lines": TC.more(lines, 150, "more lines on this screen"), "shot": shot, "app": pkg}, ensure_ascii=False))  # cap: prompt
         log(tool="phone_shop_look", args=args, shot=shot, result=f"read {len(lines)} lines in {pkg}")
     except Exception as e:
         out.write_text(json.dumps({"error": f"{type(e).__name__}: {e}"}))
@@ -1172,7 +1173,7 @@ async def phone_url(url: str, why: str) -> str:
 async def phone_done(summary: str) -> str:
     t, S["task"] = active_task(), None                   # the task's permission ends with it
     if t:
-        summary = f"{summary}\n\n(Task “{t['task'][:80]}”: {t.get('actions', 0)} actions under your one OK.)"  # cap: preview
+        summary = f"{summary}\n\n(Task “{TC.cut(t['task'], 80)}”: {t.get('actions', 0)} actions under your one OK.)"  # cap: preview
     (DONE / f"{uuid.uuid4().hex[:16]}.json").write_text(json.dumps({"at": now(), "summary": summary[:3000]}, ensure_ascii=False))  # cap: id
     log(tool="phone_done", result=summary)
     return "Sent to the owner."
@@ -1315,13 +1316,13 @@ async def phone_files() -> str:
         return err
     r = await asyncio.to_thread(files_report)
     log(tool="phone_files", result=f"{len(r['biggest'])} big files, {len(r['areas'])} areas")
-    lines = ["Biggest files: " + "; ".join(f"{f['path'].replace('/sdcard/', '')} {gb(f['size'])} {f['date']}" for f in r["biggest"][:25])]
+    lines = ["Biggest files: " + "; ".join(TC.more([f"{f['path'].replace('/sdcard/', '')} {gb(f['size'])} {f['date']}" for f in r["biggest"]], 25, "more"))]  # cap: prompt
     for a in r["areas"]:
         lines.append(f"{a['area']}: {a['files']} files, {gb(a['size'])}, {a['oldest']} to {a['newest']}; by year: "
                      + ", ".join(f"{y} {v['files']} files {gb(v['size'])}" for y, v in a["by_year"].items()))
     for k, v in r["contents"].items():
         if v:
-            lines.append(f"In {k}: " + ", ".join(v[:25]))
+            lines.append(f"In {k}: " + ", ".join(TC.more(v, 25, "more")))  # cap: prompt
     return "\n".join(lines)
 
 

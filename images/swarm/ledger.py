@@ -12,7 +12,8 @@ import re
 import sqlite3
 import time
 from collections import Counter
-from textcap import bounded_json, cut                    # visible caps and input limits (AGENTS.md, truncation)
+from textcap import bounded_json, cut
+import textcap as TC                    # visible caps and input limits (AGENTS.md, truncation)
 
 MAIN = ("draft", "open", "ready", "active", "checking", "done")
 SIDE = ("blocked", "snoozed", "declined", "merged", "gone")
@@ -176,6 +177,10 @@ TK = {"task": {("draft", "open"): {A, S}, ("open", "ready"): {S, O}, ("ready", "
                        ("ready", "active"): {O}, ("active", "open"): {S, O}, ("active", "checking"): {S, O}, ("checking", "done"): {C},
                        ("checking", "open"): {C, O}, ("done", "open"): {C, O}, ("declined", "open"): {A, O},
                        **{(f, "declined"): {O} for f in ("draft", "open", "ready")}, **{(f, "gone"): {A, O} for f in ("draft", "open", "ready")}},
+      # MEM-17: a memory issue (a dispute on a wiki page) is moved by the Memory Keeper as system; the owner may decide one
+      "memory_issue": {("draft", "open"): {S}, ("open", "active"): {S}, ("active", "done"): {S}, ("open", "done"): {S}, ("blocked", "done"): {S, O},
+                       ("active", "blocked"): {S}, ("blocked", "active"): {S, O}, ("active", "open"): {S},
+                       **{(f, "declined"): {O} for f in ("open", "active", "blocked")}},
       # SWM-20: a requirement's state follows requirements/*.yaml, synced by the runner
       "requirement": {(f, t): {S} for f in set(REQ_STATE.values()) for t in set(REQ_STATE.values()) if f != t}}
 PROPOSABLE = {"update", "evidence", "link", "transition"}   # what a propose may carry (SWM-49)
@@ -471,7 +476,7 @@ class Ledger:
         if label not in LABELS:
             raise Refused(f"label must be one of {list(LABELS)}")
         origin = e.get("origin") or (f"agent:{actor['id']}" if actor["cls"] == A else actor["cls"])
-        self._event(aid, actor, "evidence", {"text": cut(redact(e["text"]), 4000), "ref": redact(e.get("ref") or "")[:400],  # cap: untrusted
+        self._event(aid, actor, "evidence", {"text": cut(redact(e["text"]), 4000), "ref": TC.cut(redact(e.get("ref") or ""), 400),  # cap: untrusted
                                              "origin": origin, "label": label, "alert": bool(e.get("alert")),
                                              **({"help": e["help"]} if e.get("help") else {})})
 
@@ -666,14 +671,14 @@ class Ledger:
         rows = [r for r in self.db.execute("select * from artifacts where kind=? and state in ('open','ready')", (kind,)) if self.sees(agent, r)]
         opened = sorted((dict(detail(r), priority=self.priority(r)) for r in rows), key=lambda x: (-x["pinned"], -x["priority"], x["id"]))
         rec = [detail(r) for r in self.db.execute("select * from artifacts where kind=? and state not in ('open','ready','draft') "
-                                                   "order by updated desc limit ?", (kind, recent_limit)) if self.sees(agent, r)]
+                                                   "order by updated desc limit ?", (kind, recent_limit)) if self.sees(agent, r)]  # cap: list (the newest done ones; the board pages further)
         return {"open": opened[:open_limit], "recent": rec}
 
     def events_since(self, seq, limit=200):
         """For the activity feed (SWM-78): events after seq with their artifact's kind and title."""
         return [dict(r) for r in self.db.execute(
             "select e.seq, e.artifact_id, e.actor, e.cls, e.run, e.kind, e.payload, e.reason, e.ts, a.kind as akind, a.title, a.label "
-            "from events e left join artifacts a on a.id=e.artifact_id where e.seq>? order by e.seq limit ?", (int(seq), int(limit)))]
+            "from events e left join artifacts a on a.id=e.artifact_id where e.seq>? order by e.seq limit ?", (int(seq), int(limit)))]  # cap: list (a page of events; the next call goes on after the last seq)
 
     def watch(self, actor, idem, artifact_id, on=True):
         self.check_actor(actor)
@@ -841,7 +846,7 @@ class Ledger:
                 self._event(int(artifact_id), actor, "handoff", {"from": me, "to": new_owner}, f"handed over in {mid}")
                 self.db.execute("update artifacts set owner=? where id=?", (new_owner, int(artifact_id)))
             self._event(int(artifact_id) if artifact_id else None, actor, "message", {"mid": mid, "act": act, "context": ctx, "to": sorted(rcpt)},
-                        text[:200])  # cap: preview
+                        TC.cut(text, 200))  # cap: preview
             return self._done(idem, actor, {"mid": mid, "context": ctx, "recipients": sorted(rcpt), "hops": hops})
 
     def reply_state(self, actor, idem, mid, state, reason=""):
@@ -902,7 +907,7 @@ class Ledger:
         """Unread messages for an agent (the owner's first, SWM-54) and its open requests (SWM-12)."""
         self.expire()
         who = "owner" if agent is None else agent
-        rows = [dict(r) for r in self.db.execute("select * from messages where recipients like ? order by id desc limit 500", (f'%"{who}"%',))
+        rows = [dict(r) for r in self.db.execute("select * from messages where recipients like ? order by id desc limit 500", (f'%"{who}"%',))  # cap: list (the 500 newest messages to one reader)
                 if not self.db.execute("select 1 from receipts where mid=? and agent=?", (r["mid"], who)).fetchone()]
         rows = [r for r in rows if agent is None or self.sees(agent, r)]
         rows.sort(key=lambda r: (r["sender_cls"] != O, -r["id"]))
@@ -919,7 +924,7 @@ class Ledger:
         return {"messages": rows[:limit], "open_requests": open_req, "expired": expired}
 
     def thread(self, agent, context, limit=200):
-        rows = [dict(r) for r in self.db.execute("select * from messages where context=? order by id desc limit ?", (context, limit))]
+        rows = [dict(r) for r in self.db.execute("select * from messages where context=? order by id desc limit ?", (context, limit))]  # cap: list (the caller's limit)
         rows = [r for r in rows if agent is None or self.sees(agent, r)]
         for r in rows:
             r["claim"] = bool(r["sender_cls"] == A and CLAIM_RE.search(r["text"] or ""))
@@ -930,7 +935,7 @@ class Ledger:
         return [dict(r) for r in self.db.execute(
             "with g as (select context, count(*) n, max(id) last_id, max(ts) last_ts, "
             "sum(case when state in ('submitted','working','input-required') then 1 else 0 end) open from messages group by context) "
-            "select g.*, m.text last_text, m.sender last_sender from g join messages m on m.id=g.last_id order by g.last_ts desc limit ?", (limit,))]
+            "select g.*, m.text last_text, m.sender last_sender from g join messages m on m.id=g.last_id order by g.last_ts desc limit ?", (limit,))]  # cap: list (the caller's limit)
 
     def feed(self, since):
         """SWM-107, the team room: every event on the shared work and every Board message after `since`, oldest first,
@@ -1004,11 +1009,11 @@ class Ledger:
         ids = []
         with self.tx():
             for n, t in enumerate(tasks):
-                plan = {"idea": idea_id, "files": [str(f) for f in t.get("files") or []][:40], "depends_on": [ids[d] for d in t.get("depends_on") or []],  # cap: untrusted
-                        "requirements": [str(x) for x in t.get("requirements") or []][:20], "repo": t.get("repo") or "ai-stack"}
+                plan = {"idea": idea_id, "files": TC.first([str(f) for f in t.get("files") or []], 40, "files of a planned task"), "depends_on": [ids[d] for d in t.get("depends_on") or []],  # cap: untrusted
+                        "requirements": TC.first([str(x) for x in t.get("requirements") or []], 20, "requirements of a planned task"), "repo": t.get("repo") or "ai-stack"}  # cap: untrusted
                 aid = self.db.execute("insert into artifacts(kind, key, state, version, label, created) values('task',?,?,?,?,?)",
                                       (f"idea:{idea_id}:{n + 1}", "draft", 0, idea["label"], self.now())).lastrowid
-                self._event(aid, actor, "create", {"kind": "task", "key": f"idea:{idea_id}:{n + 1}", "title": redact(t["title"])[:120],  # cap: untrusted
+                self._event(aid, actor, "create", {"kind": "task", "key": f"idea:{idea_id}:{n + 1}", "title": TC.cut(redact(t["title"]), 120),  # cap: untrusted
                                                    "body": cut(redact(t["body"]), 4000), "plan": plan, "label": idea["label"],  # cap: untrusted
                                                    "origin": f"agent:{actor['id']}" if actor["cls"] == A else "system", "owner": actor["id"]})
                 self._link(actor, aid, idea_id, "part_of", f"task {n + 1} of {len(tasks)}")
@@ -1147,7 +1152,7 @@ class Ledger:
         me = actor["id"] if actor["cls"] == A else actor.get("agent") or actor["id"]
         if not str(summary or "").strip():
             raise Refused("finish needs a run summary (one or two sentences: what you did and found)")
-        ops = list(ops or [])[:20]
+        ops = TC.first(ops or [], 20, "ops in one finish")  # cap: untrusted
         for n, o in enumerate(ops, 1):
             if not isinstance(o, dict) or o.get("op") not in ("upsert", "evidence", "transition", "link", "send", "rate"):
                 raise Refused(f"op {n}: op must be upsert, evidence, transition, link, send or rate")
@@ -1201,7 +1206,7 @@ class Ledger:
 
     def runs_of(self, limit=40):
         return [dict(r) for r in self.db.execute("select run, agent, started, finished, summary, ops, state, card, label, label_reason, "
-                                                 "failure from runs order by started desc limit ?", (int(limit),))]
+                                                 "failure from runs order by started desc limit ?", (int(limit),))]  # cap: list (the caller's limit)
 
     # ------------------------------------------------------------ replay sets and failure classes (SWM-82, SWM-84)
     def fate(self, aid):
@@ -1282,14 +1287,14 @@ class Ledger:
                                  "order by created desc", (agent, since)).fetchall():
             if a["id"] in seen:
                 continue
-            ev = [x[0] for x in self.db.execute("select text from evidence where artifact_id=? and ts<=? order by id limit 4", (a["id"], a["created"] + 60))]
+            ev = [x[0] for x in self.db.execute("select text from evidence where artifact_id=? and ts<=? order by id limit 4", (a["id"], a["created"] + 60))]  # cap: parse (the evidence it was proposed with, for its scorecard)
             lessons = [dict(x) for x in self.db.execute(
                 "select a.title, json_extract(e.payload, '$.to') as decision, e.reason from events e join artifacts a on a.id=e.artifact_id "
-                "where a.owner=? and e.cls='owner' and e.kind='transition' and e.ts<? order by e.seq desc limit 10", (agent, a["created"]))]
+                "where a.owner=? and e.cls='owner' and e.kind='transition' and e.ts<? order by e.seq desc limit 10", (agent, a["created"]))]  # cap: parse (the scorecard's sample of decisions)
             own = [{"id": x["id"], "title": x["title"]} for x in self.db.execute(       # what its context pack listed then: its open work
                 "select b.id, b.title from artifacts b where b.owner=? and b.kind=? and b.created<? and b.created>? and not exists "
                 "(select 1 from events e where e.artifact_id=b.id and e.kind='transition' and e.ts<? and "
-                "json_extract(e.payload, '$.to') in ('done','declined','merged','gone')) order by b.id desc limit 15",
+                "json_extract(e.payload, '$.to') in ('done','declined','merged','gone')) order by b.id desc limit 15",  # cap: parse (the scorecard's sample)
                 (agent, a["kind"], a["created"], a["created"] - 30 * 86400, a["created"]))]
             label, why = self.fate(a["id"])
             fail = classify(label, why)
@@ -1363,7 +1368,7 @@ class Ledger:
             q += " and state in (%s)" % ",".join("?" * len(states))
             args += list(states)
         out = []
-        for r in self.db.execute(q + " order by updated desc limit ?", (*args, int(limit))).fetchall():
+        for r in self.db.execute(q + " order by updated desc limit ?", (*args, int(limit))).fetchall():  # cap: list (the caller's limit)
             since = self.db.execute("select max(ts) from events where artifact_id=? and kind='transition' and json_extract(payload, '$.to')=?",
                                     (r["id"], r["state"])).fetchone()[0] or r["created"]
             exps = self.experiments_of(r["id"])
@@ -1534,7 +1539,7 @@ class Ledger:
     # ------------------------------------------------------------ refusals and scorecards (SWM-80, SWM-17)
     def refused(self, actor, op, reason):
         try:
-            self.db.execute("insert into refusals(ts, actor, op, reason) values(?,?,?,?)", (self.now(), actor, op, str(reason)[:300]))  # cap: store
+            self.db.execute("insert into refusals(ts, actor, op, reason) values(?,?,?,?)", (self.now(), actor, op, TC.cut(str(reason), 300)))  # cap: store
         except sqlite3.Error:
             pass
 
@@ -1693,7 +1698,7 @@ class Ledger:
 
     def summary(self, r):
         return {"id": r["id"], "kind": r["kind"], "key": r["key"], "title": r["title"], "state": r["state"], "version": r["version"],
-                "owner": r["owner"], "label": r["label"], "pinned": r["pinned"]}
+                "owner": r["owner"], "label": r["label"], "pinned": r["pinned"], "created": r["created"], "updated": r["updated"]}
 
     def find(self, agent, text="", kind=None, state=None, key=None, limit=20):
         q, args = "select * from artifacts where 1=1", []
@@ -1726,7 +1731,7 @@ class Ledger:
                 "refs": [dict(x) for x in self.db.execute("select system, ref from refs where artifact_id=?", (aid,))],
                 "watchers": [x[0] for x in self.db.execute("select agent from watchers where artifact_id=?", (aid,))],
                 "history": [dict(x) for x in self.db.execute("select seq, actor, cls, kind, reason, ts from events where artifact_id=? "
-                                                             "order by seq desc limit 30", (aid,))]}
+                                                             "order by seq desc limit 30", (aid,))]}  # cap: list (an artifact's 30 newest events; the Ledger keeps every one)
 
     def context(self, agent, advance=True):
         """SWM-16, SWM-34, SWM-60, SWM-61: the start-of-run pack, in a fixed order, within PACK_CHARS."""
@@ -1763,7 +1768,7 @@ class Ledger:
         pack["cut"] = cut
         pack["team"], pack["team_rule"] = self.roster(agent), TEAM_RULE   # SWM-108: small and fixed, outside the budget
         if (self.cards.get(agent) or {}).get("instructions"):          # SWM-18: the card's standing instructions come first
-            pack = {"instructions": [str(x) for x in self.cards[agent]["instructions"]][:20], **pack}
+            pack = {"instructions": TC.first([str(x) for x in self.cards[agent]["instructions"]], 20, "standing instructions of a card"), **pack}  # cap: untrusted
         top = self.db.execute("select coalesce(max(seq), 0) from events").fetchone()[0]
         if advance:
             self.db.execute("insert or replace into cursors values(?, ?)", (agent, top))

@@ -22,7 +22,7 @@ def conversation_key(alias, data):
         inp = data.get("input")
         first = inp[0] if isinstance(inp, list) and inp else inp
         parts = [str(data.get("instructions") or ""), json.dumps(first, sort_keys=True, default=str)]
-    return "aistack-" + hashlib.sha256("\x00".join([alias or "", *parts]).encode()).hexdigest()[:32]
+    return "aistack-" + hashlib.sha256("\x00".join([alias or "", *parts]).encode()).hexdigest()[:32]  # cap: id (a hash's first 32 hex digits)
 
 
 class CacheAffinity(CustomLogger):

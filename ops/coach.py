@@ -11,6 +11,7 @@ Triggers (a scorecard over its last 90 days, at least MIN_IDEAS ideas or labelle
 The Coach never writes a change for itself (the Ledger refuses it, SWM-70); an agent without a model is skipped.
 """
 import json
+import textcap as TC                              # visible caps (AGENTS.md, truncation)
 import re
 import sys
 from pathlib import Path
@@ -75,8 +76,8 @@ def draft(f, card, ask, lessons=""):
         d = json.loads(m.group(0)) if m else {}
     except ValueError:
         return None
-    ins = [str(x).strip()[:300] for x in d.get("instructions") or [] if str(x).strip()][:3]  # cap: untrusted
-    return {"instructions": ins, "why": str(d.get("why") or "")[:400]} if ins else None  # cap: untrusted
+    ins = [TC.cut(str(x).strip(), 300) for x in d.get("instructions") or [] if str(x).strip()][:3]  # cap: untrusted
+    return {"instructions": ins, "why": TC.cut(str(d.get("why") or ""), 400)} if ins else None  # cap: untrusted
 
 
 def coach(send=None, ask=None, cards=None, run=""):

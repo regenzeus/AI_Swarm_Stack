@@ -13,6 +13,7 @@ structural graph as knowledge-graph.fallback.json, and writes its progress to /s
 Exit 75 = stopped on the ChatGPT usage limit (resume later: make ua-enrich REPO=<name>).
 """
 import json
+import textcap as TC                              # visible caps (AGENTS.md, truncation)
 import os
 import re
 import sys
@@ -57,11 +58,11 @@ def ask(prompt, key):
         with urllib.request.urlopen(req, timeout=300) as r:
             res = json.load(r)
     except urllib.error.HTTPError as e:
-        detail = e.read().decode(errors="replace")[:500]  # cap: untrusted
+        detail = TC.cut(e.read().decode(errors="replace"), 500)  # cap: untrusted
         if e.code == 429 or re.search(r"usage.?limit|rate.?limit|quota", detail, re.I):
             raise Limit(detail)
         raise RuntimeError(f"HTTP {e.code}: {detail}")
-    text = res["choices"][0]["message"]["content"]
+    text = TC.answer(res, MODEL)
     return json.loads(re.search(r"\{.*\}", text, re.S).group(0)), res.get("usage") or {}
 
 
@@ -108,12 +109,12 @@ def relayer(g):
 def excerpt(text, symbols, body=14):
     """A big file: its head plus the first lines of every symbol, so the model still sees each one."""
     lines = text.splitlines()
-    out = ["\n".join(lines[:40])]  # cap: prompt
+    out = ["\n".join(lines[:40]) + (f"\n... ({len(lines)} lines in all; each symbol's start follows)" if len(lines) > 40 else "")]  # cap: prompt
     for s in symbols:
         lr = s.get("lineRange") or [0, 0]
         if lr[0] > 40:
             out.append(f"... line {lr[0]}:\n" + "\n".join(lines[lr[0] - 1:min(lr[1], lr[0] + body)]))
-    return "\n".join(out)[:FILE_CHARS]
+    return TC.cut("\n".join(out), FILE_CHARS)  # cap: prompt
 
 
 def pieces(text, symbols):
@@ -179,8 +180,8 @@ def apply(g, files, answer):
             continue
         s = re.sub(r"\s+", " ", str(a.get("summary", ""))).strip()
         if len(s) >= 15 and is_placeholder(f.get("summary")):
-            f["summary"] = s[:400]  # cap: untrusted
-            tags = [str(t).lower()[:30] for t in (a.get("tags") or []) if str(t).strip()][:5]
+            f["summary"] = TC.cut(s, 400)  # cap: untrusted
+            tags = [str(t).lower()[:30] for t in (a.get("tags") or []) if str(t).strip()][:5]  # cap: id (short tags)
             if tags:
                 f["tags"] = tags
             if a.get("complexity") in ("simple", "moderate", "complex"):
@@ -190,7 +191,7 @@ def apply(g, files, answer):
             n = by_key.get((path, name))
             t = re.sub(r"\s+", " ", str(text)).strip()
             if n and len(t) >= 10 and is_placeholder(n.get("summary")):
-                n["summary"] = t[:300]  # cap: untrusted
+                n["summary"] = TC.cut(t, 300)  # cap: untrusted
     return done
 
 
@@ -225,7 +226,7 @@ def main(repo_dir, name, key, ask=ask, pause=2.0):
     dropped = prune(g)
     relayered = relayer(g)
     save(kg, g)
-    desc = str(g.get("project", {}).get("description", ""))[:600]  # cap: prompt
+    desc = TC.cut(str(g.get("project", {}).get("description", "")), 600)  # cap: prompt
     todo, files = work(g, repo_dir)
     total, explained = counts(g)
     print(f"{name}: {dropped} tool-output nodes dropped, layers {'rebuilt' if relayered else 'kept'}, "
@@ -258,7 +259,7 @@ def main(repo_dir, name, key, ask=ask, pause=2.0):
         for i in range(0, len(open_layers), 10):          # ten layers per call, a dozen files each
             group = open_layers[i:i + 10]
             text = "\n\n".join(f"=== {l['id']} ({l['name']}, {len(l['nodeIds'])} files)\n" + "\n".join(
-                f"- {nodes[x].get('filePath')}: {nodes[x].get('summary', '')[:140]}" for x in l["nodeIds"][:12] if x in nodes)  # cap: prompt
+                f"- {nodes[x].get('filePath')}: {TC.cut(nodes[x].get('summary', ''), 140)}" for x in l["nodeIds"][:12] if x in nodes)  # cap: prompt
                 for l in group)
             try:
                 answer, usage = ask(LAYERS.format(repo=name, desc=desc, layers=text), key)
@@ -274,7 +275,7 @@ def main(repo_dir, name, key, ask=ask, pause=2.0):
             for l in group:
                 d = re.sub(r"\s+", " ", str(got.get(l["id"]) or got.get(l["name"]) or got.get(l["id"].removeprefix("layer:")) or "")).strip()
                 if len(d) >= 15:
-                    l["description"] = d[:400]  # cap: untrusted
+                    l["description"] = TC.cut(d, 400)  # cap: untrusted
                     n += 1
             save(kg, g)
             print(f"  +{n} layer descriptions", flush=True)

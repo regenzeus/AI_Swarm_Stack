@@ -16,6 +16,11 @@ from pathlib import Path
 SPOOL = Path(os.environ.get("RUNTIME_SPOOL", "/work/.runtime"))
 MAX = 20000
 
+def _cut(s):
+    """The run record's cap (MAX), marked like textcap.cut (this file runs where ops/textcap.py is not)."""
+    s = str(s)
+    return s if len(s) <= MAX else s[:MAX] + f" [… {len(s) - MAX:,} more characters cut]"  # cap: store
+
 
 def main():
     try:
@@ -31,17 +36,17 @@ def main():
     out = transcript_events(h, base, sid)
     now = time.time()
     if ev == "SessionStart":
-        out.append({**base, "ts": now, "kind": "run", "title": "Claude Code started", "run_title": os.environ.get("AISTACK_TITLE", "")[:200],
+        out.append({**base, "ts": now, "kind": "run", "title": "Claude Code started", "run_title": os.environ.get("AISTACK_TITLE", "")[:200],  # cap: id (the run's title; its whole brief is the first event)
                     "data": {"manifest": {"agent": base["agent"], "engine": "claude-code", "model": h.get("model") or os.environ.get("ANTHROPIC_MODEL", ""),
                                           "cwd": h.get("cwd"), "source": h.get("source")},
                              "box": json.loads(os.environ["AISTACK_BOX"]) if os.environ.get("AISTACK_BOX") else None}})
     elif ev == "PreToolUse":
-        out.append({**base, "ts": now, "kind": "call", "title": h.get("tool_name"), "detail": json.dumps(h.get("tool_input") or {}, ensure_ascii=False)[:MAX]})
+        out.append({**base, "ts": now, "kind": "call", "title": h.get("tool_name"), "detail": _cut(json.dumps(h.get("tool_input") or {}, ensure_ascii=False))})  # cap: store
     elif ev == "PostToolUse":
         resp = h.get("tool_response")
         text = resp if isinstance(resp, str) else json.dumps(resp, ensure_ascii=False, default=str)
         err = isinstance(resp, dict) and (resp.get("is_error") or resp.get("error") or resp.get("interrupted"))
-        out.append({**base, "ts": now, "kind": "error" if err else "result", "title": h.get("tool_name"), "detail": (text or "")[:MAX],
+        out.append({**base, "ts": now, "kind": "error" if err else "result", "title": h.get("tool_name"), "detail": _cut(text or ""),  # cap: store
                     "status": "failure" if err else "success"})
     elif ev == "Stop":
         out.append({**base, "ts": now, "kind": "end", "status": "done", "title": "Claude Code finished"})
@@ -86,9 +91,9 @@ def transcript_events(h, base, sid):
                         "tokens": {"in": tin, "out": u.get("output_tokens") or 0, "cached": u.get("cache_read_input_tokens") or 0, "reasoning": 0}})
         for b in msg.get("content") or []:
             if b.get("type") == "text" and (b.get("text") or "").strip():
-                out.append({**base, "ts": ts, "kind": "say", "title": "Says", "detail": b["text"][:MAX]})
+                out.append({**base, "ts": ts, "kind": "say", "title": "Says", "detail": _cut(b["text"])})  # cap: store
             elif b.get("type") == "thinking" and (b.get("thinking") or "").strip():
-                out.append({**base, "ts": ts, "kind": "think", "title": "Thinking", "detail": b["thinking"][:MAX]})
+                out.append({**base, "ts": ts, "kind": "think", "title": "Thinking", "detail": _cut(b["thinking"])})  # cap: store
     try:
         _mkspool()
         mark.write_text(f"{end} {last_id}")

@@ -48,6 +48,7 @@ import prune as PN                                 # PLT-21: growing files prune
 import prices as PR                               # TSK-27: tokens at list price
 import a2a as A2                                  # TSK-19: outside agents over A2A, off until the owner switches it on
 from textcap import limit, limit_items, tail as tailcut                    # visible caps and input limits (AGENTS.md, truncation)
+import textcap as TC
 import prompts as P                               # MEM-11: the agent prompts live in prompts/<owner>.md
 
 OPS = Path(__file__).resolve().parent
@@ -209,7 +210,7 @@ def ask_text(prompt, key, model="gpt-sub", timeout=300):
         RTM.model_call(model, int((time.time() - t0) * 1000), error=f"{type(e).__name__}: {str(e)}")
         raise
     RTM.model_call(model, int((time.time() - t0) * 1000), res.get("usage"))
-    text = res["choices"][0]["message"]["content"]
+    text = TC.answer(res, model)                         # refused when it stopped at its output limit
     RTM.stage("Answer", text, kind="say")
     P.case(src, text, model)                            # a replay case for a later change of this prompt
     return text
@@ -386,7 +387,7 @@ def run_briefing(m, logf):
                 if ln.strip() and n < 400:
                     n += 1
                     low = ln.lower()
-                    RTM.stage(ln.strip()[:160], ln.strip(), kind="error" if ("error" in low or "failed" in low or "traceback" in low) else "stage")  # cap: preview
+                    RTM.stage(TC.cut(ln.strip(), 160), ln.strip(), kind="error" if ("error" in low or "failed" in low or "traceback" in low) else "stage")  # cap: preview
             p.wait(timeout=3600)
         except subprocess.TimeoutExpired:
             p.kill()
@@ -450,13 +451,13 @@ def file_task_result(m, out, kind="run", deliver=True):
     vault_commit([f"missions/{m['slug']}"], f"mission: {m['slug']} {kind} {t:%F %H:%M}")
     reindex()
     if deliver:
-        X.deliver(m, m["title"], short or result[:500], rel, f"Mission {kind} · {t:%d %b %Y}", text)  # cap: preview
-    return "ok", short or result[:300], rel  # cap: preview
+        X.deliver(m, m["title"], short or TC.cut(result, 500), rel, f"Mission {kind} · {t:%d %b %Y}", text)  # cap: preview
+    return "ok", short or TC.cut(result, 300), rel  # cap: preview
 
 
 def run_task(m, logf, ev=None):
     logs = sorted((MISSIONS / m["slug"] / "log").rglob("*.md"))
-    last = section(logs[-1].read_text(), "Result")[:2500] if logs else "(none)"  # cap: prompt
+    last = TC.cut(section(logs[-1].read_text(), "Result"), 2500) if logs else "(none)"  # cap: prompt
     evtext = f"\nThis run was triggered by an event: {ev['trigger']}: {ev['summary']}\nStart with what this event means for the mission.\n" if ev else ""
     out = hermes_z(TASK_PROMPT.format(date=f"{now():%d %b %Y}", title=m["title"], goal=m.get("goal", ""), last=last, event=evtext))
     Path(logf).write_text(out)
@@ -900,7 +901,7 @@ def handle_stack(req):
             return {"facts": []}
         rows = sh("docker", "exec", "aistack-hindsight-db-1", "psql", "-U", "hindsight", "-d", "hindsight", "-tAF", "\t", "-c",
                   f"select fact_type, to_char(created_at, 'YYYY-MM-DD'), left(text, 400) from memory_units "
-                  f"where text ilike '%{q}%' order by created_at desc limit 40").splitlines()
+                  f"where text ilike '%{q}%' order by created_at desc limit 40").splitlines()  # cap: list (the 40 newest matches; a narrower search finds the rest)
         return {"facts": [dict(zip(("type", "date", "text"), r.split("\t"))) for r in rows if r.count("\t") == 2]}
     raise ValueError("unknown action")
 
@@ -921,7 +922,7 @@ STACK_ACTIONS = {"email", "vault_add", "understand", "forget", "memory_search"}
 BUILD_ACTIONS = {"build_assign", "build_revise", "build_approve", "build_approve_all", "build_reject", "build_recheck", "build_revert"}
 IMPROVE_ACTIONS = {"improve_scan", "proposal_accept", "proposal_dismiss"}
 REPO_ACTIONS = {"codemap", "repo_create", "repo_buildable", "repo_remove"}
-CREW_ACTIONS = {"crew_run", "crew_memory_forget", "crew_schedule", "health_ack", "phone_cleanup_do", "phone_cleanup_do_all", "phone_cleanup_dismiss"}
+CREW_ACTIONS = {"crew_run", "crew_memory_forget", "crew_memory_undo", "crew_schedule", "health_ack", "phone_cleanup_do", "phone_cleanup_do_all", "phone_cleanup_dismiss"}
 creating = threading.Lock()            # one new mission at a time (drafting takes a minute or two)
 
 
@@ -1011,7 +1012,7 @@ def process_inbox():
             continue
         if not re.fullmatch(r"[A-Za-z0-9_-]{1,64}", rid) or not isinstance(req, dict):
             continue
-        if req.get("action") in ("create", "memory", "email", "vault_add", "forget", "build_reject", "codemap", "repo_create", "repo_buildable", "repo_remove", "crew_memory_forget"):     # slow ones run in a thread
+        if req.get("action") in ("create", "memory", "email", "vault_add", "forget", "build_reject", "codemap", "repo_create", "repo_buildable", "repo_remove", "crew_memory_forget", "crew_memory_undo"):     # slow ones run in a thread
             def slow(rid=rid, req=req):
                 with creating:
                     respond(rid, req)
@@ -1067,7 +1068,7 @@ def system_info():
             "select count(*) filter (where fact_type <> 'observation'), count(*) filter (where fact_type = 'observation') "
             "from memory_units").strip().split("|")
     pending = []
-    for fn in sh("docker", "exec", HERMES, "sh", "-c", "ls /opt/data/pending/memory 2>/dev/null").split()[:20]:
+    for fn in sh("docker", "exec", HERMES, "sh", "-c", "ls /opt/data/pending/memory 2>/dev/null").split()[:20]:  # cap: list (20 at a time; the next come once these are decided)
         try:
             item = json.loads(sh("docker", "exec", HERMES, "cat", f"/opt/data/pending/memory/{fn}") or "{}")
             if item.get("id"):
@@ -1134,7 +1135,7 @@ def recent_calls():
               'select to_char(s."startTime" at time zone \'UTC\', \'YYYY-MM-DD"T"HH24:MI:SS"Z"\'), coalesce(k.key_alias,\'?\'), '
               's.model_group, s.total_tokens, s.spend from "LiteLLM_SpendLogs" s '
               'left join "LiteLLM_VerificationToken" k on k.token = s.api_key where s.model_group <> \'\' '
-              'order by s."startTime" desc limit 25').splitlines()
+              'order by s."startTime" desc limit 25').splitlines()  # cap: list (the 25 newest model calls; LiteLLM keeps every one)
     out = []
     for r in rows:
         p = r.split("|")
@@ -1157,7 +1158,7 @@ def write_state(c, missions):
     month_ago = (t - dt.timedelta(days=30)).isoformat()
     for m in missions.values():
         runs = [dict(r) for r in c.execute("select id, trigger, status, started, ended, seconds, calls, tokens, spend, models, "
-                                           "summary, output, event, steps, mode from runs where slug=? order by id desc limit 20", (m["slug"],))]
+                                           "summary, output, event, steps, mode from runs where slug=? order by id desc limit 20", (m["slug"],))]  # cap: list (the 20 newest runs; the run record has all)
         for r in runs:
             r["event"] = json.loads(r["event"]) if r["event"] else None
             r["steps"] = json.loads(r["steps"]) if r["steps"] else None
@@ -1187,7 +1188,7 @@ def write_state(c, missions):
             item["outputs"] = [str(p.relative_to(VAULT)) for p in outs[-40:]][::-1]  # cap: list
         else:
             logs = sorted((MISSIONS / m["slug"] / "log").rglob("*.md"))
-            item["outputs"] = [str(p.relative_to(VAULT)) for p in logs[-30:]][::-1]
+            item["outputs"] = [str(p.relative_to(VAULT)) for p in logs[-30:]][::-1]  # cap: list (the 30 newest results; the vault has all)
             item["notes"] = J.state_text(f"mission:{m['slug']}") or (read_notes(m) if (MISSIONS / m["slug"] / "NOTES.md").exists() else "")
         out.append(item)
     order = {"active": 0, "paused": 1, "archived": 2}

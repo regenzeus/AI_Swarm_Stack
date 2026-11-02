@@ -4,9 +4,24 @@
 
 // a script error on a phone is invisible from the PC: report it to the server log (docker logs mission-control)
 let errSent = 0;
+// a cut that shows itself, like textcap.cut (AGENTS.md, truncation): how many characters follow
+// a list that shows part of itself says how many more there are (AGENTS.md, truncation)
+// MEM-21: what the Memory Keeper changed (each with its Undo), whether its trial lets it, and the wikis' disputes
+const KEEPER_CLASS = { duplicate: "duplicate retired", test_noise: "test noise retired", agent_run: "an agent's run retired", not_english: "put into English", passing_state: "dated as passed" };
+function keeperHtml(k) {
+  const ch = k.changes || [], d = k.disputes || {};
+  const row = (e) => `<li><div class="small quote">${esc(e.fact || "")}</div><div class="row between wrap" style="gap:6px"><span class="tiny muted">${esc(KEEPER_CLASS[e.class] || e.class)}${e.after?.text ? ` → “${esc(e.after.text)}”` : ""}${e.after?.occurred_end ? ` (held until ${esc(e.after.occurred_end)})` : ""} · ${esc(e.why || "")} · ${rel(Date.parse(e.at) / 1000)}</span>${e.undone ? `<span class="tiny muted">undone</span>` : `<button class="btn sm ghost" data-kundo="${esc(e.id)}">Undo</button>`}</div></li>`;
+  return `<div class="card pad-l crews" style="margin-bottom:12px"><h2>What the Memory Keeper changed</h2>
+    <div class="tiny ${k.gate?.open ? "muted" : "warn-t"}" style="margin-top:4px">${k.gate?.open ? "It may fix duplicates, test noise, agents' runs, other languages and passed states itself: " : "It only suggests, it changes nothing itself: "}${esc(k.gate?.why || "")}</div>
+    ${d.open !== undefined ? `<div class="tiny muted">Wiki disputes: ${nf(d.open)} open · ${nf((d.tasks || []).length)} being researched${d.settled ? ` · ${nf(d.settled)} settled` : ""}${d.asked ? ` · ${nf(d.asked)} for you to decide (Agents → Ideas)` : ""}</div>` : ""}
+    ${ch.length ? `<ul class="crewf">${ch.map(row).join("")}</ul>${moreOf(k.changes_total, ch.length)}` : `<div class="tiny muted" style="margin-top:6px">No change yet.</div>`}
+    <div class="tiny faint">Nothing is deleted: a retired fact stays in the archive, a rewritten one keeps its old text here.</div></div>`;
+}
+function moreOf(total, shown) { return total > shown ? `<div class="tiny muted">… and ${nf(total - shown)} more</div>` : ""; }
+function clipped(s, n) { s = String(s ?? ""); return s.length <= n ? s : `${s.slice(0, n)} [… ${nf(s.length - n)} more characters cut]`; }   /* cap: preview: the helper */
 function reportError(msg, where) {
   if (errSent++ > 5) return;
-  try { navigator.sendBeacon("/api/clienterror", JSON.stringify({ msg: String(msg).slice(0, 500) /* cap: untrusted */, where: String(where || "").slice(0, 300) /* cap: untrusted */, url: location.hash, ua: navigator.userAgent })); } catch (_) {}
+  try { navigator.sendBeacon("/api/clienterror", JSON.stringify({ msg: clipped(String(msg), 500) /* cap: untrusted */, where: clipped(String(where || ""), 300) /* cap: untrusted */, url: location.hash, ua: navigator.userAgent })); } catch (_) {}
 }
 // An error is reported to the server and told to the owner too: a broken "Start mission" once only showed its spinner (FND-52)
 const toldError = (msg) => { try { toast(`Something went wrong in the app: ${msg}. It is reported; reload the page and try again.`, true); } catch (_) {} };
@@ -168,7 +183,7 @@ function spark(vals, w = 84, h = 28) {
   return `<svg class="spark" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><defs><linearGradient id="sg" x1="0" x2="1"><stop offset="0" stop-color="var(--accent)"/><stop offset="1" stop-color="var(--accent-2)"/></linearGradient></defs><polyline points="${pts}" fill="none" stroke="url(#sg)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 }
 function bars(runs) {
-  const rs = runs.slice(0, 20).reverse();
+  const rs = runs.slice(0, 20).reverse();   /* cap: list: the 20 newest runs as bars; the run list has every one */
   if (!rs.length) return `<div class="small muted">No runs yet: each one shows here as a bar.</div>`;
   const W = 600, H = 120, max = Math.max(...rs.map((r) => r.tokens || 0)) || 1, bw = W / rs.length;
   return `<svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${rs.map((r, i) => {
@@ -1182,6 +1197,7 @@ function bindCrew() {
   const forget = async (ids, btn) => { btn.disabled = true; const r = await act({ action: "crew_memory_forget", ids }, (x) => (x?.forgotten !== undefined ? `${x.forgotten} forgotten (reversible): no agent recalls them now` : "")); if (r?.forgotten === undefined) btn.disabled = false; };
   $$("[data-cforget]").forEach((b) => (b.onclick = () => forget([b.dataset.cforget], b)));
   $$("[data-cforgetall]").forEach((b) => (b.onclick = () => forget((S.crew.find((a) => a.id === "memory")?.suggestions || []).map((s) => s.id), b)));
+  $$("[data-kundo]").forEach((b) => (b.onclick = async () => { b.disabled = true; const r = await act({ action: "crew_memory_undo", change: b.dataset.kundo }, (x) => (x?.undone ? "Undone: the fact is as it was" : "")); if (!r?.undone) b.disabled = false; }));
 }
 
 const CREW_PRESETS = [["every", "5min", "every 5 minutes"], ["every", "10min", "every 10 minutes"], ["every", "1h", "every hour"],
@@ -1393,6 +1409,7 @@ async function agentNow(body, kind, A, m, c) {
     ${c?.suggestions?.length ? `<div class="card pad-l crews" style="margin-bottom:12px"><div class="row between wrap" style="gap:6px"><h2>${c.suggestions.length} memor${c.suggestions.length > 1 ? "ies" : "y"} to look at</h2><button class="btn sm ghost" data-cforgetall="1">Forget all ${c.suggestions.length}</button></div>
       <ul class="crewf">${c.suggestions.map((s) => `<li><div class="small quote">${esc(s.text)}</div><div class="row between wrap" style="gap:6px"><span class="tiny muted">${esc(s.why)}${s.note ? " · " + esc(s.note) : ""}</span><button class="btn sm ghost" data-cforget="${esc(s.id)}">Forget</button></div></li>`).join("")}</ul>
       <div class="tiny faint">Forgetting retires the fact from recall; it stays in the archive and can be restored.</div></div>` : ""}
+    ${c?.keeper ? keeperHtml(c.keeper) : ""}
     ${m?.type === "shopping" ? shopMissionHtml(m) : ""}
     ${c?.actions?.length ? phoneStepsHtml(c) : ""}
     ${m?.outputs?.length && !A.live ? `<div class="card pad-l" id="latest" style="margin-bottom:12px"><h2>Latest result</h2><div class="muted small" style="margin-top:10px">Loading…</div></div>` : ""}
@@ -1788,7 +1805,7 @@ function filesHtml(files) {
   const mod = files.filter((f) => f.modified).length, row = (f) => `<div class="frow"><span class="mono small wrap grow" title="${esc(f.path)}">${esc(f.path)}</span>
     ${f.modified ? `<span class="tag fmod">changed${f.modified > 1 ? " ×" + f.modified : ""}</span>` : ""}${f.read ? `<span class="tag">read${f.read > 1 ? " ×" + f.read : ""}</span>` : ""}<span class="tiny faint">${esc(f.tools.join(", "))}</span></div>`;
   return `<div class="tiny muted" style="margin-bottom:6px">${files.length} files · ${mod} changed · ${files.length - mod} only read</div>
-    <div class="flist">${files.slice(0, 20).map(row).join("")}</div>
+    <div class="flist">${files.slice(0, 20).map(row).join("") /* cap: list: the rest folds below */}</div>
     ${files.length > 20 ? `<details><summary class="tiny muted">${files.length - 20} more</summary><div class="flist">${files.slice(20).map(row).join("")}</div></details>` : ""}`;
 }
 function statsHtml(d) {
@@ -1804,7 +1821,7 @@ function problemsHtml(ps) {
   const groups = {};
   ps.forEach((p) => (groups[p.kind] = groups[p.kind] || []).push(p));
   return `<div class="obsprob"><b class="small">Problems · ${ps.length}</b>${Object.entries(groups).map(([k, xs]) => `<details><summary class="small err-t">${esc(PROB_LABEL[k] || k)} ×${xs.length}</summary>
-    ${xs.slice(0, 30).map((p) => `<div class="tiny">+${Math.round(p.t || 0)}s · ${esc(p.text)}</div>`).join("")}</details>`).join("")}</div>`;
+    ${xs.slice(0, 30).map((p) => `<div class="tiny">+${Math.round(p.t || 0)}s · ${esc(p.text)}</div>`).join("")}${xs.length > 30 ? `<div class="tiny muted">… and ${xs.length - 30} more</div>` : ""}</details>`).join("")}</div>`;   /* cap: list */
 }
 function touchesHtml(d, files) {
   if (!d) return `<div class="small muted">Recorded for runs from 28 October on.</div>`;
@@ -1814,8 +1831,8 @@ function touchesHtml(d, files) {
   const lines = (xs, mono) => xs.map((x) => `<div class="${mono ? "mono " : ""}tiny ellipsis" title="${esc(x)}">${esc(x)}</div>`).join("") || `<div class="tiny muted">none</div>`;
   return `<div class="tiny muted">${d.used_tools.length} tools used${d.allowed_tools.length ? ` of ${d.allowed_tools.length} allowed` : ""}${d.grants?.length ? ` · grants: ${d.grants.map(esc).join(", ")}` : ""}${d.mails_read ? ` · ${d.mails_read} mails read` : ""}${d.phone_screens ? ` · ${d.phone_screens} phone screens` : ""}</div>
     ${sec("Changed", changed.length, filesHtml(changed), changed.length ? "warn-t" : "")}
-    ${sec("Read", read.length + d.urls.length + d.searches.length, `${read.length ? filesHtml(read) : ""}${d.urls.length ? `<div style="margin-top:6px"><b class="tiny">Pages</b>${lines(d.urls, true)}</div>` : ""}${d.searches.length ? `<div style="margin-top:6px"><b class="tiny">Searches</b>${lines(d.searches)}</div>` : ""}`)}
-    ${sec("Refused", d.refused?.length || 0, (d.refused || []).map((r) => `<div class="tiny">+${Math.round(r.t || 0)}s <b>${esc(r.tool)}</b>: ${esc(r.why)}</div>`).join("") || `<div class="tiny muted">none</div>`, d.refused?.length ? "err-t" : "")}
+    ${sec("Read", read.length + (d.urls_total ?? d.urls.length) + (d.searches_total ?? d.searches.length), `${read.length ? filesHtml(read) : ""}${d.urls.length ? `<div style="margin-top:6px"><b class="tiny">Pages</b>${lines(d.urls, true)}${moreOf(d.urls_total, d.urls.length)}</div>` : ""}${d.searches.length ? `<div style="margin-top:6px"><b class="tiny">Searches</b>${lines(d.searches)}${moreOf(d.searches_total, d.searches.length)}</div>` : ""}`)}
+    ${sec("Refused", d.refused_total ?? (d.refused?.length || 0), (d.refused || []).map((r) => `<div class="tiny">+${Math.round(r.t || 0)}s <b>${esc(r.tool)}</b>: ${esc(r.why)}</div>`).join("") || `<div class="tiny muted">none</div>`, d.refused?.length ? "err-t" : "")}
     ${sec("Cut off", d.partial.length, d.partial.map((p) => `<div class="tiny">+${Math.round(p.t || 0)}s <b>${esc(p.tool)}</b>: ${esc(p.why)}</div>`).join("") || `<div class="tiny muted">none</div>`, d.partial.length ? "err-t" : "")}`;
 }
 function obsBlocks(files, detail) {
@@ -1899,6 +1916,7 @@ function liveHtml(V, opts = {}) {
       ${(V.drift || []).length ? `<div class="tiny muted" style="margin-top:6px">${ic.tune}Changed since its last run: ${V.drift.map(esc).join("; ")}</div>` : ""}
       ${V.problems.length ? problemsHtml(V.problems) : ""}
       <div class="row between wrap" style="gap:6px;margin-top:10px"><b class="small">Log</b>${levelSeg()}</div>
+      ${V.events_total > V.events.length ? `<div class="small muted">${nf(V.events_total - V.events.length)} earlier events are not shown here; the run record keeps every one.</div>` : ""}
       ${logHtml(V.events, { cls: V.live ? "live" : "" })}
       <details class="obsb" ${opts.compact ? "" : "open"}><summary class="small"><b>What it touched</b> <span class="muted">· ${T.files.length} files · ${T.urls.length} pages${T.connections.length ? ` · ${T.connections.length} connections` : ""}</span></summary>
         ${V.box ? `<div class="lvbox"><b class="small">${ic.lock || ""}The box it works in</b><div class="tiny muted">${esc(V.box.where || "")}${V.box.can ? ` · may: ${esc(V.box.can)}` : ""}${V.box.network ? ` · network: ${esc(V.box.network)}` : ""}${V.box.never ? ` · never: ${esc(V.box.never)}` : ""}</div></div>` : ""}
@@ -2517,7 +2535,7 @@ async function vShare() {
   const s = await api(`/api/share/${route.args[0]}`).catch(() => null);
   if (route.name !== "share") return;
   if (!s || s.error) { view.innerHTML = emptyState("This shared item is gone (they are kept two weeks).", `<a class="btn sm" href="#/">${ic.home || ""}Go to Home</a>`, "card pad-l"); return; }
-  const about = [s.title, s.url, s.text && s.text !== s.url ? s.text : ""].filter(Boolean).join("\n").slice(0, 4000);   // cap: prompt: what a new mission or chat starts from
+  const about = clipped([s.title, s.url, s.text && s.text !== s.url ? s.text : ""].filter(Boolean).join("\n"), 4000);   // cap: prompt: what a new mission or chat starts from
   const ctx = about ? `\n\n${about}` : "";
   const ask = (q, send) => `#/chat?share=${s.id}&prompt=${encodeURIComponent(q + ctx)}${send ? "&send=1" : ""}`;
   const quick = [["Summarise this", "Summarise this for me: the key points and why it matters."],
@@ -3737,7 +3755,7 @@ function bindStack() {
 // The Stack tab is one page: how the stack works (live map, guide chapters, search) and how it is doing (status),
 // each status section linked to the chapter that explains it. Chapters open as #/guide/<id> (guide.js).
 // MEM-01, MEM-07: every memory the stack keeps (ops/memory.py, refreshed hourly): kind, size, growth, limit, who tidies it, problems
-const MEM_KIND = { episodic: "what happened", semantic: "what is true", procedural: "how to act", shared: "shared work", index: "search" };
+const MEM_KIND = { working: "what a task hands on", episodic: "what happened", semantic: "what is true", procedural: "how to act", shared: "shared work", index: "search" };
 const fmtBytes = (b) => (b >= 1e9 ? `${nf(b / 1e9, 1)} GB` : b >= 1e6 ? `${nf(b / 1e6, 1)} MB` : `${nf(Math.round((b || 0) / 1e3))} KB`);
 function memUse(m) {                                          // how full it is against its limit: [value, limit, label]
   const [n, unit] = m.limit || [];

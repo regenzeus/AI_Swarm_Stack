@@ -201,3 +201,125 @@ items:
     verify: {method: test, by: [tests/test_librarian.py::test_a_compile_keeps_superseded_lines_and_a_contested_page_and_skips_merged_stubs,
       tests/test_librarian.py::test_the_librarian_merges_marks_and_lints_every_agent_wiki_and_changes_only_what_the_vault_restores]}
     trace: [ops/mission_extras.py, ops/librarian.py]
+  - id: MEM-14
+    title: A compile sees what it rewrites
+    statement: A wiki compile shall show the model each page it may rewrite whole up to 12,000 characters (past that its
+      start, with the cut marked), and every list line of the old page that the model was not shown shall stay on the
+      page under its own section.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-10, SN-09]
+    sources: [DEC-31, docs/MEMORY.md]
+    findings: [FND-103]
+    verify: {method: test, by: [tests/test_librarian.py::test_a_compile_sees_a_long_page_whole_and_keeps_the_lines_it_was_not_shown]}
+    trace: [ops/mission_extras.py]
+  - id: MEM-15
+    title: Hand-offs by reference past a budget
+    statement: A task step shall get each earlier result it builds on whole while they fit a budget together, and past it
+      each result's marked start, its size and where the whole result is (a file in an OpenCode step's work folder, a
+      vault file for a Hermes step; a Claude or build step takes them whole apart from its brief), and a prompt too long
+      for one command-line argument shall be refused with its size.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-10, SN-13]
+    sources: [docs/MEMORY.md]
+    findings: [FND-104]
+    rationale: FND-99 moved the results out of the builder's brief, but every step still gets them copied whole; a Hermes
+      step takes its prompt as one argument, which Linux refuses past 128 KiB. A size contract test pushes a
+      150,000-character result through every adapter.
+    verify: {method: test, by: [tests/test_conductor.py::test_a_result_too_long_for_a_prompt_goes_by_reference_through_every_adapter]}
+    trace: [ops/conductor.py]
+  - id: MEM-16
+    title: A cut a model reads shows itself
+    statement: Every cut of text going to a model (cap reason prompt) shall carry the textcap marker with how much is
+      missing, and ops/truncation.py shall refuse a prompt cap without it.
+    type: quality
+    priority: should
+    status: implemented
+    parents: [SN-10, SN-13]
+    sources: [docs/MEMORY.md, docs/TRUNCATION-AUDIT.md]
+    findings: [FND-105]
+    rationale: 92 of 96 prompt caps sliced without a mark; FND-100 and FND-103 showed that a model takes an unmarked cut
+      for the whole text. All 98 prompt caps are marked since the audit of 2 November.
+    verify: {method: test, by: [tests/test_truncation.py::test_every_cap_names_its_reason_and_an_unexplained_one_fails_the_check]}
+    trace: [ops/truncation.py, ops/textcap.py]
+  - id: MEM-17
+    title: A contradiction is worked to an end
+    statement: A contradiction the Librarian marks shall become a Ledger item owned by its wiki's writer, the writer's next
+      compile shall be told of it, a mark open for 14 days shall start a refinement task (TSK-34) that researches it, and
+      a settled claim shall move under Superseded with the item closed.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-10, SN-09]
+    sources: [DEC-31, DEC-32, docs/MEMORY.md]
+    findings: [FND-106]
+    verify: {method: test, by: [tests/test_keeper.py::test_a_contradiction_on_a_wiki_becomes_a_dispute_a_task_researches_and_its_settling_closes,
+      tests/test_keeper.py::test_a_dispute_its_research_could_not_settle_goes_to_the_owner,
+      tests/test_keeper.py::test_the_compile_is_told_of_the_disputes_on_the_pages_it_rewrites]}
+    trace: [ops/keeper.py, ops/mission_extras.py, images/swarm/ledger.py]
+  - id: MEM-18
+    title: Long-term memory holds each fact once
+    statement: Long-term memory shall keep one fact for one statement of the owner (a repeat confirms it, it is not added
+      again), in English, with no facts on agents' runs, and a fact on a passing state shall carry the date it held; its
+      retain mission shall ask for this at the source and the Memory Keeper (MEM-21) shall fix what still gets in.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-10, SN-04]
+    sources: [DEC-31, docs/MEMORY.md]
+    findings: [FND-107]
+    rationale: 'Measured 2 Nov: the same voice preference up to five times, facts in Spanish and German, about 35 facts on
+      agent runs, and 55 forget suggestions waiting since 30 October (KNW-08 retires only on the owner''s tap; decision D2
+      in docs/MEMORY.md). The owner decided D2 on 2 Nov (DEC-40).'
+    verify: {method: test, by: [tests/test_keeper.py::test_the_judgement_is_checked_before_it_counts_and_the_older_fact_stays,
+      tests/test_keeper.py::test_each_change_is_logged_with_what_was_there_and_undone]}
+    trace: [ops/keeper.py, compose/apps.yaml]
+  - id: MEM-19
+    title: The inventory has every store
+    statement: The memory inventory (MEM-01) shall also declare a task's hand-offs (the steps' results), Hermes' own memory
+      (USER.md), the code graphs and the chats, each with its kind, writer, reader, limit and curator.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-10, SN-07]
+    sources: [DEC-31, docs/MEMORY.md]
+    findings: [FND-108]
+    verify: {method: test, by: [tests/test_memory.py::test_every_memory_store_is_declared_with_its_kind_writers_readers_limit_and_curator,
+      tests/test_memory.py::test_the_inventory_measures_each_store_names_its_problems_and_reads_growth_from_daily_snapshots]}
+    trace: [ops/memory.py, images/mission-control/web/static/app.js]
+  - id: MEM-20
+    title: A memory trial
+    statement: The stack shall have a trial with an answer key for the Memory Keeper's judgement (eval/trials/memory.yaml) that
+      plants faults among true facts and scores the changes it would make itself (precision, a true fact touched counts
+      against it) and the faults it finds (recall), and contradictions of the owner's facts shall count only as questions;
+      its last three runs on the current prompt shall gate the Keeper's automatic changes.
+    type: process
+    priority: should
+    status: implemented
+    parents: [SN-10, SN-08]
+    sources: [docs/MEMORY.md, docs/SWARM-TRIALS.md]
+    verify: {method: test, by: [tests/test_keeper.py::test_the_trial_scores_the_automatic_changes_against_the_answer_key,
+      tests/test_keeper.py::test_nothing_is_changed_while_the_trial_has_not_passed_three_times_on_the_current_prompt]}
+    trace: [ops/keeper.py, eval/trials/memory.yaml]
+  - id: MEM-21
+    title: One Memory Keeper, by rules
+    statement: 'One agent, the Memory Keeper, shall look after every memory store every night (its judgement parts on
+      Wednesdays) by these rules: it deletes nothing (a fact is soft-retired, rewritten with its old text kept, or
+      moved under Superseded); it writes every change with what was there, why and how to undo it, and the owner can
+      undo each from its page; it corrects world knowledge only through a research task''s sourced findings; it makes
+      no automatic change to the owner''s facts beyond retiring duplicates, test noise and agents'' runs, translating
+      into English and dating passing states, and asks him when two of his facts disagree; it makes those changes
+      only while its trial passes (MEM-20) and at most 40 a pass; and it says once a week what it changed.'
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-10, SN-09, SN-13]
+    sources: [DEC-31, DEC-40, docs/MEMORY.md]
+    verify: {method: test, by: [tests/test_keeper.py::test_each_change_is_logged_with_what_was_there_and_undone,
+      tests/test_keeper.py::test_nothing_is_changed_while_the_trial_has_not_passed_three_times_on_the_current_prompt,
+      tests/test_keeper.py::test_the_crew_saves_the_keeper_s_report_and_undoes_a_change_on_the_owner_s_tap]}
+    trace: [ops/keeper.py, ops/crew.py, ops/missions.py, config/agents.yaml, ops/systemd/crew-memory.timer, prompts/memory.md,
+      images/mission-control/server.py, images/mission-control/web/static/app.js, images/mission-control/guide/08-knowledge.md]

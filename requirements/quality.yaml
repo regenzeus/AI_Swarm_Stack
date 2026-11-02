@@ -169,19 +169,36 @@ items:
         tests/test_requirements.py::test_groups_and_phases_are_rendered]}
     trace: [ops/req.py]
   - id: QA-16
-    title: Every text cap names its reason
-    statement: Every place in the code that cuts text (a slice of 40 or more, a textcap cut or tail, an ellipsis or
-      line clamp) shall name its reason on its line (prompt, untrusted, api, id, parse, store, preview or list), and the
-      checks shall fail on one that does not.
+    title: Every text cap names its reason and shows itself
+    statement: Every place in the code that cuts text (a slice of 20 or more or by an UPPERCASE constant in Python or JS,
+      a textcap helper, an ellipsis or line clamp, a shell head, tail or cut, a SQL limit of 2 rows or more) shall name
+      its one reason on its line (prompt, untrusted, api, id, parse, store, preview, list or rotate); a cut with a reason
+      someone reads (prompt, untrusted, store, preview) shall carry a visible marker; and the checks shall fail on one
+      that does not.
     type: process
     priority: must
     status: implemented
     parents: [SN-15, SN-06]
     sources: [DEC-27, AGENTS.md]
-    findings: [FND-38]
+    findings: [FND-38, FND-105, FND-109]
     verify: {method: test, by: [tests/test_truncation.py::test_every_cap_names_its_reason_and_an_unexplained_one_fails_the_check,
       tests/test_truncation.py::test_the_image_copies_of_textcap_are_the_same_file]}
-    trace: [ops/truncation.py, ops/check.sh, images/mission-control/textcap.py, images/swarm/textcap.py]
+    trace: [ops/truncation.py, ops/check.sh, images/mission-control/textcap.py, images/swarm/textcap.py, images/browser/textcap.py,
+      images/desk/textcap.py, images/mail/textcap.py, images/phone/textcap.py, images/research/textcap.py]
+  - id: QA-21
+    title: A model's answer cut at its output limit is not used
+    statement: Every model call shall read its answer's stop reason, and an answer that stopped at the model's output
+      limit (finish_reason length) or a Claude Code run that stopped at its turn limit shall not be parsed, stored or
+      delivered as a whole answer; the chat shall say so under such an answer.
+    type: quality
+    priority: must
+    status: implemented
+    parents: [SN-15, SN-06]
+    sources: [DEC-27, docs/TRUNCATION-AUDIT.md]
+    findings: [FND-109]
+    verify: {method: test, by: [tests/test_truncation.py::test_a_cut_within_an_outside_limit_lists_and_model_answers_show_what_they_left,
+      tests/test_truncation.py::test_every_cap_names_its_reason_and_an_unexplained_one_fails_the_check]}
+    trace: [ops/textcap.py, ops/missions.py, ops/builds.py, ops/claude_tasks.py, ops/truncation.py, images/mission-control/server.py]
   - id: QA-17
     title: A failure is not dropped without a trace
     statement: A broad catch (except Exception, or bare except) that drops what it caught shall not be added; the checks

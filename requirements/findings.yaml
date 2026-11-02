@@ -1311,3 +1311,105 @@ items:
       TASK_JUDGE says so; replay passed (equal 3).
     status: fixed
     resolved: "night/w10, 2026-11-02: staffing.calls_of and evidence_of, TASK_JUDGE"
+  - id: FND-103
+    title: A wiki compile wrote over the parts of a page it never saw
+    finding: "The compile showed the model the first 3,000 characters of each page it touches, with no mark, and wrote the
+      model's text over the whole page. The model, told to return each page's full new text, could not keep what it had
+      not seen: from 28 October to 1 November 14 pages of three wikis (the voice speaker, the RAM upgrade, ASP Isotopes)
+      lost 142 Timeline lines, 264 Open-question lines, 33 Key facts and one contradiction mark, a page's oldest part at
+      each compile. Only the Superseded lines were guarded."
+    evidence: ["vault 85d96c0 → f6e1b46 (1 Nov 08:13): projects/ram-upgrade-to-32-gb 6,843 → 4,787 characters; its October
+        Timeline and all four Open questions gone", "measured 2 Nov over every page's git history: 440 lines lost unseen"]
+    severity: high
+    kind: defect
+    affects: [MEM-14]
+    recommendation: Show each page whole up to 12,000 characters with a marked cut past it; a list line past what the model
+      saw comes back under its section; restore the dated Timeline lines from the vault's history (the other sections
+      may have changed since, so they stay in the history and the missions' logs).
+    status: fixed
+    resolved: "night/w14, 2026-11-02: mission_extras PAGE_SEEN and keep_unseen; from the vault's history one dated Timeline
+      line per result a page no longer cited (61 on 9 pages, vault acbd58a; the other lost lines were rewordings of
+      entries still there)"
+  - id: FND-104
+    title: Every step still gets earlier results copied whole
+    finding: "After FND-99 the earlier results travel apart from a step's brief, but still whole: 80,000 characters for a
+      build, a Claude task's context, and for a Hermes step the whole prompt as one command-line argument, which Linux
+      refuses past 128 KiB (MAX_ARG_STRLEN). A Claude step's brief is sliced at 19,000 characters without a mark."
+    evidence: ["ops/conductor.py run_hermes: hermes -z <prompt>", "ops/conductor.py run_claude: head[:19000]"]
+    severity: medium
+    kind: risk
+    affects: [MEM-15]
+    recommendation: Pass by reference past a budget (MEM-15), Hermes' prompt through a file, and a size contract test
+      through every adapter.
+    status: fixed
+    resolved: "night/w17, 2026-11-02: conductor handoff and result_file (by reference past HANDOFF), the OpenCode step's results folder, run_hermes refuses a prompt over ARG_BYTES"
+  - id: FND-105
+    title: Most cuts a model reads do not show themselves
+    finding: "Of 96 places that cut text going to a model (cap: prompt), 92 slice it without a mark, so the model takes the
+      start for the whole: the cause of FND-100 and FND-103. Among them the wiki context of a refinement (8,000), the
+      mission plan's notes (3,000), a journal's result (3,000) and the inbox's mail body (20,000)."
+    evidence: ["ops/truncation.py report, 2 Nov: 96 prompt caps, 4 through textcap"]
+    severity: medium
+    kind: risk
+    affects: [MEM-16, QA-16]
+    recommendation: A prompt cap goes through textcap.cut or tail, enforced by ops/truncation.py; the long ones first.
+    status: fixed
+    resolved: "night/w16, 2026-11-02: the second truncation audit; every prompt cap marked, the check refuses an unmarked one"
+  - id: FND-106
+    title: A marked contradiction waits for nobody
+    finding: "The Librarian marks a contradiction with both sources and the page becomes contested, but no agent is asked
+      to settle it: the two on the voice-speaker wiki (entities/smartdomo, entities/smattex) have been open since 30
+      October, and a compile lost a third (FND-103)."
+    evidence: ["public/memory.json librarian, 30 Oct: smartdomo 2 marked, unresolved"]
+    severity: low
+    kind: incoherence
+    affects: [MEM-17]
+    recommendation: Each mark a Ledger item for the wiki's writer; a refinement task after 14 days (MEM-17).
+    status: fixed
+    resolved: "night/w17, 2026-11-02: keeper.disputes (a memory_issue per mark, a refinement after 14 days, settled when the mark is gone, the owner asked after that), the compile told"
+  - id: FND-107
+    title: Long-term memory repeats itself and keeps what belongs elsewhere
+    finding: "Hindsight held 222 facts on 2 November, up from 120 on 30 October: the voice-reply preference up to five
+      times, facts in Spanish and German, about 35 facts on agent runs (journals hold those, MEM-06), and passing states
+      (a setup 'incomplete') with no end. The weekly curator's 55 forget suggestions of 30 October wait for the owner's
+      tap; none was taken."
+    evidence: ["hindsight memory_units 2 Nov: 65 world, 74 experience, 83 observation", "crew/memory.json: 55 suggestions, 30 Oct"]
+    severity: medium
+    kind: incoherence
+    affects: [MEM-18]
+    recommendation: Reconcile at write (a repeat confirms, not adds), English facts, agent-run facts kept out; the owner
+      decides whether exact duplicates and test noise may be retired softly without a tap (docs/MEMORY.md D2).
+    status: fixed
+    resolved: "night/w17, 2026-11-02: the Memory Keeper (ops/keeper.py) behind its trial; Hindsight's retain mission asks for English and no agents' runs; DEC-40"
+  - id: FND-108
+    title: Four memory stores are not in the inventory
+    finding: "The memory inventory (MEM-01) lists ten stores, but not a task's hand-offs (missions.sqlite task_steps), Hermes'
+      own memory (USER.md, gated by memory_review), the builder's code graphs (graphify) or the chats; their size, growth
+      and curator are not seen."
+    evidence: ["ops/memory.py STORES, 2 Nov"]
+    severity: low
+    kind: incoherence
+    affects: [MEM-19]
+    recommendation: Declare them in STORES with a measure each (MEM-19).
+    status: fixed
+    resolved: "night/w17, 2026-11-02: memory.STORES task-handoffs, hermes-memory, code-graphs, chats, each measured"
+  - id: FND-109
+    title: Model answers cut at their output limit passed as whole, and cuts the check could not see
+    finding: "No model call read the answer's finish_reason: an answer that stopped at the output limit was parsed (a plan
+      or the desk's JSON cut halfway), stored as a mission result or shown in the chat as finished; a Claude Code run that
+      stopped at its turn limit was read as an empty or partial answer. The truncation check saw only literal slices of 40
+      or more and only required a reason, so it missed slices by a constant (the Librarian's page and the doctor's evidence
+      in their prompts), slices of 20 to 39 (a mail's date lost its time zone), shell tails (the curator's lint REPORT read
+      through tail -60), SQL lists of the newest rows, and 250 raw slices with a reason someone reads. A reason on the line
+      above also covered the next cap, which hid four."
+    evidence: ["ops/truncation.py report and a scan of 2 Nov: 250 raw read caps, 35 constant slices, 39 short slices, 20
+        shell and 25 SQL caps", "ops/missions.py ask_text: res['choices'][0]['message']['content'] with no stop reason"]
+    severity: high
+    kind: defect
+    affects: [QA-16, QA-21]
+    recommendation: Read every answer through textcap.answer(); refuse a Claude run stopped at its turn limit; mark every
+      cut someone reads (cut, tail, fit, more, first); remove the caps nothing needs; have the check see every kind of cut,
+      fail on an unmarked one and let one reason cover one cap.
+    status: fixed
+    resolved: "night/w16, 2026-11-02: textcap fit, more, first, answer; builds.claude_text; about 200 cuts marked, 6 removed,
+      4 refused instead; ops/truncation.py sees slices from 20 and by constant, shell, SQL and model answers"

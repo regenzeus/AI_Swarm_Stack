@@ -63,7 +63,7 @@ the Ledger, with why the writer would not see it (lane discipline, see the swarm
 it in, names the helper in the fact's source and marks the help as folded. Every wiki is an item in the Ledger, so its
 helps show in Agents → Activity.
 
-The one other change is the **Librarian**'s weekly tidy (see *Knowledge*): it merges two pages about the same subject,
+The one other change is the **Memory Keeper**'s weekly tidy (see *Knowledge*): it merges two pages about the same subject,
 marks contradictions and pages not confirmed for 90 days, and writes hub pages in the vault wiki for subjects several
 wikis share. It adds no facts. When a result changes a fact, the old fact moves to the page's **Superseded** section with
 the date it stopped holding, so a page's history stays readable.

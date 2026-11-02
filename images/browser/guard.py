@@ -9,6 +9,7 @@ browse_back. What it refuses, whatever the page says:
 Pages are untrusted: results go to the scout, which holds no private data (see config/hermes/configure-scout.sh).
 """
 import asyncio, os, re
+import textcap as TC                              # visible caps (AGENTS.md, truncation)
 
 import uvicorn
 from mcp import ClientSession
@@ -74,7 +75,7 @@ def page(text):
     m = re.search(r"Page URL:\s*(\S+)", text)
     last.update(snapshot=text, url=m.group(1) if m else last["url"])
     text = compact(text)
-    return text if len(text) <= MAX else text[:MAX] + f"\n… (cut: {len(text) - MAX} more characters; search or open a narrower page)"
+    return text if len(text) <= MAX else text[:MAX] + f"\n… (cut: {len(text) - MAX} more characters; search or open a narrower page)"  # cap: prompt
 
 
 def line_of(ref):
@@ -84,7 +85,7 @@ def line_of(ref):
 async def checked(text):
     """After a step: take the page snapshot; if it landed on a forbidden page, go back and say so."""
     if text.startswith("Browser error") or "### Error" in text:
-        return text[:600]  # cap: prompt
+        return TC.cut(text, 600)  # cap: prompt
     out = page(await call("browser_snapshot"))
     if DENY_URL.search(last["url"]):
         bad = last["url"]
@@ -116,7 +117,7 @@ async def browse_click(ref: str, element: str) -> str:
     if not target:
         return "No such ref on the current page: call browse_look first."
     if DENY_BUTTON.search(target) or DENY_BUTTON.search(element):
-        return f"Refused: '{target.strip()[:120]}' would buy, order or sign in. This browser only looks."  # cap: untrusted
+        return f"Refused: '{TC.cut(target.strip(), 120)}' would buy, order or sign in. This browser only looks."  # cap: untrusted
     return await checked(await call("browser_click", {"ref": ref, "element": element}))
 
 
@@ -125,7 +126,7 @@ async def browse_click(ref: str, element: str) -> str:
 async def browse_search(ref: str, text: str) -> str:
     target = line_of(ref)
     if not SEARCH_FIELD.search(target):
-        return f"Refused: '{target.strip()[:120] or ref}' is not a search field. This browser only types searches."  # cap: untrusted
+        return f"Refused: '{TC.cut(target.strip(), 120) or ref}' is not a search field. This browser only types searches."  # cap: untrusted
     if PERSONAL.search(text) or len(text) > 200:
         return "Refused: that looks like personal data (e-mail, long number). Search for products and facts only."
     return await checked(await call("browser_type", {"ref": ref, "element": "search field", "text": text, "submit": True}))

@@ -15,6 +15,7 @@ voice     the Echo bridge: Alexa Devices records each voice request on the Echo'
 Every action is logged: /srv/ai/house/log.jsonl, the activity feed, the runtime record (run "house", "house-voice:<ts>").
 """
 import base64
+import textcap as TC                              # visible caps (AGENTS.md, truncation)
 import json
 import os
 import re
@@ -277,7 +278,7 @@ def status(max_age=30):
 def state():
     d = dict(_status["data"])                     # the worker refreshes it; the state writer never waits for HA
     try:
-        d["log"] = [json.loads(ln) for ln in LOG.read_text().splitlines()[-30:]][::-1]
+        d["log"] = [json.loads(ln) for ln in LOG.read_text().splitlines()[-30:]][::-1]  # cap: list (the 30 newest actions; the log file has every one)
     except (OSError, ValueError):
         d["log"] = []
     return {"house": d}
@@ -363,7 +364,7 @@ def echo_of(name):
 def alexa(req):
     """A text command through an Echo, as if spoken: for the lights and devices that live in the Alexa app."""
     _need()
-    by, text = req.get("by", "ai"), str(req.get("command", "")).strip()[:300]  # cap: untrusted
+    by, text = req.get("by", "ai"), TC.limit(str(req.get("command", "")).strip(), 300, "an Alexa command")   # a command is refused, never cut
     if not text:
         raise ValueError("say what Alexa should do")
     if by != "owner" and PROTECT.search(text):
@@ -378,7 +379,7 @@ def alexa(req):
 
 def say(req):
     _need()
-    by, msg = req.get("by", "ai"), str(req.get("message", "")).strip()[:600]  # cap: api
+    by, msg = req.get("by", "ai"), TC.limit(str(req.get("message", "")).strip(), 600, "a message to say aloud")   # spoken whole or not at all
     if not msg:
         raise ValueError("nothing to say")
     where = str(req.get("echo", "")).strip()
@@ -419,9 +420,9 @@ def ask_hermes(question, echo):
                                  headers={"Content-Type": "application/json", "Authorization": f"Bearer {os.environ.get('API_SERVER_KEY', '')}",
                                           "X-Hermes-Session-Id": f"alexa-{echo['id'][:8]}-{time.strftime('%Y%m%d')}"})
     with urllib.request.urlopen(req, timeout=150) as r:
-        text = json.load(r)["choices"][0]["message"]["content"]
+        text = TC.answer(json.load(r), "Hermes")
     text = re.sub(r"[*_`#>\[\]]", "", text)
-    return re.sub(r"\(https?://\S+\)|https?://\S+", "", text).strip()[:600]  # cap: api
+    return TC.fit(re.sub(r"\(https?://\S+\)|https?://\S+", "", text).strip(), 600)  # cap: api
 
 
 def answer(question, echo):
