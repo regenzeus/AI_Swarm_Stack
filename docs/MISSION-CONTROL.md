@@ -58,9 +58,9 @@ reopens the chat you left on this device, with its draft; `#/chat?new=1` starts 
 
 `ops/repos.py` lists ai-stack and every repo in `~/code`: buildable (origin is Forgejo) or studied only, its Graphify
 graph (`graphify-out/graph.json`, kept current by `ops/graphify-sync.sh`; ai-stack through a mirror clone in
-`~/code/ai-stack`), its Understand Anything code map (`.ua/`, `ops/understand.sh`) and digest (`/srv/ai/code-docs`). The
+`~/code/ai-stack`), its Understand Anything code map (`.ua/`), digest and written analysis (`/srv/ai/code-docs`), all made by one job, `ops/onboard.py`. The
 app draws the graph (`/api/repo/<name>/graph`: the 200 best-connected nodes, laid out once) and shows the digest or
-README. Actions: `understand` (study a GitHub repo or refresh), `codemap` (show a repo in the viewer, behind the gate),
+README. Actions: `understand` (onboard a repo, the whole package, or make it anew), `codemap` (show a repo in the viewer, behind the gate),
 `repo_create` and `repo_buildable` (Forgejo API with `FORGEJO_TOKEN`; a studied repo keeps its origin as `upstream`).
 Hermes: `repos_overview`, `repo_create`, `repo_make_buildable`, `understand_repo`.
 

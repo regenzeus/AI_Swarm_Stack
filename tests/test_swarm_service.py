@@ -26,7 +26,7 @@ def test_identity_comes_only_from_the_stored_credential(svc):
     with pytest.raises(Refused, match="unknown caller"):
         svc.agent_from_headers({"x-api-key": "guess"})
     r = svc.answer(lambda: svc.agent_from_headers({"x-api-key": "tok-scout"}), "upsert",
-                   {"idem": "i1", "kind": "report", "key": "r1", "title": "Uranium miners note", "body": "text"})
+                   {"idem": "i1", "kind": "report", "key": "r1", "title": "Copper miners note", "body": "text"})
     assert r["ok"]
     assert svc.ledger.get(None, r["result"]["id"])["owner"] == "scout"      # the sender is the token's agent, not an argument
 
@@ -87,7 +87,7 @@ def test_the_restore_drill_opens_the_swarm_snapshot_and_counts_its_record(svc, t
     fails when it is missing."""
     import restore_check as RC
     svc.answer(lambda: svc.agent_from_headers({"x-api-key": "tok-scout"}), "upsert",
-               {"idem": "i1", "kind": "report", "key": "r1", "title": "Uranium miners note", "body": "text"})
+               {"idem": "i1", "kind": "report", "key": "r1", "title": "Copper miners note", "body": "text"})
     svc.snapshot()
     root = tmp_path / "restored"
     (root / "swarm").mkdir(parents=True)

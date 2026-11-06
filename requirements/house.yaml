@@ -36,7 +36,7 @@ items:
   - id: HSE-04
     title: Protected things only by the owner
     statement: A plug or switch whose name says it powers the fridge, freezer, router, NAS, PC, server or similar, and
-      anything the network and NAS integrations offer (FRITZ!Box Tools, Synology DSM) whatever its name, shall be
+      anything the network and NAS integrations offer (router Tools, Synology DSM) whatever its name, shall be
       readable by agents but switchable only by the owner on the House page, also not through an Alexa command.
     type: constraint
     priority: must

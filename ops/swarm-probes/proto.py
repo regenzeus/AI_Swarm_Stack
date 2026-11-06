@@ -96,7 +96,7 @@ async def find(req):
         vec, df, n = tfidf[kind]
         v = {w: (1 + math.log(c)) * math.log((n + 1) / df.get(w, 1)) for w, c in Counter(re.findall(r"[a-z0-9]+", q.lower())).items()}
         norm = math.sqrt(sum(x * x for x in v.values())) or 1
-        sim = sorted(((sum(x / norm * d.get(w, 0) for w, x in v.items()), i) for i, d in vec.items()), reverse=True)[:3]
+        sim = sorted(((sum(x / norm * d.get(w, 0) for w, x in v.items()), i) for i, d in vec.items()), reverse=True)[:3]  # cap: top
     return JSONResponse({"hits": [dict(r) for r in rows], "similar": sim})
 
 

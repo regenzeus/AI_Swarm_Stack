@@ -109,7 +109,7 @@ def main():
     head = subprocess.run(["git", "-C", str(skills_sync.REPO), "rev-parse", "--short", "HEAD"],
                           capture_output=True, text=True).stdout.strip()
     msg = (f"Weekly {what} run: {verdict}\nSkills history: "
-           f"http://192.168.1.80:3000/regenzeus/hermes-skills/commit/{head}")
+           f"http://192.168.1.10:3000/regenzeus/hermes-skills/commit/{head}")
     print(msg)
     skills_sync.notify(msg)
 

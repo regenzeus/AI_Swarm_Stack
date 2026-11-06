@@ -362,7 +362,7 @@ def triage(b, groups, keep=16):
     for start in range(0, len(groups), 60):
         chunk = groups[start:start + 60]
         lines = "\n".join(
-            f"[{start + i}] {g['items'][0]['title']} ({', '.join(sorted({x['source'] for x in g['items']})[:3])}"
+            f"[{start + i}] {g['items'][0]['title']} ({', '.join(sorted({x['source'] for x in g['items']})[:3])}"  # cap: top
             f"{', +' + str(len(g['items']) - 3) if len(g['items']) > 3 else ''}) {TC.cut(g['items'][0]['summary'], 200)}"  # cap: prompt
             for i, g in enumerate(chunk))
         text, ref, fills = prompt("TRIAGE", topic=b["topic"], mission=b["mission"], questions=qs, prefer=", ".join(b["sources"].get("prefer", [])),
@@ -391,7 +391,7 @@ def article_url(url):
 def read(group):
     if group["items"][0].get("via") == "mail":     # what the digest kept; a mail's links are never opened
         return group["items"][0]["text"]
-    for it in group["items"][:4]:
+    for it in group["items"][:4]:  # cap: top
         it["url"] = article_url(it["url"])
     for it in group["items"]:
         if "news.google.com" in it["url"]:
@@ -454,7 +454,7 @@ def write(b, chosen, rows, prev, date):
     sources, blocks = [], []
     for i, (g, p) in enumerate(chosen, 1):
         nums = []
-        for it in g["items"][:4]:
+        for it in g["items"][:4]:  # cap: top
             sources.append(it)
             nums.append(len(sources))
         first = g["items"][0]
@@ -549,7 +549,7 @@ def watch(spec):
     for u in TC.first(spec.get("feeds", []), 20, "feeds of the topic"):  # cap: list (the log names the rest)
         out["feeds"][u] = [{"id": key(it), "title": it["title"], "url": it["url"], "source": it["source"],
                             "published": it["published"].isoformat() if it["published"] else None} for it in from_feed(u, "feed")[:20]]  # cap: list (a feed's 20 newest items; the feed has the rest)
-    for r in spec.get("github", [])[:10]:
+    for r in TC.first(spec.get("github", []), 10, "GitHub repositories of the topic"):  # cap: list (the log names the rest: GitHub allows 60 calls an hour without a token)
         if not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", r):
             continue
         try:                                            # public activity, no token: 60 calls an hour are plenty for a few repos
@@ -584,7 +584,7 @@ def alert(spec):
     b = brief("/topic")
     ev = spec["event"]
     texts = []
-    for it in ev.get("items", [])[:4]:
+    for it in ev.get("items", [])[:4]:  # cap: top
         body = ""
         try:
             if it.get("form"):
@@ -597,7 +597,7 @@ def alert(spec):
     text, ref, fills = prompt("ALERT", topic=b["topic"], mission=b["mission"], questions=json.dumps(b["key_questions"], ensure_ascii=False),
                               kind=ev["kind"], summary=ev["summary"], items="\n\n".join(texts))
     r = ask(text, "gpt-sub", ref=ref, fills=fills)
-    srcs = "\n".join(f"{i}. [{it.get('title', '')}]({it.get('url', '')})" for i, it in enumerate(ev.get("items", [])[:4], 1))
+    srcs = "\n".join(f"{i}. [{it.get('title', '')}]({it.get('url', '')})" for i, it in enumerate(ev.get("items", [])[:4], 1))  # cap: top
     r["markdown"] = f"# {r.get('title') or ev['summary']}\n\n{r.get('markdown', '')}\n\n## Sources\n\n{srcs}\n"
     r["prompt"], r["case"] = ref, (CASES[-1] if CASES else None)      # the runner records the version and keeps the case
     print(json.dumps(r, ensure_ascii=False))
@@ -650,7 +650,7 @@ def check(spec):
     """--check: keep only the sources of a drafted brief that work (Mission Control, new briefings).
     stdin {"symbols": [...], "feeds": [...], "filings": [...]} -> stdout the same keys, failing entries removed."""
     ok = {"symbols": [], "feeds": [], "filings": []}
-    for sym in spec.get("symbols", [])[:15]:
+    for sym in spec.get("symbols", []):
         try:
             d = json.loads(get(f"https://query1.finance.yahoo.com/v8/finance/chart/{urllib.parse.quote(sym)}?range=5d&interval=1d"))
             if [c for c in d["chart"]["result"][0]["indicators"]["quote"][0]["close"] if c is not None]:
@@ -658,7 +658,7 @@ def check(spec):
         except Exception as e:
             log(f"check: symbol {sym} dropped ({str(e)})")
         time.sleep(0.3)
-    for url in spec.get("feeds", [])[:8]:
+    for url in spec.get("feeds", []):
         try:
             if feedparser.parse(get(url)).entries:
                 ok["feeds"].append(url)
@@ -669,7 +669,7 @@ def check(spec):
     if spec.get("filings") and os.environ.get("SEC_CONTACT"):
         try:
             known = {v["ticker"] for v in json.loads(get("https://www.sec.gov/files/company_tickers.json")).values()}
-            ok["filings"] = [t for t in spec["filings"][:10] if t in known]
+            ok["filings"] = [t for t in spec["filings"] if t in known]
         except Exception as e:
             log(f"check: sec index failed ({str(e)})")
     print(json.dumps(ok))

@@ -36,6 +36,7 @@ LESSON_DAYS = 90        # SWM-61
 LINKS = {"duplicates", "relates", "blocks", "caused_by", "fixes", "supersedes", "implements", "different_from", "merged_into",
          "depends_on", "part_of"}                         # a task depends_on another task and is part_of its idea (SWM-91)
 LEASE_H = 4                                               # SWM-92: a lease nobody refreshes ends after this many hours
+# limit: refuses, a plan's tasks on the Ledger, with the limit
 TASKS_MAX = 8
 WATCH_DAYS = 14                                           # SWM-18: a shipped agent change is watched this long
 MIN_EXAMPLES = 4                                          # an experiment needs at least this many settled replay examples
@@ -571,6 +572,7 @@ class Ledger:
                     self._passed(row)
             if to == "active" and row["kind"] in WIP:
                 n = self.db.execute("select count(*) from artifacts where kind=? and state='active'", (row["kind"],)).fetchone()[0]
+                # limit: waits, work in progress per kind: it stays ready at its rank (SWM-40)
                 if n >= WIP[row["kind"]]:
                     raise Refused(f"{n} {row['kind']}s are being built already (work-in-progress limit {WIP[row['kind']]}, SWM-40): "
                                   "it stays ready at its rank")
@@ -764,6 +766,7 @@ class Ledger:
         if label not in LABELS:
             raise Refused(f"label must be one of {list(LABELS)}")
         text = redact(text)
+        # limit: refuses, a Board message; the detail belongs in an artifact
         if len(text) > 4000:
             raise Refused(f"a message holds at most 4,000 characters (this one has {len(text):,}): shorten it, or put the detail in an artifact and link it")
         if not text.strip():
@@ -779,7 +782,7 @@ class Ledger:
         if parent:
             ctx = parent["context"]
         elif not ctx:
-            pair = sorted([me] + [r for r in rcpt])[:2] if len(rcpt) == 1 else None
+            pair = sorted([me] + [r for r in rcpt])[:2] if len(rcpt) == 1 else None  # cap: parse
             ctx = f"dm:{'+'.join(pair)}" if pair else f"group:{'+'.join(sorted([me] + list(rcpt)))[:200]}"  # cap: id
         if artifact_id:
             a = self._get_row(int(artifact_id))
@@ -1614,7 +1617,7 @@ class Ledger:
                 "declined": len(declines), "refined": refined,
                 "accepted_share": round(len(active) / made, 2), "proven_share": round(len(done) / len(active), 2) if active else None,
                 "reopen_rate": round(len(reopened) / len(done), 2) if done else None,
-                "decline_reasons": sorted(reasons.items(), key=lambda x: -x[1])[:3], "refusals_24h": self.refusals_since().get(agent, 0),
+                "decline_reasons": sorted(reasons.items(), key=lambda x: -x[1])[:3], "refusals_24h": self.refusals_since().get(agent, 0),  # cap: top
                 "requests": self.requests_of(agent, days), "replays": replays, "failures": failures, "helps": helps}
 
     # ------------------------------------------------------------ reads
@@ -1759,6 +1762,7 @@ class Ledger:
             keep = []
             for it in items:
                 n = len(json.dumps(it, ensure_ascii=False))
+                # limit: drops, context pack items past the pack's size (SWM-60); the pack lists what it left out
                 if used + n > PACK_CHARS:
                     cut.append(f"{name}:{it.get('id') or it.get('artifact_id') or it.get('seq')}")
                     continue

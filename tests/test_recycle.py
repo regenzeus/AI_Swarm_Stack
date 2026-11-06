@@ -44,7 +44,7 @@ def test_a_busy_hour_skips_the_night_without_restarting(tmp_path):
     calls, clock = [], [1000.0]
     sh = lambda *cmd, timeout=0: calls.append(cmd) or (STATS if cmd[:2] == ("docker", "stats") else "")
     st = tmp_path / "state.json"
-    st.write_text(json.dumps({"running": {"slug": "uranium"}}))
+    st.write_text(json.dumps({"running": {"slug": "copper"}}))
     R_mem = R.memory
     R.memory = lambda sh: {"swap": 1}
     try:

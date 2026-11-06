@@ -17,7 +17,7 @@ def J(tmp_path, monkeypatch):
     vault = tmp_path / "vault"
     for rel, title in {"missions/ram/wiki/entities/gskill.md": "G.Skill", "missions/ram/wiki/concepts/ddr4.md": "DDR4",
                        "missions/pc/wiki/concepts/ddr4.md": "DDR4", "missions/mail/wiki/concepts/ddr4.md": "DDR4",
-                       "topics/uranium/wiki/entities/cameco.md": "Cameco", "wiki/concepts/x.md": "X"}.items():
+                       "topics/copper/wiki/entities/acme-mining.md": "Acme Mining", "wiki/concepts/x.md": "X"}.items():
         (vault / rel).parent.mkdir(parents=True, exist_ok=True)
         (vault / rel).write_text(f"---\ntitle: {title}\n---\nbody")
     subprocess.run(["git", "init", "-q"], cwd=vault, check=True)

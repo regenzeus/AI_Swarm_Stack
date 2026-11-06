@@ -156,7 +156,7 @@ result, and a probe that exercises it.
 ### Briefings that change a decision
 
 - **Outcome:** the share of briefings you rated "I acted on this" or "useful", against "noise".
-- **Journey:** each briefing (uranium, ASP Isotopes, China automotive) ends with three buttons in the mail, the app and
+- **Journey:** each briefing (copper, Beta Materials, Battery recycling) ends with three buttons in the mail, the app and
   Telegram: **Acted on it · Useful · Noise**, and an optional line. Ratings feed the desk: an item kind rated noise
   three times is dropped (licence class *briefing*); a briefing rated noise three weeks running asks whether to stop.
 - **Exam:** the research-accuracy trial covers its facts; the citations are checked against the sources it read (the

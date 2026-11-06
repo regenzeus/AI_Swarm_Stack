@@ -149,7 +149,7 @@ def save_rule(c, req):
     if src == "github" and not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", param):
         raise ValueError("give the repository as owner/name")
     if src == "price" and not re.fullmatch(r"[A-Za-z0-9.\-=^]{1,15}:\d{1,2}(\.\d)?", param):
-        raise ValueError("give the price rule as SYMBOL:percent, e.g. CCJ:8")
+        raise ValueError("give the price rule as SYMBOL:percent, e.g. ACME:8")
     if src == "filing" and not re.fullmatch(r"[A-Za-z.]{1,8}", param):
         raise ValueError("give the US ticker")
     if src == "schedule" and not M.valid_schedule(param):
@@ -501,6 +501,7 @@ def calendar_set(req):
         _cal.update(t=0, events=[], error=None)
         return {"calendar": None}
     url = str(req.get("url") or "").strip()
+    # limit: refuses, what is no calendar address
     if not re.match(r"^https://[^\s/]+/\S+$", url) or len(url) > 2000:
         raise ValueError("give the calendar's secret address in iCal format (https://…, often ending in .ics)")
     CAL_FILE.parent.mkdir(parents=True, exist_ok=True)

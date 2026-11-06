@@ -77,12 +77,12 @@ your e-mail**: waiting for the next report, cited, or read and not used. The Inb
 
 ```try
 label: See what your e-mail gave a briefing
-chat: Which newsletters fed my uranium briefing this week, and what did the report take from them?
+chat: Which newsletters fed my copper briefing this week, and what did the report take from them?
 note: Hermes reads the topic's mail folder and its reports. The same list is on the briefing's page, under From your e-mail.
 ```
 
 **Long-term task.** An agent works on a goal over many runs and keeps its own notes between them. It researches,
-compares and builds up an answer over days. Good for "find the best uranium producer to watch" or "track this
+compares and builds up an answer over days. Good for "find the best copper producer to watch" or "track this
 company's project milestones". Tasks can run as **deep research** (see the Deep research chapter).
 
 Here are your missions right now:
@@ -149,7 +149,7 @@ don't run. Archived missions fold away at the bottom of the Agents list. You can
 
 ```try
 label: Control a mission by chat
-chat: Pause my uranium briefing until Monday, and run the lithium one now.
+chat: Pause my copper briefing until Monday, and run the lithium one now.
 note: Hermes uses mission_control for each mission and confirms what it did.
 ```
 
@@ -161,7 +161,7 @@ changes it with `mission_update`. You'll find the change listed in the mission's
 
 ```try
 label: Change a schedule by chat
-chat: Move my uranium briefing to weekdays at 06:30 and also send it by e-mail.
+chat: Move my copper briefing to weekdays at 06:30 and also send it by e-mail.
 note: Hermes reads the mission, then updates the schedule and delivery, and tells you what changed.
 ```
 
@@ -203,7 +203,7 @@ stack runs on the subscription, the dollar figure stays at $0.00. Tokens show ho
 ## Agent memory
 
 Each agent keeps its own memory, a short file in your vault: `agents/<agent>/MEMORY.md` (for example
-`agents/mission-uranium-briefing/MEMORY.md`), committed in git like the rest of the vault.
+`agents/mission-copper-briefing/MEMORY.md`), committed in git like the rest of the vault.
 
 - **Written at each run's end**: the run's log is condensed into an entry: what it did, what it found, what failed and
   why, the open questions. One short ChatGPT call (gpt-sub-fast) writes it; when the model is limited, a plain

@@ -822,7 +822,7 @@ def mission_context(slug):
     if not m:
         return ""
     d = {k: m.get(k) for k in ("title", "type", "status", "schedule_text", "goal", "depth", "triggers", "brief", "notes")}
-    d["last_runs"] = [{k: r.get(k) for k in ("started", "status", "summary")} for r in (m.get("runs") or [])[:3]]
+    d["last_runs"] = [{k: r.get(k) for k in ("started", "status", "summary")} for r in (m.get("runs") or [])[:3]]  # cap: top
     return (f"This conversation is about the mission '{m['title']}' (slug '{slug}'). Help the owner tune its focus: discuss what "
             "it should track, then apply agreed changes with mission_update (briefings: key_questions, searches, watchlist, "
             "notes; tasks: goal) or mission_set_triggers, using this slug, and say exactly what you changed. To answer "
@@ -837,6 +837,7 @@ def doc_text(path, name):
         if n.endswith(".pdf"):
             from pypdf import PdfReader
             r = PdfReader(str(path))
+            # limit: drops, PDF pages past 300 in an attachment; the text says how many it has
             return "\n\n".join(f"--- page {i} ---\n{(pg.extract_text() or '').strip()}" for i, pg in enumerate(r.pages[:300], 1)) + (f"\n\n(only the first 300 of {len(r.pages)} pages)" if len(r.pages) > 300 else "")  # cap: prompt
         if n.endswith(".docx"):
             import docx
@@ -849,10 +850,15 @@ def doc_text(path, name):
             import openpyxl
             wb = openpyxl.load_workbook(str(path), read_only=True, data_only=True)
             out = []
-            for ws in wb.worksheets[:10]:
+            for ws in wb.worksheets[:10]:  # cap: list (the text says how many more)
                 out.append(f"--- sheet {ws.title} ---")
                 for row in ws.iter_rows(max_row=2000, values_only=True):
                     out.append(" | ".join("" if v is None else str(v) for v in row))
+                if (ws.max_row or 0) > 2000:
+                    out.append(f"(only the first 2,000 of {ws.max_row:,} rows of this sheet)")
+            # limit: drops, sheets past 10 in an attachment; the text says how many it left out
+            if len(wb.worksheets) > 10:
+                out.append(f"(… and {len(wb.worksheets) - 10} more sheets, not read)")
             return "\n".join(out)
         return path.read_text(errors="replace")
     except Exception as e:
@@ -1002,7 +1008,9 @@ LIVE = {}            # chat id -> answer in progress: text, reasoning, tools, do
 RUNNING = {}         # chat id -> asyncio task (for stop)
 LIMITED = {}         # chat id -> when its message is tried again (AST-12: the subscription's usage limit)
 LIMIT = re.compile(r"usage.?limit|rate.?limit|ratelimit|\b429\b|too many requests|hit your limit", re.I)
+# limit: waits, a chat that met a usage limit is tried again this often (AST-12)
 LIMIT_RETRY = 15 * 60                    # no reset time in the error: try again every 15 minutes
+# limit: stops, a chat still limited after a day stops waiting and says so (AST-12)
 LIMIT_GIVE_UP = 24 * 3600                # still limited after a day: stop and say so
 
 
@@ -1935,7 +1943,7 @@ async def api_forgejo_connect(request):
 
 
 # ---------- House: Home Assistant on the NAS (ops/house.py) ----------
-HA_BROWSER = os.environ.get("HA_BROWSER_URL", "http://192.168.1.80:8123")   # where the owner's browser reaches it (home Wi-Fi)
+HA_BROWSER = os.environ.get("HA_BROWSER_URL", "http://192.168.1.10:8123")   # where the owner's browser reaches it (home Wi-Fi)
 _house_states = {}                                       # OAuth state → (client_id, expiry)
 
 
@@ -2025,6 +2033,7 @@ async def api_whoami(request):
 async def api_clienterror(request):
     """An error the app hit in the browser: logged and kept (newest 500) for the health board (APP-24)."""
     raw = await request.body()
+    # limit: refuses, an error report longer than the app sends, with its size
     if len(raw) > 4000:                                   # a report this long is not one the app sends: refused, not cut
         return JSONResponse({"error": f"the report is {len(raw):,} bytes; the limit is 4,000"}, status_code=413)
     try:
@@ -2073,6 +2082,7 @@ def screen_views(days=30, path=None, today=None):
 async def api_view(request):
     """PLT-26: the app says a screen was opened (its route name and tab only)."""
     raw = await request.body()
+    # limit: refuses, a page-view report longer than the app sends, with its size
     if len(raw) > 200:                                    # the app sends a name and a tab: anything longer is refused, not cut
         return JSONResponse({"error": f"the report is {len(raw):,} bytes; the limit is 200"}, status_code=413)
     try:
@@ -2277,7 +2287,7 @@ async def api_repo_graph(request):
             comm[n["folder"]] = comm.get(n["folder"], 0) + 1
         _graph_cache.clear()
         _graph_cache[key] = {"nodes": nodes, "links": links, "total": len(known), "shown": len(nodes),
-                             "communities": sorted(comm.items(), key=lambda x: -x[1])[:12]}
+                             "communities": sorted(comm.items(), key=lambda x: -x[1])[:12]}  # cap: top
     return JSONResponse(_graph_cache[key])
 
 
@@ -2372,18 +2382,19 @@ async def api_repo_map(request):
 
 
 async def api_repo_overview(request):
-    """What the repo is: the code map digest (Understand Anything) if there is one, else its README."""
+    """What the repo is: the code map digest (Understand Anything) if there is one, else its README; and the written analysis of its onboarding."""
     name = request.path_params["name"]
     d = repo_dir(name)
     if not d:
         return JSONResponse({"error": "no such repo"}, status_code=404)
-    digest = CODE_DOCS / f"{name}.md"
+    digest, written = CODE_DOCS / f"{name}.md", CODE_DOCS / f"{name}.analysis.md"
+    analysis = cut(written.read_text(errors="replace"), 200000) if written.exists() else ""  # cap: store
     if digest.exists():
-        return JSONResponse({"source": "code map digest", "markdown": cut(digest.read_text(errors="replace"), 200000)})  # cap: store
+        return JSONResponse({"source": "code map digest", "markdown": cut(digest.read_text(errors="replace"), 200000), "analysis": analysis})  # cap: store
     for readme in ("README.md", "readme.md", "README.rst", "README"):
         if (d / readme).exists():
-            return JSONResponse({"source": readme, "markdown": cut((d / readme).read_text(errors="replace"), 200000)})  # cap: store
-    return JSONResponse({"source": None, "markdown": ""})
+            return JSONResponse({"source": readme, "markdown": cut((d / readme).read_text(errors="replace"), 200000), "analysis": analysis})  # cap: store
+    return JSONResponse({"source": None, "markdown": "", "analysis": analysis})
 
 
 # ---------- guide (chapters in guide/*.md; live parts come from the state and the tool list) ----------
@@ -2733,7 +2744,7 @@ async def windows_result(id: str, wait_seconds: int = 45) -> str:
 SCHEDULES = ("Schedule format: 'daily HH:MM', 'weekdays HH:MM', 'weekly mon,thu HH:MM' (mon tue wed thu fri sat sun), "
              "'every Nh' (1-24 hours) or 'manual' (on demand only).")
 TRIGGERS = ("Triggers (list of objects): {'type': 'sec_filing', 'tickers': ['ASPI'], 'forms': optional e.g. ['8-K','10-Q']}, "
-            "{'type': 'price_move', 'symbol': 'ASPI' (Yahoo symbol), 'pct': 8}, {'type': 'news', 'query': 'ASP Isotopes'}. "
+            "{'type': 'price_move', 'symbol': 'ASPI' (Yahoo symbol), 'pct': 8}, {'type': 'news', 'query': 'Beta Materials'}. "
             "Checked every 10 minutes; each new event starts a run (briefings write a short alert).")
 
 
@@ -2816,8 +2827,8 @@ async def mission_details(slug: str) -> str:
         return f"No mission '{slug}'."
     d = {k: m.get(k) for k in ("title", "type", "status", "schedule_text", "triggers", "depth", "next_run", "budget_usd_month",
                                "deliver", "goal", "brief", "notes", "stats", "wiki")}
-    d["runs"] = [{k: r.get(k) for k in ("started", "status", "seconds", "calls", "tokens", "spend", "summary")} for r in m["runs"][:5]]
-    d["outputs"] = m.get("outputs", [])[:5]
+    d["runs"] = [{k: r.get(k) for k in ("started", "status", "seconds", "calls", "tokens", "spend", "summary")} for r in m["runs"][:5]]  # cap: top
+    d["outputs"] = m.get("outputs", [])[:5]  # cap: top
     return json.dumps(d, ensure_ascii=False, indent=1)
 
 
@@ -3044,20 +3055,42 @@ async def improvement_proposals(scan_now: bool = False) -> str:
 
 @mcp.tool()
 async def understand_repo(repo: str) -> str:
-    """Analyse a code repository: clone it (GitHub URL like https://github.com/owner/name, or the name of a repo in
-    ~/code), build its code graph and its Understand Anything code map. Takes several minutes; the owner gets a message."""
+    """Onboard a code repository, the whole package: copy it (an https git URL, or the name of a repo in ~/code), its code
+    graph, its code map, every file explained, the search index and a written analysis by Claude Code (what it is, how the
+    stack could use it, risks, a verdict). No size limit; it waits for usage limits by itself and takes minutes to an hour.
+    The owner gets a message when it ends, either way. Do not start your own analysis as well: repos_overview shows the step
+    it is at or why it stopped, and when it is done the analysis is at qmd_get code-docs/<name>.analysis.md."""
     r = await submit({"action": "understand", "repo": repo, "source": "chat"})
-    return "Started; the owner gets a message when the code map is ready." + made("repo", repo, "changed") if r.get("ok") else f"Error: {r.get('error')}"
+    if not r.get("ok"):
+        return f"Error: {r.get('error')}"
+    name = r.get("repo") or repo
+    return (f"Onboarding of {name} {'is already running' if r.get('already') else 'has started'}, nothing is finished yet. "
+            "Say so plainly; repos_overview shows the step it is at or why it stopped. The owner gets a message when it ends.") + made("repo", name, "changed")
+
+
+def onboard_line(r):
+    """One repository's onboarding, as ops/onboard.py line() words it (the runner's state holds the same fields)."""
+    o = r["onboard"]
+    cur = next((s for s in o.get("steps", []) if s["id"] == o.get("step")), None)
+    if o["status"] == "done":
+        return "full package"
+    if o["status"] == "failed":
+        return f"onboarding STOPPED at {cur['title'] if cur else 'a step'}: {o.get('why')}"
+    if o["status"] == "incomplete":
+        return "package incomplete, missing: " + ", ".join(s["title"] for s in o.get("steps", []) if s["state"] != "done")
+    return f"onboarding: step {o.get('index')} of {o.get('total')} ({cur['title'] if cur else ''})" + (f", {cur['note']}" if cur and cur.get("note") else "")
 
 
 @mcp.tool()
 async def repos_overview() -> str:
     """The owner's code repositories: whether the builder may change each one (on Forgejo) or it is only studied, its code
-    graph size, whether it has a code map, and its last commit. Use the names with build_assign and understand_repo."""
+    graph size, whether it has a code map, how far its onboarding is (the step, or why it stopped), and its last commit.
+    Use the names with build_assign and understand_repo."""
     rs = (state().get("code") or {}).get("repos") or []
     return "\n".join(f"- {r['name']}: {'buildable' if r['buildable'] else 'studied only'}"
-                     f"{f' · graph {r['graph']['nodes']} nodes' if r.get('graph') else ' · no graph yet'}"
+                     f"{f' · graph {r['graph']['nodes']} nodes' if r.get('graph') else ' · no code to graph' if r.get('no_code') else ' · no graph yet'}"
                      f"{' · code map' if r.get('codemap') else ''}"
+                     f"{' · ' + onboard_line(r) if r.get('onboard') else ''}"
                      f"{f' · last commit {r['last']['ts'][:10]}: {r['last']['subject']}' if r.get('last') else ''}" for r in rs) or "(none)"
 
 

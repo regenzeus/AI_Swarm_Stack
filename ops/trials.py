@@ -103,7 +103,7 @@ def check(t, run=subprocess.run):
     k = key_dir(t)
     s = score(k / "reference", k, run=run)
     if s["error"] or not s["total"] or s["passed"] != s["total"]:
-        bad = [c["id"] for c in s["cases"] if not c["ok"]][:5]   # cap: preview
+        bad = [c["id"] for c in s["cases"] if not c["ok"]][:5]   # cap: top (preview)
         raise RuntimeError(f"the answer key of {t['name']} does not pass its own reference: {s['error'] or bad}")
     return s
 

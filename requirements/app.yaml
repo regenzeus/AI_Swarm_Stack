@@ -328,7 +328,7 @@ items:
   - id: APP-30
     title: Every tool's menus one tap away
     statement: The Stack page shall start with Tools, one card for every tool the stack runs on (Home Assistant, the NAS,
-      the FRITZ!Box, Forgejo, Hermes admin, Phoenix and the rest) with where it opens (anywhere, or the home network)
+      the router, Forgejo, Hermes admin, Phoenix and the rest) with where it opens (anywhere, or the home network)
       and its main menus as links, and a Go-to search over those menus and the app's own pages; one list
       (web/static/tools.json) feeds them, the guide and the House page; every link shall be opened each night and a
       broken one reported.

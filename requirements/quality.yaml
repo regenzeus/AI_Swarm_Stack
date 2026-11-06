@@ -255,3 +255,17 @@ items:
       tests/test_repo_docs.py::test_every_make_recipe_calls_a_file_that_exists,
       tests/test_docs.py::test_the_readme_and_the_index_point_at_what_is_current]}
     trace: [README.md, docs/README.md]
+  - id: QA-22
+    title: No limit stays secret
+    statement: Every limit that stops, refuses, drops or delays work shall carry in the code what it does and why it exists,
+      and docs/LIMITS.md shall list them all. A limit without that tag, a list slice without a reason or an out-of-date list
+      shall fail the checks. A limit that drops what the owner or an agent asked for shall say so where they see it, or
+      refuse with the limit named.
+    type: quality
+    priority: must
+    status: implemented
+    parents: ['SN-15', 'SN-06']
+    sources: [AGENTS.md, docs/LIMITS.md]
+    findings: [FND-123]
+    verify: {method: test, by: [tests/test_limits.py::test_the_limit_that_refused_the_owner_s_repository_would_fail_the_check_today, tests/test_limits.py::test_a_limit_needs_what_it_does_and_why, tests/test_limits.py::test_the_list_of_limits_stays_current, tests/test_limits.py::test_every_limit_in_the_repository_says_what_it_does_and_why, tests/test_limits.py::test_nothing_is_left_of_the_size_limit_on_repositories, tests/test_limits.py::test_a_short_list_slice_needs_its_reason, tests/test_limits.py::test_triggers_and_tickers_over_the_limit_are_refused_not_dropped, tests/test_limits.py::test_a_briefing_checks_every_source_it_was_given, tests/test_limits.py::test_a_fan_out_runs_every_item_or_refuses_the_plan, tests/test_limits.py::test_past_the_day_s_budget_the_owner_is_told_once, tests/test_limits.py::test_an_attachment_says_which_sheets_and_rows_it_left_out]}
+    trace: [ops/limits.py, ops/truncation.py, ops/check.sh, docs/LIMITS.md]

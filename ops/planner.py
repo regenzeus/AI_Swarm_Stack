@@ -12,6 +12,7 @@ import re
 import prompts as P                               # MEM-11: the agent prompts live in prompts/<owner>.md
 
 FOLLOW = ("tests/", "requirements/", "docs/", "AGENTS.md", "CLAUDE.md", "README.md")
+# limit: paces, a planner's answer with more falls back to one build, which does all of it
 MAX_TASKS = 5
 REQ_ID = re.compile(r"\b[A-Z]{2,3}-\d{2,3}\b")
 

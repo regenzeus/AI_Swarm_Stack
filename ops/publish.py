@@ -35,6 +35,8 @@ EXCLUDE = {
     "secrets/secrets.enc.yaml": "the owner's credentials: encrypted, but ciphertext is not published",
     "secrets/agent-keys.enc.yaml": "the agents' virtual keys: encrypted, but ciphertext is not published",
 }
+# Real runs' records hold real answers and details of the owner's setup. The ones a requirement cites as its evidence stay.
+LEFT_OUT = re.compile(r"^eval/results/(?!20261031-140852-|20261031-152501-|20261101-020317-)")
 # Addresses that are placeholders or test fixtures, not anyone's mailbox. A new one stops the publish until it is here.
 ALLOW_EMAILS = {"owner@example.com", "test@example.com", "test@example.org", "anna@example.com", "noreply@anthropic.com",
                 "builder@ai-stack.local", "x@spam.ru", "service@paypal.de", "secret@github.com", "newsletter@x.com",
@@ -44,6 +46,7 @@ ALLOW_EMAILS = {"owner@example.com", "test@example.com", "test@example.org", "an
 # only as an image, without metadata, and small. docs/PUBLISHING.md says how such a picture is made. Any other binary stops.
 ASSETS = "docs/screenshots/"
 ASSET_TYPES = {".jpg": b"\xff\xd8\xff", ".png": b"\x89PNG\r\n\x1a\n"}
+# limit: refuses, an image over this stops a publish, with its name (SEC-19)
 ASSET_MAX = 1_000_000
 # Words that hold a private term by chance; the scan matches terms inside words, so each one is named here.
 ALLOW_WORDS = {"mmarco"}                                         # the mMARCO dataset in a reranker model's name
@@ -60,7 +63,7 @@ CHECKS = [
                          r"|AKIA[0-9A-Z]{16}|\d{8,10}:AA[0-9A-Za-z_-]{30,}|AIza[0-9A-Za-z_-]{30,})"), lambda m: m in ALLOW_TOKENS),
     ("private key", re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----|AGE-SECRET-KEY-1[0-9A-Z]{20,}"), lambda m: False),
     ("age recipient", re.compile(r"\bage1[0-9a-z]{50,}\b"), lambda m: False),
-    ("sops value", re.compile(r"ENC\[AES256_GCM,"), lambda m: False),
+    ("sops value", re.compile(r"ENC[\[]AES256_GCM,"), lambda m: False),
 ]
 
 
@@ -129,6 +132,7 @@ def scan(files, terms):
         if any(hit(p, path) for p, _ in pats):
             out.append(f"{path}: the file name holds a private term")
         for n, line in enumerate(text.splitlines(), 1):
+            line = re.sub(r"\\+(?=[^A-Za-z0-9])", "", line)   # a term written as a regular expression is still the term (FND-124)
             for p, what in pats:
                 if hit(p, line):
                     out.append(f"{path}:{n}: {what}")
@@ -178,6 +182,8 @@ def build(head="HEAD", terms=None, archive=None, assets=None):
                 files[m.name] = tar.extractfile(m).read().decode("utf-8")    # every other tracked file is text; a binary stops it
                 if m.mode & 0o111:
                     executable.add(redact(m.name, terms))
+    files = {p: t for p, t in files.items() if not LEFT_OUT.match(p)}
+    executable = {p for p in executable if not LEFT_OUT.match(p)}
     for path in EXCLUDE:
         if path in files:
             files["secrets/" + Path(path).name.replace(".enc.yaml", ".example.yaml")] = example(files.pop(path), Path(path).name)
@@ -236,15 +242,18 @@ def record(**row):
         f.write(json.dumps({"ts": int(time.time()), **row}) + "\n")
 
 
-def push(dest, head):
-    """Commit the snapshot on top of the public repository's history and push it. -> the public commit or None."""
+def push(dest, head, fresh=False):
+    """Commit the snapshot on top of the public repository's history and push it. -> the public commit or None.
+    fresh: the snapshot becomes the whole public history, replacing what was there (only on the owner's word)."""
     repo = WORK / "repo"
     git = lambda *a, **k: subprocess.run(["git", "-C", str(repo), *a], check=True, capture_output=True, text=True, **k)
+    if fresh and repo.exists():
+        shutil.rmtree(repo)
     if not (repo / ".git").exists():
         repo.mkdir(parents=True, exist_ok=True)
         subprocess.run(["git", "init", "-q", "-b", "main", str(repo)], check=True)
         git("remote", "add", "origin", REMOTE)
-    if git("ls-remote", "--heads", "origin", "main").stdout.strip():
+    if not fresh and git("ls-remote", "--heads", "origin", "main").stdout.strip():
         git("fetch", "-q", "origin", "main")
         git("reset", "-q", "--hard", "origin/main")
     for p in repo.iterdir():                             # the snapshot replaces the tree; the public history stays
@@ -256,14 +265,14 @@ def push(dest, head):
     want = {str(p.relative_to(dest)) for p in dest.rglob("*") if p.is_file()}
     if tracked != want:                                   # (an ignore rule dropped the secrets examples once, 31 Oct 2026)
         raise SystemExit(f"not pushed: git would commit {len(tracked)} files, the snapshot has {len(want)}: "
-                         + ", ".join(sorted(want ^ tracked)[:10]))
+                         + ", ".join(sorted(want ^ tracked)[:10]))  # cap: top
     if not git("status", "--porcelain").stdout.strip():
         return None
     sha = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "--short", head], check=True, capture_output=True, text=True).stdout.strip()
     env = {"GIT_AUTHOR_NAME": AUTHOR[0], "GIT_AUTHOR_EMAIL": AUTHOR[1], "GIT_COMMITTER_NAME": AUTHOR[0],
            "GIT_COMMITTER_EMAIL": AUTHOR[1]}
     git("commit", "-q", "-m", f"Snapshot of {time.strftime('%Y-%m-%d')} (private {sha})", env={**os.environ, **env})
-    git("push", "-q", "origin", "main")
+    git("push", "-q", *(["--force"] if fresh else []), "origin", "main")
     return git("rev-parse", "--short", "HEAD").stdout.strip()
 
 
@@ -272,7 +281,17 @@ def committed():
     return subprocess.run(["git", "-C", str(ROOT), "rev-parse", "HEAD"], check=True, capture_output=True, text=True).stdout.strip()
 
 
-def main(mode):
+def scan_only(head):
+    """The privacy scan alone on one commit, for every landing (ops/land.sh): what would stop the next publish stops here,
+    while it is still one change's fault. No map on this machine: nothing to compare with. -> problems."""
+    if not MAP.exists():
+        return []
+    terms, assets = load_map(), {}
+    files, _ = build(head, terms, assets=assets)
+    return scan({**files, **{p: "" for p in assets}}, terms) + asset_problems(assets)
+
+
+def main(mode, fresh=False):
     head = committed()
     terms = load_map()
     assets = {}
@@ -297,13 +316,18 @@ def main(mode):
         print(f"clean: {dest} (push it with make publish)")
         record(mode=mode, head=head, files=len(files), result="clean")
         return 0
-    public = push(dest, head)
+    public = push(dest, head, fresh)
     print(f"pushed {public} to {REMOTE}" if public else "the public repository already has this snapshot")
-    record(mode=mode, head=head, files=len(files), result="pushed" if public else "unchanged", public=public)
+    record(mode=mode, head=head, files=len(files), result="pushed" if public else "unchanged", public=public, fresh=fresh)
     return 0
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2 or sys.argv[1] not in ("check", "push"):
+    args = sys.argv[1:]
+    if len(args) == 2 and args[0] == "scan":
+        found = scan_only(args[1])
+        print("\n".join(found) or "   the privacy scan is clean")
+        sys.exit(1 if found else 0)
+    if args not in (["check"], ["push"], ["push", "--fresh"]):
         sys.exit(__doc__)
-    sys.exit(main(sys.argv[1]))
+    sys.exit(main(args[0], fresh="--fresh" in args))

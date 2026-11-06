@@ -50,14 +50,18 @@ note: The stack studies itself too. Scroll to the graph and tap a node.
 
 ## Adding a repository
 
-**Study a GitHub repository.** Paste its link under **Add a repository**, or ask in chat. The stack clones it,
-builds the graph right away and the code map in a few minutes. Third-party code is never run: the analysis only
-reads it, in a sandbox without internet or keys.
+**Study a repository.** Paste its https link under **Add a repository**, or ask in chat. Onboarding always does the
+whole package, one step after the other, whatever the repository's size: a copy of the code, its code graph, its code
+map, every file explained, a place in the search, and a written analysis on its page (what it is, how the stack could
+use it, risks, a verdict). Its page shows the step it is at. It takes minutes to an hour, waits by itself when a usage
+limit or the PC's memory is in the way, and goes on after a crash or a restart. You get a message when it ends, and if
+a step cannot be done the message and the page say why, with **Try again**. Third-party code is never run: the analysis
+only reads it.
 
 ```try
 label: Study a repository by chat
 chat: Study the repository github.com/pallets/click and tell me how its command parsing works.
-note: Hermes calls understand_repo. The repository appears in the Code tab, and you get a message when its code map is ready.
+note: Hermes calls understand_repo. The repository appears in the Code tab with its steps, and you get a message when the onboarding ends.
 ```
 
 **Create a new repository.** Give it a name, and the stack creates a private repository on your Forgejo with a README

@@ -7,19 +7,20 @@ requests here; builds.py does the building).
   codemap    -> show one repo in the code map viewer (ops/understand-dashboard.sh; behind the tailnet gate, no token)
   repo_create, repo_buildable -> need a Forgejo token (FORGEJO_TOKEN, made once by the owner): a new private repo on
                 Forgejo cloned to ~/code, or a studied GitHub repo moved to Forgejo so the builder can change it
-Studying a repo (clone + graph + code map) is the existing "understand" action in ops/missions.py.
+Studying a repo is ops/onboard.py (the "understand" action in ops/missions.py): the whole package, shown step by step.
 ai-stack itself is studied through a read-only mirror clone in ~/code/ai-stack (kept current by ops/graphify-sync.sh).
 """
 import json, os, re, subprocess, time
 from pathlib import Path
 from textcap import tail                    # visible caps and input limits (AGENTS.md, truncation)
 import textcap as TC
+import onboard as O
 
 M = B = None
 CODE = Path.home() / "code"
 STACK = Path.home() / "ai-stack"
 DOCS = Path("/srv/ai/code-docs")
-NAME = re.compile(r"^[a-z0-9][a-z0-9._-]{1,40}$")
+NAME = re.compile(r"^[a-z0-9][a-z0-9._-]{1,99}$")   # as GitHub allows: a studied repository must stay removable
 _cache = {"t": 0, "data": []}
 
 
@@ -61,11 +62,16 @@ def one(name):
         info["files"] = len(git(live, "ls-files").splitlines())
     except Exception:
         pass
+    info["no_code"] = (study / "graphify-out" / ".no-code").exists()      # only web pages or documents: nothing to graph
+    info["package"] = O.package(name)                        # what it has on disk; the job's own record is laid over it (state)
     return info
 
 
 def repos(force=False):
-    if force or time.time() - _cache["t"] > 120:
+    stale = _cache.get("milestone") != O.last_milestone()     # a job finished a step: what is on disk changed
+    arrived = any(n not in {r["name"] for r in _cache["data"]} and (CODE / n / ".git").exists() for n in O.active())
+    if force or stale or arrived or time.time() - _cache["t"] > 120:
+        _cache["milestone"] = O.last_milestone()
         names = ["ai-stack"] + sorted(d.name for d in CODE.iterdir() if (d / ".git").exists() and d.name != "ai-stack") if CODE.exists() else ["ai-stack"]
         _cache.update(t=time.time(), data=[one(n) for n in names], codemap=codemap_repo())
     return _cache["data"]
@@ -152,6 +158,7 @@ def remove(name, c):
             if p == B.WB / name:
                 subprocess.run(["docker", "exec", "-u", "0", B.BUILDER, "rm", "-rf", f"/work/{name}"], capture_output=True, timeout=300)
             subprocess.run(["rm", "-rf", str(p)], check=False, timeout=300)
+    O.forget(name)                                           # its job, its records and its analysis
     for p in (DOCS / f"{name}.md", Path("/srv/ai/state/graphify") / f"{name}.head"):
         p.unlink(missing_ok=True)
     if path.exists():
@@ -162,4 +169,5 @@ def remove(name, c):
 
 
 def state():
-    return {"code": {"repos": repos(), "codemap": _cache.get("codemap"), "forgejo_token": bool(token())}}
+    rows = [{**r, "onboard": O.status(r["name"], r.get("package"))} for r in repos()]     # live, every state write
+    return {"code": {"repos": rows, "codemap": _cache.get("codemap"), "forgejo_token": bool(token())}}

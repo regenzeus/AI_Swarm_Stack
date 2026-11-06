@@ -25,6 +25,7 @@ step "yaml parses" python3 ops/ci_yaml_check.py
 step "agent registry (ops/registry.py: cards, keys, grants, units)" python3 ops/registry.py check
 step "agent prompts (ops/prompts.py: each change replay-tested, MEM-11)" python3 ops/prompts.py check
 step "truncation (ops/truncation.py: every cap names its reason)" python3 ops/truncation.py check
+step "limits (ops/limits.py: every limit says what it does and why, QA-22)" python3 ops/limits.py check
 if command -v semgrep >/dev/null 2>&1; then           # the repo's own rules (.semgrep.yml), offline
   step "security patterns (semgrep)" semgrep scan --config .semgrep.yml --metrics off --disable-version-check --error --quiet --exclude tests/semgrep .
   step "semgrep rules still catch what they should" python3 ops/semgrep_selftest.py

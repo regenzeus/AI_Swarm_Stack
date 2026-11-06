@@ -262,9 +262,9 @@ items:
     severity: low
     kind: contradiction
     title: A German briefing in an English stack
-    finding: DEC-02 made everything English, but the topic asp-isotopes-aspi-unternehmens-news still has language de, and
+    finding: DEC-02 made everything English, but the topic beta-materials-aspi-unternehmens-news still has language de, and
       the desk keeps its German clean-up code for it.
-    evidence: ["/srv/vault/topics/asp-isotopes-aspi-unternehmens-news/TOPIC.md: language de", "images/desk/desk.py:362 german()"]
+    evidence: ["/srv/vault/topics/beta-materials-aspi-unternehmens-news/TOPIC.md: language de", "images/desk/desk.py:362 german()"]
     affects: [MIS-12, CST-09]
     recommendation: Archive or switch that topic to English, then remove german() and its test.
     status: fixed
@@ -868,7 +868,7 @@ items:
     finding: OBS-16's gap named four Telegram senders that now go through notify.sh and missed three that send their
       own; CST-09 stayed partial for a German topic that had been archived; FND-28 stayed open although fixed two days
       earlier.
-    evidence: ["grep of Telegram senders (2026-10-30)", "state.json: asp-isotopes-aspi-unternehmens-news archived", "dae7d13"]
+    evidence: ["grep of Telegram senders (2026-10-30)", "state.json: beta-materials-aspi-unternehmens-news archived", "dae7d13"]
     severity: low
     kind: drift
     affects: [OBS-16]
@@ -955,7 +955,7 @@ items:
       36 hours of the week its searches asked for (231 items, 3 recent, 0 chosen), sent its Chinese queries to US-English
       Google News with when:1d added to their own when:7d, and the brief's notes were the intake's plan for agents (Main,
       Scout, Desk), so the writer reported its research and e-mail blocked. The task never asked the desk for e-mail, the
-      price table carried the uranium brief's Sprott note, and the board showed the task only as scheduled."
+      price table carried the copper brief's Sprott note, and the board showed the task only as scheduled."
     evidence: ["/srv/ai/desk/weekly-chinese-automotive-news-email/last.log (2026-10-31 16:54): 231 items collected, 3 new in 36 h; triage kept 0",
       "topics/weekly-chinese-automotive-news-email/TOPIC.md notes (Main must enable Task #79 ...)", "missions.sqlite runs id 52: Briefing blocked: no source material supplied"]
     severity: high
@@ -982,7 +982,7 @@ items:
       in images/desk/desk.py never found the headline: the header showed the kicker twice and the headline stayed in the
       body as an unstyled h1 (2em). The page was a fixed 640 px table without a viewport, so Gmail on Android scaled the
       text up further; the owner saw five words per screen."
-    evidence: ["owner's screenshot of the China Automotive Weekly e-mail, 2026-10-31", "the 30 Oct job report e-mail: 'Daily briefing · 30 Oct 2026' twice"]
+    evidence: ["owner's screenshot of the Battery Recycling Weekly e-mail, 2026-10-31", "the 30 Oct job report e-mail: 'Daily briefing · 30 Oct 2026' twice"]
     severity: medium
     kind: defect
     affects: [MIS-15]
@@ -1315,7 +1315,7 @@ items:
     title: A wiki compile wrote over the parts of a page it never saw
     finding: "The compile showed the model the first 3,000 characters of each page it touches, with no mark, and wrote the
       model's text over the whole page. The model, told to return each page's full new text, could not keep what it had
-      not seen: from 28 October to 1 November 14 pages of three wikis (the voice speaker, the RAM upgrade, ASP Isotopes)
+      not seen: from 28 October to 1 November 14 pages of three wikis (the voice speaker, the RAM upgrade, Beta Materials)
       lost 142 Timeline lines, 264 Open-question lines, 33 Key facts and one contradiction mark, a page's oldest part at
       each compile. Only the Superseded lines were guarded."
     evidence: ["vault 85d96c0 → f6e1b46 (1 Nov 08:13): projects/ram-upgrade-to-32-gb 6,843 → 4,787 characters; its October
@@ -1420,7 +1420,7 @@ items:
       compiled from then on was written without its created date (24 pages on 2 Nov, three wikis). No test read created
       back; found while building the task page."
     evidence: ["ops/mission_extras.py compile_into: '\"sources\": sorted(...),   # every source stays (it was the newest 30)
-        \"created\": old.get(\"created\", today),'", "vault: 24 pages of the RAM, voice speaker and China automotive wikis
+        \"created\": old.get(\"created\", today),'", "vault: 24 pages of the RAM, voice speaker and Battery recycling wikis
         without created after 06:00 on 2 Nov"]
     severity: medium
     kind: defect
@@ -1434,7 +1434,7 @@ items:
     title: A mission's research was filed under another task's scout step
     finding: "Hermes runs its agents in one resident process, so a scout run cannot be told who started it and the run record
       guessed: a live Conductor step of the same agent first. On 2 Nov the RAM mission asked the scout three questions
-      while the China automotive briefing's scout steps 6 and 7 ran: the answers were filed under those steps, so the
+      while the Battery recycling briefing's scout steps 6 and 7 ran: the answers were filed under those steps, so the
       briefing's page and swarm map listed geizhals.de RAM searches as its top source and counted their tokens. Of 35
       scout runs on record that answered a research call, 3 sat under the wrong task, 7 under no run and 24 under the
       other of two parallel sessions of the same mission run."
@@ -1531,7 +1531,7 @@ items:
       a long disconnection: crew.phone_down (fix/p6), an alert after 30 min disconnected or 10 min silent unless stopped"
   - id: FND-117
     title: A task whose planning a restart cut off waited forever
-    finding: "Task 93 (the Cameco rule's alert of 1 Nov) sat in 'planning' for 27 hours: the planner marks a task planning
+    finding: "Task 93 (the Acme Mining rule's alert of 1 Nov) sat in 'planning' for 27 hours: the planner marks a task planning
       before its model call, a runner restart (a deploy) cut the call off, and the worker only looks for new tasks."
     evidence: ["missions.sqlite tasks 93: status planning since 2026-11-01 13:32", "docs/PROBES.md P6"]
     severity: medium
@@ -1592,17 +1592,17 @@ items:
     decision: true
   - id: FND-121
     title: A newsletter on a watched topic never reached that topic, and the digest judged mail by its subject alone
-    finding: "The owner asked on 4 Nov whether everything in his uranium newsletter reaches the wiki. Of the 33 mails the digest saw
-      that day, 1 named a watched topic in its text: TipRanks, one line saying Cameco has a new analyst rating, no fact. 3 more
+    finding: "The owner asked on 4 Nov whether everything in his copper newsletter reaches the wiki. Of the 33 mails the digest saw
+      that day, 1 named a watched topic in its text: a ratings site, one line saying Acme Mining has a new analyst rating, no fact. 3 more
       matched only because 'mg' was read as the car maker MG. Over the five recorded days (148 mails) it was 2: that one and
-      Investing.com's weekly watchlist, the only mail with numbers on uranium companies. In 60 days Gmail held no
-      newsletter about uranium as such: the 9 other hits are the stack's own briefing mailed to him. MAX_FILE (5) was never reached
-      (0, 1, 3, 0, 1 picks). The filter was the weak part: the model sees sender and subject only, so it picked TipRanks' 'A stock on
+      A markets site's weekly watchlist, the only mail with numbers on copper companies. In 60 days Gmail held no
+      newsletter about copper as such: the 9 other hits are the stack's own briefing mailed to him. MAX_FILE (5) was never reached
+      (0, 1, 3, 0, 1 picks). The filter was the weak part: the model sees sender and subject only, so it picked a ratings site' 'A stock on
       your watchlist' three times on a guess, and whatever it picked went to the general vault, while a topic's wiki is compiled only from that
       topic's reports. The listing was the silent risk: it took the newest 40 of a two-day window that held 61, with 35 new on 2 Nov. Gmail's
-      own search is no substitute: an OR search for Cameco missed the TipRanks mail that a narrower search found."
+      own search is no substitute: an OR search for Acme Mining missed the a ratings site mail that a narrower search found."
     evidence: ["/srv/ai/state/prompt-cases/inbox.PICK.jsonl: 148 rows over 5 runs", "mail_read of all 148 against each active TOPIC.md's names, 4 Nov",
-      "/srv/ai/missions/crew/inbox.json: filed 1 of 33", "mail_search newer_than:60d uranium terms: 8 Investing.com, 9 AI Stack"]
+      "/srv/ai/missions/crew/inbox.json: filed 1 of 33", "mail_search newer_than:60d copper terms: 8 a markets site, 9 AI Stack"]
     severity: medium
     kind: defect
     affects: [CRW-13, MIS-28, MEM-04]
@@ -1611,3 +1611,49 @@ items:
       reaches the wiki only through the report, so its wiki stays shared."
     status: fixed
     resolved: "feat/topic-mail, 2026-11-04: ops/inbox.py hand_over and settle, images/desk/desk.py from_mail, the topic page's From your e-mail, the listing raised to the tool's 100 and reaching back to the last finished run"
+  - id: FND-122
+    title: Onboarding refused any repository over 150 source files, and told nobody
+    finding: "ops/understand.sh refused a repository with more than 150 source files. The limit came in with commit ba35be9 on
+      25 Oct 2026, from a coding session, to protect the shared ChatGPT limit; the owner never asked for it and no requirement or
+      test named it, while SN-14 says the stack can study any repository. The runner started the job and logged 'Analysing' without
+      looking at the result, the app promised 'you get a message', which no code sent, even on success, and the repo page had no
+      running or failed state. So on 6 Nov the button did nothing the owner could see, and Hermes could only say 'not yet confirmed'."
+    evidence: ["journalctl: understand-1793950559 and understand-1793951026, 177 source files, refused within 2 s",
+      "ops/understand.sh, ops/ua_enrich.py, ops/ua_digest.py: no call that sends a message", "/srv/ai/missions/public/events.jsonl: only 'Analysing' events, no end",
+      "ops/understand.sh, in git since ba35be9: nothing in requirements/ or tests/ named MAX_FILES"]
+    severity: high
+    kind: defect
+    affects: [BLD-26]
+    recommendation: One restartable job with no size limit, its steps on the repo page and in repos_overview, a real message when it ends.
+    status: fixed
+    resolved: "fix/boot, 2026-11-06: ops/onboard.py replaces ops/understand.sh (tests/test_onboard.py)"
+  - id: FND-123
+    title: Limits nobody chose dropped work without a word
+    finding: "An audit after FND-122 found more of the kind. A drafted briefing checked only its first 8 feeds, 15 symbols and 10
+      filings and removed the rest as if they had failed. A mission kept 10 triggers and 10 tickers, the watchlist 15 entries, and a
+      fan-out the first 8 items, all without a word. Past 10 Board messages a day the owner's phone stayed silent, and an event
+      dropped from a task's queue reached only the log. The truncation check could not see them: it ignored slices under 20. And an
+      attachment's sheets past 10 and rows past 2,000 were left out unmarked. Nothing listed the stack's limits."
+    evidence: ["images/desk/desk.py, ops/missions.py, ops/mission_extras.py, ops/conductor.py, ops/swarm_client.py at 3a94403", "ops/truncation.py at 3a94403: MIN = 20"]
+    severity: medium
+    kind: defect
+    affects: [QA-22]
+    recommendation: Refuse with the limit named, say what was left out, or drop the limit; tag every limit and generate the list.
+    status: fixed
+    resolved: "fix/boot, 2026-11-06: the limits refuse or say so, ops/limits.py and docs/LIMITS.md (tests/test_limits.py)"
+  - id: FND-124
+    title: The NAS's real address reached GitHub, and the public copy told strangers more than it had to
+    finding: "eval/bench-v1.yaml held the NAS's real LAN address as a regular expression, with a backslash before each dot, in all 8
+      public commits. The map replaces a plain address and the scan reads plain text, so neither saw it, and a first audit on 6 Nov
+      missed it for the same reason. It is reachable only from the owner's own network. The name, e-mail, tailnet and PC name are in no
+      commit, also with backslashes taken out. Beyond that, the map held identifiers only: the placeholder kept real last numbers, the
+      README named the NAS model, and the public copy showed the topics and companies the owner follows, router and phone models, and
+      16 records of real runs. The owner noticed on 6 Nov 2026."
+    evidence: ["every public commit's files, backslashes removed, against the map on 6 Nov 2026: only eval/bench-v1.yaml, line 116",
+      "README.md and docs/HOME-VOICE.md at 8328817", "eval/results/ at 8328817: 19 files, 3 cited by requirements"]
+    severity: high
+    kind: defect
+    affects: [SEC-19]
+    recommendation: The scan reads text without backslashes; the map holds what a stranger should not learn; run records stay out; one fresh public history, on the owner's word.
+    status: fixed
+    resolved: "fix/boot, 2026-11-06: ops/publish.py scan and LEFT_OUT and push --fresh, the private map, and every landing runs the scan (tests/test_publish.py); the owner chose on 6 Nov 2026 to keep the old public commits"

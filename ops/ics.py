@@ -11,6 +11,7 @@ import re
 from zoneinfo import ZoneInfo
 
 DAYS = {"MO": 0, "TU": 1, "WE": 2, "TH": 3, "FR": 4, "SA": 5, "SU": 6}
+# limit: drops, occurrences looked at per calendar event: years of a weekly meeting
 MAX_REPEATS = 2000                                # cap: list (occurrences looked at per event: years of a weekly meeting)
 
 

@@ -16,13 +16,13 @@ tasks:
   - {text: "Look up the current EU rules for returning online orders", kinds: [research]}
   # analysis
   - {text: "Analyse which of my missions cost the most model calls last week and why", kinds: [analysis]}
-  - {text: "Go through my vault notes on uranium and summarise where the sources disagree", kinds: [analysis, research]}
+  - {text: "Go through my vault notes on copper and summarise where the sources disagree", kinds: [analysis, research]}
   - {text: "Which agents failed most often this month, and what do the failures have in common?", kinds: [analysis]}
   - {text: "Review the ai-stack requirements and list the partial ones that block the swarm roadmap", kinds: [analysis, code_question]}
   - {text: "How does the builder decide when a build is ready for review?", kinds: [code_question, analysis]}
   # watching
-  - {text: "Tell me when Cameco moves more than 8 % in a day", kinds: [watching]}
+  - {text: "Tell me when Acme Mining moves more than 8 % in a day", kinds: [watching]}
   - {text: "Watch for news about a new Raspberry Pi model", kinds: [watching, briefing]}
-  - {text: "Let me know when Boss Energy files anything with the SEC", kinds: [watching]}
+  - {text: "Let me know when Gamma Metals files anything with the SEC", kinds: [watching]}
   - {text: "Every Monday morning, check whether my NAS has firmware updates", kinds: [watching, errand, research]}
-  - {text: "Send me a short uranium news briefing every weekday at 7", kinds: [briefing, watching]}
+  - {text: "Send me a short copper news briefing every weekday at 7", kinds: [briefing, watching]}

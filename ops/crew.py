@@ -888,6 +888,7 @@ def maintainability(c):
     P.record(MAINT_PROMPT)                                # MEM-11: the run records the prompt's version
     p = subprocess.run(["docker", "exec", "-u", "hermes", "-e", "CLAUDE_CODE_OAUTH_TOKEN", "-w", "/tmp/crew-review", *RTM.env_args(),
                         "-e", "AISTACK_AGENT=claude-maintainability", "-e", "AISTACK_TITLE=Maintainability review", BUILDER,
+                        # limit: stops, the maintainer's pass past 60 turns is reported as stopped
                         "timeout", "1500", "claude", "-p", J.take(MAINT_PROMPT + maint_context(c), tools=False), "--output-format", "json", "--max-turns", "60",
                         "--allowedTools", "Read,Grep,Glob", "--disallowedTools", "Bash,Edit,Write,NotebookEdit,WebFetch,WebSearch",
                         "--settings", "/config/claude-hooks/claude-runtime-settings.json"],
@@ -898,7 +899,7 @@ def maintainability(c):
     d = json_in(out)
     if not d:
         raise RuntimeError(f"no review came back: {tail(out or p.stderr, 4000)}")  # cap: store
-    findings = [f for f in d.get("findings", []) if isinstance(f, dict)][:12]
+    findings = TC.first([f for f in d.get("findings", []) if isinstance(f, dict)], 12, "findings")  # cap: untrusted (its prompt names the limit)
     new = propose(c, d.get("proposals") or [], "maintainability review", "maintainability")
     save("maintainability", result=f"{len(findings)} findings, {new} new proposal{'s' if new != 1 else ''}", findings=findings,
          proposals=new, seconds=round(time.time() - t0), last=time.time())
@@ -969,7 +970,7 @@ def tests(c):
     for f, n, ln in gaps:
         if f in hot and ln >= 25:                 # untested and changed lately: where a missing test costs (not "never mentioned")
             by_file.setdefault(f, []).append((n, ln))
-    for f, fs in sorted(by_file.items(), key=lambda kv: -sum(x[1] for x in kv[1]))[:1]:
+    for f, fs in sorted(by_file.items(), key=lambda kv: -sum(x[1] for x in kv[1]))[:1]:  # cap: top
         names = ", ".join(f"{n}()" for n, _ in fs[:5])
         props.append({"title": f"Add tests for {f.split('/')[-1]}: {fs[0][0]} and more"[:100],  # cap: id
                       "why": "These functions changed lately and no test covers them, so a regression would go unnoticed.", "signal": f"untested in {f}: {names}",
@@ -1152,6 +1153,7 @@ def _ask_claude(prompt, name):
     import runtime as RTM
     p = subprocess.run(["docker", "exec", "-u", "hermes", "-e", "CLAUDE_CODE_OAUTH_TOKEN", "-w", "/work/ai-stack", *RTM.env_args(),
                         "-e", f"AISTACK_AGENT=claude-{name}", "-e", f"AISTACK_TITLE={name}: answers on the Board", BUILDER,
+                        # limit: stops, a crew agent's Board answer past 20 turns is reported as stopped
                         "timeout", "600", "claude", "-p", prompt, "--output-format", "json", "--max-turns", "20",
                         "--allowedTools", "Read,Grep,Glob", "--disallowedTools", "Bash,Edit,Write,NotebookEdit,WebFetch,WebSearch",
                         "--settings", "/config/claude-hooks/claude-runtime-settings.json"],

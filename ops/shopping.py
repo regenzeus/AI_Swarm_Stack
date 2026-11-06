@@ -329,7 +329,7 @@ def propose(m, d, rel, open_p=None):
              url=pick["url"], address=f"your {pick['shop']} account's default address (never changed)", why=cut(d.get("why") or "", 2000),  # cap: untrusted
              why_now=cut(d.get("why_now") or v["reason"], 2000), verdict=v, need=TC.cut(str(d.get("need") or ""), 300),  # cap: untrusted
              trend=TC.cut(str(d.get("trend") or ""), 200), price_history=TC.cut(str(d.get("price_history") or ""), 200), report=rel,  # cap: untrusted
-             offers=d["offers"][:6], match=d["match"], budget_eur=num(d.get("budget_eur")), deadline=date_or_none(d.get("deadline")))
+             offers=TC.first(d["offers"], 6, "offers"), match=d["match"], budget_eur=num(d.get("budget_eur")), deadline=date_or_none(d.get("deadline")))  # cap: untrusted (its prompt names the limit)
     p["history"] = (p.get("history") or []) + [{"at": M.now().isoformat(timespec="minutes"), "total_eur": pick["total_eur"], "source": "agent"}]
     p["history"] = p["history"][-60:]  # cap: rotate (the newest 60 prices, for the trend line)
     over = over_limit(pick["total_eur"], pick["shop"], lim)

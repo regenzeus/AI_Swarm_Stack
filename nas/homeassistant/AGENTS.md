@@ -1,6 +1,6 @@
 # nas/homeassistant/: Home Assistant on the NAS (the House)
 
-`compose.yaml` runs Home Assistant (pinned by digest) on the DS923+ with host networking, so it can discover devices
+`compose.yaml` runs Home Assistant (pinned by digest) on the NAS with host networking, so it can discover devices
 on the home network; LAN only, port 8123, no router forward. `configuration.yaml` is the first configuration: `make
 ha-deploy` (ops/deploy-ha.sh) writes it only when the NAS has none, after that it belongs to Home Assistant and the owner.
 

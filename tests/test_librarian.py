@@ -50,17 +50,17 @@ def L(tmp_path, monkeypatch):
          "## Key facts\n- EUR 129 on 2026-10-30 [[missions/ram/log/b]]; kits: [[entities/ripjaws-v]], [[entities/gskill-ripjaws]], [[entities/missing]]")
     page(vault, "missions/ram/wiki/projects/ram", {"title": "RAM upgrade", **fresh}, "Upgrade with [[entities/gskill-ripjaws]] and [[concepts/ddr4]].")
     page(vault, "missions/ram/wiki/entities/proshop", {"title": "Proshop", "last_validated": "2026-07-01", "trust": "news"}, "A shop [[projects/ram]].")
-    page(vault, "topics/uranium/wiki/entities/cameco", {"title": "Cameco (CCJ)", "summary": "Uranium miner", **fresh}, "Miner.")
-    page(vault, "wiki/entities/cameco", {"title": "Cameco", "type": "entity", "sources": ["raw/a.md"], "created": "2026-10-01",
+    page(vault, "topics/copper/wiki/entities/acme-mining", {"title": "Acme Mining (ACME)", "summary": "Copper miner", **fresh}, "Miner.")
+    page(vault, "wiki/entities/acme-mining", {"title": "Acme Mining", "type": "entity", "sources": ["raw/a.md"], "created": "2026-10-01",
                                          "last_validated": "2026-10-01", "trust": "verified"}, "A miner ([[raw/a]]).")
     for rel in ("missions/ram/log/a.md", "missions/ram/log/b.md", "raw/a.md"):
         (vault / rel).parent.mkdir(parents=True, exist_ok=True)
         (vault / rel).write_text("a result")
-    (vault / "index.md").write_text("# Index\n\n## Entities\n- [[wiki/entities/cameco]] — Cameco\n")
+    (vault / "index.md").write_text("# Index\n\n## Entities\n- [[wiki/entities/acme-mining]] — Acme Mining\n")
     git = lambda *a: subprocess.run(["git", *a], cwd=vault, check=True, capture_output=True, text=True)   # noqa: E731
     git("init", "-q"); git("config", "user.email", "t@t"); git("config", "user.name", "t"); git("add", "-A"); git("commit", "-qm", "seed")
     missions = {"ram": {"slug": "ram", "title": "RAM upgrade", "type": "task"},
-                "u": {"slug": "u", "title": "Uranium", "type": "briefing", "topic": "uranium"}}
+                "u": {"slug": "u", "title": "Copper", "type": "briefing", "topic": "copper"}}
     prompts, touched, answers = [], [], {}
 
     def ask_json(prompt, key, model="gpt-sub", timeout=300):
@@ -115,11 +115,11 @@ def test_the_librarian_merges_marks_and_lints_every_agent_wiki_and_changes_only_
     assert "[[entities/gskill-ripjaws|G.Skill Ripjaws V]]" in index and "ripjaws-v" not in index
     assert "missions/ram/wiki/entities/gskill-ripjaws.md" in L.touched                                         # the run record sees each write
 
-    hub_meta, hub = meta_of(L, "wiki/hubs/cameco")
+    hub_meta, hub = meta_of(L, "wiki/hubs/acme-mining")
     assert hub_meta["type"] == "hub" and hub_meta["librarian"] is True and rep["hubs"]["hubs"] == 1
-    assert "\nlast_validated: 2026-11-04\n" in (L.M.VAULT / "wiki/hubs/cameco.md").read_text()                # a bare date, as the vault check reads it
-    assert "[[wiki/entities/cameco|Cameco]]" in hub and "[[topics/uranium/wiki/entities/cameco|Cameco (CCJ)]] — Uranium miner" in hub
-    assert (L.M.VAULT / "index.md").read_text().endswith("## Entities\n- [[wiki/entities/cameco]] — Cameco\n\n## Hubs\n- [[wiki/hubs/cameco]] — Cameco\n")
+    assert "\nlast_validated: 2026-11-04\n" in (L.M.VAULT / "wiki/hubs/acme-mining.md").read_text()                # a bare date, as the vault check reads it
+    assert "[[wiki/entities/acme-mining|Acme Mining]]" in hub and "[[topics/copper/wiki/entities/acme-mining|Acme Mining (ACME)]] — Copper miner" in hub
+    assert (L.M.VAULT / "index.md").read_text().endswith("## Entities\n- [[wiki/entities/acme-mining]] — Acme Mining\n\n## Hubs\n- [[wiki/hubs/acme-mining]] — Acme Mining\n")
     assert rep["commit"] and L.git("log", "-1", "--format=%s").stdout.startswith("librarian: 2026-11-04 · 2 wikis checked, 1 duplicate merged")
     assert L.git("status", "--porcelain").stdout == ""                                                       # all of it in one commit
     assert json.loads(L.store().read_text())["read"]["missions/ram/wiki"]
@@ -241,7 +241,7 @@ def test_the_librarian_and_the_map_share_one_rule_for_a_subject():
     import librarian
     import server as S
     assert librarian.SUBJECT_STOP == S.SUBJECT_STOP
-    for t in ("Cameco (CCJ)", "Index", "G.Skill Ripjaws V", "DDR4", "Centrus Energy (LEU)"):
+    for t in ("Acme Mining (ACME)", "Index", "G.Skill Ripjaws V", "DDR4", "Centrus Energy (LEU)"):
         assert librarian.subject(t) == S.subject(t)
 
 

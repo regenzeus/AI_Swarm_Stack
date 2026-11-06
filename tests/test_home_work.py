@@ -98,8 +98,8 @@ def test_home_s_results_are_one_card_per_outcome_named_by_what_it_is_about():
     page; a running task is on Now; the stack's own machinery (health, deploys, the Ledger, crew jobs, trials, probes)
     is not among your results."""
     ts = "2026-11-02T13:25:00+01:00"
-    state = {"missions": [{"slug": "uranium", "title": "Uranium", "type": "briefing", "runs": [
-                {"status": "ok", "summary": "Boss reports 359,000 lb", "output": "topics/uranium/reports/2026/10/2026-10-28.md",
+    state = {"missions": [{"slug": "copper", "title": "Copper", "type": "briefing", "runs": [
+                {"status": "ok", "summary": "Boss reports 359,000 lb", "output": "topics/copper/reports/2026/10/2026-10-28.md",
                  "started": "2026-10-28T06:33:34+01:00", "ended": "2026-10-28T06:37:54+01:00", "seconds": 260, "calls": 3, "trigger": "schedule"},
                 {"status": "failed", "summary": "no answer", "started": "2026-10-27T06:30:00+01:00"}]}],
              "tasks": [{"id": 113, "status": "done", "door": "plan", "source": "rule:2", "kind": "research", "title": "Macusani brief", "result": "tasks/113-macusani.md", "updated": ts, "runs": [{"occ": 1, "ended": ts, "status": "done"}]},
@@ -108,7 +108,7 @@ def test_home_s_results_are_one_card_per_outcome_named_by_what_it_is_about():
                        {"id": 79, "status": "scheduled", "door": "plan", "source": "app", "kind": "briefing", "title": "China weekly", "result": "tasks/79-china-1.md", "updated": ts, "runs": [{"occ": 1, "ended": ts, "status": "done"}]},
                        {"id": 115, "status": "done", "door": "plan", "source": "probe:p4", "title": "Hermes version", "updated": ts},
                        {"id": 109, "status": "done", "door": "plan", "source": "trial:mustache", "title": "Mustache", "updated": ts},
-                       {"id": 12, "status": "done", "door": "mission", "source": "app", "title": "Uranium mission", "updated": ts},
+                       {"id": 12, "status": "done", "door": "mission", "source": "app", "title": "Copper mission", "updated": ts},
                        {"id": 130, "status": "running", "door": "plan", "source": "app", "title": "Busy one", "updated": "2099-01-01T00:00:00+00:00",
                         "steps": [{"status": "done", "agent": "scout"}, {"status": "running", "agent": "main"}]}],
              "crew": [{"id": "inbox", "name": "Inbox digest", "last": 1793219000, "result": "Filed 2 of 37", "schedule": "daily 07:15", "state": "ok"}],
@@ -120,10 +120,10 @@ def test_home_s_results_are_one_card_per_outcome_named_by_what_it_is_about():
     assert ["alert", "Macusani brief", "#/task/113"] in items                          # the rule's alert and its task: one card
     assert ["task", "Compare two NAS", "#/task/120"] in items and ["failed", "Broken one", "#/task/121"] in items
     assert ["briefing", "China weekly", "#/task/79"] in items                          # a scheduled task's last run
-    assert ["briefing", "Boss reports 359,000 lb", "#/read?path=topics%2Furanium%2Freports%2F2026%2F10%2F2026-10-28.md&m=uranium"] in items
-    assert ["failed", "Did not finish: no answer", "#/mission/uranium?tab=history"] in items
+    assert ["briefing", "Boss reports 359,000 lb", "#/read?path=topics%2Fcopper%2Freports%2F2026%2F10%2F2026-10-28.md&m=copper"] in items
+    assert ["failed", "Did not finish: no answer", "#/mission/copper?tab=history"] in items
     heads = [h for _, h, _ in items]
-    for gone in ("Hermes version", "Mustache", "Uranium mission", "Busy one", "Filed 2 of 37", "Deployed: Work section", "Journey checks: 4 failed", "Rule fired on Macusani: task #113"):
+    for gone in ("Hermes version", "Mustache", "Copper mission", "Busy one", "Filed 2 of 37", "Deployed: Work section", "Journey checks: 4 failed", "Rule fired on Macusani: task #113"):
         assert not any(gone in h for h in heads), gone
     when = json.loads(run(state, "JSON.stringify(feedItems().map((x) => +new Date(toIso(x.ts))))"))
     assert when == sorted(when, reverse=True)

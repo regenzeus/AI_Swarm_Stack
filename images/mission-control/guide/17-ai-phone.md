@@ -7,7 +7,7 @@ minutes: 4
 summary: Hermes can use apps on your old Android phone (look, tap, type, scroll, open apps), and it asks your OK once per job, unless you let it work for a while.
 views: [phone]
 ---
-Your old phone (the S22) is the **AI phone**. Ask Hermes in chat to do something on it, and it looks at the screen,
+Your old phone (the AI phone) is the **AI phone**. Ask Hermes in chat to do something on it, and it looks at the screen,
 then taps, types, scrolls and opens apps the way you would. It works on that one phone only, never on your main phone.
 
 ```try

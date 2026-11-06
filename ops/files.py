@@ -26,7 +26,9 @@ M = None                                             # ops/missions.py, set by i
 ROOT = Path(os.environ.get("FILES_DIR", "/srv/ai/missions/files"))
 LEDGER = Path(os.environ.get("SWARM_DB", "/srv/ai/swarm/swarm.db"))
 TYPES = {".md": "text/markdown", ".csv": "text/csv", ".json": "application/json", ".txt": "text/plain"}
+# limit: refuses, one file a mission makes, with its size: split it (MIS-23)
 MAX_BYTES = 2_000_000                                # one file; the e-mail's attachments together stay under ATTACH_MAX
+# limit: refuses, a mail's attachments together: Gmail takes 25 MB, encoding adds a third
 ATTACH_MAX = 20_000_000                              # Gmail takes 25 MB in all, the encoding adds a third
 KEEP_VERSIONS = 5                                    # earlier versions kept per file
 ARCHIVED_DAYS = 180                                  # an archived mission's files, untouched this long, go to the trash
@@ -64,6 +66,7 @@ def asked_of(raw):
         if n not in seen:
             seen.add(n)
             out.append({"name": n, "what": M.limit(str(what or ""), 500, "what the file is") if M else str(what or "")})
+    # limit: refuses, files asked of one mission, with the limit (MIS-23)
     if len(out) > 20:
         raise Refused(f"{len(out)} files asked for; at most 20 per mission")
     return out
@@ -144,6 +147,7 @@ def save(slug, name, text=None, from_ledger=None, final=True, source="agent", no
         raise Refused("give the file's text, or from_ledger=<Ledger report id>")
     body = ledger_body(from_ledger) if from_ledger is not None else str(text)
     data = body.encode("utf-8")
+    # limit: refuses, as MAX_BYTES
     if len(data) > MAX_BYTES:
         raise Refused(f"'{n}' is {len(data):,} bytes; a file can have at most {MAX_BYTES:,}: split it")
     if not data.strip():

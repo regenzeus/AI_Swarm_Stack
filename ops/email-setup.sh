@@ -12,6 +12,7 @@ read -r -p "Gmail address that sends the reports [${default}]: " from; from=${fr
 read -r -p "Send reports to [${from}]: " to; to=${to:-$from}
 read -r -s -p "Gmail app password (16 letters, hidden): " pw; echo
 pw=${pw// /}
+# limit: refuses, a Gmail app password has 16 letters
 [ ${#pw} -ge 16 ] || { echo "That does not look like an app password (16 letters)."; exit 1; }
 sops set "$S" '["GMAIL_ADDRESS"]' "\"$from\""
 sops set "$S" '["MAIL_TO"]' "\"$to\""

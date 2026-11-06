@@ -8,7 +8,8 @@ a request here. The runner works through them one at a time:
     never touched, and the snapshot is deleted afterwards;
   - `claude -p` in aistack-builder-1 (same pinned Claude Code, Serena, proxy and sandbox as the builder); the token
     is passed per run (docker exec -e), never stored in the container;
-  - mode "ask": Read, Grep, Glob and Serena's read-only tools; mode "analyse": also Bash (tests, linters) in the copy.
+  - mode "ask": Read, Grep, Glob and Serena's read-only tools; mode "study": the same with more time, for onboarding a
+    repository; mode "analyse": also Bash (tests, linters) in the copy.
     Never Edit/Write, no web: changes go through build_assign as before.
 Evidence: a task may ask for read-only evidence (`evidence`: mission:<slug>, run:<runtime ref>, crew:<agent id>,
 minutes:<N>), gathered by the Health doctor's code (ops/doctor.py: run record or mission timeline, runner journal,
@@ -39,6 +40,9 @@ MODES = {
     "ask": {"tools": "Read,Grep,Glob,mcp__serena__find_symbol,mcp__serena__find_referencing_symbols,mcp__serena__get_symbols_overview,"
                      "mcp__serena__find_declaration,mcp__serena__find_implementations,mcp__serena__search_for_pattern,{graph}",
             "turns": 40, "timeout": 15 * 60},
+    "study": {"tools": "Read,Grep,Glob,mcp__serena__find_symbol,mcp__serena__find_referencing_symbols,mcp__serena__get_symbols_overview,"
+                       "mcp__serena__find_declaration,mcp__serena__find_implementations,mcp__serena__search_for_pattern,{graph}",
+              "turns": 80, "timeout": 30 * 60},     # onboarding's analysis: as long as "analyse", but third-party code is never run (BLD-18)
     "analyse": {"tools": "Read,Grep,Glob,Bash,mcp__serena__find_symbol,mcp__serena__find_referencing_symbols,mcp__serena__get_symbols_overview,"
                          "mcp__serena__find_declaration,mcp__serena__find_implementations,mcp__serena__search_for_pattern,"
                          "mcp__serena__get_diagnostics_for_file,{graph}",
@@ -210,6 +214,7 @@ def run(c, t):
                "-e", f"AISTACK_REF=claude-task:{tid}", "-e", "AISTACK_AGENT=claude-task", "-e", f"AISTACK_TITLE={t['question'][:150]}",  # cap: id
                "-e", "AISTACK_BOX=" + json.dumps(box), B.BUILDER,
                "timeout", str(cfg["timeout"]), "claude", "-p", prompt, "--output-format", "stream-json", "--verbose",
+               # limit: stops, a Claude task past its mode's turns and time (MODES) is reported as stopped
                "--max-turns", str(cfg["turns"]), "--allowedTools", cfg["tools"], "--disallowedTools", NEVER,
                "--mcp-config", B.SERENA_FOR_CLAUDE, "--strict-mcp-config", "--settings", "/config/claude-hooks/claude-runtime-settings.json"]
         p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, env={**os.environ})

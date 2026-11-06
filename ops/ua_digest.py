@@ -29,7 +29,7 @@ out = [f"# {repo}: code map", "",
 if g.get("layers"):
     out += ["## Layers", ""]
     for l in g["layers"]:
-        files = [nodes[i]["name"] for i in l.get("nodeIds", []) if i in nodes][:12]
+        files = [nodes[i]["name"] for i in l.get("nodeIds", []) if i in nodes]  # every file has its own section below
         out.append(f"- **{l['name']}**: {l.get('description', '').strip()} ({', '.join(files)})")
     out.append("")
 if g.get("tour"):

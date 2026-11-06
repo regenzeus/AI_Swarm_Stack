@@ -31,7 +31,7 @@ out = {}
 for p in json.load(sys.stdin):
     r = scan_skill(Path("/opt/data/skills") / p, source="agent-created")
     out[p] = {"verdict": r.verdict, "categories": sorted({f.category for f in r.findings}),
-              "findings": [f"{f.severity} {f.category} {f.file}:{f.line}" for f in r.findings][:8]}
+              "findings": [f"{f.severity} {f.category} {f.file}:{f.line}" for f in r.findings][:8]}  # cap: top
 print(json.dumps(out))
 '''
 
@@ -125,7 +125,7 @@ def main(note=()):
     learned = [l for l in lines if "[learned" in l]
     if learned:
         notify("Hermes learned/changed skills: " + cut("; ".join(learned), 3000, "the full list is in the skills repo") +  # cap: api
-               f"\nDiff: http://192.168.1.80:3000/regenzeus/hermes-skills/commit/{sha}")
+               f"\nDiff: http://192.168.1.10:3000/regenzeus/hermes-skills/commit/{sha}")
 
 
 def approve(name):

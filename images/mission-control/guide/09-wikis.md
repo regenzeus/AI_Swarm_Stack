@@ -18,7 +18,7 @@ It is rewritten automatically when the wiki's pages change (at most every six ho
 
 The **Wiki** tab opens with a **map of all your wikis**: one bubble per wiki, sized by its pages (purple the vault wiki, amber
 an agent's, teal a topic's), and a line between two wikis for the subjects both have: a page with the same title or alias,
-like *Centrus Energy* in the ASPI and the Uranium wiki. Tap a bubble to open its wiki, a line for the shared subjects.
+like *Centrus Energy* in the ASPI and the Copper wiki. Tap a bubble to open its wiki, a line for the shared subjects.
 There is no wiki that holds all the others: each has one owner and one topic, and the vault wiki is the top layer.
 
 Under the map is the list of all your wikis, each with its pages and links and **who used it in the last 7 days**: which

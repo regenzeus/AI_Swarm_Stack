@@ -134,7 +134,7 @@ def parse_mail(text):
 
 def terms_of(brief):
     """What names a topic in a mail: the brief's watchlist (names, aliases, ticker symbols), its searches where they are
-    plain words or quoted names, and a word three or more of its searches share ("uranium")."""
+    plain words or quoted names, and a word three or more of its searches share ("copper")."""
     terms, words = [], collections.Counter()
     for w in brief.get("watchlist") or []:
         terms += [w.get("name"), *(w.get("aliases") or [])]

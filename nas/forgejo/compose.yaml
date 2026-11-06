@@ -1,4 +1,4 @@
-# Forgejo on the Synology DS923+. Deployed to /volume1/docker/forgejo/compose.yaml.
+# Forgejo on the Synology NAS. Deployed to /volume1/docker/forgejo/compose.yaml.
 # Hosts the private repos ai-stack, vault and hermes-skills. LAN/tailnet only; no router forward.
 name: forgejo
 
@@ -14,8 +14,8 @@ services:
       FORGEJO__security__INSTALL_LOCK: "true"
       FORGEJO__service__DISABLE_REGISTRATION: "true"
       FORGEJO__service__REQUIRE_SIGNIN_VIEW: "true"
-      FORGEJO__server__DOMAIN: 192.168.1.80
-      FORGEJO__server__ROOT_URL: http://192.168.1.80:3000/
+      FORGEJO__server__DOMAIN: 192.168.1.10
+      FORGEJO__server__ROOT_URL: http://192.168.1.10:3000/
       FORGEJO__server__HTTP_PORT: "3000"
       FORGEJO__server__START_SSH_SERVER: "true"
       FORGEJO__server__SSH_PORT: "2222"

@@ -5,11 +5,14 @@ this file holds nothing the scan of the real snapshot would stop on."""
 import hashlib
 import io
 import json
+import subprocess
 import tarfile
 import types
+from pathlib import Path
 
 import publish as P
 
+ROOT = Path(__file__).resolve().parent.parent
 AT = "@"
 LAN = "192.168."
 TERMS = [("jdoe7" + AT + "mail.test", "owner@example.com"), ("Jane Doe", "Alex Example"), ("Jane", "the owner"),
@@ -133,3 +136,57 @@ def test_images_come_only_from_one_folder_and_hide_nothing(tmp_path):
         raise AssertionError("a binary outside the folder must stop the snapshot")
     except UnicodeDecodeError:
         pass
+
+
+def test_an_address_written_as_a_regular_expression_is_still_found():
+    """FND-124: the benchmark held the NAS's real address as a pattern, in every public commit, past every scan."""
+    escaped = LAN.replace(".", "\\\\.") + "77\\\\.80"
+    probs = P.scan({"bench.yaml": f'must_not: ["{escaped}"]', "mail.json": '"owner' + AT + 'example.com\\nFrom"'}, TERMS)
+    assert any(p.startswith("bench.yaml:1: LAN address") for p in probs)
+    assert not any(p.startswith("mail.json") for p in probs)   # a line break in JSON is no part of the address before it
+
+
+def test_real_runs_stay_out_but_the_evidence_requirements_cite_stays(tmp_path):
+    assert P.LEFT_OUT.match("eval/results/20261024-224644-baseline-v1.json")
+    assert P.LEFT_OUT.match("eval/results/20261101-113137-trial-semver.json")
+    for cited in ("20261031-140852-tasks-gate.json", "20261031-152501-conductor-gate.json", "20261101-020317-trigger-proof.json"):
+        assert not P.LEFT_OUT.match(f"eval/results/{cited}")
+        assert cited in "".join(f.read_text() for f in (ROOT / "requirements").glob("*.yaml"))
+    assert not P.LEFT_OUT.match("eval/tasks-v1.yaml")
+
+
+def test_a_fresh_publish_replaces_the_public_history(tmp_path, monkeypatch):
+    bare = tmp_path / "public.git"
+    subprocess.run(["git", "init", "-q", "--bare", "-b", "main", str(bare)], check=True)
+    monkeypatch.setattr(P, "REMOTE", str(bare))
+    monkeypatch.setattr(P, "WORK", tmp_path / "work")
+    monkeypatch.setattr(P, "ROOT", tmp_path / "private")
+    monkeypatch.setenv("GIT_CONFIG_GLOBAL", "/dev/null")
+    (tmp_path / "private").mkdir()
+    subprocess.run(["git", "init", "-q", "-b", "main", str(tmp_path / "private")], check=True)
+    g = ["git", "-C", str(tmp_path / "private"), "-c", "user.name=a", "-c", "user.email=a@example.com"]
+    subprocess.run([*g, "commit", "-q", "--allow-empty", "-m", "x"], check=True)
+    dest = tmp_path / "tree"
+    dest.mkdir()
+    for text in ("one", "two"):
+        (dest / "a.txt").write_text(text)
+        assert P.push(dest, "HEAD")
+    count = lambda: subprocess.run(["git", "--git-dir", str(bare), "rev-list", "--count", "main"], capture_output=True, text=True).stdout.strip()
+    assert count() == "2"
+    (dest / "a.txt").write_text("clean")
+    assert P.push(dest, "HEAD", fresh=True)
+    assert count() == "1"
+    shown = subprocess.run(["git", "--git-dir", str(bare), "show", "main:a.txt"], capture_output=True, text=True).stdout
+    assert shown == "clean"
+
+
+def test_every_landing_runs_the_privacy_scan_and_a_leak_stops_it(monkeypatch, tmp_path):
+    land = (ROOT / "ops/land.sh").read_text()
+    assert 'python3 ops/publish.py scan "$TIP"' in land and "NOT LANDED: the privacy scan stopped it" in land
+    assert land.index("publish.py scan") < land.index("git merge -q --ff-only")      # before main moves
+    monkeypatch.setattr(P, "MAP", tmp_path / "no-map")
+    assert P.scan_only("HEAD") == []                                                  # a machine without the map has nothing to compare
+    (tmp_path / "map").write_text("Jane\tthe owner\n")
+    monkeypatch.setattr(P, "MAP", tmp_path / "map")
+    monkeypatch.setattr(P, "build", lambda head, terms, assets=None: ({"a.md": "x" + AT + "leak.example.de"}, set()))
+    assert any(x.startswith("a.md:1: e-mail address") for x in P.scan_only("HEAD"))

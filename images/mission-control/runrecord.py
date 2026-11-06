@@ -31,6 +31,7 @@ WAIT_S = 3 * 3600             # a run parked on a declared wait (the Windows dis
 CUT_OFF_S = 5 * 60            # the watchdog looks every 30 seconds: this long past its limit means it wasn't running either
 KEEP_EVENTS_S = 90 * 86400
 END_STATES = ("done", "failed", "stopped", "stalled", "limit")
+# limit: drops, one step's detail past this in the run record, marked
 MAX_DETAIL = 20000
 
 # The OpenTelemetry GenAI names (semantic conventions, still in development: mapped here only)
@@ -947,7 +948,7 @@ def made_item(tool, args, text):
                                           "resume": "resumed", "archive": "archived"}.get(args.get("action"), "changed"), "mission_update": "settings changed",
                       "mission_set_triggers": "triggers set", "build_request_changes": "sent back with changes",
                       "build_recheck": "checks re-run", "build_switch_engine": f"moved to {args.get('engine', 'the other engine')}",
-                      "repo_make_buildable": "moved to Forgejo", "understand_repo": "code map started"}.get(tool, "changed")
+                      "repo_make_buildable": "moved to Forgejo", "understand_repo": "onboarding started"}.get(tool, "changed")
     return it
 
 

@@ -1,6 +1,6 @@
 [
  {"fills": {"echo": "Schlafzimmer Echo", "room": "", "question": "schreib mir ein neuen newsletter über semiconductor shortages"}, "model": "gpt-sub-fast", "user": ""},
  {"fills": {"echo": "Küche Echo Dot", "room": "", "question": "wie lange muss ein Ei kochen, damit es wachsweich ist"}, "model": "gpt-sub-fast", "user": ""},
- {"fills": {"echo": "Büro Echo Dot", "room": "", "question": "recherchier mal, welche Mesh-Repeater am besten zur FRITZ!Box 7530 AX passen, und schick mir das Ergebnis"}, "model": "gpt-sub-fast", "user": ""},
+ {"fills": {"echo": "Büro Echo Dot", "room": "", "question": "recherchier mal, welche Mesh-Repeater am besten zur router 7530 AX passen, und schick mir das Ergebnis"}, "model": "gpt-sub-fast", "user": ""},
  {"fills": {"echo": "Wohnzimmer Echo", "room": "", "question": "what's the capital of Australia"}, "model": "gpt-sub-fast", "user": ""}
 ]

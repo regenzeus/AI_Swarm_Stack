@@ -338,10 +338,10 @@
    "pass": true
   },
   {
-   "text": "Go through my vault notes on uranium and summarise where the sources disagree",
+   "text": "Go through my vault notes on copper and summarise where the sources disagree",
    "kind": "analysis",
    "done": [
-    "The report lists the uranium-related notes reviewed with vault paths or links, identifies their underlying sources where available, and states any access or coverage gaps.",
+    "The report lists the copper-related notes reviewed with vault paths or links, identifies their underlying sources where available, and states any access or coverage gaps.",
     "Each material disagreement names the issue, describes the competing positions, and cites supporting passages or precise locations in the vault notes.",
     "The report distinguishes substantive contradictions from differences in publication date, forecast horizon, units, definitions or assumptions, and avoids treating repeated references to one source as independent evidence.",
     "A concise concluding summary identifies the most consequential unresolved disagreements and explains what evidence would resolve them; if no material disagreements are found, it says so explicitly."
@@ -349,12 +349,12 @@
    "questions": [],
    "plan": [
     {
-     "step": "Find uranium-related vault notes using titles, tags, full-text search and relevant internal links; include linked notes only where they inform uranium claims. Record the scope and any inaccessible material without modifying the vault.",
+     "step": "Find copper-related vault notes using titles, tags, full-text search and relevant internal links; include linked notes only where they inform copper claims. Record the scope and any inaccessible material without modifying the vault.",
      "agent": "mission",
      "why": "Runs one-off analyses of the owner's information and can assemble the evidence set."
     },
     {
-     "step": "Extract material claims and source attribution, including dates, units, forecast horizons and assumptions. Compare claims by topic, prioritising disagreements that affect the overall uranium outlook, and flag missing provenance rather than guessing.",
+     "step": "Extract material claims and source attribution, including dates, units, forecast horizons and assumptions. Compare claims by topic, prioritising disagreements that affect the overall copper outlook, and flag missing provenance rather than guessing.",
      "agent": "mission",
      "why": "Can systematically compare the supplied evidence and separate genuine disagreements from contextual differences."
     },
@@ -455,18 +455,18 @@
    "pass": true
   },
   {
-   "text": "Tell me when Cameco moves more than 8 % in a day",
+   "text": "Tell me when Acme Mining moves more than 8 % in a day",
    "kind": "watching",
    "done": [
-    "An ongoing price-move watch is active for CCJ with an 8% threshold in either direction.",
+    "An ongoing price-move watch is active for ACME with an 8% threshold in either direction.",
     "The trigger uses the latest regular-session price relative to the previous trading day's close, excludes extended-hours trading, and requires an absolute move strictly greater than 8%.",
-    "Each alert identifies Cameco and CCJ, direction and percentage move, current price, previous close, quote timestamp with timezone, and a source link.",
+    "Each alert identifies Acme Mining and ACME, direction and percentage move, current price, previous close, quote timestamp with timezone, and a source link.",
     "Alerts reach the owner through the main assistant's Telegram channel, with chat as fallback, at most once per trading day per direction."
    ],
    "questions": [],
    "plan": [
     {
-     "step": "Register an ongoing CCJ price-move watch using the NYSE USD listing as the default, measuring both directions against the previous trading day's close during regular trading hours.",
+     "step": "Register an ongoing ACME price-move watch using the NYSE USD listing as the default, measuring both directions against the previous trading day's close during regular trading hours.",
      "agent": "mission",
      "why": "Runs the owner's missions and can configure the ongoing watch and daily deduplication."
     },
@@ -519,10 +519,10 @@
    "pass": true
   },
   {
-   "text": "Let me know when Boss Energy files anything with the SEC",
+   "text": "Let me know when Gamma Metals files anything with the SEC",
    "kind": "watching",
    "done": [
-    "Boss Energy Limited is identified against authoritative sources, with its SEC CIK and supported ticker recorded if available; distinguish it from similarly named issuers.",
+    "Gamma Metals Limited is identified against authoritative sources, with its SEC CIK and supported ticker recorded if available; distinguish it from similarly named issuers.",
     "An ongoing SEC-filing watch covers all forms and amendments for the verified issuer, or the owner receives a clear explanation if no SEC registrant or supported monitoring identifier can be established.",
     "Each new-filing alert contains the company name, form type, filing date, accession number, direct SEC filing link, and a brief description based on the filing.",
     "Existing filings establish the initial baseline without generating historical alerts; subsequent filings are reported once per accession number."
@@ -530,7 +530,7 @@
    "questions": [],
    "plan": [
     {
-     "step": "Verify Boss Energy Limited using its official investor-relations information and SEC records. Use ASX ticker BOE and US OTC ticker BQSSF as identity leads, not proof of SEC registration; establish the correct CIK and supported SEC-monitoring ticker.",
+     "step": "Verify Gamma Metals Limited using its official investor-relations information and SEC records. Use ASX ticker BOE and US OTC ticker BQSSF as identity leads, not proof of SEC registration; establish the correct CIK and supported SEC-monitoring ticker.",
      "agent": "scout",
      "why": "Scout is the only agent that reads the web and can verify the issuer and authoritative SEC records."
     },
@@ -583,12 +583,12 @@
    "pass": true
   },
   {
-   "text": "Send me a short uranium news briefing every weekday at 7",
+   "text": "Send me a short copper news briefing every weekday at 7",
    "kind": "briefing",
    "done": [
     "A recurring briefing is scheduled for Monday through Friday at 07:00 in the owner's configured timezone, falling back to UTC, starting with the next scheduled occurrence.",
     "Each briefing contains 3–5 concise news bullets, or fewer if there are fewer material developments, and stays under 250 words.",
-    "Each news bullet includes a source link, the development's date, and a brief explanation of its significance for uranium.",
+    "Each news bullet includes a source link, the development's date, and a brief explanation of its significance for copper.",
     "Coverage prioritizes developments since the previous briefing, including weekend news on Mondays; older context is labeled and previously reported news is not repeated without a material update.",
     "Each briefing is delivered through the owner's configured briefing channel, defaulting to Telegram and then chat if no channel is configured; quiet days receive a short no-material-news update rather than filler."
    ],
@@ -600,7 +600,7 @@
      "why": "Desk runs regular topic briefings and can apply the scheduling and delivery defaults."
     },
     {
-     "step": "Before each delivery, gather and verify material uranium news since the previous briefing, prioritizing primary announcements and reputable reporting; report prices only with their date and spot or term designation.",
+     "step": "Before each delivery, gather and verify material copper news since the previous briefing, prioritizing primary announcements and reputable reporting; report prices only with their date and spot or term designation.",
      "agent": "scout",
      "why": "Scout is the only agent that reads the web and can supply current reporting with source links."
     },

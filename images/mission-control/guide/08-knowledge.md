@@ -16,7 +16,7 @@ The vault is an Obsidian folder on your PC (`C:\AI\vault`), versioned in git on 
 every report and alert, mission notes, the mission wikis, and imported mail and chat exports. You can open it in
 Obsidian on the PC like any other vault.
 
-**Search** (qmd) indexes all of it, combining keyword search and meaning-based search, so "uranium supply
+**Search** (qmd) indexes all of it, combining keyword search and meaning-based search, so "copper supply
 deficit" also finds a report that says "shortfall in U3O8 production". Hermes searches it before answering.
 
 ## Adding knowledge
@@ -31,8 +31,8 @@ note: Find "Add knowledge". Choose Note, Web page or File, give it a title and a
 
 ```try
 label: Add knowledge by chat
-chat: Save this to my vault as "Uranium thesis": I think the supply deficit lasts until 2030 because restarts are slower than planned.
-note: Hermes calls vault_add. Later you can ask "What's my uranium thesis?" and it finds it.
+chat: Save this to my vault as "Copper thesis": I think the supply deficit lasts until 2030 because restarts are slower than planned.
+note: Hermes calls vault_add. Later you can ask "What's my copper thesis?" and it finds it.
 ```
 
 ## Long-term memory

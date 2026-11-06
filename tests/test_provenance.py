@@ -12,7 +12,7 @@ import conductor as CD
 import provenance as PV
 import tasks as TK
 
-A, B = "https://www.world-nuclear-news.org/articles/cameco-q3?utm_source=x#top", "https://example.com/other/"
+A, B = "https://www.world-nuclear-news.org/articles/acme-mining-q3?utm_source=x#top", "https://example.com/other/"
 
 
 @pytest.fixture
@@ -27,11 +27,11 @@ def P(tmp_path, monkeypatch):
             ("task:1:step:2", "task:1", "desk", 260, 390)]
     for run, ref, agent, s, e in runs:
         r.execute("insert into runs (run, ref, agent, started, ended, end_state) values (?,?,?,?,?,'done')", (run, ref, agent, s, e))
-    calls = [("hermes:scout:abc", 120, "web_search", {"query": "Cameco Q3 output"}),
+    calls = [("hermes:scout:abc", 120, "web_search", {"query": "Acme Mining Q3 output"}),
              ("hermes:scout:abc", 130, "mcp__webfetch__fetch_fetch", {"url": A, "max_length": 5000}),
              ("hermes:scout:helper", 160, "mcp__webfetch__browser_browse_open", {"url": B}),
              ("hermes:scout:abc", 170, "mcp__vault__qmd_get", {"file": "topics/u/reports/r.md"}),
-             ("hermes:scout:abc", 180, "memory_recall", {"query": "uranium positions"}),
+             ("hermes:scout:abc", 180, "memory_recall", {"query": "copper positions"}),
              ("hermes:scout:abc", 190, "todo_list", {}),
              ("hermes:scout:abc", 200, "mcp__webfetch__jobs_jobs_search", {"what": "AUTOSAR", "where": "Kassel"})]
     for run, ts, tool, a in calls:
@@ -45,11 +45,11 @@ def P(tmp_path, monkeypatch):
     CD.table(c)
     (tmp_path / "tasks").mkdir()
     PV.M = types.SimpleNamespace(VAULT=tmp_path, PUBLIC=tmp_path / "public", log=print)
-    plan = [{"step": "Find Cameco's Q3 output", "agent": "scout", "why": "web", "after": []},
+    plan = [{"step": "Find Acme Mining's Q3 output", "agent": "scout", "why": "web", "after": []},
             {"step": "Write it up", "agent": "desk", "why": "writes", "after": [1]}]
     t0 = TK.now()
     c.execute("insert into tasks (id, text, title, goal, kind, door, ref, done, effort, autonomy, rhythm, spec, questions, answers, status, source, created, updated) "
-              "values (1,'x','Cameco Q3','find it','research','plan','1','[]','standard','auto','{\"type\":\"once\"}',?,'[]','[]','running','app',?,?)",
+              "values (1,'x','Acme Mining Q3','find it','research','plan','1','[]','standard','auto','{\"type\":\"once\"}',?,'[]','[]','running','app',?,?)",
               (json.dumps({"plan": plan}), t0, t0))
     c.commit()
     CD.M = types.SimpleNamespace(log=print)
@@ -74,11 +74,11 @@ def links(P, rel):
 
 def test_a_step_s_tool_calls_are_its_used_artifacts_and_its_finding_is_derived_from_the_pages_it_names(P):
     t = TK.row(P.c, 1)
-    PV.record_step(P.c, t, step(P, 1, f"Cameco produced 5.2 Mlb in Q3 ({A.replace('www.', '')})."))
+    PV.record_step(P.c, t, step(P, 1, f"Acme Mining produced 5.2 Mlb in Q3 ({A.replace('www.', '')})."))
     a = PV.norm(A)
-    assert a == "https://world-nuclear-news.org/articles/cameco-q3"                      # one address for one page
-    assert links(P, "used") == {(1, "search", "search:Cameco Q3 output"), (1, "page", a), (1, "page", PV.norm(B)),
-                                (1, "note", "vault:topics/u/reports/r.md"), (1, "memory", "memory:uranium positions"),
+    assert a == "https://world-nuclear-news.org/articles/acme-mining-q3"                      # one address for one page
+    assert links(P, "used") == {(1, "search", "search:Acme Mining Q3 output"), (1, "page", a), (1, "page", PV.norm(B)),
+                                (1, "note", "vault:topics/u/reports/r.md"), (1, "memory", "memory:copper positions"),
                                 (1, "search", "jobs:AUTOSAR Kassel")}                    # its helper's read is its too; todo_list is nothing
     assert links(P, "generated") == {(1, "finding", "finding:1.1.1")}
     der = P.c.execute("select a.uri, s.uri from prov p join artifacts a on a.id=p.artifact join artifacts s on s.id=p.src where p.rel='derived'").fetchall()
@@ -89,16 +89,16 @@ def test_a_step_s_tool_calls_are_its_used_artifacts_and_its_finding_is_derived_f
 
 def test_the_run_s_answer_is_derived_from_the_last_findings_and_marks_what_it_cites(P, monkeypatch):
     t = TK.row(P.c, 1)
-    s1 = step(P, 1, f"Cameco produced 5.2 Mlb ({A})")
-    s2 = step(P, 2, f"## Cameco Q3\n5.2 Mlb [1]\n\n[1]: {A}")
+    s1 = step(P, 1, f"Acme Mining produced 5.2 Mlb ({A})")
+    s2 = step(P, 2, f"## Acme Mining Q3\n5.2 Mlb [1]\n\n[1]: {A}")
     PV.record_step(P.c, t, s1)
     PV.record_step(P.c, t, s2)
-    (P.tmp / "tasks/1-cameco-q3.md").write_text(s2["output"])
-    P.c.execute("update task_occ set status='done', ended=?, result='tasks/1-cameco-q3.md' where task=1", (TK.now(),)); P.c.commit()
+    (P.tmp / "tasks/1-acme-mining-q3.md").write_text(s2["output"])
+    P.c.execute("update task_occ set status='done', ended=?, result='tasks/1-acme-mining-q3.md' where task=1", (TK.now(),)); P.c.commit()
     PV.record_run(P.c, t, 1, CD.steps(P.c, 1))
     assert links(P, "cited") == {(0, "page", PV.norm(A))}                                 # B was read, never cited
     der = {tuple(x) for x in P.c.execute("select a.uri, s.uri from prov p join artifacts a on a.id=p.artifact join artifacts s on s.id=p.src where p.rel='derived'")}
-    assert ("finding:1.1.2", "finding:1.1.1") in der and ("vault:tasks/1-cameco-q3.md", "finding:1.1.2") in der
+    assert ("finding:1.1.2", "finding:1.1.1") in der and ("vault:tasks/1-acme-mining-q3.md", "finding:1.1.2") in der
     m = PV.map_of(P.c, 1, 1)
     assert m["numbers"]["read"] == 4 and m["numbers"]["cited"] == 1 and m["numbers"]["steps"] == 2   # pages, the note, the memory
     assert {(x["run"], x["step"], x["own"]) for x in m["lanes"]} == {("task:1:step:1", 1, True), ("hermes:scout:abc", 1, False),

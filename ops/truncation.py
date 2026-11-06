@@ -29,7 +29,10 @@ bounded_json, or the line writes its own marker ("…", "more", "earlier", "cut"
 there is a problem even with its reason, because a reader takes the start for the whole (FND-100, FND-103).
 A model's answer is read with textcap.answer(), which refuses one that stopped at its output limit; reading
 ["choices"][0]["message"] directly is a problem.
-Slices under 20 (short hashes, dates, a few items) are not checked; the rules in AGENTS.md still apply to them.
+  top        a short top-N view on purpose (the biggest five, the newest three): nobody's work is left out, and the whole is
+             elsewhere. Never for what an owner or an agent asked for: refuse it (textcap.limit_items) or use first().
+A list slice of any length needs its reason (FND-123): a loop, a comprehension or a default list cut at [:N]. Other slices
+under 20 (short hashes, dates) are not checked; the rules in AGENTS.md still apply to them.
 Reads only the repository. Stdlib only.
 """
 import re
@@ -39,11 +42,13 @@ from collections import Counter
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-REASONS = ("prompt", "untrusted", "api", "id", "parse", "store", "preview", "list", "rotate")
+REASONS = ("prompt", "untrusted", "api", "id", "parse", "store", "preview", "list", "rotate", "top")
 MARKED = {"prompt", "untrusted", "store", "preview"}        # someone reads it: the cut must show itself
 MIN = 20
 PY = re.compile(r"\[(?:-?\d*:)?-?(\d{2,})\]|\[-(\d{2,}):\]")
 PYC = re.compile(r"\[(?:-?\w*:\s*-?[A-Z][A-Z0-9_]{2,}|-[A-Z][A-Z0-9_]{2,}\s*:)\]")
+LISTCUT = re.compile(r"\bfor\s+[\w, ()]+\s+in\s+[^:]*\[:\d{1,2}\]\s*:|\bfor\s+.*\bin\b.*\]\[:\d{1,2}\]|\.get\(\s*[\"'][\w-]+[\"']\s*,\s*\[\]\s*\)\[:\d{1,2}\]"
+                     r"|\bor \[\]\)\[:\d{1,2}\]|\bsorted\(.*\)\[:\d{1,2}\]")
 JS = re.compile(r"\.(?:slice|substring|substr)\(\s*-?\d+\s*,\s*(\d{2,})\s*\)|\.slice\(\s*-(\d{2,})\s*\)")
 JSC = re.compile(r"\.(?:slice|substring|substr)\(\s*-?\w+\s*,\s*[A-Z][A-Z0-9_]{2,}\s*\)|\.slice\(\s*-[A-Z][A-Z0-9_]{2,}\s*\)")
 CALL = re.compile(r"(?<![\w.])(?:TC\.)?(cut|tail|tailcut|bounded_json)\(|(?<![\w.])TC\.(fit|more|first)\(")
@@ -87,6 +92,7 @@ def found(f, ln):
     if f.endswith(".py"):
         what += [m.group(0) for m in PY.finditer(code) if int(m.group(1) or m.group(2)) >= MIN]
         what += [m.group(0) for m in PYC.finditer(code)]
+        what += [m.group(0) for m in LISTCUT.finditer(code)]
         what += [m.group(0) for m in SQL.finditer(code) if SQLCTX.search(code)]
     if f.endswith(".js"):
         what += [m.group(0) for m in JS.finditer(ln) if int(m.group(1) or m.group(2)) >= MIN]

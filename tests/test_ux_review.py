@@ -46,7 +46,7 @@ def test_the_home_feed_filters_by_kind_and_each_card_names_its_kind():
     js = "\n".join(["let homeFilter = 'all', homeShow = 40; const homeEx = new Map(); const ic = new Proxy({}, {get: () => '<svg></svg>'});",
         "const esc = (s) => String(s ?? '');", "const toIso = (x) => x, dayOf = () => 'Today', clockOf = () => '10:00';",
         re.search(r"^const RKIND = .*?;$", APP, re.M | re.S)[0],
-        "const items = [{ ts: '3', kind: 'briefing', agent: 'Uranium', head: 'the briefing', href: '#' }, { ts: '2', kind: 'alert', agent: 'Task #113', head: 'the alert', href: '#' },",
+        "const items = [{ ts: '3', kind: 'briefing', agent: 'Copper', head: 'the briefing', href: '#' }, { ts: '2', kind: 'alert', agent: 'Task #113', head: 'the alert', href: '#' },",
         "  { ts: '1', kind: 'failed', agent: 'Task #121', head: 'did not finish', tone: 'err', href: '#' }];",
         "const feedItems = () => items;", fn("feedHtml"),
         "const every = feedHtml(); homeFilter = 'alert'; const alerts = feedHtml();",

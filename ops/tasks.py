@@ -255,6 +255,7 @@ def create(req, c):
     text = re.sub(r"\s+", " ", str(req.get("text", ""))).strip()
     if len(text) < 8:
         raise ValueError("say what the stack should do (at least a few words)")
+    # limit: refuses, a task given in a sentence, with its size: the rest goes in a document
     if len(text) > 4000:
         raise ValueError(f"the task is {len(text):,} characters; keep it under 4,000 and put the rest in a document")
     autonomy = req.get("autonomy") if req.get("autonomy") in AUTONOMY else "auto"

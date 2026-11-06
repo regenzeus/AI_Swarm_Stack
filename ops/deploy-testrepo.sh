@@ -11,4 +11,4 @@ tmp=$(mktemp --suffix=.tar); git -C "$REPO" archive --format=tar -o "$tmp" "$sha
 ssh synology "mkdir -p $APP/config $APP/data $APP/backups $APP/scripts $APP/state $APP/releases/$sha"
 scp -O -q "$tmp" "synology:$APP/releases/$sha.tar"; rm -f "$tmp"
 ssh synology "cd $APP/releases/$sha && tar -xf ../$sha.tar && rm ../$sha.tar && cp deploy/compose.yaml $APP/config/compose.yaml && cp deploy/ops.sh $APP/scripts/ops.sh && sed -i 's/\r\$//' $APP/scripts/ops.sh && chmod 750 $APP/scripts/ops.sh && sh $APP/scripts/ops.sh deploy $sha && cd $APP/releases && ls -1t | tail -n +6 | xargs -r rm -rf"
-curl -s http://192.168.1.80:8088/api/info; echo
+curl -s http://192.168.1.10:8088/api/info; echo

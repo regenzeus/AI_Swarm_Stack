@@ -48,7 +48,7 @@ sends you the result.
 
 ```try
 label: Ask for a short research note
-chat: Research what happened to uranium spot prices this week and send me a short summary in the app.
+chat: Research what happened to copper spot prices this week and send me a short summary in the app.
 note: Hermes creates a one-off mission. You'll see it under Missions while it runs, then get the result as a notification.
 ```
 

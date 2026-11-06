@@ -23,7 +23,7 @@ const toast = (m, bad) => toasts.push([m, !!bad]);
 globalThis.fetch = (path, o) => new Promise((_, rej) => o.signal.addEventListener("abort", () => rej(Object.assign(new Error("aborted"), { name: "AbortError" }))));
 (async () => {
   let err = ""; try { await api("/api/state", { timeout: 50 }); } catch (e) { err = e.message; }
-  const r = await act({ action: "create", title: "Uranium" });
+  const r = await act({ action: "create", title: "Copper" });
   process.stdout.write(JSON.stringify([err, r, toasts]));
 })();"""
     src = js.replace('timeout: 30000', 'timeout: 60')                                     # the test waits 60 ms, not 30 s
@@ -42,8 +42,8 @@ globalThis.fetch = (path, o) => {
   if (path === "/api/request") return Promise.resolve({ ok: true, status: 200, headers: { get: () => "application/json" }, json: () => ({ ok: true, pending: true, id: "x" }) });
   polls++;
   if (polls < 3) return new Promise((_, rej) => o.signal.addEventListener("abort", () => rej(Object.assign(new Error("a"), { name: "AbortError" }))));
-  return Promise.resolve({ ok: true, status: 200, headers: { get: () => "application/json" }, json: () => ({ ok: true, slug: "uranium" }) });
+  return Promise.resolve({ ok: true, status: 200, headers: { get: () => "application/json" }, json: () => ({ ok: true, slug: "copper" }) });
 };
-(async () => { const r = await act({ action: "create", title: "Uranium" }, "Mission created"); process.stdout.write(JSON.stringify([r, polls, toasts])); })();"""
+(async () => { const r = await act({ action: "create", title: "Copper" }, "Mission created"); process.stdout.write(JSON.stringify([r, polls, toasts])); })();"""
     r, polls, toasts = run(js)
-    assert r == {"ok": True, "slug": "uranium"} and polls == 3 and toasts == [["Mission created", False]]   # two stalled polls, then the answer
+    assert r == {"ok": True, "slug": "copper"} and polls == 3 and toasts == [["Mission created", False]]   # two stalled polls, then the answer

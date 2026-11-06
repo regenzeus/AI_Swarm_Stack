@@ -381,7 +381,7 @@ def deterministic(v, state, summary):
     for s in steps:
         name = s.split("(", 1)[0]
         tools[name] = tools.get(name, 0) + 1
-    did = f"{calls} model calls, {len(steps)} steps" + (": " + ", ".join(f"{t} ×{n}" for t, n in sorted(tools.items(), key=lambda x: -x[1])[:5]) if tools else "")
+    did = f"{calls} model calls, {len(steps)} steps" + (": " + ", ".join(f"{t} ×{n}" for t, n in sorted(tools.items(), key=lambda x: -x[1])[:5]) if tools else "")  # cap: top
     lines = [f"Did: {did}", f"Found: {clip(summary, 300)}" if summary else ""]
     if state != "done" or errors or probs:
         lines.append("Failed: " + clip("; ".join(([state] if state != "done" else []) + errors[:2] + probs[:2]) or state, 300))
@@ -405,7 +405,7 @@ def condense(v, title, run, state, summary, seconds, result):
         _log(f"journal: the model condense was skipped ({type(e).__name__}): deterministic entry")
         return None
     lines = [clip(ln.strip("-* \t"), 260) for ln in out.splitlines() if re.match(r"^\W*(Did|Found|Failed|Open):", ln.strip())]
-    return [re.sub(r"^\W*", "", ln) for ln in lines][:4] or None
+    return [re.sub(r"^\W*", "", ln) for ln in lines][:4] or None  # cap: top
 
 
 def record(agent, title, run, state, summary="", seconds=None, result=""):
@@ -498,7 +498,7 @@ def curate():
             d = M.ask_json(FOLD_PROMPT.format(title=doc["title"], notes="\n".join(f"- {x}" for x in doc["notes"]) or "(none)",
                                               entries=TC.cut("\n\n".join(e["head"] + "\n" + "\n".join(f"- {x}" for x in e["lines"]) for e in old), 12000)),  # cap: prompt
                            os.environ["VK_JOURNAL"], model="gpt-sub-fast", timeout=180)
-            notes = [clip(x, 220) for x in d.get("notes") or [] if str(x).strip()][:12]
+            notes = TC.first([clip(x, 220) for x in d.get("notes") or [] if str(x).strip()], 12, "journal notes")  # cap: untrusted (a model's fold; its prompt names the limit)
         except Exception as e:
             _log(f"journal curate {a}: skipped ({type(e).__name__})")
             continue

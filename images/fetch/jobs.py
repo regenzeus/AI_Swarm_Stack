@@ -15,6 +15,7 @@ from mcp.server.fastmcp import FastMCP
 API = "https://rest.arbeitsagentur.de/jobboerse/jobsuche-service"
 HEADERS = {"X-API-Key": "jobboerse-jobsuche", "User-Agent": "ai-stack-jobs/1.0 (personal job search)"}
 PAGE = "https://www.arbeitsagentur.de/jobsuche/jobdetail/"
+# limit: drops, one job ad past this; the text says how long it was
 MAX_TEXT = 12000                      # cap: prompt (one job ad; the agent reads a few of them)
 
 mcp = FastMCP("jobs", host="0.0.0.0", port=8001)

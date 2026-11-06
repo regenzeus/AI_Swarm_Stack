@@ -10,7 +10,7 @@ Method, statuses and rules: [README.md](README.md). Names of the parts: [glossar
 | [App](#app-app) (APP) | 42 | 42 | 0 | 0 | 0 | 0 | 0 |
 | [Assistant](#ast-assistant) (AST) | 14 | 13 | 1 | 0 | 0 | 0 | 0 |
 | [Autonomy](#aut-autonomy) (AUT) | 8 | 2 | 2 | 0 | 0 | 4 | 0 |
-| [Builder](#bld-builder) (BLD) | 25 | 24 | 0 | 0 | 0 | 1 | 0 |
+| [Builder](#bld-builder) (BLD) | 26 | 25 | 0 | 0 | 0 | 1 | 0 |
 | [Connections](#cnx-connections) (CNX) | 6 | 6 | 0 | 0 | 0 | 0 | 0 |
 | [Constraints](#cst-constraints) (CST) | 15 | 11 | 2 | 1 | 0 | 1 | 0 |
 | [Crew](#crw-crew) (CRW) | 13 | 12 | 0 | 0 | 0 | 0 | 1 |
@@ -22,7 +22,7 @@ Method, statuses and rules: [README.md](README.md). Names of the parts: [glossar
 | [Observability](#obs-observability) (OBS) | 18 | 18 | 0 | 0 | 0 | 0 | 0 |
 | [AI phone](#phn-ai-phone) (PHN) | 27 | 27 | 0 | 0 | 0 | 0 | 0 |
 | [Platform](#plt-platform) (PLT) | 32 | 27 | 3 | 0 | 0 | 2 | 0 |
-| [Quality and process](#qa-quality-and-process) (QA) | 21 | 20 | 0 | 0 | 0 | 1 | 0 |
+| [Quality and process](#qa-quality-and-process) (QA) | 22 | 21 | 0 | 0 | 0 | 1 | 0 |
 | [Research](#res-research) (RES) | 7 | 6 | 1 | 0 | 0 | 0 | 0 |
 | [Security](#sec-security) (SEC) | 19 | 18 | 1 | 0 | 0 | 0 | 0 |
 | [Shopping](#shp-shopping) (SHP) | 13 | 12 | 0 | 0 | 0 | 1 | 0 |
@@ -30,9 +30,9 @@ Method, statuses and rules: [README.md](README.md). Names of the parts: [glossar
 | [Task engine](#tsk-task-engine) (TSK) | 35 | 29 | 6 | 0 | 0 | 0 | 0 |
 | [Trials](#trl-trials) (TRL) | 17 | 13 | 2 | 0 | 0 | 2 | 0 |
 | [Voice](#voi-voice) (VOI) | 9 | 8 | 0 | 0 | 0 | 1 | 0 |
-| **All** | **518** | **469** | **27** | **1** | **2** | **15** | **4** |
+| **All** | **520** | **471** | **27** | **1** | **2** | **15** | **4** |
 
-Unit tests claimed by a requirement: 817 of 817.
+Unit tests claimed by a requirement: 854 of 854.
 
 ## Findings
 
@@ -48,6 +48,8 @@ Unit tests claimed by a requirement: 817 of 817.
 | [FND-109](#fnd-109) Model answers cut at their output limit passed as whole, and cuts the check could not see | high | fixed | - | [QA-16](#qa-16), [QA-21](#qa-21) |
 | [FND-116](#fnd-116) One unreadable request stopped the AI phone for a day | high | fixed | - | [SHP-07](#shp-07) |
 | [FND-119](#fnd-119) A cold start of the PC left the stack down for three hours and every job failing | high | fixed | - | [PLT-28](#plt-28), [PLT-29](#plt-29), [PLT-30](#plt-30) |
+| [FND-122](#fnd-122) Onboarding refused any repository over 150 source files, and told nobody | high | fixed | - | [BLD-26](#bld-26) |
+| [FND-124](#fnd-124) The NAS's real address reached GitHub, and the public copy told strangers more than it had to | high | fixed | - | [SEC-19](#sec-19) |
 | [FND-22](#fnd-22) Agents talking to each other would cross the trust boundaries | high | fixed | - | [SWM-09](#swm-09), [SWM-10](#swm-10), [SWM-15](#swm-15), [SWM-67](#swm-67), [SEC-04](#sec-04) |
 | [FND-37](#fnd-37) A deployed agent change did not reach its agent | high | fixed | - | [SWM-18](#swm-18), [SWM-102](#swm-102), [PLT-08](#plt-08) |
 | [FND-38](#fnd-38) Text the owner reads or types was cut silently all over the stack | high | fixed | - | [APP-19](#app-19), [APP-20](#app-20), [QA-16](#qa-16) |
@@ -79,6 +81,7 @@ Unit tests claimed by a requirement: 817 of 817.
 | [FND-117](#fnd-117) A task whose planning a restart cut off waited forever | medium | fixed | - | [TSK-03](#tsk-03) |
 | [FND-12](#fnd-12) Caps the owner rejected are still in the code | medium | fixed | - | [CRW-06](#crw-06), [SWM-08](#swm-08), [SWM-35](#swm-35) |
 | [FND-121](#fnd-121) A newsletter on a watched topic never reached that topic, and the digest judged mail by its subject alone | medium | fixed | - | [CRW-13](#crw-13), [MIS-28](#mis-28), [MEM-04](#mem-04) |
+| [FND-123](#fnd-123) Limits nobody chose dropped work without a word | medium | fixed | - | [QA-22](#qa-22) |
 | [FND-14](#fnd-14) The mail connector can strand an approval like the phone did | medium | fixed | - | [CNX-06](#cnx-06), [SWM-19](#swm-19) |
 | [FND-17](#fnd-17) Seven ways to send a Telegram message | medium | fixed | - | [OBS-16](#obs-16), [SWM-59](#swm-59) |
 | [FND-23](#fnd-23) The swarm would start jobs, which only the runner may do | medium | fixed | - | [SWM-13](#swm-13) |
@@ -227,7 +230,7 @@ The Mustache trial's second run (task 108) was stopped at 3.4 of its 3 million t
 
 **A wiki compile wrote over the parts of a page it never saw** (high defect, fixed)
 
-The compile showed the model the first 3,000 characters of each page it touches, with no mark, and wrote the model's text over the whole page. The model, told to return each page's full new text, could not keep what it had not seen: from 28 October to 1 November 14 pages of three wikis (the voice speaker, the RAM upgrade, ASP Isotopes) lost 142 Timeline lines, 264 Open-question lines, 33 Key facts and one contradiction mark, a page's oldest part at each compile. Only the Superseded lines were guarded.
+The compile showed the model the first 3,000 characters of each page it touches, with no mark, and wrote the model's text over the whole page. The model, told to return each page's full new text, could not keep what it had not seen: from 28 October to 1 November 14 pages of three wikis (the voice speaker, the RAM upgrade, Beta Materials) lost 142 Timeline lines, 264 Open-question lines, 33 Key facts and one contradiction mark, a page's oldest part at each compile. Only the Superseded lines were guarded.
 
 - Evidence: `vault 85d96c0 → f6e1b46 (1 Nov 08:13): projects/ram-upgrade-to-32-gb 6,843 → 4,787 characters; its October Timeline and all four Open questions gone`; `measured 2 Nov over every page's git history: 440 lines lost unseen`
 - Affects: [MEM-14](#mem-14)
@@ -266,6 +269,28 @@ On 4 Nov the PC started cold for the first time since the stack's scheduled jobs
 - Affects: [PLT-28](#plt-28), [PLT-29](#plt-29), [PLT-30](#plt-30)
 - Recommendation: Docker retries for ever; one gate for the runner and every job; catch-ups one at a time; no alerts during a start; one message naming the cause when the stack stays down.
 - Resolved: fix/boot, 2026-11-04: ops/systemd/docker-boot.conf (PLT-29), ops/stack_gate.py on every timer's unit and in the runner (PLT-28), ops/stack_ready.py opens the gate and reports each start (PLT-30); the failing boot rehearsed with containerd's database held locked (docs/PROBES.md P8). A real cold start of the PC is the remaining proof, and its result is on the Stack page.
+
+### FND-122
+
+**Onboarding refused any repository over 150 source files, and told nobody** (high defect, fixed)
+
+ops/understand.sh refused a repository with more than 150 source files. The limit came in with commit ba35be9 on 25 Oct 2026, from a coding session, to protect the shared ChatGPT limit; the owner never asked for it and no requirement or test named it, while SN-14 says the stack can study any repository. The runner started the job and logged 'Analysing' without looking at the result, the app promised 'you get a message', which no code sent, even on success, and the repo page had no running or failed state. So on 6 Nov the button did nothing the owner could see, and Hermes could only say 'not yet confirmed'.
+
+- Evidence: `journalctl: understand-1793950559 and understand-1793951026, 177 source files, refused within 2 s`; `ops/understand.sh, ops/ua_enrich.py, ops/ua_digest.py: no call that sends a message`; `/srv/ai/missions/public/events.jsonl: only 'Analysing' events, no end`; `ops/understand.sh, in git since ba35be9: nothing in requirements/ or tests/ named MAX_FILES`
+- Affects: [BLD-26](#bld-26)
+- Recommendation: One restartable job with no size limit, its steps on the repo page and in repos_overview, a real message when it ends.
+- Resolved: fix/boot, 2026-11-06: ops/onboard.py replaces ops/understand.sh (tests/test_onboard.py)
+
+### FND-124
+
+**The NAS's real address reached GitHub, and the public copy told strangers more than it had to** (high defect, fixed)
+
+eval/bench-v1.yaml held the NAS's real LAN address as a regular expression, with a backslash before each dot, in all 8 public commits. The map replaces a plain address and the scan reads plain text, so neither saw it, and a first audit on 6 Nov missed it for the same reason. It is reachable only from the owner's own network. The name, e-mail, tailnet and PC name are in no commit, also with backslashes taken out. Beyond that, the map held identifiers only: the placeholder kept real last numbers, the README named the NAS model, and the public copy showed the topics and companies the owner follows, router and phone models, and 16 records of real runs. The owner noticed on 6 Nov 2026.
+
+- Evidence: `every public commit's files, backslashes removed, against the map on 6 Nov 2026: only eval/bench-v1.yaml, line 116`; `README.md and docs/HOME-VOICE.md at 8328817`; `eval/results/ at 8328817: 19 files, 3 cited by requirements`
+- Affects: [SEC-19](#sec-19)
+- Recommendation: The scan reads text without backslashes; the map holds what a stranger should not learn; run records stay out; one fresh public history, on the owner's word.
+- Resolved: fix/boot, 2026-11-06: ops/publish.py scan and LEFT_OUT and push --fresh, the private map, and every landing runs the scan (tests/test_publish.py); the owner chose on 6 Nov 2026 to keep the old public commits
 
 ### FND-22
 
@@ -359,7 +384,7 @@ On 2026-10-31 at 03:32 the backup failed: rsync could not read a file a containe
 
 **A weekly briefing task wrote "blocked" on its first run and looked like it waited for Monday** (high defect, fixed)
 
-Task #79 (a weekly e-mail of Chinese automotive news) ran at once (mission run 52), but the desk kept only 36 hours of the week its searches asked for (231 items, 3 recent, 0 chosen), sent its Chinese queries to US-English Google News with when:1d added to their own when:7d, and the brief's notes were the intake's plan for agents (Main, Scout, Desk), so the writer reported its research and e-mail blocked. The task never asked the desk for e-mail, the price table carried the uranium brief's Sprott note, and the board showed the task only as scheduled.
+Task #79 (a weekly e-mail of Chinese automotive news) ran at once (mission run 52), but the desk kept only 36 hours of the week its searches asked for (231 items, 3 recent, 0 chosen), sent its Chinese queries to US-English Google News with when:1d added to their own when:7d, and the brief's notes were the intake's plan for agents (Main, Scout, Desk), so the writer reported its research and e-mail blocked. The task never asked the desk for e-mail, the price table carried the copper brief's Sprott note, and the board showed the task only as scheduled.
 
 - Evidence: `/srv/ai/desk/weekly-chinese-automotive-news-email/last.log (2026-10-31 16:54): 231 items collected, 3 new in 36 h; triage kept 0`; `topics/weekly-chinese-automotive-news-email/TOPIC.md notes (Main must enable Task #79 ...)`; `missions.sqlite runs id 52: Briefing blocked: no source material supplied`
 - Affects: [MIS-11](#mis-11), [MIS-15](#mis-15), [TSK-04](#tsk-04)
@@ -548,7 +573,7 @@ Hindsight held 222 facts on 2 November, up from 120 on 30 October: the voice-rep
 
 The second truncation audit (827455e) put a cap's reason comment in the middle of the wiki compile's page metadata, so the key after it, created, became part of the comment: every page a mission, a briefing or a refinement compiled from then on was written without its created date (24 pages on 2 Nov, three wikis). No test read created back; found while building the task page.
 
-- Evidence: `ops/mission_extras.py compile_into: '"sources": sorted(...), # every source stays (it was the newest 30) "created": old.get("created", today),'`; `vault: 24 pages of the RAM, voice speaker and China automotive wikis without created after 06:00 on 2 Nov`
+- Evidence: `ops/mission_extras.py compile_into: '"sources": sorted(...), # every source stays (it was the newest 30) "created": old.get("created", today),'`; `vault: 24 pages of the RAM, voice speaker and Battery recycling wikis without created after 06:00 on 2 Nov`
 - Affects: [MEM-14](#mem-14)
 - Recommendation: Put the key back before the comment, test that a compiled page keeps its created date, and restore the 24 pages' dates from the vault's history.
 - Resolved: task/pages, 2026-11-02: created back in compile_into; tests/test_librarian.py checks it; the 24 pages' dates restored from their earlier versions (or the day the page was first committed)
@@ -557,7 +582,7 @@ The second truncation audit (827455e) put a cap's reason comment in the middle o
 
 **A mission's research was filed under another task's scout step** (medium defect, fixed)
 
-Hermes runs its agents in one resident process, so a scout run cannot be told who started it and the run record guessed: a live Conductor step of the same agent first. On 2 Nov the RAM mission asked the scout three questions while the China automotive briefing's scout steps 6 and 7 ran: the answers were filed under those steps, so the briefing's page and swarm map listed geizhals.de RAM searches as its top source and counted their tokens. Of 35 scout runs on record that answered a research call, 3 sat under the wrong task, 7 under no run and 24 under the other of two parallel sessions of the same mission run.
+Hermes runs its agents in one resident process, so a scout run cannot be told who started it and the run record guessed: a live Conductor step of the same agent first. On 2 Nov the RAM mission asked the scout three questions while the Battery recycling briefing's scout steps 6 and 7 ran: the answers were filed under those steps, so the briefing's page and swarm map listed geizhals.de RAM searches as its top source and counted their tokens. Of 35 scout runs on record that answered a research call, 3 sat under the wrong task, 7 under no run and 24 under the other of two parallel sessions of the same mission run.
 
 - Evidence: `runtime.db: hermes:scout:8033d389..., f1f1afa9..., aad86ca4... ref task:79:step:6/7, titled with questions the RAM mission's hermes:mission:077ce7f5... asked through research_research seconds before`; `images/mission-control/runrecord.py _infer_ref: the live task step of the same agent first`
 - Affects: [OBS-18](#obs-18), [APP-36](#app-36)
@@ -579,7 +604,7 @@ The task page and the task card quote the owner's words ("You wrote: ...") on a 
 
 **A task whose planning a restart cut off waited forever** (medium defect, fixed)
 
-Task 93 (the Cameco rule's alert of 1 Nov) sat in 'planning' for 27 hours: the planner marks a task planning before its model call, a runner restart (a deploy) cut the call off, and the worker only looks for new tasks.
+Task 93 (the Acme Mining rule's alert of 1 Nov) sat in 'planning' for 27 hours: the planner marks a task planning before its model call, a runner restart (a deploy) cut the call off, and the worker only looks for new tasks.
 
 - Evidence: `missions.sqlite tasks 93: status planning since 2026-11-01 13:32`; `docs/PROBES.md P6`
 - Affects: [TSK-03](#tsk-03)
@@ -601,12 +626,23 @@ Per-agent caps on open proposals were added on 2026-10-29 and rejected by the ow
 
 **A newsletter on a watched topic never reached that topic, and the digest judged mail by its subject alone** (medium defect, fixed)
 
-The owner asked on 4 Nov whether everything in his uranium newsletter reaches the wiki. Of the 33 mails the digest saw that day, 1 named a watched topic in its text: TipRanks, one line saying Cameco has a new analyst rating, no fact. 3 more matched only because 'mg' was read as the car maker MG. Over the five recorded days (148 mails) it was 2: that one and Investing.com's weekly watchlist, the only mail with numbers on uranium companies. In 60 days Gmail held no newsletter about uranium as such: the 9 other hits are the stack's own briefing mailed to him. MAX_FILE (5) was never reached (0, 1, 3, 0, 1 picks). The filter was the weak part: the model sees sender and subject only, so it picked TipRanks' 'A stock on your watchlist' three times on a guess, and whatever it picked went to the general vault, while a topic's wiki is compiled only from that topic's reports. The listing was the silent risk: it took the newest 40 of a two-day window that held 61, with 35 new on 2 Nov. Gmail's own search is no substitute: an OR search for Cameco missed the TipRanks mail that a narrower search found.
+The owner asked on 4 Nov whether everything in his copper newsletter reaches the wiki. Of the 33 mails the digest saw that day, 1 named a watched topic in its text: a ratings site, one line saying Acme Mining has a new analyst rating, no fact. 3 more matched only because 'mg' was read as the car maker MG. Over the five recorded days (148 mails) it was 2: that one and A markets site's weekly watchlist, the only mail with numbers on copper companies. In 60 days Gmail held no newsletter about copper as such: the 9 other hits are the stack's own briefing mailed to him. MAX_FILE (5) was never reached (0, 1, 3, 0, 1 picks). The filter was the weak part: the model sees sender and subject only, so it picked a ratings site' 'A stock on your watchlist' three times on a guess, and whatever it picked went to the general vault, while a topic's wiki is compiled only from that topic's reports. The listing was the silent risk: it took the newest 40 of a two-day window that held 61, with 35 new on 2 Nov. Gmail's own search is no substitute: an OR search for Acme Mining missed the a ratings site mail that a narrower search found.
 
-- Evidence: `/srv/ai/state/prompt-cases/inbox.PICK.jsonl: 148 rows over 5 runs`; `mail_read of all 148 against each active TOPIC.md's names, 4 Nov`; `/srv/ai/missions/crew/inbox.json: filed 1 of 33`; `mail_search newer_than:60d uranium terms: 8 Investing.com, 9 AI Stack`
+- Evidence: `/srv/ai/state/prompt-cases/inbox.PICK.jsonl: 148 rows over 5 runs`; `mail_read of all 148 against each active TOPIC.md's names, 4 Nov`; `/srv/ai/missions/crew/inbox.json: filed 1 of 33`; `mail_search newer_than:60d copper terms: 8 a markets site, 9 AI Stack`
 - Affects: [CRW-13](#crw-13), [MIS-28](#mis-28), [MEM-04](#mem-04)
 - Recommendation: Search each newsletter's own text for the topic's names, check matches against its key questions, hand them to the topic. MEM-04's rule against private wikis meant personal mail: a topic takes only mail with a List-Unsubscribe header, never protected mail, and its text reaches the wiki only through the report, so its wiki stays shared.
 - Resolved: feat/topic-mail, 2026-11-04: ops/inbox.py hand_over and settle, images/desk/desk.py from_mail, the topic page's From your e-mail, the listing raised to the tool's 100 and reaching back to the last finished run
+
+### FND-123
+
+**Limits nobody chose dropped work without a word** (medium defect, fixed)
+
+An audit after FND-122 found more of the kind. A drafted briefing checked only its first 8 feeds, 15 symbols and 10 filings and removed the rest as if they had failed. A mission kept 10 triggers and 10 tickers, the watchlist 15 entries, and a fan-out the first 8 items, all without a word. Past 10 Board messages a day the owner's phone stayed silent, and an event dropped from a task's queue reached only the log. The truncation check could not see them: it ignored slices under 20. And an attachment's sheets past 10 and rows past 2,000 were left out unmarked. Nothing listed the stack's limits.
+
+- Evidence: `images/desk/desk.py, ops/missions.py, ops/mission_extras.py, ops/conductor.py, ops/swarm_client.py at 3a94403`; `ops/truncation.py at 3a94403: MIN = 20`
+- Affects: [QA-22](#qa-22)
+- Recommendation: Refuse with the limit named, say what was left out, or drop the limit; tag every limit and generate the list.
+- Resolved: fix/boot, 2026-11-06: the limits refuse or say so, ops/limits.py and docs/LIMITS.md (tests/test_limits.py)
 
 ### FND-14
 
@@ -977,7 +1013,7 @@ After task #79's run 54 the Telegram message was in the notification log, but th
 
 Every briefing e-mail since the desk began has a blank line after the report's front matter, so email() in images/desk/desk.py never found the headline: the header showed the kicker twice and the headline stayed in the body as an unstyled h1 (2em). The page was a fixed 640 px table without a viewport, so Gmail on Android scaled the text up further; the owner saw five words per screen.
 
-- Evidence: `owner's screenshot of the China Automotive Weekly e-mail, 2026-10-31`; `the 30 Oct job report e-mail: 'Daily briefing · 30 Oct 2026' twice`
+- Evidence: `owner's screenshot of the Battery Recycling Weekly e-mail, 2026-10-31`; `the 30 Oct job report e-mail: 'Daily briefing · 30 Oct 2026' twice`
 - Affects: [MIS-15](#mis-15)
 - Recommendation: Strip the blank line before reading the headline, style every heading, and lay the e-mail out fluid with a viewport.
 - Resolved: fix/email-mobile, 2026-10-31: images/desk/desk.py MAIL and email(); checked at 375 px with the real report
@@ -1283,9 +1319,9 @@ The invariant says the app only drops requests into the runner's inbox (chat exc
 
 **A German briefing in an English stack** (low contradiction, fixed)
 
-DEC-02 made everything English, but the topic asp-isotopes-aspi-unternehmens-news still has language de, and the desk keeps its German clean-up code for it.
+DEC-02 made everything English, but the topic beta-materials-aspi-unternehmens-news still has language de, and the desk keeps its German clean-up code for it.
 
-- Evidence: `/srv/vault/topics/asp-isotopes-aspi-unternehmens-news/TOPIC.md: language de`; `images/desk/desk.py:362 german()`
+- Evidence: `/srv/vault/topics/beta-materials-aspi-unternehmens-news/TOPIC.md: language de`; `images/desk/desk.py:362 german()`
 - Affects: [MIS-12](#mis-12), [CST-09](#cst-09)
 - Recommendation: Archive or switch that topic to English, then remove german() and its test.
 - Resolved: fix/req-sync, 2026-10-30: the topic was archived; german(), the German prompts and price table are gone
@@ -1461,7 +1497,7 @@ Missions call swarm_context several times a run (once with the same arguments th
 
 OBS-16's gap named four Telegram senders that now go through notify.sh and missed three that send their own; CST-09 stayed partial for a German topic that had been archived; FND-28 stayed open although fixed two days earlier.
 
-- Evidence: `grep of Telegram senders (2026-10-30)`; `state.json: asp-isotopes-aspi-unternehmens-news archived`; `dae7d13`
+- Evidence: `grep of Telegram senders (2026-10-30)`; `state.json: beta-materials-aspi-unternehmens-news archived`; `dae7d13`
 - Affects: [OBS-16](#obs-16)
 - Recommendation: Re-check every partial, violated and open item in each review, as this one did.
 - Resolved: fix/req-sync, 2026-10-30: the three corrected; the review's sweep 2 re-checked all 37
@@ -1497,7 +1533,7 @@ The trial's build #11 appeared on the Tasks board as task #89 (source door) besi
 | <a id="sn-03"></a>**SN-03** Costs nothing to run: Running the stack costs $0 beyond the subscriptions the owner already pays; nothing can spend money by accident. | must | [APP-40](#app-40), [APP-41](#app-41), [APP-42](#app-42), [APP-43](#app-43), [APP-44](#app-44), [APP-45](#app-45), [AST-02](#ast-02), [AST-08](#ast-08), [BLD-06](#bld-06), [CST-02](#cst-02), [CST-15](#cst-15), [GW-02](#gw-02), [GW-04](#gw-04), [GW-09](#gw-09), [MIS-04](#mis-04), [MIS-16](#mis-16), [PHN-27](#phn-27), [PLT-11](#plt-11), [PLT-26](#plt-26), [PLT-27](#plt-27), [RES-07](#res-07), [SHP-05](#shp-05), [SWM-13](#swm-13), [SWM-14](#swm-14), [SWM-29](#swm-29), [SWM-40](#swm-40), [SWM-53](#swm-53), [SWM-60](#swm-60), [SWM-62](#swm-62), [SWM-81](#swm-81) |
 | <a id="sn-04"></a>**SN-04** Private data stays home: Notes, reports, memory, chats, mail and files stay on the PC and the NAS; only the model calls leave, and The owner knows which provider sees what. | must | [AUT-03](#aut-03), [CST-04](#cst-04), [CST-06](#cst-06), [HSE-07](#hse-07), [KNW-05](#knw-05), [KNW-07](#knw-07), [MEM-06](#mem-06), [MEM-18](#mem-18), [PHN-16](#phn-16), [PHN-19](#phn-19), [RES-01](#res-01), [SEC-03](#sec-03), [SEC-04](#sec-04), [SEC-06](#sec-06), [SEC-17](#sec-17), [SEC-18](#sec-18), [SEC-19](#sec-19), [SWM-67](#swm-67) |
 | <a id="sn-05"></a>**SN-05** Agents cannot do damage: No agent can spend money, delete data for good, leak private data, change the NAS, the router or phone and PC security settings, or deploy code without the owner's approval; prompt injection from the web or mail cannot steer an agent into any of it. | must | [APP-10](#app-10), [APP-20](#app-20), [AST-08](#ast-08), [AST-09](#ast-09), [AST-10](#ast-10), [AST-14](#ast-14), [AUT-01](#aut-01), [AUT-03](#aut-03), [BLD-02](#bld-02), [BLD-07](#bld-07), [BLD-10](#bld-10), [BLD-13](#bld-13), [BLD-16](#bld-16), [BLD-18](#bld-18), [CNX-01](#cnx-01), [CNX-03](#cnx-03), [CNX-04](#cnx-04), [CNX-05](#cnx-05), [CRW-04](#crw-04), [CRW-10](#crw-10), [CRW-11](#crw-11), [CRW-13](#crw-13), [CST-04](#cst-04), [CST-05](#cst-05), [CST-06](#cst-06), [CST-07](#cst-07), [CST-10](#cst-10), [CST-11](#cst-11), [CST-12](#cst-12), [GW-05](#gw-05), [HSE-04](#hse-04), [HSE-05](#hse-05), [HSE-08](#hse-08), [HSE-09](#hse-09), [KNW-04](#knw-04), [KNW-06](#knw-06), [KNW-11](#knw-11), [MEM-04](#mem-04), [MIS-17](#mis-17), [MIS-28](#mis-28), [PHN-01](#phn-01), [PHN-03](#phn-03), [PHN-04](#phn-04), [PHN-05](#phn-05), [PHN-06](#phn-06), [PHN-07](#phn-07), [PHN-08](#phn-08), [PHN-15](#phn-15), [PLT-02](#plt-02), [PLT-03](#plt-03), [PLT-09](#plt-09), [RES-01](#res-01), [RES-03](#res-03), [RES-04](#res-04), [RES-06](#res-06), [SEC-01](#sec-01), [SEC-02](#sec-02), [SEC-03](#sec-03), [SEC-04](#sec-04), [SEC-05](#sec-05), [SEC-06](#sec-06), [SEC-07](#sec-07), [SEC-08](#sec-08), [SEC-09](#sec-09), [SEC-10](#sec-10), [SEC-11](#sec-11), [SEC-12](#sec-12), [SEC-13](#sec-13), [SEC-14](#sec-14), [SEC-15](#sec-15), [SEC-16](#sec-16), [SHP-05](#shp-05), [SHP-06](#shp-06), [SHP-07](#shp-07), [SHP-09](#shp-09), [SHP-10](#shp-10), [SWM-06](#swm-06), [SWM-109](#swm-109), [SWM-11](#swm-11), [SWM-15](#swm-15), [SWM-23](#swm-23), [SWM-24](#swm-24), [SWM-26](#swm-26), [SWM-42](#swm-42), [SWM-43](#swm-43), [SWM-46](#swm-46), [SWM-51](#swm-51), [SWM-58](#swm-58), [SWM-66](#swm-66), [SWM-67](#swm-67), [SWM-68](#swm-68), [SWM-69](#swm-69), [SWM-70](#swm-70), [SWM-77](#swm-77), [SWM-89](#swm-89), [TRL-05](#trl-05), [TSK-15](#tsk-15), [TSK-20](#tsk-20), [VOI-01](#voi-01), [VOI-03](#voi-03), [VOI-07](#voi-07) |
-| <a id="sn-06"></a>**SN-06** Usable from the phone, anywhere, one sign-in: Everything is usable and decidable from the owner's phone (installable app, push, Telegram), from anywhere on his tailnet, with his Tailscale login as the only sign-in. | must | [APP-01](#app-01), [APP-02](#app-02), [APP-03](#app-03), [APP-04](#app-04), [APP-08](#app-08), [APP-09](#app-09), [APP-15](#app-15), [APP-17](#app-17), [APP-19](#app-19), [APP-20](#app-20), [APP-37](#app-37), [APP-38](#app-38), [APP-39](#app-39), [AST-01](#ast-01), [AST-03](#ast-03), [AUT-05](#aut-05), [AUT-06](#aut-06), [MIS-15](#mis-15), [MIS-23](#mis-23), [QA-16](#qa-16), [QA-21](#qa-21), [SEC-01](#sec-01), [SEC-02](#sec-02), [SWM-11](#swm-11), [SWM-57](#swm-57), [SWM-93](#swm-93), [SWM-95](#swm-95), [TSK-02](#tsk-02), [VOI-09](#voi-09) |
+| <a id="sn-06"></a>**SN-06** Usable from the phone, anywhere, one sign-in: Everything is usable and decidable from the owner's phone (installable app, push, Telegram), from anywhere on his tailnet, with his Tailscale login as the only sign-in. | must | [APP-01](#app-01), [APP-02](#app-02), [APP-03](#app-03), [APP-04](#app-04), [APP-08](#app-08), [APP-09](#app-09), [APP-15](#app-15), [APP-17](#app-17), [APP-19](#app-19), [APP-20](#app-20), [APP-37](#app-37), [APP-38](#app-38), [APP-39](#app-39), [AST-01](#ast-01), [AST-03](#ast-03), [AUT-05](#aut-05), [AUT-06](#aut-06), [MIS-15](#mis-15), [MIS-23](#mis-23), [QA-16](#qa-16), [QA-21](#qa-21), [QA-22](#qa-22), [SEC-01](#sec-01), [SEC-02](#sec-02), [SWM-11](#swm-11), [SWM-57](#swm-57), [SWM-93](#swm-93), [SWM-95](#swm-95), [TSK-02](#tsk-02), [VOI-09](#voi-09) |
 | <a id="sn-07"></a>**SN-07** See what every agent does: For every agent, mission, crew job, build and tool the owner can see what it did step by step, what it read and changed, what it produced, what it cost and when something went wrong, without having to look for it. | must | [APP-07](#app-07), [APP-11](#app-11), [APP-12](#app-12), [APP-16](#app-16), [APP-19](#app-19), [APP-22](#app-22), [APP-23](#app-23), [APP-24](#app-24), [APP-35](#app-35), [APP-36](#app-36), [AST-04](#ast-04), [AUT-04](#aut-04), [AUT-07](#aut-07), [BLD-14](#bld-14), [BLD-20](#bld-20), [CRW-01](#crw-01), [CRW-02](#crw-02), [CRW-09](#crw-09), [CRW-12](#crw-12), [GW-01](#gw-01), [GW-07](#gw-07), [HSE-02](#hse-02), [MEM-01](#mem-01), [MEM-07](#mem-07), [MEM-09](#mem-09), [MEM-10](#mem-10), [MEM-19](#mem-19), [MIS-16](#mis-16), [OBS-01](#obs-01), [OBS-02](#obs-02), [OBS-03](#obs-03), [OBS-04](#obs-04), [OBS-05](#obs-05), [OBS-06](#obs-06), [OBS-07](#obs-07), [OBS-08](#obs-08), [OBS-09](#obs-09), [OBS-10](#obs-10), [OBS-14](#obs-14), [OBS-15](#obs-15), [OBS-18](#obs-18), [PLT-24](#plt-24), [PLT-30](#plt-30), [QA-17](#qa-17), [RES-05](#res-05), [SEC-07](#sec-07), [SHP-11](#shp-11), [SWM-103](#swm-103), [SWM-104](#swm-104), [SWM-105](#swm-105), [SWM-106](#swm-106), [SWM-107](#swm-107), [SWM-110](#swm-110), [SWM-111](#swm-111), [SWM-112](#swm-112), [SWM-113](#swm-113), [SWM-114](#swm-114), [SWM-115](#swm-115), [SWM-17](#swm-17), [SWM-23](#swm-23), [SWM-25](#swm-25), [SWM-30](#swm-30), [SWM-57](#swm-57), [SWM-58](#swm-58), [SWM-64](#swm-64), [SWM-78](#swm-78), [SWM-79](#swm-79), [SWM-80](#swm-80), [SWM-81](#swm-81), [SWM-82](#swm-82), [SWM-84](#swm-84), [SWM-90](#swm-90), [SWM-96](#swm-96), [SWM-99](#swm-99), [TSK-04](#tsk-04), [TSK-09](#tsk-09), [TSK-17](#tsk-17), [TSK-35](#tsk-35) |
 | <a id="sn-08"></a>**SN-08** The stack maintains and improves itself: Housekeeping agents keep the stack healthy, and the stack proposes and builds its own improvements; the owner approves what ships. | must | [APP-21](#app-21), [AST-11](#ast-11), [AUT-02](#aut-02), [BLD-01](#bld-01), [BLD-03](#bld-03), [BLD-04](#bld-04), [BLD-05](#bld-05), [BLD-08](#bld-08), [BLD-10](#bld-10), [BLD-21](#bld-21), [BLD-22](#bld-22), [BLD-24](#bld-24), [CRW-01](#crw-01), [CRW-03](#crw-03), [CRW-04](#crw-04), [CRW-07](#crw-07), [CRW-08](#crw-08), [CRW-09](#crw-09), [CRW-10](#crw-10), [CST-07](#cst-07), [GW-09](#gw-09), [KNW-08](#knw-08), [MEM-11](#mem-11), [MEM-13](#mem-13), [MEM-20](#mem-20), [OBS-13](#obs-13), [PLT-08](#plt-08), [PLT-19](#plt-19), [QA-07](#qa-07), [SEC-08](#sec-08), [SWM-07](#swm-07), [SWM-102](#swm-102), [SWM-18](#swm-18), [SWM-38](#swm-38), [SWM-44](#swm-44), [SWM-45](#swm-45), [SWM-46](#swm-46), [SWM-47](#swm-47), [SWM-61](#swm-61), [SWM-70](#swm-70), [SWM-82](#swm-82), [SWM-83](#swm-83), [SWM-84](#swm-84), [SWM-91](#swm-91), [SWM-92](#swm-92), [SWM-93](#swm-93), [SWM-94](#swm-94), [SWM-95](#swm-95), [SWM-96](#swm-96), [TRL-14](#trl-14), [TRL-15](#trl-15), [TRL-16](#trl-16), [TRL-17](#trl-17), [TSK-13](#tsk-13), [TSK-16](#tsk-16), [TSK-17](#tsk-17) |
 | <a id="sn-09"></a>**SN-09** Nothing is ever lost: Data and configuration are backed up, the backups are proven to restore, and the whole stack can move to a new PC. | must | [AST-10](#ast-10), [AUT-04](#aut-04), [CNX-03](#cnx-03), [CST-05](#cst-05), [KNW-01](#knw-01), [KNW-11](#knw-11), [MEM-08](#mem-08), [MEM-12](#mem-12), [MEM-14](#mem-14), [MEM-17](#mem-17), [MEM-21](#mem-21), [PLT-12](#plt-12), [PLT-13](#plt-13), [PLT-14](#plt-14), [PLT-15](#plt-15), [PLT-16](#plt-16), [PLT-17](#plt-17), [SWM-30](#swm-30), [SWM-35](#swm-35), [SWM-36](#swm-36), [SWM-73](#swm-73), [SWM-76](#swm-76) |
@@ -1505,8 +1541,8 @@ The trial's build #11 appeared on the Tasks board as task #89 (source door) besi
 | <a id="sn-11"></a>**SN-11** Hands in the real world, under control: Agents can act through the AI phone, Gmail, shopping and the House (lights, plugs, Echos), each only within grants and approvals the owner controls, with Stop and a log. | should | [CNX-01](#cnx-01), [CNX-02](#cnx-02), [CRW-11](#crw-11), [CST-12](#cst-12), [HSE-01](#hse-01), [HSE-02](#hse-02), [HSE-03](#hse-03), [HSE-05](#hse-05), [HSE-06](#hse-06), [HSE-07](#hse-07), [MIS-17](#mis-17), [PHN-01](#phn-01), [PHN-02](#phn-02), [PHN-05](#phn-05), [PHN-13](#phn-13), [PHN-14](#phn-14), [PHN-17](#phn-17), [PHN-18](#phn-18), [PHN-19](#phn-19), [PHN-22](#phn-22), [PHN-23](#phn-23), [PLT-22](#plt-22), [SHP-01](#shp-01), [SHP-02](#shp-02), [SHP-03](#shp-03), [SHP-04](#shp-04), [SHP-11](#shp-11), [SHP-13](#shp-13), [SWM-26](#swm-26), [TRL-16](#trl-16), [VOI-01](#voi-01), [VOI-02](#voi-02), [VOI-03](#voi-03), [VOI-04](#voi-04), [VOI-05](#voi-05), [VOI-06](#voi-06), [VOI-08](#voi-08) |
 | <a id="sn-12"></a>**SN-12** English everywhere: Chat, app, reports, wikis, Telegram, code, docs and commit messages are in English. | must | [CST-09](#cst-09), [MIS-12](#mis-12), [TSK-35](#tsk-35) |
 | <a id="sn-13"></a>**SN-13** Runs unattended for months: The stack keeps working through usage-limit pauses, restarts, deploys, reboots and power cuts, and recovers by itself; no work, approval or message is lost on a restart. | must | [APP-23](#app-23), [APP-24](#app-24), [AST-03](#ast-03), [AST-12](#ast-12), [BLD-03](#bld-03), [BLD-06](#bld-06), [BLD-09](#bld-09), [BLD-12](#bld-12), [CNX-06](#cnx-06), [CST-03](#cst-03), [CST-08](#cst-08), [CST-14](#cst-14), [GW-03](#gw-03), [GW-04](#gw-04), [GW-06](#gw-06), [GW-08](#gw-08), [MEM-05](#mem-05), [MEM-07](#mem-07), [MEM-08](#mem-08), [MEM-15](#mem-15), [MEM-16](#mem-16), [MEM-21](#mem-21), [MIS-03](#mis-03), [MIS-04](#mis-04), [MIS-05](#mis-05), [MIS-10](#mis-10), [OBS-03](#obs-03), [OBS-04](#obs-04), [PHN-09](#phn-09), [PHN-10](#phn-10), [PHN-11](#phn-11), [PHN-14](#phn-14), [PHN-25](#phn-25), [PLT-04](#plt-04), [PLT-05](#plt-05), [PLT-06](#plt-06), [PLT-07](#plt-07), [PLT-08](#plt-08), [PLT-09](#plt-09), [PLT-10](#plt-10), [PLT-11](#plt-11), [PLT-13](#plt-13), [PLT-18](#plt-18), [PLT-21](#plt-21), [PLT-23](#plt-23), [PLT-27](#plt-27), [PLT-28](#plt-28), [PLT-29](#plt-29), [PLT-30](#plt-30), [PLT-31](#plt-31), [PLT-32](#plt-32), [QA-17](#qa-17), [SHP-12](#shp-12), [SWM-12](#swm-12), [SWM-19](#swm-19), [SWM-31](#swm-31), [SWM-47](#swm-47), [SWM-52](#swm-52), [SWM-53](#swm-53), [SWM-63](#swm-63), [SWM-71](#swm-71), [SWM-72](#swm-72), [SWM-73](#swm-73), [SWM-76](#swm-76), [SWM-85](#swm-85), [SWM-87](#swm-87), [TSK-06](#tsk-06), [TSK-08](#tsk-08) |
-| <a id="sn-14"></a>**SN-14** Understand and change any codebase: The stack can study any repository (code graph, code map), answer questions about it, change the owner's own repositories through the builder, and check code against large specifications. | should | [AST-09](#ast-09), [BLD-01](#bld-01), [BLD-11](#bld-11), [BLD-15](#bld-15), [BLD-17](#bld-17), [BLD-18](#bld-18), [BLD-19](#bld-19), [BLD-23](#bld-23), [BLD-25](#bld-25), [QA-14](#qa-14) |
-| <a id="sn-15"></a>**SN-15** A codebase AI agents can develop safely: The repository is organised for coding agents (rules per directory, checks, tests, docs that stay true), so that agents can change it without breaking it. | must | [APP-13](#app-13), [AST-07](#ast-07), [AST-11](#ast-11), [AUT-08](#aut-08), [CRW-07](#crw-07), [CRW-08](#crw-08), [CST-08](#cst-08), [CST-13](#cst-13), [KNW-13](#knw-13), [PLT-24](#plt-24), [PLT-25](#plt-25), [PLT-26](#plt-26), [QA-01](#qa-01), [QA-02](#qa-02), [QA-03](#qa-03), [QA-04](#qa-04), [QA-05](#qa-05), [QA-06](#qa-06), [QA-07](#qa-07), [QA-13](#qa-13), [QA-16](#qa-16), [QA-18](#qa-18), [QA-19](#qa-19), [QA-20](#qa-20), [QA-21](#qa-21), [SEC-15](#sec-15), [SWM-01](#swm-01), [SWM-16](#swm-16), [SWM-22](#swm-22), [SWM-28](#swm-28), [SWM-37](#swm-37), [SWM-41](#swm-41), [SWM-85](#swm-85), [SWM-88](#swm-88) |
+| <a id="sn-14"></a>**SN-14** Understand and change any codebase: The stack can study any repository (code graph, code map), answer questions about it, change the owner's own repositories through the builder, and check code against large specifications. | should | [AST-09](#ast-09), [BLD-01](#bld-01), [BLD-11](#bld-11), [BLD-15](#bld-15), [BLD-17](#bld-17), [BLD-18](#bld-18), [BLD-19](#bld-19), [BLD-23](#bld-23), [BLD-25](#bld-25), [BLD-26](#bld-26), [QA-14](#qa-14) |
+| <a id="sn-15"></a>**SN-15** A codebase AI agents can develop safely: The repository is organised for coding agents (rules per directory, checks, tests, docs that stay true), so that agents can change it without breaking it. | must | [APP-13](#app-13), [AST-07](#ast-07), [AST-11](#ast-11), [AUT-08](#aut-08), [CRW-07](#crw-07), [CRW-08](#crw-08), [CST-08](#cst-08), [CST-13](#cst-13), [KNW-13](#knw-13), [PLT-24](#plt-24), [PLT-25](#plt-25), [PLT-26](#plt-26), [QA-01](#qa-01), [QA-02](#qa-02), [QA-03](#qa-03), [QA-04](#qa-04), [QA-05](#qa-05), [QA-06](#qa-06), [QA-07](#qa-07), [QA-13](#qa-13), [QA-16](#qa-16), [QA-18](#qa-18), [QA-19](#qa-19), [QA-20](#qa-20), [QA-21](#qa-21), [QA-22](#qa-22), [SEC-15](#sec-15), [SWM-01](#swm-01), [SWM-16](#swm-16), [SWM-22](#swm-22), [SWM-28](#swm-28), [SWM-37](#swm-37), [SWM-41](#swm-41), [SWM-85](#swm-85), [SWM-88](#swm-88) |
 | <a id="sn-16"></a>**SN-16** Known, current and checkable requirements: What the stack must do is written down properly, kept current with every change, and contradictions between the parts are found and shown. | must | [APP-14](#app-14), [APP-18](#app-18), [MEM-02](#mem-02), [MEM-11](#mem-11), [MEM-13](#mem-13), [QA-06](#qa-06), [QA-08](#qa-08), [QA-09](#qa-09), [QA-10](#qa-10), [QA-11](#qa-11), [QA-12](#qa-12), [QA-13](#qa-13), [QA-14](#qa-14), [QA-15](#qa-15), [SWM-03](#swm-03), [SWM-20](#swm-20), [SWM-35](#swm-35), [SWM-55](#swm-55), [SWM-88](#swm-88), [TRL-02](#trl-02), [TRL-14](#trl-14), [TRL-17](#trl-17) |
 | <a id="sn-17"></a>**SN-17** Agents that work together over time: Agents keep working on the same topics over many runs, refine and reopen each other's work, see each other's artifacts and talk to each other directly, to groups or to all, with the owner reading along. | should | [CRW-05](#crw-05), [MEM-03](#mem-03), [MIS-18](#mis-18), [MIS-19](#mis-19), [MIS-20](#mis-20), [OBS-13](#obs-13), [SWM-01](#swm-01), [SWM-02](#swm-02), [SWM-03](#swm-03), [SWM-04](#swm-04), [SWM-05](#swm-05), [SWM-07](#swm-07), [SWM-08](#swm-08), [SWM-09](#swm-09), [SWM-10](#swm-10), [SWM-100](#swm-100), [SWM-101](#swm-101), [SWM-102](#swm-102), [SWM-103](#swm-103), [SWM-104](#swm-104), [SWM-105](#swm-105), [SWM-106](#swm-106), [SWM-107](#swm-107), [SWM-108](#swm-108), [SWM-109](#swm-109), [SWM-11](#swm-11), [SWM-110](#swm-110), [SWM-111](#swm-111), [SWM-112](#swm-112), [SWM-113](#swm-113), [SWM-114](#swm-114), [SWM-115](#swm-115), [SWM-12](#swm-12), [SWM-13](#swm-13), [SWM-16](#swm-16), [SWM-17](#swm-17), [SWM-18](#swm-18), [SWM-20](#swm-20), [SWM-21](#swm-21), [SWM-22](#swm-22), [SWM-27](#swm-27), [SWM-28](#swm-28), [SWM-32](#swm-32), [SWM-33](#swm-33), [SWM-34](#swm-34), [SWM-37](#swm-37), [SWM-41](#swm-41), [SWM-48](#swm-48), [SWM-49](#swm-49), [SWM-50](#swm-50), [SWM-51](#swm-51), [SWM-52](#swm-52), [SWM-54](#swm-54), [SWM-56](#swm-56), [SWM-60](#swm-60), [SWM-62](#swm-62), [SWM-63](#swm-63), [SWM-64](#swm-64), [SWM-65](#swm-65), [SWM-75](#swm-75), [SWM-86](#swm-86), [SWM-90](#swm-90), [SWM-97](#swm-97), [SWM-98](#swm-98), [SWM-99](#swm-99), [TRL-01](#trl-01), [TRL-07](#trl-07), [TSK-05](#tsk-05), [TSK-07](#tsk-07), [TSK-18](#tsk-18), [TSK-19](#tsk-19) |
 | <a id="sn-18"></a>**SN-18** Told once, not spammed: the owner hears about what needs him or went wrong once, on his phone, and is not flooded with repeats or noise. | should | [APP-38](#app-38), [AUT-05](#aut-05), [AUT-06](#aut-06), [CRW-12](#crw-12), [MIS-22](#mis-22), [OBS-10](#obs-10), [OBS-11](#obs-11), [OBS-12](#obs-12), [OBS-16](#obs-16), [OBS-17](#obs-17), [SHP-04](#shp-04), [SWM-100](#swm-100), [SWM-14](#swm-14), [SWM-39](#swm-39), [SWM-50](#swm-50), [SWM-56](#swm-56), [SWM-59](#swm-59), [SWM-71](#swm-71), [SWM-80](#swm-80) |
@@ -1802,7 +1838,7 @@ The Stack page shall start with a link to each of its sections; Home's feed shal
 
 **Every tool's menus one tap away** · should · functional · **implemented**
 
-The Stack page shall start with Tools, one card for every tool the stack runs on (Home Assistant, the NAS, the FRITZ!Box, Forgejo, Hermes admin, Phoenix and the rest) with where it opens (anywhere, or the home network) and its main menus as links, and a Go-to search over those menus and the app's own pages; one list (web/static/tools.json) feeds them, the guide and the House page; every link shall be opened each night and a broken one reported.
+The Stack page shall start with Tools, one card for every tool the stack runs on (Home Assistant, the NAS, the router, Forgejo, Hermes admin, Phoenix and the rest) with where it opens (anywhere, or the home network) and its main menus as links, and a Go-to search over those menus and the app's own pages; one list (web/static/tools.json) feeds them, the guide and the House page; every link shall be opened each night and a broken one reported.
 
 - Parents: [SN-01](#sn-01), [SN-02](#sn-02)
 - Sources: `images/mission-control/guide/12-stack-page.md`
@@ -2389,7 +2425,7 @@ The repo page shall show the interactive code map of every repository that has o
 - Parents: [SN-14](#sn-14)
 - Sources: `images/mission-control/guide/11-code.md`
 - Verified by: test: `tests/test_repos.py::test_every_repo_with_a_code_map_shows_it_clean_and_without_the_minimap`
-- Trace: `images/mission-control/web/static/app.js`, `ops/graphify-sync.sh`, `ops/understand.sh`, `ops/ua_fix.mjs`, `images/opencode/Dockerfile`
+- Trace: `images/mission-control/web/static/app.js`, `ops/graphify-sync.sh`, `ops/onboard.py`, `ops/ua_fix.mjs`, `images/opencode/Dockerfile`
 - Findings: [FND-48](#fnd-48)
 
 ### BLD-16
@@ -2421,7 +2457,7 @@ Analysing a third-party repository shall only read it, in a sandbox without inte
 
 - Parents: [SN-05](#sn-05), [SN-14](#sn-14)
 - Sources: `images/mission-control/guide/11-code.md`
-- Verified by: inspection: `ops/understand.sh`
+- Verified by: inspection: `ops/onboard.py`, `ops/claude_tasks.py`
 
 ### BLD-19
 
@@ -2491,6 +2527,18 @@ The builder's page shall show the changes merged a week into the owner's own rep
 - Parents: [SN-14](#sn-14), [SN-01](#sn-01)
 - Sources: `chat 2026-11-02: The builder on your own projects`, `docs/NEXT-PHASE.md`
 - Verified by: -
+
+### BLD-26
+
+**Onboarding always ends in the whole package** · must · functional · **implemented**
+
+Onboarding a repository, from its page, from Add a repository, through Hermes or with make understand, shall run one job that ends in the whole package whatever the repository's size (a copy of the code, its code graph, its code map, every file explained, its digest in the search index, a written analysis on its page). It shall wait by itself for usage limits, the PC's memory and the gateway without using up a try, and go on at its first unfinished step after a crash, a deploy or a restart of the PC. The repo page and repos_overview shall show the step it is at. A step that failed three times shall stop the job with the reason on the page, in repos_overview and in a message, and Try again shall go on from that step. The owner shall get one message when the job ends, either way.
+
+- Parents: [SN-14](#sn-14)
+- Sources: `images/mission-control/guide/11-code.md`
+- Verified by: test: `tests/test_onboard.py::test_a_big_repository_gets_the_whole_package_and_one_message`, `tests/test_onboard.py::test_no_size_limit_is_left_anywhere_in_the_job`, `tests/test_onboard.py::test_a_step_that_keeps_failing_stops_with_its_reason_and_says_so`, `tests/test_onboard.py::test_try_again_goes_on_from_the_step_that_failed`, `tests/test_onboard.py::test_a_usage_limit_waits_uses_no_try_and_goes_on_by_itself`, `tests/test_onboard.py::test_too_little_memory_waits_and_a_stopped_enrichment_is_no_failure`, `tests/test_onboard.py::test_a_crash_resumes_at_the_first_unfinished_step`, `tests/test_onboard.py::test_the_watchdog_restarts_a_dead_job_and_gives_up_with_a_reason`, `tests/test_onboard.py::test_a_tap_while_it_runs_starts_nothing_more`, `tests/test_onboard.py::test_a_complete_package_is_made_anew_on_request_and_a_failed_redo_keeps_the_old_map`, `tests/test_onboard.py::test_a_different_repository_of_the_same_name_is_refused_with_the_reason`, `tests/test_onboard.py::test_what_can_be_onboarded`, `tests/test_onboard.py::test_a_half_done_clone_never_looks_like_a_repository`, `tests/test_onboard.py::test_files_that_stay_unexplained_are_said_not_hidden`, `tests/test_onboard.py::test_the_analysis_is_asked_once_survives_a_restart_and_is_saved`, `tests/test_onboard.py::test_the_study_mode_can_not_run_anything`, `tests/test_onboard.py::test_the_app_shows_the_steps_and_promises_nothing_false`, `tests/test_onboard.py::test_hermes_reads_why_it_stopped_in_repos_overview`, `tests/test_onboard.py::test_removing_a_repository_takes_its_job_and_records`, `tests/test_onboard.py::test_a_long_wait_tells_the_owner_why`, `tests/test_onboard.py::test_a_repository_without_code_still_gets_the_whole_package`, `tests/test_onboard.py::test_a_new_address_is_copied_by_the_job_the_runner_starts_by_name`
+- Trace: `ops/onboard.py`, `ops/repos.py`, `ops/missions.py`, `ops/ua_digest.py`, `ops/claude_tasks.py`, `images/mission-control/server.py`, `images/mission-control/web/static/app.js`, `prompts/shared.md`, `prompts/opencode.md`
+- Findings: [FND-122](#fnd-122)
 
 ## CNX Connections
 
@@ -2563,7 +2611,7 @@ If the mail connector restarts while a first-Trash approval waits, then the card
 
 **One PC, one NAS** · must · constraint · **implemented**
 
-The stack shall run on one Windows 10 Pro PC (i7-7700K, 16 GB RAM) inside WSL2 (Ubuntu-24.04, capped at 10 GB) with rootless Docker, plus a Synology DS923+ NAS (4 GB RAM) for git, CI, backups and Home Assistant.
+The stack shall run on one Windows 10 Pro PC (i7-7700K, 16 GB RAM) inside WSL2 (Ubuntu-24.04, capped at 10 GB) with rootless Docker, plus a Synology NAS NAS (4 GB RAM) for git, CI, backups and Home Assistant.
 
 - Parents: [SN-01](#sn-01)
 - Sources: `README.md`
@@ -3014,7 +3062,7 @@ The House service shall switch, dim and move what it is asked to by name, and re
 
 **Protected things only by the owner** · must · constraint · **implemented**
 
-A plug or switch whose name says it powers the fridge, freezer, router, NAS, PC, server or similar, and anything the network and NAS integrations offer (FRITZ!Box Tools, Synology DSM) whatever its name, shall be readable by agents but switchable only by the owner on the House page, also not through an Alexa command.
+A plug or switch whose name says it powers the fridge, freezer, router, NAS, PC, server or similar, and anything the network and NAS integrations offer (router Tools, Synology DSM) whatever its name, shall be readable by agents but switchable only by the owner on the House page, also not through an Alexa command.
 
 - Parents: [SN-05](#sn-05)
 - Sources: `images/mission-control/guide/19-house.md`
@@ -3787,7 +3835,7 @@ When the owner asks for a file the stack cannot make (Word, PDF, images, archive
 While the owner grants Gmail read, a newsletter that names an active briefing's topic (the watchlist and searches of its TOPIC.md) and passes one check against its key questions shall go to that topic's folder and be read by its next report as untrusted data, with the mail named as a source line; through the report it reaches the topic's wiki. A mail without a List-Unsubscribe header, a protected mail and the stack's own briefings shall never go there, no link in a mail shall be opened, and a mail's text shall never decide what the desk fetches. The topic's page shall list each mail with what came of it: waiting for the next report, cited in a report, or read and not used.
 
 - Parents: [SN-10](#sn-10), [SN-05](#sn-05)
-- Sources: `chat 2026-11-04: does everything in my uranium newsletter reach the wiki and make the AI smarter?`, [FND-121](#fnd-121)
+- Sources: `chat 2026-11-04: does everything in my copper newsletter reach the wiki and make the AI smarter?`, [FND-121](#fnd-121)
 - Verified by: test: `tests/test_topic_mail.py::test_a_newsletter_on_a_watched_topic_goes_to_that_topic_as_untrusted_data`, `tests/test_topic_mail.py::test_only_a_list_s_mail_goes_to_a_topic_never_a_person_s_or_the_stack_s_own_or_a_protected_one`, `tests/test_topic_mail.py::test_a_mail_the_check_leaves_out_stays_out_and_says_why`, `tests/test_topic_mail.py::test_a_usage_limit_leaves_the_mails_for_the_next_run`, `tests/test_topic_mail.py::test_the_listing_reaches_back_to_the_last_finished_run_and_says_when_it_held_more`, `tests/test_topic_mail.py::test_a_topic_s_names_come_from_its_brief_and_short_capitals_match_exactly`, `tests/test_topic_mail.py::test_a_long_mail_is_narrowed_around_the_names_and_every_gap_is_marked`, `tests/test_topic_mail.py::test_the_next_report_reads_a_handed_mail_as_data_and_names_it_as_a_source`, `tests/test_topic_mail.py::test_a_filed_report_settles_its_mails_so_they_are_read_once`, `tests/test_topic_mail.py::test_the_topic_s_page_lists_each_mail_and_what_came_of_it`, `tests/test_topic_mail.py::test_the_e_mail_of_a_report_drops_the_link_only_the_app_can_open`
 - Trace: `ops/inbox.py`, `images/desk/desk.py`, `ops/desk.sh`, `ops/missions.py`, `ops/provenance.py`, `prompts/inbox.md`, `prompts/desk.md`, `images/mission-control/web/static/app.js`
 - Findings: [FND-121](#fnd-121)
@@ -4881,6 +4929,18 @@ Every file path, make target, app screen and relative link that a Markdown docum
 - Trace: `README.md`, `docs/README.md`
 - Findings: [FND-71](#fnd-71), [FND-81](#fnd-81)
 
+### QA-22
+
+**No limit stays secret** · must · quality · **implemented**
+
+Every limit that stops, refuses, drops or delays work shall carry in the code what it does and why it exists, and docs/LIMITS.md shall list them all. A limit without that tag, a list slice without a reason or an out-of-date list shall fail the checks. A limit that drops what the owner or an agent asked for shall say so where they see it, or refuse with the limit named.
+
+- Parents: [SN-15](#sn-15), [SN-06](#sn-06)
+- Sources: `AGENTS.md`, `docs/LIMITS.md`
+- Verified by: test: `tests/test_limits.py::test_the_limit_that_refused_the_owner_s_repository_would_fail_the_check_today`, `tests/test_limits.py::test_a_limit_needs_what_it_does_and_why`, `tests/test_limits.py::test_the_list_of_limits_stays_current`, `tests/test_limits.py::test_every_limit_in_the_repository_says_what_it_does_and_why`, `tests/test_limits.py::test_nothing_is_left_of_the_size_limit_on_repositories`, `tests/test_limits.py::test_a_short_list_slice_needs_its_reason`, `tests/test_limits.py::test_triggers_and_tickers_over_the_limit_are_refused_not_dropped`, `tests/test_limits.py::test_a_briefing_checks_every_source_it_was_given`, `tests/test_limits.py::test_a_fan_out_runs_every_item_or_refuses_the_plan`, `tests/test_limits.py::test_past_the_day_s_budget_the_owner_is_told_once`, `tests/test_limits.py::test_an_attachment_says_which_sheets_and_rows_it_left_out`
+- Trace: `ops/limits.py`, `ops/truncation.py`, `ops/check.sh`, `docs/LIMITS.md`
+- Findings: [FND-123](#fnd-123)
+
 ## RES Research
 
 ### RES-01
@@ -5167,9 +5227,9 @@ make publish shall push the committed stack to the public GitHub repository only
 
 - Parents: [SN-04](#sn-04)
 - Sources: `docs/PUBLISHING.md`
-- Verified by: test: `tests/test_publish.py::test_images_come_only_from_one_folder_and_hide_nothing`, `tests/test_publish.py::test_terms_are_replaced_as_whole_words_and_only_a_capitalised_sentence_start_is_capitalised`, `tests/test_publish.py::test_the_scan_names_every_leftover_without_printing_the_term_and_lets_placeholders_pass`, `tests/test_publish.py::test_the_snapshot_leaves_out_the_secrets_and_follows_the_public_text`, `tests/test_publish.py::test_a_snapshot_with_a_leftover_runs_no_tests_and_pushes_nothing`, `tests/test_publish.py::test_the_push_refuses_when_git_would_leave_out_a_file_of_the_snapshot`
+- Verified by: test: `tests/test_publish.py::test_images_come_only_from_one_folder_and_hide_nothing`, `tests/test_publish.py::test_every_landing_runs_the_privacy_scan_and_a_leak_stops_it`, `tests/test_publish.py::test_an_address_written_as_a_regular_expression_is_still_found`, `tests/test_publish.py::test_real_runs_stay_out_but_the_evidence_requirements_cite_stays`, `tests/test_publish.py::test_a_fresh_publish_replaces_the_public_history`, `tests/test_publish.py::test_terms_are_replaced_as_whole_words_and_only_a_capitalised_sentence_start_is_capitalised`, `tests/test_publish.py::test_the_scan_names_every_leftover_without_printing_the_term_and_lets_placeholders_pass`, `tests/test_publish.py::test_the_snapshot_leaves_out_the_secrets_and_follows_the_public_text`, `tests/test_publish.py::test_a_snapshot_with_a_leftover_runs_no_tests_and_pushes_nothing`, `tests/test_publish.py::test_the_push_refuses_when_git_would_leave_out_a_file_of_the_snapshot`
 - Trace: `ops/publish.py`, `ops/private-terms.sh`, `Makefile`
-- Findings: [FND-75](#fnd-75)
+- Findings: [FND-75](#fnd-75), [FND-124](#fnd-124)
 
 ## SHP Shopping
 
@@ -7691,7 +7751,7 @@ One script shall connect Home Assistant to the speech services, to the voice gat
 
 **The AI phone's satellite app only inside a task the owner approved** · must · constraint · **implemented**
 
-The agents shall read or touch the Home Assistant app on the AI phone, whose sign-in reaches the house, the FRITZ!Box and the NAS, only inside a phone task the owner approved that names it; free mode alone shall not open it.
+The agents shall read or touch the Home Assistant app on the AI phone, whose sign-in reaches the house, the Router and the NAS, only inside a phone task the owner approved that names it; free mode alone shall not open it.
 
 - Parents: [SN-05](#sn-05)
 - Sources: `docs/HOME-VOICE.md`
@@ -7739,7 +7799,7 @@ The Voice page shall show spoken questions answered a day and the share answered
 | <a id="dec-14"></a>**DEC-14** Requirements engineering for the repo | 2026-10-29 | The stack's requirements are engineered retroactively, prepared for the agent swarm, kept current with every change, and contradictions between the parts are looked for and reported. | - |
 | <a id="dec-15"></a>**DEC-15** Agent swarm design | 2026-10-29 | Agents on different harnesses and models get a shared artifact ledger with a generic lifecycle, a communication board (direct, multicast to all, rooms) and a chatroom, reusing existing technology. | - |
 | <a id="dec-16"></a>**DEC-16** Claude Code as second engine | 2026-10-28 | Claude Code on the owner's Claude subscription becomes the builder's second engine, the default for code work when connected, and the reviewer of ChatGPT builds; code it reads is sent to Anthropic. | - |
-| <a id="dec-17"></a>**DEC-17** The old phone is the AI phone | 2026-10-28 | The old Samsung S22 (ai-phone) is the AI phone; the main phone (S25) is not driven until a separate design for sessions on it. | - |
+| <a id="dec-17"></a>**DEC-17** The old phone is the AI phone | 2026-10-28 | The old Samsung AI phone (ai-phone) is the AI phone; the main phone (main phone) is not driven until a separate design for sessions on it. | - |
 | <a id="dec-18"></a>**DEC-18** Voice through Alexa and a Voice speaker | 2026-10-29 | Talking to Hermes through the Echos ("Alexa, Hermes …") is wanted; a Home Assistant Voice speaker may follow. | 2026-10-28: the owner does not want voice |
 | <a id="dec-19"></a>**DEC-19** Approve everything that ships | 2026-10-27 | The stack's own improvement proposals and builds ship only after the owner's approval. (Asked on 2026-10-29 whether small upkeep fixes may ship by themselves; no answer yet.) | - |
 | <a id="dec-20"></a>**DEC-20** The owner does not run scripts | 2026-10-24 | Setup and recovery prefer routes that need no scripts or clicks from the owner; what only he can do (passwords, sign-ins, purchases, approvals) is asked for in one step with exact instructions. | - |
@@ -7763,7 +7823,7 @@ The Voice page shall show spoken questions answered a day and the share answered
 | <a id="dec-38"></a>**DEC-38** One OK per phone task; free mode asks only for private data | 2026-11-01 | The owner found an approval for every tap too much ("I want to give it permission to use the phone"). An agent asks once for a whole task (its apps, the exact texts it types, up to an hour); the owner's time window becomes a free mode where typing and opening apps and addresses run without asking unless the text holds an e-mail address, phone number, IBAN or key; a request already waiting goes ahead when the permission comes. Money, passwords, blocked apps and Stop are unchanged. | DEC-23 |
 | <a id="dec-39"></a>**DEC-39** SQLite for the swarm | 2026-11-02 | The owner confirmed SQLite for the swarm's Ledger ("keep SQLite for the swarm database ... Yes do all"): one writer (the Swarm service), WAL, a nightly snapshot the restore drill checks, 7 MB. Postgres would add a second failure point and buy nothing on one machine. Closes design decision 2 (SWM-73). | - |
 | <a id="dec-43"></a>**DEC-43** The stack asks Windows; Windows fetches | 2026-11-06 | The owner wanted the stack to talk to Claude Code outside WSL. WSL stays cut off (interop and automount off, no port): a small script on Windows fetches requests from a folder and treats them as data, the way the host probe fetches a disk scan. Status needs no approval; a question goes to Claude with reading tools only, in folders listed on Windows where WSL cannot write; only a turn of the owner's own chat can ask. Changes on Windows would need the owner's tap on the whole job and are not built. Build 27, a second Claude inside WSL, was rejected: it could not reach the Windows sessions. | - |
-| <a id="dec-42"></a>**DEC-42** The AI phone stays on Wi-Fi | 2026-11-04 | Asked whether the S22 will ever run without Wi-Fi, on a SIM only, the owner answered "No, always Wi-Fi". Any Wi-Fi counts, the S25 hotspot included, so ADB over Wi-Fi and Tailscale stay the only way in and the agent app of docs/PHONE-ANYWHERE.md Stage 2 is not built. | - |
+| <a id="dec-42"></a>**DEC-42** The AI phone stays on Wi-Fi | 2026-11-04 | Asked whether the AI phone will ever run without Wi-Fi, on a SIM only, the owner answered "No, always Wi-Fi". Any Wi-Fi counts, the main phone hotspot included, so ADB over Wi-Fi and Tailscale stay the only way in and the agent app of docs/PHONE-ANYWHERE.md Stage 2 is not built. | - |
 | <a id="dec-41"></a>**DEC-41** The AI phone has no single-step approvals | 2026-11-04 | The owner again found approving single actions too much ("I do not want to allow every singel action on AI Phone. I want to allow more macro."). DEC-38 had added one OK per task but left a card per action as the fallback when an agent did not ask for a task. That fallback is gone: taps, swipes, keys, typing and opening apps or addresses run only inside an approved job or free mode, and otherwise are refused with the instruction to ask for the job. Money, settings, deleting, private text in free mode, passwords, blocked apps and Stop are unchanged. | - |
 | <a id="dec-40"></a>**DEC-40** The Memory Keeper fixes the memory by rules | 2026-11-02 | The owner asked for one dedicated agent that runs periodically and fixes the memory systems, contradictions and false information included, designed carefully to best practice, and answered D2 ("Yes do all"): the memory agent may retire duplicates, test noise and facts on agents' runs, translate facts into English and date passing states itself, softly and restorably, with each change listed and undoable, while its answer-key trial passes; contradictions of his own facts stay his to decide; world knowledge is corrected only through research with sources (docs/MEMORY.md, the Memory Keeper; MEM-21). | DEC-32 |
 
@@ -8113,6 +8173,17 @@ The Voice page shall show spoken questions answered a day and the share answered
 | `tests/test_librarian.py::test_the_librarian_merges_marks_and_lints_every_agent_wiki_and_changes_only_what_the_vault_restores` | [KNW-14](#knw-14), [MEM-08](#mem-08), [MEM-12](#mem-12) |
 | `tests/test_librarian.py::test_the_search_index_cleanup_is_measured_before_and_after` | [MEM-08](#mem-08) |
 | `tests/test_librarian.py::test_what_a_pass_wrote_before_a_step_failed_is_still_in_its_commit_and_nothing_else_is` | [MEM-08](#mem-08) |
+| `tests/test_limits.py::test_a_briefing_checks_every_source_it_was_given` | [QA-22](#qa-22) |
+| `tests/test_limits.py::test_a_fan_out_runs_every_item_or_refuses_the_plan` | [QA-22](#qa-22) |
+| `tests/test_limits.py::test_a_limit_needs_what_it_does_and_why` | [QA-22](#qa-22) |
+| `tests/test_limits.py::test_a_short_list_slice_needs_its_reason` | [QA-22](#qa-22) |
+| `tests/test_limits.py::test_an_attachment_says_which_sheets_and_rows_it_left_out` | [QA-22](#qa-22) |
+| `tests/test_limits.py::test_every_limit_in_the_repository_says_what_it_does_and_why` | [QA-22](#qa-22) |
+| `tests/test_limits.py::test_nothing_is_left_of_the_size_limit_on_repositories` | [QA-22](#qa-22) |
+| `tests/test_limits.py::test_past_the_day_s_budget_the_owner_is_told_once` | [QA-22](#qa-22) |
+| `tests/test_limits.py::test_the_limit_that_refused_the_owner_s_repository_would_fail_the_check_today` | [QA-22](#qa-22) |
+| `tests/test_limits.py::test_the_list_of_limits_stays_current` | [QA-22](#qa-22) |
+| `tests/test_limits.py::test_triggers_and_tickers_over_the_limit_are_refused_not_dropped` | [QA-22](#qa-22) |
 | `tests/test_litellm_patch.py::test_arguments_only_in_done_become_one_delta` | [GW-03](#gw-03) |
 | `tests/test_litellm_patch.py::test_calls_that_streamed_deltas_are_left_alone` | [GW-03](#gw-03) |
 | `tests/test_litellm_patch.py::test_dockerfile_base_matches_the_pin` | [GW-03](#gw-03) |
@@ -8152,6 +8223,28 @@ The Voice page shall show spoken questions answered a day and the share answered
 | `tests/test_observe.py::test_stages_use_one_schema` | [OBS-06](#obs-06) |
 | `tests/test_observe.py::test_stats_pair_calls_with_results` | [OBS-06](#obs-06) |
 | `tests/test_observe.py::test_the_deploy_smoke_test_refusals_are_expected_not_problems` | [OBS-07](#obs-07) |
+| `tests/test_onboard.py::test_a_big_repository_gets_the_whole_package_and_one_message` | [BLD-26](#bld-26) |
+| `tests/test_onboard.py::test_a_complete_package_is_made_anew_on_request_and_a_failed_redo_keeps_the_old_map` | [BLD-26](#bld-26) |
+| `tests/test_onboard.py::test_a_crash_resumes_at_the_first_unfinished_step` | [BLD-26](#bld-26) |
+| `tests/test_onboard.py::test_a_different_repository_of_the_same_name_is_refused_with_the_reason` | [BLD-26](#bld-26) |
+| `tests/test_onboard.py::test_a_half_done_clone_never_looks_like_a_repository` | [BLD-26](#bld-26) |
+| `tests/test_onboard.py::test_a_long_wait_tells_the_owner_why` | [BLD-26](#bld-26) |
+| `tests/test_onboard.py::test_a_new_address_is_copied_by_the_job_the_runner_starts_by_name` | [BLD-26](#bld-26) |
+| `tests/test_onboard.py::test_a_repository_without_code_still_gets_the_whole_package` | [BLD-26](#bld-26) |
+| `tests/test_onboard.py::test_a_step_that_keeps_failing_stops_with_its_reason_and_says_so` | [BLD-26](#bld-26) |
+| `tests/test_onboard.py::test_a_tap_while_it_runs_starts_nothing_more` | [BLD-26](#bld-26) |
+| `tests/test_onboard.py::test_a_usage_limit_waits_uses_no_try_and_goes_on_by_itself` | [BLD-26](#bld-26) |
+| `tests/test_onboard.py::test_files_that_stay_unexplained_are_said_not_hidden` | [BLD-26](#bld-26) |
+| `tests/test_onboard.py::test_hermes_reads_why_it_stopped_in_repos_overview` | [BLD-26](#bld-26) |
+| `tests/test_onboard.py::test_no_size_limit_is_left_anywhere_in_the_job` | [BLD-26](#bld-26) |
+| `tests/test_onboard.py::test_removing_a_repository_takes_its_job_and_records` | [BLD-26](#bld-26) |
+| `tests/test_onboard.py::test_the_analysis_is_asked_once_survives_a_restart_and_is_saved` | [BLD-26](#bld-26) |
+| `tests/test_onboard.py::test_the_app_shows_the_steps_and_promises_nothing_false` | [BLD-26](#bld-26) |
+| `tests/test_onboard.py::test_the_study_mode_can_not_run_anything` | [BLD-26](#bld-26) |
+| `tests/test_onboard.py::test_the_watchdog_restarts_a_dead_job_and_gives_up_with_a_reason` | [BLD-26](#bld-26) |
+| `tests/test_onboard.py::test_too_little_memory_waits_and_a_stopped_enrichment_is_no_failure` | [BLD-26](#bld-26) |
+| `tests/test_onboard.py::test_try_again_goes_on_from_the_step_that_failed` | [BLD-26](#bld-26) |
+| `tests/test_onboard.py::test_what_can_be_onboarded` | [BLD-26](#bld-26) |
 | `tests/test_otlp.py::test_a_claude_run_becomes_one_trace_with_model_and_tool_spans` | [SWM-79](#swm-79) |
 | `tests/test_otlp.py::test_a_task_run_is_one_trace_from_the_run_to_every_model_and_tool_call` | [TSK-09](#tsk-09), [TSK-26](#tsk-26) |
 | `tests/test_otlp.py::test_only_claude_runs_are_traced_when_they_end` | [SWM-79](#swm-79) |
@@ -8224,8 +8317,12 @@ The Voice page shall show spoken questions answered a day and the share answered
 | `tests/test_provenance.py::test_the_run_s_answer_is_derived_from_the_last_findings_and_marks_what_it_cites` | [TSK-23](#tsk-23), [TSK-24](#tsk-24) |
 | `tests/test_prune.py::test_the_app_drops_uploads_older_than_90_days` | [PLT-21](#plt-21) |
 | `tests/test_prune.py::test_the_runner_drops_what_is_older_than_90_days` | [PLT-21](#plt-21) |
+| `tests/test_publish.py::test_a_fresh_publish_replaces_the_public_history` | [SEC-19](#sec-19) |
 | `tests/test_publish.py::test_a_snapshot_with_a_leftover_runs_no_tests_and_pushes_nothing` | [SEC-19](#sec-19) |
+| `tests/test_publish.py::test_an_address_written_as_a_regular_expression_is_still_found` | [SEC-19](#sec-19) |
+| `tests/test_publish.py::test_every_landing_runs_the_privacy_scan_and_a_leak_stops_it` | [SEC-19](#sec-19) |
 | `tests/test_publish.py::test_images_come_only_from_one_folder_and_hide_nothing` | [SEC-19](#sec-19) |
+| `tests/test_publish.py::test_real_runs_stay_out_but_the_evidence_requirements_cite_stays` | [SEC-19](#sec-19) |
 | `tests/test_publish.py::test_terms_are_replaced_as_whole_words_and_only_a_capitalised_sentence_start_is_capitalised` | [SEC-19](#sec-19) |
 | `tests/test_publish.py::test_the_push_refuses_when_git_would_leave_out_a_file_of_the_snapshot` | [SEC-19](#sec-19) |
 | `tests/test_publish.py::test_the_scan_names_every_leftover_without_printing_the_term_and_lets_placeholders_pass` | [SEC-19](#sec-19) |

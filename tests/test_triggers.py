@@ -8,15 +8,15 @@ import pytest
 def test_clean_triggers(runner):
     import mission_extras as X
     t = X.clean_triggers([{"type": "sec_filing", "tickers": ["aspi", "bad ticker!"]},
-                          {"type": "price_move", "symbol": "ccj", "pct": 8},
-                          {"type": "news", "query": "  ASP Isotopes  "}])
+                          {"type": "price_move", "symbol": "acme", "pct": 8},
+                          {"type": "news", "query": "  Beta Materials  "}])
     assert t[0] == {"type": "sec_filing", "tickers": ["ASPI"], "forms": X.DEFAULT_FORMS}
-    assert t[1] == {"type": "price_move", "symbol": "CCJ", "pct": 8.0}
-    assert t[2]["query"] == "ASP Isotopes"
-    assert X.trigger_text(t[1]) == "CCJ moves ±8 % in a day"
+    assert t[1] == {"type": "price_move", "symbol": "ACME", "pct": 8.0}
+    assert t[2]["query"] == "Beta Materials"
+    assert X.trigger_text(t[1]) == "ACME moves ±8 % in a day"
 
 
-@pytest.mark.parametrize("bad", [[{"type": "sec_filing", "tickers": []}], [{"type": "price_move", "symbol": "CCJ", "pct": 90}],
+@pytest.mark.parametrize("bad", [[{"type": "sec_filing", "tickers": []}], [{"type": "price_move", "symbol": "ACME", "pct": 90}],
                                  [{"type": "news", "query": "x"}], [{"type": "weather"}]])
 def test_clean_triggers_rejects(runner, bad):
     import mission_extras as X
@@ -26,7 +26,7 @@ def test_clean_triggers_rejects(runner, bad):
 
 def test_check_events_baseline_then_fire(runner, monkeypatch):
     import mission_extras as X
-    filings = [{"id": "0001-26-000001", "form": "8-K", "filed": "2026-10-26T12:00:00", "title": "Asp Isotopes filed 8-K", "url": "https://sec.gov/x"}]
+    filings = [{"id": "0001-26-000001", "form": "8-K", "filed": "2026-10-26T12:00:00", "title": "Beta Materials filed 8-K", "url": "https://sec.gov/x"}]
     watch = {"sec": {"ASPI": filings}, "prices": {"ASPI": {"last": 2.2, "prev": 2.0, "pct": 10.0, "currency": "USD", "date": "2026-10-27"}},
              "news": {}}
     monkeypatch.setattr(X.subprocess, "run", lambda *a, **k: types.SimpleNamespace(returncode=0, stdout=json.dumps(watch), stderr=""))
@@ -36,7 +36,7 @@ def test_check_events_baseline_then_fire(runner, monkeypatch):
     X._last_watch["t"] = 0
     X.check_events({"aspi": m}, c)                           # first look: only remember what exists
     assert c.execute("select count(*) from runs").fetchone()[0] == 0
-    filings.append({"id": "0001-26-000002", "form": "8-K", "filed": "2026-10-27T09:00:00", "title": "Asp Isotopes filed 8-K again", "url": "https://sec.gov/y"})
+    filings.append({"id": "0001-26-000002", "form": "8-K", "filed": "2026-10-27T09:00:00", "title": "Beta Materials filed 8-K again", "url": "https://sec.gov/y"})
     X._last_watch["t"] = 0
     X.check_events({"aspi": m}, c)
     rows = [json.loads(r["event"]) for r in c.execute("select event from runs where trigger='event'")]
@@ -52,20 +52,20 @@ def test_a_task_s_trigger_starts_the_task_s_next_run_not_a_mission_run(runner, m
     for the task's next occurrence."""
     import mission_extras as X
     import tasks as TK
-    news = [{"id": "n1", "title": "Cameco signs a supply deal", "url": "https://news.example/1"}]
-    monkeypatch.setattr(X.subprocess, "run", lambda *a, **k: types.SimpleNamespace(returncode=0, stdout=json.dumps({"sec": {}, "prices": {}, "news": {"Cameco": news}}), stderr=""))
+    news = [{"id": "n1", "title": "Acme Mining signs a supply deal", "url": "https://news.example/1"}]
+    monkeypatch.setattr(X.subprocess, "run", lambda *a, **k: types.SimpleNamespace(returncode=0, stdout=json.dumps({"sec": {}, "prices": {}, "news": {"Acme Mining": news}}), stderr=""))
     c = runner.db()
     TK.table(c)
     t0 = TK.now()
     tid = c.execute("insert into tasks (text, title, goal, kind, door, ref, done, effort, autonomy, rhythm, spec, questions, answers, status, source, created, updated) "
-                    "values ('x','Cameco deals','say what it means','research','plan','1','[\"names the deal\"]','standard','auto',?,'{}','[]','[]','scheduled','app',?,?)",
-                    (json.dumps({"type": "event", "triggers": [{"type": "news", "query": "Cameco"}]}), t0, t0)).lastrowid
+                    "values ('x','Acme Mining deals','say what it means','research','plan','1','[\"names the deal\"]','standard','auto',?,'{}','[]','[]','scheduled','app',?,?)",
+                    (json.dumps({"type": "event", "triggers": [{"type": "news", "query": "Acme Mining"}]}), t0, t0)).lastrowid
     c.commit()
     X._last_watch["t"] = 0
     X.check_events({}, c)                                    # first look: only remember what exists
-    news.append({"id": "n2", "title": "Cameco signs again", "url": "https://news.example/2"})
+    news.append({"id": "n2", "title": "Acme Mining signs again", "url": "https://news.example/2"})
     X._last_watch["t"] = 0
     X.check_events({}, c)
     evs = [json.loads(r["event"]) for r in c.execute("select event from task_events where task=?", (tid,))]
-    assert [e["summary"] for e in evs] == ["1 new article(s) about “Cameco”: Cameco signs again"] and evs[0]["trigger"] == "News about “Cameco”"
+    assert [e["summary"] for e in evs] == ["1 new article(s) about “Acme Mining”: Acme Mining signs again"] and evs[0]["trigger"] == "News about “Acme Mining”"
     assert c.execute("select count(*) from runs").fetchone()[0] == 0

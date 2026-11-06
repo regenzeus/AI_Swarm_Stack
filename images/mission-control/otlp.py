@@ -19,6 +19,7 @@ import threading
 import urllib.request
 
 PHOENIX = os.environ.get("PHOENIX_URL", "http://phoenix:6006")
+# limit: drops, one trace attribute's text past this, marked
 MAX = 4000
 
 

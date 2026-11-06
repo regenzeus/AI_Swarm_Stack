@@ -14,6 +14,7 @@ import time
 from pathlib import Path
 
 SPOOL = Path(os.environ.get("RUNTIME_SPOOL", "/work/.runtime"))
+# limit: drops, a tool result's detail past this in the run record, which marks the cut
 MAX = 20000
 
 def _cut(s):

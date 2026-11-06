@@ -156,10 +156,10 @@ def files_of(m):
 def clean_triggers(raw):
     """Validate triggers from the app or chat; raises ValueError with a readable reason."""
     out = []
-    for t in (raw or [])[:10]:
+    for t in TC.limit_items(raw, 10, "triggers on one mission"):
         k = t.get("type")
         if k == "sec_filing":
-            tick = [x.strip().upper() for x in t.get("tickers", []) if re.fullmatch(r"[A-Za-z.\-]{1,10}", str(x).strip())][:10]
+            tick = TC.limit_items([x.strip().upper() for x in t.get("tickers", []) if re.fullmatch(r"[A-Za-z.\-]{1,10}", str(x).strip())], 10, "tickers on one trigger")
             forms = [f for f in t.get("forms") or DEFAULT_FORMS if f in FORMS]
             if not tick:
                 raise ValueError("SEC filing trigger needs at least one US ticker")
@@ -326,7 +326,7 @@ def run_deep(m, logf, rid, c, ev=None):
     evtext = f"Triggered by an event: {ev['trigger']}: {ev['summary']}" if ev else ""
     plan = M.ask_json(PLAN.format(title=m["title"], goal=goal, notes=TC.cut(notes, 3000), event=evtext) + M.FL.brief(m, plan=True), os.environ["VK_MISSION"])  # cap: prompt
     steps = [{"title": TC.cut(s.get("title", ""), 60), "question": TC.cut(s.get("question", ""), 500), "status": "pending"}  # cap: untrusted
-             for s in plan.get("steps", [])[:5] if s.get("question")]
+             for s in TC.first(plan.get("steps", []), 5, "research steps") if s.get("question")]  # cap: untrusted (its prompt asks for 3 to 5)
     if not steps:
         return "failed", "planning failed", ""
     save = lambda: (c.execute("update runs set steps=? where id=?", (json.dumps(steps), rid)), c.commit())
@@ -420,7 +420,7 @@ def compile_into(root, title, source_rel, text, key, touched=None):
     by_path = {p["path"]: p for p in pages}
     folders = "|".join(sorted({"entities", "concepts", "projects", "events"} | {p["path"].split("/")[0] for p in pages if "/" in p["path"]}))
     written = []
-    for pg in r.get("pages", [])[:8]:
+    for pg in TC.first(r.get("pages", []), 8, "wiki pages from one result"):  # cap: untrusted (a model's answer; the rest stays in the result itself)
         path = str(pg.get("path", "")).strip().lower().removesuffix(".md")
         if not (re.fullmatch(rf"({folders})/[a-z0-9][a-z0-9-]{{0,60}}", path) or path in by_path) or not pg.get("body"):
             continue                             # a folder the wiki has (the vault wiki's howto, answers ...) or a page it has
@@ -428,7 +428,7 @@ def compile_into(root, title, source_rel, text, key, touched=None):
         before = by_path.get(path, {}).get("body", "")
         body = keep_unseen(before, keep_superseded(before, str(pg["body"])), PAGE_SEEN)   # MEM-12: a superseded fact stays
         meta = {"title": TC.cut(str(pg.get("title") or path.split("/")[-1]), 100), "type": KIND.get(path.split("/")[0]) or old.get("type") or "page",  # cap: untrusted
-                "summary": str(pg.get("summary", "")), "aliases": [TC.cut(str(a), 60) for a in pg.get("aliases") or []][:8],  # cap: untrusted
+                "summary": str(pg.get("summary", "")), "aliases": [TC.cut(str(a), 60) for a in pg.get("aliases") or []][:8],  # cap: top (untrusted)
                 "sources": sorted(set((old.get("sources") or []) + [src])), "created": old.get("created", today),   # every source stays (it was the newest 30)
                 "last_validated": today, "trust": "contested" if "[!contradiction]" in body else "news"}
         M.write_front(M.VAULT / root / f"{path}.md", meta, body)

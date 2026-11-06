@@ -84,7 +84,7 @@ if [ -f /mnt/c/Users/Owner/.ssh/id_ed25519_forgejo ] && [ -z "${REHEARSAL:-}" ];
 fi
 cat > /home/$U/.ssh/config <<'EOF'
 Host forgejo
-  HostName 192.168.1.80
+  HostName 192.168.1.10
   Port 2222
   User git
   IdentityFile ~/.ssh/id_ed25519_forgejo

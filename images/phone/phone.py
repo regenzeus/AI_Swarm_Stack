@@ -80,7 +80,7 @@ com.google.android.gms.wallet
 com.samsung.android.spay
 com.osp.app.signin
 com.google.android.apps.accountsettings
-# the voice satellite (docs/HOME-VOICE.md, VOI-07): its sign-in reaches the house, the FRITZ!Box and the NAS, so only
+# the voice satellite (docs/HOME-VOICE.md, VOI-07): its sign-in reaches the house, the router and the NAS, so only
 # a task the owner approved that names it opens it ("task:" = blocked except inside such a task)
 task:homeassistant
 """
@@ -314,7 +314,9 @@ def wake():
 
 # PHN-17: the owner watches the agents work; idle, the screen is off (it drained the battery when kept on, 2026-10-29)
 SCREEN_HOLD = 120                    # s the screen stays on after the agents' last action
+# limit: stops, the AI phone's screen stays on at most this while an action waits for the owner's OK
 SCREEN_WAIT_MAX = 15 * 60            # s it stays on while an action waits for the owner's OK (= the approval's own wait)
+# limit: refuses, the longest the owner can keep the AI phone's screen on (battery)
 SCREEN_OWNER_MAX = 60                # minutes the owner can keep it on from the Phone page
 
 
@@ -799,6 +801,7 @@ OUTWARD = "↗ This can send text or a web address off the phone, so it asks you
 # API key, IP address. In the owner's free mode only typing or an address with one of these still asks (PHN-19).
 PRIVATE = re.compile(r"[\w.+-]+@[\w-]+\.[\w.]+|\b[A-Z]{2}\d{2}(?: ?[A-Z0-9]{4}){3,7}\b|\+?\d[\d /-]{8,}\d"
                      r"|\b(?:sk|ghp|xox[bp]|AKIA)[-_A-Za-z0-9]{12,}|\b(?:\d{1,3}\.){3}\d{1,3}\b")
+# limit: stops, one task approval on the AI phone lasts at most this; the card names it
 TASK_MAX = 60                         # minutes one task approval lasts at most
 HOMES = ("com.sec.android.app.launcher", "com.google.android.apps.nexuslauncher", "com.android.launcher3")   # the home screen
 
@@ -1000,7 +1003,7 @@ def gb(n):
     return f"{n / 1e9:.1f} GB" if n >= 1e8 else f"{n / 1e6:.0f} MB"
 
 
-# The S22 is no longer the owner's private phone: its old personal data may go. Files are listed by name, size and date
+# The AI phone is no longer the owner's private phone: its old personal data may go. Files are listed by name, size and date
 # (never opened or read); deleting needs the owner's OK for each deletion, never inside his time window.
 FILE_AREAS = ("DCIM", "Pictures", "Download", "Documents", "Movies", "Music", "Recordings", "SdCardBackUp",
               "Android/media/com.whatsapp/WhatsApp/Media")
@@ -1194,6 +1197,7 @@ async def shop_look(req):
 @mcp.tool(description="Type text into the focused field (tap the field first). enter=true presses Enter afterwards. Never for "
                       "passwords, card, bank or security codes: those fields are refused, the owner types them himself. " + WHY)
 async def phone_type(text: str, why: str, enter: bool = False) -> str:
+    # limit: refuses, text an agent types on the AI phone at once, with the limit
     if len(text) > 500:
         return f"Refused: {len(text)} characters to type; at most 500 at a time (type it in parts)."
     args = {"text": text, "enter": enter}
@@ -1235,6 +1239,7 @@ async def phone_url(url: str, why: str) -> str:
     if (b := blocked(url)):
         log(tool="phone_url", args={"url": url}, why=why, result=f"refused: blocked word ({b})")
         return f"Refused: that address matches the block list ({b}): banking, payments or passwords."
+    # limit: refuses, an address longer than the phone opens, with its size
     if len(url) > 2000:
         return f"Refused: the address is {len(url)} characters; at most 2,000."
     args = {"url": url}
@@ -1263,11 +1268,14 @@ async def phone_done(summary: str) -> str:
 async def phone_task(task: str, apps: list[str], why: str, texts: list[str] = [], minutes: int = 30) -> str:
     known = await asyncio.to_thread(launchable)
     pkgs, missing = [], []
-    for a in apps[:8]:
+    if len(apps) > 8:            # limit: refuses, the owner reads one approval: it names the few apps the task needs
+        return f"Refused: {len(apps)} apps in one task; at most 8. Name only the apps this task needs."
+    for a in apps:
         p = a if a in known else next((k for k in known if a.lower() in k.lower()), "")
         (pkgs.append(p) if p and not blocked(p, hard=True) else missing.append(a))
     if missing or not pkgs:
         return f"Not a task the phone can approve: {', '.join(missing) or 'no app'} is not an app it may open (call phone_apps)."
+    # limit: refuses, what a task may type: no long text and nothing like a card number
     if any(len(x) > 200 or CARDLIKE.search(x) for x in texts):
         return "Refused: a text to type is too long, or looks like a card or bank number."
     args = {"task": task[:300], "apps": pkgs, "texts": [x for x in texts[:20] if x], "minutes": max(5, min(TASK_MAX, int(minutes)))}  # cap: id
@@ -1336,10 +1344,10 @@ async def phone_storage() -> str:
     log(tool="phone_storage", result=f"{gb(r['free'])} free of {gb(r['total'])}")
     lines = [f"Storage: {gb(r['total'] - r['free'])} used of {gb(r['total'])}, {gb(r['free'])} free."]
     lines += ["Categories: " + ", ".join(f"{k.replace(' Size', '')} {gb(v)}" for k, v in r["categories"].items() if v)]
-    lines += ["Biggest folders: " + ", ".join(f"{f['path'].replace('/sdcard/', '')} {gb(f['size'])}" for f in r["folders"][:10])]
-    lines += ["Inside app media/data: " + ", ".join(f"{f['path'].split('/')[-1]} {gb(f['size'])}" for f in r["app_media"][:8])]
+    lines += ["Biggest folders: " + ", ".join(f"{f['path'].replace('/sdcard/', '')} {gb(f['size'])}" for f in r["folders"][:10])]  # cap: top
+    lines += ["Inside app media/data: " + ", ".join(f"{f['path'].split('/')[-1]} {gb(f['size'])}" for f in r["app_media"][:8])]  # cap: top
     if r["whatsapp"]:
-        lines += ["WhatsApp media: " + ", ".join(f"{f['path'].split('/')[-1]} {gb(f['size'])}" for f in r["whatsapp"][:8])]
+        lines += ["WhatsApp media: " + ", ".join(f"{f['path'].split('/')[-1]} {gb(f['size'])}" for f in r["whatsapp"][:8])]  # cap: top
     lines += ["File counts: " + ", ".join(f"{k} {v}" for k, v in r["file_counts"].items())]
     return "\n".join(lines)
 

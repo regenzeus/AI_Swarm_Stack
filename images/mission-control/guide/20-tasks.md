@@ -197,7 +197,7 @@ sources:
 |---|---|
 | news on a search, a breaking story on a subject | Google News for your search words |
 | a new item in a feed, activity on a GitHub repository | the feed's address, owner/name |
-| a price move, a new SEC filing | SYMBOL:percent (CCJ:8), a US ticker |
+| a price move, a new SEC filing | SYMBOL:percent (ACME:8), a US ticker |
 | activity on Forgejo | your repositories on the NAS: commits, issues, pull requests |
 | new mail | your inbox, only while Gmail *read* is granted (Stack → Connections) |
 | a change in the House | lights, plugs, shutters, locks, sensors |
@@ -207,7 +207,7 @@ sources:
 | a finished task, a mission's own trigger | any, or a task number or words |
 
 Write `{title}`, `{detail}`, `{url}` or `{source}` into the task and they are filled from the event:
-"Read {title} and tell me in three lines what it means for my uranium positions".
+"Read {title} and tell me in three lines what it means for my copper positions".
 
 **Check first** lets a model decide whether the event really is what you mean ("a new supply contract, not a rumour")
 before anything starts. Each rule lists its last firings: started a task, waited out its cooldown, or turned down by its

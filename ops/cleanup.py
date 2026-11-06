@@ -77,8 +77,8 @@ def phone_facts():
     step("finding", "Storage", f"{gb(s['total'] - s['free'])} used of {gb(s['total'])}, {gb(s['free'])} free; "
          + ", ".join(f"{k.replace(' Size', '')} {gb(v)}" for k, v in s["categories"].items() if v))
     step("finding", "Apps", f"{len(out['apps'])} installed by the owner; biggest: "
-         + ", ".join(f"{a['package']} {gb(a['total'])}" for a in out["apps"][:8]))
-    for a in f.get("areas", [])[:6]:
+         + ", ".join(f"{a['package']} {gb(a['total'])}" for a in out["apps"][:8]))  # cap: top
+    for a in f.get("areas", [])[:6]:  # cap: top
         step("finding", a["area"].split("/")[-1] if "whatsapp" not in a["area"] else "WhatsApp media",
              f"{a['files']} files, {gb(a['size'])}, {a['oldest']} to {a['newest']}; by year: "
              + ", ".join(f"{y} {gb(v['size'])}" for y, v in a["by_year"].items()))
@@ -104,7 +104,7 @@ def pc_facts(wait=1500):
                      f"{scan.get('errors', 0)} folders unreadable (skipped)", int((time.time() - asked) * 1000))
                 for d in scan.get("drives", []):
                     step("finding", f"Drive {d['root']}", f"{gib(d['total'] - d['free'])} used of {gib(d['total'])}, {gib(d['free'])} free")
-                for c in scan.get("clutter", [])[:10]:
+                for c in scan.get("clutter", [])[:10]:  # cap: top
                     step("finding", c["label"], f"{gib(c['size'])} · {c['verdict']} · {c['path']} · {c['how']}")
                 return scan, True
         except (OSError, ValueError):
@@ -139,8 +139,8 @@ def phone_report(f, today=None):
     cutoff = (today - dt.timedelta(days=UNUSED_DAYS)).isoformat()
     free = s["free"]
     unused = [a for a in apps if not a["blocked"] and (not a["last_used"] or a["last_used"] < cutoff)]
-    big_unused = sorted(unused, key=lambda a: -a["total"])[:15]
-    caches = sorted([a for a in apps if a["cache"] >= 50e6 and not a["blocked"]], key=lambda a: -a["cache"])[:8]
+    big_unused = sorted(unused, key=lambda a: -a["total"])[:15]  # cap: top
+    caches = sorted([a for a in apps if a["cache"] >= 50e6 and not a["blocked"]], key=lambda a: -a["cache"])[:8]  # cap: top
     wa = {x["path"].split("/")[-1]: x["size"] for x in s.get("whatsapp", [])}
     lines = [f"**{gb(s['total'] - free)} of {gb(s['total'])} used, {gb(free)} free** ({100 * free / max(s['total'], 1):.0f} % free).", "",
              "### Where the space goes", "", "| What | Size |", "|---|---|"]
@@ -151,7 +151,7 @@ def phone_report(f, today=None):
               "DCIM": ("camera photos and videos: move to Google Photos / the NAS, then delete", "caution"),
               "Pictures": ("pictures and screenshots: keep or move", "caution"),
               "Download": ("downloads: usually safe to delete after a look", "safe")}
-    for x in s["folders"][:10]:
+    for x in s["folders"][:10]:  # cap: top
         name = x["path"].replace("/sdcard/", "")
         what, verdict = advice.get(name, ("", "caution"))
         lines.append(f"| {name} | {gb(x['size'])} | {what} | {verdict} |")
@@ -159,7 +159,7 @@ def phone_report(f, today=None):
         lines += ["", f"### WhatsApp media: {gb(sum(wa.values()))}", "",
                   "Images, videos and voice notes received in chats. Biggest saver on most phones: WhatsApp → Settings → "
                   "Storage and data → Manage storage (largest files, forwarded many times), or delete media per chat.", ""]
-        lines += [f"- {k}: {gb(v)}" for k, v in sorted(wa.items(), key=lambda x: -x[1])[:6]]
+        lines += [f"- {k}: {gb(v)}" for k, v in sorted(wa.items(), key=lambda x: -x[1])[:6]]  # cap: top
     lines += ["", f"### Apps without a recorded use for {UNUSED_DAYS}+ days ({len(unused)} apps, {gb(sum(a['total'] for a in unused))})", "",
               "Android keeps about a year of usage history, so \"no use recorded\" can also mean before that.", "",
               "| App | Size | Data | Installed | Last use |", "|---|---|---|---|---|"]
@@ -238,6 +238,7 @@ def pc_report(scan, fresh, docker=()):
             continue                                   # skip a folder that is most of its already-listed parent
         shown.append((d["path"], d["size"]))
         lines.append(f"| {d['path']} | {gib(d['size'])} |")
+        # limit: drops, the AI phone's cleanup report lists the biggest 25 of a kind; the scan has them all
         if len(shown) >= 25:
             break
     games = scan.get("steam_games", [])
@@ -245,7 +246,7 @@ def pc_report(scan, fresh, docker=()):
         lines += ["", f"### Steam games on C: ({gib(sum(g['size'] for g in games))})", "",
                   "⚠️ caution: uninstall in Steam what you no longer play (you can always reinstall).", ""]
         lines += [f"- {g['name']}: {gib(g['size'])}" for g in games[:10]]
-    lines += ["", "### Biggest files", ""] + [f"- {f['path']}: {gib(f['size'])} ({f['modified']})" for f in scan.get("top_files", [])[:12]]
+    lines += ["", "### Biggest files", ""] + [f"- {f['path']}: {gib(f['size'])} ({f['modified']})" for f in scan.get("top_files", [])[:12]]  # cap: top
     if docker:
         lines += ["", "### Docker inside WSL (the AI stack)", ""]
         lines += [f"- {x.get('Type')}: {x.get('Size')} ({x.get('Reclaimable')} reclaimable)" for x in docker]

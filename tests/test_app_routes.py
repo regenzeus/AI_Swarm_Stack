@@ -36,7 +36,7 @@ def test_live_redraws_do_not_replay_the_entrance_animation():
 
 def test_the_interactive_code_map_is_inside_the_repo_page():
     js = (Path(__file__).resolve().parent.parent / "images/mission-control/web/static/app.js").read_text()
-    assert '<iframe src="${HOSTURL}:8446/"' in js and 'id="rstudy2"' in js     # the owner asked for it in Code -> repo, twice
+    assert '<iframe src="${HOSTURL}:8446/"' in js and 'id="ronb"' in js     # the owner asked for it in Code -> repo, twice
 
 
 

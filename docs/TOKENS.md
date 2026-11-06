@@ -5,7 +5,7 @@ The ChatGPT Plus limit is a 5-hour window; every token the stack sends counts ag
 
 ## Before
 
-**Boss Energy analysis (run 8, deep research):** 161 model calls, 2.44 M input tokens, 0.85 M of them cached (35 %),
+**Gamma Metals analysis (run 8, deep research):** 161 model calls, 2.44 M input tokens, 0.85 M of them cached (35 %),
 26 k output. The scout (research) made 119 of the calls and 1.83 M of the input (75 %).
 
 **Fixed cost of every call** (system prompt + tool definitions, sent again on each call):

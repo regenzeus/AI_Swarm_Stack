@@ -20,6 +20,7 @@ import prompts as P                               # MEM-11: the agent prompts li
 M = B = None
 STACK = Path.home() / "ai-stack"
 EVERY = dt.timedelta(days=7)
+# limit: drops, ideas past 5 a self-review; its prompt names the limit and the log says
 MAX = 5
 STATE = Path("/srv/ai/missions/builds/improve.json")
 

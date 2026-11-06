@@ -31,8 +31,8 @@ def test_every_memory_store_is_declared_with_its_kind_writers_readers_limit_and_
 @pytest.fixture
 def vault(tmp_path, monkeypatch):
     v = tmp_path / "vault"
-    for rel, text in {"raw/a.md": "a source", "wiki/entities/cameco.md": "---\ntitle: Cameco\n---\nx",
-                      "missions/ram/wiki/entities/cameco.md": "---\ntitle: Cameco (CCJ)\n---\ny", "missions/ram/wiki/concepts/dram.md": "z",
+    for rel, text in {"raw/a.md": "a source", "wiki/entities/acme-mining.md": "---\ntitle: Acme Mining\n---\nx",
+                      "missions/ram/wiki/entities/acme-mining.md": "---\ntitle: Acme Mining (ACME)\n---\ny", "missions/ram/wiki/concepts/dram.md": "z",
                       "agents/mission-ram/MEMORY.md": "# Memory\n## Journal\n### one\n- Did: a\n### two\n- Did: b\n" + "x" * 21000,
                       "missions/ram/NOTES.md": "# Working notes\n\n- one\n- two\n"}.items():
         (v / rel).parent.mkdir(parents=True, exist_ok=True)
@@ -134,8 +134,8 @@ def test_the_wiki_map_has_every_wiki_and_the_subjects_they_share(app, vault):
     m = TestClient(app.app).get("/api/wiki/map", headers=H).json()
     nodes = {n["root"]: n for n in m["nodes"]}
     assert nodes["wiki"]["writer"] == "curator" and nodes["missions/ram/wiki"]["writer"] == "mission:ram" and nodes["missions/ram/wiki"]["pages"] == 2
-    assert m["edges"] == [{"a": "missions/ram/wiki", "b": "wiki", "subjects": ["Cameco (CCJ)"]}]   # the same subject, one with its ticker
-    assert m["shared"] == [{"subject": "Cameco (CCJ)", "wikis": ["missions/ram/wiki", "wiki"]}]   # once, though title and alias match
+    assert m["edges"] == [{"a": "missions/ram/wiki", "b": "wiki", "subjects": ["Acme Mining (ACME)"]}]   # the same subject, one with its ticker
+    assert m["shared"] == [{"subject": "Acme Mining (ACME)", "wikis": ["missions/ram/wiki", "wiki"]}]   # once, though title and alias match
     assert app.subject("Index") == "" and app.subject("Centrus Energy (LEU)") == "centrus energy"
 
 
@@ -147,19 +147,19 @@ def test_who_read_and_wrote_which_wiki_comes_from_the_run_record(tmp_path, monke
     R.ingest([
         {"run": "mission-run:1", "agent": "mission:ram", "kind": "start", "run_title": "Mission · RAM", "ts": t},
         {"run": "mission-run:1", "agent": "mission:ram", "kind": "result", "title": "wiki_search", "ts": t + 1,
-         "detail": "qmd://missions/ram/wiki/entities/cameco.md: x\nqmd://vault-wiki/concepts/dram.md: y"},
+         "detail": "qmd://missions/ram/wiki/entities/acme-mining.md: x\nqmd://vault-wiki/concepts/dram.md: y"},
         {"run": "mission-run:1", "agent": "mission:ram", "kind": "call", "title": "write_file", "ts": t + 2,
-         "detail": json.dumps({"path": "missions/ram/wiki/entities/cameco.md"})},
+         "detail": json.dumps({"path": "missions/ram/wiki/entities/acme-mining.md"})},
         {"run": "hermes:mission:9", "agent": "mission", "ref": "mission-run:1", "kind": "run", "ts": t + 2.5},
-        {"run": "hermes:mission:9", "agent": "mission", "kind": "result", "title": "mcp__vault__qmd_query", "ts": t + 2.6, "detail": "qmd://topics/uranium/wiki/y.md"},
+        {"run": "hermes:mission:9", "agent": "mission", "kind": "result", "title": "mcp__vault__qmd_query", "ts": t + 2.6, "detail": "qmd://topics/copper/wiki/y.md"},
         {"run": "hermes:main:1", "agent": "main", "kind": "run", "ts": t + 3},
-        {"run": "hermes:main:1", "agent": "main", "kind": "result", "title": "mcp__vault__qmd_query", "ts": t + 4, "detail": "qmd://topics/uranium/wiki/x.md"},
+        {"run": "hermes:main:1", "agent": "main", "kind": "result", "title": "mcp__vault__qmd_query", "ts": t + 4, "detail": "qmd://topics/copper/wiki/x.md"},
         {"run": "hermes:main:1", "agent": "main", "kind": "call", "title": "read_file", "ts": t + 5, "detail": json.dumps({"path": "agents/mission-ram/MEMORY.md"})},
     ])
     acc = {(x["agent"], x["root"]): x for x in R.wiki_access(1)}
     assert acc[("mission:ram", "missions/ram/wiki")]["reads"] == 1 and acc[("mission:ram", "missions/ram/wiki")]["writes"] == 1
-    assert acc[("mission:ram", "wiki")]["reads"] == 1 and acc[("main", "topics/uranium/wiki")]["reads"] == 1
-    assert acc[("mission:ram", "topics/uranium/wiki")]["reads"] == 1          # the mission profile's run counts for its mission
+    assert acc[("mission:ram", "wiki")]["reads"] == 1 and acc[("main", "topics/copper/wiki")]["reads"] == 1
+    assert acc[("mission:ram", "topics/copper/wiki")]["reads"] == 1          # the mission profile's run counts for its mission
     assert len(acc) == 4                                                    # a journal read is no wiki read
 
 
@@ -176,7 +176,7 @@ def test_the_app_draws_the_map_the_access_and_the_memory_section():
 def test_an_archived_mission_s_wiki_is_listed_last_and_left_off_the_map(app, vault):
     import json as J
     (vault / "missions/old/wiki/entities").mkdir(parents=True)
-    (vault / "missions/old/wiki/entities/cameco.md").write_text("---\ntitle: Cameco\n---\nold")
+    (vault / "missions/old/wiki/entities/acme-mining.md").write_text("---\ntitle: Acme Mining\n---\nold")
     st = J.loads(app.STATE.read_text())
     st["missions"].append({"slug": "old", "title": "Job report", "type": "briefing", "status": "archived", "wiki": "missions/old/wiki", "runs": []})
     app.STATE.write_text(J.dumps(st))
@@ -202,7 +202,7 @@ const check = (nodes) => { const at = wikiMapLabels(nodes, rad, W, H, (n) => n.t
     for (const o of nodes) if (o !== n && (hit(b, box(o)) || hit(b, [o.x - rad(o), o.y - rad(o), o.x + rad(o), o.y + rad(o)]))) bad.push(n.t + " covers " + o.t); }
   return nodes.map((n) => at.get(n).y < 0 ? "above" : at.get(n).anchor === "middle" ? "below" : at.get(n).anchor); };
 // as the force layout leaves them (bubbles apart by their radii + 34), and two neighbours whose names would meet below
-const map = check([{ t: "Uranium mining", pages: 40, x: 170, y: 110 }, { t: "ASP Isotopes", pages: 25, x: 260, y: 170 },
+const map = check([{ t: "Copper mining", pages: 40, x: 170, y: 110 }, { t: "Beta Materials", pages: 25, x: 260, y: 170 },
   { t: "Job report", pages: 8, x: 90, y: 190 }, { t: "RAM upgrade to 32 GB", pages: 6, x: 170, y: 220 }, { t: "Vault wiki", pages: 3, x: 300, y: 60 }]);
 const pair = check([{ t: "Home Assistant", pages: 3, x: 100, y: 100 }, { t: "PC disk cleanup", pages: 2, x: 180, y: 100 }]);
 process.stdout.write(JSON.stringify({ bad, map, pair }));"""

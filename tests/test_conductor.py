@@ -231,7 +231,7 @@ def test_the_owner_can_cancel_and_every_planned_task_goes_to_the_conductor(K):
     assert TK.conducted({**base, "kind": "coding", "spec": {"plan": [{"step": "change it", "agent": "builder", "why": "", "after": []}]}})
     assert TK.conducted({**base, "kind": "briefing", "spec": {"plan": []}})               # the desk's plan replaces the intake's
     assert TK.conducted({**base, "kind": "shopping", "spec": {"plan": []}})                # a price watch: its agent's check
-    assert TK.conducted({**base, "rhythm": {"type": "event", "triggers": [{"type": "news", "query": "uranium"}]}})   # on an event
+    assert TK.conducted({**base, "rhythm": {"type": "event", "triggers": [{"type": "news", "query": "copper"}]}})   # on an event
     assert not TK.conducted({**base, "spec": {"plan": []}})
 
 
@@ -295,7 +295,7 @@ def test_a_briefing_runs_collect_scouts_write_and_deliver_and_each_desk_step_han
             return f"x {s} {d} collected: ..."
         rel = f"topics/{slug}/reports/{d[:4]}/{d[5:7]}/{d}.md"
         (K.tmp / rel).parent.mkdir(parents=True)
-        (K.tmp / rel).write_text('---\nheadline: "China Automotive Weekly"\nstats: {"chosen": 3}\n---\n\n# China Automotive Weekly\n\nVW [1]\n')
+        (K.tmp / rel).write_text('---\nheadline: "Battery Recycling Weekly"\nstats: {"chosen": 3}\n---\n\n# Battery Recycling Weekly\n\nVW [1]\n')
         return f"x {s} {d} filed: {rel} stats: {{}}"
     monkeypatch.setattr(CD, "desk_run", desk_run)
     monkeypatch.setattr(CD, "ADAPTERS", {**CD.ADAPTERS, "desk-collect": CD.run_desk_collect, "desk-write": CD.run_desk_write, "deliver": CD.run_deliver})
@@ -314,7 +314,7 @@ def test_a_briefing_runs_collect_scouts_write_and_deliver_and_each_desk_step_han
     assert "627 items collected" in ss[0]["output"] and "VW profit falls 99% · 财新 · https://caixin.com/1" in ss[0]["output"]
     assert calls[1][1] == date and [f["question"] for f in calls[1][2]] == ["Sales?", "Batteries?"] and calls[1][2][0]["text"] == "result of step 2"
     m, title, kicker = delivered[0]
-    assert m == {"slug": slug, "title": "RAM check", "deliver": ["telegram", "app", "email"]} and title == "China Automotive Weekly"
+    assert m == {"slug": slug, "title": "RAM check", "deliver": ["telegram", "app", "email"]} and title == "Battery Recycling Weekly"
     assert kicker.startswith("Weekly briefing · ") and ss[4]["output"].startswith("Delivered by Telegram and e-mail and kept in the app")
     t = TK.row(K.c, K.tid)
     assert t["status"] == "scheduled" and "VW [1]" in (K.tmp / t["spec"]["result"]).read_text()
@@ -416,12 +416,12 @@ def test_a_hermes_step_s_prompt_starts_with_its_run(monkeypatch):
 
 def on_event(K, plan, kind="research"):
     K.c.execute("update tasks set kind=?, rhythm=?, spec=?, status='scheduled' where id=?",
-                (kind, json.dumps({"type": "event", "triggers": [{"type": "news", "query": "Cameco"}]}), json.dumps({"plan": plan}), K.tid))
+                (kind, json.dumps({"type": "event", "triggers": [{"type": "news", "query": "Acme Mining"}]}), json.dumps({"plan": plan}), K.tid))
     K.c.execute("delete from task_steps"); K.c.execute("delete from task_occ"); K.c.commit()
 
 
-EV = {"kind": "news", "trigger": "News about “Cameco”", "summary": "1 new article(s) about “Cameco”: Cameco signs a supply deal",
-      "items": [{"title": "Cameco signs a supply deal", "url": "https://news.example/1"}]}
+EV = {"kind": "news", "trigger": "News about “Acme Mining”", "summary": "1 new article(s) about “Acme Mining”: Acme Mining signs a supply deal",
+      "items": [{"title": "Acme Mining signs a supply deal", "url": "https://news.example/1"}]}
 
 
 def test_an_event_starts_a_run_whose_steps_know_the_event_and_more_events_wait_their_turn(K, monkeypatch):
@@ -438,7 +438,7 @@ def test_an_event_starts_a_run_whose_steps_know_the_event_and_more_events_wait_t
     o = CD.occurrences(K.c, K.tid)
     assert [(x["occ"], x["trigger"], x["event"]["summary"]) for x in o] == [(1, "event", EV["summary"])] and TK.row(K.c, K.tid)["status"] == "running"
     tick(K); tick(K)
-    assert "This run was started by an event: News about “Cameco”: 1 new article(s)" in prompts[0] and "https://news.example/1" in prompts[0]
+    assert "This run was started by an event: News about “Acme Mining”: 1 new article(s)" in prompts[0] and "https://news.example/1" in prompts[0]
     assert TK.row(K.c, K.tid)["status"] == "running" and CD.occurrences(K.c, K.tid)[0]["event"]["summary"] == "a second deal"
     tick(K); tick(K)
     assert [x["status"] for x in CD.occurrences(K.c, K.tid)] == ["done", "done"] and TK.row(K.c, K.tid)["status"] == "scheduled"
@@ -487,20 +487,20 @@ def test_a_price_watch_runs_its_shopping_agent_s_check_and_a_reached_target_star
 
 def test_an_event_triggered_briefing_writes_the_desk_s_alert_and_delivers_it(K, monkeypatch):
     delivered = []
-    rel = "topics/cameco/alerts/2026/11/x.md"
+    rel = "topics/acme-mining/alerts/2026/11/x.md"
     (K.tmp / rel).parent.mkdir(parents=True)
-    (K.tmp / rel).write_text("# Cameco signs\n\nWhat it means [1]")
-    CD.M.X = types.SimpleNamespace(APP="https://x", alert_of=lambda topic, ev: ({"title": "Cameco signs", "markdown": "# Cameco signs", "short": "A deal"}, ""),
+    (K.tmp / rel).write_text("# Acme Mining signs\n\nWhat it means [1]")
+    CD.M.X = types.SimpleNamespace(APP="https://x", alert_of=lambda topic, ev: ({"title": "Acme Mining signs", "markdown": "# Acme Mining signs", "short": "A deal"}, ""),
                                    file_alert=lambda topic, a, ev: rel,
                                    deliver=lambda m, title, short, r, kicker, text, empty=False: delivered.append((title, short, r, kicker)) or True)
     monkeypatch.setattr(CD, "ADAPTERS", {**CD.ADAPTERS, "desk-alert": CD.run_desk_alert, "deliver": CD.run_deliver})
     on_event(K, CD.alert_plan({}), kind="briefing")
-    K.c.execute("update tasks set spec=? where id=?", (json.dumps({"plan": CD.alert_plan({}), "topic": "cameco", "deliver": ["telegram", "app"]}), K.tid))
+    K.c.execute("update tasks set spec=? where id=?", (json.dumps({"plan": CD.alert_plan({}), "topic": "acme-mining", "deliver": ["telegram", "app"]}), K.tid))
     K.c.commit()
     CD.fire(K.c, K.tid, EV)
     for _ in range(4):
         tick(K)
-    assert delivered == [("Cameco signs", "A deal", rel, "Alert · News about “Cameco”")]
+    assert delivered == [("Acme Mining signs", "A deal", rel, "Alert · News about “Acme Mining”")]
     assert CD.steps(K.c, K.tid)[1]["output"].startswith("Delivered by Telegram and kept in the app") and TK.row(K.c, K.tid)["status"] == "scheduled"
 
 
@@ -510,15 +510,15 @@ def test_a_wiki_refinement_s_research_sees_the_page_and_its_writer_folds_the_fin
     import mission_extras as X
     import missions as MM
     prompts, calls, commits = [], [], []
-    monkeypatch.setattr(CD, "ADAPTERS", {**CD.ADAPTERS, "hermes": lambda c, t, s, prompt, card: prompts.append(prompt) or "Cameco produced 31 Mlb; Kazatomprom and Orano unchanged", "wiki": CD.run_wiki})
-    pages = [{"path": p, "title": t, "summary": "", "aliases": []} for p, t in (("entities/cameco", "Cameco"), ("entities/kazatomprom", "Kazatomprom"), ("entities/orano", "Orano"), ("entities/other", "Other"))]
+    monkeypatch.setattr(CD, "ADAPTERS", {**CD.ADAPTERS, "hermes": lambda c, t, s, prompt, card: prompts.append(prompt) or "Acme Mining produced 31 Mlb; Kazatomprom and Orano unchanged", "wiki": CD.run_wiki})
+    pages = [{"path": p, "title": t, "summary": "", "aliases": []} for p, t in (("entities/acme-mining", "Acme Mining"), ("entities/kazatomprom", "Kazatomprom"), ("entities/orano", "Orano"), ("entities/other", "Other"))]
     monkeypatch.setattr(X, "wiki_pages", lambda root: pages)
     monkeypatch.setattr(X, "compile_into", lambda root, title, src, text, key, touched=None: calls.append((root, src, list(touched), text)) or list(touched))
     monkeypatch.setenv("VK_MISSION", "k")
     (K.tmp / "missions/u/wiki/entities").mkdir(parents=True)
-    (K.tmp / "missions/u/wiki/entities/cameco.md").write_text("---\ntitle: Cameco\n---\n## Key facts\n- 2025 output 30 Mlb")
+    (K.tmp / "missions/u/wiki/entities/acme-mining.md").write_text("---\ntitle: Acme Mining\n---\n## Key facts\n- 2025 output 30 Mlb")
     CD.M.split_front, CD.M.vault_commit, CD.M.reindex = MM.split_front, lambda paths, msg: commits.append(paths), lambda: None
-    w = {"root": "missions/u/wiki", "title": "Uranium mining", "page": "entities/cameco", "page_title": "Cameco"}
+    w = {"root": "missions/u/wiki", "title": "Copper mining", "page": "entities/acme-mining", "page_title": "Acme Mining"}
     K.c.execute("update tasks set text='Check its facts', spec=? where id=?", (json.dumps({"wiki": w, "plan": [
         {"step": "check it", "agent": "scout", "why": "web", "after": []},
         {"step": "Write it into the wiki", "agent": "mission", "harness": "wiki", "why": "", "after": [1]}]}), K.tid))
@@ -526,12 +526,12 @@ def test_a_wiki_refinement_s_research_sees_the_page_and_its_writer_folds_the_fin
     CD.start(K.c, TK.row(K.c, K.tid))
     for _ in range(3):
         tick(K)
-    assert "The page “Cameco” of the wiki “Uranium mining” as it stands now:" in prompts[0] and "2025 output 30 Mlb" in prompts[0]
+    assert "The page “Acme Mining” of the wiki “Copper mining” as it stands now:" in prompts[0] and "2025 output 30 Mlb" in prompts[0]
     (root, src, touched, text), = calls
-    assert root == "missions/u/wiki" and touched == ["entities/cameco", "entities/kazatomprom", "entities/orano"] and src == f"tasks/{K.tid}-wiki-findings-1.md"
-    assert text.startswith("The owner asked for this change to the wiki (its page “Cameco”): Check its facts") and "31 Mlb" in (K.tmp / src).read_text()
+    assert root == "missions/u/wiki" and touched == ["entities/acme-mining", "entities/kazatomprom", "entities/orano"] and src == f"tasks/{K.tid}-wiki-findings-1.md"
+    assert text.startswith("The owner asked for this change to the wiki (its page “Acme Mining”): Check its facts") and "31 Mlb" in (K.tmp / src).read_text()
     out = CD.steps(K.c, K.tid)[1]["output"]
-    assert out.startswith("3 pages of the wiki “Uranium mining” written: entities/cameco, entities/kazatomprom, entities/orano") and commits[0] == ["missions/u/wiki", src]
+    assert out.startswith("3 pages of the wiki “Copper mining” written: entities/acme-mining, entities/kazatomprom, entities/orano") and commits[0] == ["missions/u/wiki", src]
     assert TK.row(K.c, K.tid)["status"] == "done"
 
 
@@ -839,7 +839,7 @@ def test_a_recurring_or_fixed_plan_gets_no_checkpoint():
 
 
 def test_an_alert_s_answer_is_in_its_message(K):
-    """P6 (2 Nov): the uranium rule's alert reached the phone as "Task #113 is done: <title>" and the three lines were only
+    """P6 (2 Nov): the copper rule's alert reached the phone as "Task #113 is done: <title>" and the three lines were only
     in the app. A task a rule fired carries its answer in the message (cut visibly when long); the owner's own does not."""
     K.c.execute("update tasks set source='rule:2' where id=?", (K.tid,))
     K.c.commit()

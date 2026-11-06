@@ -17,7 +17,7 @@ for repo in "$CODE"/*/; do
   # files as "working-tree changes" and warns that the map is out of date
   grep -qx "graphify-out/" "$repo/.git/info/exclude" 2>/dev/null || echo "graphify-out/" >> "$repo/.git/info/exclude"
   head=$(git -C "$repo" rev-parse HEAD 2>/dev/null) || continue
-  [ "$(cat "$STATE/$name.head" 2>/dev/null)" = "$head" ] && [ -f "$repo/graphify-out/graph.json" ] && continue
+  [ "$(cat "$STATE/$name.head" 2>/dev/null)" = "$head" ] && { [ -f "$repo/graphify-out/graph.json" ] || [ -f "$repo/graphify-out/.no-code" ]; } && continue
   [ "$(cat "$STATE/$name.failed" 2>/dev/null)" = "$head" ] && continue          # failed at this commit: try again at the next one
   # An update reads the old graph: when it cannot (no graph yet, or a graph.json broken by a crash, as ai-stack's was on
   # 2026-10-30 and then failed silently every minute for hours), the graph is built anew from the code.
@@ -26,12 +26,17 @@ for repo in "$CODE"/*/; do
     mv "$gj" "$gj.broken-$(date +%F-%H%M)"                   # an extract reads it too: set aside (kept), so the next one starts clean
     echo "$(date '+%F %T') graph.json of $name unreadable: kept as $(basename "$gj").broken-$(date +%F-%H%M), building it anew" >&2
   fi
+  said=$(mktemp)
   if { [ -f "$gj" ] && $G graphify update "/code/$name" >/dev/null 2>&1; } \
-     || $G graphify extract "/code/$name" --code-only >/dev/null 2>&1; then
-    echo "$head" > "$STATE/$name.head"; rm -f "$STATE/$name.failed"; changed=1; echo "$(date '+%F %T') graph updated: $name @ ${head:0:7}"   # cap: id (a short commit hash)
+     || $G graphify extract "/code/$name" --code-only >"$said" 2>&1; then
+    echo "$head" > "$STATE/$name.head"; rm -f "$STATE/$name.failed" "$repo/graphify-out/.no-code"; changed=1; echo "$(date '+%F %T') graph updated: $name @ ${head:0:7}"   # cap: id (a short commit hash)
+  elif grep -q "graph is empty" "$said"; then    # only web pages or documents: nothing for this tool to read, which is no failure
+    echo "$head" > "$STATE/$name.head"; rm -f "$STATE/$name.failed"; mkdir -p "$repo/graphify-out"; touch "$repo/graphify-out/.no-code"
+    echo "$(date '+%F %T') no code to graph: $name @ ${head:0:7}"   # cap: id (a short commit hash)
   else
     echo "$head" > "$STATE/$name.failed"; echo "$(date '+%F %T') graph FAILED: $name @ ${head:0:7} (update and rebuild; next try at its next commit)" >&2   # cap: id (a short commit hash)
   fi
+  rm -f "$said"
 done
 if [ "$changed" = 1 ] || [ ! -f "$CODE/.graphify/merged-graph.json" ]; then
   graphs=$(for g in "$CODE"/*/graphify-out/graph.json; do echo "/code/${g#$CODE/}"; done)

@@ -20,6 +20,7 @@ docker exec aistack-hindsight-db-1 pg_dumpall -U hindsight > $STAGE/hindsight.sq
 "$(dirname "$0")/backup-copy.sh" /srv/ai/ $STAGE/srv-ai/
 # The vault and the repositories stay in use: tar's exit 1 says a file changed while it read it, and the archive is still good
 # (6 Nov 2026: the vault's git, the night's backup lost). Anything worse stops the backup.
+# limit: stops, tar's exit above 1 is a real failure; 1 only says a file changed while it was read
 live_tar() { local rc=0; tar "$@" || rc=$?; [ "$rc" -le 1 ] || exit "$rc"; }
 live_tar -C ~ -cf $STAGE/home.tar ai-stack hermes-skills code .config/systemd/user
 live_tar -C /srv -cf $STAGE/vault.tar vault

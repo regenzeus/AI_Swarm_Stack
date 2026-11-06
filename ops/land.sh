@@ -2,6 +2,7 @@
 # Land an owner-supervised session's branch on main the way a build lands (BLD-20, FND-04):
 #   bash ops/land.sh <branch> "<the owner's approval, e.g. chat 2026-10-29: implement all now>"
 # 1. the checks (ops/check.sh, in the builder's image) on the exact commit that lands; any failure stops here
+#    and the privacy scan of the public copy (ops/publish.py, FND-124): nothing private gets near main, whenever a publish comes
 # 2. the land lock, fast-forward main to the branch, push
 # 3. ops/deploy.py (which takes the deploy lock and records the deploy with its source)
 # 4. the runner restarts when the deploy says so: at once when no run is going, otherwise as soon as it is idle
@@ -38,6 +39,12 @@ if ! git archive --format=tar "$TIP" | docker exec -i aistack-builder-1 sh -c \
   exit 1
 fi
 grep -E "passed in|ALL CHECKS" "$LOG" | tail -2   # cap: list (the summary lines)
+
+if ! SAID=$(python3 ops/publish.py scan "$TIP" 2>&1); then
+  echo "$SAID" | tail -15                         # cap: list (it names file and line; the private term itself never shows)
+  echo "NOT LANDED: the privacy scan stopped it. Add a real identifier to the private map, name a fake one in ops/publish.py, or reword it (docs/PUBLISHING.md)" >&2
+  exit 1
+fi
 
 export LAND_TIP=$TIP LAND_BRANCH=$BRANCH
 OUT=$(flock ~/.aistack-land.lock bash -c '

@@ -38,6 +38,34 @@ You use it from your phone through **Mission Control**, an installable web app o
 Telegram. Your Tailscale login is the only sign-in. A built-in guide (Stack → Guide) explains every screen with examples
 you can try.
 
+## Why not just use the Claude or ChatGPT app?
+
+Use them if they do what you need. They take minutes to set up, need no PC of your own to look after, and are made by
+the people who make the models. Both have become very good: you can steer work from your phone, schedule it and let it
+run in their cloud. This stack runs **on top of the same subscriptions** and is for the things one vendor's app is not
+built to do. Checked in November 2026 against the
+[Claude Code](https://code.claude.com/docs/en/routines) and [Codex](https://learn.chatgpt.com/docs/automations) docs; these apps change fast.
+
+| | Claude or Codex app | ai-stack |
+|---|---|---|
+| **Models** | One vendor's | Both together: ChatGPT chats and maps code, Claude Code does the hard code, and the other engine reviews a build where it can |
+| **Between runs** | A scheduled run mostly starts fresh, and one on your computer needs it awake with the app open | One memory for every agent: your notes, a wiki per topic, long-term facts, each agent's journal. All plain files you own |
+| **Who does the work** | One assistant and the helpers it starts | 25 agents with their own keys, tools and jobs, a shared ledger of the work, and weekly trials that measure them |
+| **Real-world hands** | Your own computer and connected accounts | A spare phone, Gmail and Home Assistant, each behind its own firewall. The phone can never approve itself |
+| **Your OK** | A prompt inside the session (Claude's Dispatch denies it after ten minutes) | One queue for every decision: builds, purchases, phone steps, mail. Nothing that matters happens without your tap |
+| **What happened** | The session's history | One record of every run of every agent, a map of who works with whom, cost and resources per agent |
+| **When it is yours** | The vendor decides what changes | MIT licensed, on your machine, pinned versions, nightly encrypted backups with a restore drill |
+
+**Five things you can ask for**
+
+1. *"Clone this repo, analyse it and tell me how we could use it."* It copies the code, draws its graph, ChatGPT writes a code map that explains every file, and Claude writes an analysis with a verdict. All of it stays searchable, so next month's question starts from there. A 177-file repository took 23 minutes, and the page showed each step.
+2. *"Send me a short news briefing on copper every weekday at 7."* A desk reads its own sources every day, checks them, mails you the report and keeps growing a wiki on the topic, for weeks.
+3. *"Tell me when this drops under 200 €."* A watch follows the price and offers, and asks you before anything is bought.
+4. *"Free up space on my phone."* An agent on the spare phone looks, proposes what to remove, and does only what you approve there.
+5. *"Why did last night's backup fail?"* An agent reads the real logs and run records. A fix goes to the builder's sandbox, the other engine reviews it, you tap to deploy, and a failed check rolls it back.
+
+**What it costs you.** A Windows PC that stays on (16 GB is tight), a NAS for git and backups, and real time to set it up and keep it running: this is one person's setup, not a product. Your prompts still go to OpenAI and Anthropic, so the privacy gain is in what stays at home (your files, memory and keys), not in the model calls. And it depends on subscription access that the vendors can change.
+
 ## How it's built
 
 It runs on one Windows 10 PC (WSL2, rootless Docker), with a Synology NAS for git, CI, Home Assistant and backups.
@@ -100,7 +128,7 @@ flowchart LR
 ```
 
 **Hosts.** Windows 10 Pro (i7-7700K, 16 GB RAM) runs WSL2 `Ubuntu-24.04` (10 GB cap) with rootless Docker,
-compose project `aistack`. The NAS (Synology DS923+, 192.168.1.80) runs Forgejo (git + CI) and Home Assistant,
+compose project `aistack`. The NAS runs Forgejo (git + CI) and Home Assistant,
 and stores the encrypted nightly backups. Windows tasks keep WSL alive, heal the WSL disk, copy backups to OneDrive,
 sync Bitbucket and probe resources.
 
@@ -119,7 +147,7 @@ sync Bitbucket and probe resources.
 | `graphify`, `opencode`, `ua-viewer` | Code graph MCP, coding UI, Understand Anything code map | internal / package proxy |
 | `gate-hermes-dashboard` (+ the code map's gate sidecar) | Single sign-in: admits only requests carrying your Tailscale login (`config/gate`) | shares the app's network namespace |
 | `swarm` | The agent swarm's Ledger: every agent-produced artifact, idea and message with its history and lifecycle | no port, no internet |
-| `phone`, `mail`, `browser`, `pricewatch` | The AI phone (ADB to the old S22), the Gmail connector, the scout's shop browser, the shopping price watch; each sealed by its own firewall | one target each |
+| `phone`, `mail`, `browser`, `pricewatch` | The AI phone (ADB to a spare phone), the Gmail connector, the scout's shop browser, the shopping price watch; each sealed by its own firewall | one target each |
 | `openwebui`, `phoenix`, `postgres`, `ollama`, `pkgproxy`, `ci-runner` | Classic chat UI, traces, LiteLLM DB, smoke-test model, npm/PyPI proxy, Forgejo runner | as needed |
 
 Host side (`ops/`, systemd user units in `ops/systemd/`): `missions.py` (the runner: missions, events, builds,
@@ -159,10 +187,10 @@ From a terminal (`grep '##' Makefile` lists every target; secrets are decrypted 
 | `make keys` / `python3 ops/update-keys.py` | create / update per-agent keys from `ops/keys.sh` |
 | `make backup` / `make restore-drill` / `make restore` | encrypted backup to the NAS, prove it restores, restore |
 | `make lock` | record which image every container runs into `versions.lock` |
-| `make desk TOPIC=uranium` | run a briefing now |
+| `make desk TOPIC=copper` | run a briefing now |
 | `make wiki-rebuild MISSION=slug` | compile a mission's wiki from all its results |
 | `make email-setup` | one-time Gmail app password for report e-mails |
-| `make understand REPO=<url>` | code graph + code map of a repository |
+| `make understand REPO=<url>` | onboard a repository: code graph, code map, search index, written analysis |
 | `make bench-gate` / `make bench` | frozen quality benchmark (subscription only) |
 | `make upgrade-check` | newer releases of pinned components (changes nothing) |
 

@@ -82,7 +82,7 @@ def test_the_setup_adds_what_is_missing_and_keeps_what_is_there(monkeypatch):
 
 
 def test_the_agents_never_open_the_home_assistant_app_on_the_ai_phone():
-    """VOI-07: the satellite's sign-in reaches the house, the FRITZ!Box and the NAS."""
+    """VOI-07: the satellite's sign-in reaches the house, the router and the NAS."""
     src = (ROOT / "images/phone/phone.py").read_text()
     block = re.search(r'DEFAULT_BLOCK = """(.*?)"""', src, re.S).group(1)
     words = [ln.strip() for ln in block.splitlines() if ln.strip() and not ln.startswith("#")]

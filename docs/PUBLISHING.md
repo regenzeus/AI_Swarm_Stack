@@ -10,7 +10,8 @@ make publish-check    # build the snapshot in /srv/ai/publish/tree, scan it, run
 make publish          # the same, then one commit on top of the public history, pushed to GitHub
 ```
 
-Each publish is the owner's call; nothing publishes by itself. Every run is logged in `/srv/ai/state/publish.jsonl`
+Each publish is the owner's call; nothing publishes by itself. **Every landing runs the same privacy scan** (`ops/land.sh`), so what
+would stop a publish stops the change that brought it. Every run is logged in `/srv/ai/state/publish.jsonl`
 (the commit it was made of, the file count, the result).
 
 ## What changes in the snapshot
@@ -23,6 +24,8 @@ Each publish is the owner's call; nothing publishes by itself. Every run is logg
 | `eval/FROZEN.sha256`, `prompts/replays.json` | hashes of the private texts | hashes of the public texts, which differ only by their placeholders |
 | `requirements/REQUIREMENTS.md`, `docs/API.md` | generated | generated again from the public files |
 | History | every commit | one snapshot commit per publish, authored by `regenzeus` with GitHub's no-reply address |
+| `eval/results/` | every run's record | left out (`LEFT_OUT`): they hold real answers and details of the setup; only the ones a requirement cites stay |
+| What the owner follows, and the home's devices | as they are | replaced from the private map: the topics, companies and sources he watches, the router and phone models |
 
 ## Screenshots
 
@@ -45,11 +48,15 @@ The identifiers are in no repository. They live in `/srv/ai/private/` (mode 700,
   last list rather than run without the owner's identifiers.
 
 To keep something new out of the snapshot, add it to the map. The scan already stops a snapshot that still holds a
-term from the map in any case, so a missing variant stops the publish instead of leaking.
+term from the map in any case, so a missing variant stops the publish instead of leaking. **The map holds what a stranger
+should not learn, not only what identifies the owner**: a real address's last number too, which gets a made-up one.
+
+The public history keeps the NAS's LAN address of FND-124: the owner decided on 6 Nov 2026 that it does not matter and asked to keep the
+history. `python3 ops/publish.py push --fresh` could replace the history with one clean snapshot, only on the owner's word.
 
 ## The checks before a push
 
-1. **The scan** reads every file and every path of the snapshot and stops on: a term from the map in any case; an
+1. **The scan** reads every file and every path of the snapshot, with the backslashes of a regular expression taken out (an address written as a pattern is still the address), and stops on: a term from the map in any case; an
    e-mail address outside the placeholders and test fixtures (`ALLOW_EMAILS`); a LAN address other than
    `192.168.1.x` and `192.168.0.0`; a Tailscale address other than `100.64.0.x`; a tailnet name other than `example`;
    a token pattern (OpenAI, GitHub, Slack, AWS, Google, Telegram) other than the fake ones in tests; a private key, an

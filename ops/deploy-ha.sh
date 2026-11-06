@@ -13,8 +13,8 @@ ssh synology "cat > $DIR/compose.yaml" <nas/homeassistant/compose.yaml
 ssh synology "test -s $DIR/config/configuration.yaml || cat > $DIR/config/configuration.yaml" <nas/homeassistant/configuration.yaml
 ssh synology "cd $DIR && $DOCKER compose pull -q && $DOCKER compose up -d"
 for _ in $(seq 1 40); do
-  if curl -fsS -o /dev/null --max-time 5 http://192.168.1.80:8123/manifest.json; then
-    echo "Home Assistant is up: http://192.168.1.80:8123"
+  if curl -fsS -o /dev/null --max-time 5 http://192.168.1.10:8123/manifest.json; then
+    echo "Home Assistant is up: http://192.168.1.10:8123"
     exit 0
   fi
   sleep 5

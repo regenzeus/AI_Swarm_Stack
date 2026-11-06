@@ -54,7 +54,9 @@ import textcap
 import textcap as TC
 
 ROOT = Path(__file__).resolve().parent.parent
+# limit: waits, steps at once: the PC's memory and the subscriptions decide (DEC-24)
 SLOTS = 2                                         # steps at once: RAM (16 GB) and the subscriptions decide, as for builds (DEC-24)
+# limit: stops, a step that failed twice fails its task with the reason; a limit or a restart is no attempt
 ATTEMPTS = 2                                      # a step that fails twice fails its task (a limit or a restart is no attempt)
 # TSK-08: what a step needs available on the PC (Windows' available memory: free plus the cache it hands back). A model
 # call starts nothing; a Hermes turn starts one process in the running Hermes container; Claude Code starts its own
@@ -65,26 +67,30 @@ NEED_GB = {"python": 0.25, "temp": 0.25, "hermes": 0.5, "claude-code": 0.75, "bu
            "opencode": 1.0, "check": 0.3}                                                      # its container; the builder's tests
 OWN_STEPS = {"desk": ("desk-collect", "desk-write", "desk-alert", "deliver"),   # the Topic Desk's steps of a briefing (TSK-22)
              "mission": ("shop", "wiki")}                                       # the shopping agent's check (TSK-21), a wiki write (TSK-34)
-QUEUE = 5                                         # cap: list (events waiting for one task's next run; the oldest are dropped, logged)
+# limit: drops, the oldest event waiting for one task's next run; said in the activity feed (TSK-21)
+QUEUE = 5                                         # cap: list (events waiting for one task's next run; the oldest are dropped, said in the feed)
 BLOCKED = re.compile(r"\A\s*(?:\**\s*)?(?:step \d+ (?:is )?)?BLOCKED\**\s*:\s*\**\s*(.+)", re.I)         # a step that could not do its work says so first (TASK_STEP): it fails,
 WRITTEN = ("hermes", "python", "temp", "opencode")   # it is not done (task #104 "done" with no phone tool, 1 Nov 2026)
 QUIET = ("Nothing new was chosen", "No price drop")   # a run whose answer starts so found nothing to send: kept, not judged
 ALERT_CHARS = 1500                                     # cap: preview (an alert's answer in its message: three lines fit; the task page has all of it)
 DESK = Path("/srv/ai/desk")                       # the desk's per-topic folders (ops/desk.sh)
 NEW = "new"                                       # TSK-15: the intake's word for "no agent fits": a temporary agent is written
+# limit: stops, a step past this counts as failed
 STEP_TIMEOUT = 40 * 60
 HARNESSES = ("hermes", "claude-code", "python", "opencode")   # the harnesses a step can run on (TSK-07)
-OPENCODE_IMAGE = "aistack/opencode:1.19.4-ua1"    # as ops/understand.sh: the pinned OpenCode with its plugins
+OPENCODE_IMAGE = "aistack/opencode:1.19.4-ua1"    # as ops/onboard.py: the pinned OpenCode with its plugins
 OPENCODE_CFG = ROOT / "config/opencode-step.json"  # a step may read, never run, edit or fetch (permission: deny)
 CODE = Path("/home/owner/code")                    # the repositories a task may name (read-only in the step)
 BUILDER = "builder"                               # its steps run as build assignments (the builder's checks, the owner's deploy tap)
-EACH = 8                                          # cap: list (a fan-out's copies; more is a plan of its own)
+EACH = 50                                         # limit: refuses, a plan fanning out over more names the limit on the task: SLOTS already paces the copies
 WAITS = ("claude-code", "build")                  # adapters whose steps wait for work elsewhere and are looked at again
 STEP_KINDS = ("build", "check")                   # TRL-07, TRL-08: a card's steps are builds in its lane, or the judge's checks
+# limit: stops, fix rounds a check may send back (TRL-08)
 LOOP_MAX = 4                                      # fix rounds a check may send back (TRL-08)
 SEEN = 6000                                       # of each finished step's result, the checkpoint reads (its prompt stays small)
 CHECKPOINTS = 3                                   # the Orchestrator's looks at one run's plan between waves (TRL-08)
 ADDS = 3                                          # steps one look may add; a run's plan stays within MAX_STEPS
+# limit: drops, steps a checkpoint adds past this; the run's plan changes say so
 MAX_STEPS = 12
 FINISHED = ("done", "skipped")                    # a step the Orchestrator dropped counts as settled for those after it
 checkpoint_ask = None                             # tests: the Orchestrator's answer; else the intake's own key (M.ask_json)
@@ -226,7 +232,7 @@ def graph(plan, agents=None):
             card = {"harness": "temp", "model": "gpt-sub"}
         elif not card or not runs_steps(card):
             raise ValueError(f"step {i}: {a!r} is no agent that can do a step (one on {', '.join(HARNESSES)})")
-        items = TC.first([str(x).strip() for x in p.get("each") or [] if str(x).strip()], EACH, "items to fan out")  # cap: untrusted (the plan's prompt names the limit)
+        items = TC.limit_items([str(x).strip() for x in p.get("each") or [] if str(x).strip()], EACH, f"items to fan out in step {i}")
         harness = (p["harness"] if p.get("harness") in OWN_STEPS.get(a, ()) else "build" if a == BUILDER
                    else card["step_kind"] if card.get("step_kind") in STEP_KINDS else card["harness"])
         lp = p.get("loop")
@@ -291,6 +297,7 @@ def fire(c, task, ev):
     for r in c.execute("select id, event from task_events where task=? and occ is null order by id desc limit -1 offset ?", (int(task), QUEUE)).fetchall():
         c.execute("update task_events set occ=0 where id=?", (r["id"],))         # 0: dropped, too many waiting
         M.log(f"conductor: task {task}: an event dropped, {QUEUE} newer ones wait: {json.loads(r['event']).get('summary', '')}")
+        M.event("task", "", f"Task #{task}: an event was dropped because {QUEUE} newer ones wait for its next run: {json.loads(r['event']).get('summary', '')}", title="Tasks")
     c.commit()
 
 
@@ -937,8 +944,9 @@ def checkpoint(c, t, ss, ask=None):
         idxs = {s["idx"] for s in ss}
         nxt = max(idxs) + 1
         for a in TC.first(d.get("add") or [], ADDS, "steps a checkpoint added"):  # cap: untrusted (its prompt names the limit)
-            if nxt > MAX_STEPS:
-                break
+            if nxt > MAX_STEPS:                          # limit: drops, a checkpoint's further steps; the run's plan changes say so
+                changes.append(f"not added, the plan is at its {MAX_STEPS} steps: {str(a.get('step', '')).strip()}")
+                continue
             try:
                 node = graph([{"step": str(a.get("step", "")).strip(), "agent": str(a.get("agent", "")), "why": "added at the checkpoint", "after": []}], agents)[0]
             except (ValueError, IndexError):

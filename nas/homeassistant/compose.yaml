@@ -1,4 +1,4 @@
-# Home Assistant on the Synology DS923+: the hub between the AI stack and the flat (Alexa/Echo, lights, Tapo plugs,
+# Home Assistant on the Synology NAS: the hub between the AI stack and the flat (Alexa/Echo, lights, Tapo plugs,
 # later the Schneider shutters). Deployed by `make ha-deploy` to /volume1/docker/homeassistant/compose.yaml.
 # LAN only (port 8123 on the NAS, no router forward). Host networking so it can discover devices (mDNS, Tapo broadcast).
 name: homeassistant

@@ -55,7 +55,7 @@ the AI phone, and no agent or chat tool can approve, change your limits or buy.
 
 ## 4. Buying, after your tap
 
-The AI phone opens the product in the shop's app (Amazon on the S22: sign in there yourself once), puts exactly that
+The AI phone opens the product in the shop's app (Amazon on the AI phone: sign in there yourself once), puts exactly that
 item in the cart and goes to checkout. On the final screen the phone itself checks, without any AI: the item and
 variant, the seller, a total at most the proposed price (+3 % and €1 for small changes, never over your cap) and your
 postcode in the delivery address. Only if all of that matches does it tap the final buy button, **once**; the log

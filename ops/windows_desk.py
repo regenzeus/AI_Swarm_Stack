@@ -13,6 +13,7 @@ ACTIONS = {"windows_ask"}
 INBOX = Path("/srv/ai/state/windesk/requests")
 ANSWERS = Path("/srv/win-exports/.host/desk")
 OUT = Path("/srv/ai/missions/windows")
+# limit: refuses, a question for the Windows desk, with its size
 QUESTION_MAX = 20000                       # cap: api: a question, not a document; the answer says so rather than cutting it
 ALIVE_S = 60                               # the desk writes its status every 10 s
 PICKUP_S = 120                             # it looks every 3 s: longer and it is not running

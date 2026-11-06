@@ -29,8 +29,10 @@ C = M = None                                         # ops/crew.py and ops/missi
 PHONE_DIR = Path(os.environ.get("PHONE_HOST_DIR", "/srv/ai/phone"))
 ACTIONS = {"phone_cleanup_do", "phone_cleanup_do_all", "phone_cleanup_dismiss", "phone_cleanup_undo"}
 MIN_DELETE, MIN_APP, MIN_CACHES = 200e6, 50e6, 300e6  # smaller steps are not worth a tap
+# limit: drops, the biggest unused apps offered at a time; the next scan offers more
 MAX_APPS = 12
 APPROVAL_S = 30 * 60
+# limit: stops, an AI phone cleanup approval lasts at most this
 BATCH_MAX_S = 4 * 3600
 UNUSED_DAYS = 90
 NEVER_AREAS = ("Databases",)                          # WhatsApp's chat backups: the owner decides those himself

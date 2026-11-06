@@ -116,7 +116,7 @@ def test_a_message_names_its_sender():
     assert IX.sender_of({"text": "Health doctor: 2 issues"}) == "doctor" and IX.sender_of({"text": "Inbox digest: 1"}) == "inbox"
     assert IX.sender_of({"title": "Tasks", "text": "Task #4 is done"}) == "conductor" and IX.sender_of({"category": "build", "text": "x"}) == "builder"
     assert IX.sender_of({"category": "system", "text": "The AI stack is back."}) == "stack" and IX.sender_of({"category": "health", "title": "Agent health", "text": "x"}) == "stack"
-    assert IX.sender_of({"category": "system", "title": "Uranium mining", "text": "Run done"}) == "mission" and IX.sender_of({"category": "approval", "text": "📱 AI phone: OK?"}) == "phone"
+    assert IX.sender_of({"category": "system", "title": "Copper mining", "text": "Run done"}) == "mission" and IX.sender_of({"category": "approval", "text": "📱 AI phone: OK?"}) == "phone"
     assert IX.sender_of({"category": "system", "text": "Vault: ingested 20"}) == "curator"
     calls = []
     for f in [*(ROOT / "ops").glob("*.py"), ROOT / "eval/bench.py"]:

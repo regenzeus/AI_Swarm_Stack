@@ -14,7 +14,6 @@ ops/swarm-probes/embed_in_hindsight.py  # swarm phase 0 probe, kept as evidence 
 ops/swarm-probes/identity_probe.py  # swarm phase 0 probe, kept as evidence for SWM-86
 ops/swarm-probes/mcp_probe.py  # swarm phase 0 probe, kept as evidence for SWM-86
 ops/token_probe.py  # a one-off measurement of prompt caching (docs/TOKENS.md), run as the Token probe crew item
-ops/ua_digest.py  # turns an Understand Anything graph into a text digest for qmd (make ua-enrich)
 ops/understand-dashboard.sh  # starts the code map viewer outside compose (review 2026-10-30, S3)
 ops/windows/bitbucket-sync.ps1  # Windows task that mirrors the owner's Bitbucket repositories; not part of the stack's behaviour
 images/portfwd/Dockerfile  # a two-line socat port forward for OpenCode (compose/apps.yaml)

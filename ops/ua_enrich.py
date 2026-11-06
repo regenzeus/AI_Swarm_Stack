@@ -9,7 +9,7 @@ graph: every node exists, but files say "python code file in the <repo> reposito
 It only rewrites placeholders, saves after every call (an interrupted run resumes where it stopped), keeps the
 structural graph as knowledge-graph.fallback.json, and writes its progress to /srv/ai/state/ua-enrich-<repo>.json
 (shown on the repo page). The code is read, never run; text in it is data for the model, not instructions.
-  python3 ops/ua_enrich.py <repo dir> <repo name>       (key: VK_CODE, as make understand sets it)
+  python3 ops/ua_enrich.py <repo dir> <repo name>       (key: VK_CODE, as make understand sets it; ops/onboard.py runs it as a step)
 Exit 75 = stopped on the ChatGPT usage limit (resume later: make ua-enrich REPO=<name>).
 """
 import json
@@ -259,7 +259,7 @@ def main(repo_dir, name, key, ask=ask, pause=2.0):
         for i in range(0, len(open_layers), 10):          # ten layers per call, a dozen files each
             group = open_layers[i:i + 10]
             text = "\n\n".join(f"=== {l['id']} ({l['name']}, {len(l['nodeIds'])} files)\n" + "\n".join(
-                f"- {nodes[x].get('filePath')}: {TC.cut(nodes[x].get('summary', ''), 140)}" for x in l["nodeIds"][:12] if x in nodes)  # cap: prompt
+                f"- {nodes[x].get('filePath')}: {TC.cut(nodes[x].get('summary', ''), 140)}" for x in l["nodeIds"][:12] if x in nodes)  # cap: top (prompt)
                 for l in group)
             try:
                 answer, usage = ask(LAYERS.format(repo=name, desc=desc, layers=text), key)

@@ -52,6 +52,7 @@ from textcap import limit, limit_items, tail as tailcut                    # vis
 import textcap as TC
 import prompts as P                               # MEM-11: the agent prompts live in prompts/<owner>.md
 import windows_desk as WD                         # PLT-31: asking Windows, through a folder it fetches from
+import onboard as O                        # onboarding a repository: the whole package (BLD-26)
 import files as FL                                # MIS-23: the files a mission was asked to make (docs/DELIVERABLES.md)
 import decisions as DQ                            # AUT-05: everything that waits for the owner, one ranked list, and its shadow
 import stack_gate as G                            # PLT-28: is the stack up; nothing starts against one that is not
@@ -67,6 +68,7 @@ LITELLM = "http://127.0.0.1:4000/v1/chat/completions"
 KEY_OF = {"briefing": "vk-desk", "task": "vk-mission", "shopping": "vk-mission",   # shopping: ops/shopping.py
           "cleanup": "vk-mission"}                                                    # cleanup: ops/cleanup.py (phone or PC)
 DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
+# limit: stops, one mission run past this counts as failed
 TASK_TIMEOUT = 40 * 60
 RETRY_MIN, MAX_WAITS = 30, 16           # subscription only: a paused run retries every 30 min, for up to 8 hours
 DOWN_RETRY_MIN = 5                      # a run the stack went away under (PLT-28): it holds the queue until the stack is back
@@ -738,10 +740,10 @@ DRAFT = P.text("desk", "TOPIC_DRAFT")
 
 
 def create_briefing(meta, req):
-    example = (VAULT / "topics/uranium/TOPIC.md").read_text()
+    example = (VAULT / "topics/copper/TOPIC.md").read_text()
     d = ask_json(DRAFT.format(example=example, title=req["title"], description=req.get("description", "")), os.environ["VK_DESK"])
-    watch = [w for w in d.get("watchlist", []) if isinstance(w, dict) and w.get("name")][:12]
-    spec = {"symbols": [w["symbol"] for w in watch if w.get("symbol")], "feeds": d.get("feeds", [])[:8], "filings": d.get("filings", [])[:10]}
+    watch = TC.first([w for w in d.get("watchlist", []) if isinstance(w, dict) and w.get("name")], 15, "watchlist entries")  # cap: untrusted (a model's draft the owner reviews; as many as the owner may set)
+    spec = {"symbols": [w["symbol"] for w in watch if w.get("symbol")], "feeds": d.get("feeds", []), "filings": d.get("filings", [])}
     chk = subprocess.run(["docker", "run", "--rm", "-i", "--network", "aistack_webonly", "-e", "SEC_CONTACT", "aistack/desk:1", "--check"],
                          input=json.dumps(spec), capture_output=True, text=True, timeout=300)
     if chk.returncode or not chk.stdout.strip():
@@ -753,15 +755,16 @@ def create_briefing(meta, req):
         for k in ("aliases", "proxy"):
             if not w.get(k) or w.get(k) == "null":
                 w.pop(k, None)
-    sections = [s for s in d.get("sections", []) if isinstance(s, str)][:10] or \
+    # cap: untrusted (a model's draft the owner reviews)
+    sections = TC.first([s for s in d.get("sections", []) if isinstance(s, str)], 10, "report sections") or \
                ["Headline", "In 60 seconds", "Key developments", "What to watch", "Open questions"]
     topic = {"topic": d.get("topic") or req["title"], "slug": meta["slug"], "language": "en",
-             "mission": d.get("mission", req.get("description", "")), "key_questions": d.get("key_questions", [])[:8],
+             "mission": d.get("mission", req.get("description", "")), "key_questions": TC.first(d.get("key_questions", []), 8, "key questions"),  # cap: untrusted (a model's draft the owner reviews)
              "watchlist": watch,
-             "sources": {"feeds": ok["feeds"], "search": [q for q in d.get("search", []) if isinstance(q, str)][:10],
+             "sources": {"feeds": ok["feeds"], "search": TC.first([q for q in d.get("search", []) if isinstance(q, str)], 10, "search queries"),  # cap: untrusted (a model's draft the owner reviews)
                          "jobs": [{"what": str(j["what"])[:120], "where": str(j.get("where") or "")[:80],   # cap: id
                                    "radius_km": min(max(int(j.get("radius_km") or 50), 0), 200)}
-                                  for j in d.get("jobs") or [] if isinstance(j, dict) and j.get("what")][:6],
+                                  for j in TC.first(d.get("jobs") or [], 6, "job searches") if isinstance(j, dict) and j.get("what")],  # cap: untrusted (a model's draft the owner reviews)
                          "gdelt": [], "filings": ok["filings"], "prefer": d.get("prefer", []), "avoid": d.get("avoid", [])},
              "report": {"sections": sections, "length": "2 minutes to read"}, "window_hours": window_hours(meta.get("schedule"))}
     write_front(VAULT / "topics" / meta["slug"] / "TOPIC.md", topic, d.get("notes", ""))
@@ -882,7 +885,7 @@ def handle(req, missions, c):
                     meta["key_questions"] = [limit(str(x), 1000, "a key question") for x in limit_items(v, 20, "key questions")]
                 elif k == "watchlist":
                     meta["watchlist"] = [{kk: vv for kk, vv in w.items() if kk in ("name", "symbol", "aliases", "proxy") and vv}
-                                         for w in v if isinstance(w, dict) and w.get("name")][:15]
+                                         for w in limit_items(v, 15, "watchlist entries") if isinstance(w, dict) and w.get("name")]
                 else:
                     meta.setdefault("sources", {})[k] = [limit(str(x), 1000, "a source") for x in limit_items(v, 30, "sources")]
             write_front(p, meta, body)
@@ -901,7 +904,6 @@ def handle(req, missions, c):
     raise ValueError(f"unknown action '{a}'")
 
 
-REPO = re.compile(r"^(https://github\.com/[\w.-]+/[\w.-]+?(\.git)?|[\w.-]{1,60})$")
 
 
 def handle_stack(req):
@@ -950,14 +952,10 @@ def handle_stack(req):
         event("vault_add", "", f"Added to the vault inbox: {title or dst.name} (wiki pages follow in a few minutes)")
         return {"path": rel}
     if a == "understand":
-        repo = str(req.get("repo", "")).strip()
-        if not REPO.match(repo):
-            raise ValueError("give a GitHub URL (https://github.com/owner/name) or a repo name in ~/code")
-        unit = f"understand-{int(time.time())}"
-        subprocess.run(["systemd-run", "--user", "--unit", unit, "-p", f"WorkingDirectory={OPS.parent}", "make", "understand", f"REPO={repo}"],
-                       capture_output=True, timeout=30)
-        event("understand", "", f"Analysing {repo}: code graph and code map (several minutes)")
-        return {"unit": unit}
+        r = O.start(req.get("repo"), str(req.get("source") or "app"))   # BLD-26: one job, the whole package, or the reason why not
+        if not r["already"]:
+            event("understand", "", f"Onboarding {r['repo']}: code graph, code map, explanations, search and a written analysis", title="Code")
+        return r
     if a == "forget":
         text = str(req.get("text", "")).strip()
         if not 3 <= len(text) <= 200:
@@ -1191,7 +1189,7 @@ def stack_info():
     tok = os.environ.get("FORGEJO_TOKEN") or os.environ.get("FORGEJO_STATUS_TOKEN", "")      # one token is enough
     for repo in ("ai-stack", "TestRepo", "vault", "hermes-skills"):
         try:
-            req = urllib.request.Request(f"http://192.168.1.80:3000/api/v1/repos/regenzeus/{repo}/actions/tasks?limit=1",
+            req = urllib.request.Request(f"http://192.168.1.10:3000/api/v1/repos/regenzeus/{repo}/actions/tasks?limit=1",
                                          headers={"Authorization": f"token {tok}"})
             runs = json.load(urllib.request.urlopen(req, timeout=10)).get("workflow_runs") or []
             ci.append({"repo": repo, "status": runs[0]["status"] if runs else "none", "sha": runs[0]["head_sha"][:7] if runs else ""})
@@ -1371,7 +1369,7 @@ def phone_watch():
                 if f.stem not in seen:
                     seen.add(f.stem)
                     p = json.loads(f.read_text())
-                    sample = "\n".join("· " + html.escape(x) for x in p.get("sample", [])[:8])
+                    sample = "\n".join("· " + html.escape(x) for x in p.get("sample", [])[:8])  # cap: top
                     X.telegram(f"📧 <b>Gmail: move {p.get('count')} mails to Trash?</b>\n<i>{html.escape(p.get('reason', ''))}</i>\n{sample}\n"
                                "(Trash only, undo possible; waits 15 min)", [[("🔍 Review", f"{X.APP}/#/system?conn=1")]], category="approval")
             for f in sorted(PHONE_DONE.glob("*.json")) if PHONE_DONE.exists() else []:     # a finished phone task
@@ -1388,6 +1386,10 @@ def watcher():
     while not stop.is_set():
         try:
             X.check_events(load_missions(), c)
+        except Exception:
+            log(traceback.format_exc())
+        try:
+            O.tick()                       # BLD-26: an onboarding job that should run and does not goes on where it stopped
         except Exception:
             log(traceback.format_exc())
         try:

@@ -315,6 +315,7 @@ def self_pause(cards, history, send=None):
     return out
 
 
+# limit: stops, an agent refused this often by the Board's guards in 24 h pauses itself, with a note (SWM-71)
 GUARD_TRIPS = 3            # SWM-71: messages refused by the Board's guards within 24 h before an agent pauses itself
 EXPIRED_ALERT = 3          # SWM-80: requests to one agent that expired unanswered within 24 h
 REFUSED_WAKES = 3          # SWM-80: wakes refused because the agent's daily budget was spent, within 24 h
@@ -346,6 +347,7 @@ def signals(send=None, now=None):
             out.append(f"{n} requests to {agent} expired unanswered in 24 h")
     for agent, times in (SW._load("wakes.json", {}).get("_refused") or {}).items():
         n = sum(1 for t in times if now - t < 86400)
+        # limit: paces, only raises a health alert (SWM-80)
         if n >= REFUSED_WAKES:
             out.append(f"{agent}'s wakes were refused {n} times in 24 h (its daily wake budget is spent; requests wait)")
     return out

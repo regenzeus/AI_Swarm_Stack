@@ -25,13 +25,13 @@ web, uses the code graph, and remembers facts about you across conversations.
 
 ```try
 label: Search your own knowledge
-chat: What do my notes and reports say about Cameco? Cite the files.
+chat: What do my notes and reports say about Acme Mining? Cite the files.
 note: Hermes searches the vault and answers with links to the reports and wiki pages it used.
 ```
 
 ```try
 label: Web research in one sentence
-chat: Look up the latest news on ASP Isotopes and tell me what matters for an investor.
+chat: Look up the latest news on Beta Materials and tell me what matters for an investor.
 note: Hermes hands the question to the scout (the only agent allowed on the web), which reads the pages in an isolated reader and reports back.
 ```
 

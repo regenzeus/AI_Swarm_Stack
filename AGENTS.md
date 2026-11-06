@@ -135,6 +135,8 @@ reason. **Never cut silently, and never cut without a reason.**
   - `preview`: a marked short form, one tap from the whole (marked).
   - `list`: shows how many more, and a way to see them.
   - `rotate`: a rolling window kept on purpose (ids already handled, a price history, the newest snapshots).
+  - `top`: a short top-N view on purpose (the biggest five). Never for what the owner or an agent asked for: refuse it
+    (`textcap.limit_items`) or use `first()`. A list slice needs its reason at any length (FND-123).
 - `ops/truncation.py check` (in `ops/check.sh`) finds every cap: slices of 20 or more and slices by an UPPERCASE
   constant in Python and JS, the textcap helpers, ellipsis CSS, `head`/`tail`/`cut -c`/`${v:a:n}` in shell, and SQL
   limits of 2 rows or more. It fails on a cap without a known reason, on an unmarked cut with a reason someone reads
@@ -142,6 +144,18 @@ reason. **Never cut silently, and never cut without a reason.**
   `textcap.answer()`. Smaller slices are not checked, but the rules above still apply to them.
 - An exception message is short: log and show it whole (`f"{e}"`, never `str(e)[:200]`).
 - The audits and what each found: `docs/TRUNCATION-AUDIT.md`.
+
+## Limits (QA-22)
+
+Nothing that stops, refuses, drops or delays work is written without saying so. On 6 Nov 2026 the owner's main workflow
+turned out to refuse repositories over 150 source files: a number nobody asked for, in no requirement, shown to nobody.
+
+- **Do not invent a limit to protect something.** If it could stop what the owner asked for, wait instead (a usage limit,
+  the PC's memory), or ask. A new limit that can refuse or drop the owner's work is the owner's decision, in a requirement.
+- **Tag every limit:** `# limit: waits|paces|refuses|stops|drops, why it exists` on its line or the line above.
+  `ops/limits.py check` (in `ops/check.sh`) fails on one without a tag, and `docs/LIMITS.md` is generated from the tags
+  (`python3 ops/limits.py write`).
+- **A promise in the app is a requirement.** "You get a message" needs the code that sends it and a test.
 
 ## Architecture invariants (do not break)
 

@@ -18,6 +18,7 @@ from mcp.server.mcpserver import MCPServer
 from mcp.server.transport_security import TransportSecuritySettings
 
 UPSTREAM = os.environ.get("PLAYWRIGHT_MCP", "http://127.0.0.1:8931/mcp")
+# limit: drops, a page's text past this per browser step; the agent sees the mark
 MAX = 18000                                     # characters of page snapshot returned per step
 DENY_URL = re.compile(r"(checkout|kasse|payment|zahlung|bezahl|/pay(?:ment)?\b|paypal\.|klarna\.|stripe\.|adyen\.|login|log-in|"
                       r"signin|sign-in|sign_in|anmeld|register|registrier|/account|konto|my-?account|mein-?konto|warenkorb|"
@@ -127,6 +128,7 @@ async def browse_search(ref: str, text: str) -> str:
     target = line_of(ref)
     if not SEARCH_FIELD.search(target):
         return f"Refused: '{TC.cut(target.strip(), 120) or ref}' is not a search field. This browser only types searches."  # cap: untrusted
+    # limit: refuses, this browser types searches only: long text or personal data never leaves the house (RES-01)
     if PERSONAL.search(text) or len(text) > 200:
         return "Refused: that looks like personal data (e-mail, long number). Search for products and facts only."
     return await checked(await call("browser_type", {"ref": ref, "element": "search field", "text": text, "submit": True}))

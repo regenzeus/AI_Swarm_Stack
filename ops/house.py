@@ -34,7 +34,7 @@ import prompts as P                               # MEM-11: the agent prompts li
 
 M = None                                          # ops/missions.py (set by missions.main)
 ACTIONS = {"house_connect", "house_switch", "house_alexa", "house_say", "house_settings", "house_status"}
-HA = os.environ.get("HA_URL", "http://192.168.1.80:8123")
+HA = os.environ.get("HA_URL", "http://192.168.1.10:8123")
 TOKEN = os.environ.get("HA_TOKEN", "")
 HOME = Path("/srv/ai/house")
 LOG, SETTINGS = HOME / "log.jsonl", HOME / "settings.json"
@@ -43,10 +43,11 @@ CONTROL = ("light", "switch", "cover", "fan")
 PROTECT = re.compile(r"fridge|freezer|k[uü]hl|gefrier|router|fritz|modem|repeater|\bnas\b|synology|diskstation|server|\bpc\b|"
                      r"computer|desktop|wlan|wi-?fi|port ?forward|internet ?(?:access|zugang)|"
                      r"aquarium|medic|cpap|heater pump|boiler|security|alarm", re.I)
-# the network and the NAS: whatever these integrations offer is the owner's alone, whatever it is called (a FRITZ!Box
+# the network and the NAS: whatever these integrations offer is the owner's alone, whatever it is called (a router
 # client's internet switch carries the client's name, not the router's)
 INFRA = {"fritz", "synology_dsm"}
 TRIGGER = re.compile(r"^\s*(?:alexa[\s,]+)?(?:(?:frag(?:e)?|ask|tell|sag(?:e)?)\s+)?hermes\b[\s,:.!?-]*(.*)$", re.I)
+# limit: drops, spoken requests past 30 an hour (HSE-07)
 VOICE_MAX_PER_HOUR = 30
 ACK_WAIT = 3          # s: Alexa first gives her own reply ("Ich weiß nicht ..."); then the Echo says Hermes heard it
 ACK = {"de": "Einen Moment, Hermes kümmert sich darum.", "en": "One moment, Hermes is on it."}
@@ -469,6 +470,7 @@ def voice_once():
             continue                              # an ordinary Alexa request: not ours, not stored
         now = time.time()
         _voice["times"] = [x for x in _voice["times"] if now - x < 3600]
+        # limit: drops, as VOICE_MAX_PER_HOUR, and one at a time (HSE-07)
         if _voice["busy"] or len(_voice["times"]) >= VOICE_MAX_PER_HOUR:
             continue
         _voice["busy"] = True

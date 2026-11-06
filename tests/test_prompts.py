@@ -58,13 +58,13 @@ def test_a_send_records_the_ref_and_a_live_call_keeps_its_case(tmp_path, monkeyp
     import runtime as RTM
     seen = []
     monkeypatch.setattr(RTM, "stage", lambda title, detail="", **k: seen.append((title, detail)))
-    p = P.text("inbox", "PICK").format(n=3, topics="uranium", rows="- 1 · a · b")
+    p = P.text("inbox", "PICK").format(n=3, topics="copper", rows="- 1 · a · b")
     assert P.record(p) == p.ref and seen == [("Prompt", p.ref)]
     monkeypatch.setattr(P, "CASES", tmp_path / "cases")
     for i in range(P.KEEP + 3):
         P.case(p, f'{{"file": [{i}]}}')
     rows = [json.loads(x) for x in (tmp_path / "cases/inbox.PICK.jsonl").read_text().splitlines()]
-    assert len(rows) == P.KEEP and rows[-1]["out"] == f'{{"file": [{P.KEEP + 2}]}}' and rows[0]["fills"]["topics"] == "uranium"
+    assert len(rows) == P.KEEP and rows[-1]["out"] == f'{{"file": [{P.KEEP + 2}]}}' and rows[0]["fills"]["topics"] == "copper"
     assert oct(os.stat(tmp_path / "cases/inbox.PICK.jsonl").st_mode)[-3:] == "600"                    # owner-only: fills hold private data
     P.case("a plain string", "x")                                                                    # no ref, no case
     assert len(list((tmp_path / "cases").iterdir())) == 1
@@ -162,8 +162,8 @@ def test_the_desk_and_the_scout_read_their_prompts_from_the_mount_and_the_desk_h
     for f in ("images/desk/desk.py", "images/research/server.py"):                  # one section format for every loader
         assert f"SECTION = re.compile(r\"{P.SECTION.pattern}\", re.M | re.S)" in (ROOT / f).read_text(), f
     monkeypatch.setattr(desk, "PROMPTS", ROOT / "prompts")
-    text, ref, fills = desk.prompt("ALERT", topic="Uranium", mission="m", questions="[]", kind="sec", summary="8-K", items="ITEM: x")
-    assert ref == f"desk/ALERT@{P.sha(P.sections('desk')['ALERT'])}" and text.startswith("You watch a topic for a research desk. Topic: Uranium.")
+    text, ref, fills = desk.prompt("ALERT", topic="Copper", mission="m", questions="[]", kind="sec", summary="8-K", items="ITEM: x")
+    assert ref == f"desk/ALERT@{P.sha(P.sections('desk')['ALERT'])}" and text.startswith("You watch a topic for a research desk. Topic: Copper.")
     assert "GERMAN_STYLE" not in P.sections("desk")                                  # every briefing is English (FND-21)
     answers = iter(['{"picks": [{"n": 0, "score": 2}]}'])
     resp = lambda *a, **k: types.SimpleNamespace(read=lambda: json.dumps({"choices": [{"message": {"content": next(answers)}}]}).encode(),  # noqa: E731

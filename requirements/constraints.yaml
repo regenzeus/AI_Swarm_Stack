@@ -6,7 +6,7 @@ items:
   - id: CST-01
     title: One PC, one NAS
     statement: The stack shall run on one Windows 10 Pro PC (i7-7700K, 16 GB RAM) inside WSL2 (Ubuntu-24.04, capped
-      at 10 GB) with rootless Docker, plus a Synology DS923+ NAS (4 GB RAM) for git, CI, backups and Home Assistant.
+      at 10 GB) with rootless Docker, plus a Synology NAS NAS (4 GB RAM) for git, CI, backups and Home Assistant.
     type: constraint
     priority: must
     status: implemented

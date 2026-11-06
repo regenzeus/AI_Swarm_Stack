@@ -118,5 +118,5 @@ def test_big_files_are_cut_to_symbol_excerpts():
 
 
 def test_understand_runs_the_enrichment_and_ignores_graphify_output():
-    sh = (Path(__file__).resolve().parent.parent / "ops/understand.sh").read_text()
-    assert "ua_enrich.py" in sh and "graphify-out/" in sh
+    job = (Path(__file__).resolve().parent.parent / "ops/onboard.py").read_text()
+    assert "ua_enrich.py" in job and "graphify-out/" in job

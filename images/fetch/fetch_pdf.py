@@ -24,6 +24,7 @@ def pdf_text(data: bytes) -> str:
             t = ""
         if t:
             pages.append(f"--- page {i} ---\n{t}")
+    # limit: drops, PDF pages past MAX_PAGES; the text says how many it has
     more = f"\n\n(only the first {MAX_PAGES} of {len(reader.pages)} pages)" if len(reader.pages) > MAX_PAGES else ""
     return "\n\n".join(pages) + more
 
@@ -43,6 +44,7 @@ async def fetch_url(url: str, user_agent: str, force_raw: bool = False, proxy_ur
         raise McpError(ErrorData(code=INTERNAL_ERROR, message=f"Failed to fetch {url} - status code {head.status_code}"))
     ctype = head.headers.get("content-type", "").lower()
     if "application/pdf" in ctype or head.content[:5] == b"%PDF-":
+        # limit: refuses, a PDF too big for the fetch service's memory, with its size
         if len(head.content) > MAX_BYTES:
             raise McpError(ErrorData(code=INTERNAL_ERROR, message=f"PDF too large ({len(head.content) // 1048576} MB)"))
         text = await asyncio.to_thread(pdf_text, head.content)

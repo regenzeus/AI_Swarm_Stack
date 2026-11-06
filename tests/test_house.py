@@ -203,7 +203,7 @@ def test_snapshot_over_websocket(H, monkeypatch):
             {"entity_id": "button.nas_user_reboot", "platform": "synology_dsm", "device_id": "d6"}],
         "config/device_registry/list": [{"id": "d1", "name": "Echo Dot", "name_by_user": "Kitchen Echo", "area_id": "kitchen", "model": "Echo Dot (5th Gen)"},
                                         {"id": "d2", "name": "Kühlschrank", "area_id": "kitchen"}, {"id": "d3", "name": "Hue", "area_id": None},
-                                        {"id": "d4", "name": "ABT3-C-0005C"}, {"id": "d5", "name": "FRITZ!Box 7530 AX"}, {"id": "d6", "name": "The owner_NAS"}],
+                                        {"id": "d4", "name": "ABT3-C-0005C"}, {"id": "d5", "name": "Router 7530 AX"}, {"id": "d6", "name": "The owner_NAS"}],
         "config/area_registry/list": [{"area_id": "kitchen", "name": "Kitchen"}],
         "get_states": [{"entity_id": "switch.plug_fridge", "state": "on", "attributes": {"friendly_name": "Plug", "current_power_w": 61.5}},
                        {"entity_id": "light.desk", "state": "on", "attributes": {"brightness": 128}}],

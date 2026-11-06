@@ -40,6 +40,7 @@ KIND = {"build": "build", "health": "health", "triggered": "alert", "price_drop"
         "shop_over": "approval", "shop_bought": "alert", "shop_stopped": "alert", "shop_delivered": "alert",
         "run_failed": "result", "budget": "result", "waiting": "result", "delivered": "result", "swarm": "swarm",
         "autonomy": "swarm", "error": "system", "system": "system", "house": "system", "claude": "system"}
+# limit: drops, Telegram's own limit on a message; the text is cut visibly
 TELEGRAM_MAX = 4096                                           # Telegram's message limit (characters)
 
 

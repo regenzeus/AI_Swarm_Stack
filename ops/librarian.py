@@ -30,6 +30,7 @@ import prompts as P                               # MEM-11: the agent prompts li
 
 M = None                                       # ops/missions.py (set by crew.run)
 STALE_DAYS = 90                                # MEM-12: an agent wiki's facts are news; unconfirmed this long, a page is stale
+# limit: paces, a wiki over this is flagged as an issue; nothing is removed
 LIMIT = 200                                    # pages per agent wiki (= ops/memory.py STORES agent-wikis)
 SAME = 0.85                                    # two page names this similar in one folder are a duplicate candidate
 PAIRS = 6                                      # duplicate candidates judged per wiki and pass; the rest wait  # cap: prompt
@@ -154,12 +155,12 @@ def merge(root, ps, keep, drop, body, today):
     pair = {keep["path"], drop["path"]}
     want, got = (set(targets(keep["body"])) | set(targets(drop["body"]))) - pair, set(targets(body)) - pair
     if want - got:
-        return f"it would lose {len(want - got)} link{'s' if len(want - got) > 1 else ''} ({', '.join(sorted(want - got)[:3])})"
+        return f"it would lose {len(want - got)} link{'s' if len(want - got) > 1 else ''} ({', '.join(sorted(want - got)[:3])})"  # cap: top
     if got - want:
         return f"it would add {len(got - want)} link{'s' if len(got - want) > 1 else ''} neither page had"
     body = M.X.keep_superseded(keep["body"] + "\n\n" + drop["body"], body)
     km, dm = keep["meta"], drop["meta"]
-    meta = {**km, "aliases": sorted({*map(str, km.get("aliases") or []), *map(str, dm.get("aliases") or []), drop["title"]} - {keep["title"]})[:12],  # cap: store
+    meta = {**km, "aliases": sorted({*map(str, km.get("aliases") or []), *map(str, dm.get("aliases") or []), drop["title"]} - {keep["title"]})[:12],  # cap: top (store)
             "sources": sorted({*(km.get("sources") or []), *(dm.get("sources") or [])}),
             "created": min(str(km.get("created") or today), str(dm.get("created") or today)),
             "last_validated": max(str(km.get("last_validated") or ""), str(dm.get("last_validated") or "")) or today.isoformat()}

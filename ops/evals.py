@@ -91,6 +91,7 @@ def ask(card, text, ref=""):
         import runtime as RTM
         p = subprocess.run(["docker", "exec", "-u", "hermes", "-e", "CLAUDE_CODE_OAUTH_TOKEN", "-w", "/work/ai-stack", *RTM.env_args(),
                             "-e", f"AISTACK_AGENT=claude-eval-{card['id']}", "-e", f"AISTACK_TITLE=replay of {card['id']} {ref}", BUILDER,
+                            # limit: stops, a replay is one answer, no tools
                             "timeout", "300", "claude", "-p", text, "--output-format", "json", "--max-turns", "2",
                             "--disallowedTools", "Bash,Edit,Write,NotebookEdit,WebFetch,WebSearch,Read,Grep,Glob,Task,TodoWrite",
                             "--settings", "/config/claude-hooks/claude-runtime-settings.json"],
@@ -214,7 +215,7 @@ def evaluate(card, cand, examples, send, ask_fn=ask, ref=""):
             out_ids = [k for k in docs if k.startswith(f"{arm[0]}{i}.")]
             s = score(ex, parsed, vec, ref_ids, out_ids)
             rows[arm].append(s)
-            d[arm] = {"scores": s, "proposed": [o.get("title") for o in ups(parsed)][:5], "seconds": round(answers[i][arm][1], 1),
+            d[arm] = {"scores": s, "proposed": [o.get("title") for o in ups(parsed)][:5], "seconds": round(answers[i][arm][1], 1),  # cap: top
                       "answer": cut(answers[i][arm][0], STORE)}  # cap: store
         detail.append(d)
     return ({m: mean(rows["baseline"], m) for m in LG.METRICS}, {m: mean(rows["candidate"], m) for m in LG.METRICS}, detail)

@@ -44,8 +44,8 @@ items:
 - {id: DEC-16, date: 2026-10-28, title: Claude Code as second engine, decision: 'Claude Code on the owner''s Claude subscription
     becomes the builder''s second engine, the default for code work when connected, and the reviewer of ChatGPT builds;
     code it reads is sent to Anthropic.'}
-- {id: DEC-17, date: 2026-10-28, title: The old phone is the AI phone, decision: The old Samsung S22 (ai-phone) is the
-    AI phone; the main phone (S25) is not driven until a separate design for sessions on it.}
+- {id: DEC-17, date: 2026-10-28, title: The old phone is the AI phone, decision: The old Samsung AI phone (ai-phone) is the
+    AI phone; the main phone (main phone) is not driven until a separate design for sessions on it.}
 - {id: DEC-18, date: 2026-10-29, title: Voice through Alexa and a Voice speaker, decision: 'Talking to Hermes through the
     Echos ("Alexa, Hermes …") is wanted; a Home Assistant Voice speaker may follow.', supersedes: '2026-10-28: the owner
     does not want voice'}
@@ -213,8 +213,8 @@ items:
     SQLite for the swarm database ... Yes do all"): one writer (the Swarm service), WAL, a nightly snapshot the restore drill
     checks, 7 MB. Postgres would add a second failure point and buy nothing on one machine. Closes design decision 2 (SWM-73).'}
 - {id: DEC-43, date: 2026-11-06, title: The stack asks Windows; Windows fetches, decision: 'The owner wanted the stack to talk to Claude Code outside WSL. WSL stays cut off (interop and automount off, no port): a small script on Windows fetches requests from a folder and treats them as data, the way the host probe fetches a disk scan. Status needs no approval; a question goes to Claude with reading tools only, in folders listed on Windows where WSL cannot write; only a turn of the owner''s own chat can ask. Changes on Windows would need the owner''s tap on the whole job and are not built. Build 27, a second Claude inside WSL, was rejected: it could not reach the Windows sessions.'}
-- {id: DEC-42, date: 2026-11-04, title: The AI phone stays on Wi-Fi, decision: 'Asked whether the S22 will ever run without Wi-Fi, on a SIM only,
-    the owner answered "No, always Wi-Fi". Any Wi-Fi counts, the S25 hotspot included, so ADB over Wi-Fi and Tailscale stay the only way in and
+- {id: DEC-42, date: 2026-11-04, title: The AI phone stays on Wi-Fi, decision: 'Asked whether the AI phone will ever run without Wi-Fi, on a SIM only,
+    the owner answered "No, always Wi-Fi". Any Wi-Fi counts, the main phone hotspot included, so ADB over Wi-Fi and Tailscale stay the only way in and
     the agent app of docs/PHONE-ANYWHERE.md Stage 2 is not built.'}
 - {id: DEC-41, date: 2026-11-04, title: The AI phone has no single-step approvals, decision: 'The owner again found approving single
     actions too much ("I do not want to allow every singel action on AI Phone. I want to allow more macro."). DEC-38 had added one OK per

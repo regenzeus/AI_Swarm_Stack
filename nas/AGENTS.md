@@ -1,6 +1,6 @@
 # nas/: what runs on the Synology NAS
 
-`forgejo/compose.yaml` is Forgejo (git + Actions) on the DS923+, deployed to `/volume1/docker/forgejo/compose.yaml`.
+`forgejo/compose.yaml` is Forgejo (git + Actions) on the NAS, deployed to `/volume1/docker/forgejo/compose.yaml`.
 It hosts the canonical repos (ai-stack, vault, hermes-skills, TestRepo) and receives the encrypted backups.
 `homeassistant/` is Home Assistant (the House: Echos, lights, plugs), deployed by `make ha-deploy` to
 `/volume1/docker/homeassistant` (host networking for device discovery, LAN only, port 8123). The owner approved it

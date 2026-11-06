@@ -112,7 +112,7 @@ services:
     volumes:
       - /srv/vault:/vault:ro
       - /srv/ai/bulk:/bulk:ro            # converted mail + chats (search-only)
-      - /srv/ai/code-docs:/code-docs:ro  # Understand Anything digests of ~/code repos (ops/understand.sh)
+      - /srv/ai/code-docs:/code-docs:ro  # digests and written analyses of ~/code repos (ops/onboard.py)
       - /srv/ai/specs:/specs:ro          # specifications, one page per section (spec/ingest.py)
       - qmd-data:/data
     networks: [backend]             # no internet: models are in qmd-data (connect edge only to re-download)

@@ -76,7 +76,7 @@ items:
   - id: VOI-07
     title: The AI phone's satellite app only inside a task the owner approved
     statement: The agents shall read or touch the Home Assistant app on the AI phone, whose sign-in reaches the house, the
-      FRITZ!Box and the NAS, only inside a phone task the owner approved that names it; free mode alone shall not open it.
+      Router and the NAS, only inside a phone task the owner approved that names it; free mode alone shall not open it.
     type: constraint
     priority: must
     status: implemented

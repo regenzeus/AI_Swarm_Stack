@@ -37,17 +37,17 @@ def test_go_to_finds_menus_and_pages_by_their_words():
         return [n for n, _, words in j["pages"] if ok(f"{n} {words}")] + \
             [f"{t['name']} → {m['name']}" for t in j["tools"] for m in t["menus"] if ok(f"{t['name']} {m['name']} {m.get('words', '')} {t['what']}")]
     assert "Home Assistant → People" in hits("people") and "Home Assistant → Voice assistants" in hits("voice pipeline")
-    assert hits("wifi")[:1] == ["FRITZ!Box → Overview"] and "Forgejo → Access tokens" in hits("tokens") and hits("house")[0] == "House"
+    assert hits("wifi")[:1] == ["Router → Overview"] and "Forgejo → Access tokens" in hits("tokens") and hits("house")[0] == "House"
 
 
 def test_a_tool_link_that_does_not_open_is_a_journey_failure():
     import journeys as J
-    tools = {"tools": [{"name": "HA", "host": "http://192.168.1.80:8123", "menus": [{"name": "People", "path": "/config/person"}, {"name": "Gone", "path": "/x"}]},
+    tools = {"tools": [{"name": "HA", "host": "http://192.168.1.10:8123", "menus": [{"name": "People", "path": "/config/person"}, {"name": "Gone", "path": "/x"}]},
                        {"name": "Hermes", "host": "tailnet:8448", "menus": [{"name": "Open", "path": "/"}]},
                        {"name": "Tailscale", "host": "https://login.tailscale.com", "menus": [{"name": "Machines", "path": "/admin"}]}]}
     seen = []
     status = {"/config/person": 200, "/x": 404, "/": 302}
     r = J.check_tools(tools, opener=lambda url: seen.append(url) or status[url[url.index("/", 8):]])
-    assert r["checked"] == 3 and r["failures"] == ["HA → Gone does not open (404): http://192.168.1.80:8123/x"]
+    assert r["checked"] == 3 and r["failures"] == ["HA → Gone does not open (404): http://192.168.1.10:8123/x"]
     assert f"{J.TAILNET}:8448/" in seen and not any("tailscale.com" in u for u in seen)          # outside the house: not called
     assert J.check_tools(tools, opener=lambda url: "URLError: timed out")["failures"][0].startswith("HA → People does not open")

@@ -15,7 +15,7 @@ facts:
   - {id: f07, date: 2026-10-24, label: keep, text: "The owner asked the assistant to watch DDR4 RAM prices and buy nothing without his approval."}
   - {id: f08, date: 2026-10-24, label: not_english, text: "Der Nutzer möchte, dass Einkäufe immer zuerst bei Amazon.de geprüft werden."}
   - {id: f09, date: 2026-10-25, label: keep, text: "The owner usually buys groceries at Edeka on Saturdays."}
-  - {id: f10, date: 2026-10-25, label: test_noise, text: "The owner created the mission 'Test Mission Control' to check that uranium briefings reach the vault."}
+  - {id: f10, date: 2026-10-25, label: test_noise, text: "The owner created the mission 'Test Mission Control' to check that copper briefings reach the vault."}
   - {id: f11, date: 2026-10-26, label: agent_run, type: experience, text: "The checker crew run completed with 0 model calls and 0 steps; two items stayed unchecked."}
   - {id: f12, date: 2026-10-26, label: keep, text: "The owner's RAM upgrade budget is at most EUR 150 delivered."}
   - {id: f13, date: 2026-10-27, label: "duplicate:f12", text: "The owner wants to spend no more than EUR 150 including delivery on the RAM upgrade."}
@@ -25,8 +25,8 @@ facts:
   - {id: f17, date: 2026-10-28, label: keep, text: "The owner's mail is read only under his read grant; the assistant never trashes mail without his tap."}
   - {id: f18, date: 2026-10-29, label: "contradiction:f19", text: "The owner wants the morning briefing at 06:30."}
   - {id: f19, date: 2026-10-29, label: keep, text: "The owner wants the morning briefing at 07:15."}
-  - {id: f20, date: 2026-10-29, label: agent_run, type: experience, text: "The Topic Desk run for the uranium briefing failed because the feed returned HTTP 503."}
-  - {id: f21, date: 2026-10-30, label: keep, text: "The owner follows uranium miners, among them Cameco and Boss Energy."}
+  - {id: f20, date: 2026-10-29, label: agent_run, type: experience, text: "The Topic Desk run for the copper briefing failed because the feed returned HTTP 503."}
+  - {id: f21, date: 2026-10-30, label: keep, text: "The owner follows copper miners, among them Acme Mining and Gamma Metals."}
   - {id: f22, date: 2026-10-30, label: keep, text: "The owner follows Centrus Energy for its LEU enrichment plans in Piketon."}
   - {id: f23, date: 2026-10-30, label: "duplicate:f04", text: "The owner runs his own AI stack inside WSL on a Windows PC."}
   - {id: f24, date: 2026-10-31, label: not_english, text: "The owner möchte Sprachantworten auf Englisch, auch wenn er Deutsch spricht."}
@@ -36,5 +36,5 @@ facts:
   - {id: f28, date: 2026-11-01, label: agent_run, type: experience, text: "The builder's step for task 107 refused its brief because the description was over 20,000 characters."}
   - {id: f29, date: 2026-11-01, label: keep, text: "The owner's G.Skill Ripjaws V kit is a different product line from the Aegis kit."}
   - {id: f30, date: 2026-11-01, label: passing_state, type: experience, text: "The Black Week sale on the RAM kit is running now and ends on October 5, 2026."}
-  - {id: f31, date: 2026-11-02, label: keep, text: "The owner is called the owner and lives in Germany."}
+  - {id: f31, date: 2026-11-02, label: keep, text: "The owner is called the owner and lives at home."}
   - {id: f32, date: 2026-11-02, label: keep, text: "The owner does not want purchases, deletions or deployments approved by voice."}

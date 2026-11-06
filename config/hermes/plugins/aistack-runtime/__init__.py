@@ -24,6 +24,7 @@ from typing import Any
 
 INGEST = os.environ.get("RUNTIME_INGEST", "http://mission-control:8093/ingest")
 KEY = os.environ.get("API_SERVER_KEY", "")
+# limit: drops, a tool result's detail past this in the run record, which marks the cut
 MAX = 20000
 
 def _cut(s):

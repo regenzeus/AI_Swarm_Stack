@@ -23,7 +23,7 @@ decrypts the secrets it needs for itself and never prints them.
 | `make desk TOPIC=<slug>` | run a briefing now |
 | `make digest` | send the morning digest now |
 | `make wiki-rebuild MISSION=<slug>` | compile a mission's wiki again from all its results |
-| `make understand REPO=<url>` | analyse a repository |
+| `make understand REPO=<url>` | onboard a repository: the whole package, step by step |
 | `make understand-dashboard REPO=<name>` | open its code map |
 | `make ua-enrich REPO=<name>` | explain the files and functions its code map left as placeholders (carries on where it stopped) |
 

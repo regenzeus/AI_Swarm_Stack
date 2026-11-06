@@ -17,8 +17,8 @@ import sys
 import urllib.error
 import urllib.request
 
-HA = os.environ.get("HA_URL", "http://192.168.1.80:8123")
-GATEWAY = "http://192.168.1.33:11434"          # the PC on the LAN; Windows passes 11434 to the gateway (11435), from the NAS only
+HA = os.environ.get("HA_URL", "http://192.168.1.10:8123")
+GATEWAY = "http://192.168.1.20:11434"          # the PC on the LAN; Windows passes 11434 to the gateway (11435), from the NAS only
 SPEECH = {"stt": ("127.0.0.1", 10300), "tts": ("127.0.0.1", 10200)}
 ROOMS = ("home", "living-room", "kitchen", "office", "bedroom", "bathroom", "hallway", "guest-bath")   # = server.py VOICE_ROOMS
 PIPELINE = "Hermes"

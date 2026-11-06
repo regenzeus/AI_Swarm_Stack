@@ -175,7 +175,7 @@ def test_inbox_digest_files_the_picks_and_skips_protected(tmp_path, monkeypatch)
     monkeypatch.setattr(inbox, "VAULT", tmp_path / "vault")
     (tmp_path / "grants.json").write_text(json.dumps({"gmail": {"read": {"until": time.time() + 600}}}))
     listing = ("<untrusted_email>\n3 messages match in all; newest 3:\n"
-               "- id 11 · Tue, 28 Oct 2026 · Uranium Weekly <u@x> · Spot price jumps · newsletter · 40 KB\n"
+               "- id 11 · Tue, 28 Oct 2026 · Metals Weekly <u@x> · Spot price jumps · newsletter · 40 KB\n"
                "- id 12 · Tue, 28 Oct 2026 · Sparkasse <s@x> · Your statement · 10 KB · PROTECTED (bank/security)\n"
                "- id 13 · Tue, 28 Oct 2026 · Shop <a@x> · 20% off today · unread · newsletter · 30 KB\n</untrusted_email>")
     calls = []
@@ -183,9 +183,9 @@ def test_inbox_digest_files_the_picks_and_skips_protected(tmp_path, monkeypatch)
                                                                                                 "<untrusted_email>\nFrom: u\n\nPrices rose 8 %.\n</untrusted_email>"))
     asked = {}
     inbox.C = crew
-    inbox.M = types.SimpleNamespace(load_missions=lambda: {"uranium": {"title": "Uranium miners", "status": "active"}}, paused=lambda s: False,
+    inbox.M = types.SimpleNamespace(load_missions=lambda: {"copper": {"title": "Copper miners", "status": "active"}}, paused=lambda s: False,
                                     now=lambda: dt.datetime(2026, 10, 28, 7, 15),
-                                    ask_json=lambda p, *a, **k: asked.setdefault("p", p) and {"pick": [{"id": "11", "why": "uranium news"}]})
+                                    ask_json=lambda p, *a, **k: asked.setdefault("p", p) and {"pick": [{"id": "11", "why": "copper news"}]})
     monkeypatch.setenv("VK_INBOX", "test")
     assert inbox.digest(None) == 1
     assert "12" not in asked["p"].split("Your statement")[0][-40:] and "Sparkasse" not in asked["p"]      # protected: never shown

@@ -27,6 +27,7 @@ ADDR, PW = os.environ.get("GMAIL_ADDRESS", ""), os.environ.get("GMAIL_APP_PASSWO
 HOST = "imap.gmail.com"
 PENDING, DECISIONS, BATCHES = D / "pending", D / "decisions", D / "batches"
 WAIT = 900                       # the owner has 15 minutes to OK a first Trash batch (no answer = no)
+# limit: drops, mail ids past this in one call; the tool's description names it and the next call takes the rest
 MAX_BATCH = 200
 BODY_CAP = 8000
 PROTECTED = re.compile(
@@ -326,7 +327,7 @@ async def ask_owner(items, reason, mission):
         froms[it["from"][:60]] = froms.get(it["from"][:60], 0) + 1  # cap: id
     (PENDING / f"{aid}.json").write_text(json.dumps({
         "id": aid, "at": now_iso(), "conn": "gmail", "action": "trash", "count": len(items), "reason": reason,
-        "mission": mission, "top_senders": sorted(froms.items(), key=lambda x: -x[1])[:10],
+        "mission": mission, "top_senders": sorted(froms.items(), key=lambda x: -x[1])[:10],  # cap: top
         "sample": [f"{i['from']} · {i['subject']}" for i in items[:15]]}, ensure_ascii=False))
     try:
         t0 = time.time()

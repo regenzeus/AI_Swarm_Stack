@@ -57,9 +57,9 @@ def test_every_door_s_work_becomes_a_task_with_every_field(K):
     c.execute("insert into builds (repo, title, description, status, created, updated, attempts) values ('ai-stack','Dark mode','Add a toggle','review',?,?,0)", (now, now))
     c.execute("insert into claude_tasks (question, status, created) values ('How does the deploy roll back?', 'done', ?)", (now,))
     (K.tmp / "chats").mkdir()
-    (K.tmp / "chats/abc123def.json").write_text(json.dumps({"title": "Uranium", "created": time.time(), "pending": True,
-                                                             "messages": [{"role": "user", "content": "What moved uranium today?"}]}))
-    missions = {"u": {"slug": "u", "title": "Uranium", "type": "briefing", "status": "active", "schedule": "daily 06:30", "created": now, "goal": "Daily uranium news"},
+    (K.tmp / "chats/abc123def.json").write_text(json.dumps({"title": "Copper", "created": time.time(), "pending": True,
+                                                             "messages": [{"role": "user", "content": "What moved copper today?"}]}))
+    missions = {"u": {"slug": "u", "title": "Copper", "type": "briefing", "status": "active", "schedule": "daily 06:30", "created": now, "goal": "Daily copper news"},
                 "old": {"slug": "old", "title": "Old", "type": "task", "status": "active", "created": "2026-01-01T00:00:00+01:00"}}
     TK.sync(c, missions)
     ts = {t["door"]: t for t in TK.state(c)["tasks"]}
@@ -134,7 +134,7 @@ def test_a_one_off_task_with_several_agents_goes_to_the_conductor_as_a_plan_grap
 
 def test_an_agent_the_intake_names_that_does_not_exist_gets_a_temporary_agent(K):
     import conductor as CD
-    tid = TK.handle({"action": "task_create", "text": "Find Cameco's newest supply contract and read its terms"}, K.c)["task"]
+    tid = TK.handle({"action": "task_create", "text": "Find Acme Mining's newest supply contract and read its terms"}, K.c)["task"]
     plan = [{"step": "find the contract", "agent": "scout", "why": "web", "after": []},
             {"step": "read its terms", "agent": "contract-reader", "why": "reads supply contracts", "after": [1]}]
     TK.intake(K.c, tid, ask=lambda p: spec(plan=plan))
@@ -241,10 +241,10 @@ def test_a_task_on_an_event_waits_for_its_trigger_and_is_watched_with_the_missio
     TK.M.slugify, TK.M.VAULT, TK.M.vault_commit = MM.slugify, K.tmp, lambda paths, msg: None
     TK.M.create_briefing = lambda meta, req: None
     TK.M.topic_of = lambda m: (({"key_questions": ["Contracts?"]}, ""), None)
-    news = {"type": "event", "triggers": [{"type": "news", "query": "Cameco supply contract"}]}
-    tid = TK.handle({"action": "task_create", "text": "When Cameco signs a supply contract, tell me what it means for my position"}, K.c)["task"]
+    news = {"type": "event", "triggers": [{"type": "news", "query": "Acme Mining supply contract"}]}
+    tid = TK.handle({"action": "task_create", "text": "When Acme Mining signs a supply contract, tell me what it means for my position"}, K.c)["task"]
     TK.intake(K.c, tid, ask=lambda p: spec(rhythm=news))
-    al = TK.handle({"action": "task_create", "text": "Alert me on Cameco supply contract news"}, K.c)["task"]
+    al = TK.handle({"action": "task_create", "text": "Alert me on Acme Mining supply contract news"}, K.c)["task"]
     TK.intake(K.c, al, ask=lambda p: spec(kind="briefing", rhythm=news))
     t, a = TK.row(K.c, tid), TK.row(K.c, al)
     assert (t["door"], t["status"], CD.occurrences(K.c, tid)) == ("plan", "scheduled", []) and not K.started
@@ -260,21 +260,21 @@ def test_improving_a_wiki_or_a_page_is_a_task_that_ends_writing_into_that_wiki(K
     import conductor as CD
     import missions as MM
     import wikis as W
-    monkeypatch.setattr(W, "roots", lambda: [("wiki", "Vault wiki"), ("missions/u/wiki", "Uranium mining")])
+    monkeypatch.setattr(W, "roots", lambda: [("wiki", "Vault wiki"), ("missions/u/wiki", "Copper mining")])
     TK.M.VAULT, TK.M.split_front = K.tmp, MM.split_front
     (K.tmp / "missions/u/wiki/entities").mkdir(parents=True)
-    (K.tmp / "missions/u/wiki/entities/cameco.md").write_text("---\ntitle: Cameco\n---\n## Key facts\n- 2025 output 30 Mlb")
+    (K.tmp / "missions/u/wiki/entities/acme-mining.md").write_text("---\ntitle: Acme Mining\n---\n## Key facts\n- 2025 output 30 Mlb")
     tid = TK.handle({"action": "task_create", "text": "Check its facts and fix the mistakes", "kind": "research",
-                     "wiki": {"root": "missions/u/wiki", "page": "entities/cameco"}}, K.c)["task"]
+                     "wiki": {"root": "missions/u/wiki", "page": "entities/acme-mining"}}, K.c)["task"]
     t = TK.row(K.c, tid)
-    assert t["text"] == "Check its facts and fix the mistakes (On the wiki “Uranium mining”, its page “Cameco”: what is found is written into it.)"
-    assert t["spec"]["wiki"] == {"root": "missions/u/wiki", "title": "Uranium mining", "page": "entities/cameco", "page_title": "Cameco"}
+    assert t["text"] == "Check its facts and fix the mistakes (On the wiki “Copper mining”, its page “Acme Mining”: what is found is written into it.)"
+    assert t["spec"]["wiki"] == {"root": "missions/u/wiki", "title": "Copper mining", "page": "entities/acme-mining", "page_title": "Acme Mining"}
     plan = [{"step": "check the output", "agent": "scout", "why": "web", "after": []}, {"step": "check the price", "agent": "scout", "why": "web", "after": []}]
     TK.intake(K.c, tid, ask=lambda p: spec(plan=plan))
     t = TK.row(K.c, tid)
-    assert t["door"] == "plan" and t["spec"]["wiki"]["page"] == "entities/cameco"                         # the intake keeps it
+    assert t["door"] == "plan" and t["spec"]["wiki"]["page"] == "entities/acme-mining"                         # the intake keeps it
     assert [(s["agent"], s["harness"], s["after"]) for s in CD.steps(K.c, tid)] == [("scout", "hermes", []), ("scout", "hermes", []), ("mission", "wiki", [1, 2])]
-    assert CD.steps(K.c, tid)[2]["title"] == "Write it into the wiki “Uranium mining”, page “Cameco” first"
+    assert CD.steps(K.c, tid)[2]["title"] == "Write it into the wiki “Copper mining”, page “Acme Mining” first"
     for bad in ({"root": "missions/x/wiki"}, {"root": "missions/u/wiki", "page": "entities/nobody"}, {"root": "missions/u/wiki", "page": "../../etc"}):
         with pytest.raises(ValueError):
             TK.handle({"action": "task_create", "text": "Research what is missing", "wiki": bad}, K.c)
@@ -326,7 +326,7 @@ def test_the_plan_sees_what_each_agent_can_reach():
 
 def test_a_long_task_s_name_is_cut_at_a_word_and_marked():
     """Task 93's name was its words cut at 80 characters mid-word ("... estimates as s"), without a mark."""
-    long = "A breaking story: Earnings call transcript: Cameco misses Q3 2026 estimates as shares fall, and more"
+    long = "A breaking story: Earnings call transcript: Acme Mining misses Q3 2026 estimates as shares fall, and more"
     t = TK.title_of(long)
     assert t.endswith(" …") and len(t) <= TK.TITLE and long.startswith(t[:-2]) and not t[:-2].endswith("as s")
     assert TK.title_of("  Short   one ") == "Short one" and TK.title_of("") == ""

@@ -77,7 +77,7 @@ def test_a_push_from_the_activity_feed_follows_the_preferences(sent, tmp_path, m
     monkeypatch.setattr(M, "PUBLIC", tmp_path)
     N.set_prefs({"push": {"build": False}})
     M.event("build", "", "Build #4 deployed", push=True, title="Builder")
-    M.event("triggered", "u", "SEC filing", push=True, title="Uranium")
+    M.event("triggered", "u", "SEC filing", push=True, title="Copper")
     pushed = [json.loads(x)["push"] for x in (tmp_path / "events.jsonl").read_text().splitlines()]
     assert pushed == [False, True]
     assert [(r["category"], r["decision"]) for r in log(tmp_path)] == [("build", "off"), ("alert", "sent")]

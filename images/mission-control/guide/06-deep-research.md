@@ -13,7 +13,7 @@ the mission screen.
 
 ```try
 label: Start a deep research task
-chat: Do a deep research task: compare Cameco, Kazatomprom and NexGen on cost, growth and risk, and e-mail me the result.
+chat: Do a deep research task: compare Acme Mining, Kazatomprom and NexGen on cost, growth and risk, and e-mail me the result.
 note: Hermes creates a one-off deep task. Open it under Missions to watch the plan and each step tick off.
 ```
 
@@ -35,7 +35,7 @@ Results come back labelled as untrusted, and Hermes treats them that way.
 
 ```try
 label: Have it read a filing
-chat: Read ASP Isotopes' latest 10-Q from the SEC and tell me the cash position and the main risks.
+chat: Read Beta Materials' latest 10-Q from the SEC and tell me the cash position and the main risks.
 note: The page reader fetches the filing from sec.gov (it identifies itself as SEC requires) and reads it in full, PDF or HTML.
 ```
 

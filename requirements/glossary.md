@@ -18,7 +18,7 @@ The names requirements use for the parts of the stack. A requirement's subject i
 | the crew | housekeeping agents on systemd timers (doctor, maintainability, tests, memory, phone cleanup, phone check, inbox) | `ops/crew.py`, `ops/systemd/crew-*` |
 | the health board | one health item per agent with alerts and notes | `images/mission-control/obs_core.py`, `ops/observe.py` |
 | the runtime record | one event stream for every agent run, with end states and the watchdog | `images/mission-control/runrecord.py` |
-| the AI phone | the old Samsung S22 (ai-phone) on the tailnet | |
+| the AI phone | a spare Android phone on the tailnet | |
 | the AI phone service | the container that drives the AI phone over ADB, with approvals, block list and Stop | `images/phone/` |
 | the mail connector | the Gmail connector (IMAP), grants, Trash only | `images/mail/` |
 | the House service | the stack's side of Home Assistant: status, switching, Alexa, the voice bridge | `ops/house.py` |

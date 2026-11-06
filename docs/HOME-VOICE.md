@@ -132,7 +132,7 @@ all three stumbled on "Hermes what is on" once (the wake word is cut off before 
 
 The NAS keeps 1.2 GB free with both services running (Home Assistant 0.43 GB, Parakeet 0.83 GB, Piper 0.04 GB).
 
-When background work is done, the gateway says so in the room you last spoke in (if you are home, from the FRITZ!Box
+When background work is done, the gateway says so in the room you last spoke in (if you are home, from the router
 presence, and not in quiet hours), otherwise a push to the phone as today.
 
 ### Missions by voice
@@ -140,7 +140,7 @@ presence, and not in quiet hours), otherwise a push to the phone as today.
 Hermes' existing tools do the work: start a mission ("research X and send me the result", a one-off), run one now,
 pause it, ask for its last result, start a task. What changes by voice:
 
-- **Say back before acting.** "I'll start a one-off research on mesh repeaters for your FRITZ!Box and send the result
+- **Say back before acting.** "I'll start a one-off research on mesh repeaters for your router and send the result
   to Telegram. Shall I?" A yes starts it. Reading and answering need no confirmation.
 - **Approvals stay in the app.** A purchase, a deploy, e-mail to anyone but the owner, deleting, the NAS and the network
   are never done by voice: Hermes says where to approve it. Voice is a shared channel: a guest, a child or the TV can be
@@ -203,14 +203,14 @@ Two steps only the owner can take; everything else is set up by `ops/voice_setup
 on the network can):
 
 ```
-netsh interface portproxy add v4tov4 listenaddress=192.168.1.33 listenport=11434 connectaddress=127.0.0.1 connectport=11435
-New-NetFirewallRule -DisplayName "Hermes voice gateway (NAS only)" -Direction Inbound -Action Allow -Protocol TCP -LocalAddress 192.168.1.33 -LocalPort 11434 -RemoteAddress 192.168.1.80
+netsh interface portproxy add v4tov4 listenaddress=192.168.1.20 listenport=11434 connectaddress=127.0.0.1 connectport=11435
+New-NetFirewallRule -DisplayName "Hermes voice gateway (NAS only)" -Direction Inbound -Action Allow -Protocol TCP -LocalAddress 192.168.1.20 -LocalPort 11434 -RemoteAddress 192.168.1.10
 ```
 
-The PC's address should stay 192.168.1.33: in the FRITZ!Box, Heimnetz → Netzwerk → the PC → "Diesem Netzwerkgerät
+The PC's address should stay 192.168.1.20: in the router, Heimnetz → Netzwerk → the PC → "Diesem Netzwerkgerät
 immer die gleiche IPv4-Adresse zuweisen".
 
-**2. On the AI phone** (the Galaxy S22): in Home Assistant, Settings → People, add a person "AI phone" who may log in
+**2. On the AI phone** (the Galaxy AI phone): in Home Assistant, Settings → People, add a person "AI phone" who may log in
 and is not an administrator; on the phone, install the Home Assistant app from the Play Store and sign in as that
 person; in the app, Settings → Companion app → Assist: make Home Assistant the default assistant, switch the wake word
 on, and pick the pipeline "Hermes". The agents can never open that app (VOI-07).

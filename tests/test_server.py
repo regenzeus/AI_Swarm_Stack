@@ -18,12 +18,12 @@ def app(tmp_path, monkeypatch):
         (m / d).mkdir(parents=True)
     vault = tmp_path / "vault"
     (vault / "wiki" / "entities").mkdir(parents=True)
-    (vault / "wiki" / "entities" / "cameco.md").write_text("---\ntitle: Cameco\naliases: [CCJ]\n---\nProducer. See [[entities/kazatomprom]] "
+    (vault / "wiki" / "entities" / "acme-mining.md").write_text("---\ntitle: Acme Mining\naliases: [ACME]\n---\nProducer. See [[entities/kazatomprom]] "
                                                            "and [[Missing Page]] and [[topics/u/reports/r|report]].")
-    (vault / "wiki" / "entities" / "kazatomprom.md").write_text("---\ntitle: Kazatomprom\n---\nPartner of [[CCJ]].")
+    (vault / "wiki" / "entities" / "kazatomprom.md").write_text("---\ntitle: Kazatomprom\n---\nPartner of [[ACME]].")
     (vault / "topics" / "u" / "reports").mkdir(parents=True)
     (vault / "topics" / "u" / "reports" / "r.md").write_text("# report")
-    state = {"missions": [{"slug": "u", "title": "Uranium", "type": "briefing", "wiki": "topics/u/wiki", "runs": []}],
+    state = {"missions": [{"slug": "u", "title": "Copper", "type": "briefing", "wiki": "topics/u/wiki", "runs": []}],
              "activity": [], "calls": [], "system": {}, "running": None, "queue": []}
     (m / "public" / "state.json").write_text(json.dumps(state))
     for k, v in {"STATE": m / "public/state.json", "INBOX": m / "inbox", "RESULTS": m / "public/results", "RUNS": m / "runs",
@@ -62,9 +62,9 @@ def test_vault_files_stay_inside_the_vault(app):
 def test_wiki_links_backlinks_and_aliases(app):
     c = TestClient(app.app)
     g = c.get("/api/wiki/graph", headers=H, params={"root": "wiki"}).json()
-    assert {(e["source"], e["target"]) for e in g["links"]} == {("entities/cameco", "entities/kazatomprom"),
-                                                                ("entities/kazatomprom", "entities/cameco")}
-    p = c.get("/api/wiki/page", headers=H, params={"root": "wiki", "id": "entities/cameco"}).json()
+    assert {(e["source"], e["target"]) for e in g["links"]} == {("entities/acme-mining", "entities/kazatomprom"),
+                                                                ("entities/kazatomprom", "entities/acme-mining")}
+    p = c.get("/api/wiki/page", headers=H, params={"root": "wiki", "id": "entities/acme-mining"}).json()
     assert p["links"]["entities/kazatomprom"] == {"kind": "page", "ref": "entities/kazatomprom"}
     assert p["links"]["Missing Page"] == {"kind": None, "ref": None}
     assert p["links"]["topics/u/reports/r"] == {"kind": "file", "ref": "topics/u/reports/r.md"}
@@ -145,8 +145,8 @@ def test_edit_starts_a_new_session(app, monkeypatch):
 
 
 def test_tool_progress_labels(app):
-    assert app.tool_label({"tool": "mcp__vault__qmd_query", "status": "running", "preview": "uranium"}) == \
-        {"name": "qmd_query", "status": "running", "detail": "uranium"}
+    assert app.tool_label({"tool": "mcp__vault__qmd_query", "status": "running", "preview": "copper"}) == \
+        {"name": "qmd_query", "status": "running", "detail": "copper"}
 
 
 def test_interrupted_chats_are_closed_on_start(app):

@@ -214,8 +214,8 @@ items:
     status: implemented
     parents: [SN-04]
     sources: [docs/PUBLISHING.md]
-    findings: [FND-75]
-    verify: {method: test, by: [tests/test_publish.py::test_images_come_only_from_one_folder_and_hide_nothing, tests/test_publish.py::test_terms_are_replaced_as_whole_words_and_only_a_capitalised_sentence_start_is_capitalised,
+    findings: [FND-75, FND-124]
+    verify: {method: test, by: [tests/test_publish.py::test_images_come_only_from_one_folder_and_hide_nothing, tests/test_publish.py::test_every_landing_runs_the_privacy_scan_and_a_leak_stops_it, tests/test_publish.py::test_an_address_written_as_a_regular_expression_is_still_found, tests/test_publish.py::test_real_runs_stay_out_but_the_evidence_requirements_cite_stays, tests/test_publish.py::test_a_fresh_publish_replaces_the_public_history, tests/test_publish.py::test_terms_are_replaced_as_whole_words_and_only_a_capitalised_sentence_start_is_capitalised,
       tests/test_publish.py::test_the_scan_names_every_leftover_without_printing_the_term_and_lets_placeholders_pass,
       tests/test_publish.py::test_the_snapshot_leaves_out_the_secrets_and_follows_the_public_text,
       tests/test_publish.py::test_a_snapshot_with_a_leftover_runs_no_tests_and_pushes_nothing,

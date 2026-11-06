@@ -299,6 +299,7 @@ function render(force = false) {
   if (!force && route.name === "missions" && missionsSig() === missionsSig.last) return swOverview();   // APP-32: nothing on the list changed:
                                                                  // only its live parts update in place, the page never moves
   if (!force && route.name === "live") return;
+  if (!force && route.name === "repo") return repoLive();
   if (!force && !(LIVE.has(route.name) || (route.name === "files" && !$("#fplan")?.innerHTML && !typing()) || ((route.name === "mission" || route.name === "crew") && agentSigOf() !== agentSig && !typing() && !$(".tl:not([hidden])") && !$("#tabbody details[open]")) || (route.name === "build" && !typing() && !$("#chbox:not([hidden])") && !$("#view details[open]") && !$("#blogbox:not([hidden])") && !($("#ar-url")?.value || $("#ar-name")?.value)))) return;
   // views that load their own data draw at once; the others wait for the first state (they are drawn when it comes)
   if (!S && !["chat", "wiki", "read", "guide", "phone", "share", "live", "swarm", "taskmap", "telemetry", "task", "trials"].includes(route.name)) { view.innerHTML = noLink() ? offlineHtml() : `<div class="stack"><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div></div>`; return; }
@@ -867,8 +868,8 @@ function bindTasks() {
 }
 
 // ---------- Triggers (TSK-10 to TSK-12): the event bus's sources, the owner's rules, breaking stories ----------
-const PARAM = { news: ["Search for", "uranium supply"], breaking: ["Subject to watch", "Cameco"], feed: ["Feed address", "https://example.com/feed.xml"],
-  github: ["Repository (owner/name)", "regenzeus/AI_Swarm_Stack"], price: ["Symbol:percent", "CCJ:8"], filing: ["US ticker", "CCJ"],
+const PARAM = { news: ["Search for", "copper supply"], breaking: ["Subject to watch", "Acme Mining"], feed: ["Feed address", "https://example.com/feed.xml"],
+  github: ["Repository (owner/name)", "regenzeus/AI_Swarm_Stack"], price: ["Symbol:percent", "ACME:8"], filing: ["US ticker", "ACME"],
   forgejo: ["Repository (empty: all)", "ai-stack"], mail: ["Sender or words (empty: any)", "invoice"], house: ["Thing or room (empty: any)", "front door"],
   file: ["File name part (empty: any)", ".pdf"], schedule: ["When", "weekdays 07:00"], task: ["Task # or words (empty: any)", ""], mission: ["Mission (empty: any)", ""],
   calendar: ["When: 60 before, start, end or 15 after", "60 before"] };
@@ -909,11 +910,11 @@ function staffHtml() {
 function ruleFormHtml() {
   const src = Object.entries(S.bus?.sources || {});
   return `<form class="card pad tform" id="ruleform" style="margin-top:12px"><b>New rule</b><div class="tgrid">
-    <label>Name<input class="input" name="name" placeholder="Cameco breaking news" required></label>
+    <label>Name<input class="input" name="name" placeholder="Acme Mining breaking news" required></label>
     <label>When<select class="input" name="source">${src.map(([k, s]) => `<option value="${k}">${esc(s.what)}</option>`).join("")}</select></label>
     <label id="rparam"><span>${PARAM[src[0]?.[0]]?.[0] || "Parameter"}</span><input class="input" name="param" placeholder="${esc(PARAM[src[0]?.[0]]?.[1] || "")}"></label>
-    <label>Only with these words (optional)<input class="input" name="words" placeholder="contract, uranium"></label>
-    <label class="wide">Then the stack should<input class="input" name="task" placeholder="Read {title} and tell me in three lines what it means for my uranium positions" required></label>
+    <label>Only with these words (optional)<input class="input" name="words" placeholder="contract, copper"></label>
+    <label class="wide">Then the stack should<input class="input" name="task" placeholder="Read {title} and tell me in three lines what it means for my copper positions" required></label>
     <label>At most once every (minutes)<input class="input" name="cooldown_min" type="number" min="0" value="60"></label>
     <label class="wide">Check first (optional: a model decides if the event really is this)<input class="input" name="check" placeholder="a new supply contract, not a rumour or an old story"></label></div>
     <div class="tiny faint" style="margin-top:6px">{title}, {detail}, {url} and {source} in the task are filled in from the event.</div>
@@ -2240,8 +2241,8 @@ function trigRow(t = { type: "sec_filing" }) {
   return `<div class="trow card">
     <select class="input" data-k="type">${[["sec_filing", "New SEC filing"], ["price_move", "Big price move"], ["news", "News on a topic"]].map(([k, l]) => `<option value="${k}" ${t.type === k ? "selected" : ""}>${l}</option>`).join("")}</select>
     <input class="input" data-k="tickers" data-for="sec_filing" placeholder="US tickers, e.g. ASPI, LEU" value="${esc((t.tickers || []).join(", "))}">
-    <div class="row" data-for="price_move"><input class="input" data-k="symbol" placeholder="Symbol, e.g. CCJ" value="${v("symbol")}"><input class="input" data-k="pct" type="number" min="1" max="50" step="0.5" value="${v("pct", 5)}" style="max-width:90px"><span class="small muted">%</span></div>
-    <input class="input" data-k="query" data-for="news" placeholder="Search, e.g. ASP Isotopes contract" value="${v("query")}">
+    <div class="row" data-for="price_move"><input class="input" data-k="symbol" placeholder="Symbol, e.g. ACME" value="${v("symbol")}"><input class="input" data-k="pct" type="number" min="1" max="50" step="0.5" value="${v("pct", 5)}" style="max-width:90px"><span class="small muted">%</span></div>
+    <input class="input" data-k="query" data-for="news" placeholder="Search, e.g. Beta Materials contract" value="${v("query")}">
     <button type="button" class="icon-btn" data-del title="Remove">${ic.trash}</button>
   </div>`;
 }
@@ -2615,7 +2616,7 @@ async function vChat() {
   const mis = mslug || cur?.mission;
   const m = mis && S ? S.missions.find((x) => x.slug === mis) : null;
   const sugg = m ? [`What does this mission track right now?`, `Make it focus more on `, `Add a key question about `, `Alert me when ${m.brief?.filings?.[0] || "the company"} files with the SEC`]
-    : ["What are my missions doing?", "What's new on uranium today?", "Research Boss Energy and e-mail me an analysis", "Watch ASPI and tell me if it moves 8 % in a day"];
+    : ["What are my missions doing?", "What's new on copper today?", "Research Gamma Metals and e-mail me an analysis", "Watch ASPI and tell me if it moves 8 % in a day"];
   view.innerHTML = `<div class="chatwrap">
     <div class="cscrim" id="cscrim" hidden></div>
     <aside class="chatlist" id="clist" aria-label="Your chats">
@@ -2935,7 +2936,7 @@ function bindPhone(P) {
 // ---------- House: Home Assistant on the NAS (ops/house.py): setup, rooms, Echos, the voice bridge ----------
 function houseSteps(h) {
   const has = (d) => (h.integrations || []).some((x) => x.domain === d);
-  const ha = h.url || "http://192.168.1.80:8123";
+  const ha = h.url || "http://192.168.1.10:8123";
   return [
     { done: h.reachable, title: "Home Assistant runs on the NAS", sub: h.reachable ? ha : "not reachable from the PC: is the NAS on?" },
     { done: h.onboarded, title: "Create your Home Assistant account", sub: "once, on your home Wi-Fi: name, user, password, your location",
@@ -2974,7 +2975,7 @@ function phoneVoiceHtml(h, ha) {
   const steps = phoneVoiceSteps(h, ha), left = steps.filter((s) => !s.done && !s.manual).length;
   return `<div class="card pad-l"><div class="row between wrap" style="gap:4px 8px;align-items:center"><h2>Talk to Hermes on the AI phone</h2><span class="tiny faint">${left ? `${left} step${left > 1 ? "s" : ""} for you` : "ready to try"}</span></div>
     <ol class="hsteps">${steps.map((s) => `<li class="${s.done ? "done" : ""}"><span class="hs-ic">${s.done ? ic.check : s.manual ? "·" : ""}</span><div class="grow"><div class="ttl">${esc(s.title)}</div><div class="sub">${esc(s.sub)}</div></div>${s.btn || ""}</li>`).join("")}</ol>
-    ${explain("you-type-the-password-yo", `You type the password yourself; the agents never open the Home Assistant app on the AI phone (its login reaches the house, the FRITZ!Box and the NAS).`, "About this")}</div>`;
+    ${explain("you-type-the-password-yo", `You type the password yourself; the agents never open the Home Assistant app on the AI phone (its login reaches the house, the router and the NAS).`, "About this")}</div>`;
 }
 
 function houseThingHtml(t) {
@@ -3660,7 +3661,7 @@ function repoCard(r) {
     <div class="tiny muted wrap">${r.last ? `${esc(r.last.subject)} · ${rel(r.last.ts)}` : esc(r.source || "")}</div>
     <div class="repo-m tiny faint">
       <span>${ic.wiki}${g ? `${nf(g.nodes)} nodes` : "no graph yet"}</span>
-      <span>${ic.layers}${r.codemap ? "code map" : "no code map"}</span>
+      <span>${ic.layers}${onboardLabel(r)}</span>
       ${r.files ? `<span>${ic.doc}${nf(r.files)} files</span>` : ""}
     </div></a>`;
 }
@@ -3669,7 +3670,7 @@ function forgejoCard() {
   if (S.code?.forgejo_token) return "";
   return `<details class="card pad-l fjcard" ${route.q.get("forgejo") ? "open" : ""}><summary><b>Connect Forgejo once</b> <span class="small muted">· 2 minutes · lets the stack create repositories, let the builder change studied ones, and open pull requests</span></summary>
     <ol class="small" style="margin:10px 0 0;padding-left:20px;line-height:1.75">
-      <li>At home (Forgejo is on your NAS), open <a href="http://192.168.1.80:3000/user/settings/applications" target="_blank" rel="noopener"><b>Forgejo → Settings → Applications</b></a> and sign in if asked.</li>
+      <li>At home (Forgejo is on your NAS), open <a href="http://192.168.1.10:3000/user/settings/applications" target="_blank" rel="noopener"><b>Forgejo → Settings → Applications</b></a> and sign in if asked.</li>
       <li>Under <b>Generate new token</b>: name <code>mission-control</code>; permissions <b>repository: Read and write</b>, <b>user: Read</b>. Tap <b>Generate token</b> and copy the long code it shows (only shown once).
         <div class="tiny faint">Your existing token <i>ai-stack-status</i> can only read, and Forgejo can't add rights to a token later. This one replaces it for everything; you can delete the old one afterwards.</div></li>
       <li>Paste it here: <div class="row wrap" style="gap:8px;margin-top:6px"><input class="input" id="fjtok" type="password" autocomplete="off" spellcheck="false" placeholder="paste the token" style="flex:1;min-width:200px"><button class="btn primary" id="fjgo">${ic.check}Connect</button></div>
@@ -3815,7 +3816,7 @@ function bindAddRepo() {
   }));
   $("#ar-go").onclick = async () => {
     const v = $("#ar-url").value.trim();
-    if (v && (await act({ action: "understand", repo: v }, "Studying it: graph and code map arrive in a few minutes"))) $("#ar-url").value = "";
+    if (v && (await act({ action: "understand", repo: v }, "Onboarding started: it shows in your repositories, step by step"))) $("#ar-url").value = "";
   };
   $("#ar-create").onclick = async () => {
     const name = $("#ar-name").value.trim().toLowerCase();
@@ -3825,6 +3826,45 @@ function bindAddRepo() {
     $("#ar-create").disabled = false;
     if (r?.repo) location.hash = `#/repo/${encodeURIComponent(r.repo)}`;
   };
+}
+
+// BLD-26: onboarding a repository, the whole package. The card shows its steps; only the card updates while it runs.
+const ONB_LIVE = ["queued", "running", "waiting"];
+let onbSeen = "";
+function onboardLabel(r) {
+  const o = r.onboard;
+  if (o && ONB_LIVE.includes(o.status)) return `onboarding, step ${o.index} of ${o.total}`;
+  if (o?.status === "failed") return "onboarding stopped";
+  return r.codemap ? "code map" : "no code map";
+}
+function onboardHtml(r) {
+  const o = r.onboard;
+  if (!o || o.status === "done") return "";
+  const live = ONB_LIVE.includes(o.status), failed = o.status === "failed", cur = o.steps.find((s) => s.id === o.step);
+  const head = live ? `Step ${o.index} of ${o.total}: ${esc(cur?.title || "starting")}`
+    : failed ? `Stopped at ${esc(cur?.title || "a step")}` : `${o.total - o.index} of ${o.total} steps still to do`;
+  const mark = (s) => (s.state === "done" ? ic.check : s.state === "failed" ? ic.alert : s.state === "pending" ? "" : ic.repeat);
+  return `<div class="card pad-l section onb"><div class="row between"><h2>Onboarding</h2>${explain("onboarding-gives-every-repository", `Onboarding gives every repository the whole package: a copy of the code, its code graph, a code map with every file explained, a place in the search so Hermes can answer about it, and a written analysis. Third-party code is only read, never run. It uses your subscriptions and waits by itself when a usage limit or the PC's memory is in the way. You get a message when it ends.`, "About this")}</div>
+    <div class="small ${failed ? "err-t" : "muted"} wrap">${head}</div>
+    ${(failed || o.status === "queued") && o.why ? `<div class="small wrap" style="margin-top:6px">${esc(o.why)}</div>` : ""}
+    <ol class="onb-steps">${o.steps.map((s) => `<li class="${esc(s.state)}"><span class="onb-mark">${mark(s)}</span><span class="wrap"><span class="${s.state === "pending" ? "muted" : ""}">${esc(s.title)}</span>${s.note ? `<span class="tiny muted onb-note">${esc(s.note)}</span>` : ""}</span></li>`).join("")}</ol>
+    ${live ? "" : `<button class="btn primary" id="ronb" style="margin-top:12px">${ic.repeat}${failed ? "Try again" : "Finish onboarding"}</button>`}</div>`;
+}
+function bindOnboard(name) {
+  const go = async (b) => { b.disabled = true; const ok = await act({ action: "understand", repo: name }, "Onboarding started: the steps show on this page"); if (!ok) b.disabled = false; };
+  [$("#ronb"), $("#rstudy")].forEach((b) => { if (b) b.onclick = () => go(b); });
+}
+function repoLive() {                                          // a state update: only the card changes; the end of a job redraws the page
+  const name = route.args[0], r = name && repoOf(name), el = $("#ronboard");
+  if (!r || !el) return;
+  const sig = JSON.stringify(r.onboard || {});
+  if (sig === onbSeen) return;
+  const was = (() => { try { return JSON.parse(onbSeen).status; } catch (_) { return ""; } })();
+  onbSeen = sig;
+  if (ONB_LIVE.includes(was) && !ONB_LIVE.includes(r.onboard?.status)) return render(true);
+  el.innerHTML = onboardHtml(r);
+  const b = $("#rstudy"); if (b) b.hidden = r.onboard?.status !== "done";
+  bindOnboard(name);
 }
 
 let cmSwitching = "";                                          // the repo the code map viewer is switching to (one switch at a time)
@@ -3844,25 +3884,26 @@ async function vRepo() {
       ${r.codemap ? `<button class="btn primary" id="rmap">${ic.layers}Interactive code map</button>` : ""}
       <a class="btn" href="#/chat?prompt=${encodeURIComponent(`In the repository ${name}: `)}">${ic.chat}Ask about it</a>
       ${r.buildable ? `<a class="btn" href="#/build?repo=${encodeURIComponent(name)}&new=1">${ic.rocket}New build</a>` : ""}
-      <button class="btn ghost" id="rstudy" title="Refresh the code map (the graph updates by itself)">${ic.repeat}${r.codemap ? "Re-analyse" : "Build code map"}</button>
+      <button class="btn ghost" id="rstudy" title="Make the code map and the analysis anew (the graph updates by itself)" ${r.onboard?.status === "done" ? "" : "hidden"}>${ic.repeat}Re-analyse</button>
       ${!r.buildable && name !== "ai-stack" ? `<button class="btn ghost" id="rbuildable" ${S.code?.forgejo_token ? "" : "disabled title='Needs the Forgejo connection (Code tab)'"}>${ic.rocket}Let the builder change it</button>` : ""}
     </div>
   </div>
   ${bs.some((b) => b.status === "review") ? `<div class="section"><div class="section-h"><h2>Waiting for you</h2></div><div class="card list waiting">${bs.filter((b) => b.status === "review").map(buildRow).join("")}</div></div>` : ""}
+  <div id="ronboard">${onboardHtml(r)}</div>
+  <div id="ranalysis"></div>
   <div class="grid g2 g4 section">
-    <div class="card kpi"><div class="kpi-l">Code graph</div><div class="kpi-v">${g ? nf(g.nodes) : "–"}</div><div class="kpi-s">${g ? `${nf(g.links)} links · ${g.communities} groups` : "builds by itself within a minute"}</div></div>
-    <div class="card kpi"><div class="kpi-l">Code map</div><div class="kpi-v" style="font-size:20px">${r.codemap ? "ready" : "–"}</div><div class="kpi-s">${!r.codemap ? "tap Build code map" : r.explained?.files ? `${r.explained.status === "running" ? "explaining… " : ""}${nf(r.explained.explained || 0)} of ${nf(r.explained.files)} files explained${r.explained.status === "limit" ? " · resumes later" : ""}` : "explained below"}</div></div>
+    <div class="card kpi"><div class="kpi-l">Code graph</div><div class="kpi-v">${g ? nf(g.nodes) : "–"}</div><div class="kpi-s">${g ? `${nf(g.links)} links · ${g.communities} groups` : r.no_code ? "no code to graph" : "builds by itself within a minute"}</div></div>
+    <div class="card kpi"><div class="kpi-l">Code map</div><div class="kpi-v" style="font-size:20px">${r.codemap ? "ready" : "–"}</div><div class="kpi-s">${!r.codemap ? "not built yet" : r.explained?.files ? `${r.explained.status === "running" ? "explaining… " : ""}${nf(r.explained.explained || 0)} of ${nf(r.explained.files)} files explained${r.explained.status === "limit" ? " · resumes later" : ""}` : "explained below"}</div></div>
     <div class="card kpi"><div class="kpi-l">Files</div><div class="kpi-v">${r.files ? nf(r.files) : "–"}</div><div class="kpi-s">${r.last ? esc(r.last.sha) : ""}</div></div>
     <div class="card kpi"><div class="kpi-l">Builds</div><div class="kpi-v">${bs.length}</div><div class="kpi-s">${bs.filter((b) => b.status === "deployed" || b.status === "merged").length} merged</div></div>
   </div>
   ${r.codemap ? `<div class="section" id="rframesec"><div class="section-h"><h2>Interactive code map</h2><a class="tiny" href="${HOSTURL}:8446/" target="_blank" rel="noopener" id="rframefull" ${S.code?.codemap === name ? "" : "hidden"}>Full screen</a></div>
     <div class="card cmframe" id="rframe">${S.code?.codemap === name ? `<iframe src="${HOSTURL}:8446/" title="Code map of ${esc(name)}" loading="lazy"></iframe>`
       : `<div class="pad-l" id="rframewait"><div class="small muted">Opening the code map of ${esc(name)}… The viewer shows one repository at a time and switches to this one now (a few seconds).</div></div>`}</div></div>`
-    : `<div class="card pad-l section cmnone"><h2>No code map yet</h2>${explain("the-code-map-explains-in", `The code map explains ${esc(name)} in plain language: what it does, its layers, a guided tour, every file and function, and an interactive, clickable map. Understand Anything writes it from the code (about 10 to 40 minutes, on your ChatGPT subscription; the code is never run).`, "About this")}
-      <button class="btn primary" id="rstudy2" style="margin-top:10px">${ic.layers}Build the code map</button></div>`}
+    : ""}
   <div id="rcodemap"></div>
   <div class="section"><div class="section-h"><h2>Code graph</h2><span class="tiny faint" id="rgnote">${g ? "tap a node: what it is, its code, what it calls" : ""}</span></div>
-    <div class="rgwrap"><div id="rgraph">${g ? `<div class="skeleton" style="height:420px"></div>` : `<div class="card empty small">No graph yet. It is built by itself within a minute of a repository arriving.</div>`}</div>
+    <div class="rgwrap"><div id="rgraph">${g ? `<div class="skeleton" style="height:420px"></div>` : `<div class="card empty small">${r.no_code ? "This repository has no code the graph tool reads: web pages or documents." : "No graph yet. It is built by itself within a minute of a repository arriving."}</div>`}</div>
       <aside class="card pad-l rnode" id="rnode" ${g ? "" : "hidden"}>${explain("tap-a-node-in-the-graph-", `Tap a node in the graph to see what it is, its source code, what it calls and what calls it${r.codemap ? ", and what the code map says about it" : ""}.`, "How to read this")}</aside></div></div>
   <div class="split section">
     <div class="card pad-l"><div class="row between"><h2>What it is</h2><span class="tiny faint" id="rsrc"></span></div><div class="md" id="rover" style="margin-top:8px"><div class="skeleton" style="height:120px"></div></div></div>
@@ -3874,6 +3915,8 @@ async function vRepo() {
   api(`/api/repo/${encodeURIComponent(name)}/overview`).then((o) => {
     $("#rover").innerHTML = o.markdown ? md(o.markdown) : `<div class="small muted">No README and no code map yet.</div>`;
     $("#rsrc").textContent = o.source || "";
+    const w = $("#ranalysis");
+    if (w) w.innerHTML = o.analysis ? `<details class="card pad-l section" open><summary><b>Written analysis</b></summary><div class="md" style="margin-top:8px">${md(o.analysis)}</div></details>` : "";
   }).catch(() => {});
   if (r.codemap) api(`/api/repo/${encodeURIComponent(name)}/map`).then((m) => { const el = $("#rcodemap"); if (el && !m.error) { el.innerHTML = codeMapHtml(m); bindCodeMap(el, m); } }).catch(() => {});
   if (g) api(`/api/repo/${encodeURIComponent(name)}/graph`).then((d) => {
@@ -3915,10 +3958,8 @@ async function vRepo() {
   const rm = $("#rmap");
   if (rm) rm.onclick = () => showMap(rm);
   if (r.codemap && S.code?.codemap !== name) showMap(null, true);   // every repo with a code map shows it, not only the last one opened
-  const study = async (b) => { b.disabled = true; if (await act({ action: "understand", repo: name }, "Analysing: you get a message when the code map is ready")) b.textContent = "Analysing… (you get a message)"; else b.disabled = false; };
-  $("#rstudy").onclick = () => study($("#rstudy"));
-  const rs2 = $("#rstudy2");
-  if (rs2) rs2.onclick = () => study(rs2);
+  bindOnboard(name);
+  onbSeen = JSON.stringify(r.onboard || {});
   const rb = $("#rbuildable");
   if (rb) rb.onclick = async () => { if (!confirm(`Copy ${name} to your Forgejo so the builder can change it? The original stays as "upstream".`)) return; rb.disabled = true; await act({ action: "repo_buildable", repo: name }, `${name} is on Forgejo now`); };
   const rr = $("#rremove");
@@ -4159,7 +4200,7 @@ function stackToolsHtml() {
     <div class="grid g2 tools">${TOOLS.tools.map((t) => { const st = toolState(t);
       return `<div class="card pad tool"><div class="row between wrap" style="gap:4px 8px;align-items:baseline"><b>${esc(t.name)}</b><span class="tiny faint">${st ? `<span class="dot ${st[0]}" style="display:inline-block;margin-right:5px"></span>${esc(st[1])} · ` : ""}${toolAtHome(t) ? "home Wi-Fi" : "anywhere"}</span></div>
         <div class="small muted">${esc(t.what)}</div><div class="chips" style="margin-top:8px">${toolLinks(t)}</div></div>`; }).join("")}</div>
-    ${explain("anywhere-opens-with-your", `${ic.check} “Anywhere” opens with your Tailscale login, no password. “Home Wi-Fi” tools (the NAS, the FRITZ!Box, Home Assistant) open at home and keep their own logins.`, "Where they open")}`;
+    ${explain("anywhere-opens-with-your", `${ic.check} “Anywhere” opens with your Tailscale login, no password. “Home Wi-Fi” tools (the NAS, the router, Home Assistant) open at home and keep their own logins.`, "Where they open")}`;
 }
 
 function toolHits(q) {
@@ -4279,7 +4320,7 @@ function bindStack() {
   };
   $("#m_go").onclick = msearch;
   $("#m_q").onkeydown = (e) => { if (e.key === "Enter") msearch(); };
-  $("#u_go").onclick = async () => { const v = $("#u_repo").value.trim(); if (v && (await act({ action: "understand", repo: v }, "Analysis started; you get a message when it's ready"))) $("#u_repo").value = ""; };
+  $("#u_go").onclick = async () => { const v = $("#u_repo").value.trim(); if (v && (await act({ action: "understand", repo: v }, "Onboarding started: it shows in your repositories, step by step"))) $("#u_repo").value = ""; };
 }
 
 // The Stack tab is one page: how the stack works (live map, guide chapters, search) and how it is doing (status),

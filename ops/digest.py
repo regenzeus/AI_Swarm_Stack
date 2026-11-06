@@ -90,7 +90,7 @@ for key in ("FORGEJO_TOKEN", "FORGEJO_STATUS_TOKEN"):        # one token is enou
 ci = []
 for repo in ("ai-stack", "TestRepo", "vault", "hermes-skills"):
     try:
-        req = urllib.request.Request(f"http://192.168.1.80:3000/api/v1/repos/regenzeus/{repo}/actions/tasks?limit=1",
+        req = urllib.request.Request(f"http://192.168.1.10:3000/api/v1/repos/regenzeus/{repo}/actions/tasks?limit=1",
                                      headers={"Authorization": f"token {tok}"})
         runs = json.load(urllib.request.urlopen(req, timeout=10)).get("workflow_runs") or []
         if runs:

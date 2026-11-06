@@ -17,7 +17,7 @@ crew-journeys.timer); each failure is an alert on the health board (ops/crew.py 
   (ops/journeys.mjs): no sideways scrolling, script error or empty screen; a card opens its page; an empty state offers
   its action; dates and numbers the app's way. A write is answered in the browser and never sent.
 - tools: every menu link of the Stack tab's tools (web/static/tools.json, APP-30) opens from the PC: the NAS, the
-  FRITZ!Box and Home Assistant on the home network, the rest through tailscale serve; a link is broken when it does not
+  Router and Home Assistant on the home network, the rest through tailscale serve; a link is broken when it does not
   answer, or answers 404 or a server error (a sign-in page is fine). Hosts outside the house are not called.
 - selftest: a page, an e-mail and a Makefile with each fault these checks are for are caught (a check that cannot
   fail proves nothing).

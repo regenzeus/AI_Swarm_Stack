@@ -73,8 +73,8 @@ def test_create_task_writes_mission_and_queues_first_run(runner):
 
 def test_create_refuses_a_duplicate_within_30_minutes(runner):
     c = runner.db()
-    first = runner.handle({"action": "create", "type": "task", "title": "ASP Isotopes investment news", "run_now": False}, {}, c)
-    again = runner.handle({"action": "create", "type": "task", "title": "ASP Isotopes (ASPI) investment news briefing",
+    first = runner.handle({"action": "create", "type": "task", "title": "Beta Materials investment news", "run_now": False}, {}, c)
+    again = runner.handle({"action": "create", "type": "task", "title": "Beta Materials (ASPI) investment news briefing",
                            "run_now": False}, runner.load_missions(), c)
     assert again["duplicate"] is True and again["slug"] == first["slug"]
 
@@ -106,7 +106,7 @@ def test_update_validates_and_resume_skips_catch_up(runner, monkeypatch, at):
 
 def test_slugify_is_unique_and_ascii(runner):
     assert runner.slugify("Uran-Märkte & Öl!", {}) == "uran-maerkte-oel"
-    assert runner.slugify("Uranium", {"uranium": {}}) == "uranium-2"
+    assert runner.slugify("Copper", {"copper": {}}) == "copper-2"
 
 
 @pytest.mark.parametrize("s,hours,label", [("daily 06:30", 36, "Daily"), ("weekly mon 08:00", 180, "Weekly"),

@@ -99,17 +99,17 @@ def test_a_pending_request_resolves_through_the_runner_s_answer(app):
 
 def test_the_item_leads_back_and_a_one_off_says_in_the_chat_when_it_ends(app):
     S, t0 = app, time.time() - 600
-    set_state(S, [mission("lith", "Lithium market"), mission("daily", "Daily uranium", schedule="daily 06:30"),
+    set_state(S, [mission("lith", "Lithium market"), mission("daily", "Daily copper", schedule="daily 06:30"),
                   mission("old", "Old one", [{"status": "ok"}])], queue=[{"slug": "lith"}, {"slug": "daily"}])
     turn(S, t0, "mission_create", {"title": "Lithium market"}, "Created: [lith] x\nmade: mission:lith", 0)
-    turn(S, t0 + 10, "mission_create", {"title": "Daily uranium"}, "Created: [daily] x\nmade: mission:daily", 1)
+    turn(S, t0 + 10, "mission_create", {"title": "Daily copper"}, "Created: [daily] x\nmade: mission:daily", 1)
     turn(S, t0 + 20, "mission_create", {"title": "Old one"}, "Created: [old] x\nmade: mission:old", 2)
     chat(S, t0, t0 + 10, t0 + 20)
     idx = S.made_pass()
     assert idx["mission:lith"]["chat"] == CID and idx["mission:lith"]["title"] == "Lithium chat"
     assert len(json.loads(S.CHATS.joinpath(f"{CID}.json").read_text())["messages"]) == 6     # nothing ended yet
     set_state(S, [mission("lith", "Lithium market", [{"status": "ok", "summary": "Albemarle leads."}]),
-                  mission("daily", "Daily uranium", [{"status": "ok"}], schedule="daily 06:30"), mission("old", "Old one", [{"status": "ok"}])])
+                  mission("daily", "Daily copper", [{"status": "ok"}], schedule="daily 06:30"), mission("old", "Old one", [{"status": "ok"}])])
     S.made_pass()
     S.made_pass()                                                                 # told once
     msgs = json.loads(S.CHATS.joinpath(f"{CID}.json").read_text())["messages"]

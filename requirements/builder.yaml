@@ -172,7 +172,7 @@ items:
     sources: [images/mission-control/guide/11-code.md]
     findings: [FND-48]
     verify: {method: test, by: [tests/test_repos.py::test_every_repo_with_a_code_map_shows_it_clean_and_without_the_minimap]}
-    trace: [images/mission-control/web/static/app.js, ops/graphify-sync.sh, ops/understand.sh, ops/ua_fix.mjs, images/opencode/Dockerfile]
+    trace: [images/mission-control/web/static/app.js, ops/graphify-sync.sh, ops/onboard.py, ops/ua_fix.mjs, images/opencode/Dockerfile]
   - id: BLD-16
     title: Removing a repository
     statement: Removing a repository shall delete only the stack's copy (clone, graph, code map, workbench), never the
@@ -202,7 +202,7 @@ items:
     status: implemented
     parents: [SN-05, SN-14]
     sources: [images/mission-control/guide/11-code.md]
-    verify: {method: inspection, by: [ops/understand.sh]}
+    verify: {method: inspection, by: [ops/onboard.py, ops/claude_tasks.py]}
   - id: BLD-19
     title: Graphs stay current
     statement: When a repository's HEAD changes, its code graph shall be rebuilt within 2 minutes, without model calls.
@@ -276,3 +276,20 @@ items:
     status: proposed
     parents: [SN-14, SN-01]
     sources: ['chat 2026-11-02: The builder on your own projects', docs/NEXT-PHASE.md]
+  - id: BLD-26
+    title: Onboarding always ends in the whole package
+    statement: Onboarding a repository, from its page, from Add a repository, through Hermes or with make understand, shall
+      run one job that ends in the whole package whatever the repository's size (a copy of the code, its code graph, its
+      code map, every file explained, its digest in the search index, a written analysis on its page). It shall wait by
+      itself for usage limits, the PC's memory and the gateway without using up a try, and go on at its first unfinished
+      step after a crash, a deploy or a restart of the PC. The repo page and repos_overview shall show the step it is at.
+      A step that failed three times shall stop the job with the reason on the page, in repos_overview and in a message,
+      and Try again shall go on from that step. The owner shall get one message when the job ends, either way.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-14]
+    sources: [images/mission-control/guide/11-code.md]
+    findings: [FND-122]
+    verify: {method: test, by: [tests/test_onboard.py::test_a_big_repository_gets_the_whole_package_and_one_message, tests/test_onboard.py::test_no_size_limit_is_left_anywhere_in_the_job, tests/test_onboard.py::test_a_step_that_keeps_failing_stops_with_its_reason_and_says_so, tests/test_onboard.py::test_try_again_goes_on_from_the_step_that_failed, tests/test_onboard.py::test_a_usage_limit_waits_uses_no_try_and_goes_on_by_itself, tests/test_onboard.py::test_too_little_memory_waits_and_a_stopped_enrichment_is_no_failure, tests/test_onboard.py::test_a_crash_resumes_at_the_first_unfinished_step, tests/test_onboard.py::test_the_watchdog_restarts_a_dead_job_and_gives_up_with_a_reason, tests/test_onboard.py::test_a_tap_while_it_runs_starts_nothing_more, tests/test_onboard.py::test_a_complete_package_is_made_anew_on_request_and_a_failed_redo_keeps_the_old_map, tests/test_onboard.py::test_a_different_repository_of_the_same_name_is_refused_with_the_reason, tests/test_onboard.py::test_what_can_be_onboarded, tests/test_onboard.py::test_a_half_done_clone_never_looks_like_a_repository, tests/test_onboard.py::test_files_that_stay_unexplained_are_said_not_hidden, tests/test_onboard.py::test_the_analysis_is_asked_once_survives_a_restart_and_is_saved, tests/test_onboard.py::test_the_study_mode_can_not_run_anything, tests/test_onboard.py::test_the_app_shows_the_steps_and_promises_nothing_false, tests/test_onboard.py::test_hermes_reads_why_it_stopped_in_repos_overview, tests/test_onboard.py::test_removing_a_repository_takes_its_job_and_records, tests/test_onboard.py::test_a_long_wait_tells_the_owner_why, tests/test_onboard.py::test_a_repository_without_code_still_gets_the_whole_package, tests/test_onboard.py::test_a_new_address_is_copied_by_the_job_the_runner_starts_by_name]}
+    trace: [ops/onboard.py, ops/repos.py, ops/missions.py, ops/ua_digest.py, ops/claude_tasks.py, images/mission-control/server.py, images/mission-control/web/static/app.js, prompts/shared.md, prompts/opencode.md]

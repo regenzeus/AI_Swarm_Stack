@@ -32,6 +32,7 @@ MIN_TASKS = 3                                      # measured results count for 
 ROUTE_MARGIN = 0.15                                # another agent takes a step only when it did at least this much better
 PROMOTE_AFTER = 3                                  # TSK-16: tasks that met their definition of done before a design is proposed
 TEMP_MODELS = ("gpt-sub", "gpt-sub-fast")          # TSK-15: what a temporary agent may run on (the subscription only)
+# limit: stops, a temporary agent key's daily budget; subscription models cost nothing, so it only bites if a paid model appears
 TEMP_BUDGET = 0.02                                 # its key's daily budget (as the background jobs' keys, ops/keys.sh)
 TEMP_GRANTS = ()                                   # its tools: none (a model call); anything asked for beyond this is refused
 JUDGED_SOURCES = ("app", "gate")                   # and "rule:<id>": tasks with the owner's (or a rule's) definition of done
@@ -189,6 +190,7 @@ def evidence_of(c, t, occ=None):
     if calls:
         out.append(f"### What the agents ran and read ({len(calls)} tool calls in the run record)\n"
                    + "\n".join(f"- {a}: {tool} {TC.cut(arg, 160)}" for a, tool, arg in calls[:CALLS])  # cap: list (each call's start, marked; the next line says how many more)
+                   # limit: drops, tool calls named for the judge; the text says how many more and the task's page has them
                    + (f"\n- … and {len(calls) - CALLS} more (the task's page has every one)" if len(calls) > CALLS else ""))
     return f"{MEASURED}\n\n" + "\n\n".join(out) if out else ""
 

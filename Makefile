@@ -103,8 +103,8 @@ restore:          ## put the newest (or FILE=) backup back on this machine
 	bash ops/restore.sh apply $(FILE)
 
 # --- MVP 9: understand code ---
-understand:       ## clone + analyse a repo: make understand REPO=https://github.com/owner/name (or REPO=name)
-	$(call SECRETS_ALL,bash ops/understand.sh $(REPO))
+understand:       ## onboard a repo, the whole package (ops/onboard.py): make understand REPO=https://github.com/owner/name (or REPO=name)
+	$(call SECRETS_ALL,python3 ops/onboard.py run $(REPO))
 
 ua-enrich:        ## explain the files and functions of REPO's code map where Understand Anything left placeholders (resumes)
 	$(call SECRETS_ALL,python3 ops/ua_enrich.py /home/owner/code/$(REPO) $(REPO))

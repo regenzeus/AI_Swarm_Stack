@@ -10,7 +10,7 @@ manager): without it the backups cannot be opened.
 
 1. Windows: install WSL (`wsl --install -d Ubuntu-24.04`), Tailscale and Git; sign in to Tailscale.
 2. Copy the ai-stack repo to C:\AI\_staging\ai-stack (download it as a zip from Forgejo in the browser, or
-   `git clone http://192.168.1.80:3000/regenzeus/ai-stack.git`).
+   `git clone http://192.168.1.10:3000/regenzeus/ai-stack.git`).
 3. Stage 1 as root: `wsl -d Ubuntu-24.04 -u root -- bash /mnt/c/AI/_staging/ai-stack/ops/bootstrap-wsl-1-root.sh`,
    then `wsl --shutdown`.
 4. Put the age key in place before stage 2 (stage 2 would otherwise create a new one):

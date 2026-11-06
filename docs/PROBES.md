@@ -7,7 +7,7 @@ runs, what it found and the change it led to. Newest first.
 
 - **Question:** a briefing and a trial at once on 10 GB of RAM with the new 16 GB swap: where do time-outs start?
 - **Measured** (free, memory pressure and docker stats every 20 s, 18:48 to 18:58): the semver trial (task #118) and
-  the uranium briefing started together. The briefing filed in 3 min 51 s (323 items read, 68 new, 7 chosen); the
+  the copper briefing started together. The briefing filed in 3 min 51 s (323 items read, 68 new, 7 chosen); the
   trial ended in 9 min with 351 of 351, clean room ok. Memory in use peaked at 6.3 GB, at least 3.6 GB stayed
   available, swap peaked at 3.4 of 16 GB, memory pressure (some, 10 s) at 9 %. No time-out, no killed process, no
   failed step. The trial took 9 minutes against 2 alone on 1 Nov, with 8 steps and 31 model calls against 23: the
@@ -40,12 +40,12 @@ runs, what it found and the change it led to. Newest first.
 ## P6: breaking news, from the story to the phone (2 Nov 2026)
 
 - **Question:** how long from a breaking story to the owner knowing what it means?
-- **Measured** (the uranium rule's two firings of 2 Nov, from the bus, the firings and the notification log): the story
+- **Measured** (the copper rule's two firings of 2 Nov, from the bus, the firings and the notification log): the story
   was raised and the "rule fired" push sent in the same second (12:06:16, 13:21:02); the three-line answer reached the
   phone 3 min 15 s and 4 min 23 s later. But the Macusani story had been published by three outlets at 12:00 to 12:01
   and was raised at 13:21: about 80 minutes went to the news search's listing (the stack looks every 10 minutes).
 - **Found too:** the "done" message carried only the task's title, so the three lines were only in the app; and the
-  Cameco alert of 1 Nov (task 93) never ran: a restart had cut off its planning and it waited 27 hours (FND-117).
+  Acme Mining alert of 1 Nov (task 93) never ran: a restart had cut off its planning and it waited 27 hours (FND-117).
 - **Changed:** an alert's answer is in its message (cut visibly past 1,500 characters); a planning a restart cut off is
   planned again at the worker's start, or failed and said why when older than six hours. Open: the 80 minutes need the
   issuers' own feeds (FND-118).

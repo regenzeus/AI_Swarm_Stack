@@ -102,6 +102,7 @@ def sweep(now=None):
     d, done = load(), []
     live = roots()
     for root, title in live:
+        # limit: paces, wiki summaries a pass; the rest the next pass
         if len(done) >= PER_PASS:
             break
         try:

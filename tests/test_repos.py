@@ -90,10 +90,12 @@ def test_graph_is_reduced_for_drawing(app, monkeypatch):
 
 def test_overview_prefers_the_code_map_digest(app):
     c = TestClient(app.app)
-    assert c.get("/api/repo/tool/overview", headers=H).json() == {"source": "README.md", "markdown": "# Tool\n\nDoes things."}
+    assert c.get("/api/repo/tool/overview", headers=H).json() == {"source": "README.md", "markdown": "# Tool\n\nDoes things.", "analysis": ""}
     app.CODE_DOCS.mkdir()
     (app.CODE_DOCS / "tool.md").write_text("# Tool, explained")
     assert c.get("/api/repo/tool/overview", headers=H).json()["source"] == "code map digest"
+    (app.CODE_DOCS / "tool.analysis.md").write_text("# Tool: analysis")          # BLD-26: the written analysis comes with it
+    assert c.get("/api/repo/tool/overview", headers=H).json()["analysis"] == "# Tool: analysis"
 
 
 def test_node_details_have_source_links_and_code_map(app):
@@ -144,7 +146,7 @@ def test_every_repo_with_a_code_map_shows_it_clean_and_without_the_minimap():
     assert 'if (cmSwitching === name) return;' in app                                                       # one switch at a time
     sync = (root / "ops/graphify-sync.sh").read_text()
     assert 'echo "graphify-out/" >> "$repo/.git/info/exclude"' in sync                                    # no "working-tree changes" from our cache
-    assert "/ua_fix.mjs" in (root / "ops/understand.sh").read_text()
+    assert "ua_fix.mjs" in (root / "ops/onboard.py").read_text()
     fix = (root / "ops/ua_fix.mjs").read_text()
     assert "autoFixGraph" in fix and "fs.writeFileSync(file" in fix                                       # the viewer's corrections, saved
     docker = (root / "images/opencode/Dockerfile").read_text()

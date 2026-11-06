@@ -8,7 +8,7 @@ summary: Choose how each mission reaches you. A push to your phone, a Telegram m
 views: []
 ---
 Each mission has a **deliver** setting with one or more channels. You pick them when creating the mission
-and can change them any time ("send my uranium briefing by e-mail too").
+and can change them any time ("send my copper briefing by e-mail too").
 
 | Channel | What you get |
 |---|---|

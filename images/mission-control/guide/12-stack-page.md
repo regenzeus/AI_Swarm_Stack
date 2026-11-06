@@ -12,7 +12,7 @@ When something is off, this is where it shows.
 
 ## Tools
 
-Every tool the stack runs on, at the top of the page: Home Assistant, the NAS, the FRITZ!Box, Forgejo, Hermes admin,
+Every tool the stack runs on, at the top of the page: Home Assistant, the NAS, the router, Forgejo, Hermes admin,
 Phoenix and the rest. Each card says where it opens (**anywhere** through your Tailscale login, or **home Wi-Fi**)
 and has its main menus as buttons: Home Assistant's People, Integrations and Voice assistants are one tap away.
 **Go to…** finds a menu by what you want (people, wifi, tokens, logs) and Mission Control's own pages too; Enter opens

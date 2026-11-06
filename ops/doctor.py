@@ -29,6 +29,7 @@ C = M = None                                   # ops/crew.py and ops/missions.py
 RTDB = Path("/srv/ai/missions/app/runtime.db")
 WAIT_S = 50 * 60                               # how long one run waits for its Claude task (the queue is one at a time)
 PER_ISSUE = 16000                              # evidence characters per issue
+# limit: paces, issues one doctor pass looks at; the rest the next
 MAX_ISSUES = 12
 CLASSES = ("real", "expected", "noise", "external")
 ERRORISH = re.compile(r"error|exception|traceback|fail|timeout|timed out|limit|refused|denied|forbidden|\b4[02]\d\b|\b5\d\d\b|stall|kill", re.I)
@@ -258,7 +259,7 @@ def evidence(i):
                              f"ended {hhmm(r['ended'])} as {r['end_state']}. Summary {r['summary']}. Drift {r['drift']}")
                 if i["kind"] != "mission":                # a mission's events are in its timeline above
                     parts.append("Its events:\n" + event_lines(ev))
-                for k in kids[:6]:
+                for k in kids[:6]:  # cap: top
                     parts.append(f"Child run {k['run']} ({k['agent']}): {k['end_state']}, summary {k['summary']}")
         if since:
             s, u = since - 120, (until or since) + 120
@@ -300,7 +301,7 @@ def evidence_for(spec, budget=40000):
     """Evidence on request (a Claude task's `evidence`): comma-separated mission:<slug>, run:<runtime ref>, crew:<agent id>
     or minutes:<N>; read-only and redacted like the doctor's own. Unknown refs are said, not guessed."""
     out = []
-    for ref in [x.strip() for x in str(spec or "").split(",") if x.strip()][:6]:
+    for ref in TC.first([x.strip() for x in str(spec or "").split(",") if x.strip()], 6, "evidence references"):  # cap: untrusted (a task's references)
         m = EVIDENCE_REF.match(ref)
         if not m:
             out.append(f"## {ref}\n(not understood: use mission:<slug>, run:<ref>, crew:<agent id> or minutes:<N>)")
@@ -389,7 +390,7 @@ def outcome(issues, d):
             findings.append({"kind": "not diagnosed", "issue": f"{i['name']} · {i['issue']}: no diagnosis came back", "key": i["key"]})
             continue
         cls = x.get("class") if x.get("class") in CLASSES else "real"
-        ev = [cut(v, 2000) for v in x.get("evidence") or []][:6]  # cap: untrusted
+        ev = [cut(v, 2000) for v in x.get("evidence") or []][:6]  # cap: top (untrusted)
         fl = next((FILELINE.search(v) for v in ev if FILELINE.search(v)), None)
         conf = x.get("confidence") if x.get("confidence") in ("high", "medium", "low") else "low"
         findings.append({"kind": cls, "file": fl[1] if fl else None, "line": int(fl[2]) if fl else None,

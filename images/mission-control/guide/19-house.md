@@ -68,7 +68,7 @@ Alexa in between, a Home Assistant Voice speaker is the better device.
 ## Safety
 
 - **Protected things**: a plug or switch whose name says it powers the fridge, freezer, router, NAS, PC, server or
-  similar is shown with *protected*, and so is everything the FRITZ!Box and NAS integrations offer (guest Wi-Fi, port
+  similar is shown with *protected*, and so is everything the router and NAS integrations offer (guest Wi-Fi, port
   forwards, a device's internet access, the NAS's restart), whatever it is called. Hermes can read it but never switch
   it, also not through an Alexa command. You can, on the House page. Name your plugs clearly in the Tapo app (e.g.
   "Fridge") so this works.

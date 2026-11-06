@@ -76,7 +76,7 @@ def draft(f, card, ask, lessons=""):
         d = json.loads(m.group(0)) if m else {}
     except ValueError:
         return None
-    ins = [TC.cut(str(x).strip(), 300) for x in d.get("instructions") or [] if str(x).strip()][:3]  # cap: untrusted
+    ins = [TC.cut(str(x).strip(), 300) for x in d.get("instructions") or [] if str(x).strip()][:3]  # cap: top (untrusted)
     return {"instructions": ins, "why": TC.cut(str(d.get("why") or ""), 400)} if ins else None  # cap: untrusted
 
 

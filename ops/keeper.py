@@ -37,6 +37,7 @@ FIXTURE = ROOT / "eval/trials/memory.yaml"
 VAULT = Path(os.environ.get("MEMORY_VAULT", "/srv/vault"))
 HERMES = "aistack-hermes-1"
 BANK = "owner"
+# limit: paces, automatic memory changes a pass; the rest are listed and follow
 AUTO_MAX = 40          # automatic changes in long-term memory a pass; the rest are listed
 DISPUTES = 2           # refinement tasks a pass for contradictions open DISPUTE_DAYS
 RECHECKS = 1           # refinement tasks a pass for stale pages agents still read
