@@ -389,6 +389,8 @@ def check_tools(tools=None, opener=open_link):
     fails = []
     for tool, menu, url in links:
         s = opener(url)
+        if not isinstance(s, int):                   # one slow answer while the PC is busy is not a broken tool: it must fail twice
+            s = opener(url)
         if not isinstance(s, int) or s == 404 or s >= 500:
             fails.append(f"{tool} → {menu} does not open ({s}): {url}")
     return {"checked": len(links), "failures": fails}

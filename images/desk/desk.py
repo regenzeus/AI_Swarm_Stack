@@ -6,11 +6,14 @@ Steps: collect (feeds, Google News, GDELT) -> keep new items of the brief's wind
 briefing, a week for a weekly one) -> group duplicates into events ->
 triage against the key questions (gpt-sub-fast) -> read the chosen articles (trafilatura, private addresses refused)
 -> prices (Yahoo chart data; deterministic, never written by the model) -> write the report (gpt-sub, in the brief's
-language, citing only numbered sources) -> check citations.
+language, citing only numbered sources) -> check citations. A newsletter handed to the topic by the Inbox digest
+(/topic/mail, MIS-28) is one more event, read as data: never triaged, so a mail's text never steers what is fetched, and
+no link in it is ever opened; its source line names the mail.
 Runs on the "webonly" network: internet and LiteLLM only. Env: LITELLM_URL, VK_DESK.
 """
 import argparse, base64, datetime as dt, hashlib, html, ipaddress, json, os, re, socket, sqlite3, sys, time, urllib.parse, urllib.request
 import textcap as TC                              # visible caps (AGENTS.md, truncation)
+from email.utils import parsedate_to_datetime
 from pathlib import Path
 
 import feedparser
@@ -267,6 +270,31 @@ def collect(b):
     return items
 
 
+def from_mail(topic_dir, slug):
+    """The e-mails the Inbox digest handed to this topic that no report has read yet (ops/inbox.py), as items of their own."""
+    out = []
+    d = Path(topic_dir) / "mail"
+    words = lambda s: re.sub(r"[\[\]()<>|`\"]", " ", str(s or "")).split()     # a source line that a mail cannot turn into a link
+    for f in sorted(d.glob("*.md")) if d.is_dir() else []:
+        try:
+            m = yaml.safe_load(re.match(r"---\n(.*?)\n---\n", f.read_text(errors="replace"), re.S)[1])
+        except (OSError, TypeError, yaml.YAMLError) as e:
+            log(f"mail {f.name} not read: {type(e).__name__}: {e}")
+            continue
+        if m.get("report") or not m.get("passages"):
+            continue
+        try:
+            sent = parsedate_to_datetime(m.get("date") or "").astimezone(dt.timezone.utc)
+        except (TypeError, ValueError):
+            sent = None
+        raw = str(m.get("from") or "")
+        addr = re.search(r"@([\w.-]+)", raw)
+        sender = " ".join(words(re.sub(r"<[^>]*>", "", raw))) + (f" ({addr[1]})" if addr else "")
+        out.append({"title": " ".join(words(m.get("subject"))) or "(no subject)", "url": "", "source": f"E-mail: {sender}", "sender": sender, "via": "mail",
+                    "published": sent, "summary": "", "text": str(m["passages"]), "questions": m.get("questions") or [], "path": f"topics/{slug}/mail/{f.stem}"})
+    return out
+
+
 # ---------- new items, grouped into events ----------
 def key(it):
     return hashlib.sha1((it["url"] or it["title"]).encode()).hexdigest()
@@ -361,6 +389,8 @@ def article_url(url):
 
 
 def read(group):
+    if group["items"][0].get("via") == "mail":     # what the digest kept; a mail's links are never opened
+        return group["items"][0]["text"]
     for it in group["items"][:4]:
         it["url"] = article_url(it["url"])
     for it in group["items"]:
@@ -427,9 +457,15 @@ def write(b, chosen, rows, prev, date):
         for it in g["items"][:4]:
             sources.append(it)
             nums.append(len(sources))
+        first = g["items"][0]
+        mailed = first.get("via") == "mail"
+        text = g["text"]
+        if mailed:
+            text = "<untrusted_email>\n" + re.sub(r"</?untrusted_email>", "", text) + "\n</untrusted_email>"
         blocks.append(f"EVENT {i} (sources {', '.join(f'[{n}]' for n in nums)}; key questions {p.get('questions', [])}; "
-                      f"published {g['items'][0]['published'] or 'unknown'}):\nTITLE: {g['items'][0]['title']}\n"
-                      f"TEXT: {g['text']}")
+                      f"published {first['published'] or 'unknown'}):\n"
+                      + (prompt("MAIL_EVENT", sender=first["sender"])[0] + "\n" if mailed else "")
+                      + f"TITLE: {first['title']}\nTEXT: {text}")
     sections = [s for s in b["report"]["sections"] if s not in ("Prices", "Headline", "In 60 seconds")]
     text, ref, fills = prompt("BRIEFING", topic=b["topic"], mission=b["mission"], questions=json.dumps(b["key_questions"], ensure_ascii=False),
                               notes=b["notes"], previous=prev or "(none, this is the first briefing)", events="\n\n".join(blocks),
@@ -450,9 +486,16 @@ def write(b, chosen, rows, prev, date):
         if body:
             md += [f"## {s}", "", body, ""]
     md += ["## Sources", ""]
-    md += [f"{n}. [{it['title']}]({it['url']}) · {it['source']}"
-           + (f" · {it['published']:%d.%m. %H:%M} UTC" if it["published"] else "") for n, it in enumerate(sources, 1)]
+    md += [(f"{n}. E-mail from {it['sender']}: “{it['title']}”" if it.get("via") == "mail" else f"{n}. [{it['title']}]({it['url']}) · {it['source']}")
+           + (f" · {it['published']:%d.%m. %H:%M} UTC" if it["published"] else "")
+           + (f" · [[{it['path']}|the mail]]" if it.get("via") == "mail" else "") for n, it in enumerate(sources, 1)]
     return "\n".join(md) + "\n", r.get("telegram", ""), r.get("headline", "")
+
+
+def mail_used(report):
+    """{a mail's file: did the text cite it?}, from the report itself, for the topic's page (ops/inbox.py settle)."""
+    body, _, srcs = report.rpartition("## Sources")
+    return {m[2]: f"[{m[1]}]" in body for m in re.finditer(r"^(\d+)\. E-mail from .* · \[\[topics/[^/\]]+/mail/([^\]|]+)\|the mail\]\]$", srcs, re.M)}
 
 
 # ---------- Mission Control: event watching, alerts, e-mail ----------
@@ -578,6 +621,7 @@ def email(spec):
     """--email: a designed HTML e-mail of a report (no model call). stdin {"markdown", "kicker", "url"} -> stdout {"html", "text"}."""
     import markdown as mdlib
     text = re.sub(r"^---\n.*?\n---\n", "", spec["markdown"], flags=re.S).lstrip()   # FND-79: a blank line hid the headline
+    text = re.sub(r" · \[\[[^\]]+\]\]$", "", text, flags=re.M)                       # a mail's source line: its link works in the app only
     m = re.match(r"#\s+(.+)\n", text)
     headline = m.group(1) if m else spec.get("kicker", "")
     body = mdlib.markdown(text[m.end():] if m else text, extensions=["tables", "sane_lists"])
@@ -668,10 +712,12 @@ def main():
         return
     chosen = triage(b, groups) if groups else []
     log(f"triage kept {len(chosen)}")
+    mail = from_mail(a.topic, b["slug"])
+    chosen += [({"words": [], "items": [it]}, {"questions": it["questions"]}) for it in mail]   # the digest's check chose them
     for g, _ in chosen:
         g["text"] = read(g)
     rows = prices(b)
-    stats = {"items": len(items), "new": len(fresh), "events": len(groups), "chosen": len(chosen)}
+    stats = {"items": len(items), "new": len(fresh), "events": len(groups), "chosen": len(chosen), "mail": len(mail)}
     if a.collect:
         (out / f"{a.date}.collected.json").write_text(json.dumps({"chosen": freeze(chosen), "prices": rows, "stats": stats}, ensure_ascii=False))
         log(f"collected: {json.dumps(stats)}")
@@ -684,8 +730,9 @@ def main():
 def file_report(b, a, out, chosen, rows, stats):
     report, telegram, headline = write(b, chosen, rows, previous(a.topic, a.date), a.date)
     stats = {**stats, "chosen": len(chosen), "sources": report.count("](http")}
+    mail = mail_used(report)
     front = (f"---\ntopic: {b['slug']}\ndate: {a.date}\ntype: daily-briefing\nheadline: {json.dumps(headline, ensure_ascii=False)}\n"
-             f"stats: {json.dumps(stats)}\n---\n\n")
+             f"stats: {json.dumps(stats)}\n" + (f"mail: {json.dumps(mail, ensure_ascii=False)}\n" if mail else "") + "---\n\n")
     (out / f"{a.date}.md").write_text(front + report)
     (out / f"{a.date}.telegram.txt").write_text(telegram)
     log(f"report written: {stats}")

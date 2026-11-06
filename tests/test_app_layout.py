@@ -43,9 +43,9 @@ def test_the_swarm_s_views_are_under_agents_on_every_screen():
 
 def test_new_chat_starts_afresh_and_attaching_is_a_clip():
     head = re.search(r'<div class="chathead">.*?\n      </div>', JS, re.S)[0]
-    assert 'title="New chat" aria-label="New chat" data-newchat>${ic.compose}' in head and "${ic.plus}" not in head
+    assert "data-newchat" not in head and "${ic.plus}" not in head                     # not in the header: first in the list of chats (APP-43)
     assert 'aria-label="Attach pictures or documents">${ic.clip}<input type="file" id="cfile"' in JS
-    assert 'if (location.hash !== "#/chat") return;' in JS and '$$("[data-newchat]")' in JS   # (on #/chat the link changed nothing)
+    assert '<a class="btn primary cnew" href="#/chat?new=1" data-newchat>' in JS and '!route.q.get("new")' in JS
 
 
 def test_the_wiki_s_new_button_is_one_line_on_the_title_row():
@@ -84,3 +84,15 @@ def test_every_idea_is_in_one_list_under_agents():
     assert ideas.index("changesOpen.filter(passed)") < ideas.index("(b.open || []).map((p, n)") < ideas.index("changesOpen.filter((a) => !passed(a))")
     assert "function swImprove" not in SWARM and "${swLoopNumbers()}" in SWARM                   # its numbers are under Flow
     assert JS.count('href="#/swarm?tab=improve"') >= 2 and "const props = ideasWaiting()" in JS   # Code and Home only link to it
+
+
+def test_the_phone_chat_is_pinned_to_the_screen_and_the_title_has_its_own_width():
+    phone = re.search(r"@media \(max-width: 959px\) \{\s*/\* on a phone the chat's own bar is the only top bar.*?\n\}", CSS, re.S)[0]
+    assert "body.chatmode .chatwrap { position: fixed; top: 0;" in phone and "bottom: calc(65px + env(safe-area-inset-bottom))" in phone
+    assert "100dvh" not in phone.split("body.chatmode .chatwrap", 1)[1].split("}", 1)[0]    # went stale when the keyboard closed
+    assert "body.chatmode { overflow: hidden;" in phone
+    assert "interactive-widget=resizes-content" in HTML                                     # the keyboard resizes the layout
+    assert re.search(r"max-height: 560px\) \{[^}]*\n  body.chatmode .tabbar \{ display: none; \}", CSS)
+    head = re.search(r'<div class="chathead">.*?\n      </div>', JS, re.S)[0]
+    assert head.index('id="ctitle"') < head.index('class="chatstat"') < head.index('id="chatchip"')
+    assert "new ResizeObserver(() => { if (atEnd) pane.scrollTop = pane.scrollHeight; }).observe(pane);" in JS

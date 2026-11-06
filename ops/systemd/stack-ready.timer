@@ -1,6 +1,6 @@
 [Unit]
-Description=Run the stack readiness check 2 minutes after boot
+Description=Bring the stack online after a boot: wait for it, then open the gate for the jobs
 [Timer]
-OnBootSec=2min
+OnBootSec=30s
 [Install]
 WantedBy=timers.target

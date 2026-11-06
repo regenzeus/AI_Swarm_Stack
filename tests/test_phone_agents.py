@@ -239,3 +239,51 @@ def test_approve_all_is_refused_from_the_ai_phone_and_the_phone_runs_steps_in_tu
     assert '("phone_cleanup_do", "phone_cleanup_do_all") and from_ai_phone(request)' in server
     phone = (Path(__file__).resolve().parent.parent / "images/phone/phone.py").read_text()
     assert 'if CLEANUP.exists() and not _cleaning else []' in phone
+
+
+def approved_step(PA, n=0):
+    PA.C.save("phone-cleanup", actions=PA.merge([], PA.steps_of(FACTS, TODAY)))
+    sid = PA.C.agent_file("phone-cleanup")["actions"][n]["id"]
+    PA.handle({"action": "phone_cleanup_do", "id": sid, "source": "app"})
+    return sid
+
+
+def test_an_approved_step_can_be_undone_until_the_phone_starts_it_and_never_runs(PA):
+    sid = approved_step(PA)
+    f = PA.PHONE_DIR / "cleanup" / f"{sid}-1.json"
+    assert f.exists()
+    assert PA.handle({"action": "phone_cleanup_undo", "id": sid}) == {"undone": sid}
+    s = next(x for x in PA.C.agent_file("phone-cleanup")["actions"] if x["id"] == sid)
+    assert s["status"] == "open" and not f.exists() and any("undone" in e for e in PA.events)
+    with pytest.raises(ValueError, match="nothing to undo"):
+        PA.handle({"action": "phone_cleanup_undo", "id": sid})
+    PA.handle({"action": "phone_cleanup_do", "id": sid, "source": "app"})              # approved again: a new hand-over
+    assert (PA.PHONE_DIR / "cleanup" / f"{sid}-2.json").exists()
+
+
+def test_once_the_phone_has_started_a_step_undo_says_it_is_too_late_and_the_step_shows_it(PA):
+    sid = approved_step(PA)
+    (PA.PHONE_DIR / "cleanup" / f"{sid}-1.started").write_text("now")
+    with pytest.raises(ValueError, match="already started"):
+        PA.handle({"action": "phone_cleanup_undo", "id": sid})
+    assert (PA.PHONE_DIR / "cleanup" / f"{sid}-1.json").exists()
+    assert PA.sync() is True
+    assert next(x for x in PA.C.agent_file("phone-cleanup")["actions"] if x["id"] == sid)["started"] is True
+
+
+def test_approve_all_takes_failed_steps_too_when_they_were_shown(PA):
+    sid = approved_step(PA)
+    acts = PA.C.agent_file("phone-cleanup")["actions"]
+    next(x for x in acts if x["id"] == sid).update(status="failed", result="not connected")
+    PA.C.save("phone-cleanup", actions=acts)
+    assert sid in PA.handle({"action": "phone_cleanup_do_all", "ids": [sid], "source": "app"})["approved"]
+
+
+def test_the_app_shows_approved_with_undo_and_says_when_the_phone_is_not_connected():
+    app = (Path(__file__).resolve().parent.parent / "images/mission-control/web/static/app.js").read_text()
+    html = app.split("function phoneStepsHtml(c)", 1)[1].split("function bindCrew()", 1)[0]
+    assert "data-pundo" in html and "Approved</span>" in html and "On the AI phone" in html
+    assert "The AI phone is not connected, so nothing runs yet." in html
+    sig = app.split("function agentSigOf()", 1)[1].split("\n}", 1)[0]
+    assert "c.actions" in sig and "s.status" in sig                  # the page redraws when a step changes, not only when reopened
+    assert '"phone_cleanup_undo"' in (Path(__file__).resolve().parent.parent / "images/mission-control/server.py").read_text()

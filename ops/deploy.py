@@ -114,6 +114,15 @@ def new_timers(units, dest):
     return [Path(f).name for f in units if f.endswith(".timer") and not (Path(dest) / Path(f).name).exists()]
 
 
+def unit_target(f, dest):
+    """Where a file of ops/systemd goes: docker-<name>.conf is a drop-in for Docker (it takes effect at Docker's next start;
+    a deploy never restarts Docker), the rest are units."""
+    name = Path(f).name
+    if name.startswith("docker-") and name.endswith(".conf"):
+        return Path(dest) / "docker.service.d" / name.removeprefix("docker-")
+    return Path(dest) / name
+
+
 def swarm_restart(changed):
     """FND-37: the swarm service reads the agent cards when it starts, through a single-file bind mount that keeps the
     file git replaced. A changed config/agents.yaml (an agent change, a new card) needs a restart to reach the agents."""
@@ -173,7 +182,9 @@ def main(old, new):
         dest = Path.home() / ".config/systemd/user"
         fresh = new_timers(units, dest)
         for f in units:
-            (dest / Path(f).name).write_text((R / f).read_text())
+            target = unit_target(f, dest)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text((R / f).read_text())
         run("systemctl", "--user", "daemon-reload")
         for n in fresh:                                           # a new scheduled job runs without a hand step
             run("systemctl", "--user", "enable", "--now", n)

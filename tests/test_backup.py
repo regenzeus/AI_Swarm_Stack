@@ -1,5 +1,6 @@
 """PLT-13 (FND-76): a file the backup user cannot read is skipped and named, and the backup still completes; any other
 copy error still fails it. rsync is replaced by a fake that answers like the real one did on 2026-10-31."""
+import re
 import os
 import subprocess
 from pathlib import Path
@@ -32,4 +33,11 @@ def test_any_other_copy_error_still_fails_the_backup(tmp_path):
     r = copy(tmp_path, "rsync error: error in socket IO (code 10)\n", 10)
     assert r.returncode == 10
     assert copy(tmp_path, "", 0).returncode == 0
-    assert '"$(dirname "$0")/backup-copy.sh" /srv/ai/ $STAGE/srv-ai/' in (ROOT / "ops/backup.sh").read_text()
+    backup = (ROOT / "ops/backup.sh").read_text()
+    assert '"$(dirname "$0")/backup-copy.sh" /srv/ai/ $STAGE/srv-ai/' in backup
+    live = re.search(r"^live_tar\(\) .*$", backup, re.M)[0]                                  # a file changed while tar read it: not a failed backup
+    for code, want in ((0, 0), (1, 0), (2, 2)):
+        script = f"set -euo pipefail\ntar() {{ return {code}; }}\n{live}\nlive_tar -cf x y\necho on\n"
+        r = subprocess.run(["bash", "-c", script], capture_output=True, text=True)
+        assert r.returncode == want and ("on" in r.stdout) == (want == 0)
+    assert "live_tar -C /srv -cf $STAGE/vault.tar vault" in backup and "live_tar -C ~ -cf $STAGE/home.tar" in backup

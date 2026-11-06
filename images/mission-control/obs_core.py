@@ -37,7 +37,7 @@ def base(name):
 NO_ARGS = {"skills_list", "todo_list", "initial_instructions",
            "browse_look", "browse_back", "mail_access", "house_status", "health_issues", "missions_overview", "builds_overview",
            "improvement_proposals", "repos_overview", "phone_look", "phone_apps", "phone_storage", "phone_apps_report",
-           "phone_files", "swarm_context", "ledger_find", "board_inbox"}
+           "phone_files", "swarm_context", "ledger_find", "board_inbox", "windows_status"}
 
 
 def empty_call(e):
@@ -186,8 +186,9 @@ def _streak(states):
     return n
 
 
-def judge(name, kind, runs, now=None, interval=None, enabled=True):
-    """runs: newest first, each {start, seconds, state, tokens?, warnings?, error?}. → {status, success_7d, issues}."""
+def judge(name, kind, runs, now=None, interval=None, enabled=True, up_since=None):
+    """runs: newest first, each {start, seconds, state, tokens?, warnings?, error?}. → {status, success_7d, issues}.
+    up_since: when this boot began; a job could not have run while the PC was off, so it is overdue only counted from then."""
     now = now or time.time()
     week = [r for r in runs if r.get("start", 0) > now - 7 * 86400]
     done = [r for r in week if r.get("state") in ("ok", "failed")]
@@ -199,7 +200,7 @@ def judge(name, kind, runs, now=None, interval=None, enabled=True):
         issues.append({"kind": "failing", "text": f"failed {streak} times in a row" + (f": {why}" if why else "")})
     elif runs and runs[0].get("state") == "failed":
         issues.append({"kind": "failed", "text": "the last run failed" + (f": {runs[0]['error']}" if runs[0].get("error") else "")})
-    if enabled and interval and runs and now - runs[0].get("start", now) > 2.5 * interval + 3600:
+    if enabled and interval and runs and now - max(runs[0].get("start", now), up_since or 0) > 2.5 * interval + 3600:
         issues.append({"kind": "overdue", "text": "did not run when scheduled"})
     hist = [r for r in runs[1:21] if r.get("state") == "ok"]  # cap: parse (the last 20 runs give the usual duration)
     last = runs[0] if runs else None

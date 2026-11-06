@@ -27,7 +27,7 @@ from textcap import tail                    # visible caps and input limits (AGE
 
 C = M = None                                         # ops/crew.py and ops/missions.py (set by crew.run / missions.main)
 PHONE_DIR = Path(os.environ.get("PHONE_HOST_DIR", "/srv/ai/phone"))
-ACTIONS = {"phone_cleanup_do", "phone_cleanup_do_all", "phone_cleanup_dismiss"}
+ACTIONS = {"phone_cleanup_do", "phone_cleanup_do_all", "phone_cleanup_dismiss", "phone_cleanup_undo"}
 MIN_DELETE, MIN_APP, MIN_CACHES = 200e6, 50e6, 300e6  # smaller steps are not worth a tap
 MAX_APPS = 12
 APPROVAL_S = 30 * 60
@@ -162,28 +162,46 @@ def approve(req):
         raise ValueError("no such cleanup step")
     if s["status"] not in ("open", "failed"):
         raise ValueError(f"this step is {s['status']}")
-    _hand_over(s, req, time.time() + APPROVAL_S)
+    _hand_over(s, req, time.time() + BATCH_MAX_S)
     C.save("phone-cleanup", actions=acts)
-    M.event("phone", "", f"Phone cleanup: approved “{s['title']}” ({gb(s['size'])}); the AI phone does it now", title="Crew")
+    M.event("phone", "", f"Phone cleanup: approved “{s['title']}” ({gb(s['size'])}); it waits its turn on the AI phone", title="Crew")
     return {"approved": sid}
 
 
 def approve_all(req):
-    """The owner's Approve all: every open step (not failed or dismissed ones) at once; the phone runs them in turn.
-    The app sends the ids it showed, so a step that appeared after the owner looked is never approved with them."""
+    """The owner's Approve all: every step shown that is open or failed (not dismissed ones) at once; the phone runs them in
+    turn. The app sends the ids it showed, so a step that appeared after the owner looked is never approved with them."""
     _approvable(req)
     acts = C.agent_file("phone-cleanup").get("actions") or []
     shown = {str(i) for i in req.get("ids") or []}
-    todo = [s for s in acts if s["status"] == "open" and s["id"] in shown]
+    todo = [s for s in acts if s["status"] in ("open", "failed") and s["id"] in shown]
     if not todo:
         raise ValueError("no open cleanup steps")
-    expires = time.time() + min(BATCH_MAX_S, APPROVAL_S * len(todo))
+    expires = time.time() + BATCH_MAX_S
     for s in todo:
         _hand_over(s, req, expires)
     C.save("phone-cleanup", actions=acts)
     size = sum(s.get("size") or 0 for s in todo)
     M.event("phone", "", f"Phone cleanup: approved all {len(todo)} steps ({gb(size)}); the AI phone does them one after another", title="Crew")
     return {"approved": [s["id"] for s in todo], "bytes": size}
+
+
+def undo(req):
+    """The owner's Undo on an approved step the phone has not started: its hand-over file goes, so it never runs. Once the
+    phone has started it (the marker it writes first), it is too late: an uninstall can't be taken back."""
+    sid = str(req.get("id", ""))
+    acts = C.agent_file("phone-cleanup").get("actions") or []
+    s = next((x for x in acts if x["id"] == sid and x["status"] == "approved"), None)
+    if not ITEM.match(sid) or not s:
+        raise ValueError("this step is not waiting: nothing to undo")
+    name = f"{sid}-{s.get('attempt', 1)}"
+    if (cdir() / f"{name}.started").exists() or (cdir() / f"{name}.result.json").exists():
+        raise ValueError("the AI phone has already started this step: it can't be undone")
+    (cdir() / f"{name}.json").unlink(missing_ok=True)
+    s.update(status="open", result="", started=False)
+    C.save("phone-cleanup", actions=acts)
+    M.event("phone", "", f"Phone cleanup: approval of “{s['title']}” undone; nothing ran", title="Crew")
+    return {"undone": sid}
 
 
 def dismiss(req):
@@ -200,7 +218,7 @@ def dismiss(req):
 
 def handle(req, c=None):
     a = req.get("action")
-    return approve(req) if a == "phone_cleanup_do" else approve_all(req) if a == "phone_cleanup_do_all" else dismiss(req)
+    return approve(req) if a == "phone_cleanup_do" else approve_all(req) if a == "phone_cleanup_do_all" else undo(req) if a == "phone_cleanup_undo" else dismiss(req)
 
 
 def sync():
@@ -213,6 +231,10 @@ def sync():
             continue
         name = f"{s['id']}-{s.get('attempt', 1)}"
         rf = PHONE_DIR / "cleanup" / f"{name}.result.json"
+        started = (PHONE_DIR / "cleanup" / f"{name}.started").exists()
+        if started != bool(s.get("started")):       # "On the AI phone…", and no more Undo
+            s["started"] = started
+            changed = True
         if rf.exists():
             try:
                 r = json.loads(rf.read_text())

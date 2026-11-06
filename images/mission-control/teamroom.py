@@ -10,6 +10,8 @@ A line is {ts, type, actor, target, verb, title, text, detail, state, ref}; its 
   work    an agent's (or the checker's, or the stack's) work on the shared artifacts: proposes, readies, ships, proves
   you     your decisions and messages
   status  a run that ended with no one asking for it, and the stack's routine bookkeeping (off in the app at first)
+interactions.py adds use, hand and tell, and your chat turns, and every line says in `to` who it reached: the map's
+lines and the pair filter are counted from that (target is only what the line's head shows).
 """
 import json
 
@@ -72,7 +74,8 @@ def event_line(e):
         ref["help"] = e["seq"]
     if kind == "help_verdict":
         ref["judges"] = p.get("seq")
-    return {"ts": e["ts"], "type": typ, "actor": who(e["actor"], cls), "target": owner if others else "", "verb": verb,
+    to = [owner] if others or (cls == "owner" and owner and owner != "system") else [str(p["agent"])] if kind == "pause" and p.get("agent") else []
+    return {"ts": e["ts"], "type": typ, "actor": who(e["actor"], cls), "target": owner if others else "", "to": to, "verb": verb,
             "title": e.get("title") or "", "text": text or "",
             "detail": f'Why {owner} would not see it, it says: {p["help"].get("unseen", "")}' if p.get("help") else "", "state": "", "ref": ref}
 
@@ -81,11 +84,11 @@ def message_line(m):
     """One Board message as a line (whole: the owner reads everything, SWM-11)."""
     rec = m.get("recipients")
     rec = json.loads(rec) if isinstance(rec, str) else rec or []
-    rec = ["you" if str(r).startswith("owner") else r for r in rec]
+    rec = ["you" if str(r).startswith("owner") else r for r in rec if not str(r).startswith("room:")]
     ctx = m.get("context") or ""
-    to = ", ".join(rec) if not ctx.startswith("room:") else "#" + ctx[5:]
+    shown = rec + (["#" + ctx[5:]] if ctx.startswith("room:") else [])      # who it reached, and the room it went through
     mine = m.get("sender_cls") == "owner"
-    return {"ts": m["ts"], "type": "you" if mine else "talk", "actor": "you" if mine else m["sender"], "target": to,
+    return {"ts": m["ts"], "type": "you" if mine else "talk", "actor": "you" if mine else m["sender"], "target": ", ".join(shown), "to": rec,
             "verb": ACT_VERB.get(m.get("act") or "inform", m.get("act") or "tells"), "title": "", "text": m.get("text") or "",
             "detail": m.get("state_reason") or "", "state": m.get("state") or "",
             "ref": {"context": ctx, **({"artifact": m["artifact_id"]} if m.get("artifact_id") else {})}}
@@ -93,20 +96,21 @@ def message_line(m):
 
 def ask_line(x):
     """A tool call between agents (runrecord.delegations): the question, and the answer whole in detail."""
-    return {"ts": x["ts"], "type": "ask", "actor": x["from"], "target": x["to"], "verb": "asks", "title": "", "text": x.get("ask") or "",
-            "detail": x.get("answer") or "", "state": x.get("state") or "", "ref": {"run": x["run"]}}
+    return {"ts": x["ts"], "type": "ask", "actor": x["from"], "target": x["to"], "to": [x["to"]], "verb": "asks", "title": "", "text": x.get("ask") or "",
+            "detail": x.get("answer") or "", "state": x.get("state") or "", "ref": {"run": x["run"]}, "world": x.get("world") or "real", "certainty": x.get("certainty") or "recorded"}
 
 
 def run_line(r):
     """A finished run no one asked for (a schedule, an event): status."""
-    return {"ts": r.get("ended") or r["started"], "type": "status", "actor": r["lane"], "target": "", "verb": f'ran {r.get("name") or r["run"]}',
-            "title": "", "text": "", "detail": "", "state": r.get("state") or "", "ref": {"run": r["run"]}}
+    return {"ts": r.get("ended") or r["started"], "type": "status", "actor": r["lane"], "target": "", "to": [], "verb": f'ran {r.get("name") or r["run"]}',
+            "title": "", "text": "", "detail": "", "state": r.get("state") or "", "ref": {"run": r["run"]}, "world": r.get("world") or "real"}
 
 
-def lines(feed, asks, runs):
-    """Every line of the window, oldest first."""
+def lines(feed, asks, runs, extra=None):
+    """Every line of the window, oldest first (extra: the lines interactions.py adds)."""
     out = [x for x in (event_line(e) for e in (feed or {}).get("events") or []) if x]
     out += [message_line(m) for m in (feed or {}).get("messages") or []]
     out += [ask_line(x) for x in asks or []]
-    out += [run_line(r) for r in runs or [] if r.get("ended") and not r.get("by")]
+    out += [run_line(r) for r in runs or [] if r.get("ended") and not r.get("by") and (r.get("cause") or {}).get("kind") != "you"]
+    out += extra or []
     return sorted(out, key=lambda x: x["ts"])

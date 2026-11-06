@@ -38,7 +38,13 @@ EXCLUDE = {
 # Addresses that are placeholders or test fixtures, not anyone's mailbox. A new one stops the publish until it is here.
 ALLOW_EMAILS = {"owner@example.com", "test@example.com", "test@example.org", "anna@example.com", "noreply@anthropic.com",
                 "builder@ai-stack.local", "x@spam.ru", "service@paypal.de", "secret@github.com", "newsletter@x.com",
-                "n@shop.de", "journeys@stack.local", "trials@stack.local", AUTHOR[1]}   # the journeys' and trials' own identities
+                "n@shop.de", "journeys@stack.local", "trials@stack.local", "a@example.com", "friend@example.org",
+                "news@u.example", "a@shop.example", "b@bank.example", AUTHOR[1]}   # the journeys' and trials' own identities
+# The one place a binary file may be (a screenshot for the public page): it cannot be scanned as text, so it comes as it is,
+# only as an image, without metadata, and small. docs/PUBLISHING.md says how such a picture is made. Any other binary stops.
+ASSETS = "docs/screenshots/"
+ASSET_TYPES = {".jpg": b"\xff\xd8\xff", ".png": b"\x89PNG\r\n\x1a\n"}
+ASSET_MAX = 1_000_000
 # Words that hold a private term by chance; the scan matches terms inside words, so each one is named here.
 ALLOW_WORDS = {"mmarco"}                                         # the mMARCO dataset in a reranker model's name
 # Fake tokens in tests (the redaction tests need something token-shaped to redact).
@@ -133,6 +139,20 @@ def scan(files, terms):
     return out
 
 
+def asset_problems(assets):
+    """{path: bytes} -> problems: only an image of the allowed kinds, nothing hidden in it (a camera's or an editor's metadata), small."""
+    out = []
+    for path, data in sorted(assets.items()):
+        magic = ASSET_TYPES.get(Path(path).suffix.lower())
+        if not magic or not data.startswith(magic):
+            out.append(f"{path}: not an image of an allowed kind")
+        elif len(data) > ASSET_MAX:
+            out.append(f"{path}: {len(data):,} bytes, {ASSET_MAX:,} at most")
+        elif any(m in data[:4096] for m in (b"Exif", b"xmpmeta", b"tEXt", b"iTXt", b"eXIf", b"Photoshop")):   # cap: parse: metadata sits at the start of an image
+            out.append(f"{path}: holds metadata")
+    return out
+
+
 def example(enc_text, source):
     """A sops file -> the same names with empty values (the names a new install fills in; no value, no ciphertext)."""
     names = [m.group(1) for m in re.finditer(r"^([A-Za-z_][A-Za-z0-9_]*):", enc_text, re.M) if m.group(1) != "sops"]
@@ -142,16 +162,20 @@ def example(enc_text, source):
             + "".join(f'{n}: ""\n' for n in names))
 
 
-def build(head="HEAD", terms=None, archive=None):
-    """The committed tree at head -> ({path: text} of the public snapshot, the paths git marks executable)."""
+def build(head="HEAD", terms=None, archive=None, assets=None):
+    """The committed tree at head -> ({path: text} of the public snapshot, the paths git marks executable). The images of
+    ASSETS go into `assets`, {path: bytes}; left out when it is not given."""
     terms = load_map() if terms is None else terms
     raw = archive if archive is not None else subprocess.run(["git", "-C", str(ROOT), "archive", "--format=tar", head],
                                                               check=True, capture_output=True).stdout
     files, executable = {}, set()
     with tarfile.open(fileobj=io.BytesIO(raw)) as tar:
         for m in tar.getmembers():
-            if m.isfile():
-                files[m.name] = tar.extractfile(m).read().decode("utf-8")    # every tracked file is text; a binary stops it
+            if m.isfile() and m.name.startswith(ASSETS) and Path(m.name).suffix.lower() in ASSET_TYPES:
+                if assets is not None:
+                    assets[m.name] = tar.extractfile(m).read()
+            elif m.isfile():
+                files[m.name] = tar.extractfile(m).read().decode("utf-8")    # every other tracked file is text; a binary stops it
                 if m.mode & 0o111:
                     executable.add(redact(m.name, terms))
     for path in EXCLUDE:
@@ -174,10 +198,14 @@ GENERATED = [(["python3", "ops/req.py", "render"], "requirements/REQUIREMENTS.md
              (["python3", "ops/api_doc.py"], "docs/API.md")]                          # are drawn again from the public ones
 
 
-def write(files, executable, dest):
+def write(files, executable, dest, assets=None):
     """The snapshot on disk, its generated documents drawn again from it. -> {path: text} as written."""
     if dest.exists():
         shutil.rmtree(dest)
+    for path, data in (assets or {}).items():
+        p = dest / path
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_bytes(data)
     for path, text in files.items():
         p = dest / path
         p.parent.mkdir(parents=True, exist_ok=True)
@@ -247,11 +275,12 @@ def committed():
 def main(mode):
     head = committed()
     terms = load_map()
-    files, executable = build(head, terms)
+    assets = {}
+    files, executable = build(head, terms, assets=assets)
     dest = WORK / "tree"
-    files = write(files, executable, dest)
-    problems = scan(files, terms)
-    print(f"snapshot of {head[:8]}: {len(files)} files, {len(problems)} problem{'s' if len(problems) != 1 else ''}")
+    files = write(files, executable, dest, assets)
+    problems = scan({**files, **{p: "" for p in assets}}, terms) + asset_problems(assets)    # an image: its name, and its kind
+    print(f"snapshot of {head[:8]}: {len(files)} files and {len(assets)} images, {len(problems)} problem{'s' if len(problems) != 1 else ''}")
     for p in problems:
         print("  " + p)
     if problems:

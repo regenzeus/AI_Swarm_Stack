@@ -25,11 +25,14 @@ builders never change the same file at once.
 
 ## The map
 
-Who works with whom. Each **dot is an agent**, coloured by its job; the bigger, the more it ran in the window, and a red
-ring means some of its runs failed (a pulsing ring: running now). A **line** joins two agents that worked together: its
-arrow points from the one who asked (the mission asks the scout to research), its **number** says how often, and it is
-dashed when they only wrote to each other on the Board. **Tap a dot** to see everything that agent said and did, **tap a
-line** for what passed between those two: both open Activity, already filtered. Pick 24 hours, 3 days or 7 days.
+Who works with whom, you at the top. The dots sit in **fixed rows**, each agent in the same place every time. Each **dot is an agent**, coloured by its job; the bigger, the more real work it did in
+the window (tests stay out, and one piece of work counts once), and a red ring means its newest run failed (a pulsing ring:
+running now). A **line** joins two that worked together: an arrow for each direction, its **number** how often. It holds
+what one agent asks another, what an agent uses through another (Main on the AI phone, Inbox on Gmail), what you asked and
+decided, and, **dotted**, hand-overs through a file or a plan (a mail filed for the curator, a plan's next step, an idea to
+the builder); **dashed** is the Board. **Messages to you** adds what each agent told you, **Tests** adds the test runs. **Tap a dot** for everything that
+agent said and did, **tap a line** for what passed between those two: both open Activity, and the rows are exactly what the
+number counts. Under the map: for how many runs the cause is known, and how many are unknown. Pick 24 hours, 3 days or 7 days.
 **Ideas too** adds the ideas each agent wrote to in the last 30 days as small dots (amber open, green proved); tap one
 for its timeline. **Every connection in words** lists each line as a sentence (*mission asked to research scout · 170
 times · last 41 min ago*), the agents that worked alone, and, with ideas shown, the ideas several agents work on.
@@ -44,10 +47,10 @@ What happened, with one set of filters for both of its parts: the **runs** (when
 said and did). A dot or a line on the map, a team card's *Its activity*, or a link from *Needs you* opens it already
 filtered; the filters are in the address, so a reload or a shared link shows the same.
 
-**When each ran**: one row per agent, one bar per run, coloured by how it ended (done, failed, stuck, waited for a usage
-limit, running). Tap a bar to see the run: when, how long, its model calls and tokens, what started it (a mission's web
+**When each ran** (tap to open): one row per agent, one bar per run, swipe for earlier days, coloured by how it ended (done,
+failed, stuck, waited for a usage limit, running, stopped; a run the shutdown cut off is stopped, at its last activity). Tap a bar to see the run: when, how long, its model calls and tokens, what started it (a mission's web
 research is started by the mission) and what it started, with lines to them. *Open its log* shows every step; *What
-they said* filters the room to the two agents. Fold it away when you only want the room.
+they said* filters the room to the two agents.
 
 The team room: one timeline of what your agents do together, newest first. Nobody has to post here; it is drawn from
 their work, so an agent that stays in its own lane only shows up with its own work. Each line says who did what to whom:

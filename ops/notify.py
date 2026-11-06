@@ -17,12 +17,14 @@ import subprocess
 import sys
 import time
 import urllib.request
+import uuid
 from pathlib import Path
 
 STATE = Path("/srv/ai/state")
 PREFS, LOG, HELD, KEYS = (STATE / "notify-prefs.json", STATE / "notifications.jsonl", STATE / "notify-held.jsonl",
                           STATE / "notify-keys.json")
 EVENTS = Path("/srv/ai/missions/public/events.jsonl")         # the app reads it and pushes what is marked push
+TOLD = Path("/srv/ai/missions/public/told.jsonl")             # SWM-113: who told the owner what, for the map (this log's state folder isn't mounted there)
 CATEGORIES = {
     "approval": "Approvals: the AI phone, Gmail, purchases (always sent, also in quiet hours)",
     "result": "Results: briefings, mission reports, digests, chat answers that waited",
@@ -83,13 +85,19 @@ def category_of(kind, title=""):
 
 def _log(**row):
     STATE.mkdir(parents=True, exist_ok=True)
+    line = json.dumps({"ts": int(time.time()), **row}, ensure_ascii=False) + "\n"
     with LOG.open("a") as f:
-        f.write(json.dumps({"ts": int(time.time()), **row}, ensure_ascii=False) + "\n")
+        f.write(line)
+    try:
+        with TOLD.open("a") as f:
+            f.write(line)
+    except OSError as e:                                 # the map's copy must never stop a message
+        print(f"notify: {TOLD} not written ({type(e).__name__})", file=sys.stderr)
 
 
-def record(channel, category, title, text, decision):
+def record(channel, category, title, text, decision, by="mission"):
     """A delivery made outside send() (the e-mail of a report) goes into the same log, so the app shows it was sent."""
-    _log(channel=channel, category=category, title=title, text=text, decision=decision)
+    _log(channel=channel, category=category, title=title, text=text, decision=decision, by=by)
 
 
 def _once(key, every, now):
@@ -118,11 +126,11 @@ def decide(channel, category, p=None, now=None):
     return "held" if quiet(p, now) else "send"
 
 
-def push_allowed(kind, text, title="", category=None):
+def push_allowed(kind, text, title="", category=None, by=""):
     """missions.event(push=True): the push only if the owner's preferences and quiet hours allow it; logged."""
     cat = category or category_of(kind, title)
     d = decide("push", cat)
-    _log(channel="push", category=cat, title=title, text=text, decision="sent" if d == "send" else d)
+    _log(channel="push", category=cat, title=title, text=text, decision="sent" if d == "send" else d, by=by)
     return d == "send"
 
 
@@ -139,6 +147,27 @@ def _telegram_bot(text_html, buttons):
         return bool(json.load(urllib.request.urlopen(req, timeout=30)).get("ok"))
     except Exception as e:                               # noqa: BLE001 - any failure falls back to Hermes' sender
         print(f"notify: Telegram Bot API failed ({type(e).__name__}), sending through Hermes", file=sys.stderr)
+        return False
+
+
+def telegram_document(name, data, caption="", mime="text/plain"):
+    """MIS-25: a mission's file as a Telegram document (the Bot API's sendDocument, multipart). Sent only after the
+    result's own message went out (send() applied the owner's policy to that one). True when Telegram took it."""
+    tok, chat = os.environ.get("TELEGRAM_BOT_TOKEN"), (os.environ.get("TELEGRAM_ALLOWED_USERS") or "").split(",")[0]
+    if not (tok and chat):
+        return False
+    b = "aistack" + uuid.uuid4().hex
+    parts = [f'--{b}\r\nContent-Disposition: form-data; name="chat_id"\r\n\r\n{chat}\r\n'.encode()]
+    if caption:
+        parts.append(f'--{b}\r\nContent-Disposition: form-data; name="caption"\r\n\r\n{caption[:1000]}\r\n'.encode())  # cap: api (Telegram's caption limit is 1024)
+    parts += [f'--{b}\r\nContent-Disposition: form-data; name="document"; filename="{name}"\r\nContent-Type: {mime}\r\n\r\n'.encode(),
+              data, f"\r\n--{b}--\r\n".encode()]
+    try:
+        req = urllib.request.Request(f"https://api.telegram.org/bot{tok}/sendDocument", data=b"".join(parts),
+                                     headers={"Content-Type": f"multipart/form-data; boundary={b}"})
+        return bool(json.load(urllib.request.urlopen(req, timeout=60)).get("ok"))
+    except Exception as e:                               # noqa: BLE001 - the file stays in the app; the card says not sent
+        print(f"notify: Telegram document {name} failed ({type(e).__name__})", file=sys.stderr)
         return False
 
 
@@ -170,24 +199,24 @@ def _event(kind, slug, text, push, title):
                             "text": text, "push": push}, ensure_ascii=False) + "\n")
 
 
-def send(text, category="system", *, title="", slug="", buttons=(), key=None, every=86400, telegram_on=True,
+def send(text, category="system", *, by="stack", title="", slug="", buttons=(), key=None, every=86400, telegram_on=True,
          push_on=False, event_kind=None, is_html=False, now=None):
-    """One notification. text is plain unless is_html (Telegram's HTML subset). push_on also shows it in the activity
-    feed (event_kind) and pushes it when allowed. key: the same key is sent at most once per `every` seconds.
-    -> {channel: decision}."""
+    """One notification. by: who sends it, an agent's id or "stack" (every caller names it: tests/test_interactions.py).
+    text is plain unless is_html (Telegram's HTML subset). push_on also shows it in the activity feed (event_kind) and
+    pushes it when allowed. key: the same key is sent at most once per `every` seconds. -> {channel: decision}."""
     if category not in CATEGORIES:
         raise ValueError(f"unknown notification category {category!r}")
     now = now or time.time()
     plain = re.sub(r"<[^>]+>", "", html.unescape(text)) if is_html else text
     if key and not _once(f"{category}:{key}", every, now):
-        _log(channel="any", category=category, title=title, text=plain, decision="duplicate", key=key)
+        _log(channel="any", category=category, title=title, text=plain, decision="duplicate", key=key, by=by)
         return {"telegram": "duplicate", "push": "duplicate"}
     p, out = prefs(), {}
     if push_on:
         d = decide("push", category, p, now)
         _event(event_kind or category, slug, plain, d == "send", title)
         out["push"] = "sent" if d == "send" else d
-        _log(channel="push", category=category, title=title, text=plain, decision=out["push"])
+        _log(channel="push", category=category, title=title, text=plain, decision=out["push"], by=by)
     if telegram_on:
         d = decide("telegram", category, p, now)
         body = text if is_html else html.escape(text)
@@ -201,7 +230,7 @@ def send(text, category="system", *, title="", slug="", buttons=(), key=None, ev
             out["telegram"] = "off"
         else:
             out["telegram"] = "sent" if telegram(_fit(body), buttons) else "failed"
-        _log(channel="telegram", category=category, title=title, text=plain, decision=out["telegram"])
+        _log(channel="telegram", category=category, title=title, text=plain, decision=out["telegram"], by=by)
     return out
 
 
@@ -217,7 +246,7 @@ def flush(now=None):
                           for r in rows)
         ok = telegram(f"🌙 <b>During quiet hours ({len(rows)})</b>\n{lines}")
         _log(channel="telegram", category="system", title="During quiet hours", text=f"{len(rows)} held messages",
-             decision="sent" if ok else "failed")
+             decision="sent" if ok else "failed", by="stack")
     tmp.unlink()
     return len(rows)
 
@@ -244,6 +273,6 @@ if __name__ == "__main__":
             cat, args = args[1], args[2:]
         if args[:1] == ["--"]:
             args = args[1:]
-        res = send(" ".join(args), cat)
+        res = send(" ".join(args), cat, by=os.environ.get("NOTIFY_BY") or "stack")
         sys.exit(0 if res.get("telegram") in ("sent", "held", "off", "duplicate") else 1)
     sys.exit(__doc__)

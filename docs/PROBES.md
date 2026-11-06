@@ -99,3 +99,18 @@ runs, what it found and the change it led to. Newest first.
   failed runs will read. Proposed: end such a run as done and raise the finding through the health board's alert.
 - **Also measured:** the doctor's evidence was refused by the same guard twice, and its upserts six times as duplicates
   of open ideas (the Ledger asking it to update or link them instead): correct refusals.
+
+## P8: a cold start of the PC, rehearsed (4 Nov 2026)
+
+- **Why:** the owner restarted the PC and got a morning of failures (FND-119). A real cold start can't be run on demand, so
+  the rehearsal holds what failed: containerd's database stays locked while WSL boots, which makes Docker's starts fail the
+  same way ("timeout waiting for containerd to start").
+- **How:** a throwaway user unit holds `flock` on `meta.db` for two minutes from the start of the boot (`Before=docker.service`),
+  then `wsl --shutdown` and the Windows keep-alive task. Pass: Docker comes up by itself after the lock goes, no unit failed,
+  no run failed, no health alert, one "online" message, one line in `/srv/ai/state/boots.jsonl`, `make smoke` passes.
+- **Result (12:01 to 12:06):** the lock made containerd fail just as it did that morning. Docker failed 6 times, came up on
+  its 7th try as soon as the lock went (145 s after boot) and did not need touching. The runner waited 3 min 45 s, then
+  started; frequent jobs were skipped, none failed; no run failed, no health alert went out; the one message was "AI stack
+  online 4 min after the start: 26 of 26 services running. Docker needed 7 tries."; `make smoke` 11 of 11.
+- **Not covered:** a real cold start of Windows, which can't be run from here. The first one reports itself on the Stack
+  page and in `/srv/ai/state/boots.jsonl`.

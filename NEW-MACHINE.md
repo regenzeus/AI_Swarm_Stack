@@ -67,6 +67,11 @@ docker build --build-arg HERMES_IMAGE="$HERMES_IMAGE" -t aistack/builder:1 image
 The explicit override keeps the builder on the pin in `versions.env` if it later differs from the Dockerfile
 default (as `ops/deploy.py` already does). Build the remaining local images before starting the full stack.
 
+## Windows desk and Remote Control
+
+Run `powershell -ExecutionPolicy Bypass -File \\\\wsl.localhost\\Ubuntu-24.04\\home\\owner\\ai-stack\\ops\\windows\\desk-setup.ps1` once,
+then `C:\\AI\\ops\\desk-signin.ps1` to sign Claude Code in. See `ops/windows/AGENTS.md` (PLT-31, PLT-32).
+
 ## Windows host-probe task
 
 After copying `ops/windows/host-probe.ps1` to `C:\AI\ops\host-probe.ps1`, register and start the task from a

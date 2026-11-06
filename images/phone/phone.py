@@ -5,8 +5,9 @@ phone_swipe, phone_key, phone_open, phone_apps. Safety, in this order:
   - Stop: /phone/STOP (Mission Control's Phone page) refuses every tool and disconnects.
   - Block list (/phone/blocklist.txt): banking, investment, payment, password and settings apps are never read
     or touched; if one comes to the front, the phone is sent to the home screen.
-  - Approval: every action that changes something waits for the owner's tap in Mission Control (push to the
-    main phone), unless the owner allowed actions for a few minutes. No answer in 15 minutes = no.
+  - Approval: the owner approves whole jobs, not single steps (PHN-26): an agent asks once with phone_task, and a tap,
+    swipe, typing or opening an app runs only inside that job or the owner's free mode; otherwise it is refused and the
+    agent is told to ask for the job. No answer in 15 minutes = no.
   - Money guard: a tap on anything that buys, pays, orders or subscribes always waits for its own approval (a time
     window never covers it); password, card and bank fields are never typed into: the owner does that himself.
   - Purchases: the one exception to "every money tap asks". When the owner approved a shopping proposal in Mission
@@ -18,7 +19,7 @@ phone_swipe, phone_key, phone_open, phone_apps. Safety, in this order:
   - Log: every call, decision and result in /phone/log.jsonl, with a screenshot of what was approved.
 The container can reach this one phone and nothing else (entrypoint.sh firewall).
   - Cleanup steps: the owner approves one step at a time on the Phone cleanup agent's page (ops/phone_agents.py);
-    the runner writes /phone/cleanup/<step>-<n>.json and the phone runs exactly that step once within 30 minutes
+    the runner writes /phone/cleanup/<step>-<n>.json and the phone runs exactly that step once, within 4 hours
     (cleanup_do: delete files by age at a deletable path, uninstall an app the owner installed, or trim caches), with the
     block list and path checks of the tools, and leaves <step>-<n>.result.json with the space freed.
 State for the app: /phone/state.json; pending approvals /phone/pending; decisions /phone/decisions; requests from
@@ -372,6 +373,10 @@ BOOT_SETUP = [   # (what the owner approves, adb commands): the AI phone comes b
     ("Exempt Tailscale and KeepADB from battery saving, so Android never stops them",
      [["shell", "dumpsys", "deviceidle", "whitelist", f"+{TAILSCALE}"],
       ["shell", "dumpsys", "deviceidle", "whitelist", f"+{KEEPADB}"]]),
+    # FND-120: the pairing of 28 Oct stopped working 7 days later, Android's default; Developer options calls this
+    # "Disable adb authorization timeout"
+    ("Keep the pairing: switch off Android's limit that drops a paired computer after 7 days",
+     [["shell", "settings", "put", "global", "adb_allowed_connection_time", "0"]]),
 ]
 
 
@@ -418,7 +423,8 @@ def boot_status():
     idle = adb("shell", "dumpsys", "deviceidle", "whitelist")
     S["boot"] = {"keepadb": "versionName" in pkg, "keepadb_allowed": "WRITE_SECURE_SETTINGS: granted=true" in pkg,
                  "tailscale_always_on": adb("shell", "settings", "get", "secure", "always_on_vpn_app").strip() == TAILSCALE,
-                 "no_battery_limit": f",{TAILSCALE}," in idle and f",{KEEPADB}," in idle}
+                 "no_battery_limit": f",{TAILSCALE}," in idle and f",{KEEPADB}," in idle,
+                 "keeps_pairing": adb("shell", "settings", "get", "global", "adb_allowed_connection_time").strip() == "0"}
     return S["boot"]
 
 
@@ -442,19 +448,20 @@ async def _boot_setup():
         log(tool="phone_setting", result=f"not changed: {S['error'] or 'the phone is not connected'}")
         return
     st = await asyncio.to_thread(boot_status)
-    done = [st["keepadb_allowed"], st["tailscale_always_on"], st["no_battery_limit"]]
+    done = [st["keepadb_allowed"], st["tailscale_always_on"], st["no_battery_limit"], st["keeps_pairing"]]
     if not st["keepadb"]:
         log(tool="phone_setting", result="KeepADB is not installed on the phone")
         return
-    for (what, cmds), ok in zip(BOOT_SETUP, done):
-        if ok:
-            continue
-        if (err := await guard("phone_setting", {"what": what}, "so the AI phone always starts in AI mode", always="⚙ Phone setting: ")):
-            log(tool="phone_setting", args={"what": what}, result=f"not changed: {err}")
-            return
-        out = [await asyncio.to_thread(adb, *c) for c in cmds]
-        log(tool="phone_setting", args={"what": what}, result="done" + "".join(f"; {o}" for o in out if o.strip() and "Events injected" not in o))
-        await asyncio.to_thread(boot_status)              # its ✓ shows on the Phone page at once, before the next card
+    todo = [(what, cmds) for (what, cmds), ok in zip(BOOT_SETUP, done) if not ok]
+    if not todo:
+        return
+    what = " · ".join(w for w, _ in todo)                 # PHN-26: one Allow for the whole set-up
+    if (err := await guard("phone_setting", {"what": what}, "so the AI phone always starts in AI mode", always="⚙ Phone setting: ")):
+        log(tool="phone_setting", args={"what": what}, result=f"not changed: {err}")
+        return
+    out = [await asyncio.to_thread(adb, *c) for _, cmds in todo for c in cmds]
+    log(tool="phone_setting", args={"what": what}, result="done" + "".join(f"; {o}" for o in out if o.strip() and "Events injected" not in o))
+    await asyncio.to_thread(boot_status)                  # the ✓s show on the Phone page at once
 
 
 def let_screen_sleep():
@@ -508,7 +515,8 @@ async def connect():
     if not await phone_online():
         S.update(connected=False, serial="", error="The phone does not answer (switched off, battery empty, or off Wi-Fi/Tailscale).")
         return False
-    for port in await scan_ports():               # other ports answer too (the pairing dialog, phone services)
+    ports = await scan_ports()
+    for port in ports:                            # other ports answer too (the pairing dialog, phone services)
         try:
             out = await asyncio.to_thread(adb, "connect", f"{HOST}:{port}", timeout=10)
         except subprocess.TimeoutExpired:
@@ -525,8 +533,17 @@ async def connect():
                 voice_status()
                 return True
         await asyncio.to_thread(adb, "disconnect", f"{HOST}:{port}")
-    S.update(connected=False, serial="", error="No wireless debugging port answered. Is Wireless debugging on, and the phone paired?")
+    S.update(connected=False, serial="", error=not_in(ports))
     return False
+
+
+def not_in(ports):
+    """Why connect() found no way in, in the owner's words. A port that answers and refuses can't be told from a phone service
+    (FND-120), so with ports open both causes are named."""
+    if ports:
+        return ("The phone answers but won't let the stack in. On it, check that Wireless debugging is on. If it is, the pairing "
+                "has lapsed (Android drops it after 7 days by default): pair it again on this page.")
+    return "No wireless debugging port answered. Is Wireless debugging on, and the phone paired?"
 
 
 def pair(port, code):
@@ -595,7 +612,7 @@ async def control_loop():
                         log(tool="phone_shop_open", args={"url": TC.cut(pa["url"], 300), "app": pa["pkg"]}, result=f"opened for purchase {pa['id']} (approved by the owner)")  # cap: untrusted
             for f in sorted(CLEANUP.glob("c-*.json")) if CLEANUP.exists() and not _cleaning else []:
                 cid = f.stem                               # one step at a time: Approve all hands over many at once
-                if CLEANUP_ID.match(cid) and not (CLEANUP / f"{cid}.result.json").exists():
+                if CLEANUP_ID.match(cid) and not (CLEANUP / f"{cid}.result.json").exists() and cleanup_ready(f):
                     _cleaning.add(cid)
                     asyncio.create_task(cleanup_do(cid))   # minutes of find/delete: not in this loop
                     break
@@ -634,18 +651,34 @@ def delete_files(target, older_than_days=0):
     return len(found), len(found) - len(left), sum(n for n, _, _ in found) - sum(n for n, _, _ in left)
 
 
-async def cleanup_do(cid):
-    """One step the owner approved in Mission Control: exactly that, once, within its 30 minutes; refused like the tools
-    (Stop, locked phone, block list, Android's own folders, system apps)."""
-    res = CLEANUP / f"{cid}.result.json"
+def cleanup_ready(f):
+    """A step waits for the phone while it is not connected (PHN-24: Approve all failed every step in turn on 4 Nov); one
+    whose approval has run out goes through, only to say so."""
+    if S["connected"]:
+        return True
     try:
+        return time.time() > json.loads(f.read_text()).get("expires", 0)
+    except (OSError, ValueError):
+        return False
+
+
+async def cleanup_do(cid):
+    """One step the owner approved in Mission Control: exactly that, once, before its approval runs out; refused like the
+    tools (Stop, locked phone, block list, Android's own folders, system apps). The marker it writes first ends the owner's
+    Undo; a hand-over file that is gone by then was undone."""
+    res, started = CLEANUP / f"{cid}.result.json", CLEANUP / f"{cid}.started"
+    try:
+        started.write_text(now())
         a = json.loads((CLEANUP / f"{cid}.json").read_text())
     except (OSError, ValueError):
+        started.unlink(missing_ok=True)
+        _cleaning.discard(cid)
         return
     kind, args = a.get("kind"), a.get("args") or {}
 
     def done(ok, text, freed=0):
         res.write_text(json.dumps({"id": cid, "at": now(), "ok": ok, "text": text, "freed": max(0, int(freed))}, ensure_ascii=False))
+        started.unlink(missing_ok=True)
         log(tool="phone_cleanup", args={"kind": kind, **args}, why=a.get("title", ""),
             decision=f"approved by the owner in Mission Control (step {cid})", result=text)
     try:
@@ -790,8 +823,23 @@ def outward(target_pkg=None, text=None):
     return OUTWARD
 
 
+HANDS = ("phone_tap", "phone_swipe", "phone_key", "phone_type", "phone_open", "phone_url")
+
+
+def needs_a_job(tool, money, always):
+    """PHN-26: the owner approves jobs, so a step of the hands never gets a card of its own. Still their own card: money,
+    settings, deleting, and private text in free mode."""
+    return tool in HANDS and not money and (not always or (always == OUTWARD and time.time() >= S["trust_until"]))
+
+
+def whole_job(fg):
+    return (f"Nothing was done: this step is not part of a job the owner approved ({fg} is in front). The owner approves whole jobs, not "
+            "single steps: call phone_task once with the whole job (what it is, every app it needs, the exact texts to type, how "
+            "many minutes), then carry on.")
+
+
 def covered(tool, fg):
-    """Why the owner's standing permission covers a tap, swipe or key here, or "" (then it asks)."""
+    """Why the owner's standing permission covers a tap, swipe or key here, or "" (then it needs a job, PHN-26)."""
     if time.time() < S["trust_until"]:
         return "the owner's free mode"
     t = active_task()
@@ -815,6 +863,8 @@ async def guard(tool, args, why, acting=True, mark=None, target_pkg=None, money=
         if (b := blocked(pkg, hard=tool == "phone_task" and pkg in args.get("apps", []))):   # a task may name a task: app
             if pkg == fg:
                 adb("shell", "input", "keyevent", "KEYCODE_HOME")
+                if tool == "phone_setting":              # the owner, just paired, is still in Settings; a setting touches no app
+                    continue
             log(tool=tool, args=args, why=why, result=f"refused: {pkg} is on the block list ({b})")
             return f"Refused: {pkg} is a blocked app (banking, payments, passwords or settings). The AI phone never uses it."
     if not acting:
@@ -828,6 +878,9 @@ async def guard(tool, args, why, acting=True, mark=None, target_pkg=None, money=
     if pa and not money and not always and fg == pa["pkg"] and tool in ("phone_tap", "phone_swipe", "phone_key"):
         log(tool=tool, args=args, why=why, decision=f"allowed (step of purchase {pa['id']}, approved by the owner)")
         return None
+    if needs_a_job(tool, money, always):
+        log(tool=tool, args=args, why=why, result="refused: not part of an approved job")
+        return whole_job(fg)
     aid = uuid.uuid4().hex[:16]
     WAITING.add(aid)
     shot = await asyncio.to_thread(screenshot, mark)
@@ -839,7 +892,8 @@ async def guard(tool, args, why, acting=True, mark=None, target_pkg=None, money=
         while time.time() - t0 < WAIT:
             if stopped():
                 return "The owner switched the AI phone off."
-            if not money and not always and (c := covered(tool, fg)):      # PHN-20: his permission came while it waited
+            if (tool == "phone_task" and time.time() < S["trust_until"]) or (not money and not always and (c := covered(tool, fg))):      # PHN-20: his permission came while it waited
+                c = "the owner's free mode" if tool == "phone_task" else c
                 log(tool=tool, args=args, why=why, shot=shot, decision=f"allowed ({c}, given while it waited)")
                 return await asyncio.to_thread(wake)
             d = DECISIONS / f"{aid}.json"
@@ -1005,7 +1059,7 @@ def deletable(path):
 
 # ---------- MCP tools ----------
 mcp = MCPServer("phone")
-WHY = "why: one sentence for the owner, who approves each action on their phone."
+WHY = "why: one sentence for the owner, who reads it in the log and on any card."
 
 
 def look_text(els):
@@ -1204,7 +1258,8 @@ async def phone_done(summary: str) -> str:
 @mcp.tool(description="Ask the owner ONCE for a whole phone task, before its first action: what the task is, the apps it needs (package "
                       "names or words from phone_apps), the exact texts you will type (empty if none) and how many minutes (5 to 60). "
                       "After his one Allow, taps, swipes and keys in those apps, opening them and typing those exact texts run without "
-                      "asking; anything else still asks. Money, passwords and blocked apps are never covered. End it with phone_done. " + WHY)
+                      "asking; a step outside it is refused until you ask again for the wider job. Single steps can't be approved: every job starts here. "
+                      "Money, passwords and blocked apps are never covered. End it with phone_done. " + WHY)
 async def phone_task(task: str, apps: list[str], why: str, texts: list[str] = [], minutes: int = 30) -> str:
     known = await asyncio.to_thread(launchable)
     pkgs, missing = [], []
@@ -1221,7 +1276,8 @@ async def phone_task(task: str, apps: list[str], why: str, texts: list[str] = []
     S["task"] = {**args, "until": time.time() + args["minutes"] * 60, "at": now(), "actions": 0}
     save_state()
     return (f"Allowed for {args['minutes']} minutes: in {', '.join(pkgs)} you may tap, swipe, press keys, open them and type "
-            f"{'only: ' + '; '.join(args['texts']) if args['texts'] else 'nothing'} without asking. Anything else still asks. "
+            f"{'only: ' + '; '.join(args['texts']) if args['texts'] else 'nothing'} without asking. Anything else is refused until you ask "
+            "again for the wider job. "
             "Call phone_done when finished.")
 
 

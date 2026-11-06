@@ -246,7 +246,24 @@
   {
    "at": "2026-10-30",
    "baseline": "moved verbatim from config/hermes/configure.sh (phone rule)",
-   "sha": "f9d94279e314"
+   "sha": "d48a419b35ea"
+  },
+  {
+   "at": "2026-11-04",
+   "cases": 4,
+   "from": "d48a419b35ea",
+   "judge": {
+    "equal": 1,
+    "new": 3,
+    "old": 0
+   },
+   "model": "gpt-sub",
+   "passed": true,
+   "sha": "3229e50d4218",
+   "valid": [
+    4,
+    4
+   ]
   }
  ],
  "main/SHOPPING_RULE": [
@@ -375,6 +392,20 @@
    "at": "2026-10-30",
    "baseline": "moved verbatim from ops/mission_extras.py SYNTH",
    "sha": "83c3555ee7f0"
+  }
+ ],
+ "mission/FILES": [
+  {
+   "at": "2026-11-03",
+   "baseline": "new: appended to DEEP_PLAN / DEEP_STEP / TASK only when the owner asked the mission for files (MIS-24); the existing texts are unchanged",
+   "sha": "0efa2150bfdc"
+  }
+ ],
+ "mission/FILES_PLAN": [
+  {
+   "at": "2026-11-03",
+   "baseline": "new: appended to DEEP_PLAN / DEEP_STEP / TASK only when the owner asked the mission for files (MIS-24); the existing texts are unchanged",
+   "sha": "757bcc5e3610"
   }
  ],
  "mission/SHOPPING": [
@@ -637,6 +668,20 @@
    "at": "2026-10-30",
    "baseline": "moved verbatim from ops/wikis.py SUMMARY",
    "sha": "855fecff5fbf"
+  }
+ ],
+ "inbox/TOPIC_CHECK": [
+  {
+   "at": "2026-11-04",
+   "baseline": "new: judges a newsletter that names a watched topic (MIS-28); no earlier text",
+   "sha": "f32378f146ef"
+  }
+ ],
+ "desk/MAIL_EVENT": [
+  {
+   "at": "2026-11-04",
+   "baseline": "new: said in front of a handed e-mail among the BRIEFING's events (MIS-28); BRIEFING's own text is unchanged",
+   "sha": "1d57fe959399"
   }
  ]
 }

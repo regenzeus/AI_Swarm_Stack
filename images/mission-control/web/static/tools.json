@@ -42,6 +42,6 @@
   ["Team", "#/swarm?tab=agents", "cards roles"], ["Ideas", "#/swarm?tab=improve", "proposals"], ["Tasks", "#/tasks", "plans"],
   ["New mission", "#/new", "create"], ["Chat", "#/chat", "hermes talk voice"], ["Wiki", "#/wiki", "knowledge vault"],
   ["Code", "#/build", "builds deploy"], ["Stack", "#/system", "tools health resources"], ["House", "#/house", "alexa echo lights voice"],
-  ["AI phone", "#/phone", "s22 android"], ["Telemetry", "#/telemetry", "tokens runs cost"], ["Guide", "#/guide", "help how"]
+  ["AI phone", "#/phone", "s22 android phone pair pairing connect wireless debugging approve allow job cleanup"], ["Telemetry", "#/telemetry", "tokens runs cost"], ["Guide", "#/guide", "help how"]
  ]
 }

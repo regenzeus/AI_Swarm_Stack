@@ -18,8 +18,11 @@ docker exec aistack-hindsight-db-1 pg_dumpall -U hindsight > $STAGE/hindsight.sq
 # /srv/ai, without what ops/backup-copy.sh names; a file the backup user cannot read is skipped and logged, not a failed
 # backup (PLT-13: one did that on 2026-10-29, the AI phone's key, and another on 2026-10-31, a container's file in workbench/)
 "$(dirname "$0")/backup-copy.sh" /srv/ai/ $STAGE/srv-ai/
-tar -C ~ -cf $STAGE/home.tar ai-stack hermes-skills code .config/systemd/user
-tar -C /srv -cf $STAGE/vault.tar vault
+# The vault and the repositories stay in use: tar's exit 1 says a file changed while it read it, and the archive is still good
+# (6 Nov 2026: the vault's git, the night's backup lost). Anything worse stops the backup.
+live_tar() { local rc=0; tar "$@" || rc=$?; [ "$rc" -le 1 ] || exit "$rc"; }
+live_tar -C ~ -cf $STAGE/home.tar ai-stack hermes-skills code .config/systemd/user
+live_tar -C /srv -cf $STAGE/vault.tar vault
 docker pause aistack-hermes-1 aistack-openwebui-1 aistack-qmd-1 aistack-opencode-1 >/dev/null
 docker run --rm --network none -v $STAGE:/stage \
   -v aistack_hermes-home:/vol/hermes-home:ro -v aistack_litellm-auth:/vol/litellm-auth:ro \

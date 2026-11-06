@@ -12,7 +12,7 @@ ADD https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js /app/web/static/ven
 ADD https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js /app/web/static/vendor/purify.min.js
 ADD https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js /app/web/static/vendor/d3.min.js
 ADD https://cdn.jsdelivr.net/npm/@fontsource-variable/inter@5.0.20/files/inter-latin-wght-normal.woff2 /app/web/static/vendor/inter.woff2
-COPY server.py obs_core.py runrecord.py otlp.py textcap.py teamroom.py /app/
+COPY server.py obs_core.py runrecord.py otlp.py textcap.py teamroom.py interactions.py /app/
 COPY web /app/web
 COPY guide /app/guide
 COPY --from=icons /out /app/web/static/icons

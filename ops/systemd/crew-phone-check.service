@@ -2,7 +2,8 @@
 Description=Crew: Phone check: battery, storage, patch, connection, screen awake (weekly, Monday)
 [Service]
 Type=oneshot
-TimeoutStartSec=1h
+TimeoutStartSec=2h
 Environment=DOCKER_HOST=unix:///run/user/1000/docker.sock
 WorkingDirectory=/home/owner/ai-stack
+ExecCondition=/usr/bin/python3 /home/owner/ai-stack/ops/stack_gate.py --wait 1800 --slot 20
 ExecStart=/usr/local/bin/sops exec-env secrets/secrets.enc.yaml "sops exec-env secrets/agent-keys.enc.yaml \"python3 ops/crew.py phone-check\""

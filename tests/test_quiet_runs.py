@@ -47,7 +47,7 @@ def test_every_email_outcome_is_recorded(runner, monkeypatch):
     """FND-78: a report's e-mail left no trace when it was sent, so its delivery could only be assumed."""
     import mission_extras as X
     rows, stages = [], []
-    monkeypatch.setattr(X.N, "record", lambda *a: rows.append(a))
+    monkeypatch.setattr(X.N, "record", lambda *a, **k: rows.append(a))
     monkeypatch.setattr(X.M.RTM, "stage", lambda title, *a, **k: stages.append((title, k.get("kind"))))
     for k in ("GMAIL_ADDRESS", "GMAIL_APP_PASSWORD", "MAIL_TO"):
         monkeypatch.delenv(k, raising=False)

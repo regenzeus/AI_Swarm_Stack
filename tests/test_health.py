@@ -45,7 +45,8 @@ def C(tmp_path, monkeypatch):
     monkeypatch.setattr(crew, "status", lambda: [])
     monkeypatch.setattr(crew, "recovery_alarms", lambda items: [])         # not this machine's swap or images
     monkeypatch.setattr(crew, "_health", {"t": 0, "data": {}})
-    probs = [{"agent": "main", "root": "hermes:main:s1", "issues": [{"kind": "stalled", "text": "stopped answering", "run": "hermes:main:s1", "at": 100}]},
+    monkeypatch.setattr(crew, "quiet", lambda: False)                      # a settled stack: alerts go out
+    probs =[{"agent": "main", "root": "hermes:main:s1", "issues": [{"kind": "stalled", "text": "stopped answering", "run": "hermes:main:s1", "at": 100}]},
              {"agent": "scout", "root": "hermes:scout:x", "issues": [{"kind": "tool-error", "text": "tool error", "run": "hermes:scout:x", "at": 90}]},
              {"agent": "mission:old", "root": "mission-run:3", "issues": [{"kind": "partial-read", "text": "partial read", "run": "mission-run:3", "at": 80}]}]
     import runtime

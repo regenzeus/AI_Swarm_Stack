@@ -29,7 +29,17 @@ def post(url, body, key, timeout=300):
         return json.load(r)
 
 
+def mark_test(q):
+    """SWM-112: this question is a replay, not the owner's: the map keeps it apart from real work (interactions.py)."""
+    try:
+        with open("/srv/ai/missions/public/test-prompts.jsonl", "a") as f:
+            f.write(json.dumps({"ts": time.time(), "prompt": q[:60]}, ensure_ascii=False) + "\n")   # cap: id (a question's head names it)
+    except OSError:
+        pass
+
+
 def ask(q, chat):
+    mark_test(q)
     body = {"model": "hermes-agent", "messages": [{"role": "system", "content": f"chat {chat}"},
                                                   {"role": "user", "content": q}]}
     for attempt in range(4):

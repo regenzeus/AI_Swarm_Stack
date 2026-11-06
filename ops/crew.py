@@ -36,6 +36,7 @@ from textcap import limit, tail                    # visible caps and input limi
 import textcap as TC
 import prompts as P                               # MEM-11: the agent prompts live in prompts/<owner>.md
 import notify as N                                # OBS-16: the one notification path
+import stack_gate as SG                           # PLT-28: is the stack up, and when did this boot begin
 
 M = I = None                                      # ops/missions.py and ops/improve.py (set by missions.main or run())
 STACK = Path.home() / "ai-stack"
@@ -195,7 +196,7 @@ def unit_status(a, units):
     start, end = ts(svc.get("ExecMainStartTimestamp")), ts(svc.get("ExecMainExitTimestamp"))
     trig = ts(tim.get("LastTriggerUSec"))         # survives a restart of WSL (the service's own times do not)
     running = svc.get("ActiveState") in ("activating", "active") and svc.get("SubState") in ("start", "running")
-    result = "running" if running else ("ok" if trig else "never") if not start else "ok" if svc.get("Result") == "success" else "failed"
+    result = "running" if running else ("ok" if trig else "never") if not start else "ok" if svc.get("Result") in ("success", "exec-condition") else "failed"   # exec-condition: the stack gate skipped it (PLT-28)
     sched = schedule_of(a["unit"])
     nxt = ts(tim.get("NextElapseUSecRealtime"))
     if not nxt and sched.startswith("every ") and (start or trig):      # interval timers have no calendar time
@@ -271,6 +272,26 @@ def state():
     return {"crew": status()}
 
 
+def set_cause(aid, kind, who="", why=""):
+    """SWM-111: why the next run of this job starts: a unit started by hand or by an alert says so here (systemd passes
+    nothing on). A run that finds no word was started by its timer."""
+    d = OUT / "cause"
+    d.mkdir(parents=True, exist_ok=True)
+    (d / f"{aid}.json").write_text(json.dumps({"kind": kind, "who": who, "why": why, "t": time.time()}, ensure_ascii=False))
+
+
+def take_cause(aid, now=None):
+    f = OUT / "cause" / f"{aid}.json"
+    try:
+        c = json.loads(f.read_text())
+        f.unlink()
+    except (OSError, ValueError):
+        return {"kind": "clock"}
+    if (now or time.time()) - c.pop("t", 0) > 600:        # an old word: its run never started (the job was paused)
+        return {"kind": "clock"}
+    return c
+
+
 def handle(req, c):
     a = req.get("action")
     if a == "crew_run":
@@ -280,6 +301,7 @@ def handle(req, c):
         if ag.get("thread") == "improve":
             I.save_scan(requested=M.now().isoformat(timespec="seconds"))
         else:
+            set_cause(ag["id"], "you", why="Run now")
             p = subprocess.run(["systemctl", "--user", "start", "--no-block", f"{ag['unit']}.service"], capture_output=True, text=True)
             if p.returncode:
                 raise ValueError(f"could not start it: {p.stderr.strip()}")
@@ -311,7 +333,7 @@ def handle(req, c):
         return r
     if a == "health_ack":
         return acknowledge([str(k)[:200] for k in (req.get("keys") or [])][:100])  # cap: id
-    if a in ("phone_cleanup_do", "phone_cleanup_do_all", "phone_cleanup_dismiss"):
+    if a in ("phone_cleanup_do", "phone_cleanup_do_all", "phone_cleanup_dismiss", "phone_cleanup_undo"):
         import phone_agents as PA
         PA.C, PA.M = sys.modules[__name__], M
         _cache["t"] = 0
@@ -358,11 +380,11 @@ def refresh_history(c):
             continue
         runs = hist.get(a["id"], [])
         f = agent_file(a["id"]) if a.get("agent") else {}
-        if runs and f.get("result", "").startswith("failed") and (runs[0]["state"] != "failed" or not runs[0].get("error")):
+        if runs and runs[0]["state"] != "running" and f.get("result", "").startswith("failed") and (runs[0]["state"] != "failed" or not runs[0].get("error")):   # a run still going (or waiting at the stack gate) has no result yet: the file is its last run's
             runs[0]["state"], runs[0]["error"] = "failed", f["result"]       # the reason, for the alert's text (FND-65)
         pay = payoff_of(c, a["id"])
         sched = schedule_of(a["unit"])
-        j = O.judge(a["name"], "crew", runs, interval=interval_of(sched), enabled=True)
+        j = O.judge(a["name"], "crew", runs, interval=interval_of(sched), enabled=True, up_since=SG.booted())
         ok = [r["seconds"] for r in runs if r["state"] == "ok"]
         stats = {"runs": len(runs), "ok": sum(r["state"] == "ok" for r in runs), "failed": sum(r["state"] == "failed" for r in runs),
                  "avg_s": round(sum(ok) / len(ok), 1) if ok else None, "max_s": max(ok) if ok else None}
@@ -400,7 +422,7 @@ def mission_health(c, m):
                      "error": r["summary"] if r["status"] == "failed" else "", "warnings": warn, "problems": probs})
     sched = (m.get("schedule") or "").split(" ")[0]
     every = MISSION_EVERY.get(sched) or (int(re.findall(r"\d+", m["schedule"])[0]) * 3600 if sched == "every" else None)
-    j = O.judge(m["title"], "mission", runs, interval=every, enabled=m.get("status") == "active")
+    j = O.judge(m["title"], "mission", runs, interval=every, enabled=m.get("status") == "active", up_since=SG.booted())
     seen = {i["kind"] for i in j["issues"]}                  # the problems detector feeds the board (last run only)
     for p in (runs[0].get("problems") if runs else []) or []:
         if p["kind"] in ("unknown-tool", "empty-args", "repeat", "partial-read", "no-end") and p["kind"] not in seen:
@@ -554,6 +576,11 @@ def journeys(c):
     return 0
 
 
+def quiet():
+    """While the stack starts, or is down (stack_watch says that once), health alerts would only list its symptoms."""
+    return not SG.settled() or bool(SG.why_down())
+
+
 def health(c, missions):
     """The Agent health board: every active mission, crew agent and engine; new alerts go out once (push + Telegram)."""
     import observe as O
@@ -594,10 +621,11 @@ def health(c, missions):
     out = []
     def send(lines):
         text = "\n".join(f"• {html_escape(x)}" for x in lines[:8]) + (f"\n… and {len(lines) - 8} more" if len(lines) > 8 else "")
-        N.send(f"⚠️ <b>Agent health</b>\n{text}", "health", buttons=[[("🔍 Open", f"{M.X.APP}/#/missions")]], push_on=True,
+        N.send(f"⚠️ <b>Agent health</b>\n{text}", "health", by="stack", buttons=[[("🔍 Open", f"{M.X.APP}/#/missions")]], push_on=True,
                event_kind="health", title="Agent health", is_html=True)
     try:
-        O.notify([{**it, "issues": [i for i in it["issues"] if i["severity"] == "alert"]} for it in items], OUT / "health-notified.json", out.append)
+        if not quiet():                                   # PLT-28: the board still shows them; a start of the PC alerts nobody
+            O.notify([{**it, "issues": [i for i in it["issues"] if i["severity"] == "alert"]} for it in items], OUT / "health-notified.json", out.append)
         if out:
             send(out)
             call_doctor(out)
@@ -788,6 +816,7 @@ def call_doctor(lines, now=None):
     if sh("systemctl", "--user", "is-enabled", "crew-doctor.timer", timeout=20).strip() not in ("enabled", "static", "linked"):
         return False
     f.write_text(json.dumps({"t": now, "why": lines[:5]}))
+    set_cause("doctor", "alert", "stack", "\n".join(lines[:5]))
     subprocess.run(["systemctl", "--user", "start", "--no-block", "crew-doctor.service"], capture_output=True, timeout=30)
     M.event("crew", "", f"Health doctor: looking at {len(lines)} new issue{'s' if len(lines) != 1 else ''}", title="Crew")
     return True
@@ -1056,7 +1085,7 @@ def run(name):
     rid, t0 = f"crew:{name}:{time.strftime('%Y%m%d-%H%M%S')}", time.time()
     RTM.set_ref(rid, f"crew:{name}")                      # a Claude review inside reports under this run
     card = REG.hash_of(name)
-    RTM.start(rid, f"crew:{name}", f"Crew · {BY_ID[name]['name']}", data={"manifest": {"agent": f"crew:{name}", "card": card, "prompts": P.version(name)}})
+    RTM.start(rid, f"crew:{name}", f"Crew · {BY_ID[name]['name']}", data={"manifest": {"agent": f"crew:{name}", "card": card, "prompts": P.version(name), "cause": take_cause(name)}})
     RUN["id"], RUN["signal"] = rid, ""
     swarm = card is not None                             # a job without a swarm card (the journeys) cannot finish a swarm run (FND-113)
     if swarm:
@@ -1070,7 +1099,7 @@ def run(name):
             res += f" · answered {k} request{'s' if k != 1 else ''}" if k else ""
         except Exception as e:
             print(f"answers: {type(e).__name__}: {e}", file=sys.stderr)
-        M.event("crew", "", f"{BY_ID[name]['name']}: {res}", push=bool(n), title="Crew")
+        M.event("crew", "", f"{BY_ID[name]['name']}: {res}", push=bool(n), title="Crew", by=name)
         RTM.emit(rid, "say", agent=f"crew:{name}", title="Result", detail=str(res))
         J.end()
         _journal(name, rid, "done", str(res), time.time() - t0)

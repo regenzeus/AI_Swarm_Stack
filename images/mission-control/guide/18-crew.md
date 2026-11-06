@@ -32,7 +32,7 @@ note: A red edge means its last run failed: open it and look at Now or History. 
 | **Health doctor** | reviews the open health issues with their logs and proposes fixes (below) | every 6 hours, and after a new alert |
 | **Phone cleanup** | turns the AI phone's storage into steps you approve one by one (below) | Sundays |
 | **Phone check** | battery, storage, security patch and connection of the AI phone | Mondays |
-| **Inbox digest** | files the newsletters worth keeping into your vault, while you grant Gmail read | daily 07:15 |
+| **Inbox digest** | while you grant Gmail read: hands a newsletter on a topic you watch to that topic's next report, and files others worth keeping into your vault. It only reads. | daily 07:15 |
 | **Journey checks** | follows your journeys end to end without a model: a task to its result (on replayed answers), every screen at phone width, the newest briefing's e-mail on a phone, every make target; a failure is an alert | nightly 04:10 |
 | **Checker** | decides whether each shipped idea worked, starts what your autonomy rules allow, pauses an agent that keeps failing | hourly |
 | **Coach** | reads every agent's scorecard and turns a real problem into an agent change with its evidence; each change is replayed on the agent's past runs before you tap Build | monthly, on the 2nd |
@@ -97,7 +97,7 @@ The **Phone cleanup** reads the AI phone's storage every week (the same facts as
 year, apps with their last use, caches) and turns it into **steps**: *Delete WhatsApp Images from before 2025
 (6000 files) · 4.1 GB*, *Uninstall com.audible.application · 5.8 GB*, *Empty all app caches · 1.2 GB*. Each one has
 its own **Approve** (and *Dismiss*: it is not proposed again). Approve runs exactly that step on the AI phone,
-once, within 30 minutes, with the phone's block list and checks (never banking apps, never Android's own folders,
+once, within 4 hours (it waits if the phone is not connected; Undo works until it starts), with the phone's block list and checks (never banking apps, never Android's own folders,
 never system apps), and the step then shows the space it freed. You can't approve from the AI phone itself.
 WhatsApp's chat backups are never proposed: you decide those yourself.
 

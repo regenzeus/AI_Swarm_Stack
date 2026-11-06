@@ -2,7 +2,6 @@
 # file that is neither traced nor listed here, and on a listed file that is traced now or gone: this list only shrinks.
 # Trace a file by naming it in a requirement's trace, sources or verify.
 ops/ask.sh  # a terminal shortcut to ask Hermes one question (make ask); no behaviour of the stack
-ops/bootstrap-wsl-2-user.sh  # one-time setup of a new WSL user, run by hand from NEW-MACHINE.md
 ops/ci_yaml_check.py  # a helper of ops/check.sh that parses the workflow files
 ops/claude-connect.sh  # one-time Claude Code login for the builder (make claude-connect)
 ops/email-setup.sh  # one-time Gmail app password for report e-mails (make email-setup)

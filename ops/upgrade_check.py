@@ -72,4 +72,4 @@ if "--notify" in sys.argv and newer:
            + ". Nothing was changed. To upgrade one: ask Claude, or follow UPGRADE.md in ai-stack.")
     sys.path.insert(0, str(ROOT / "ops"))
     import notify as N                            # the one notification path (OBS-16)
-    N.send(msg, "system")
+    N.send(msg, "system", by="stack")

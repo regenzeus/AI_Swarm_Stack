@@ -33,6 +33,11 @@ resources
 Every part of the stack runs as its own service. Green means running, amber means running but unhealthy, red
 means stopped. Services restart themselves after crashes and after the PC reboots.
 
+When you start the PC, the stack comes online by itself in a few minutes; the top of this page says when it last did and
+how long it took, and Telegram gets one line. Missions wait until it is up, then the ones the PC slept through run. The
+nightly jobs catch up one after the other over the next two hours, so the first hour is busier than usual. If it is
+still down after 10 minutes, one message names the cause.
+
 ```live
 services
 ```

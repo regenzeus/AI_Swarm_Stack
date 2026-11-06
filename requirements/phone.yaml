@@ -3,10 +3,10 @@ area: AI phone
 prefix: PHN
 items:
   - id: PHN-01
-    title: Every changing action waits for the owner
-    statement: Before an action that changes something on the AI phone, the AI phone service shall wait up to 15 minutes
-      for the owner's answer and treat no answer as no; looking at the screen, going back and going home need no
-      approval.
+    title: What asks the owner waits for the answer
+    statement: Before anything on the AI phone that needs the owner's OK (a job, PHN-26; money, a setting, deleting), the AI phone
+      service shall wait up to 15 minutes for the answer and treat no answer as no; looking at the screen, going back and
+      going home need no approval.
     type: constraint
     priority: must
     status: implemented
@@ -37,7 +37,7 @@ items:
     status: implemented
     parents: [SN-05]
     sources: [images/phone/AGENTS.md]
-    verify: {method: test, by: [tests/test_phone.py::test_money_buttons_always_ask_even_in_a_time_window, tests/test_cleanup.py::test_uninstall_always_asks_even_inside_the_time_window, tests/test_cleanup.py::test_delete_always_asks_and_never_blocked_or_everything, tests/test_phone.py::test_start_in_ai_mode_asks_for_each_setting]}
+    verify: {method: test, by: [tests/test_phone.py::test_money_buttons_always_ask_even_in_a_time_window, tests/test_cleanup.py::test_uninstall_always_asks_even_inside_the_time_window, tests/test_cleanup.py::test_delete_always_asks_and_never_blocked_or_everything, tests/test_phone.py::test_start_in_ai_mode_asks_once_for_all_that_is_missing]}
   - id: PHN-04
     title: Blocked apps are never touched
     statement: The AI phone service shall check the block list (banking, investment, payment, wallet, password,
@@ -144,13 +144,13 @@ items:
   - id: PHN-14
     title: Starts in AI mode after a restart
     statement: The AI phone shall come back to AI mode after a reboot (wireless debugging on through KeepADB, Tailscale
-      as always-on VPN, both exempt from battery saving), each setting applied only after the owner's Allow.
+      as always-on VPN, both exempt from battery saving), applied only after the owner's one Allow.
     type: functional
     priority: should
     status: implemented
     parents: [SN-13, SN-11]
     sources: [DEC-13]
-    verify: {method: test, by: [tests/test_phone.py::test_start_in_ai_mode_asks_for_each_setting]}
+    verify: {method: test, by: [tests/test_phone.py::test_start_in_ai_mode_asks_once_for_all_that_is_missing]}
   - id: PHN-15
     title: Deletes and uninstalls stay inside safe limits
     statement: The AI phone service shall never uninstall blocked or system apps and shall delete only at allowed paths,
@@ -188,7 +188,7 @@ items:
     title: One OK for a whole phone task
     statement: An agent shall ask the owner once for a phone task, naming its apps, the exact texts it will type and how
       long (at most an hour); after one Allow, taps, swipes and keys in those apps and on the home screen, opening them
-      and typing those texts shall run without asking, counted on the task; anything else shall still ask, money always;
+      and typing those texts shall run without asking, counted on the task; anything else shall be refused until the agent asks for the wider job (PHN-26), money always asks;
       the task shall end with phone_done (its summary says how many actions ran) or the owner's End task.
     type: functional
     priority: must
@@ -254,4 +254,67 @@ items:
     sources: [docs/HOME-VOICE.md]
     verify: {method: test, by: [tests/test_phone.py::test_an_app_opens_fresh_when_a_blocked_screen_sits_on_top_of_it]}
     trace: [images/phone/phone.py]
-
+  - id: PHN-24
+    title: An approved cleanup step says so, can be undone, and waits for the phone
+    statement: An approved cleanup step shall show as approved with an Undo until the AI phone starts it, then as running,
+      then its result. While the phone is not connected the app shall say so, and approved steps shall wait for it up to
+      4 hours instead of failing; Approve all shall also cover failed steps that were shown.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-02]
+    findings: [FND-120]
+    sources: ['chat 2026-11-04: Clicked approved all here. I feel the feedback could be better. Individuals could say approved
+        and undo or something? Also i dont see ai phone doing stuff yet.']
+    verify: {method: test, by: [tests/test_phone_agents.py::test_an_approved_step_can_be_undone_until_the_phone_starts_it_and_never_runs,
+      tests/test_phone_agents.py::test_once_the_phone_has_started_a_step_undo_says_it_is_too_late_and_the_step_shows_it,
+      tests/test_phone_agents.py::test_approve_all_takes_failed_steps_too_when_they_were_shown,
+      tests/test_phone_agents.py::test_the_app_shows_approved_with_undo_and_says_when_the_phone_is_not_connected,
+      tests/test_phone.py::test_a_step_waits_while_the_phone_is_not_connected_and_one_that_ran_out_goes_through_to_say_so,
+      tests/test_phone.py::test_a_step_undone_just_as_it_starts_does_not_run_or_block_the_next]}
+    trace: [ops/phone_agents.py, images/phone/phone.py, images/mission-control/web/static/app.js, images/mission-control/server.py]
+  - id: PHN-25
+    title: The pairing does not lapse
+    statement: Starting in AI mode shall include switching off Android's limit that drops a paired computer after 7 days, on the
+      owner's Allow; and when the phone answers but refuses the connection, the app shall name a lapsed pairing and offer to
+      pair again.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-13, SN-02]
+    findings: [FND-120]
+    sources: ['chat 2026-11-04: AI Phone will bott up after restart into AI controlable state as long as it has internet is the
+        requirement.', docs/PHONE-ANYWHERE.md]
+    verify: {method: test, by: [tests/test_phone.py::test_starting_in_ai_mode_keeps_the_pairing_from_lapsing,
+      tests/test_phone.py::test_a_refused_way_in_names_both_causes_and_the_pairing]}
+    trace: [images/phone/phone.py, images/mission-control/web/static/app.js, docs/PHONE-ANYWHERE.md]
+  - id: PHN-26
+    title: The owner approves whole jobs, not single steps
+    statement: A tap, swipe, key, typing or opening an app or address on the AI phone shall run only inside a job the owner approved or
+      in free mode. Otherwise it shall be refused without a card, telling the agent to ask once for the whole job. A step outside the
+      job shall be refused the same way. Money, phone settings, deleting and private text in free mode keep their own card, and the
+      set-up for starting in AI mode takes one Allow.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-02]
+    sources: ['chat 2026-11-04: I also do not want to allow every singel action on AI Phone. I want to allow more macro.']
+    verify: {method: test, by: [tests/test_phone.py::test_a_single_step_gets_no_card_and_tells_the_agent_to_ask_for_the_job,
+      tests/test_phone.py::test_a_job_covers_its_steps_and_a_step_outside_it_is_refused_not_carded,
+      tests/test_phone.py::test_money_and_private_text_in_free_mode_keep_their_own_card,
+      tests/test_phone.py::test_start_in_ai_mode_asks_once_for_all_that_is_missing,
+      tests/test_phone.py::test_a_setting_goes_ahead_when_the_owner_is_still_in_settings]}
+    trace: [images/phone/phone.py, prompts/main.md, ops/missions.py, images/mission-control/web/static/app.js,
+      images/mission-control/guide/17-ai-phone.md]
+  - id: PHN-27
+    title: The AI phone's page is easy to find
+    statement: The AI phone's page shall be one tap away from the top of Home, Agents and Stack and from its cleanup steps, shall be found
+      by searching for pairing or wireless debugging, and Home shall list a long disconnection under what needs the owner.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-03]
+    sources: ['chat 2026-11-04: Where are these apps Phone page? No idea how to find which is itself a big issue. Phone page needs to be
+        easier to find.']
+    verify: {method: test, by: [tests/test_phone.py::test_the_phone_page_is_one_tap_from_home_agents_stack_and_search]}
+    trace: [images/mission-control/web/static/app.js, images/mission-control/web/static/tools.json]

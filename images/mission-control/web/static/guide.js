@@ -131,13 +131,17 @@ const TOOL_HELP = {
   house_switch: "Switches one light, plug or shutter (protected ones like the fridge plug never).",
   house_alexa: "Tells Alexa a command as if you said it: for the lights that live in the Alexa app.",
   house_say: "Speaks a short message on one Echo, or on all of them.",
+  windows_status: "Says how your Windows PC is: memory, disks, the folders Claude may read there, and whether Claude is signed in.",
+  windows_ask: "Asks Claude Code on your Windows PC about your files there: it can only read, only in the folders you allow.",
+  windows_result: "Fetches the answer from your Windows PC (and waits a little while Claude is still reading).",
   claude_task: "Hands a code question, a review or a long document to Claude Code (read-only, on your Claude plan).",
   claude_task_result: "Fetches Claude Code's answer to a task (and waits a little while it is still working).",
   health_issues: "Lists the open health issues of every agent (alerts and notes) with the run that shows each one.",
   agent_note: "Lets an agent keep a standing note in its own memory (Agents → the agent → Memory), read by all its future runs.",
   missions_overview: "Lists all your missions with status, schedule, triggers, next run and costs.",
   mission_details: "Reads one mission in full: goal, brief, notes, recent runs and where its files are.",
-  mission_create: "Starts a new briefing or task, including one-off and deep research jobs.",
+  mission_create: "Starts a new briefing or task, including one-off and deep research jobs, with the files it must deliver.",
+  file_save: "A mission saves a file it was asked to deliver (Markdown, CSV, JSON, text): on its Results, attached to its e-mail.",
   mission_control: "Runs, pauses, resumes or archives a mission.",
   mission_update: "Changes a mission: goal, questions, sources, schedule, delivery or depth.",
   mission_set_triggers: "Sets the events a mission reacts to: SEC filings, price moves, news.",
@@ -193,7 +197,7 @@ const how = (id) => `<a class="howto" href="#/guide/${id}" title="How this works
 // APP-31: an explanation is there for who needs it and folded for who knows: one small line opens it, and it stays open
 // through every live redraw (the page's and a card's own) until closed
 const EXPLAIN_OPEN = new Set();
-const explain = (key, html, label = "About this") => `<details class="explain" data-x="${key}"${EXPLAIN_OPEN.has(key) ? " open" : ""}><summary><span class="xi">i</span>${label}</summary><div class="small muted">${html}</div></details>`;
+const explain = (key, html, label = "About this") => `<details class="explain" data-x="${key}"${EXPLAIN_OPEN.has(key) ? " open" : ""}><summary aria-label="${label}" title="${label}"><span class="xi">i</span></summary><div class="small muted">${html}</div></details>`;
 document.addEventListener("toggle", (e) => { const k = e.target?.dataset?.x; if (k) e.target.open ? EXPLAIN_OPEN.add(k) : EXPLAIN_OPEN.delete(k); }, true);
 
 async function vGuide() {

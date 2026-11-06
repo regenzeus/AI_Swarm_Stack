@@ -45,14 +45,15 @@ items:
   - id: MEM-04
     title: Each agent reads the wikis its card names
     statement: Each agent's card shall name the wikis it reads (by default its own, the vault wiki and wikis on related
-      subjects), a run's start shall search only those and its own wiki first of all, and a wiki built from the owner's mail
-      shall reach only its own mission.
+      subjects), a run's start shall search only those and its own wiki first of all, and a wiki built from the owner's personal mail
+      (a mission that holds a Gmail grant) shall reach only its own mission. A topic's newsletters (MIS-28) are bulk mail handed
+      through its report and do not make its wiki private (FND-121).
     type: functional
     priority: should
     status: implemented
     parents: [SN-10, SN-05]
     sources: [DEC-31]
-    findings: [FND-45]
+    findings: [FND-45, FND-121]
     verify: {method: test, by: [tests/test_memory_coherent.py::test_a_run_reads_the_wikis_its_card_names_its_own_first_and_never_a_private_one]}
     trace: [ops/journal.py, ops/registry.py, config/agents.yaml, ops/missions.py]
   - id: MEM-05

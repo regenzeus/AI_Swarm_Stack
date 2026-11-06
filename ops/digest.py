@@ -117,4 +117,4 @@ msg = "\n".join(lines)
 print(msg)
 if "--print" not in sys.argv:
     import notify as N                            # the one notification path (OBS-16)
-    N.send(msg, "result")
+    N.send(msg, "result", by="stack")

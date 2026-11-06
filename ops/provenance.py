@@ -176,6 +176,8 @@ def record_step(c, t, s, db=None):
                     aid = art(c, "item", norm(it["url"]), f"{it.get('title', '')} · {it.get('source', '')}")
                     link(c, task, occ, idx, run, "used", aid)
                     seen[norm(it["url"])] = aid
+                elif it.get("via") == "mail":     # MIS-28: a handed mail has no address, only its file
+                    link(c, task, occ, idx, run, "used", art(c, "item", f"vault:{it['path']}.md", f"{it.get('title', '')} · {it.get('source', '')}"))
     made = None
     if h in ("desk-write", "desk-alert") and resume.get("report"):
         made = art(c, "report", f"vault:{resume['report']}", "The briefing" if h == "desk-write" else "The alert")

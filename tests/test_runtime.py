@@ -88,6 +88,17 @@ def test_two_scout_steps_started_together_each_get_their_own_run_by_its_prompt_s
     assert refs["hermes:scout:c:1"] in ("task:3:step:1", "task:4:step:1")       # no such run: the live step, as before
 
 
+def test_a_run_the_shutdown_cut_off_is_not_called_stuck(RT):
+    """SWM-114: the doctor's run went quiet at 20:18, the PC was off, and the watchdog called it stuck at 08:38: a 12-hour bar and a false alert."""
+    t = time.time()
+    RT.ingest([ev("crew:doctor:1", "run", t - 43000, agent="crew:doctor"), ev("crew:doctor:1", "stage", t - 42999, agent="crew:doctor", title="Prompt")])
+    assert RT.watchdog_once(now=t) == ["crew:doctor:1"]
+    r = RT.runs(agent="crew:doctor")[0]
+    assert r["end_state"] == "stopped" and r["ended"] <= t - 42990                       # its bar ends at its last activity
+    assert not [p for p in RT.open_problems(hours=48) if p["run"] == "crew:doctor:1"]    # and no alert says it stopped answering
+    assert "Cut off by a shutdown" in RT.view("crew:doctor:1")["events"][-1]["detail"]
+
+
 def test_the_watchdog_closes_silent_runs_honestly(RT):
     t = time.time() - 5000
     RT.ingest([ev("m", "run", t), ev("phone:1", "run", t, agent="ai-phone", data={"manifest": {"agent": "ai-phone", "idle_end": True}})])

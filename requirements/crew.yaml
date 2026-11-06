@@ -144,9 +144,10 @@ items:
     findings: [FND-01]
   - id: CRW-13
     title: The inbox digest only reads
-    statement: While the owner grants Gmail read, the inbox digest shall file newsletters worth keeping for his topics
-      into the vault inbox each morning, never look at bank, security or code mails, never organise or delete mail,
-      and do nothing (saying so) without the grant.
+    statement: While the owner grants Gmail read, the inbox digest shall hand a newsletter on a watched topic to that
+      topic (MIS-28), file other newsletters worth keeping for his topics into the vault inbox each morning, read back to its
+      last finished run and say when the window held more than it listed, never look at bank, security or code mails,
+      never organise or delete mail, and do nothing (saying so) without the grant.
     type: functional
     priority: should
     status: implemented
@@ -154,3 +155,4 @@ items:
     sources: [images/mission-control/guide/18-crew.md]
     verify: {method: test, by: [tests/test_phone_agents.py::test_inbox_digest_does_nothing_without_the_grant, tests/test_phone_agents.py::test_inbox_digest_files_the_picks_and_skips_protected]}
     trace: [ops/inbox.py]
+    findings: [FND-121]

@@ -18,7 +18,7 @@ def P(tmp_path, monkeypatch):
     monkeypatch.setenv("PHONE_HOST", "100.64.0.10")
     import phone
     phone = importlib.reload(phone)                       # paths are read at import
-    phone.WAIT = 3
+    phone.WAIT = 30                                       # a loaded machine must not read as "the owner did not answer"; the test of no answer sets its own
     calls = []
 
     async def connected():
@@ -35,13 +35,14 @@ def P(tmp_path, monkeypatch):
 
 def answer(P, allow, minutes=0):
     """The owner taps in Mission Control: wait for the request, then write the decision."""
+    pending, decisions = P.PENDING, P.DECISIONS               # this test's folders, whatever runs next
     def go():
-        for _ in range(50):
-            pend = list(P.PENDING.glob("*.json"))
+        for _ in range(600):                                  # up to 30 s: 2.5 s lost the race on a loaded machine
+            pend = list(pending.glob("*.json"))
             if pend:
-                tmp = P.DECISIONS / f"{pend[0].stem}.tmp"              # atomic, as Mission Control writes it
+                tmp = decisions / f"{pend[0].stem}.tmp"                # atomic, as Mission Control writes it
                 tmp.write_text(json.dumps({"allow": allow, "minutes": minutes}))
-                tmp.rename(P.DECISIONS / pend[0].name)
+                tmp.rename(decisions / pend[0].name)
                 return
             time.sleep(0.05)
     threading.Thread(target=go, daemon=True).start()
@@ -56,20 +57,22 @@ def test_block_list_covers_money_passwords_and_settings(P):
 
 
 def test_an_action_waits_for_the_owner(P):
+    """What still gets a card (a job, money, a setting) waits for the owner's tap; no answer is no."""
+    job = lambda: P.guard("phone_task", {"task": "t", "apps": []}, "w", always="📋 One OK for a whole task: ")
     answer(P, True)
-    out = asyncio.run(P.phone_tap(why="open the menu", x=10, y=20))
-    assert out.startswith("Done") and ("shell", "input", "tap", "10", "20") in P.calls
+    assert asyncio.run(job()) is None
     answer(P, False)
-    assert "declined" in asyncio.run(P.phone_tap(why="again", x=10, y=20))
-    assert "did not approve" in asyncio.run(P.phone_type(text="hello", why="no answer"))
+    assert "declined" in asyncio.run(job())
+    P.WAIT = 1
+    assert "did not approve" in asyncio.run(job())
     assert not list(P.PENDING.glob("*.json"))             # requests disappear once answered or timed out
     log = [json.loads(x) for x in (P.D / "log.jsonl").read_text().splitlines()]
     assert [e.get("decision") for e in log if e.get("decision")] == ["allowed", "declined", "no answer"]
 
 
 def test_allow_for_a_few_minutes(P):
-    answer(P, True, minutes=5)
-    asyncio.run(P.phone_swipe(direction="up", why="scroll"))
+    answer(P, True, minutes=5)                            # an Allow 5 min from an older message still works
+    assert asyncio.run(P.guard("phone_shop_look", {}, "look")) is None
     assert P.S["trust_until"] > time.time() + 200
     assert asyncio.run(P.phone_swipe(direction="up", why="scroll again")).startswith("Done")   # no second request
 
@@ -244,7 +247,7 @@ def test_an_offline_phone_is_not_port_scanned(tmp_path, monkeypatch):
     assert scanned == [1]
 
 
-def test_start_in_ai_mode_asks_for_each_setting(P, monkeypatch):
+def test_start_in_ai_mode_asks_once_for_all_that_is_missing(P, monkeypatch):
     state = {"pkg": "versionName=1.8.38\n WRITE_SECURE_SETTINGS: granted=false", "vpn": "null", "idle": ""}
 
     def adb(*a, **k):
@@ -252,11 +255,11 @@ def test_start_in_ai_mode_asks_for_each_setting(P, monkeypatch):
         cmd = " ".join(a)
         return state["pkg"] if "dumpsys package" in cmd else state["vpn"] if "settings get" in cmd else state["idle"] if cmd.endswith("whitelist") else ""
     monkeypatch.setattr(P, "adb", adb)
-    asks = []
+    asks, answers = [], ["declined", None]
 
     async def guard(tool, args, why, **k):
         asks.append((tool, args["what"], k.get("always")))
-        return None if len(asks) < 3 else "declined"
+        return answers.pop(0)
     monkeypatch.setattr(P, "guard", guard)
 
     async def offline():
@@ -266,13 +269,15 @@ def test_start_in_ai_mode_asks_for_each_setting(P, monkeypatch):
     assert not asks and "not installed" not in (P.D / "log.jsonl").read_text()     # offline: no wrong verdict
     monkeypatch.setattr(P, "connect", lambda: asyncio.sleep(0, True))
     asyncio.run(P.boot_setup())
-    assert [a[0] for a in asks] == ["phone_setting"] * 3 and all(a[2] for a in asks)      # always its own OK
-    ran = [c for c in P.calls if c[1] in ("pm", "settings") and c[2] in ("grant", "put")]
-    assert ran == [("shell", "pm", "grant", P.KEEPADB, "android.permission.WRITE_SECURE_SETTINGS"),
-                   ("shell", "pm", "grant", P.KEEPADB, "android.permission.POST_NOTIFICATIONS"),
-                   ("shell", "settings", "put", "secure", "always_on_vpn_app", P.TAILSCALE),
-                   ("shell", "settings", "put", "secure", "always_on_vpn_lockdown", "0")]
-    assert not any("deviceidle" in c and "whitelist" in c and len(c) > 4 for c in P.calls)    # declined: not run
+    changes = lambda: [c for c in P.calls if c[1] in ("pm", "settings") and c[2] in ("grant", "put")]
+    assert len(asks) == 1 and not changes()                        # declined: nothing runs
+    asyncio.run(P.boot_setup())
+    assert len(asks) == 2 and asks[1][0] == "phone_setting" and asks[1][2]            # one card, always its own OK
+    assert changes() == [("shell", "pm", "grant", P.KEEPADB, "android.permission.WRITE_SECURE_SETTINGS"),
+                         ("shell", "pm", "grant", P.KEEPADB, "android.permission.POST_NOTIFICATIONS"),
+                         ("shell", "settings", "put", "secure", "always_on_vpn_app", P.TAILSCALE),
+                         ("shell", "settings", "put", "secure", "always_on_vpn_lockdown", "0"),
+                         ("shell", "settings", "put", "global", "adb_allowed_connection_time", "0")]
 
 
 def test_cards_left_by_a_restart_are_dropped_and_start_in_ai_mode_asks_again(P, monkeypatch):
@@ -286,7 +291,7 @@ def test_cards_left_by_a_restart_are_dropped_and_start_in_ai_mode_asks_again(P, 
     res = {}
 
     async def run():
-        t = asyncio.create_task(P.guard("phone_tap", {"label": "OK"}, "test"))
+        t = asyncio.create_task(P.guard("phone_shop_look", {"label": "OK"}, "test"))
         for _ in range(20):
             await asyncio.sleep(0.02)
             P.sweep_orphans()
@@ -358,9 +363,9 @@ def test_free_mode_types_freely_but_private_text_asks(P):
 
 
 def test_a_waiting_request_goes_ahead_when_the_owner_opens_free_mode(P):
-    """PHN-20: the request does not wait for an Allow the owner already gave as a window or a task."""
+    """PHN-20: the request does not wait for an Allow the owner already gave as a window."""
     async def go():
-        waiting = asyncio.create_task(P.guard("phone_swipe", {"direction": "up"}, "scroll"))
+        waiting = asyncio.create_task(P.guard("phone_task", {"task": "t", "apps": []}, "job", always="📋 One OK for a whole task: "))
         await asyncio.sleep(0.5)
         assert list(P.PENDING.glob("*.json"))                         # it asked
         P.S["trust_until"] = time.time() + 600
@@ -469,3 +474,82 @@ def test_the_shopping_agent_s_phone_requests_are_readable_by_the_phone(tmp_path,
     assert json.loads(f.read_text())["do"] == "shop_look" and f.stat().st_mode & 0o044 == 0o044   # group and others may read
     src = (Path(__file__).resolve().parent.parent / "ops/shopping.py").read_text()
     assert 'save_json(PHONE / "control"' not in src                         # no phone request is written this-user-only
+
+
+def test_a_step_waits_while_the_phone_is_not_connected_and_one_that_ran_out_goes_through_to_say_so(P, tmp_path):
+    f = tmp_path / "c-0000000000-1.json"
+    f.write_text(json.dumps({"expires": time.time() + 600}))
+    P.S["connected"] = False
+    assert P.cleanup_ready(f) is False
+    P.S["connected"] = True
+    assert P.cleanup_ready(f) is True
+    P.S["connected"] = False
+    f.write_text(json.dumps({"expires": time.time() - 1}))
+    assert P.cleanup_ready(f) is True
+
+
+def test_a_step_undone_just_as_it_starts_does_not_run_or_block_the_next(P):
+    P.CLEANUP.mkdir(parents=True, exist_ok=True)
+    P._cleaning.add("c-0000000000-1")
+    asyncio.run(P.cleanup_do("c-0000000000-1"))                    # its hand-over file is gone: the owner's Undo
+    assert not P._cleaning and not list(P.CLEANUP.glob("c-0000000000-1.*"))
+
+
+def test_a_refused_way_in_names_both_causes_and_the_pairing(P):
+    assert "pair it again" in P.not_in([42035]) and "Wireless debugging is on" in P.not_in([42035])
+    assert P.not_in([]).startswith("No wireless debugging port answered")
+
+
+def test_starting_in_ai_mode_keeps_the_pairing_from_lapsing(P, monkeypatch):
+    what, cmds = P.BOOT_SETUP[-1]
+    assert "7 days" in what and cmds == [["shell", "settings", "put", "global", "adb_allowed_connection_time", "0"]]
+    monkeypatch.setattr(P, "adb", lambda *a, **k: "0" if "adb_allowed_connection_time" in a else "")
+    assert P.boot_status()["keeps_pairing"] is True
+
+
+def test_a_single_step_gets_no_card_and_tells_the_agent_to_ask_for_the_job(P):
+    for call in (P.phone_tap(why="menu", x=10, y=20), P.phone_swipe(direction="up", why="s"), P.phone_type(text="hello", why="t"),
+                 P.phone_url(url="https://example.com", why="u")):
+        out = asyncio.run(call)
+        assert "phone_task" in out and "Nothing was done" in out
+    assert not list(P.PENDING.glob("*.json")) and ("shell", "input", "tap", "10", "20") not in P.calls
+
+
+def test_a_job_covers_its_steps_and_a_step_outside_it_is_refused_not_carded(P):
+    P.S["task"] = {"task": "t", "apps": ["com.android.chrome"], "texts": ["hello"], "until": time.time() + 600, "actions": 0}
+    assert asyncio.run(P.guard("phone_tap", {"label": "A"}, "w")) is None and P.S["task"]["actions"] == 1
+    assert P.outward(text="hello") == ""
+    P.fg[0] = "com.google.android.apps.maps"
+    assert "com.google.android.apps.maps is in front" in asyncio.run(P.guard("phone_tap", {"label": "A"}, "w"))
+    assert "phone_task" in asyncio.run(P.guard("phone_type", {}, "w", always=P.outward(text="not listed")))
+    assert not list(P.PENDING.glob("*.json"))
+
+
+def test_money_and_private_text_in_free_mode_keep_their_own_card(P):
+    answer(P, False)
+    assert "declined" in asyncio.run(P.guard("phone_tap", {"label": "Buy"}, "pay", money=True))
+    P.S["trust_until"] = time.time() + 600
+    answer(P, False)
+    assert "declined" in asyncio.run(P.guard("phone_type", {}, "mail", always=P.outward(text="owner@example.com")))
+    answer(P, False)
+    assert "declined" in asyncio.run(P.guard("phone_uninstall", {}, "x", always="🗑 This removes an app: "))
+
+
+def test_a_setting_goes_ahead_when_the_owner_is_still_in_settings(P):
+    P.fg[0] = "com.android.settings"
+    answer(P, True)
+    assert asyncio.run(P.guard("phone_setting", {"what": "x"}, "w", always="⚙ Phone setting: ")) is None
+    P.fg[0] = "com.android.settings"
+    assert "blocked app" in asyncio.run(P.guard("phone_tap", {"label": "x"}, "w"))
+
+
+def test_the_phone_page_is_one_tap_from_home_agents_stack_and_search():
+    root = Path(__file__).resolve().parent.parent / "images/mission-control/web/static"
+    app = (root / "app.js").read_text()
+    home = app.split('<div class="home-side">', 1)[1].split("</div>", 1)[0]
+    assert home.index("devicesHtml()") < home.index("nowHtml()")          # above the fold, not under what is running
+    assert app.split("function vSystem()", 1)[1].count("phoneBanner()") == 1
+    assert "phoneBanner()" in app.split("function vMissions()", 1)[1].split("\n}", 1)[0]
+    assert 'i.kind === "phone-down"' in app and "AI phone page" in app.split("function phoneStepsHtml(c)", 1)[1].split("function bindCrew()", 1)[0]
+    page = next(x for x in json.loads((root / "tools.json").read_text())["pages"] if x[1] == "#/phone")
+    assert "pair" in page[2] and "wireless" in page[2]

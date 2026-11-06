@@ -416,6 +416,6 @@ async function vTrials() {
     return `<div class="section"><h2 class="wrap" style="margin-bottom:8px">${esc(d.trials?.[n] || n)} <span class="hcount">${rs.length}</span></h2>
       <div class="stack">${rs.slice().reverse().map((r) => runRow(r, rs[rs.indexOf(r) - 1])).join("") || `<div class="card pad small muted">Not run yet. It runs at night, one trial at a time (make trial NAME=${esc(n)}).</div>`}</div></div>`; }).join("")
     || `<div class="card empty">No trials yet.</div>`}
-  <div class="tiny faint section">Each run's record is in /srv/ai/trials/runs; the answer keys live outside every agent's reach. ${typeof how === "function" ? how("tasks") : ""}</div>`;
+  <div class="tiny faint section">Each run's record is in /srv/ai/trials/runs; the answer keys live outside every agent's reach. ${typeof how === "function" ? how("telemetry") : ""}</div>`;
 }
 

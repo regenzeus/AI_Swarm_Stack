@@ -7,7 +7,7 @@ Method, statuses and rules: [README.md](README.md). Names of the parts: [glossar
 
 | Area | Requirements | Implemented | Partial | Violated | Planned | Proposed | Deprecated |
 |---|---|---|---|---|---|---|---|
-| [App](#app-app) (APP) | 35 | 35 | 0 | 0 | 0 | 0 | 0 |
+| [App](#app-app) (APP) | 42 | 42 | 0 | 0 | 0 | 0 | 0 |
 | [Assistant](#ast-assistant) (AST) | 14 | 13 | 1 | 0 | 0 | 0 | 0 |
 | [Autonomy](#aut-autonomy) (AUT) | 8 | 2 | 2 | 0 | 0 | 4 | 0 |
 | [Builder](#bld-builder) (BLD) | 25 | 24 | 0 | 0 | 0 | 1 | 0 |
@@ -18,26 +18,27 @@ Method, statuses and rules: [README.md](README.md). Names of the parts: [glossar
 | [House](#hse-house) (HSE) | 9 | 9 | 0 | 0 | 0 | 0 | 0 |
 | [Knowledge](#knw-knowledge) (KNW) | 15 | 15 | 0 | 0 | 0 | 0 | 0 |
 | [Memory](#mem-memory) (MEM) | 21 | 21 | 0 | 0 | 0 | 0 | 0 |
-| [Missions](#mis-missions) (MIS) | 22 | 19 | 1 | 0 | 0 | 1 | 1 |
+| [Missions](#mis-missions) (MIS) | 28 | 25 | 1 | 0 | 0 | 1 | 1 |
 | [Observability](#obs-observability) (OBS) | 18 | 18 | 0 | 0 | 0 | 0 | 0 |
-| [AI phone](#phn-ai-phone) (PHN) | 23 | 23 | 0 | 0 | 0 | 0 | 0 |
-| [Platform](#plt-platform) (PLT) | 27 | 22 | 3 | 0 | 0 | 2 | 0 |
+| [AI phone](#phn-ai-phone) (PHN) | 27 | 27 | 0 | 0 | 0 | 0 | 0 |
+| [Platform](#plt-platform) (PLT) | 32 | 27 | 3 | 0 | 0 | 2 | 0 |
 | [Quality and process](#qa-quality-and-process) (QA) | 21 | 20 | 0 | 0 | 0 | 1 | 0 |
 | [Research](#res-research) (RES) | 7 | 6 | 1 | 0 | 0 | 0 | 0 |
 | [Security](#sec-security) (SEC) | 19 | 18 | 1 | 0 | 0 | 0 | 0 |
 | [Shopping](#shp-shopping) (SHP) | 13 | 12 | 0 | 0 | 0 | 1 | 0 |
-| [Agent swarm](#swm-agent-swarm) (SWM) | 109 | 97 | 8 | 0 | 2 | 0 | 2 |
+| [Agent swarm](#swm-agent-swarm) (SWM) | 115 | 103 | 8 | 0 | 2 | 0 | 2 |
 | [Task engine](#tsk-task-engine) (TSK) | 35 | 29 | 6 | 0 | 0 | 0 | 0 |
 | [Trials](#trl-trials) (TRL) | 17 | 13 | 2 | 0 | 0 | 2 | 0 |
 | [Voice](#voi-voice) (VOI) | 9 | 8 | 0 | 0 | 0 | 1 | 0 |
-| **All** | **490** | **441** | **27** | **1** | **2** | **15** | **4** |
+| **All** | **518** | **469** | **27** | **1** | **2** | **15** | **4** |
 
-Unit tests claimed by a requirement: 723 of 723.
+Unit tests claimed by a requirement: 817 of 817.
 
 ## Findings
 
 | Finding | Severity | Status | Owner decision | Affects |
 |---|---|---|---|---|
+| [FND-120](#fnd-120) The AI phone's pairing lapsed after 7 days and the app blamed Wireless debugging | high | open | yes | [PHN-24](#phn-24), [PHN-25](#phn-25) |
 | [FND-118](#fnd-118) A breaking story reaches the stack about 80 minutes after it is published | medium | open | - | [TSK-12](#tsk-12) |
 | [FND-18](#fnd-18) Memory is the top risk and nothing budgets it | medium | open | yes | [CST-14](#cst-14), [SWM-74](#swm-74) |
 | [FND-01](#fnd-01) The phone check still expects the screen to stay awake | high | fixed | - | [CRW-12](#crw-12), [PHN-13](#phn-13), [APP-14](#app-14) |
@@ -46,6 +47,7 @@ Unit tests claimed by a requirement: 723 of 723.
 | [FND-103](#fnd-103) A wiki compile wrote over the parts of a page it never saw | high | fixed | - | [MEM-14](#mem-14) |
 | [FND-109](#fnd-109) Model answers cut at their output limit passed as whole, and cuts the check could not see | high | fixed | - | [QA-16](#qa-16), [QA-21](#qa-21) |
 | [FND-116](#fnd-116) One unreadable request stopped the AI phone for a day | high | fixed | - | [SHP-07](#shp-07) |
+| [FND-119](#fnd-119) A cold start of the PC left the stack down for three hours and every job failing | high | fixed | - | [PLT-28](#plt-28), [PLT-29](#plt-29), [PLT-30](#plt-30) |
 | [FND-22](#fnd-22) Agents talking to each other would cross the trust boundaries | high | fixed | - | [SWM-09](#swm-09), [SWM-10](#swm-10), [SWM-15](#swm-15), [SWM-67](#swm-67), [SEC-04](#sec-04) |
 | [FND-37](#fnd-37) A deployed agent change did not reach its agent | high | fixed | - | [SWM-18](#swm-18), [SWM-102](#swm-102), [PLT-08](#plt-08) |
 | [FND-38](#fnd-38) Text the owner reads or types was cut silently all over the stack | high | fixed | - | [APP-19](#app-19), [APP-20](#app-20), [QA-16](#qa-16) |
@@ -76,6 +78,7 @@ Unit tests claimed by a requirement: 723 of 723.
 | [FND-115](#fnd-115) A task's own words could widen its page on a phone | medium | fixed | - | [APP-36](#app-36) |
 | [FND-117](#fnd-117) A task whose planning a restart cut off waited forever | medium | fixed | - | [TSK-03](#tsk-03) |
 | [FND-12](#fnd-12) Caps the owner rejected are still in the code | medium | fixed | - | [CRW-06](#crw-06), [SWM-08](#swm-08), [SWM-35](#swm-35) |
+| [FND-121](#fnd-121) A newsletter on a watched topic never reached that topic, and the digest judged mail by its subject alone | medium | fixed | - | [CRW-13](#crw-13), [MIS-28](#mis-28), [MEM-04](#mem-04) |
 | [FND-14](#fnd-14) The mail connector can strand an approval like the phone did | medium | fixed | - | [CNX-06](#cnx-06), [SWM-19](#swm-19) |
 | [FND-17](#fnd-17) Seven ways to send a Telegram message | medium | fixed | - | [OBS-16](#obs-16), [SWM-59](#swm-59) |
 | [FND-23](#fnd-23) The swarm would start jobs, which only the runner may do | medium | fixed | - | [SWM-13](#swm-13) |
@@ -156,6 +159,16 @@ Unit tests claimed by a requirement: 723 of 723.
 | [FND-70](#fnd-70) Gap notes that no longer said what is true | low | fixed | - | [OBS-16](#obs-16) |
 | [FND-73](#fnd-73) Long pages without a way across, and identifiers where names belong | low | fixed | - | [APP-26](#app-26) |
 | [FND-91](#fnd-91) A plan's build also shows as a task of its own | low | fixed | - | [TRL-05](#trl-05) |
+
+### FND-120
+
+**The AI phone's pairing lapsed after 7 days and the app blamed Wireless debugging** (high defect, open)
+
+On 4 Nov the AI phone connected at 11:32 and refused every connection from 12:02 on: its TLS handshake ends with CERTIFICATE_UNKNOWN, so the phone no longer accepts the stack's key. The pairing dates from 28 Oct 11:54, 7 days before, and 7 days is Android's default for adb_allowed_connection_time. That timing is the evidence; the phone's own list can't be read without the connection, and one write-up says each connection renews the 7 days. The app said 'No wireless debugging port answered', and the owner's Approve all failed all 10 cleanup steps in turn, each with that text.
+
+- Evidence: `adb trace 4 Nov 13:25: tls_connection.cpp 'Post-handshake SSL_peek failed [SSLV3_ALERT_CERTIFICATE_UNKNOWN]' on port 42035`; `/srv/ai/phone/log.jsonl: pair 28 Oct 11:54:50; connect 4 Nov 11:32:57 on port 42035; 10 phone_cleanup results 13:19 to 13:25`
+- Affects: [PHN-24](#phn-24), [PHN-25](#phn-25)
+- Recommendation: Pair again; switch the limit off as part of Start in AI mode; name a refused connection; let approved steps wait.
 
 ### FND-118
 
@@ -242,6 +255,17 @@ At 08:20 on 2 Nov the RAM upgrade's shopping agent asked the AI phone to look th
 - Affects: [SHP-07](#shp-07)
 - Recommendation: Write the phone's requests readable by the phone; read each request on its own, report one it cannot read once and go on; alert when the AI phone stays disconnected.
 - Resolved: fix/phone-control, 2026-11-02: shopping.to_phone (0644) for shop_look and shop_open; phone.take skips and reports what it cannot read or delete; the stuck request moved aside and the phone reconnected at 16:55. The alert for a long disconnection: crew.phone_down (fix/p6), an alert after 30 min disconnected or 10 min silent unless stopped
+
+### FND-119
+
+**A cold start of the PC left the stack down for three hours and every job failing** (high defect, fixed)
+
+On 4 Nov the PC started cold for the first time since the stack's scheduled jobs were built (every earlier boot was a restart of WSL with Windows already up, containerd ready in under 4 s). containerd took over 15 s to open its database; Docker allows it 15 s and that cannot be configured. Three such starts hit systemd's limit of 3 a minute, which is final: Docker stayed down from 08:40 until it was started by hand at 11:32. The runner did not ask: it started the morning's four missions at once and marked them failed. Every scheduled job did the same (skills-sync 30 times, the backup, the Checker, the doctor), and the jobs the PC slept through all fired in its first minutes. The health board also called jobs overdue for the hours the PC was off. The owner got an alert per symptom and none that named Docker; a Hermes-routed notice could not reach anyone because Hermes runs in Docker too.
+
+- Evidence: `journalctl --user -u docker -b: 'waiting for response from boltdb open', 'timeout waiting for containerd to start' at 08:40:03, 08:40:22, 08:40:39, 'Start request repeated too quickly' at 08:40:42`; `missions.sqlite runs of 4 Nov 08:40-08:41: 4 failed, 'Cannot connect to the Docker daemon' or 'no answer'`; `public/events.jsonl 08:40:40: 'Memory gatekeeper: did not run when scheduled' 14 hours after the PC was switched off`
+- Affects: [PLT-28](#plt-28), [PLT-29](#plt-29), [PLT-30](#plt-30)
+- Recommendation: Docker retries for ever; one gate for the runner and every job; catch-ups one at a time; no alerts during a start; one message naming the cause when the stack stays down.
+- Resolved: fix/boot, 2026-11-04: ops/systemd/docker-boot.conf (PLT-29), ops/stack_gate.py on every timer's unit and in the runner (PLT-28), ops/stack_ready.py opens the gate and reports each start (PLT-30); the failing boot rehearsed with containerd's database held locked (docs/PROBES.md P8). A real cold start of the PC is the remaining proof, and its result is on the Stack page.
 
 ### FND-22
 
@@ -572,6 +596,17 @@ Per-agent caps on open proposals were added on 2026-10-29 and rejected by the ow
 - Affects: [CRW-06](#crw-06), [SWM-08](#swm-08), [SWM-35](#swm-35)
 - Recommendation: Remove the caps when SWM-04/SWM-08 land (phase 1 of the swarm design), or earlier on the owner's word.
 - Resolved: feat/swarm-switch, 2026-10-29 (caps, title matching and stale closures removed; the Ledger ranks instead)
+
+### FND-121
+
+**A newsletter on a watched topic never reached that topic, and the digest judged mail by its subject alone** (medium defect, fixed)
+
+The owner asked on 4 Nov whether everything in his uranium newsletter reaches the wiki. Of the 33 mails the digest saw that day, 1 named a watched topic in its text: TipRanks, one line saying Cameco has a new analyst rating, no fact. 3 more matched only because 'mg' was read as the car maker MG. Over the five recorded days (148 mails) it was 2: that one and Investing.com's weekly watchlist, the only mail with numbers on uranium companies. In 60 days Gmail held no newsletter about uranium as such: the 9 other hits are the stack's own briefing mailed to him. MAX_FILE (5) was never reached (0, 1, 3, 0, 1 picks). The filter was the weak part: the model sees sender and subject only, so it picked TipRanks' 'A stock on your watchlist' three times on a guess, and whatever it picked went to the general vault, while a topic's wiki is compiled only from that topic's reports. The listing was the silent risk: it took the newest 40 of a two-day window that held 61, with 35 new on 2 Nov. Gmail's own search is no substitute: an OR search for Cameco missed the TipRanks mail that a narrower search found.
+
+- Evidence: `/srv/ai/state/prompt-cases/inbox.PICK.jsonl: 148 rows over 5 runs`; `mail_read of all 148 against each active TOPIC.md's names, 4 Nov`; `/srv/ai/missions/crew/inbox.json: filed 1 of 33`; `mail_search newer_than:60d uranium terms: 8 Investing.com, 9 AI Stack`
+- Affects: [CRW-13](#crw-13), [MIS-28](#mis-28), [MEM-04](#mem-04)
+- Recommendation: Search each newsletter's own text for the topic's names, check matches against its key questions, hand them to the topic. MEM-04's rule against private wikis meant personal mail: a topic takes only mail with a List-Unsubscribe header, never protected mail, and its text reaches the wiki only through the report, so its wiki stays shared.
+- Resolved: feat/topic-mail, 2026-11-04: ops/inbox.py hand_over and settle, images/desk/desk.py from_mail, the topic page's From your e-mail, the listing raised to the tool's 100 and reaching back to the last finished run
 
 ### FND-14
 
@@ -1457,30 +1492,30 @@ The trial's build #11 appeared on the Tasks board as task #89 (source door) besi
 
 | Need | Priority | Refined by |
 |---|---|---|
-| <a id="sn-01"></a>**SN-01** A personal AI team that works by itself: Agents read the news, research companies and topics, watch filings and prices, and deliver briefings, alerts and research results on their own, so that the owner mostly just reads results. | must | [APP-05](#app-05), [APP-25](#app-25), [APP-26](#app-26), [APP-30](#app-30), [APP-31](#app-31), [APP-32](#app-32), [APP-33](#app-33), [APP-34](#app-34), [APP-35](#app-35), [AST-01](#ast-01), [AST-05](#ast-05), [AST-07](#ast-07), [AST-13](#ast-13), [BLD-25](#bld-25), [CST-01](#cst-01), [MIS-01](#mis-01), [MIS-02](#mis-02), [MIS-06](#mis-06), [MIS-08](#mis-08), [MIS-09](#mis-09), [MIS-10](#mis-10), [MIS-11](#mis-11), [MIS-13](#mis-13), [MIS-14](#mis-14), [MIS-15](#mis-15), [MIS-21](#mis-21), [MIS-22](#mis-22), [RES-02](#res-02), [RES-03](#res-03), [RES-04](#res-04), [RES-05](#res-05), [SHP-13](#shp-13), [VOI-09](#voi-09) |
-| <a id="sn-02"></a>**SN-02** Out of the loop except for real decisions: the owner is asked only for decisions that are really his (approvals of spending, deploys, deletions, settings, grants), each one tap away with enough context to decide; no scripts to run, no busywork, nothing shown as needing him that does not. | must | [APP-04](#app-04), [APP-05](#app-05), [APP-06](#app-06), [APP-07](#app-07), [APP-13](#app-13), [APP-14](#app-14), [APP-21](#app-21), [APP-25](#app-25), [APP-26](#app-26), [APP-30](#app-30), [APP-31](#app-31), [AST-06](#ast-06), [AST-12](#ast-12), [AUT-01](#aut-01), [AUT-02](#aut-02), [AUT-05](#aut-05), [AUT-07](#aut-07), [AUT-08](#aut-08), [CNX-02](#cnx-02), [CRW-02](#crw-02), [CRW-05](#crw-05), [CRW-06](#crw-06), [CST-03](#cst-03), [MIS-07](#mis-07), [MIS-20](#mis-20), [PHN-02](#phn-02), [PHN-11](#phn-11), [PHN-12](#phn-12), [PHN-18](#phn-18), [PHN-20](#phn-20), [PHN-21](#phn-21), [PHN-22](#phn-22), [SHP-01](#shp-01), [SHP-03](#shp-03), [SHP-08](#shp-08), [SWM-05](#swm-05), [SWM-06](#swm-06), [SWM-08](#swm-08), [SWM-33](#swm-33), [SWM-38](#swm-38), [SWM-39](#swm-39), [SWM-40](#swm-40), [SWM-42](#swm-42), [SWM-43](#swm-43), [SWM-44](#swm-44), [SWM-54](#swm-54), [SWM-55](#swm-55), [SWM-61](#swm-61), [SWM-87](#swm-87), [TRL-15](#trl-15), [TSK-03](#tsk-03), [TSK-20](#tsk-20), [VOI-08](#voi-08) |
-| <a id="sn-03"></a>**SN-03** Costs nothing to run: Running the stack costs $0 beyond the subscriptions the owner already pays; nothing can spend money by accident. | must | [AST-02](#ast-02), [AST-08](#ast-08), [BLD-06](#bld-06), [CST-02](#cst-02), [CST-15](#cst-15), [GW-02](#gw-02), [GW-04](#gw-04), [GW-09](#gw-09), [MIS-04](#mis-04), [MIS-16](#mis-16), [PLT-11](#plt-11), [PLT-26](#plt-26), [PLT-27](#plt-27), [RES-07](#res-07), [SHP-05](#shp-05), [SWM-13](#swm-13), [SWM-14](#swm-14), [SWM-29](#swm-29), [SWM-40](#swm-40), [SWM-53](#swm-53), [SWM-60](#swm-60), [SWM-62](#swm-62), [SWM-81](#swm-81) |
+| <a id="sn-01"></a>**SN-01** A personal AI team that works by itself: Agents read the news, research companies and topics, watch filings and prices, and deliver briefings, alerts and research results on their own, so that the owner mostly just reads results. | must | [APP-05](#app-05), [APP-25](#app-25), [APP-26](#app-26), [APP-30](#app-30), [APP-31](#app-31), [APP-32](#app-32), [APP-33](#app-33), [APP-34](#app-34), [APP-35](#app-35), [AST-01](#ast-01), [AST-05](#ast-05), [AST-07](#ast-07), [AST-13](#ast-13), [BLD-25](#bld-25), [CST-01](#cst-01), [MIS-01](#mis-01), [MIS-02](#mis-02), [MIS-06](#mis-06), [MIS-08](#mis-08), [MIS-09](#mis-09), [MIS-10](#mis-10), [MIS-11](#mis-11), [MIS-13](#mis-13), [MIS-14](#mis-14), [MIS-15](#mis-15), [MIS-21](#mis-21), [MIS-22](#mis-22), [MIS-23](#mis-23), [RES-02](#res-02), [RES-03](#res-03), [RES-04](#res-04), [RES-05](#res-05), [SHP-13](#shp-13), [VOI-09](#voi-09) |
+| <a id="sn-02"></a>**SN-02** Out of the loop except for real decisions: the owner is asked only for decisions that are really his (approvals of spending, deploys, deletions, settings, grants), each one tap away with enough context to decide; no scripts to run, no busywork, nothing shown as needing him that does not. | must | [APP-04](#app-04), [APP-05](#app-05), [APP-06](#app-06), [APP-07](#app-07), [APP-13](#app-13), [APP-14](#app-14), [APP-21](#app-21), [APP-25](#app-25), [APP-26](#app-26), [APP-30](#app-30), [APP-31](#app-31), [AST-06](#ast-06), [AST-12](#ast-12), [AUT-01](#aut-01), [AUT-02](#aut-02), [AUT-05](#aut-05), [AUT-07](#aut-07), [AUT-08](#aut-08), [CNX-02](#cnx-02), [CRW-02](#crw-02), [CRW-05](#crw-05), [CRW-06](#crw-06), [CST-03](#cst-03), [MIS-07](#mis-07), [MIS-20](#mis-20), [PHN-02](#phn-02), [PHN-11](#phn-11), [PHN-12](#phn-12), [PHN-18](#phn-18), [PHN-20](#phn-20), [PHN-21](#phn-21), [PHN-22](#phn-22), [PHN-24](#phn-24), [PHN-25](#phn-25), [PHN-26](#phn-26), [SHP-01](#shp-01), [SHP-03](#shp-03), [SHP-08](#shp-08), [SWM-05](#swm-05), [SWM-06](#swm-06), [SWM-08](#swm-08), [SWM-33](#swm-33), [SWM-38](#swm-38), [SWM-39](#swm-39), [SWM-40](#swm-40), [SWM-42](#swm-42), [SWM-43](#swm-43), [SWM-44](#swm-44), [SWM-54](#swm-54), [SWM-55](#swm-55), [SWM-61](#swm-61), [SWM-87](#swm-87), [TRL-15](#trl-15), [TSK-03](#tsk-03), [TSK-20](#tsk-20), [VOI-08](#voi-08) |
+| <a id="sn-03"></a>**SN-03** Costs nothing to run: Running the stack costs $0 beyond the subscriptions the owner already pays; nothing can spend money by accident. | must | [APP-40](#app-40), [APP-41](#app-41), [APP-42](#app-42), [APP-43](#app-43), [APP-44](#app-44), [APP-45](#app-45), [AST-02](#ast-02), [AST-08](#ast-08), [BLD-06](#bld-06), [CST-02](#cst-02), [CST-15](#cst-15), [GW-02](#gw-02), [GW-04](#gw-04), [GW-09](#gw-09), [MIS-04](#mis-04), [MIS-16](#mis-16), [PHN-27](#phn-27), [PLT-11](#plt-11), [PLT-26](#plt-26), [PLT-27](#plt-27), [RES-07](#res-07), [SHP-05](#shp-05), [SWM-13](#swm-13), [SWM-14](#swm-14), [SWM-29](#swm-29), [SWM-40](#swm-40), [SWM-53](#swm-53), [SWM-60](#swm-60), [SWM-62](#swm-62), [SWM-81](#swm-81) |
 | <a id="sn-04"></a>**SN-04** Private data stays home: Notes, reports, memory, chats, mail and files stay on the PC and the NAS; only the model calls leave, and The owner knows which provider sees what. | must | [AUT-03](#aut-03), [CST-04](#cst-04), [CST-06](#cst-06), [HSE-07](#hse-07), [KNW-05](#knw-05), [KNW-07](#knw-07), [MEM-06](#mem-06), [MEM-18](#mem-18), [PHN-16](#phn-16), [PHN-19](#phn-19), [RES-01](#res-01), [SEC-03](#sec-03), [SEC-04](#sec-04), [SEC-06](#sec-06), [SEC-17](#sec-17), [SEC-18](#sec-18), [SEC-19](#sec-19), [SWM-67](#swm-67) |
-| <a id="sn-05"></a>**SN-05** Agents cannot do damage: No agent can spend money, delete data for good, leak private data, change the NAS, the router or phone and PC security settings, or deploy code without the owner's approval; prompt injection from the web or mail cannot steer an agent into any of it. | must | [APP-10](#app-10), [APP-20](#app-20), [AST-08](#ast-08), [AST-09](#ast-09), [AST-10](#ast-10), [AST-14](#ast-14), [AUT-01](#aut-01), [AUT-03](#aut-03), [BLD-02](#bld-02), [BLD-07](#bld-07), [BLD-10](#bld-10), [BLD-13](#bld-13), [BLD-16](#bld-16), [BLD-18](#bld-18), [CNX-01](#cnx-01), [CNX-03](#cnx-03), [CNX-04](#cnx-04), [CNX-05](#cnx-05), [CRW-04](#crw-04), [CRW-10](#crw-10), [CRW-11](#crw-11), [CRW-13](#crw-13), [CST-04](#cst-04), [CST-05](#cst-05), [CST-06](#cst-06), [CST-07](#cst-07), [CST-10](#cst-10), [CST-11](#cst-11), [CST-12](#cst-12), [GW-05](#gw-05), [HSE-04](#hse-04), [HSE-05](#hse-05), [HSE-08](#hse-08), [HSE-09](#hse-09), [KNW-04](#knw-04), [KNW-06](#knw-06), [KNW-11](#knw-11), [MEM-04](#mem-04), [MIS-17](#mis-17), [PHN-01](#phn-01), [PHN-03](#phn-03), [PHN-04](#phn-04), [PHN-05](#phn-05), [PHN-06](#phn-06), [PHN-07](#phn-07), [PHN-08](#phn-08), [PHN-15](#phn-15), [PLT-02](#plt-02), [PLT-03](#plt-03), [PLT-09](#plt-09), [RES-01](#res-01), [RES-03](#res-03), [RES-04](#res-04), [RES-06](#res-06), [SEC-01](#sec-01), [SEC-02](#sec-02), [SEC-03](#sec-03), [SEC-04](#sec-04), [SEC-05](#sec-05), [SEC-06](#sec-06), [SEC-07](#sec-07), [SEC-08](#sec-08), [SEC-09](#sec-09), [SEC-10](#sec-10), [SEC-11](#sec-11), [SEC-12](#sec-12), [SEC-13](#sec-13), [SEC-14](#sec-14), [SEC-15](#sec-15), [SEC-16](#sec-16), [SHP-05](#shp-05), [SHP-06](#shp-06), [SHP-07](#shp-07), [SHP-09](#shp-09), [SHP-10](#shp-10), [SWM-06](#swm-06), [SWM-109](#swm-109), [SWM-11](#swm-11), [SWM-15](#swm-15), [SWM-23](#swm-23), [SWM-24](#swm-24), [SWM-26](#swm-26), [SWM-42](#swm-42), [SWM-43](#swm-43), [SWM-46](#swm-46), [SWM-51](#swm-51), [SWM-58](#swm-58), [SWM-66](#swm-66), [SWM-67](#swm-67), [SWM-68](#swm-68), [SWM-69](#swm-69), [SWM-70](#swm-70), [SWM-77](#swm-77), [SWM-89](#swm-89), [TRL-05](#trl-05), [TSK-15](#tsk-15), [TSK-20](#tsk-20), [VOI-01](#voi-01), [VOI-03](#voi-03), [VOI-07](#voi-07) |
-| <a id="sn-06"></a>**SN-06** Usable from the phone, anywhere, one sign-in: Everything is usable and decidable from the owner's phone (installable app, push, Telegram), from anywhere on his tailnet, with his Tailscale login as the only sign-in. | must | [APP-01](#app-01), [APP-02](#app-02), [APP-03](#app-03), [APP-04](#app-04), [APP-08](#app-08), [APP-09](#app-09), [APP-15](#app-15), [APP-17](#app-17), [APP-19](#app-19), [APP-20](#app-20), [APP-37](#app-37), [APP-38](#app-38), [AST-01](#ast-01), [AST-03](#ast-03), [AUT-05](#aut-05), [AUT-06](#aut-06), [MIS-15](#mis-15), [QA-16](#qa-16), [QA-21](#qa-21), [SEC-01](#sec-01), [SEC-02](#sec-02), [SWM-11](#swm-11), [SWM-57](#swm-57), [SWM-93](#swm-93), [SWM-95](#swm-95), [TSK-02](#tsk-02), [VOI-09](#voi-09) |
-| <a id="sn-07"></a>**SN-07** See what every agent does: For every agent, mission, crew job, build and tool the owner can see what it did step by step, what it read and changed, what it produced, what it cost and when something went wrong, without having to look for it. | must | [APP-07](#app-07), [APP-11](#app-11), [APP-12](#app-12), [APP-16](#app-16), [APP-19](#app-19), [APP-22](#app-22), [APP-23](#app-23), [APP-24](#app-24), [APP-35](#app-35), [APP-36](#app-36), [AST-04](#ast-04), [AUT-04](#aut-04), [AUT-07](#aut-07), [BLD-14](#bld-14), [BLD-20](#bld-20), [CRW-01](#crw-01), [CRW-02](#crw-02), [CRW-09](#crw-09), [CRW-12](#crw-12), [GW-01](#gw-01), [GW-07](#gw-07), [HSE-02](#hse-02), [MEM-01](#mem-01), [MEM-07](#mem-07), [MEM-09](#mem-09), [MEM-10](#mem-10), [MEM-19](#mem-19), [MIS-16](#mis-16), [OBS-01](#obs-01), [OBS-02](#obs-02), [OBS-03](#obs-03), [OBS-04](#obs-04), [OBS-05](#obs-05), [OBS-06](#obs-06), [OBS-07](#obs-07), [OBS-08](#obs-08), [OBS-09](#obs-09), [OBS-10](#obs-10), [OBS-14](#obs-14), [OBS-15](#obs-15), [OBS-18](#obs-18), [PLT-24](#plt-24), [QA-17](#qa-17), [RES-05](#res-05), [SEC-07](#sec-07), [SHP-11](#shp-11), [SWM-103](#swm-103), [SWM-104](#swm-104), [SWM-105](#swm-105), [SWM-106](#swm-106), [SWM-107](#swm-107), [SWM-17](#swm-17), [SWM-23](#swm-23), [SWM-25](#swm-25), [SWM-30](#swm-30), [SWM-57](#swm-57), [SWM-58](#swm-58), [SWM-64](#swm-64), [SWM-78](#swm-78), [SWM-79](#swm-79), [SWM-80](#swm-80), [SWM-81](#swm-81), [SWM-82](#swm-82), [SWM-84](#swm-84), [SWM-90](#swm-90), [SWM-96](#swm-96), [SWM-99](#swm-99), [TSK-04](#tsk-04), [TSK-09](#tsk-09), [TSK-17](#tsk-17), [TSK-35](#tsk-35) |
+| <a id="sn-05"></a>**SN-05** Agents cannot do damage: No agent can spend money, delete data for good, leak private data, change the NAS, the router or phone and PC security settings, or deploy code without the owner's approval; prompt injection from the web or mail cannot steer an agent into any of it. | must | [APP-10](#app-10), [APP-20](#app-20), [AST-08](#ast-08), [AST-09](#ast-09), [AST-10](#ast-10), [AST-14](#ast-14), [AUT-01](#aut-01), [AUT-03](#aut-03), [BLD-02](#bld-02), [BLD-07](#bld-07), [BLD-10](#bld-10), [BLD-13](#bld-13), [BLD-16](#bld-16), [BLD-18](#bld-18), [CNX-01](#cnx-01), [CNX-03](#cnx-03), [CNX-04](#cnx-04), [CNX-05](#cnx-05), [CRW-04](#crw-04), [CRW-10](#crw-10), [CRW-11](#crw-11), [CRW-13](#crw-13), [CST-04](#cst-04), [CST-05](#cst-05), [CST-06](#cst-06), [CST-07](#cst-07), [CST-10](#cst-10), [CST-11](#cst-11), [CST-12](#cst-12), [GW-05](#gw-05), [HSE-04](#hse-04), [HSE-05](#hse-05), [HSE-08](#hse-08), [HSE-09](#hse-09), [KNW-04](#knw-04), [KNW-06](#knw-06), [KNW-11](#knw-11), [MEM-04](#mem-04), [MIS-17](#mis-17), [MIS-28](#mis-28), [PHN-01](#phn-01), [PHN-03](#phn-03), [PHN-04](#phn-04), [PHN-05](#phn-05), [PHN-06](#phn-06), [PHN-07](#phn-07), [PHN-08](#phn-08), [PHN-15](#phn-15), [PLT-02](#plt-02), [PLT-03](#plt-03), [PLT-09](#plt-09), [RES-01](#res-01), [RES-03](#res-03), [RES-04](#res-04), [RES-06](#res-06), [SEC-01](#sec-01), [SEC-02](#sec-02), [SEC-03](#sec-03), [SEC-04](#sec-04), [SEC-05](#sec-05), [SEC-06](#sec-06), [SEC-07](#sec-07), [SEC-08](#sec-08), [SEC-09](#sec-09), [SEC-10](#sec-10), [SEC-11](#sec-11), [SEC-12](#sec-12), [SEC-13](#sec-13), [SEC-14](#sec-14), [SEC-15](#sec-15), [SEC-16](#sec-16), [SHP-05](#shp-05), [SHP-06](#shp-06), [SHP-07](#shp-07), [SHP-09](#shp-09), [SHP-10](#shp-10), [SWM-06](#swm-06), [SWM-109](#swm-109), [SWM-11](#swm-11), [SWM-15](#swm-15), [SWM-23](#swm-23), [SWM-24](#swm-24), [SWM-26](#swm-26), [SWM-42](#swm-42), [SWM-43](#swm-43), [SWM-46](#swm-46), [SWM-51](#swm-51), [SWM-58](#swm-58), [SWM-66](#swm-66), [SWM-67](#swm-67), [SWM-68](#swm-68), [SWM-69](#swm-69), [SWM-70](#swm-70), [SWM-77](#swm-77), [SWM-89](#swm-89), [TRL-05](#trl-05), [TSK-15](#tsk-15), [TSK-20](#tsk-20), [VOI-01](#voi-01), [VOI-03](#voi-03), [VOI-07](#voi-07) |
+| <a id="sn-06"></a>**SN-06** Usable from the phone, anywhere, one sign-in: Everything is usable and decidable from the owner's phone (installable app, push, Telegram), from anywhere on his tailnet, with his Tailscale login as the only sign-in. | must | [APP-01](#app-01), [APP-02](#app-02), [APP-03](#app-03), [APP-04](#app-04), [APP-08](#app-08), [APP-09](#app-09), [APP-15](#app-15), [APP-17](#app-17), [APP-19](#app-19), [APP-20](#app-20), [APP-37](#app-37), [APP-38](#app-38), [APP-39](#app-39), [AST-01](#ast-01), [AST-03](#ast-03), [AUT-05](#aut-05), [AUT-06](#aut-06), [MIS-15](#mis-15), [MIS-23](#mis-23), [QA-16](#qa-16), [QA-21](#qa-21), [SEC-01](#sec-01), [SEC-02](#sec-02), [SWM-11](#swm-11), [SWM-57](#swm-57), [SWM-93](#swm-93), [SWM-95](#swm-95), [TSK-02](#tsk-02), [VOI-09](#voi-09) |
+| <a id="sn-07"></a>**SN-07** See what every agent does: For every agent, mission, crew job, build and tool the owner can see what it did step by step, what it read and changed, what it produced, what it cost and when something went wrong, without having to look for it. | must | [APP-07](#app-07), [APP-11](#app-11), [APP-12](#app-12), [APP-16](#app-16), [APP-19](#app-19), [APP-22](#app-22), [APP-23](#app-23), [APP-24](#app-24), [APP-35](#app-35), [APP-36](#app-36), [AST-04](#ast-04), [AUT-04](#aut-04), [AUT-07](#aut-07), [BLD-14](#bld-14), [BLD-20](#bld-20), [CRW-01](#crw-01), [CRW-02](#crw-02), [CRW-09](#crw-09), [CRW-12](#crw-12), [GW-01](#gw-01), [GW-07](#gw-07), [HSE-02](#hse-02), [MEM-01](#mem-01), [MEM-07](#mem-07), [MEM-09](#mem-09), [MEM-10](#mem-10), [MEM-19](#mem-19), [MIS-16](#mis-16), [OBS-01](#obs-01), [OBS-02](#obs-02), [OBS-03](#obs-03), [OBS-04](#obs-04), [OBS-05](#obs-05), [OBS-06](#obs-06), [OBS-07](#obs-07), [OBS-08](#obs-08), [OBS-09](#obs-09), [OBS-10](#obs-10), [OBS-14](#obs-14), [OBS-15](#obs-15), [OBS-18](#obs-18), [PLT-24](#plt-24), [PLT-30](#plt-30), [QA-17](#qa-17), [RES-05](#res-05), [SEC-07](#sec-07), [SHP-11](#shp-11), [SWM-103](#swm-103), [SWM-104](#swm-104), [SWM-105](#swm-105), [SWM-106](#swm-106), [SWM-107](#swm-107), [SWM-110](#swm-110), [SWM-111](#swm-111), [SWM-112](#swm-112), [SWM-113](#swm-113), [SWM-114](#swm-114), [SWM-115](#swm-115), [SWM-17](#swm-17), [SWM-23](#swm-23), [SWM-25](#swm-25), [SWM-30](#swm-30), [SWM-57](#swm-57), [SWM-58](#swm-58), [SWM-64](#swm-64), [SWM-78](#swm-78), [SWM-79](#swm-79), [SWM-80](#swm-80), [SWM-81](#swm-81), [SWM-82](#swm-82), [SWM-84](#swm-84), [SWM-90](#swm-90), [SWM-96](#swm-96), [SWM-99](#swm-99), [TSK-04](#tsk-04), [TSK-09](#tsk-09), [TSK-17](#tsk-17), [TSK-35](#tsk-35) |
 | <a id="sn-08"></a>**SN-08** The stack maintains and improves itself: Housekeeping agents keep the stack healthy, and the stack proposes and builds its own improvements; the owner approves what ships. | must | [APP-21](#app-21), [AST-11](#ast-11), [AUT-02](#aut-02), [BLD-01](#bld-01), [BLD-03](#bld-03), [BLD-04](#bld-04), [BLD-05](#bld-05), [BLD-08](#bld-08), [BLD-10](#bld-10), [BLD-21](#bld-21), [BLD-22](#bld-22), [BLD-24](#bld-24), [CRW-01](#crw-01), [CRW-03](#crw-03), [CRW-04](#crw-04), [CRW-07](#crw-07), [CRW-08](#crw-08), [CRW-09](#crw-09), [CRW-10](#crw-10), [CST-07](#cst-07), [GW-09](#gw-09), [KNW-08](#knw-08), [MEM-11](#mem-11), [MEM-13](#mem-13), [MEM-20](#mem-20), [OBS-13](#obs-13), [PLT-08](#plt-08), [PLT-19](#plt-19), [QA-07](#qa-07), [SEC-08](#sec-08), [SWM-07](#swm-07), [SWM-102](#swm-102), [SWM-18](#swm-18), [SWM-38](#swm-38), [SWM-44](#swm-44), [SWM-45](#swm-45), [SWM-46](#swm-46), [SWM-47](#swm-47), [SWM-61](#swm-61), [SWM-70](#swm-70), [SWM-82](#swm-82), [SWM-83](#swm-83), [SWM-84](#swm-84), [SWM-91](#swm-91), [SWM-92](#swm-92), [SWM-93](#swm-93), [SWM-94](#swm-94), [SWM-95](#swm-95), [SWM-96](#swm-96), [TRL-14](#trl-14), [TRL-15](#trl-15), [TRL-16](#trl-16), [TRL-17](#trl-17), [TSK-13](#tsk-13), [TSK-16](#tsk-16), [TSK-17](#tsk-17) |
 | <a id="sn-09"></a>**SN-09** Nothing is ever lost: Data and configuration are backed up, the backups are proven to restore, and the whole stack can move to a new PC. | must | [AST-10](#ast-10), [AUT-04](#aut-04), [CNX-03](#cnx-03), [CST-05](#cst-05), [KNW-01](#knw-01), [KNW-11](#knw-11), [MEM-08](#mem-08), [MEM-12](#mem-12), [MEM-14](#mem-14), [MEM-17](#mem-17), [MEM-21](#mem-21), [PLT-12](#plt-12), [PLT-13](#plt-13), [PLT-14](#plt-14), [PLT-15](#plt-15), [PLT-16](#plt-16), [PLT-17](#plt-17), [SWM-30](#swm-30), [SWM-35](#swm-35), [SWM-36](#swm-36), [SWM-73](#swm-73), [SWM-76](#swm-76) |
-| <a id="sn-10"></a>**SN-10** Knowledge that grows and answers with sources: Everything the owner and his agents write becomes a searchable, linked knowledge base (vault, wikis, long-term memory) that answers questions with citations. | must | [APP-15](#app-15), [CRW-13](#crw-13), [KNW-01](#knw-01), [KNW-02](#knw-02), [KNW-03](#knw-03), [KNW-04](#knw-04), [KNW-05](#knw-05), [KNW-06](#knw-06), [KNW-08](#knw-08), [KNW-09](#knw-09), [KNW-10](#knw-10), [KNW-12](#knw-12), [KNW-13](#knw-13), [KNW-14](#knw-14), [KNW-15](#knw-15), [MEM-01](#mem-01), [MEM-02](#mem-02), [MEM-03](#mem-03), [MEM-04](#mem-04), [MEM-05](#mem-05), [MEM-06](#mem-06), [MEM-09](#mem-09), [MEM-10](#mem-10), [MEM-12](#mem-12), [MEM-14](#mem-14), [MEM-15](#mem-15), [MEM-16](#mem-16), [MEM-17](#mem-17), [MEM-18](#mem-18), [MEM-19](#mem-19), [MEM-20](#mem-20), [MEM-21](#mem-21), [MIS-01](#mis-01), [MIS-11](#mis-11), [MIS-18](#mis-18), [MIS-19](#mis-19), [MIS-21](#mis-21), [SWM-66](#swm-66), [TSK-34](#tsk-34) |
+| <a id="sn-10"></a>**SN-10** Knowledge that grows and answers with sources: Everything the owner and his agents write becomes a searchable, linked knowledge base (vault, wikis, long-term memory) that answers questions with citations. | must | [APP-15](#app-15), [CRW-13](#crw-13), [KNW-01](#knw-01), [KNW-02](#knw-02), [KNW-03](#knw-03), [KNW-04](#knw-04), [KNW-05](#knw-05), [KNW-06](#knw-06), [KNW-08](#knw-08), [KNW-09](#knw-09), [KNW-10](#knw-10), [KNW-12](#knw-12), [KNW-13](#knw-13), [KNW-14](#knw-14), [KNW-15](#knw-15), [MEM-01](#mem-01), [MEM-02](#mem-02), [MEM-03](#mem-03), [MEM-04](#mem-04), [MEM-05](#mem-05), [MEM-06](#mem-06), [MEM-09](#mem-09), [MEM-10](#mem-10), [MEM-12](#mem-12), [MEM-14](#mem-14), [MEM-15](#mem-15), [MEM-16](#mem-16), [MEM-17](#mem-17), [MEM-18](#mem-18), [MEM-19](#mem-19), [MEM-20](#mem-20), [MEM-21](#mem-21), [MIS-01](#mis-01), [MIS-11](#mis-11), [MIS-18](#mis-18), [MIS-19](#mis-19), [MIS-21](#mis-21), [MIS-28](#mis-28), [SWM-66](#swm-66), [TSK-34](#tsk-34) |
 | <a id="sn-11"></a>**SN-11** Hands in the real world, under control: Agents can act through the AI phone, Gmail, shopping and the House (lights, plugs, Echos), each only within grants and approvals the owner controls, with Stop and a log. | should | [CNX-01](#cnx-01), [CNX-02](#cnx-02), [CRW-11](#crw-11), [CST-12](#cst-12), [HSE-01](#hse-01), [HSE-02](#hse-02), [HSE-03](#hse-03), [HSE-05](#hse-05), [HSE-06](#hse-06), [HSE-07](#hse-07), [MIS-17](#mis-17), [PHN-01](#phn-01), [PHN-02](#phn-02), [PHN-05](#phn-05), [PHN-13](#phn-13), [PHN-14](#phn-14), [PHN-17](#phn-17), [PHN-18](#phn-18), [PHN-19](#phn-19), [PHN-22](#phn-22), [PHN-23](#phn-23), [PLT-22](#plt-22), [SHP-01](#shp-01), [SHP-02](#shp-02), [SHP-03](#shp-03), [SHP-04](#shp-04), [SHP-11](#shp-11), [SHP-13](#shp-13), [SWM-26](#swm-26), [TRL-16](#trl-16), [VOI-01](#voi-01), [VOI-02](#voi-02), [VOI-03](#voi-03), [VOI-04](#voi-04), [VOI-05](#voi-05), [VOI-06](#voi-06), [VOI-08](#voi-08) |
 | <a id="sn-12"></a>**SN-12** English everywhere: Chat, app, reports, wikis, Telegram, code, docs and commit messages are in English. | must | [CST-09](#cst-09), [MIS-12](#mis-12), [TSK-35](#tsk-35) |
-| <a id="sn-13"></a>**SN-13** Runs unattended for months: The stack keeps working through usage-limit pauses, restarts, deploys, reboots and power cuts, and recovers by itself; no work, approval or message is lost on a restart. | must | [APP-23](#app-23), [APP-24](#app-24), [AST-03](#ast-03), [AST-12](#ast-12), [BLD-03](#bld-03), [BLD-06](#bld-06), [BLD-09](#bld-09), [BLD-12](#bld-12), [CNX-06](#cnx-06), [CST-03](#cst-03), [CST-08](#cst-08), [CST-14](#cst-14), [GW-03](#gw-03), [GW-04](#gw-04), [GW-06](#gw-06), [GW-08](#gw-08), [MEM-05](#mem-05), [MEM-07](#mem-07), [MEM-08](#mem-08), [MEM-15](#mem-15), [MEM-16](#mem-16), [MEM-21](#mem-21), [MIS-03](#mis-03), [MIS-04](#mis-04), [MIS-05](#mis-05), [MIS-10](#mis-10), [OBS-03](#obs-03), [OBS-04](#obs-04), [PHN-09](#phn-09), [PHN-10](#phn-10), [PHN-11](#phn-11), [PHN-14](#phn-14), [PLT-04](#plt-04), [PLT-05](#plt-05), [PLT-06](#plt-06), [PLT-07](#plt-07), [PLT-08](#plt-08), [PLT-09](#plt-09), [PLT-10](#plt-10), [PLT-11](#plt-11), [PLT-13](#plt-13), [PLT-18](#plt-18), [PLT-21](#plt-21), [PLT-23](#plt-23), [PLT-27](#plt-27), [QA-17](#qa-17), [SHP-12](#shp-12), [SWM-12](#swm-12), [SWM-19](#swm-19), [SWM-31](#swm-31), [SWM-47](#swm-47), [SWM-52](#swm-52), [SWM-53](#swm-53), [SWM-63](#swm-63), [SWM-71](#swm-71), [SWM-72](#swm-72), [SWM-73](#swm-73), [SWM-76](#swm-76), [SWM-85](#swm-85), [SWM-87](#swm-87), [TSK-06](#tsk-06), [TSK-08](#tsk-08) |
+| <a id="sn-13"></a>**SN-13** Runs unattended for months: The stack keeps working through usage-limit pauses, restarts, deploys, reboots and power cuts, and recovers by itself; no work, approval or message is lost on a restart. | must | [APP-23](#app-23), [APP-24](#app-24), [AST-03](#ast-03), [AST-12](#ast-12), [BLD-03](#bld-03), [BLD-06](#bld-06), [BLD-09](#bld-09), [BLD-12](#bld-12), [CNX-06](#cnx-06), [CST-03](#cst-03), [CST-08](#cst-08), [CST-14](#cst-14), [GW-03](#gw-03), [GW-04](#gw-04), [GW-06](#gw-06), [GW-08](#gw-08), [MEM-05](#mem-05), [MEM-07](#mem-07), [MEM-08](#mem-08), [MEM-15](#mem-15), [MEM-16](#mem-16), [MEM-21](#mem-21), [MIS-03](#mis-03), [MIS-04](#mis-04), [MIS-05](#mis-05), [MIS-10](#mis-10), [OBS-03](#obs-03), [OBS-04](#obs-04), [PHN-09](#phn-09), [PHN-10](#phn-10), [PHN-11](#phn-11), [PHN-14](#phn-14), [PHN-25](#phn-25), [PLT-04](#plt-04), [PLT-05](#plt-05), [PLT-06](#plt-06), [PLT-07](#plt-07), [PLT-08](#plt-08), [PLT-09](#plt-09), [PLT-10](#plt-10), [PLT-11](#plt-11), [PLT-13](#plt-13), [PLT-18](#plt-18), [PLT-21](#plt-21), [PLT-23](#plt-23), [PLT-27](#plt-27), [PLT-28](#plt-28), [PLT-29](#plt-29), [PLT-30](#plt-30), [PLT-31](#plt-31), [PLT-32](#plt-32), [QA-17](#qa-17), [SHP-12](#shp-12), [SWM-12](#swm-12), [SWM-19](#swm-19), [SWM-31](#swm-31), [SWM-47](#swm-47), [SWM-52](#swm-52), [SWM-53](#swm-53), [SWM-63](#swm-63), [SWM-71](#swm-71), [SWM-72](#swm-72), [SWM-73](#swm-73), [SWM-76](#swm-76), [SWM-85](#swm-85), [SWM-87](#swm-87), [TSK-06](#tsk-06), [TSK-08](#tsk-08) |
 | <a id="sn-14"></a>**SN-14** Understand and change any codebase: The stack can study any repository (code graph, code map), answer questions about it, change the owner's own repositories through the builder, and check code against large specifications. | should | [AST-09](#ast-09), [BLD-01](#bld-01), [BLD-11](#bld-11), [BLD-15](#bld-15), [BLD-17](#bld-17), [BLD-18](#bld-18), [BLD-19](#bld-19), [BLD-23](#bld-23), [BLD-25](#bld-25), [QA-14](#qa-14) |
 | <a id="sn-15"></a>**SN-15** A codebase AI agents can develop safely: The repository is organised for coding agents (rules per directory, checks, tests, docs that stay true), so that agents can change it without breaking it. | must | [APP-13](#app-13), [AST-07](#ast-07), [AST-11](#ast-11), [AUT-08](#aut-08), [CRW-07](#crw-07), [CRW-08](#crw-08), [CST-08](#cst-08), [CST-13](#cst-13), [KNW-13](#knw-13), [PLT-24](#plt-24), [PLT-25](#plt-25), [PLT-26](#plt-26), [QA-01](#qa-01), [QA-02](#qa-02), [QA-03](#qa-03), [QA-04](#qa-04), [QA-05](#qa-05), [QA-06](#qa-06), [QA-07](#qa-07), [QA-13](#qa-13), [QA-16](#qa-16), [QA-18](#qa-18), [QA-19](#qa-19), [QA-20](#qa-20), [QA-21](#qa-21), [SEC-15](#sec-15), [SWM-01](#swm-01), [SWM-16](#swm-16), [SWM-22](#swm-22), [SWM-28](#swm-28), [SWM-37](#swm-37), [SWM-41](#swm-41), [SWM-85](#swm-85), [SWM-88](#swm-88) |
 | <a id="sn-16"></a>**SN-16** Known, current and checkable requirements: What the stack must do is written down properly, kept current with every change, and contradictions between the parts are found and shown. | must | [APP-14](#app-14), [APP-18](#app-18), [MEM-02](#mem-02), [MEM-11](#mem-11), [MEM-13](#mem-13), [QA-06](#qa-06), [QA-08](#qa-08), [QA-09](#qa-09), [QA-10](#qa-10), [QA-11](#qa-11), [QA-12](#qa-12), [QA-13](#qa-13), [QA-14](#qa-14), [QA-15](#qa-15), [SWM-03](#swm-03), [SWM-20](#swm-20), [SWM-35](#swm-35), [SWM-55](#swm-55), [SWM-88](#swm-88), [TRL-02](#trl-02), [TRL-14](#trl-14), [TRL-17](#trl-17) |
-| <a id="sn-17"></a>**SN-17** Agents that work together over time: Agents keep working on the same topics over many runs, refine and reopen each other's work, see each other's artifacts and talk to each other directly, to groups or to all, with the owner reading along. | should | [CRW-05](#crw-05), [MEM-03](#mem-03), [MIS-18](#mis-18), [MIS-19](#mis-19), [MIS-20](#mis-20), [OBS-13](#obs-13), [SWM-01](#swm-01), [SWM-02](#swm-02), [SWM-03](#swm-03), [SWM-04](#swm-04), [SWM-05](#swm-05), [SWM-07](#swm-07), [SWM-08](#swm-08), [SWM-09](#swm-09), [SWM-10](#swm-10), [SWM-100](#swm-100), [SWM-101](#swm-101), [SWM-102](#swm-102), [SWM-103](#swm-103), [SWM-104](#swm-104), [SWM-105](#swm-105), [SWM-106](#swm-106), [SWM-107](#swm-107), [SWM-108](#swm-108), [SWM-109](#swm-109), [SWM-11](#swm-11), [SWM-12](#swm-12), [SWM-13](#swm-13), [SWM-16](#swm-16), [SWM-17](#swm-17), [SWM-18](#swm-18), [SWM-20](#swm-20), [SWM-21](#swm-21), [SWM-22](#swm-22), [SWM-27](#swm-27), [SWM-28](#swm-28), [SWM-32](#swm-32), [SWM-33](#swm-33), [SWM-34](#swm-34), [SWM-37](#swm-37), [SWM-41](#swm-41), [SWM-48](#swm-48), [SWM-49](#swm-49), [SWM-50](#swm-50), [SWM-51](#swm-51), [SWM-52](#swm-52), [SWM-54](#swm-54), [SWM-56](#swm-56), [SWM-60](#swm-60), [SWM-62](#swm-62), [SWM-63](#swm-63), [SWM-64](#swm-64), [SWM-65](#swm-65), [SWM-75](#swm-75), [SWM-86](#swm-86), [SWM-90](#swm-90), [SWM-97](#swm-97), [SWM-98](#swm-98), [SWM-99](#swm-99), [TRL-01](#trl-01), [TRL-07](#trl-07), [TSK-05](#tsk-05), [TSK-07](#tsk-07), [TSK-18](#tsk-18), [TSK-19](#tsk-19) |
+| <a id="sn-17"></a>**SN-17** Agents that work together over time: Agents keep working on the same topics over many runs, refine and reopen each other's work, see each other's artifacts and talk to each other directly, to groups or to all, with the owner reading along. | should | [CRW-05](#crw-05), [MEM-03](#mem-03), [MIS-18](#mis-18), [MIS-19](#mis-19), [MIS-20](#mis-20), [OBS-13](#obs-13), [SWM-01](#swm-01), [SWM-02](#swm-02), [SWM-03](#swm-03), [SWM-04](#swm-04), [SWM-05](#swm-05), [SWM-07](#swm-07), [SWM-08](#swm-08), [SWM-09](#swm-09), [SWM-10](#swm-10), [SWM-100](#swm-100), [SWM-101](#swm-101), [SWM-102](#swm-102), [SWM-103](#swm-103), [SWM-104](#swm-104), [SWM-105](#swm-105), [SWM-106](#swm-106), [SWM-107](#swm-107), [SWM-108](#swm-108), [SWM-109](#swm-109), [SWM-11](#swm-11), [SWM-110](#swm-110), [SWM-111](#swm-111), [SWM-112](#swm-112), [SWM-113](#swm-113), [SWM-114](#swm-114), [SWM-115](#swm-115), [SWM-12](#swm-12), [SWM-13](#swm-13), [SWM-16](#swm-16), [SWM-17](#swm-17), [SWM-18](#swm-18), [SWM-20](#swm-20), [SWM-21](#swm-21), [SWM-22](#swm-22), [SWM-27](#swm-27), [SWM-28](#swm-28), [SWM-32](#swm-32), [SWM-33](#swm-33), [SWM-34](#swm-34), [SWM-37](#swm-37), [SWM-41](#swm-41), [SWM-48](#swm-48), [SWM-49](#swm-49), [SWM-50](#swm-50), [SWM-51](#swm-51), [SWM-52](#swm-52), [SWM-54](#swm-54), [SWM-56](#swm-56), [SWM-60](#swm-60), [SWM-62](#swm-62), [SWM-63](#swm-63), [SWM-64](#swm-64), [SWM-65](#swm-65), [SWM-75](#swm-75), [SWM-86](#swm-86), [SWM-90](#swm-90), [SWM-97](#swm-97), [SWM-98](#swm-98), [SWM-99](#swm-99), [TRL-01](#trl-01), [TRL-07](#trl-07), [TSK-05](#tsk-05), [TSK-07](#tsk-07), [TSK-18](#tsk-18), [TSK-19](#tsk-19) |
 | <a id="sn-18"></a>**SN-18** Told once, not spammed: the owner hears about what needs him or went wrong once, on his phone, and is not flooded with repeats or noise. | should | [APP-38](#app-38), [AUT-05](#aut-05), [AUT-06](#aut-06), [CRW-12](#crw-12), [MIS-22](#mis-22), [OBS-10](#obs-10), [OBS-11](#obs-11), [OBS-12](#obs-12), [OBS-16](#obs-16), [OBS-17](#obs-17), [SHP-04](#shp-04), [SWM-100](#swm-100), [SWM-14](#swm-14), [SWM-39](#swm-39), [SWM-50](#swm-50), [SWM-56](#swm-56), [SWM-59](#swm-59), [SWM-71](#swm-71), [SWM-80](#swm-80) |
 | <a id="sn-19"></a>**SN-19** Give a task, the stack does the rest: The owner gives any task (coding, research, analysis, watching, errands) in one sentence, or with details preset when wanted; the stack works out what done means, plans it, chooses or creates the agents, models and harnesses, runs it once, on a schedule, on an event or after other work, for minutes or for months, and asks only the real decisions. | must | [TRL-01](#trl-01), [TRL-02](#trl-02), [TRL-03](#trl-03), [TRL-04](#trl-04), [TRL-05](#trl-05), [TRL-06](#trl-06), [TRL-07](#trl-07), [TRL-08](#trl-08), [TRL-09](#trl-09), [TRL-10](#trl-10), [TRL-11](#trl-11), [TRL-12](#trl-12), [TRL-13](#trl-13), [TSK-01](#tsk-01), [TSK-02](#tsk-02), [TSK-03](#tsk-03), [TSK-04](#tsk-04), [TSK-05](#tsk-05), [TSK-06](#tsk-06), [TSK-07](#tsk-07), [TSK-11](#tsk-11), [TSK-13](#tsk-13), [TSK-14](#tsk-14), [TSK-15](#tsk-15), [TSK-16](#tsk-16), [TSK-21](#tsk-21), [TSK-22](#tsk-22), [TSK-23](#tsk-23), [TSK-24](#tsk-24), [TSK-25](#tsk-25), [TSK-26](#tsk-26), [TSK-27](#tsk-27), [TSK-28](#tsk-28), [TSK-29](#tsk-29), [TSK-30](#tsk-30), [TSK-31](#tsk-31), [TSK-32](#tsk-32), [TSK-33](#tsk-33), [TSK-34](#tsk-34) |
 | <a id="sn-20"></a>**SN-20** Work that starts when the world changes: Tasks start by themselves when something happens, such as a news story breaking, mail arriving, code changing, a price moving, a device changing state or another task finishing. | should | [TSK-10](#tsk-10), [TSK-11](#tsk-11), [TSK-12](#tsk-12), [TSK-21](#tsk-21), [TSK-22](#tsk-22), [TSK-23](#tsk-23), [TSK-24](#tsk-24), [TSK-25](#tsk-25), [TSK-26](#tsk-26), [TSK-27](#tsk-27), [TSK-28](#tsk-28), [TSK-29](#tsk-29), [TSK-30](#tsk-30), [TSK-31](#tsk-31), [TSK-32](#tsk-32), [TSK-33](#tsk-33) |
 
 ## APP App
 
-### APP-01
+#### APP-01
 
 **Phone first** · must · quality · **implemented**
 
@@ -1492,7 +1527,7 @@ Every screen shall work at 375 px width without horizontal scrolling and on a de
 - Trace: `images/mission-control/web/static/app.css`
 - Findings: [FND-40](#fnd-40), [FND-41](#fnd-41), [FND-82](#fnd-82)
 
-### APP-02
+#### APP-02
 
 **Every screen opens cold** · must · quality · **implemented**
 
@@ -1503,7 +1538,7 @@ Every app route shall render when it is opened directly (a link, a notification,
 - Verified by: test: `tests/test_app_routes.py::test_every_screen_is_drawn_when_opened_cold`, `tests/test_app_routes.py::test_the_connections_card_is_started_by_render`, `tests/test_app_routes.py::test_view_scripts_load_before_app_js_and_take_no_arguments`
 - Findings: [FND-30](#fnd-30)
 
-### APP-03
+#### APP-03
 
 **Installable, with push and self-update** · must · functional · **implemented**
 
@@ -1514,7 +1549,7 @@ The app shall be installable as a PWA, deliver push notifications to devices tha
 - Verified by: inspection: `images/mission-control/web/sw.js`, `images/mission-control/web/manifest.webmanifest`, `images/mission-control/server.py`
 - Trace: `images/mission-control/icons.py`
 
-### APP-04
+#### APP-04
 
 **Offline is said plainly** · must · functional · **implemented**
 
@@ -1524,7 +1559,7 @@ If the app cannot reach the stack for 8 seconds, then it shall say so (Tailscale
 - Sources: `owner 2026-10-29: 'Loading forever like that'`
 - Verified by: inspection: `images/mission-control/web/static/app.js`
 
-### APP-05
+#### APP-05
 
 **Home answers three questions** · must · functional · **implemented**
 
@@ -1536,7 +1571,7 @@ Home shall show, in this order, what needs the owner, what is running now with w
 - Trace: `images/mission-control/web/static/app.js`
 - Findings: [FND-57](#fnd-57)
 
-### APP-06
+#### APP-06
 
 **Needs you is only the owner's decisions** · must · functional · **implemented**
 
@@ -1547,7 +1582,7 @@ Needs you shall list only decisions that wait for the owner (builds to review, p
 - Verified by: test: `tests/test_home_work.py::test_needs_you_lists_only_decisions_and_says_so_when_there_are_none`
 - Findings: [FND-08](#fnd-08)
 
-### APP-07
+#### APP-07
 
 **Stack upkeep is visible but separate** · should · functional · **implemented**
 
@@ -1557,7 +1592,7 @@ Health alerts and the stack's own improvement ideas shall show under Now as Stac
 - Sources: [DEC-09](#dec-09)
 - Verified by: test: `tests/test_home_work.py::test_stack_upkeep_sits_under_now_not_needs_you`, `tests/test_home_work.py::test_list_row_chevrons_have_a_size`
 
-### APP-08
+#### APP-08
 
 **Live updates without losing your place** · must · quality · **implemented**
 
@@ -1567,7 +1602,7 @@ The app shall update only the parts that changed when new state arrives, never r
 - Sources: `images/mission-control/web/AGENTS.md`
 - Verified by: test: `tests/test_app_routes.py::test_live_redraws_do_not_replay_the_entrance_animation`, `tests/test_app_routes.py::test_an_open_timeline_is_not_redrawn_away`
 
-### APP-09
+#### APP-09
 
 **Answers are never cached** · must · quality · **implemented**
 
@@ -1577,7 +1612,7 @@ Mission Control's API answers shall carry headers that forbid caching.
 - Sources: `incident: an old service worker served stale state`
 - Verified by: test: `tests/test_server.py::test_api_answers_are_never_cached`
 
-### APP-10
+#### APP-10
 
 **Every value is escaped** · must · constraint · **implemented**
 
@@ -1587,7 +1622,7 @@ The front end shall escape every value it puts into HTML and sanitise rendered m
 - Sources: `images/mission-control/web/AGENTS.md`
 - Verified by: inspection: `images/mission-control/web/static/app.js`
 
-### APP-11
+#### APP-11
 
 **One list of agents** · must · functional · **implemented**
 
@@ -1598,7 +1633,7 @@ The Agents tab shall list missions and crew jobs as one kind of agent, sorted by
 - Verified by: test: `tests/test_crew.py::test_systemd_state_becomes_crew_cards`
 - Trace: `images/mission-control/web/static/app.js`, `ops/crew.py`
 
-### APP-12
+#### APP-12
 
 **The Stack page shows the machine** · must · functional · **implemented**
 
@@ -1608,7 +1643,7 @@ The Stack page shall show the live architecture map, every service with its stat
 - Sources: `images/mission-control/guide/12-stack-page.md`, [DEC-06](#dec-06)
 - Verified by: test: `tests/test_guide.py::test_live_map_boxes_point_at_real_sections`
 
-### APP-13
+#### APP-13
 
 **The guide covers every feature** · must · quality · **implemented**
 
@@ -1618,7 +1653,7 @@ The in-app guide shall have a chapter for every screen, mention every assistant 
 - Sources: `images/mission-control/guide/AGENTS.md`
 - Verified by: test: `tests/test_guide.py::test_chapters_are_well_formed`, `tests/test_guide.py::test_every_app_screen_has_a_chapter`, `tests/test_guide.py::test_every_screen_s_how_this_page_works_opens_the_chapter_about_it`, `tests/test_guide.py::test_every_make_target_is_explained`, `tests/test_guide.py::test_examples_and_live_blocks_point_at_real_things`, `tests/test_guide.py::test_guide_api`
 
-### APP-14
+#### APP-14
 
 **The guide says what is true** · must · quality · **implemented**
 
@@ -1629,7 +1664,7 @@ Every statement in the guide shall match the current behaviour; when behaviour c
 - Verified by: inspection: `images/mission-control/guide/01-welcome.md`, `images/mission-control/guide/10-builder.md`, `images/mission-control/guide/13-technology.md`, `images/mission-control/guide/17-ai-phone.md`
 - Findings: [FND-01](#fnd-01), [FND-06](#fnd-06), [FND-07](#fnd-07), [FND-08](#fnd-08), [FND-09](#fnd-09)
 
-### APP-15
+#### APP-15
 
 **Share anything to the stack** · should · functional · **implemented**
 
@@ -1639,7 +1674,7 @@ When the owner shares a link, text, picture or file to the installed app, Missio
 - Sources: `images/mission-control/guide/02-first-ten-minutes.md`
 - Verified by: test: `tests/test_server.py::test_phone_share_is_kept_and_opened_in_the_app`
 
-### APP-16
+#### APP-16
 
 **Activity links to its subject** · should · functional · **implemented**
 
@@ -1649,7 +1684,7 @@ Every activity-feed entry concerning a build, a run or an agent shall link to th
 - Sources: `owner 2026-10-28`
 - Verified by: test: `tests/test_guide.py::test_activity_feed_links_build_events_to_their_build`
 
-### APP-17
+#### APP-17
 
 **The live stream carries everything the screens need** · should · functional · **implemented**
 
@@ -1659,7 +1694,7 @@ The app's live state stream shall carry the AI phone's status alongside missions
 - Sources: `images/mission-control/AGENTS.md`
 - Verified by: test: `tests/test_server.py::test_the_live_stream_carries_the_ai_phone`
 
-### APP-18
+#### APP-18
 
 **What's new writes itself** · could · functional · **implemented**
 
@@ -1669,7 +1704,7 @@ The What's new chapter shall list the stack's changes from its git history, newe
 - Sources: `images/mission-control/guide/16-whats-new.md`
 - Verified by: inspection: `images/mission-control/web/static/guide.js`
 
-### APP-19
+#### APP-19
 
 **Nothing the owner reads is cut** · must · quality · **implemented**
 
@@ -1681,7 +1716,7 @@ Every text the owner reads (the app, Telegram, push, e-mail, the activity feed, 
 - Trace: `ops/textcap.py`, `images/mission-control/web/static/app.js`, `images/mission-control/web/static/app.css`, `ops/crew.py`
 - Findings: [FND-38](#fnd-38)
 
-### APP-20
+#### APP-20
 
 **The owner's input is refused, never cut** · must · quality · **implemented**
 
@@ -1693,7 +1728,7 @@ When the owner sends a text or a list over a limit, the stack shall refuse it wi
 - Trace: `ops/textcap.py`, `ops/builds.py`, `ops/missions.py`, `ops/swarm_client.py`, `images/swarm/ledger.py`, `images/mission-control/server.py`
 - Findings: [FND-38](#fnd-38)
 
-### APP-21
+#### APP-21
 
 **One list of ideas** · should · functional · **implemented**
 
@@ -1704,7 +1739,7 @@ Every open idea to improve the stack or its agents (the crew's and the self-revi
 - Verified by: test: `tests/test_app_layout.py::test_every_idea_is_in_one_list_under_agents`
 - Trace: `images/mission-control/web/static/swarm.js`, `images/mission-control/web/static/app.js`
 
-### APP-22
+#### APP-22
 
 **Every chart moves, zooms and names its dots the same way** · should · functional · **implemented**
 
@@ -1715,7 +1750,7 @@ Every zoomable chart (the code graph, the wiki graphs, Who works with whom) shal
 - Verified by: test: `tests/test_charts.py::test_every_chart_moves_and_zooms_through_one_helper_and_one_finger_scrolls_the_page`, `tests/test_charts.py::test_a_redraw_keeps_the_map_s_dots_and_zoom`, `tests/test_charts.py::test_names_never_cover_each_other_and_the_busiest_keep_theirs`, `tests/test_charts.py::test_the_map_names_every_dot_and_shows_open_ideas_when_asked`
 - Trace: `images/mission-control/web/static/app.js`, `images/mission-control/web/static/swarm.js`, `images/mission-control/web/static/app.css`
 
-### APP-23
+#### APP-23
 
 **No call of the app waits forever** · must · functional · **implemented**
 
@@ -1727,7 +1762,7 @@ Every call the app makes shall end within its time limit (45 s, 30 s for a reque
 - Trace: `images/mission-control/web/static/app.js`
 - Findings: [FND-51](#fnd-51), [FND-52](#fnd-52)
 
-### APP-24
+#### APP-24
 
 **An error in the app is kept, raised and caught before it lands** · must · functional · **implemented**
 
@@ -1739,7 +1774,7 @@ Every error the app reports shall be kept (the newest 500, in the missions data)
 - Trace: `images/mission-control/server.py`, `ops/crew.py`, `ops/app_lint.py`, `ops/check.sh`, `ops/ui_crawl.js`, `images/builder/Dockerfile`, `images/ci-runner/Dockerfile`
 - Findings: [FND-53](#fnd-53), [FND-54](#fnd-54)
 
-### APP-25
+#### APP-25
 
 **What the owner asked for comes before the stack's diagnostics** · must · functional · **implemented**
 
@@ -1751,7 +1786,7 @@ A mission's page shall show its latest result before its run log unless a run is
 - Trace: `images/mission-control/web/static/app.js`, `images/mission-control/web/static/app.css`
 - Findings: [FND-55](#fnd-55), [FND-56](#fnd-56), [FND-57](#fnd-57), [FND-58](#fnd-58), [FND-59](#fnd-59)
 
-### APP-26
+#### APP-26
 
 **Long pages can be crossed, and the owner sees names, not identifiers** · should · functional · **implemented**
 
@@ -1763,7 +1798,7 @@ The Stack page shall start with a link to each of its sections; Home's feed shal
 - Trace: `images/mission-control/web/static/app.js`, `images/mission-control/web/static/app.css`, `images/mission-control/server.py`, `ops/crew.py`
 - Findings: [FND-73](#fnd-73)
 
-### APP-30
+#### APP-30
 
 **Every tool's menus one tap away** · should · functional · **implemented**
 
@@ -1774,7 +1809,7 @@ The Stack page shall start with Tools, one card for every tool the stack runs on
 - Verified by: test: `tests/test_tools.py::test_every_tool_has_its_menus_and_every_page_exists`, `tests/test_tools.py::test_go_to_finds_menus_and_pages_by_their_words`, `tests/test_tools.py::test_a_tool_link_that_does_not_open_is_a_journey_failure`
 - Trace: `images/mission-control/web/static/tools.json`, `images/mission-control/web/static/app.js`, `images/mission-control/web/static/guide.js`, `ops/journeys.py`
 
-### APP-31
+#### APP-31
 
 **Explanations are there, folded** · should · functional · **implemented**
 
@@ -1785,7 +1820,7 @@ An explanation of how to read a screen shall be folded behind one small labelled
 - Verified by: test: `tests/test_charts.py::test_explanations_fold_and_stay_open_through_redraws`
 - Trace: `images/mission-control/web/static/guide.js`, `images/mission-control/web/static/app.js`, `images/mission-control/web/static/swarm.js`, `images/mission-control/web/static/app.css`
 
-### APP-32
+#### APP-32
 
 **A live update never moves the page** · must · functional · **implemented**
 
@@ -1797,7 +1832,7 @@ A live update of the Agents overview shall redraw the page only when what it lis
 - Trace: `images/mission-control/web/static/app.js`
 - Findings: [FND-96](#fnd-96)
 
-### APP-33
+#### APP-33
 
 **Back returns to where you were** · should · functional · **implemented**
 
@@ -1808,7 +1843,7 @@ Going back or forward to a page shall return to where it was scrolled, once its 
 - Verified by: test: `tests/test_charts.py::test_back_returns_to_where_you_were_and_a_new_page_starts_at_the_top`
 - Trace: `images/mission-control/web/static/app.js`
 
-### APP-34
+#### APP-34
 
 **A calm, readable dark theme** · should · constraint · **implemented**
 
@@ -1819,7 +1854,7 @@ The app shall use a graphite background with opaque surfaces and hairline border
 - Verified by: test: `tests/test_charts.py::test_the_theme_is_calm`
 - Trace: `images/mission-control/web/static/app.css`, `images/mission-control/web/index.html`, `images/mission-control/web/manifest.webmanifest`
 
-### APP-35
+#### APP-35
 
 **Every task has its own page** · must · functional · **implemented**
 
@@ -1832,7 +1867,7 @@ Each task shall have its own page (#/task/<id>), opened from every notification,
 - Findings: [FND-97](#fnd-97), [FND-95](#fnd-95), [FND-98](#fnd-98)
 - Refined by: [APP-36](#app-36), [APP-37](#app-37)
 
-### APP-36
+#### APP-36
 
 **A task's page tells its whole story, the result first** · must · functional · **implemented**
 
@@ -1845,7 +1880,7 @@ A task's page shall open on its result and then tell how it was done, most impor
 - Findings: [FND-111](#fnd-111), [FND-115](#fnd-115)
 - Refined by: [OBS-18](#obs-18)
 
-### APP-37
+#### APP-37
 
 **A card on Home opens its subject** · must · functional · **implemented**
 
@@ -1857,7 +1892,7 @@ Each card of Home's feed shall open its subject (the task it names, the mission,
 - Trace: `images/mission-control/web/static/app.js`, `images/mission-control/guide/01-welcome.md`
 - Refined by: [APP-38](#app-38)
 
-### APP-38
+#### APP-38
 
 **Home is your desk: one result per outcome, and it never moves under your finger** · must · functional · **implemented**
 
@@ -1867,6 +1902,87 @@ Home shall hold, in this order, the box to give a task or ask, what needs the ow
 - Sources: `chat 2026-11-02: We have tasks triggers and agents here ... jumps 2 links ... Its very weak difference what is what visually ... If task produces result will there be 2 entries? ... This is home tab. What should actually be here? Do we need a tasks tab like agents? Can you please make it make sense?`
 - Verified by: test: `tests/test_home_work.py::test_home_s_results_are_one_card_per_outcome_named_by_what_it_is_about`, `tests/test_home_work.py::test_home_holds_its_updates_while_you_scroll_or_touch`
 - Trace: `images/mission-control/web/static/app.js`, `images/mission-control/web/static/app.css`, `images/mission-control/guide/01-welcome.md`
+
+#### APP-40
+
+**On a phone the chat fills the screen and its header is not cramped** · must · functional · **implemented**
+
+On a phone, the chat shall be pinned between the top of the screen and the tab bar, whatever the keyboard or the page did before; the keyboard shall resize it, with the tab bar out of the way and the newest message in sight. Its header shall give the title its own width with a line of status under it when there is something to say, and a first title shall end on a whole word with the cut marked.
+
+- Parents: [SN-03](#sn-03)
+- Sources: `chat 2026-11-05: Headline looks badly formatted and cramped. Find good solution best practise chat window not flush at bottom?`
+- Verified by: test: `tests/test_app_layout.py::test_the_phone_chat_is_pinned_to_the_screen_and_the_title_has_its_own_width`, `tests/test_chat_made.py::test_a_chat_s_first_title_ends_on_a_whole_word_with_the_cut_marked`
+- Trace: `images/mission-control/web/static/app.css`, `images/mission-control/web/static/app.js`, `images/mission-control/web/index.html`, `images/mission-control/server.py`
+
+#### APP-39
+
+**What you make in a chat, you reach from the chat, and it leads back** · must · functional · **implemented**
+
+Every chat answer in which Hermes made something (a mission, a build, a Claude task, a repository, a note in the vault, an e-mail) shall show it under the answer as a card with its kind, its name, its state now (being created, queued, running, done, waits for you, failed) and its result's headline, opening its page in one tap; a change to an item (paused, triggers set, sent back) shall be one line. The chat's header shall count what it made (Made here · N) and list it, the chat list shall show it as icons, and the item's page shall say From a chat with a link back to the answer that made it. A one-off item shall say in its chat when it ends; a recurring one shall not. What the chat made shall be read from the run record's tool results and their ids, never guessed by time.
+
+- Parents: [AST-02](#ast-02), [SN-06](#sn-06)
+- Sources: `chat 2026-11-02: I dispatched a mission in chat. How can i jump from chat to the mission page? ... I feel if we are creating items in chat they need to be accessible from chat. Can you design this out?`
+- Verified by: test: `tests/test_chat_made.py::test_the_answer_that_made_a_mission_shows_it_with_its_live_state`, `tests/test_chat_made.py::test_older_answers_are_read_by_their_wording_and_a_pending_one_by_its_title`, `tests/test_chat_made.py::test_a_pending_request_resolves_through_the_runner_s_answer`, `tests/test_chat_made.py::test_the_item_leads_back_and_a_one_off_says_in_the_chat_when_it_ends`, `tests/test_chat_made.py::test_maker_tools_end_with_the_line_the_app_reads`
+- Trace: `images/mission-control/runrecord.py`, `images/mission-control/server.py`, `images/mission-control/web/static/app.js`, `images/mission-control/web/static/app.css`, `docs/CHAT-MADE.md`, `tests/test_chat_made.py`
+
+### Layout
+
+#### APP-41
+
+**Explanations wait until asked for** · should · functional · **implemented**
+
+An explanation on a page shall be one small info control that takes no room until tapped, and Activity's filters shall fit three lines on a phone: search and time, kinds with something in them, and names with the picked ones first; a page shall not spell out in always-visible text what a control already shows.
+
+- Parents: [SN-03](#sn-03)
+- Sources: `chat 2026-11-05: Also hide the explanation text. We need more intiotive ux. Less verbose always visible ui explanations.`
+- Verified by: test: `tests/test_interactions.py::test_the_app_draws_the_one_list`, `tests/test_charts.py::test_explanations_fold_and_stay_open_through_redraws`
+- Trace: `images/mission-control/web/static/guide.js`, `images/mission-control/web/static/app.css`, `images/mission-control/web/static/swarm.js`
+
+### Other
+
+#### APP-42
+
+**The chat reopens where you left it** · must · functional · **implemented**
+
+Going to another page and back to Chat shall reopen the chat you left, at the place you were reading, with what you typed and attached still there; a new chat starts only when you ask for one, and a chat deleted meanwhile opens a new one without an error.
+
+- Parents: [SN-03](#sn-03)
+- Sources: `chat 2026-11-06: Also i am annoyee i always go to empty chat when i go somewhere else in mission control and then back to chat.`
+- Verified by: test: `tests/test_chat_screen.py::test_the_chat_tab_reopens_the_chat_you_left_with_its_draft_and_place`
+- Trace: `images/mission-control/web/static/app.js`
+
+#### APP-43
+
+**New chat is in a proper list of chats** · should · functional · **implemented**
+
+New chat shall be the first thing in the list of chats and not in the chat's header. On a phone the list shall slide in as a drawer that Back closes, with search, your chats under Pinned, Today, Yesterday, Last 7 days and Earlier, each with its title, when and its last line; a swipe right shall open it and a swipe left close it, with the drawer following the finger; pin and delete shall be one tap behind each chat, and delete shall ask by a second tap, not a system dialog.
+
+- Parents: [SN-03](#sn-03)
+- Sources: `chat 2026-11-06: also dont like the new chat button top rights. Its tiny simple and should probably just be in chat selection and go to chat selection should be nicer.`, `chat 2026-11-06: I want to swip right to select chat and swipe left to close selection.`
+- Verified by: test: `tests/test_chat_screen.py::test_new_chat_lives_in_a_drawer_of_chats_and_back_closes_it`, `tests/test_chat_screen.py::test_the_list_groups_chats_by_day_and_gives_each_a_line`, `tests/test_chat_screen.py::test_a_chat_s_last_line_is_plain_and_short`, `tests/test_chat_screen.py::test_a_swipe_opens_and_closes_the_drawer`, `tests/test_app_layout.py::test_new_chat_starts_afresh_and_attaching_is_a_clip`
+- Trace: `images/mission-control/web/static/app.js`, `images/mission-control/web/static/app.css`, `images/mission-control/server.py`
+
+#### APP-44
+
+**A screenshot is one tap from the keyboard** · should · functional · **implemented**
+
+On a phone, while you type and in an empty chat, Screenshot or photo, Camera and Paste shall sit above the box, tapping them shall keep the keyboard up, and a picture pasted or dropped into the chat shall be attached like one picked with the clip.
+
+- Parents: [SN-03](#sn-03)
+- Sources: `chat 2026-11-06: Also want it easy to give it screenshots. In claude its always suggested above keyboard`
+- Verified by: test: `tests/test_chat_screen.py::test_a_screenshot_is_one_tap_from_the_keyboard`
+- Trace: `images/mission-control/web/static/app.js`, `images/mission-control/web/static/app.css`, `images/mission-control/guide/03-chat.md`
+
+#### APP-45
+
+**The chat reads like a premium chat** · should · functional · **implemented**
+
+The chat shall put reading first. Its header shall hold the chat's title, what it made and a menu, and say the app's state only while something is off; a message's actions shall come on a tap, except under the newest answer; an answer's steps shall be one quiet line that opens; an empty chat shall ask what it can do, with no paragraph of explanation; a button shall bring you back to the newest message.
+
+- Parents: [SN-03](#sn-03)
+- Sources: `chat 2026-11-06: I want the chat to feel like premium ai chat.. Overall chat doesnt feel that premium.`
+- Verified by: test: `tests/test_chat_screen.py::test_the_chat_puts_reading_first`
+- Trace: `images/mission-control/web/static/app.js`, `images/mission-control/web/static/app.css`
 
 ## AST Assistant
 
@@ -1890,6 +2006,7 @@ Mission Control shall send Hermes only the new message with a Hermes session id 
 - Sources: `docs/REVIEW-2026-10-27.md`, `images/mission-control/guide/03-chat.md`
 - Verified by: test: `tests/test_server.py::test_chat_sends_only_the_new_turn_with_a_hermes_session`, `tests/test_server.py::test_edit_starts_a_new_session`
 - Trace: `images/mission-control/server.py`
+- Refined by: [APP-39](#app-39), [MIS-27](#mis-27)
 
 ### AST-03
 
@@ -2757,12 +2874,13 @@ Every Monday the phone check shall fail only when the AI phone is not connected,
 
 **The inbox digest only reads** · should · functional · **implemented**
 
-While the owner grants Gmail read, the inbox digest shall file newsletters worth keeping for his topics into the vault inbox each morning, never look at bank, security or code mails, never organise or delete mail, and do nothing (saying so) without the grant.
+While the owner grants Gmail read, the inbox digest shall hand a newsletter on a watched topic to that topic (MIS-28), file other newsletters worth keeping for his topics into the vault inbox each morning, read back to its last finished run and say when the window held more than it listed, never look at bank, security or code mails, never organise or delete mail, and do nothing (saying so) without the grant.
 
 - Parents: [SN-10](#sn-10), [SN-05](#sn-05)
 - Sources: `images/mission-control/guide/18-crew.md`
 - Verified by: test: `tests/test_phone_agents.py::test_inbox_digest_does_nothing_without_the_grant`, `tests/test_phone_agents.py::test_inbox_digest_files_the_picks_and_skips_protected`
 - Trace: `ops/inbox.py`
+- Findings: [FND-121](#fnd-121)
 
 ## GW Gateway
 
@@ -3154,13 +3272,13 @@ Each wiki shall be a Ledger artifact owned by its one writer (the curator for th
 
 **Each agent reads the wikis its card names** · should · functional · **implemented**
 
-Each agent's card shall name the wikis it reads (by default its own, the vault wiki and wikis on related subjects), a run's start shall search only those and its own wiki first of all, and a wiki built from the owner's mail shall reach only its own mission.
+Each agent's card shall name the wikis it reads (by default its own, the vault wiki and wikis on related subjects), a run's start shall search only those and its own wiki first of all, and a wiki built from the owner's personal mail (a mission that holds a Gmail grant) shall reach only its own mission. A topic's newsletters (MIS-28) are bulk mail handed through its report and do not make its wiki private (FND-121).
 
 - Parents: [SN-10](#sn-10), [SN-05](#sn-05)
 - Sources: [DEC-31](#dec-31)
 - Verified by: test: `tests/test_memory_coherent.py::test_a_run_reads_the_wikis_its_card_names_its_own_first_and_never_a_private_one`
 - Trace: `ops/journal.py`, `ops/registry.py`, `config/agents.yaml`, `ops/missions.py`
-- Findings: [FND-45](#fnd-45)
+- Findings: [FND-45](#fnd-45), [FND-121](#fnd-121)
 
 ### MEM-05
 
@@ -3524,6 +3642,7 @@ The runner shall deliver a mission's results on each of its channels (app push, 
 - Verified by: test: `tests/test_desk.py::test_the_email_puts_the_headline_in_its_header_and_fits_a_phone`, `tests/test_quiet_runs.py::test_a_briefing_with_no_news_chosen_is_empty_and_prices_alone_do_not_count`, `tests/test_quiet_runs.py::test_an_empty_run_is_not_sent_and_the_next_full_one_names_its_day`, `tests/test_quiet_runs.py::test_every_email_outcome_is_recorded`, `tests/test_quiet_runs.py::test_the_briefing_run_asks_whether_the_report_is_empty`
 - Trace: `ops/mission_extras.py`, `ops/missions.py`
 - Findings: [FND-60](#fnd-60), [FND-77](#fnd-77), [FND-78](#fnd-78), [FND-79](#fnd-79)
+- Refined by: [MIS-23](#mis-23), [MIS-25](#mis-25)
 
 ### MIS-16
 
@@ -3603,6 +3722,75 @@ Each briefing shall offer Acted on it, Useful and Noise in the mail, the app and
 - Parents: [SN-01](#sn-01), [SN-18](#sn-18)
 - Sources: `chat 2026-11-02: Briefings that change a decision`, `docs/NEXT-PHASE.md`
 - Verified by: -
+
+### MIS-23
+
+**Results shows what you asked for, first** · must · functional · **implemented**
+
+A mission's Results shall begin with the files the owner asked it to make. Each file shall show its name, words, checkboxes and size, whether it is final or a draft, how it was delivered, and Open, Download and Copy. A file that was asked for and not saved shall be shown as asked for, not delivered, with the reason and a way to run again. Drafts its runs left in the Ledger shall follow, then the run reports. The mission header, Home's result card and the chat card shall show the files too. Files shall live outside the vault's git, so that deleting one frees its space.
+
+- Parents: [MIS-15](#mis-15), [SN-01](#sn-01), [SN-06](#sn-06)
+- Sources: `chat 2026-11-03: Why does it not show the actual result of the mission in results? Results should always also show the results right? ... the mission files should be shown in the results section too or a dedicated files section`
+- Verified by: test: `tests/test_files.py::test_the_app_serves_a_file_for_reading_and_as_a_download_and_nothing_outside`, `tests/test_files.py::test_results_lists_the_ledger_drafts_a_mission_s_runs_wrote`
+- Trace: `ops/files.py`, `images/mission-control/server.py`, `images/mission-control/runrecord.py`, `images/mission-control/web/static/app.js`, `images/mission-control/web/static/app.css`, `images/mission-control/guide/04-missions.md`, `docs/DELIVERABLES.md`, `tests/test_files.py`
+- Refined by: [MIS-24](#mis-24), [MIS-25](#mis-25), [MIS-26](#mis-26)
+
+### MIS-24
+
+**The mission saves the files it was asked for** · must · functional · **implemented**
+
+The files the owner asks for shall be recorded with the mission when it is made, and can be changed in its Settings or by Hermes. The mission's agent shall be told them and shall save each one with file_save, either as text or from a Ledger report unchanged. The tool is on its own server, given only to the mission agent. Saving a file again shall keep the earlier version.
+
+- Parents: [MIS-23](#mis-23)
+- Sources: `docs/DELIVERABLES.md`
+- Verified by: test: `tests/test_files.py::test_a_saved_file_keeps_its_earlier_versions_and_says_what_it_holds`, `tests/test_files.py::test_a_ledger_report_is_saved_unchanged`, `tests/test_files.py::test_the_agent_is_told_what_to_save`
+- Trace: `ops/files.py`, `ops/missions.py`, `ops/mission_extras.py`, `prompts/mission.md`, `prompts/replays.json`, `config/agents.yaml`, `config/litellm/config.yaml`, `ops/keys.sh`
+- Refined by: [MIS-27](#mis-27)
+
+### MIS-25
+
+**Files arrive as real attachments; a missing one makes the run partial** · must · functional · **implemented**
+
+A run's delivery shall attach the files it saved: to the e-mail as attachments under their own names, and on Telegram as documents after the result's message. Each file shall record its own delivery. A run that ends without a file that was asked for shall be marked partial, and its notification and e-mail shall name the missing file.
+
+- Parents: [MIS-15](#mis-15), [MIS-23](#mis-23)
+- Sources: `docs/DELIVERABLES.md`
+- Verified by: test: `tests/test_files.py::test_the_e_mail_carries_each_file_as_a_real_attachment`, `tests/test_files.py::test_delivery_attaches_says_what_is_missing_and_records_it_per_file`, `tests/test_files.py::test_the_run_s_end_names_what_is_missing_and_attaches_what_it_saved`, `tests/test_files.py::test_the_run_is_partial_when_an_asked_file_is_missing`
+- Trace: `ops/mission_extras.py`, `ops/notify.py`, `ops/missions.py`, `ops/files.py`
+
+### MIS-26
+
+**Mission files are cleaned up by rules the owner sees** · must · functional · **implemented**
+
+Deleting a file shall move it, with its versions, to a trash it can be restored from for 30 days. Every day a cleanup shall: - keep only the newest 5 versions of each file; - move to the trash the unpinned files of missions archived and untouched for 180 days; - empty what has been in the trash for 30 days. A Files page shall show every mission's files, the space they take against a limit, the trash and these rules, and offer Clean up now, which first shows what it would do. Past 80 % of the limit the owner shall get a notice.
+
+- Parents: [MIS-23](#mis-23), [PLT-21](#plt-21)
+- Sources: `docs/DELIVERABLES.md`
+- Verified by: test: `tests/test_files.py::test_delete_goes_to_the_trash_and_restores`, `tests/test_files.py::test_the_cleanup_follows_its_rules_and_a_dry_run_changes_nothing`
+- Trace: `ops/files.py`, `images/mission-control/web/static/app.js`
+
+### MIS-27
+
+**Hermes promises only what the stack can deliver** · must · functional · **implemented**
+
+When the owner asks for a file the stack cannot make (Word, PDF, images, archives), Hermes shall say so in the chat and offer Markdown before any mission is made. mission_create shall refuse such a file. The tools' descriptions shall say what can be made and how it is delivered.
+
+- Parents: [MIS-24](#mis-24), [AST-02](#ast-02)
+- Sources: `chat 2026-11-03: Check this mission i asked it to send me a md attachment ... Why does it not follow my instructions?`
+- Verified by: test: `tests/test_files.py::test_hermes_says_at_once_what_the_stack_cannot_deliver`, `tests/test_files.py::test_what_the_stack_cannot_make_is_refused_with_the_reason`, `tests/test_files.py::test_the_app_and_the_runner_agree_on_what_a_file_can_be`
+- Trace: `images/mission-control/server.py`, `images/mission-control/web/static/guide.js`
+
+### MIS-28
+
+**A newsletter on a watched topic reaches that topic** · should · functional · **implemented**
+
+While the owner grants Gmail read, a newsletter that names an active briefing's topic (the watchlist and searches of its TOPIC.md) and passes one check against its key questions shall go to that topic's folder and be read by its next report as untrusted data, with the mail named as a source line; through the report it reaches the topic's wiki. A mail without a List-Unsubscribe header, a protected mail and the stack's own briefings shall never go there, no link in a mail shall be opened, and a mail's text shall never decide what the desk fetches. The topic's page shall list each mail with what came of it: waiting for the next report, cited in a report, or read and not used.
+
+- Parents: [SN-10](#sn-10), [SN-05](#sn-05)
+- Sources: `chat 2026-11-04: does everything in my uranium newsletter reach the wiki and make the AI smarter?`, [FND-121](#fnd-121)
+- Verified by: test: `tests/test_topic_mail.py::test_a_newsletter_on_a_watched_topic_goes_to_that_topic_as_untrusted_data`, `tests/test_topic_mail.py::test_only_a_list_s_mail_goes_to_a_topic_never_a_person_s_or_the_stack_s_own_or_a_protected_one`, `tests/test_topic_mail.py::test_a_mail_the_check_leaves_out_stays_out_and_says_why`, `tests/test_topic_mail.py::test_a_usage_limit_leaves_the_mails_for_the_next_run`, `tests/test_topic_mail.py::test_the_listing_reaches_back_to_the_last_finished_run_and_says_when_it_held_more`, `tests/test_topic_mail.py::test_a_topic_s_names_come_from_its_brief_and_short_capitals_match_exactly`, `tests/test_topic_mail.py::test_a_long_mail_is_narrowed_around_the_names_and_every_gap_is_marked`, `tests/test_topic_mail.py::test_the_next_report_reads_a_handed_mail_as_data_and_names_it_as_a_source`, `tests/test_topic_mail.py::test_a_filed_report_settles_its_mails_so_they_are_read_once`, `tests/test_topic_mail.py::test_the_topic_s_page_lists_each_mail_and_what_came_of_it`, `tests/test_topic_mail.py::test_the_e_mail_of_a_report_drops_the_link_only_the_app_can_open`
+- Trace: `ops/inbox.py`, `images/desk/desk.py`, `ops/desk.sh`, `ops/missions.py`, `ops/provenance.py`, `prompts/inbox.md`, `prompts/desk.md`, `images/mission-control/web/static/app.js`
+- Findings: [FND-121](#fnd-121)
 
 ## OBS Observability
 
@@ -3807,9 +3995,9 @@ A scout run that answers a research call shall be recorded under the run whose c
 
 ### PHN-01
 
-**Every changing action waits for the owner** · must · constraint · **implemented**
+**What asks the owner waits for the answer** · must · constraint · **implemented**
 
-Before an action that changes something on the AI phone, the AI phone service shall wait up to 15 minutes for the owner's answer and treat no answer as no; looking at the screen, going back and going home need no approval.
+Before anything on the AI phone that needs the owner's OK (a job, PHN-26; money, a setting, deleting), the AI phone service shall wait up to 15 minutes for the answer and treat no answer as no; looking at the screen, going back and going home need no approval.
 
 - Parents: [SN-05](#sn-05), [SN-11](#sn-11)
 - Sources: `images/phone/AGENTS.md`, `images/mission-control/guide/17-ai-phone.md`
@@ -3836,7 +4024,7 @@ An action that would buy, pay, order or subscribe, uninstall an app, delete file
 
 - Parents: [SN-05](#sn-05)
 - Sources: `images/phone/AGENTS.md`
-- Verified by: test: `tests/test_phone.py::test_money_buttons_always_ask_even_in_a_time_window`, `tests/test_cleanup.py::test_uninstall_always_asks_even_inside_the_time_window`, `tests/test_cleanup.py::test_delete_always_asks_and_never_blocked_or_everything`, `tests/test_phone.py::test_start_in_ai_mode_asks_for_each_setting`
+- Verified by: test: `tests/test_phone.py::test_money_buttons_always_ask_even_in_a_time_window`, `tests/test_cleanup.py::test_uninstall_always_asks_even_inside_the_time_window`, `tests/test_cleanup.py::test_delete_always_asks_and_never_blocked_or_everything`, `tests/test_phone.py::test_start_in_ai_mode_asks_once_for_all_that_is_missing`
 
 ### PHN-04
 
@@ -3943,11 +4131,11 @@ The AI phone service shall let the screen sleep after 30 seconds when idle and n
 
 **Starts in AI mode after a restart** · should · functional · **implemented**
 
-The AI phone shall come back to AI mode after a reboot (wireless debugging on through KeepADB, Tailscale as always-on VPN, both exempt from battery saving), each setting applied only after the owner's Allow.
+The AI phone shall come back to AI mode after a reboot (wireless debugging on through KeepADB, Tailscale as always-on VPN, both exempt from battery saving), applied only after the owner's one Allow.
 
 - Parents: [SN-13](#sn-13), [SN-11](#sn-11)
 - Sources: [DEC-13](#dec-13)
-- Verified by: test: `tests/test_phone.py::test_start_in_ai_mode_asks_for_each_setting`
+- Verified by: test: `tests/test_phone.py::test_start_in_ai_mode_asks_once_for_all_that_is_missing`
 
 ### PHN-15
 
@@ -3984,7 +4172,7 @@ While the agents act on the AI phone, its screen shall stay on until two minutes
 
 **One OK for a whole phone task** · must · functional · **implemented**
 
-An agent shall ask the owner once for a phone task, naming its apps, the exact texts it will type and how long (at most an hour); after one Allow, taps, swipes and keys in those apps and on the home screen, opening them and typing those texts shall run without asking, counted on the task; anything else shall still ask, money always; the task shall end with phone_done (its summary says how many actions ran) or the owner's End task.
+An agent shall ask the owner once for a phone task, naming its apps, the exact texts it will type and how long (at most an hour); after one Allow, taps, swipes and keys in those apps and on the home screen, opening them and typing those texts shall run without asking, counted on the task; anything else shall be refused until the agent asks for the wider job (PHN-26), money always asks; the task shall end with phone_done (its summary says how many actions ran) or the owner's End task.
 
 - Parents: [SN-02](#sn-02), [SN-11](#sn-11)
 - Sources: `requirements/decisions.yaml`
@@ -4046,6 +4234,52 @@ When opening an app brings up a blocked screen that app had opened (Android's se
 - Verified by: test: `tests/test_phone.py::test_an_app_opens_fresh_when_a_blocked_screen_sits_on_top_of_it`
 - Trace: `images/phone/phone.py`
 
+### PHN-24
+
+**An approved cleanup step says so, can be undone, and waits for the phone** · should · functional · **implemented**
+
+An approved cleanup step shall show as approved with an Undo until the AI phone starts it, then as running, then its result. While the phone is not connected the app shall say so, and approved steps shall wait for it up to 4 hours instead of failing; Approve all shall also cover failed steps that were shown.
+
+- Parents: [SN-02](#sn-02)
+- Sources: `chat 2026-11-04: Clicked approved all here. I feel the feedback could be better. Individuals could say approved and undo or something? Also i dont see ai phone doing stuff yet.`
+- Verified by: test: `tests/test_phone_agents.py::test_an_approved_step_can_be_undone_until_the_phone_starts_it_and_never_runs`, `tests/test_phone_agents.py::test_once_the_phone_has_started_a_step_undo_says_it_is_too_late_and_the_step_shows_it`, `tests/test_phone_agents.py::test_approve_all_takes_failed_steps_too_when_they_were_shown`, `tests/test_phone_agents.py::test_the_app_shows_approved_with_undo_and_says_when_the_phone_is_not_connected`, `tests/test_phone.py::test_a_step_waits_while_the_phone_is_not_connected_and_one_that_ran_out_goes_through_to_say_so`, `tests/test_phone.py::test_a_step_undone_just_as_it_starts_does_not_run_or_block_the_next`
+- Trace: `ops/phone_agents.py`, `images/phone/phone.py`, `images/mission-control/web/static/app.js`, `images/mission-control/server.py`
+- Findings: [FND-120](#fnd-120)
+
+### PHN-25
+
+**The pairing does not lapse** · must · functional · **implemented**
+
+Starting in AI mode shall include switching off Android's limit that drops a paired computer after 7 days, on the owner's Allow; and when the phone answers but refuses the connection, the app shall name a lapsed pairing and offer to pair again.
+
+- Parents: [SN-13](#sn-13), [SN-02](#sn-02)
+- Sources: `chat 2026-11-04: AI Phone will bott up after restart into AI controlable state as long as it has internet is the requirement.`, `docs/PHONE-ANYWHERE.md`
+- Verified by: test: `tests/test_phone.py::test_starting_in_ai_mode_keeps_the_pairing_from_lapsing`, `tests/test_phone.py::test_a_refused_way_in_names_both_causes_and_the_pairing`
+- Trace: `images/phone/phone.py`, `images/mission-control/web/static/app.js`, `docs/PHONE-ANYWHERE.md`
+- Findings: [FND-120](#fnd-120)
+
+### PHN-26
+
+**The owner approves whole jobs, not single steps** · must · functional · **implemented**
+
+A tap, swipe, key, typing or opening an app or address on the AI phone shall run only inside a job the owner approved or in free mode. Otherwise it shall be refused without a card, telling the agent to ask once for the whole job. A step outside the job shall be refused the same way. Money, phone settings, deleting and private text in free mode keep their own card, and the set-up for starting in AI mode takes one Allow.
+
+- Parents: [SN-02](#sn-02)
+- Sources: `chat 2026-11-04: I also do not want to allow every singel action on AI Phone. I want to allow more macro.`
+- Verified by: test: `tests/test_phone.py::test_a_single_step_gets_no_card_and_tells_the_agent_to_ask_for_the_job`, `tests/test_phone.py::test_a_job_covers_its_steps_and_a_step_outside_it_is_refused_not_carded`, `tests/test_phone.py::test_money_and_private_text_in_free_mode_keep_their_own_card`, `tests/test_phone.py::test_start_in_ai_mode_asks_once_for_all_that_is_missing`, `tests/test_phone.py::test_a_setting_goes_ahead_when_the_owner_is_still_in_settings`
+- Trace: `images/phone/phone.py`, `prompts/main.md`, `ops/missions.py`, `images/mission-control/web/static/app.js`, `images/mission-control/guide/17-ai-phone.md`
+
+### PHN-27
+
+**The AI phone's page is easy to find** · should · functional · **implemented**
+
+The AI phone's page shall be one tap away from the top of Home, Agents and Stack and from its cleanup steps, shall be found by searching for pairing or wireless debugging, and Home shall list a long disconnection under what needs the owner.
+
+- Parents: [SN-03](#sn-03)
+- Sources: `chat 2026-11-04: Where are these apps Phone page? No idea how to find which is itself a big issue. Phone page needs to be easier to find.`
+- Verified by: test: `tests/test_phone.py::test_the_phone_page_is_one_tap_from_home_agents_stack_and_search`
+- Trace: `images/mission-control/web/static/app.js`, `images/mission-control/web/static/tools.json`
+
 ## PLT Platform
 
 ### PLT-01
@@ -4103,7 +4337,7 @@ The WSL VM shall not shut down while idle (idle timeouts off, a keep-alive task 
 
 **Hermes sees its tools after a boot** · must · functional · **implemented**
 
-After a boot, the stack-ready job shall wait until the gateway lists every expected MCP tool for vk-main and restart Hermes once if Hermes started before them.
+After a boot, the stack-ready job shall wait until the gateway lists every expected MCP tool for vk-main and restart Hermes once, before any job or mission may start (PLT-28).
 
 - Parents: [SN-13](#sn-13)
 - Sources: `ops/stack_ready.py`
@@ -4277,6 +4511,7 @@ The stack shall prune event logs, run logs, build logs and diffs, chat uploads a
 - Verified by: test: `tests/test_runtime.py::test_touches_refusals_connections_and_retention`, `tests/test_prune.py::test_the_runner_drops_what_is_older_than_90_days`, `tests/test_prune.py::test_the_app_drops_uploads_older_than_90_days`
 - Trace: `images/mission-control/runrecord.py`, `images/mission-control/server.py`, `ops/prune.py`, `ops/missions.py`
 - Rationale: The owner's chats are his conversations, not growing logs; they stay until he deletes them. Uploads that were filed into the vault stay in the vault.
+- Refined by: [MIS-26](#mis-26)
 
 ### PLT-22
 
@@ -4346,6 +4581,68 @@ WSL shall have a swap of 16 GB on an SSD with room for it, so the memory of idle
 - Trace: `ops/recycle.py`, `ops/systemd/recycle.timer`, `ops/systemd/recycle.service`, `ops/windows/host-setup.ps1`
 - Gap: The doctor's check of each container against its budget, and on-demand services for trials and builds.
 - Rationale: On 2 Nov the 3 GB swap was full, held mostly by idle qmd, Hindsight, Open WebUI and Phoenix; Open WebUI was back at 655 MB an hour after a restart.
+
+### PLT-28
+
+**Nothing starts against a stack that is not up** · must · functional · **implemented**
+
+The runner and every scheduled job shall first ask whether the stack is up (the boot check done, Docker answering, the services every job leans on running and not paused, the gateway live). Until it is, the runner shall start nothing and keep queued runs queued; a job shall wait or be skipped, not fail; a run the stack went away under shall wait and run again; and jobs the PC slept through shall catch up one after the other. No health alert shall go out during a start or while the stack is down, and the hours the PC was off shall not make a job overdue. If the stack stays down for 10 minutes, one message shall name the cause, and one shall say when it is back.
+
+- Parents: [SN-13](#sn-13)
+- Sources: `chat 2026-11-04: I restarted the PC and we had a lot of failures ... When I start PC everything should go online and working again. No failures.`, `docs/PROBES.md`
+- Verified by: test: `tests/test_boot.py::test_the_gate_opens_only_when_docker_the_services_and_the_gateway_are_up`, `tests/test_boot.py::test_the_gate_stays_shut_until_the_boot_check_is_done_and_opens_by_itself_later`, `tests/test_boot.py::test_wait_returns_when_the_stack_comes_up_gives_up_after_its_time_and_stops_on_request`, `tests/test_boot.py::test_the_cli_exits_1_when_the_stack_is_down_so_systemd_skips_the_job`, `tests/test_boot.py::test_every_scheduled_job_waits_for_the_stack_except_the_job_that_brings_it_up`, `tests/test_boot.py::test_each_job_s_start_timeout_has_room_for_its_slot_and_the_wait`, `tests/test_boot.py::test_jobs_that_run_every_few_minutes_skip_at_once_and_catch_ups_each_get_their_own_slot`, `tests/test_boot.py::test_a_run_the_gate_skipped_is_no_run_and_its_wait_is_not_its_run_time`, `tests/test_boot.py::test_the_hours_the_pc_was_off_do_not_make_a_job_overdue`, `tests/test_boot.py::test_no_health_alert_while_the_stack_starts_or_is_down`, `tests/test_boot.py::test_a_skipped_job_does_not_show_as_failed`, `tests/test_boot.py::test_a_job_waiting_its_turn_is_not_charged_with_its_last_run_s_failure`, `tests/test_journeys.py::test_a_tool_check_needs_two_timeouts_to_call_a_tool_broken`, `tests/test_boot.py::test_a_run_the_stack_went_away_under_waits_and_runs_again_and_alarms_nobody`, `tests/test_boot.py::test_a_real_failure_is_still_a_failure_while_the_stack_is_up`, `tests/test_boot.py::test_a_log_that_names_a_paused_container_counts_as_the_stack_s_doing`, `tests/test_boot.py::test_queued_runs_stay_queued_while_the_stack_is_down`, `tests/test_boot.py::test_the_owner_hears_once_after_ten_minutes_and_once_when_it_is_back`
+- Trace: `ops/stack_gate.py`, `ops/missions.py`, `ops/crew.py`, `ops/observe.py`, `ops/recycle.py`, `images/mission-control/obs_core.py`, `ops/systemd/AGENTS.md`
+- Rationale: FND-119. On 4 Nov Docker stayed down for three hours; four missions, the backup and 70 runs of scheduled jobs failed against it, and the alerts named each symptom but never the cause.
+- Findings: [FND-119](#fnd-119)
+
+### PLT-29
+
+**Docker never gives up starting** · must · quality · **implemented**
+
+Docker shall keep trying to start for as long as it takes, without a limit on attempts, and shall read what containerd needs into memory before each try.
+
+- Parents: [SN-13](#sn-13)
+- Sources: `chat 2026-11-04: When I start PC everything should go online and working again.`, `docs/PROBES.md`
+- Verified by: test: `tests/test_boot.py::test_docker_never_gives_up_and_warms_what_containerd_needs`, `tests/test_boot.py::test_a_deploy_installs_the_drop_in_for_docker_and_a_new_machine_too`
+- Trace: `ops/systemd/docker-boot.conf`, `ops/deploy.py`, `ops/new-machine.sh`, `ops/bootstrap-wsl-2-user.sh`
+- Rationale: FND-119. Docker allows containerd 15 seconds and that cannot be configured; systemd's default limit of 3 starts a minute made three slow starts final.
+- Findings: [FND-119](#fnd-119)
+
+### PLT-30
+
+**Each start of the PC reports how it went** · should · functional · **implemented**
+
+Each boot shall leave one line in /srv/ai/state/boots.jsonl (when, how long until online, Docker's tries, services running, tools missing), shown at the top of the Stack page, and send the owner one message saying the stack is online or what is missing. The gate shall open even when something is missing, so the jobs do not wait for ever.
+
+- Parents: [SN-13](#sn-13), [SN-07](#sn-07)
+- Sources: `chat 2026-11-04: When I start PC everything should go online and working again.`
+- Verified by: test: `tests/test_boot.py::test_the_first_check_of_a_boot_restarts_hermes_opens_the_gate_logs_it_and_says_so_once`, `tests/test_boot.py::test_missing_tools_still_open_the_gate_say_what_is_missing_and_fail_the_unit`, `tests/test_boot.py::test_the_message_names_services_that_did_not_come_up_and_a_slow_docker`
+- Trace: `ops/stack_ready.py`, `ops/missions.py`, `images/mission-control/web/static/app.js`
+- Findings: [FND-119](#fnd-119)
+
+### PLT-31
+
+**The stack asks Windows through a desk it cannot command** · should · constraint · **implemented**
+
+A script on Windows, started at logon without admin rights, shall publish the PC's status and fetch questions the stack leaves in a folder; it shall treat a request as data and run nothing from it. A question shall go to Claude Code with reading tools only, inside folders listed in a file on Windows, never key or password files. Only a turn of the owner's own chat shall be able to ask.
+
+- Parents: [SN-13](#sn-13)
+- Sources: [DEC-43](#dec-43)
+- Verified by: test: `tests/test_windows_desk.py::test_a_question_is_left_in_the_folder_and_its_answer_published`, `tests/test_windows_desk.py::test_a_silent_desk_is_said_not_waited_for`, `tests/test_windows_desk.py::test_only_your_own_chat_can_ask`, `tests/test_windows_desk.py::test_the_desk_gives_claude_reading_tools_only_and_runs_nothing_from_a_request`, `tests/test_windows_desk.py::test_a_use_of_windows_is_a_line_on_the_map`
+- Trace: `ops/windows/desk.ps1`, `ops/windows/desk-common.ps1`, `ops/windows/desk-settings.json`, `ops/windows/desk-setup.ps1`, `ops/windows/desk-signin.ps1`, `ops/windows_desk.py`, `images/mission-control/server.py`
+- Rationale: Interop stays off and no port opens, so nothing in WSL can start anything on Windows, where the owner's logins are.
+
+### PLT-32
+
+**Remote Control runs from logon on Windows** · should · functional · **implemented**
+
+From logon, one `claude remote-control` shall run on Windows under the owner's user in the first allowed folder, started again if it ends with growing waits, with no permission flags and its connection link never logged.
+
+- Parents: [SN-13](#sn-13)
+- Sources: `chat 2026-11-06: I always want to start claude with remote control on reboot.`
+- Verified by: test: `tests/test_windows_desk.py::test_remote_control_keeps_one_server_and_passes_no_permission_flags`
+- Trace: `ops/windows/claude-remote.ps1`, `ops/windows/desk-setup.ps1`
+- Rationale: The desktop app starts at logon, but its old sessions stay offline after a restart until a new message runs in them.
 
 ## QA Quality and process
 
@@ -4866,11 +5163,11 @@ The guide and README shall name every provider that receives data (OpenAI throug
 
 **The public snapshot holds nothing personal** · must · functional · **implemented**
 
-make publish shall push the committed stack to the public GitHub repository only as a snapshot without the private history, in which every identifier of the private map outside the repository is replaced and the encrypted secrets are left out with an example naming their values, and only when a scan finds no identifier in any case, e-mail address, LAN or Tailscale address, tailnet name, key or token outside the allowed placeholders, and the snapshot's own tests pass.
+make publish shall push the committed stack to the public GitHub repository only as a snapshot without the private history, in which every identifier of the private map outside the repository is replaced and the encrypted secrets are left out with an example naming their values, and only when a scan finds no identifier in any case, e-mail address, LAN or Tailscale address, tailnet name, key or token outside the allowed placeholders, and the snapshot's own tests pass. A binary file shall stop it, except an image without metadata in docs/screenshots.
 
 - Parents: [SN-04](#sn-04)
 - Sources: `docs/PUBLISHING.md`
-- Verified by: test: `tests/test_publish.py::test_terms_are_replaced_as_whole_words_and_only_a_capitalised_sentence_start_is_capitalised`, `tests/test_publish.py::test_the_scan_names_every_leftover_without_printing_the_term_and_lets_placeholders_pass`, `tests/test_publish.py::test_the_snapshot_leaves_out_the_secrets_and_follows_the_public_text`, `tests/test_publish.py::test_a_snapshot_with_a_leftover_runs_no_tests_and_pushes_nothing`, `tests/test_publish.py::test_the_push_refuses_when_git_would_leave_out_a_file_of_the_snapshot`
+- Verified by: test: `tests/test_publish.py::test_images_come_only_from_one_folder_and_hide_nothing`, `tests/test_publish.py::test_terms_are_replaced_as_whole_words_and_only_a_capitalised_sentence_start_is_capitalised`, `tests/test_publish.py::test_the_scan_names_every_leftover_without_printing_the_term_and_lets_placeholders_pass`, `tests/test_publish.py::test_the_snapshot_leaves_out_the_secrets_and_follows_the_public_text`, `tests/test_publish.py::test_a_snapshot_with_a_leftover_runs_no_tests_and_pushes_nothing`, `tests/test_publish.py::test_the_push_refuses_when_git_would_leave_out_a_file_of_the_snapshot`
 - Trace: `ops/publish.py`, `ops/private-terms.sh`, `Makefile`
 - Findings: [FND-75](#fnd-75)
 
@@ -5020,7 +5317,7 @@ A shopping task shall track its delivery, ask the owner once that the item arriv
 | 2 | Checker, scorecards and autonomy rules | [SWM-40](#swm-40), [SWM-42](#swm-42), [SWM-43](#swm-43), [SWM-07](#swm-07), [SWM-44](#swm-44), [SWM-45](#swm-45), [SWM-46](#swm-46), [SWM-47](#swm-47), [SWM-71](#swm-71), [SWM-80](#swm-80), [SWM-17](#swm-17) |
 | 3 | Board and Chatroom | [SWM-10](#swm-10), [SWM-48](#swm-48), [SWM-49](#swm-49), [SWM-12](#swm-12), [SWM-50](#swm-50), [SWM-51](#swm-51), [SWM-52](#swm-52), [SWM-14](#swm-14), [SWM-13](#swm-13), [SWM-53](#swm-53), [SWM-54](#swm-54), [SWM-55](#swm-55), [SWM-56](#swm-56), [SWM-11](#swm-11), [SWM-57](#swm-57), [SWM-58](#swm-58), [SWM-59](#swm-59), [SWM-90](#swm-90), [SWM-15](#swm-15), [SWM-97](#swm-97), [SWM-98](#swm-98) |
 | 4 | Parallel work, wider review and the harness adapters | [SWM-27](#swm-27), [SWM-02](#swm-02), [SWM-28](#swm-28), [SWM-21](#swm-21), [SWM-91](#swm-91), [SWM-92](#swm-92), [SWM-93](#swm-93), [SWM-94](#swm-94), [SWM-95](#swm-95), [SWM-96](#swm-96), [SWM-100](#swm-100), [SWM-101](#swm-101) |
-| 5 | Improvement loop: replay sets, the evaluation gate, the Coach | [SWM-70](#swm-70), [SWM-18](#swm-18), [SWM-82](#swm-82), [SWM-83](#swm-83), [SWM-84](#swm-84), [SWM-20](#swm-20), [SWM-99](#swm-99), [SWM-102](#swm-102), [SWM-103](#swm-103), [SWM-104](#swm-104), [SWM-105](#swm-105), [SWM-106](#swm-106), [SWM-107](#swm-107), [SWM-108](#swm-108), [SWM-109](#swm-109) |
+| 5 | Improvement loop: replay sets, the evaluation gate, the Coach | [SWM-70](#swm-70), [SWM-18](#swm-18), [SWM-82](#swm-82), [SWM-83](#swm-83), [SWM-84](#swm-84), [SWM-20](#swm-20), [SWM-99](#swm-99), [SWM-102](#swm-102), [SWM-103](#swm-103), [SWM-104](#swm-104), [SWM-105](#swm-105), [SWM-106](#swm-106), [SWM-107](#swm-107), [SWM-108](#swm-108), [SWM-109](#swm-109), [SWM-110](#swm-110), [SWM-111](#swm-111), [SWM-112](#swm-112), [SWM-113](#swm-113), [SWM-114](#swm-114), [SWM-115](#swm-115) |
 
 ### Registry and identity
 
@@ -6448,15 +6745,15 @@ The Swarm page shall show, for a window of 6 hours to 7 days, one row per agent 
 
 #### SWM-104
 
-**A map of who starts and messages whom** · should · functional · **implemented**
+**A map of who works with whom** · should · functional · **implemented**
 
-The Agents overview shall show, for a chosen window, a map with every agent that ran as a named dot (its size by its runs, a ring for failed runs and for running now) and a line between two agents that worked together (an arrow from the one who asked, how often, dashed for Board messages only), where a tap on a dot or a line opens Activity on that agent or that pair; and, one tap away, each connection in words with both named, their roles, what it was, how often, when last and how many run now, the agents that worked alone, and the ideas each agent wrote to.
+The Agents overview shall show, for a chosen window, a map with every agent that ran as a named dot (its size by its real work, a ring while its newest run failed and for running now) and a line between two that worked together (an arrow per direction, how often, dashed for Board messages only, dotted for hand-overs only), where a tap on a dot or a line opens Activity on that agent or that pair; each agent shall sit at the same place in fixed rows whatever the window, no number shall cover another number, a dot or a name at phone width, and test runs shall be one chip away; and, one tap away, each connection in words with both named, their roles, what it was, how often, when last and how many run now, the agents that worked alone, and the ideas each agent wrote to.
 
 - Parents: [SN-07](#sn-07), [SN-17](#sn-17)
 - Sources: [DEC-28](#dec-28)
-- Verified by: test: `tests/test_swarm_views.py::test_the_map_counts_who_starts_whom_and_shows_what_runs_now`, `tests/test_swarm_views.py::test_the_agents_tab_is_four_views_and_none_of_the_ten_is_lost`, `tests/test_swarm_views.py::test_the_map_is_agents_as_dots_and_lines_that_open_activity`
+- Verified by: test: `tests/test_swarm_views.py::test_the_map_counts_who_starts_whom_and_shows_what_runs_now`, `tests/test_swarm_views.py::test_the_agents_tab_is_four_views_and_none_of_the_ten_is_lost`, `tests/test_swarm_views.py::test_the_map_is_agents_as_dots_and_lines_that_open_activity`, `tests/test_swarm_views.py::test_the_map_keeps_fixed_rows_and_no_number_covers_anything`
 - Phase: 5 Improvement loop: replay sets, the evaluation gate, the Coach
-- Trace: `images/mission-control/runrecord.py`, `images/mission-control/web/static/swarm.js`
+- Trace: `images/mission-control/interactions.py`, `images/mission-control/runrecord.py`, `images/mission-control/web/static/swarm.js`
 - Findings: [FND-40](#fnd-40), [FND-89](#fnd-89)
 
 ### Board
@@ -6534,6 +6831,80 @@ An agent's own write to another agent's artifact (evidence, a link from it, an u
 - Phase: 5 Improvement loop: replay sets, the evaluation gate, the Coach
 - Trace: `images/swarm/ledger.py`, `images/swarm/swarm.py`, `ops/coach.py`, `ops/swarm_client.py`, `images/mission-control/teamroom.py`, `images/mission-control/web/static/swarm.js`
 - Rationale: The owner's rule: each agent is responsible for its own lane first and for the team's goals, and gets involved in another's only with a clear, valuable contribution its owner would not see or has missed. Broadcast coordination costs every agent every message and the MAST study finds a third of multi-agent failures between agents; so a step in is rare, reasoned, new and judged, and an agent whose steps do not help learns to stay out.
+
+### Observability
+
+#### SWM-110
+
+**One list of who works with whom** · should · functional · **implemented**
+
+The map, the Activity feed and the timeline shall be drawn from one list of interactions, so the number on a line is exactly what a tap on that line opens, for every line and every window.
+
+- Parents: [SN-07](#sn-07), [SN-17](#sn-17)
+- Sources: [DEC-28](#dec-28)
+- Verified by: test: `tests/test_interactions.py::test_a_line_s_number_is_what_its_tap_opens`, `tests/test_interactions.py::test_the_app_draws_the_one_list`
+- Phase: 5 Improvement loop: replay sets, the evaluation gate, the Coach
+- Trace: `images/mission-control/interactions.py`, `images/mission-control/teamroom.py`, `images/mission-control/server.py`, `images/mission-control/web/static/swarm.js`
+
+#### SWM-111
+
+**Every run has one cause** · should · functional · **implemented**
+
+Every run shall have exactly one cause (you, an agent, its timer, a rule, an alert, a test, or unknown), crew jobs recording theirs when they start; what is unknown or from before it was recorded shall be counted on screen, never hidden, and a lumped starter such as Hermes shall be settled to the real agent.
+
+- Parents: [SN-07](#sn-07), [SN-17](#sn-17)
+- Sources: [DEC-28](#dec-28)
+- Verified by: test: `tests/test_interactions.py::test_every_run_has_one_cause_and_no_lumped_starter`, `tests/test_interactions.py::test_a_crew_job_keeps_why_it_started`
+- Phase: 5 Improvement loop: replay sets, the evaluation gate, the Coach
+- Trace: `images/mission-control/interactions.py`, `ops/crew.py`, `images/mission-control/web/static/swarm.js`
+
+#### SWM-112
+
+**What you asked and decided is on the map** · should · functional · **implemented**
+
+The list shall hold what the owner did: each chat and spoken turn with its answer, Run now, a typed task, a question to Claude, and decisions at the app's door and on the shared work, each reaching the agent concerned; an arrow from the owner shall open those rows. Nothing the owner said or was told shall be shown to the AI phone. Tests shall stay apart from work and one piece of work shall count once, a chip showing the tests when asked.
+
+- Parents: [SN-07](#sn-07), [SN-17](#sn-17)
+- Sources: [DEC-28](#dec-28)
+- Verified by: test: `tests/test_interactions.py::test_what_the_owner_asked_about_is_on_the_map`, `tests/test_interactions.py::test_a_dot_counts_real_work_once_and_rings_only_while_its_newest_run_failed`, `tests/test_interactions.py::test_the_app_draws_the_one_list`
+- Phase: 5 Improvement loop: replay sets, the evaluation gate, the Coach
+- Trace: `images/mission-control/interactions.py`, `images/mission-control/server.py`, `images/mission-control/web/static/swarm.js`
+
+#### SWM-113
+
+**Tool use, hand-overs and messages to you are on the map** · should · functional · **implemented**
+
+The list shall hold what an agent does through another (Main on the AI phone, Inbox on Gmail), hand-overs through a file or an output (a plan's next step, a mail filed for the curator or a topic, an idea to the builder), and every message to the owner with its named sender, all senders naming themselves; a link worked out from timing shall say it is matched.
+
+- Parents: [SN-07](#sn-07), [SN-17](#sn-17)
+- Sources: [DEC-28](#dec-28)
+- Verified by: test: `tests/test_interactions.py::test_what_the_owner_asked_about_is_on_the_map`, `tests/test_interactions.py::test_a_message_names_its_sender`, `tests/test_interactions.py::test_a_session_is_tied_to_its_caller_or_marked_unknown`, `tests/test_interactions.py::test_the_records_for_it_are_kept`
+- Phase: 5 Improvement loop: replay sets, the evaluation gate, the Coach
+- Trace: `images/mission-control/interactions.py`, `ops/notify.py`, `ops/runtime.py`, `ops/inbox.py`
+
+#### SWM-114
+
+**A run the shutdown cut off is not stuck** · should · functional · **implemented**
+
+A run that fell silent while the stack itself was down shall end as stopped at its last activity, with that reason, and raise no alert; a bar shall end at the run's last activity when it was silent to its end.
+
+- Parents: [SN-07](#sn-07), [SN-17](#sn-17)
+- Sources: [DEC-28](#dec-28)
+- Verified by: test: `tests/test_runtime.py::test_a_run_the_shutdown_cut_off_is_not_called_stuck`
+- Phase: 5 Improvement loop: replay sets, the evaluation gate, the Coach
+- Trace: `images/mission-control/runrecord.py`, `images/mission-control/web/static/swarm.js`
+
+#### SWM-115
+
+**No channel slips past the map** · should · functional · **implemented**
+
+Every tool server of the gateway shall say what a call to it means for the map, or the build fails; a record the map reads that can't be read shall be named on screen instead of showing nothing.
+
+- Parents: [SN-07](#sn-07), [SN-17](#sn-17)
+- Sources: [DEC-28](#dec-28)
+- Verified by: test: `tests/test_interactions.py::test_no_tool_server_slips_past_the_map`, `tests/test_interactions.py::test_the_app_draws_the_one_list`
+- Phase: 5 Improvement loop: replay sets, the evaluation gate, the Coach
+- Trace: `images/mission-control/interactions.py`, `images/mission-control/web/static/swarm.js`
 
 ## TSK Task engine
 
@@ -7391,6 +7762,9 @@ The Voice page shall show spoken questions answered a day and the share answered
 | <a id="dec-37"></a>**DEC-37** A price watch is its shopping agent's check; purchases stay the agent's runs | 2026-11-01 | The owner asked for price watches and event-triggered tasks under the Conductor ("Please do these two properly"). A price watch task holds its shopping agent (ops/shopping.py: limits, proposals, approvals, the order's tracking), made once with no schedule of its own; each occurrence of the task is one check of that agent (offers, a proposal or watching), and a waiting proposal that reaches its price or date starts the task's next occurrence. The purchase after the owner's tap and the order tracking stay the agent's own runs: they are the narrow deterministic path of docs/SHOPPING.md, with its own approval, and a plan step must not be able to start them. An event-triggered task runs each firing as an occurrence (its event in every step's prompt; events that come meanwhile wait, at most five); a briefing on an event is the desk's alert, then its delivery. Completes DEC-36's last sentence. | - |
 | <a id="dec-38"></a>**DEC-38** One OK per phone task; free mode asks only for private data | 2026-11-01 | The owner found an approval for every tap too much ("I want to give it permission to use the phone"). An agent asks once for a whole task (its apps, the exact texts it types, up to an hour); the owner's time window becomes a free mode where typing and opening apps and addresses run without asking unless the text holds an e-mail address, phone number, IBAN or key; a request already waiting goes ahead when the permission comes. Money, passwords, blocked apps and Stop are unchanged. | DEC-23 |
 | <a id="dec-39"></a>**DEC-39** SQLite for the swarm | 2026-11-02 | The owner confirmed SQLite for the swarm's Ledger ("keep SQLite for the swarm database ... Yes do all"): one writer (the Swarm service), WAL, a nightly snapshot the restore drill checks, 7 MB. Postgres would add a second failure point and buy nothing on one machine. Closes design decision 2 (SWM-73). | - |
+| <a id="dec-43"></a>**DEC-43** The stack asks Windows; Windows fetches | 2026-11-06 | The owner wanted the stack to talk to Claude Code outside WSL. WSL stays cut off (interop and automount off, no port): a small script on Windows fetches requests from a folder and treats them as data, the way the host probe fetches a disk scan. Status needs no approval; a question goes to Claude with reading tools only, in folders listed on Windows where WSL cannot write; only a turn of the owner's own chat can ask. Changes on Windows would need the owner's tap on the whole job and are not built. Build 27, a second Claude inside WSL, was rejected: it could not reach the Windows sessions. | - |
+| <a id="dec-42"></a>**DEC-42** The AI phone stays on Wi-Fi | 2026-11-04 | Asked whether the S22 will ever run without Wi-Fi, on a SIM only, the owner answered "No, always Wi-Fi". Any Wi-Fi counts, the S25 hotspot included, so ADB over Wi-Fi and Tailscale stay the only way in and the agent app of docs/PHONE-ANYWHERE.md Stage 2 is not built. | - |
+| <a id="dec-41"></a>**DEC-41** The AI phone has no single-step approvals | 2026-11-04 | The owner again found approving single actions too much ("I do not want to allow every singel action on AI Phone. I want to allow more macro."). DEC-38 had added one OK per task but left a card per action as the fallback when an agent did not ask for a task. That fallback is gone: taps, swipes, keys, typing and opening apps or addresses run only inside an approved job or free mode, and otherwise are refused with the instruction to ask for the job. Money, settings, deleting, private text in free mode, passwords, blocked apps and Stop are unchanged. | - |
 | <a id="dec-40"></a>**DEC-40** The Memory Keeper fixes the memory by rules | 2026-11-02 | The owner asked for one dedicated agent that runs periodically and fixes the memory systems, contradictions and false information included, designed carefully to best practice, and answered D2 ("Yes do all"): the memory agent may retire duplicates, test noise and facts on agents' runs, translate facts into English and date passing states itself, softly and restorably, with each change listed and undoable, while its answer-key trial passes; contradictions of his own facts stay his to decide; world knowledge is corrected only through research with sources (docs/MEMORY.md, the Memory Keeper; MEM-21). | DEC-32 |
 
 ## Test index
@@ -7405,8 +7779,9 @@ The Voice page shall show spoken questions answered a day and the share answered
 | `tests/test_app_layout.py::test_a_crew_agent_s_claude_task_is_named_after_it_and_keeps_its_whole_question` | [APP-19](#app-19) |
 | `tests/test_app_layout.py::test_an_icon_in_text_is_one_line_high_and_no_page_has_an_app_top_bar` | [APP-01](#app-01) |
 | `tests/test_app_layout.py::test_every_idea_is_in_one_list_under_agents` | [APP-21](#app-21) |
-| `tests/test_app_layout.py::test_new_chat_starts_afresh_and_attaching_is_a_clip` | [APP-01](#app-01) |
+| `tests/test_app_layout.py::test_new_chat_starts_afresh_and_attaching_is_a_clip` | [APP-01](#app-01), [APP-43](#app-43) |
 | `tests/test_app_layout.py::test_the_chat_has_one_top_bar_on_a_phone_with_the_live_state_in_it` | [APP-01](#app-01) |
+| `tests/test_app_layout.py::test_the_phone_chat_is_pinned_to_the_screen_and_the_title_has_its_own_width` | [APP-40](#app-40) |
 | `tests/test_app_layout.py::test_the_section_headings_keep_their_gap_and_stay_on_one_line` | [APP-01](#app-01) |
 | `tests/test_app_layout.py::test_the_swarm_s_views_are_under_agents_on_every_screen` | [APP-01](#app-01) |
 | `tests/test_app_layout.py::test_the_wiki_s_new_button_is_one_line_on_the_title_row` | [APP-01](#app-01) |
@@ -7424,6 +7799,28 @@ The Voice page shall show spoken questions answered a day and the share answered
 | `tests/test_app_timeouts.py::test_a_request_that_never_answers_ends_with_a_clear_message_instead_of_spinning` | [APP-23](#app-23) |
 | `tests/test_backup.py::test_an_unreadable_file_is_skipped_and_named_and_the_backup_goes_on` | [PLT-13](#plt-13) |
 | `tests/test_backup.py::test_any_other_copy_error_still_fails_the_backup` | [PLT-13](#plt-13) |
+| `tests/test_boot.py::test_a_deploy_installs_the_drop_in_for_docker_and_a_new_machine_too` | [PLT-29](#plt-29) |
+| `tests/test_boot.py::test_a_job_waiting_its_turn_is_not_charged_with_its_last_run_s_failure` | [PLT-28](#plt-28) |
+| `tests/test_boot.py::test_a_log_that_names_a_paused_container_counts_as_the_stack_s_doing` | [PLT-28](#plt-28) |
+| `tests/test_boot.py::test_a_real_failure_is_still_a_failure_while_the_stack_is_up` | [PLT-28](#plt-28) |
+| `tests/test_boot.py::test_a_run_the_gate_skipped_is_no_run_and_its_wait_is_not_its_run_time` | [PLT-28](#plt-28) |
+| `tests/test_boot.py::test_a_run_the_stack_went_away_under_waits_and_runs_again_and_alarms_nobody` | [PLT-28](#plt-28) |
+| `tests/test_boot.py::test_a_skipped_job_does_not_show_as_failed` | [PLT-28](#plt-28) |
+| `tests/test_boot.py::test_docker_never_gives_up_and_warms_what_containerd_needs` | [PLT-29](#plt-29) |
+| `tests/test_boot.py::test_each_job_s_start_timeout_has_room_for_its_slot_and_the_wait` | [PLT-28](#plt-28) |
+| `tests/test_boot.py::test_every_scheduled_job_waits_for_the_stack_except_the_job_that_brings_it_up` | [PLT-28](#plt-28) |
+| `tests/test_boot.py::test_jobs_that_run_every_few_minutes_skip_at_once_and_catch_ups_each_get_their_own_slot` | [PLT-28](#plt-28) |
+| `tests/test_boot.py::test_missing_tools_still_open_the_gate_say_what_is_missing_and_fail_the_unit` | [PLT-30](#plt-30) |
+| `tests/test_boot.py::test_no_health_alert_while_the_stack_starts_or_is_down` | [PLT-28](#plt-28) |
+| `tests/test_boot.py::test_queued_runs_stay_queued_while_the_stack_is_down` | [PLT-28](#plt-28) |
+| `tests/test_boot.py::test_the_cli_exits_1_when_the_stack_is_down_so_systemd_skips_the_job` | [PLT-28](#plt-28) |
+| `tests/test_boot.py::test_the_first_check_of_a_boot_restarts_hermes_opens_the_gate_logs_it_and_says_so_once` | [PLT-30](#plt-30) |
+| `tests/test_boot.py::test_the_gate_opens_only_when_docker_the_services_and_the_gateway_are_up` | [PLT-28](#plt-28) |
+| `tests/test_boot.py::test_the_gate_stays_shut_until_the_boot_check_is_done_and_opens_by_itself_later` | [PLT-28](#plt-28) |
+| `tests/test_boot.py::test_the_hours_the_pc_was_off_do_not_make_a_job_overdue` | [PLT-28](#plt-28) |
+| `tests/test_boot.py::test_the_message_names_services_that_did_not_come_up_and_a_slow_docker` | [PLT-30](#plt-30) |
+| `tests/test_boot.py::test_the_owner_hears_once_after_ten_minutes_and_once_when_it_is_back` | [PLT-28](#plt-28) |
+| `tests/test_boot.py::test_wait_returns_when_the_stack_comes_up_gives_up_after_its_time_and_stops_on_request` | [PLT-28](#plt-28) |
 | `tests/test_builds.py::test_a_clash_only_in_the_generated_requirements_is_drawn_again` | [BLD-21](#bld-21) |
 | `tests/test_builds.py::test_a_rate_limited_reviewer_hands_over_to_the_other_engine` | [BLD-10](#bld-10) |
 | `tests/test_builds.py::test_a_repo_without_a_check_script_runs_its_tests` | [BLD-24](#bld-24) |
@@ -7451,7 +7848,7 @@ The Voice page shall show spoken questions answered a day and the share answered
 | `tests/test_charts.py::test_a_redraw_keeps_the_map_s_dots_and_zoom` | [APP-22](#app-22) |
 | `tests/test_charts.py::test_back_returns_to_where_you_were_and_a_new_page_starts_at_the_top` | [APP-33](#app-33) |
 | `tests/test_charts.py::test_every_chart_moves_and_zooms_through_one_helper_and_one_finger_scrolls_the_page` | [APP-22](#app-22) |
-| `tests/test_charts.py::test_explanations_fold_and_stay_open_through_redraws` | [APP-31](#app-31) |
+| `tests/test_charts.py::test_explanations_fold_and_stay_open_through_redraws` | [APP-31](#app-31), [APP-41](#app-41) |
 | `tests/test_charts.py::test_names_never_cover_each_other_and_the_busiest_keep_theirs` | [APP-22](#app-22) |
 | `tests/test_charts.py::test_the_map_names_every_dot_and_shows_open_ideas_when_asked` | [APP-22](#app-22) |
 | `tests/test_charts.py::test_the_theme_is_calm` | [APP-34](#app-34) |
@@ -7459,6 +7856,19 @@ The Voice page shall show spoken questions answered a day and the share answered
 | `tests/test_chat_limit.py::test_a_normal_answer_about_rate_limits_is_not_a_usage_limit` | [AST-12](#ast-12) |
 | `tests/test_chat_limit.py::test_a_usage_limit_keeps_the_message_and_says_when_the_limit_resets` | [AST-12](#ast-12) |
 | `tests/test_chat_limit.py::test_after_the_reset_the_message_is_answered_by_itself_and_the_owner_is_told` | [AST-12](#ast-12) |
+| `tests/test_chat_made.py::test_a_chat_s_first_title_ends_on_a_whole_word_with_the_cut_marked` | [APP-40](#app-40) |
+| `tests/test_chat_made.py::test_a_pending_request_resolves_through_the_runner_s_answer` | [APP-39](#app-39) |
+| `tests/test_chat_made.py::test_maker_tools_end_with_the_line_the_app_reads` | [APP-39](#app-39) |
+| `tests/test_chat_made.py::test_older_answers_are_read_by_their_wording_and_a_pending_one_by_its_title` | [APP-39](#app-39) |
+| `tests/test_chat_made.py::test_the_answer_that_made_a_mission_shows_it_with_its_live_state` | [APP-39](#app-39) |
+| `tests/test_chat_made.py::test_the_item_leads_back_and_a_one_off_says_in_the_chat_when_it_ends` | [APP-39](#app-39) |
+| `tests/test_chat_screen.py::test_a_chat_s_last_line_is_plain_and_short` | [APP-43](#app-43) |
+| `tests/test_chat_screen.py::test_a_screenshot_is_one_tap_from_the_keyboard` | [APP-44](#app-44) |
+| `tests/test_chat_screen.py::test_a_swipe_opens_and_closes_the_drawer` | [APP-43](#app-43) |
+| `tests/test_chat_screen.py::test_new_chat_lives_in_a_drawer_of_chats_and_back_closes_it` | [APP-43](#app-43) |
+| `tests/test_chat_screen.py::test_the_chat_puts_reading_first` | [APP-45](#app-45) |
+| `tests/test_chat_screen.py::test_the_chat_tab_reopens_the_chat_you_left_with_its_draft_and_place` | [APP-42](#app-42) |
+| `tests/test_chat_screen.py::test_the_list_groups_chats_by_day_and_gives_each_a_line` | [APP-43](#app-43) |
 | `tests/test_checker.py::test_a_check_must_be_complete_and_name_what_exists` | [SWM-44](#swm-44), [SWM-45](#swm-45) |
 | `tests/test_checker.py::test_a_failing_proposer_pauses_itself_once` | [SWM-71](#swm-71) |
 | `tests/test_checker.py::test_a_log_count_can_read_a_host_units_journal` | [SWM-44](#swm-44) |
@@ -7573,6 +7983,20 @@ The Voice page shall show spoken questions answered a day and the share answered
 | `tests/test_events.py::test_rules_are_checked_when_saved_and_schedules_come_due` | [TSK-11](#tsk-11) |
 | `tests/test_events.py::test_the_local_sources_each_fire` | [TSK-10](#tsk-10) |
 | `tests/test_events.py::test_the_web_sources_baseline_first_then_fire_their_rules` | [TSK-10](#tsk-10) |
+| `tests/test_files.py::test_a_ledger_report_is_saved_unchanged` | [MIS-24](#mis-24) |
+| `tests/test_files.py::test_a_saved_file_keeps_its_earlier_versions_and_says_what_it_holds` | [MIS-24](#mis-24) |
+| `tests/test_files.py::test_delete_goes_to_the_trash_and_restores` | [MIS-26](#mis-26) |
+| `tests/test_files.py::test_delivery_attaches_says_what_is_missing_and_records_it_per_file` | [MIS-25](#mis-25) |
+| `tests/test_files.py::test_hermes_says_at_once_what_the_stack_cannot_deliver` | [MIS-27](#mis-27) |
+| `tests/test_files.py::test_results_lists_the_ledger_drafts_a_mission_s_runs_wrote` | [MIS-23](#mis-23) |
+| `tests/test_files.py::test_the_agent_is_told_what_to_save` | [MIS-24](#mis-24) |
+| `tests/test_files.py::test_the_app_and_the_runner_agree_on_what_a_file_can_be` | [MIS-27](#mis-27) |
+| `tests/test_files.py::test_the_app_serves_a_file_for_reading_and_as_a_download_and_nothing_outside` | [MIS-23](#mis-23) |
+| `tests/test_files.py::test_the_cleanup_follows_its_rules_and_a_dry_run_changes_nothing` | [MIS-26](#mis-26) |
+| `tests/test_files.py::test_the_e_mail_carries_each_file_as_a_real_attachment` | [MIS-25](#mis-25) |
+| `tests/test_files.py::test_the_run_is_partial_when_an_asked_file_is_missing` | [MIS-25](#mis-25) |
+| `tests/test_files.py::test_the_run_s_end_names_what_is_missing_and_attaches_what_it_saved` | [MIS-25](#mis-25) |
+| `tests/test_files.py::test_what_the_stack_cannot_make_is_refused_with_the_reason` | [MIS-27](#mis-27) |
 | `tests/test_guide.py::test_activity_feed_links_build_events_to_their_build` | [APP-16](#app-16) |
 | `tests/test_guide.py::test_chapters_are_well_formed` | [APP-13](#app-13) |
 | `tests/test_guide.py::test_every_app_screen_has_a_chapter` | [APP-13](#app-13) |
@@ -7623,6 +8047,16 @@ The Voice page shall show spoken questions answered a day and the share answered
 | `tests/test_improve.py::test_requests_are_validated` | [SEC-11](#sec-11) |
 | `tests/test_improve.py::test_scan_turns_signals_into_ideas_and_refines_a_known_one` | [CRW-03](#crw-03), [SWM-05](#swm-05) |
 | `tests/test_improve.py::test_when_a_self_review_is_due` | [CRW-03](#crw-03) |
+| `tests/test_interactions.py::test_a_crew_job_keeps_why_it_started` | [SWM-111](#swm-111) |
+| `tests/test_interactions.py::test_a_dot_counts_real_work_once_and_rings_only_while_its_newest_run_failed` | [SWM-112](#swm-112) |
+| `tests/test_interactions.py::test_a_line_s_number_is_what_its_tap_opens` | [SWM-110](#swm-110) |
+| `tests/test_interactions.py::test_a_message_names_its_sender` | [SWM-113](#swm-113) |
+| `tests/test_interactions.py::test_a_session_is_tied_to_its_caller_or_marked_unknown` | [SWM-113](#swm-113) |
+| `tests/test_interactions.py::test_every_run_has_one_cause_and_no_lumped_starter` | [SWM-111](#swm-111) |
+| `tests/test_interactions.py::test_no_tool_server_slips_past_the_map` | [SWM-115](#swm-115) |
+| `tests/test_interactions.py::test_the_app_draws_the_one_list` | [APP-41](#app-41), [SWM-110](#swm-110), [SWM-112](#swm-112), [SWM-115](#swm-115) |
+| `tests/test_interactions.py::test_the_records_for_it_are_kept` | [SWM-113](#swm-113) |
+| `tests/test_interactions.py::test_what_the_owner_asked_about_is_on_the_map` | [SWM-112](#swm-112), [SWM-113](#swm-113) |
 | `tests/test_jobs.py::test_a_full_ad_is_read_by_its_reference_and_labelled_untrusted` | [MIS-21](#mis-21) |
 | `tests/test_jobs.py::test_a_job_hunt_brief_collects_each_opening_once_as_its_own_event` | [MIS-21](#mis-21) |
 | `tests/test_jobs.py::test_the_scout_alone_gets_the_jobs_tools_on_the_isolated_fetch_container` | [MIS-21](#mis-21) |
@@ -7646,6 +8080,7 @@ The Voice page shall show spoken questions answered a day and the share answered
 | `tests/test_journeys.py::test_a_mangled_email_headline_fails_the_check_and_the_desk_s_email_passes_it` | [TSK-32](#tsk-32) |
 | `tests/test_journeys.py::test_a_route_that_scrolls_sideways_at_375_px_and_each_other_screen_fault_fail_the_check` | [TSK-31](#tsk-31), [TSK-32](#tsk-32) |
 | `tests/test_journeys.py::test_a_task_given_in_a_sentence_is_followed_to_its_result_and_a_broken_hand_over_fails_it` | [TSK-32](#tsk-32) |
+| `tests/test_journeys.py::test_a_tool_check_needs_two_timeouts_to_call_a_tool_broken` | [PLT-28](#plt-28) |
 | `tests/test_journeys.py::test_the_browser_half_measures_what_the_owner_sees` | [TSK-32](#tsk-32) |
 | `tests/test_journeys.py::test_the_replay_is_the_newest_finished_planned_task` | [TSK-32](#tsk-32) |
 | `tests/test_keeper.py::test_a_contradiction_on_a_wiki_becomes_a_dispute_a_task_researches_and_its_settling_closes` | [MEM-17](#mem-17) |
@@ -7721,8 +8156,14 @@ The Voice page shall show spoken questions answered a day and the share answered
 | `tests/test_otlp.py::test_a_task_run_is_one_trace_from_the_run_to_every_model_and_tool_call` | [TSK-09](#tsk-09), [TSK-26](#tsk-26) |
 | `tests/test_otlp.py::test_only_claude_runs_are_traced_when_they_end` | [SWM-79](#swm-79) |
 | `tests/test_otlp.py::test_the_protobuf_is_an_otlp_export_request` | [SWM-79](#swm-79) |
+| `tests/test_phone.py::test_a_job_covers_its_steps_and_a_step_outside_it_is_refused_not_carded` | [PHN-26](#phn-26) |
 | `tests/test_phone.py::test_a_mismatch_stops_without_buying` | [SHP-09](#shp-09) |
 | `tests/test_phone.py::test_a_pin_locked_phone_is_never_unlocked` | [PHN-06](#phn-06) |
+| `tests/test_phone.py::test_a_refused_way_in_names_both_causes_and_the_pairing` | [PHN-25](#phn-25) |
+| `tests/test_phone.py::test_a_setting_goes_ahead_when_the_owner_is_still_in_settings` | [PHN-26](#phn-26) |
+| `tests/test_phone.py::test_a_single_step_gets_no_card_and_tells_the_agent_to_ask_for_the_job` | [PHN-26](#phn-26) |
+| `tests/test_phone.py::test_a_step_undone_just_as_it_starts_does_not_run_or_block_the_next` | [PHN-24](#phn-24) |
+| `tests/test_phone.py::test_a_step_waits_while_the_phone_is_not_connected_and_one_that_ran_out_goes_through_to_say_so` | [PHN-24](#phn-24) |
 | `tests/test_phone.py::test_a_waiting_request_goes_ahead_when_the_owner_opens_free_mode` | [PHN-20](#phn-20) |
 | `tests/test_phone.py::test_allow_for_a_few_minutes` | [PHN-02](#phn-02) |
 | `tests/test_phone.py::test_allowance_any_length_or_until_stopped` | [PHN-02](#phn-02) |
@@ -7738,27 +8179,34 @@ The Voice page shall show spoken questions answered a day and the share answered
 | `tests/test_phone.py::test_free_mode_types_freely_but_private_text_asks` | [PHN-19](#phn-19) |
 | `tests/test_phone.py::test_home_assistant_becomes_the_phone_s_voice_assistant_after_one_allow` | [PHN-22](#phn-22) |
 | `tests/test_phone.py::test_in_free_mode_only_an_address_or_text_with_private_data_asks` | [PHN-02](#phn-02), [PHN-19](#phn-19), [SEC-04](#sec-04) |
+| `tests/test_phone.py::test_money_and_private_text_in_free_mode_keep_their_own_card` | [PHN-26](#phn-26) |
 | `tests/test_phone.py::test_money_buttons_always_ask_even_in_a_time_window` | [PHN-03](#phn-03) |
 | `tests/test_phone.py::test_one_ok_covers_a_whole_task_and_money_still_asks` | [PHN-18](#phn-18) |
 | `tests/test_phone.py::test_one_unreadable_request_never_stops_the_phone` | [SHP-07](#shp-07) |
 | `tests/test_phone.py::test_secret_fields_and_card_numbers_are_never_typed` | [CST-11](#cst-11) |
-| `tests/test_phone.py::test_start_in_ai_mode_asks_for_each_setting` | [PHN-03](#phn-03), [PHN-14](#phn-14) |
+| `tests/test_phone.py::test_start_in_ai_mode_asks_once_for_all_that_is_missing` | [PHN-03](#phn-03), [PHN-14](#phn-14), [PHN-26](#phn-26) |
+| `tests/test_phone.py::test_starting_in_ai_mode_keeps_the_pairing_from_lapsing` | [PHN-25](#phn-25) |
 | `tests/test_phone.py::test_the_approved_final_tap_happens_once` | [SHP-09](#shp-09) |
 | `tests/test_phone.py::test_the_home_assistant_app_opens_only_inside_a_task_that_names_it` | [VOI-07](#voi-07) |
+| `tests/test_phone.py::test_the_phone_page_is_one_tap_from_home_agents_stack_and_search` | [PHN-27](#phn-27) |
 | `tests/test_phone.py::test_the_screen_stays_on_while_working_or_waiting_and_goes_off_when_idle` | [PHN-17](#phn-17) |
 | `tests/test_phone.py::test_the_shopping_agent_s_phone_requests_are_readable_by_the_phone` | [SHP-07](#shp-07) |
 | `tests/test_phone.py::test_url_block_list_and_done_summary` | [PHN-04](#phn-04) |
 | `tests/test_phone_agents.py::test_a_dismissed_step_stays_dismissed` | [CRW-11](#crw-11) |
 | `tests/test_phone_agents.py::test_a_paired_phone_reconnects_after_a_restart` | [PHN-10](#phn-10) |
+| `tests/test_phone_agents.py::test_an_approved_step_can_be_undone_until_the_phone_starts_it_and_never_runs` | [PHN-24](#phn-24) |
 | `tests/test_phone_agents.py::test_approvals_are_refused_from_the_ai_phone` | [PHN-07](#phn-07) |
 | `tests/test_phone_agents.py::test_approve_all_hands_over_every_open_step_shown_and_the_phone_runs_one_at_a_time` | [CRW-11](#crw-11) |
 | `tests/test_phone_agents.py::test_approve_all_is_refused_from_the_ai_phone_and_the_phone_runs_steps_in_turn` | [CRW-11](#crw-11) |
+| `tests/test_phone_agents.py::test_approve_all_takes_failed_steps_too_when_they_were_shown` | [PHN-24](#phn-24) |
 | `tests/test_phone_agents.py::test_approve_writes_exactly_one_step_and_results_come_back` | [CRW-11](#crw-11) |
 | `tests/test_phone_agents.py::test_cleanup_facts_become_one_step_per_item` | [CRW-11](#crw-11) |
 | `tests/test_phone_agents.py::test_inbox_digest_does_nothing_without_the_grant` | [CRW-13](#crw-13) |
 | `tests/test_phone_agents.py::test_inbox_digest_files_the_picks_and_skips_protected` | [CRW-13](#crw-13) |
+| `tests/test_phone_agents.py::test_once_the_phone_has_started_a_step_undo_says_it_is_too_late_and_the_step_shows_it` | [PHN-24](#phn-24) |
 | `tests/test_phone_agents.py::test_phone_check_fails_only_on_real_faults` | [CRW-12](#crw-12) |
 | `tests/test_phone_agents.py::test_stop_refuses_approvals` | [PHN-05](#phn-05) |
+| `tests/test_phone_agents.py::test_the_app_shows_approved_with_undo_and_says_when_the_phone_is_not_connected` | [PHN-24](#phn-24) |
 | `tests/test_phone_agents.py::test_the_mail_tools_survive_a_log_they_cannot_write` | [OBS-04](#obs-04) |
 | `tests/test_phone_agents.py::test_the_phone_runs_an_approved_step_once_with_its_checks` | [CRW-11](#crw-11) |
 | `tests/test_prompts.py::test_a_filled_prompt_that_drives_tools_is_replayed_as_a_dry_run` | [MEM-11](#mem-11) |
@@ -7777,6 +8225,7 @@ The Voice page shall show spoken questions answered a day and the share answered
 | `tests/test_prune.py::test_the_app_drops_uploads_older_than_90_days` | [PLT-21](#plt-21) |
 | `tests/test_prune.py::test_the_runner_drops_what_is_older_than_90_days` | [PLT-21](#plt-21) |
 | `tests/test_publish.py::test_a_snapshot_with_a_leftover_runs_no_tests_and_pushes_nothing` | [SEC-19](#sec-19) |
+| `tests/test_publish.py::test_images_come_only_from_one_folder_and_hide_nothing` | [SEC-19](#sec-19) |
 | `tests/test_publish.py::test_terms_are_replaced_as_whole_words_and_only_a_capitalised_sentence_start_is_capitalised` | [SEC-19](#sec-19) |
 | `tests/test_publish.py::test_the_push_refuses_when_git_would_leave_out_a_file_of_the_snapshot` | [SEC-19](#sec-19) |
 | `tests/test_publish.py::test_the_scan_names_every_leftover_without_printing_the_term_and_lets_placeholders_pass` | [SEC-19](#sec-19) |
@@ -7856,6 +8305,7 @@ The Voice page shall show spoken questions answered a day and the share answered
 | `tests/test_runtime.py::test_a_declared_wait_is_not_a_stall` | [OBS-03](#obs-03) |
 | `tests/test_runtime.py::test_a_hermes_run_without_a_ref_joins_the_live_step_of_its_agent` | [TSK-09](#tsk-09) |
 | `tests/test_runtime.py::test_a_run_opens_on_first_event_and_stays_closed_after_its_end` | [OBS-01](#obs-01) |
+| `tests/test_runtime.py::test_a_run_the_shutdown_cut_off_is_not_called_stuck` | [SWM-114](#swm-114) |
 | `tests/test_runtime.py::test_chat_sessions_are_tied_to_their_chat` | [OBS-01](#obs-01) |
 | `tests/test_runtime.py::test_children_show_under_their_parent_and_keep_it_alive` | [OBS-03](#obs-03) |
 | `tests/test_runtime.py::test_drift_against_the_previous_run_of_the_same_agent` | [OBS-08](#obs-08) |
@@ -8016,6 +8466,7 @@ The Voice page shall show spoken questions answered a day and the share answered
 | `tests/test_swarm_views.py::test_the_agents_tab_is_four_views_and_none_of_the_ten_is_lost` | [SWM-103](#swm-103), [SWM-104](#swm-104), [SWM-105](#swm-105), [SWM-106](#swm-106) |
 | `tests/test_swarm_views.py::test_the_map_counts_who_starts_whom_and_shows_what_runs_now` | [SWM-104](#swm-104) |
 | `tests/test_swarm_views.py::test_the_map_is_agents_as_dots_and_lines_that_open_activity` | [SWM-104](#swm-104) |
+| `tests/test_swarm_views.py::test_the_map_keeps_fixed_rows_and_no_number_covers_anything` | [SWM-104](#swm-104) |
 | `tests/test_swarm_views.py::test_the_timeline_has_every_run_with_its_lane_its_end_and_what_started_it` | [SWM-103](#swm-103) |
 | `tests/test_swarm_views.py::test_tool_calls_between_agents_are_exchanges_with_the_whole_question_and_answer` | [SWM-105](#swm-105) |
 | `tests/test_task_page.py::test_a_door_task_s_page_finds_its_own_run_and_a_recurring_task_shows_one_run` | [APP-36](#app-36) |
@@ -8058,6 +8509,17 @@ The Voice page shall show spoken questions answered a day and the share answered
 | `tests/test_tools.py::test_a_tool_link_that_does_not_open_is_a_journey_failure` | [APP-30](#app-30) |
 | `tests/test_tools.py::test_every_tool_has_its_menus_and_every_page_exists` | [APP-30](#app-30) |
 | `tests/test_tools.py::test_go_to_finds_menus_and_pages_by_their_words` | [APP-30](#app-30) |
+| `tests/test_topic_mail.py::test_a_filed_report_settles_its_mails_so_they_are_read_once` | [MIS-28](#mis-28) |
+| `tests/test_topic_mail.py::test_a_long_mail_is_narrowed_around_the_names_and_every_gap_is_marked` | [MIS-28](#mis-28) |
+| `tests/test_topic_mail.py::test_a_mail_the_check_leaves_out_stays_out_and_says_why` | [MIS-28](#mis-28) |
+| `tests/test_topic_mail.py::test_a_newsletter_on_a_watched_topic_goes_to_that_topic_as_untrusted_data` | [MIS-28](#mis-28) |
+| `tests/test_topic_mail.py::test_a_topic_s_names_come_from_its_brief_and_short_capitals_match_exactly` | [MIS-28](#mis-28) |
+| `tests/test_topic_mail.py::test_a_usage_limit_leaves_the_mails_for_the_next_run` | [MIS-28](#mis-28) |
+| `tests/test_topic_mail.py::test_only_a_list_s_mail_goes_to_a_topic_never_a_person_s_or_the_stack_s_own_or_a_protected_one` | [MIS-28](#mis-28) |
+| `tests/test_topic_mail.py::test_the_e_mail_of_a_report_drops_the_link_only_the_app_can_open` | [MIS-28](#mis-28) |
+| `tests/test_topic_mail.py::test_the_listing_reaches_back_to_the_last_finished_run_and_says_when_it_held_more` | [MIS-28](#mis-28) |
+| `tests/test_topic_mail.py::test_the_next_report_reads_a_handed_mail_as_data_and_names_it_as_a_source` | [MIS-28](#mis-28) |
+| `tests/test_topic_mail.py::test_the_topic_s_page_lists_each_mail_and_what_came_of_it` | [MIS-28](#mis-28) |
 | `tests/test_trials.py::test_a_gap_beyond_the_key_is_for_review_and_a_run_can_be_scored_again` | [TRL-13](#trl-13) |
 | `tests/test_trials.py::test_a_run_s_tokens_count_each_model_call_once` | [TRL-09](#trl-09) |
 | `tests/test_trials.py::test_a_task_given_straight_to_the_builder_is_followed_through_its_build` | [TRL-01](#trl-01) |
@@ -8120,3 +8582,9 @@ The Voice page shall show spoken questions answered a day and the share answered
 | `tests/test_wikis.py::test_the_real_split_front_reads_broken_front_matter_as_plain_text` | [KNW-10](#knw-10) |
 | `tests/test_wikis.py::test_the_vault_wiki_and_paths_outside_wikis_cannot_be_deleted` | [KNW-11](#knw-11) |
 | `tests/test_wikis.py::test_wiki_delete_is_wired_for_the_app_only` | [KNW-11](#knw-11) |
+| `tests/test_windows_desk.py::test_a_question_is_left_in_the_folder_and_its_answer_published` | [PLT-31](#plt-31) |
+| `tests/test_windows_desk.py::test_a_silent_desk_is_said_not_waited_for` | [PLT-31](#plt-31) |
+| `tests/test_windows_desk.py::test_a_use_of_windows_is_a_line_on_the_map` | [PLT-31](#plt-31) |
+| `tests/test_windows_desk.py::test_only_your_own_chat_can_ask` | [PLT-31](#plt-31) |
+| `tests/test_windows_desk.py::test_remote_control_keeps_one_server_and_passes_no_permission_flags` | [PLT-32](#plt-32) |
+| `tests/test_windows_desk.py::test_the_desk_gives_claude_reading_tools_only_and_runs_nothing_from_a_request` | [PLT-31](#plt-31) |

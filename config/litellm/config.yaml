@@ -59,6 +59,10 @@ mcp_servers:
     transport: "http"
     timeout: 960          # an action waits up to 15 min for the owner's OK; LiteLLM's default (60 s) cut it off first
     description: "The AI phone (the owner's old Android test phone): look at the screen, tap, type, scroll, open apps. Ask the owner once per task with phone_task (its apps and exact texts); money always asks, passwords are never typed."
+  files:
+    url: "http://mission-control:8096/mcp"
+    transport: "http"
+    description: "A mission saves the files it was asked to deliver (Markdown, CSV, JSON, text): shown on its page, attached to its e-mail."
   house:
     url: "http://mission-control:8094/mcp"
     transport: "http"

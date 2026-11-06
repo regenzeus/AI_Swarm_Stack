@@ -208,14 +208,14 @@ items:
       the private history, in which every identifier of the private map outside the repository is replaced and the
       encrypted secrets are left out with an example naming their values, and only when a scan finds no identifier in
       any case, e-mail address, LAN or Tailscale address, tailnet name, key or token outside the allowed placeholders,
-      and the snapshot's own tests pass.
+      and the snapshot's own tests pass. A binary file shall stop it, except an image without metadata in docs/screenshots.
     type: functional
     priority: must
     status: implemented
     parents: [SN-04]
     sources: [docs/PUBLISHING.md]
     findings: [FND-75]
-    verify: {method: test, by: [tests/test_publish.py::test_terms_are_replaced_as_whole_words_and_only_a_capitalised_sentence_start_is_capitalised,
+    verify: {method: test, by: [tests/test_publish.py::test_images_come_only_from_one_folder_and_hide_nothing, tests/test_publish.py::test_terms_are_replaced_as_whole_words_and_only_a_capitalised_sentence_start_is_capitalised,
       tests/test_publish.py::test_the_scan_names_every_leftover_without_printing_the_term_and_lets_placeholders_pass,
       tests/test_publish.py::test_the_snapshot_leaves_out_the_secrets_and_follows_the_public_text,
       tests/test_publish.py::test_a_snapshot_with_a_leftover_runs_no_tests_and_pushes_nothing,

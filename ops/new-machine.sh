@@ -14,6 +14,7 @@ if ! systemctl --user is-active -q docker; then
 fi
 if [ ! -f ~/.config/systemd/user/docker.service.d/no-detach-netns.conf ]; then   # see the file for why
   install -D -m 644 ops/systemd/docker-no-detach-netns.conf ~/.config/systemd/user/docker.service.d/no-detach-netns.conf
+  install -D -m 644 ops/systemd/docker-boot.conf ~/.config/systemd/user/docker.service.d/boot.conf
   systemctl --user daemon-reload && systemctl --user restart docker
 fi
 grep -q DOCKER_HOST ~/.bashrc || echo "export DOCKER_HOST=unix://$XDG_RUNTIME_DIR/docker.sock" >> ~/.bashrc

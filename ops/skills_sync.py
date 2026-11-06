@@ -46,7 +46,7 @@ def hermes(*cmd, inp=None):
 
 def notify(text, category="system"):
     import notify as N                            # the one notification path (OBS-16)
-    N.send(text, category)
+    N.send(text, category, by="stack")
 
 
 def record(**kw):

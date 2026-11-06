@@ -1553,3 +1553,61 @@ items:
     recommendation: Add the issuers' own feeds (press-release wires such as GlobeNewswire, the companies' news pages) for the
       watched subjects, raising a story from one primary source; the answer goes in the alert's message (done).
     status: open
+  - id: FND-119
+    title: A cold start of the PC left the stack down for three hours and every job failing
+    finding: "On 4 Nov the PC started cold for the first time since the stack's scheduled jobs were built (every earlier boot
+      was a restart of WSL with Windows already up, containerd ready in under 4 s). containerd took over 15 s to open its
+      database; Docker allows it 15 s and that cannot be configured. Three such starts hit systemd's limit of 3 a minute,
+      which is final: Docker stayed down from 08:40 until it was started by hand at 11:32. The runner did not ask: it started
+      the morning's four missions at once and marked them failed. Every scheduled job did the same (skills-sync 30 times,
+      the backup, the Checker, the doctor), and the jobs the PC slept through all fired in its first minutes. The health
+      board also called jobs overdue for the hours the PC was off. The owner got an alert per symptom and none that named
+      Docker; a Hermes-routed notice could not reach anyone because Hermes runs in Docker too."
+    evidence: ["journalctl --user -u docker -b: 'waiting for response from boltdb open', 'timeout waiting for containerd to start' at 08:40:03, 08:40:22, 08:40:39, 'Start request repeated too quickly' at 08:40:42",
+      "missions.sqlite runs of 4 Nov 08:40-08:41: 4 failed, 'Cannot connect to the Docker daemon' or 'no answer'",
+      "public/events.jsonl 08:40:40: 'Memory gatekeeper: did not run when scheduled' 14 hours after the PC was switched off"]
+    severity: high
+    kind: defect
+    affects: [PLT-28, PLT-29, PLT-30]
+    recommendation: Docker retries for ever; one gate for the runner and every job; catch-ups one at a time; no alerts during a start; one message naming the cause when the stack stays down.
+    status: fixed
+    resolved: "fix/boot, 2026-11-04: ops/systemd/docker-boot.conf (PLT-29), ops/stack_gate.py on every timer's unit and in the
+      runner (PLT-28), ops/stack_ready.py opens the gate and reports each start (PLT-30); the failing boot rehearsed with
+      containerd's database held locked (docs/PROBES.md P8). A real cold start of the PC is the remaining proof, and
+      its result is on the Stack page."
+  - id: FND-120
+    title: The AI phone's pairing lapsed after 7 days and the app blamed Wireless debugging
+    finding: "On 4 Nov the AI phone connected at 11:32 and refused every connection from 12:02 on: its TLS handshake ends with
+      CERTIFICATE_UNKNOWN, so the phone no longer accepts the stack's key. The pairing dates from 28 Oct 11:54, 7 days
+      before, and 7 days is Android's default for adb_allowed_connection_time. That timing is the evidence; the phone's own
+      list can't be read without the connection, and one write-up says each connection renews the 7 days. The app said 'No wireless
+      debugging port answered', and the owner's Approve all failed all 10 cleanup steps in turn, each with that text."
+    evidence: ["adb trace 4 Nov 13:25: tls_connection.cpp 'Post-handshake SSL_peek failed [SSLV3_ALERT_CERTIFICATE_UNKNOWN]' on port 42035",
+      "/srv/ai/phone/log.jsonl: pair 28 Oct 11:54:50; connect 4 Nov 11:32:57 on port 42035; 10 phone_cleanup results 13:19 to 13:25"]
+    severity: high
+    kind: defect
+    affects: [PHN-24, PHN-25]
+    recommendation: Pair again; switch the limit off as part of Start in AI mode; name a refused connection; let approved steps wait.
+    status: open
+    decision: true
+  - id: FND-121
+    title: A newsletter on a watched topic never reached that topic, and the digest judged mail by its subject alone
+    finding: "The owner asked on 4 Nov whether everything in his uranium newsletter reaches the wiki. Of the 33 mails the digest saw
+      that day, 1 named a watched topic in its text: TipRanks, one line saying Cameco has a new analyst rating, no fact. 3 more
+      matched only because 'mg' was read as the car maker MG. Over the five recorded days (148 mails) it was 2: that one and
+      Investing.com's weekly watchlist, the only mail with numbers on uranium companies. In 60 days Gmail held no
+      newsletter about uranium as such: the 9 other hits are the stack's own briefing mailed to him. MAX_FILE (5) was never reached
+      (0, 1, 3, 0, 1 picks). The filter was the weak part: the model sees sender and subject only, so it picked TipRanks' 'A stock on
+      your watchlist' three times on a guess, and whatever it picked went to the general vault, while a topic's wiki is compiled only from that
+      topic's reports. The listing was the silent risk: it took the newest 40 of a two-day window that held 61, with 35 new on 2 Nov. Gmail's
+      own search is no substitute: an OR search for Cameco missed the TipRanks mail that a narrower search found."
+    evidence: ["/srv/ai/state/prompt-cases/inbox.PICK.jsonl: 148 rows over 5 runs", "mail_read of all 148 against each active TOPIC.md's names, 4 Nov",
+      "/srv/ai/missions/crew/inbox.json: filed 1 of 33", "mail_search newer_than:60d uranium terms: 8 Investing.com, 9 AI Stack"]
+    severity: medium
+    kind: defect
+    affects: [CRW-13, MIS-28, MEM-04]
+    recommendation: "Search each newsletter's own text for the topic's names, check matches against its key questions, hand them to the topic.
+      MEM-04's rule against private wikis meant personal mail: a topic takes only mail with a List-Unsubscribe header, never protected mail, and its text
+      reaches the wiki only through the report, so its wiki stays shared."
+    status: fixed
+    resolved: "feat/topic-mail, 2026-11-04: ops/inbox.py hand_over and settle, images/desk/desk.py from_mail, the topic page's From your e-mail, the listing raised to the tool's 100 and reaching back to the last finished run"

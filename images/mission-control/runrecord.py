@@ -28,6 +28,7 @@ import obs_core as O
 DB = Path(os.environ.get("RUNTIME_DB", "/missions/app/runtime.db"))
 STALL_S = 20 * 60              # a phone approval waits up to 15 min, a research call up to 10: longer means stuck
 WAIT_S = 3 * 3600             # a run parked on a declared wait (the Windows disk scan) is not stuck until this long
+CUT_OFF_S = 5 * 60            # the watchdog looks every 30 seconds: this long past its limit means it wasn't running either
 KEEP_EVENTS_S = 90 * 86400
 END_STATES = ("done", "failed", "stopped", "stalled", "limit")
 MAX_DETAIL = 20000
@@ -441,8 +442,10 @@ def timeline(hours=24, now=None):
     stats = {r["run"]: (r["n"], r["t"] or 0) for r in c.execute(
         "select run, count(*) n, sum(coalesce(json_extract(data, '$.tokens.in'), 0) + coalesce(json_extract(data, '$.tokens.out'), 0)) t "
         "from events where kind='llm' and ts>=? group by run", (since - 86400,))}
+    busy = {r["run"]: r["t"] for r in c.execute("select run, max(ts) t from events where kind<>'end' and ts>=? group by run", (since - 86400,))}
     out = []
     for r in rows:
+        man = json.loads(r["manifest"]) if r["manifest"] else {}
         p = parents.get(r["ref"])
         n, t = stats.get(r["run"], (0, 0))
         ref = r["ref"] or ""
@@ -450,38 +453,20 @@ def timeline(hours=24, now=None):
               else "hermes" if ref == "chat" else None)           # "chat": Hermes' claude tool (the assistant or a mission's agent)
         out.append({"run": r["run"], "lane": lane_of(r["agent"]), "agent": r["agent"], "name": name_of(r, c), "started": r["started"],
                     "ended": r["ended"], "last": r["last"], "state": r["end_state"] or ("running" if r["ended"] is None else "done"),
-                    "parent": p["run"] if p else None, "by": by, "calls": n, "tokens": t})   # by: crew:doctor queued a Claude task
+                    "parent": p["run"] if p else None, "by": by, "calls": n, "tokens": t,   # by: crew:doctor queued a Claude task
+                    "ref": r["ref"], "title": r["title"], "recorded": man.get("cause"), "trigger": man.get("trigger"), "repo": man.get("repo"),
+                    "until": busy.get(r["run"]) if r["ended"] and busy.get(r["run"]) and r["ended"] - busy[r["run"]] > STALL_S else None})   # silent to its end (the PC was off): the bar stops at its last activity
     return {"since": since, "now": now, "runs": out}
 
 
-def interactions(hours=168, now=None):
-    """Who starts whom (a run started inside another agent's run), counted per pair, with the pairs working right now."""
-    tl = timeline(hours, now)
-    edges, nodes = {}, {}
-    for r in tl["runs"]:
-        n = nodes.setdefault(r["lane"], {"id": r["lane"], "runs": 0, "live": 0, "failed": 0, "last": 0})
-        n["runs"] += 1
-        n["live"] += r["state"] == "running"
-        n["failed"] += r["state"] in ("failed", "stalled")
-        n["last"] = max(n["last"], r["last"] or r["started"])
-        if r["by"] and r["by"] != r["lane"]:
-            e = edges.setdefault((r["by"], r["lane"]), {"from": r["by"], "to": r["lane"], "kind": "starts", "n": 0, "live": 0, "last": 0})
-            e["n"] += 1
-            e["live"] += r["state"] == "running"
-            e["last"] = max(e["last"], r["started"])
-    if any(e["from"] == "you" for e in edges.values()):
-        nodes.setdefault("you", {"id": "you", "runs": 0, "live": 0, "failed": 0, "last": 0})
-    return {"since": tl["since"], "now": tl["now"], "nodes": sorted(nodes.values(), key=lambda x: -x["runs"]),
-            "edges": sorted(edges.values(), key=lambda x: -x["n"])}
-
-
-def delegations(hours=168, pair=None, now=None):
+def delegations(hours=168, pair=None, now=None, runs=None):
     """What agents ask each other through their tools (a mission asks the scout, a crew job asks Claude): each
     delegated run as an exchange, its question (the run's title, or the call that started it) and its answer (its
-    last words), whole. pair "a+b" keeps the exchanges between two agents. -> newest last."""
+    last words), whole. pair "a+b" keeps the exchanges between two agents. runs: the window's runs, already settled by
+    interactions.py. -> newest last."""
     c = db()
     out = []
-    for r in timeline(hours, now)["runs"]:
+    for r in timeline(hours, now)["runs"] if runs is None else runs:
         if not r["by"] or r["by"] in ("you", r["lane"]):
             continue
         if pair and set(pair.split("+")) != {r["by"], r["lane"]}:
@@ -504,7 +489,7 @@ def delegations(hours=168, pair=None, now=None):
                         "order by e.ts desc limit 1", (r["run"], r["run"])).fetchone()     # its last words, or its own agent's (a task's Claude run)
         answer = (say["detail"] if say else "") or ("(still working)" if r["state"] == "running" else f"(no answer: {r['state']})")
         out.append({"run": r["run"], "from": r["by"], "to": r["lane"], "ts": r["started"], "ended": r["ended"], "state": r["state"],
-                    "ask": ask, "answer": answer})
+                    "ask": ask, "answer": answer, "world": r.get("world"), "certainty": (r.get("cause") or {}).get("certainty")})
     return out
 
 
@@ -590,6 +575,10 @@ def watchdog_once(now=None):
     stale = [r["run"] for r in rows]
     for r in rows:
         idle = json.loads(r["manifest"] or "{}").get("idle_end")     # a phone or mail session simply went quiet: it ended then
+        if not idle and now - r["last"] > STALL_S + CUT_OFF_S:       # this watchdog was down too: the PC was off, nobody could answer (SWM-114)
+            ingest([{"run": r["run"], "kind": "end", "source": "watchdog", "status": "stopped", "ts": r["last"] + 1, "title": "cut off",
+                     "detail": f"Cut off by a shutdown: the stack was down for {round((now - r['last']) / 60)} minutes after its last activity"}])
+            continue
         ingest([{"run": r["run"], "kind": "end", "source": "watchdog", "status": "done" if idle else "stalled", "ts": r["last"] + 1 if idle else now,
                  "title": "session ended" if idle else "closed by the watchdog",
                  "detail": f"no activity for {STALL_S // 60} minutes" if idle else f"no event for {STALL_S // 60} minutes"}])
@@ -868,4 +857,120 @@ def wiki_access(hours=168, now=None):
             a["last"] = max(a["last"], e["ts"])
     return sorted(({"agent": k[0], "root": k[1], "reads": len(v["reads"]), "writes": len(v["writes"]), "last": v["last"]}
                    for k, v in acc.items()), key=lambda x: (x["root"], -x["reads"] - x["writes"]))
+
+
+def ledger_drafts(agent):
+    """MIS-23: the Ledger reports the runs of an agent (mission:<slug>, with the agents inside its runs) wrote or
+    changed, newest first: [{id, title, ts, run}]. A mission keeps long drafts there; its Results page lists them."""
+    c = db()
+    roots = [r["run"] for r in c.execute("select run from runs where agent=?", (agent,))]
+    seen, todo = set(roots), list(roots)
+    while todo and len(seen) < 2000:
+        todo = [r["run"] for r in c.execute(f"select run from runs where ref in ({','.join('?' * len(todo))})", todo) if r["run"] not in seen]
+        seen |= set(todo)
+    if not seen:
+        return []
+    q, out = ",".join("?" * len(seen)), {}
+    calls = {}
+    for e in c.execute(f"select run, ts, kind, title, detail, data from events where run in ({q}) and kind in ('call', 'result') "
+                       f"and title like '%ledger_upsert' order by ts, id", tuple(seen)):
+        cid = _json(e["data"]).get("call_id")
+        if e["kind"] == "call":
+            calls[cid] = _json(e["detail"])
+            continue
+        res = _json(e["detail"])
+        inner = _json(res.get("result") if isinstance(res.get("result"), str) else json.dumps(res.get("result") or {}))
+        r = inner.get("result") if isinstance(inner.get("result"), dict) else inner
+        aid = (r or {}).get("id")
+        args = calls.get(cid) or {}
+        if inner.get("ok") is False or not aid or (args.get("kind") and args.get("kind") != "report"):
+            continue
+        out[int(aid)] = {"id": int(aid), "title": args.get("title") or r.get("title") or f"Ledger report #{aid}", "ts": e["ts"], "run": e["run"]}
+    return sorted(out.values(), key=lambda x: -x["ts"])
+
+
+# ---------- what a chat made (docs/CHAT-MADE.md, APP-39): read from its turns' tool results, nothing inferred by time ----------
+MAKERS = {"mission_create": "mission", "mission_control": "mission", "mission_update": "mission", "mission_set_triggers": "mission",
+          "build_assign": "build", "build_request_changes": "build", "build_recheck": "build", "build_switch_engine": "build",
+          "claude_task": "claude", "repo_create": "repo", "repo_make_buildable": "repo", "understand_repo": "repo",
+          "vault_add": "note", "send_email": "email"}
+MADE_LINE = re.compile(r"^(made|changed): ([a-z]+):(\S+)$", re.M)     # the line each maker tool ends its answer with
+OLD_WORDING = {                                                       # results from before that line: their present wording
+    "mission_create": re.compile(r"(Created|Already exists): \[([^\]]+)\]"),
+    "build_assign": re.compile(r"Build #(\d+) queued"),
+    "claude_task": re.compile(r"Claude task #(\d+) started"),
+    "repo_create": re.compile(r"Created (\S+?)\.$"),
+    "vault_add": re.compile(r"Added: (\S+)"),
+}
+ARG_ID = {"mission": "slug", "build": "id", "repo": "repo"}
+
+
+def maker_of(title):
+    """mcp__vault__missions_mission_create → mission_create (the tools that make or change something), else None."""
+    name = O.base(title)
+    return next((t for t in sorted(MAKERS, key=len, reverse=True) if name == t or name.endswith("_" + t)), None)
+
+
+def _json(s):
+    try:
+        v = json.loads(s or "")
+        return v if isinstance(v, dict) else {}
+    except ValueError:
+        return {}
+
+
+def made_item(tool, args, text):
+    """One maker tool's result → {kind, id, verb (made|exists|changed|pending|failed|sent), title, what}; id is
+    "request-<rid>" while the runner was still working when the tool answered (the app resolves it)."""
+    kind, title = MAKERS[tool], str(args.get("title") or args.get("subject") or args.get("name") or "")
+    it = {"kind": kind, "id": None, "verb": "made", "title": title, "what": ""}
+    m = MADE_LINE.search(text)
+    if m:
+        it.update(verb=m[1], kind=m[2], id=m[3])
+        if it["id"].startswith("request-"):
+            it["verb"] = "pending"
+    elif text.startswith("Error"):
+        it.update(verb="failed", what=text)
+    elif tool in OLD_WORDING and (w := OLD_WORDING[tool].search(text)):
+        it.update(id=w[w.lastindex], verb="exists" if w[1] == "Already exists" else "made")
+    elif tool == "mission_create" and text.startswith("Creating"):
+        it["verb"] = "pending"                                        # the app finds it by its title (titles are unique)
+    elif tool == "send_email":
+        it["verb"] = "sent"
+    elif tool in ("mission_control", "mission_update", "mission_set_triggers", "build_request_changes", "build_recheck",
+                  "build_switch_engine", "repo_make_buildable", "understand_repo"):
+        it["verb"] = "changed"
+    if it["verb"] in ("changed", "failed") and not it["id"]:          # what it changed (or failed on) is in its arguments
+        it["id"] = str(args.get(ARG_ID.get(kind, "id")) or "") or None
+    if it["verb"] == "changed" and not it["what"]:
+        it["what"] = {"mission_control": {"run": "run started", "deep_run": "deep research run started", "pause": "paused",
+                                          "resume": "resumed", "archive": "archived"}.get(args.get("action"), "changed"), "mission_update": "settings changed",
+                      "mission_set_triggers": "triggers set", "build_request_changes": "sent back with changes",
+                      "build_recheck": "checks re-run", "build_switch_engine": f"moved to {args.get('engine', 'the other engine')}",
+                      "repo_make_buildable": "moved to Forgejo", "understand_repo": "code map started"}.get(tool, "changed")
+    return it
+
+
+def chat_made(chat=None, since=0):
+    """APP-39: what chat <chat> (every chat: None) made or changed, oldest first: [{key, chat, run, ts, tool, kind, id, verb,
+    title, what}]. key is the result event's id: stable, so the app can keep what it resolved."""
+    c, out = db(), []
+    q = ("select e.id, e.run, e.ts, e.title, e.detail, e.data, r.ref from events e join runs r on r.run=e.run "
+         "where e.kind='result' and r.ref " + ("= ?" if chat else "like 'chat:%'") + " and e.ts>=? and (" +
+         " or ".join("e.title like ?" for _ in MAKERS) + ") order by e.ts, e.id")
+    rows = c.execute(q, ((f"chat:{chat}",) if chat else ()) + (since,) + tuple(f"%{t}" for t in MAKERS)).fetchall()
+    calls = {}
+    for r in rows:
+        tool = maker_of(r["title"])
+        if not tool:
+            continue
+        cid = _json(r["data"]).get("call_id")
+        if cid and r["run"] not in calls:                             # the call's arguments: what it was asked to make
+            calls[r["run"]] = {_json(x["data"]).get("call_id"): _json(x["detail"]) for x in
+                               c.execute("select data, detail from events where run=? and kind='call'", (r["run"],))}
+        res = _json(r["detail"])
+        text = str(res.get("result") or r["detail"] or "").strip()
+        out.append({"key": r["id"], "chat": r["ref"][5:], "run": r["run"], "ts": r["ts"], "tool": tool,
+                    **made_item(tool, (calls.get(r["run"]) or {}).get(cid) or {}, text)})
+    return out
 

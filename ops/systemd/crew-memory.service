@@ -2,7 +2,8 @@
 Description=Crew: the Memory Keeper: long-term memory, wiki disputes and re-checks, journals, the search index (its judgement and the wiki tidy on Wednesdays)
 [Service]
 Type=oneshot
-TimeoutStartSec=2h
+TimeoutStartSec=3h30min
 Environment=DOCKER_HOST=unix:///run/user/1000/docker.sock
 WorkingDirectory=/home/owner/ai-stack
+ExecCondition=/usr/bin/python3 /home/owner/ai-stack/ops/stack_gate.py --wait 1800 --slot 45
 ExecStart=/usr/local/bin/sops exec-env secrets/secrets.enc.yaml "sops exec-env secrets/agent-keys.enc.yaml \"python3 ops/crew.py memory\""

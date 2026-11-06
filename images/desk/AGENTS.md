@@ -13,6 +13,9 @@ the `vk-desk` key.
 
 - Outbound fetches go through `public_url()` (refuses private and loopback targets). Keep every new fetch behind it.
 - Text from the web is untrusted: it is summarised, never executed or followed as instructions.
+- A newsletter in `/topic/mail` (the Inbox digest's, MIS-28) is one more event, framed as untrusted e-mail. It skips triage, so a
+  mail's text never steers what is fetched, and its links are never opened. Its source line names the mail; a filed report
+  lists its mails in its front matter (`mail:`) and `ops/inbox.py settle` marks them, so each is read once.
 - Network-free helpers (`german()`, `release_text()`, `public_url()`) have tests in `tests/test_desk.py`. Add tests
   for new pure functions there. Feed and article parsers are stubbed in tests.
 - Pins are in the `Dockerfile` (`feedparser`, `trafilatura`, `markdown`, …).

@@ -51,7 +51,8 @@ The Chat tab is Hermes (main profile) through its OpenAI-compatible API. Per mes
 GPT-6.1 Sol, `gpt-sub-fast` = GPT-6 Luna), reasoning effort (low…xhigh), attachments (images go to Hermes as
 images; PDF, Word, Excel, CSV and text are extracted to text in the app). The answer runs as a server-side task and
 is saved even if the phone disconnects; the app follows it over a reconnecting SSE stream with tool steps. Edit,
-regenerate, stop, copy, rename, pin, search. Focus chats (`#/chat?mission=slug`) carry the mission's context.
+regenerate, stop, copy, rename, pin, search. Focus chats (`#/chat?mission=slug`) carry the mission's context. `#/chat`
+reopens the chat you left on this device, with its draft; `#/chat?new=1` starts a new one, from the drawer of chats.
 
 ## Code tab (repositories)
 

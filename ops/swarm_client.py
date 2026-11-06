@@ -574,7 +574,7 @@ def notify_owner(send=None, notify=None, now=None):
 
 def _notify(text):
     import notify as N                            # the one notification path (OBS-16)
-    N.send(text, "swarm")
+    N.send(text, "swarm", by="stack")
 
 
 # ---------------------------------------------------------------- answers for every request (SWM-12, SWM-13, SWM-49)

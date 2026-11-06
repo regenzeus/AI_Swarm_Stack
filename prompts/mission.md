@@ -15,6 +15,27 @@ question an agent can answer with web research and the user's notes. Answer only
 {{"steps": [{{"title": "3-6 words", "question": "the precise question"}}]}}
 <!-- end -->
 
+<!-- prompt: FILES_PLAN · ops/mission_extras.py run_deep(): added to DEEP_PLAN when the owner asked for files · fills: files -->
+The owner asked this mission for these files: {files}
+Make the last step write each of them in full and save it.
+<!-- end -->
+
+<!-- prompt: FILES · ops/files.py brief(): added to DEEP_STEP and TASK when the owner asked for files (MIS-24) · fills: files, slug -->
+
+## Files the owner asked for
+
+{files}
+
+They are what this mission delivers. Write each one in full and save it with
+`file_save(mission="{slug}", name=..., text=...)`. If a document is already in a Ledger report, save that report's body
+unchanged with `file_save(mission="{slug}", name=..., from_ledger=<report id>)`.
+
+- Save a file again when you improve it. Earlier versions are kept.
+- Only these formats can be saved: .md, .csv, .json and .txt, up to 2 MB each.
+- A file that is not saved is not delivered. The e-mail attaches what is saved, and the mission page shows it.
+- Never say a file was sent or attached. Delivery happens after the run.
+<!-- end -->
+
 <!-- prompt: DEEP_STEP · ops/mission_extras.py run_deep(): one step (Hermes mission profile) · fills: date, earlier, goal, question, step_title, title -->
 You are working on one step of a multi-step research mission. Today is {date}.
 Mission: {title}

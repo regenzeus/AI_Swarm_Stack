@@ -37,6 +37,7 @@ docs it points to. `README.md` is the product overview; `docs/` holds architectu
 | `tests/` | Unit tests (pytest, all fakes) and docs-coverage tests | [tests/AGENTS.md](tests/AGENTS.md) |
 | `.forgejo/workflows/` | CI | [.forgejo/workflows/AGENTS.md](.forgejo/workflows/AGENTS.md) |
 | `docs/` | Architecture, security model, reviews | [docs/AGENTS.md](docs/AGENTS.md) |
+| `docs/screenshots/` | The public page's pictures, never of real data | [docs/screenshots/AGENTS.md](docs/screenshots/AGENTS.md) |
 | `eval/` | Frozen benchmark and retrieval evaluation | [eval/AGENTS.md](eval/AGENTS.md) |
 | `eval/trials/` | Trials: tasks with an answer key no agent sees, scored and audited (docs/SWARM-TRIALS.md) | [eval/trials/AGENTS.md](eval/trials/AGENTS.md) |
 | `requirements/` | What the stack must do: needs, constraints, decisions, requirements, findings (contradictions) | [requirements/AGENTS.md](requirements/AGENTS.md) |

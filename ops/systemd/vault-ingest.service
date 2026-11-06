@@ -3,4 +3,5 @@ Description=Vault inbox ingest (one pass)
 [Service]
 Type=oneshot
 Environment=DOCKER_HOST=unix:///run/user/1000/docker.sock
+ExecCondition=/usr/bin/python3 /home/owner/ai-stack/ops/stack_gate.py
 ExecStart=/home/owner/ai-stack/ops/vault-ingest.sh

@@ -91,7 +91,7 @@ agents:
     wake: on_request
     budgets: {wakes_per_day: 6, messages_per_hour: 20}
     memory: {wikis: [own, vault, related]}  # MEM-04: what its runs read, its own wiki first
-    tools: [qmd, research, claude, mail, swarm]
+    tools: [qmd, research, claude, mail, swarm, files]   # files: MIS-24, file_save
     autonomy: {}
   - id: desk
     purpose: Writes the Topic Desk briefings.
@@ -268,8 +268,8 @@ agents:
     tools: []
     autonomy: {}
   - id: inbox
-    purpose: The Inbox digest; files newsletters worth keeping into the vault.
-    responsibilities: [read mail under the owner's read grant, file the picks, never organise or trash]
+    purpose: The Inbox digest; hands newsletters on a watched topic to that topic, files others worth keeping into the vault.
+    responsibilities: [read mail under the owner's read grant, hand matching newsletters to their topic, file the picks, never organise or trash]
     owns: {}
     harness: python
     model: gpt-sub-fast

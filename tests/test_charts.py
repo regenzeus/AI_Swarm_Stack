@@ -49,10 +49,11 @@ def test_the_map_names_every_dot_and_shows_open_ideas_when_asked():
 
 
 def test_a_redraw_keeps_the_map_s_dots_and_zoom():
-    """APP-22: the map redraws with live data; its dots stay put (new ones settle around them) and so does the zoom."""
+    """APP-22: the map redraws with live data; its dots stay put (their places come from the agents and the width alone,
+    test_the_map_keeps_fixed_rows_and_no_number_covers_anything) and so does the zoom."""
     m = fn(SWARM, "swMapCard")
-    assert "fx: was[n.id].x, fy: was[n.id].y" in m and "settled ? 0" in m
-    assert "swOv.pos = Object.fromEntries" in m and "svg.call(zoom.transform, swOv.zoom || d3.zoomIdentity)" in m
+    assert "swMapPlan(agentIds, W," in m and "forceSimulation" not in m and "Math.random" not in fn(SWARM, "swMapRows")
+    assert "svg.call(zoom.transform, swOv.zoom || d3.zoomIdentity)" in m
 
 
 def test_explanations_fold_and_stay_open_through_redraws():

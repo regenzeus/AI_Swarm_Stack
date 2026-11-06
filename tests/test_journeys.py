@@ -123,3 +123,11 @@ def test_the_browser_half_measures_what_the_owner_sees():
     assert 'req.method() !== "GET"' in js and "route.fulfill({ status: 200" in js                               # a write is never sent
     assert "for (const [k, v] of Object.entries(s)) if (Array.isArray(v)) s[k] = [];" in js                    # the emptied state
     subprocess.run(["node", "--check", str(ROOT / "ops/journeys.mjs")], check=True)
+
+
+def test_a_tool_check_needs_two_timeouts_to_call_a_tool_broken(monkeypatch):
+    import journeys as JY
+    monkeypatch.setattr(JY, "tool_links", lambda tools=None: [("T", "Open", "https://t")])
+    tries = iter(["TimeoutError: slow", 200])
+    assert JY.check_tools(opener=lambda url: next(tries))["failures"] == []
+    assert JY.check_tools(opener=lambda url: "TimeoutError: slow")["failures"]

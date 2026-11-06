@@ -7,6 +7,7 @@ All web access happens in the desk container (SSRF-guarded "webonly" network); t
 Telegram's API and Gmail's SMTP.
 """
 import datetime as dt, hashlib, html, json, os, re, smtplib, subprocess, time, urllib.parse, urllib.request
+from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from textcap import cut, tail                    # visible caps and input limits (AGENTS.md, truncation)
@@ -25,7 +26,7 @@ WATCH_EVERY = 600             # seconds between event checks
 def telegram(text, buttons=(), category="result"):
     """HTML message with URL buttons into Mission Control (callback buttons would need Hermes' bot loop), through the
     one notification path: the owner's preferences and quiet hours decide (OBS-16). True when it went out now."""
-    return N.send(text, category, buttons=buttons, is_html=True).get("telegram") == "sent"
+    return N.send(text, category, by="mission", buttons=buttons, is_html=True).get("telegram") == "sent"
 
 
 def links(slug, path=None):
@@ -43,12 +44,31 @@ def email_ready():
 def sent(subject, decision, why=""):
     """FND-78: every e-mail outcome is recorded (the notification log and the run's timeline), so a delivery is
     checked, not assumed."""
-    N.record("email", "result", subject, why or f"to {os.environ.get('MAIL_TO', '?')}", decision)
+    N.record("email", "result", subject, why or f"to {os.environ.get('MAIL_TO', '?')}", decision, by="mission")
     M.RTM.stage(f"E-mail {'sent' if decision == 'sent' else 'not sent'}: {subject}", why, kind="stage" if decision == "sent" else "error")
     return decision == "sent"
 
 
-def email(subject, markdown_text, kicker, url):
+def message(d, subject, files=()):
+    """The e-mail: the designed report (text and HTML) and, MIS-25, each file as a real attachment with its name."""
+    body = MIMEMultipart("alternative")
+    body.attach(MIMEText(d["text"], "plain", "utf-8"))
+    body.attach(MIMEText(d["html"], "html", "utf-8"))
+    if files:
+        msg = MIMEMultipart("mixed")
+        msg.attach(body)
+        for name, data, mime in files:
+            main, sub = mime.split("/", 1)
+            part = MIMEText(data.decode("utf-8", "replace"), sub, "utf-8") if main == "text" else MIMEApplication(data, sub)
+            part.add_header("Content-Disposition", "attachment", filename=name)
+            msg.attach(part)
+    else:
+        msg = body
+    msg["Subject"], msg["From"], msg["To"] = subject, f"AI Stack <{os.environ['GMAIL_ADDRESS']}>", os.environ["MAIL_TO"]
+    return msg
+
+
+def email(subject, markdown_text, kicker, url, files=()):
     if not email_ready():
         return sent(subject, "failed", "e-mail is not set up (GMAIL_ADDRESS, GMAIL_APP_PASSWORD, MAIL_TO)")
     p = subprocess.run(["docker", "run", "--rm", "-i", "--network", "none", "aistack/desk:1", "--email"],
@@ -57,11 +77,7 @@ def email(subject, markdown_text, kicker, url):
     if p.returncode:
         M.log("email render failed:", tail(p.stderr, 4000))  # cap: store
         return sent(subject, "failed", "the e-mail could not be rendered")
-    d = json.loads(p.stdout)
-    msg = MIMEMultipart("alternative")
-    msg["Subject"], msg["From"], msg["To"] = subject, f"AI Stack <{os.environ['GMAIL_ADDRESS']}>", os.environ["MAIL_TO"]
-    msg.attach(MIMEText(d["text"], "plain", "utf-8"))
-    msg.attach(MIMEText(d["html"], "html", "utf-8"))
+    msg = message(json.loads(p.stdout), subject, files)
     try:
         with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=60) as s:
             s.login(os.environ["GMAIL_ADDRESS"], os.environ["GMAIL_APP_PASSWORD"])
@@ -105,11 +121,35 @@ def deliver(m, title, short, path, kicker, markdown_text=None, empty=False):
     if days:
         kicker += f" · nothing new on {', '.join(days)}"
     f.write_text(json.dumps(quiet))
+    chk = files_of(m)                                  # MIS-25: what this run saved goes along; what is missing is said
+    note = (f"Files: {', '.join(chk['saved'])}" if chk["saved"] else "") + \
+           (f"{' · ' if chk['saved'] else ''}Not delivered: {', '.join(chk['missing'])}" if chk["missing"] else "")
     if "telegram" in d:
-        telegram(f"<b>{html.escape(title)}</b>\n<i>{html.escape(kicker)}</i>\n\n{html.escape(short)}", links(m["slug"], path))
+        ok = telegram(f"<b>{html.escape(title)}</b>\n<i>{html.escape(kicker)}</i>\n\n{html.escape(short)}"
+                      + (f"\n\n{html.escape(note)}" if note else ""), links(m["slug"], path))
+        if chk["attach"]:                              # the files follow the message only when it went out now
+            done = [n for n, data, mime in chk["attach"] if ok and N.telegram_document(n, data, m["title"], mime)]
+            M.FL.record_delivery(m["slug"], done, "telegram", True)
+            M.FL.record_delivery(m["slug"], [n for n, _, _ in chk["attach"] if n not in done], "telegram", False,
+                                 "the result's message was held (quiet hours) or off" if not ok else "Telegram refused it")
     if "email" in d and markdown_text:
-        email(f"{m['title']}: {title}", markdown_text, kicker, f"{APP}/#/read?path={urllib.parse.quote(path)}&m={m['slug']}")
+        text = markdown_text + (f"\n\n---\n\n**Attached:** {', '.join(n for n, _, _ in chk['attach'])}" if chk["attach"] else "") \
+            + (f"\n\n**Not delivered:** {', '.join(chk['missing'])} (asked for, not saved by the run)" if chk["missing"] else "")
+        ok = email(f"{m['title']}: {title}", text, kicker, f"{APP}/#/read?path={urllib.parse.quote(path)}&m={m['slug']}",
+                   **({"files": chk["attach"]} if chk["attach"] else {}))
+        M.FL.record_delivery(m["slug"], [n for n, _, _ in chk["attach"]], "email", ok)
     return True
+
+
+def files_of(m):
+    """The files this run saved and those asked for but missing ({saved, missing, attach}); none for a task's delivery
+    or when the store cannot be read (the result still goes out, said in the log)."""
+    try:
+        return M.FL.check_run(m) if M.FL.SLUG.fullmatch(m.get("slug") or "") and (M.FL.ROOT / m["slug"]).exists() or m.get("files_asked") \
+            else {"saved": [], "missing": [], "attach": []}
+    except Exception as e:
+        M.log(f"files of {m.get('slug')}: {type(e).__name__}: {e}")
+        return {"saved": [], "missing": [], "attach": []}
 
 
 # ---------- triggers ----------
@@ -284,7 +324,7 @@ SYNTH = P.text("mission", "DEEP_SYNTH")
 def run_deep(m, logf, rid, c, ev=None):
     goal, notes = m.get("goal", ""), M.read_notes(m)
     evtext = f"Triggered by an event: {ev['trigger']}: {ev['summary']}" if ev else ""
-    plan = M.ask_json(PLAN.format(title=m["title"], goal=goal, notes=TC.cut(notes, 3000), event=evtext), os.environ["VK_MISSION"])  # cap: prompt
+    plan = M.ask_json(PLAN.format(title=m["title"], goal=goal, notes=TC.cut(notes, 3000), event=evtext) + M.FL.brief(m, plan=True), os.environ["VK_MISSION"])  # cap: prompt
     steps = [{"title": TC.cut(s.get("title", ""), 60), "question": TC.cut(s.get("question", ""), 500), "status": "pending"}  # cap: untrusted
              for s in plan.get("steps", [])[:5] if s.get("question")]
     if not steps:
@@ -299,7 +339,7 @@ def run_deep(m, logf, rid, c, ev=None):
             f.write(f"## {s['title']}\n{s['question']}\n")
             f.flush()
             out = M.hermes_z(STEP.format(date=f"{M.now():%d %b %Y}", title=m["title"], goal=goal, step_title=s["title"],
-                                         question=s["question"], earlier=TC.tail("\n\n".join(found), 6000) or "(none yet)"), timeout=900)  # cap: prompt
+                                         question=s["question"], earlier=TC.tail("\n\n".join(found), 6000) or "(none yet)") + M.FL.brief(m), timeout=900)  # cap: prompt
             f.write(out + "\n\n")
             f.flush()
             s["status"] = "done" if out.strip() else "failed"

@@ -17,6 +17,7 @@ Run: missions.service (sops exec-env: VK_DESK, VK_MISSION, SEC_CONTACT, TELEGRAM
 """
 import datetime as dt, html, json, os, re, signal, sqlite3, subprocess, sys, threading, time, traceback, unicodedata
 import urllib.request
+from email.utils import parsedate_to_datetime
 from pathlib import Path
 
 import yaml
@@ -50,7 +51,10 @@ import a2a as A2                                  # TSK-19: outside agents over 
 from textcap import limit, limit_items, tail as tailcut                    # visible caps and input limits (AGENTS.md, truncation)
 import textcap as TC
 import prompts as P                               # MEM-11: the agent prompts live in prompts/<owner>.md
+import windows_desk as WD                         # PLT-31: asking Windows, through a folder it fetches from
+import files as FL                                # MIS-23: the files a mission was asked to make (docs/DELIVERABLES.md)
 import decisions as DQ                            # AUT-05: everything that waits for the owner, one ranked list, and its shadow
+import stack_gate as G                            # PLT-28: is the stack up; nothing starts against one that is not
 
 OPS = Path(__file__).resolve().parent
 VAULT = Path("/srv/vault")
@@ -65,6 +69,8 @@ KEY_OF = {"briefing": "vk-desk", "task": "vk-mission", "shopping": "vk-mission",
 DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
 TASK_TIMEOUT = 40 * 60
 RETRY_MIN, MAX_WAITS = 30, 16           # subscription only: a paused run retries every 30 min, for up to 8 hours
+DOWN_RETRY_MIN = 5                      # a run the stack went away under (PLT-28): it holds the queue until the stack is back
+STACK_GONE = re.compile(r"Cannot connect to the Docker daemon|Container \S+ is (?:paused|restarting|not running)|No such container", re.I)
 PAUSED = re.compile(r"\b429\b|rate.?limit|usage.?limit|too many requests|quota|no deployments available|cooldown", re.I)
 
 
@@ -118,9 +124,9 @@ EVENTS_LOCK = threading.Lock()                     # the event log's writer and 
 EVENT_DAYS, EVENTS = 3, 200                        # Home's feed: three days of events, at most 200 (the newest 80 lost a morning's alerts by evening, APP-37)
 
 
-def event(kind, slug="", text="", push=False, title="", category=None):
+def event(kind, slug="", text="", push=False, title="", category=None, by=""):
     if push:                                       # OBS-16: a push only where the owner's preferences and quiet hours allow it
-        push = N.push_allowed(kind, text, title, category)
+        push = N.push_allowed(kind, text, title, category, by=by or ("mission" if slug else ""))
     e = {"ts": now().isoformat(timespec="seconds"), "kind": kind, "slug": slug, "title": title, "text": text, "push": push}
     with EVENTS_LOCK, open(PUBLIC / "events.jsonl", "a") as f:
         f.write(json.dumps(e, ensure_ascii=False) + "\n")
@@ -128,7 +134,7 @@ def event(kind, slug="", text="", push=False, title="", category=None):
 
 
 def notify(text, category="system"):
-    N.send(text, category)
+    N.send(text, category, by="stack")
 
 
 # ---------- missions on disk ----------
@@ -164,7 +170,8 @@ def load_missions():
 def save_mission(m):
     meta = {k: m[k] for k in ("title", "type", "status", "schedule", "triggers", "depth", "once", "budget_usd_month", "deliver",
                               "topic", "created", "target", "watch_pct", "best_price_eur", "best_price_at",      # these three: shopping
-                              "task")                                         # TSK-21: the task that runs this agent
+                              "task",                                         # TSK-21: the task that runs this agent
+                              "files_asked")                                  # MIS-23: the files the owner asked it to make
             if m.get(k) not in (None, [], "", False)}
     write_front(MISSIONS / m["slug"] / "MISSION.md", meta, m.get("goal", ""))
 
@@ -172,6 +179,27 @@ def save_mission(m):
 def topic_of(m):
     p = VAULT / "topics" / m.get("topic", m["slug"]) / "TOPIC.md"
     return (split_front(p.read_text()), p) if p.exists() else (({}, ""), p)
+
+
+_mail_seen = {}                     # a handed mail's facts by (path, mtime): the state is written every few seconds
+
+
+def topic_mail(tdir):
+    """MIS-28: the mails the Inbox digest handed to a topic, newest first, and what came of each -> (40 newest, how many)."""
+    files = sorted((tdir / "mail").glob("*.md"), key=lambda p: p.name, reverse=True)
+    out = []
+    for p in files[:40]:                  # cap: list (the count goes with it; the vault has all)
+        k = (str(p), p.stat().st_mtime)
+        if k not in _mail_seen:
+            meta, _ = split_front(p.read_text(errors="replace"))
+            try:
+                at = parsedate_to_datetime(str(meta.get("date"))).isoformat()
+            except (TypeError, ValueError):
+                at = ""
+            _mail_seen[k] = {"path": str(p.relative_to(VAULT)), "subject": meta.get("subject") or p.stem, "from": meta.get("from") or "",
+                             "at": at, "why": meta.get("why") or "", "report": meta.get("report") or "", "cited": bool(meta.get("cited"))}
+        out.append(_mail_seen[k])
+    return out, len(files)
 
 
 def read_notes(m):
@@ -461,7 +489,7 @@ def run_task(m, logf, ev=None):
     logs = sorted((MISSIONS / m["slug"] / "log").rglob("*.md"))
     last = TC.cut(section(logs[-1].read_text(), "Result"), 2500) if logs else "(none)"  # cap: prompt
     evtext = f"\nThis run was triggered by an event: {ev['trigger']}: {ev['summary']}\nStart with what this event means for the mission.\n" if ev else ""
-    out = hermes_z(TASK_PROMPT.format(date=f"{now():%d %b %Y}", title=m["title"], goal=m.get("goal", ""), last=last, event=evtext))
+    out = hermes_z(TASK_PROMPT.format(date=f"{now():%d %b %Y}", title=m["title"], goal=m.get("goal", ""), last=last, event=evtext) + FL.brief(m))
     Path(logf).write_text(out)
     return file_task_result(m, out, "event run" if ev else "run")
 
@@ -516,17 +544,25 @@ def execute(c, row, missions):
     end = now()
     J.after_run(m, rid, status, summary, output, (end - start).total_seconds())     # its journal entry (before the run ends)
     tries = int(row["attempts"] or 0)
-    if status == "failed" and paused(summary + "\n" + "\n".join(tail(logf, 40))) and tries < MAX_WAITS:   # cap: parse
-        retry = end + dt.timedelta(minutes=RETRY_MIN)
+    said = (summary + "\n" + "\n".join(tail(logf, 40))) if status == "failed" else ""   # cap: parse
+    down = stack_gone(said) if said and not paused(said) else ""     # PLT-28: the stack went away under this run: not the run's fault
+    if (down or (said and paused(said))) and tries < MAX_WAITS:
+        retry = end + dt.timedelta(minutes=DOWN_RETRY_MIN if down else RETRY_MIN)
         c.execute("update runs set status='waiting', retry_at=?, attempts=?, summary=? where id=?",
-                  (retry.isoformat(timespec="seconds"), tries + 1, f"ChatGPT paused the stack (usage limit); retry {tries + 1} at {retry:%H:%M}", rid))
+                  (retry.isoformat(timespec="seconds"), tries + 1, f"The stack is not up ({down}); retry at {retry:%H:%M}" if down
+                   else f"ChatGPT paused the stack (usage limit); retry {tries + 1} at {retry:%H:%M}", rid))
         c.commit()
         with lock:
             running.clear()
-        RTM.end(f"mission-run:{rid}", f"mission:{m['slug']}", "limit", "usage limit: waiting to retry", (end - start).total_seconds())
+        RTM.end(f"mission-run:{rid}", f"mission:{m['slug']}", "limit", f"waiting to retry: {down}" if down else "usage limit: waiting to retry", (end - start).total_seconds())
         RTM.set_ref(None)
-        event("waiting", m["slug"], f"ChatGPT paused the stack (usage limit). Waiting; retry at {retry:%H:%M}.", push=tries == 0, title=m["title"])
+        event("waiting", m["slug"], f"The stack is not up ({down}). Waiting; retry at {retry:%H:%M}." if down
+              else f"ChatGPT paused the stack (usage limit). Waiting; retry at {retry:%H:%M}.", push=not down and tries == 0, title=m["title"])
         return
+    missing = FL.check_run(m, rid)["missing"] if m.get("files_asked") and status == "ok" else None
+    if missing:                                        # MIS-25: a run that left an asked-for file unmade is partial, and says so
+        summary = f"Partial: not delivered: {', '.join(missing)}. {summary}"
+        RTM.stage(f"Files not delivered: {', '.join(missing)}", "asked for when the mission was made; the run did not save them", kind="error")
     time.sleep(8)                       # LiteLLM writes spend logs in batches (refresh_costs recounts later)
     calls, tokens, spend, models = calls_of(KEY_OF[m["type"]], start, end)
     c.execute("update runs set status=?, ended=?, seconds=?, calls=?, tokens=?, spend=?, models=?, summary=?, output=? "
@@ -603,6 +639,33 @@ def requeue_interrupted(c):
             log(f"requeued {r['slug']} (interrupted by a runner restart)")
 
 
+def stack_gone(said):
+    """Why a failed run was the stack's doing and not its own, or "": the stack is down now, or its log says it was."""
+    return G.why_down() or ("the stack was restarting" if STACK_GONE.search(said) else "")
+
+
+def stack_watch(step=30, down_for=600):
+    """PLT-28: the stack down for 10 minutes: one message naming the cause, and one when it is back. (On 4 Nov the owner
+    got an alert per job that failed, and none that said Docker had stopped.)"""
+    since = told = None
+    while not stop.wait(step):
+        since, told = stack_watch_step(G.why_down(), since, told, time.time(), down_for)
+
+
+def stack_watch_step(why, since, told, t, down_for=600):
+    """-> (down since, told the owner)."""
+    if not why:
+        if told:
+            notify("The AI stack is back.")
+        return None, None
+    since = since or t
+    if not told and t - since >= down_for:
+        notify(f"⚠️ The AI stack has been down for {round((t - since) / 60)} min: {why}. It keeps trying to start by itself; "
+               "scheduled work waits and runs when it is back.")
+        told = True
+    return since, told
+
+
 def _run_thread(row):
     _run_local.rid = row["id"]
     c = db()
@@ -628,6 +691,8 @@ def worker():
                      + (f" and id not in ({','.join('?' * len(busy))})" if busy else "") + " order by id limit 1")
                 row = c.execute(q, (now().isoformat(timespec="seconds"), *busy)).fetchone()
                 c.close()
+                if row and G.why_down():                # PLT-28: it stays queued until the stack is back
+                    row = None
                 if row:
                     t = threading.Thread(target=_run_thread, args=(row,), daemon=True, name=f"run-{row['id']}")
                     active[row["id"]] = t
@@ -730,6 +795,9 @@ def handle(req, missions, c):
                 "budget_usd_month": min(max(float(req.get("budget_usd_month", 0.10)), 0), 1.0),
                 "deliver": [x for x in req.get("deliver", ["telegram", "app"]) if x in DELIVER],
                 "created": now().isoformat(timespec="seconds"), "goal": desc or title, "once": bool(req.get("once"))}
+        asked = FL.asked_of(req.get("files"))         # MIS-23: refused at once (with the reason) when the stack cannot make one
+        if asked:
+            meta["files_asked"] = asked
         needs = [n for n in (req.get("needs") or []) if n in CONN_SCOPES]      # app access the owner grants on the mission page
         if needs:
             meta["needs"] = needs
@@ -924,7 +992,7 @@ STACK_ACTIONS = {"email", "vault_add", "understand", "forget", "memory_search"}
 BUILD_ACTIONS = {"build_assign", "build_revise", "build_approve", "build_approve_all", "build_reject", "build_recheck", "build_revert"}
 IMPROVE_ACTIONS = {"improve_scan", "proposal_accept", "proposal_dismiss"}
 REPO_ACTIONS = {"codemap", "repo_create", "repo_buildable", "repo_remove"}
-CREW_ACTIONS = {"crew_run", "crew_memory_forget", "crew_memory_undo", "crew_schedule", "health_ack", "phone_cleanup_do", "phone_cleanup_do_all", "phone_cleanup_dismiss"}
+CREW_ACTIONS = {"crew_run", "crew_memory_forget", "crew_memory_undo", "crew_schedule", "health_ack", "phone_cleanup_do", "phone_cleanup_do_all", "phone_cleanup_dismiss", "phone_cleanup_undo"}
 creating = threading.Lock()            # one new mission at a time (drafting takes a minute or two)
 
 
@@ -965,7 +1033,7 @@ def store_secret(name, value, msg):
 
 def notify_task(tid, title, what):
     """A task that waits for the owner (a question, its plan's OK), through the one notification path."""
-    N.send(f"Task #{tid} {what}: {title}", "result", title="Tasks", buttons=[[("🔍 Open the task", f"{X.APP}/#/task/{tid}")]],
+    N.send(f"Task #{tid} {what}: {title}", "result", by="conductor", title="Tasks", buttons=[[("🔍 Open the task", f"{X.APP}/#/task/{tid}")]],
            push_on=True, event_kind="task")
 
 
@@ -977,7 +1045,7 @@ def handle_notify(req):
     cid = str(req.get("chat", ""))
     if not re.fullmatch(r"[a-z0-9]{6,24}", cid):
         raise ValueError("no such chat")
-    N.send(f"The answer that waited for the usage limit is ready: {req.get('title') or 'your chat'}", "result", title="Chat",
+    N.send(f"The answer that waited for the usage limit is ready: {req.get('title') or 'your chat'}", "result", by="main", title="Chat",
            buttons=[[("💬 Open the chat", f"{X.APP}/#/chat?c={cid}")]], push_on=True, event_kind="chat")
     return {}
 
@@ -989,8 +1057,8 @@ def respond(rid, req):
         res = (CT.handle(req, c) if a == "claude_task" else handle_forgejo_connect(req) if a == "forgejo_connect" else handle_memory(req) if a == "memory" else handle_stack(req) if a in STACK_ACTIONS
                else B.handle(req, c) if a in BUILD_ACTIONS else I.handle(req, c) if a in IMPROVE_ACTIONS
                else R.handle(req, c) if a in REPO_ACTIONS else CR.handle(req, c) if a in CREW_ACTIONS else J.handle(req) if a in J.ACTIONS
-               else SH.handle(req, c) if a in SH.ACTIONS else W.handle(req) if a in W.ACTIONS else H.handle(req) if a in H.ACTIONS
-               else SW.handle(req, c) if a in SW.ACTIONS else handle_notify(req) if a in ("notify_prefs", "chat_ready") else TK.handle(req, c) if a in TK.ACTIONS else EV.handle(req, c) if a in EV.ACTIONS else A2.handle(req) if a in A2.ACTIONS
+               else WD.handle(req) if a in WD.ACTIONS else SH.handle(req, c) if a in SH.ACTIONS else W.handle(req) if a in W.ACTIONS else H.handle(req) if a in H.ACTIONS
+               else SW.handle(req, c) if a in SW.ACTIONS else FL.handle(req) if a in FL.ACTIONS else handle_notify(req) if a in ("notify_prefs", "chat_ready") else TK.handle(req, c) if a in TK.ACTIONS else EV.handle(req, c) if a in EV.ACTIONS else A2.handle(req) if a in A2.ACTIONS
                else handle(req, load_missions(), c))
         res = {"ok": True, **res}
     except Exception as e:
@@ -1085,6 +1153,7 @@ def system_info():
         "timers": timers, "failed": failed, "services": services,
         "backup": next((r for r in reversed(bk) if r.get("kind") == "backup"), None),
         "drill": next((r for r in reversed(bk) if r.get("kind") == "restore-drill"), None),
+        "boot": (jsonl("/srv/ai/state/boots.jsonl") or [None])[-1],       # PLT-30: how the last start of the PC went
         "memory": {"facts": int(hs[0]), "observations": int(hs[1])} if len(hs) == 2 and hs[0].isdigit() else None,
         "pending_memory": pending, "email_ready": X.email_ready(), **stack_info()})
     return _sys["data"]
@@ -1171,7 +1240,7 @@ def write_state(c, missions):
                          (m["slug"],)).fetchone()
         nd = next_due(m.get("schedule"), t) if m.get("status") == "active" else None
         item = {k: m.get(k) for k in ("slug", "title", "type", "status", "schedule", "budget_usd_month", "deliver", "created", "goal",
-                                      "topic", "depth", "needs", "task")}
+                                      "topic", "depth", "needs", "task", "once", "files_asked")}
         item.update(schedule_text=schedule_text(m.get("schedule")), next_run=nd.isoformat() if nd else None, runs=runs,
                     triggers=[{**tr, "text": X.trigger_text(tr)} for tr in m.get("triggers") or []], wiki=X.wiki_root(m),
                     stats={"runs": st[0], "ok": st[1] or 0, "failed": st[2] or 0, "calls": st[3], "tokens": st[4],
@@ -1188,6 +1257,7 @@ def write_state(c, missions):
             tdir = VAULT / "topics" / m.get("topic", m["slug"])
             outs = sorted([*(tdir / "reports").rglob("*.md"), *(tdir / "alerts").rglob("*.md")], key=lambda p: p.name)
             item["outputs"] = [str(p.relative_to(VAULT)) for p in outs[-40:]][::-1]  # cap: list
+            item["mail"], item["mail_total"] = topic_mail(tdir)
         else:
             logs = sorted((MISSIONS / m["slug"] / "log").rglob("*.md"))
             item["outputs"] = [str(p.relative_to(VAULT)) for p in logs[-30:]][::-1]  # cap: list (the 30 newest results; the vault has all)
@@ -1219,7 +1289,7 @@ def write_state(c, missions):
     except FileNotFoundError:
         ev = []
     state = {"generated": t.isoformat(timespec="seconds"), "missions": out, "running": run or None, "queue": queue,
-             "activity": ev, "calls": recent_calls(), "system": system_info(), "resources": RES, **B.state(c), **I.state(c), **R.state(), **CT.state(c), **CR.state(), **SH.state(), **H.state(), **SW.state(), **MEM.state(CR.status()), **N.state(), **TK.state(c), **EV.state(c), **ST.state(c), "health": health,
+             "activity": ev, "calls": recent_calls(), "system": system_info(), "resources": RES, **B.state(c), **I.state(c), **R.state(), **CT.state(c), **CR.state(), **SH.state(), **H.state(), **SW.state(), **MEM.state(CR.status()), **N.state(), **TK.state(c), **EV.state(c), **ST.state(c), **FL.state(), "health": health,
              "prices": PR.load().get("models", {}), **A2.state()}                  # TSK-27: the app prices tokens with the same table
     try:
         state.update(DQ.state(state))
@@ -1294,7 +1364,7 @@ def phone_watch():
                     seen.add(f.stem)
                     p = json.loads(f.read_text())
                     go = f"{X.APP}/#/phone?id={p['id']}&do="       # one tap: the app opens and records the answer
-                    first = [("✅ Allow", go + "allow")] if p.get("money") else [("✅ Allow", go + "allow"), ("✅ Allow 5 min", go + "allow5")]
+                    first = [("✅ Allow this job" if p.get("tool") == "phone_task" else "✅ Allow", go + "allow")]      # such an OK opens no time window
                     X.telegram(f"📱 <b>AI phone: OK?</b>\n{html.escape(p.get('text', ''))}\n<i>{html.escape(p.get('why', ''))}</i>\n"
                                f"(waits 15 min)", [first, [("❌ Decline", go + "deny"), ("🔍 Look first", f"{X.APP}/#/phone")]], category="approval")
             for f in CONN_PENDING.glob("*.json") if CONN_PENDING.exists() else []:
@@ -1328,7 +1398,7 @@ def watcher():
 
 
 def main():
-    X.M = B.M = I.M = R.M = SH.M = CL.M = T.M = CT.M = CR.M = J.M = W.M = H.M = TK.M = CD.M = EV.M = ST.M = PV.M = HI.M = A2.M = PN.M = sys.modules[__name__]
+    X.M = B.M = I.M = R.M = SH.M = CL.M = T.M = CT.M = CR.M = J.M = W.M = H.M = TK.M = CD.M = EV.M = ST.M = PV.M = HI.M = A2.M = PN.M = FL.M = WD.M = sys.modules[__name__]
     CT.B = B
     CR.I = I
     I.B = R.B = B
@@ -1342,6 +1412,10 @@ def main():
         write_state(c, load_missions())
         return
     signal.signal(signal.SIGTERM, lambda *_: stop.set())
+    log("mission runner: waiting for the stack")
+    if not G.wait(G.START_WAIT_S, stop=stop):       # PLT-28: nothing starts against a stack that is still coming up
+        log(f"mission runner: starting without the stack: {G.why_down()}")
+    threading.Thread(target=stack_watch, daemon=True, name="stack-watch").start()
     threading.Thread(target=worker, daemon=True).start()
     threading.Thread(target=watcher, daemon=True).start()
     threading.Thread(target=W.worker, daemon=True, name="wiki-summaries").start()
@@ -1350,6 +1424,7 @@ def main():
     threading.Thread(target=resmon, daemon=True).start()
     threading.Thread(target=B.worker, daemon=True).start()
     threading.Thread(target=CT.worker, daemon=True).start()
+    threading.Thread(target=WD.worker, daemon=True).start()
     threading.Thread(target=RTM.forwarder, args=(stop,), daemon=True).start()     # the sandboxes' runtime spools
     threading.Thread(target=T.worker, daemon=True).start()
     threading.Thread(target=I.worker, daemon=True).start()
@@ -1358,6 +1433,7 @@ def main():
     threading.Thread(target=EV.worker, daemon=True, name="event-bus").start()      # events, rules, breaking news (TSK-10)
     HI.start()                                                                      # the telemetry history, hourly (TSK-25)
     PN.start()                                                                      # growing files pruned, daily (PLT-21)
+    FL.start()                                                                      # mission files: retention and quota, daily (MIS-26)
     threading.Thread(target=ST.worker, daemon=True, name="staffing").start()       # judged tasks, measured agents (TSK-17)
     log("mission runner started")
     last_state = last_cost = 0

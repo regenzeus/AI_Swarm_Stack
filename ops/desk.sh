@@ -14,7 +14,7 @@ V=/srv/vault; ONLY=${1:-}; DATE=$(date +%F)
 [ "${2:-}" = "--date" ] && DATE=$3
 MODE=${DESK_MODE:-full}
 case "$MODE" in collect) ARGS=(--collect) ;; write) ARGS=(--write) ;; *) ARGS=() ;; esac
-notify() { [ "${DESK_TELEGRAM:-1}" = 0 ] || NOTIFY_CATEGORY=result "$(dirname "$0")/notify.sh" "$1" >/dev/null 2>&1 || true; }
+notify() { [ "${DESK_TELEGRAM:-1}" = 0 ] || NOTIFY_CATEGORY=result NOTIFY_BY=desk "$(dirname "$0")/notify.sh" "$1" >/dev/null 2>&1 || true; }
 
 for t in "$V"/topics/*/TOPIC.md; do
   slug=$(basename "$(dirname "$t")")
@@ -41,6 +41,7 @@ for t in "$V"/topics/*/TOPIC.md; do
     echo "$(date '+%F %T') $slug $DATE NOT filed: $dest"
     continue
   fi
+  python3 "$(dirname "$0")/inbox.py" settle "$slug" "$dest" || echo "$(date '+%F %T') $slug: the mails of $dest not settled"   # MIS-28
   ( cd "$V" && git add "topics/$slug" && git commit -qm "desk: $slug briefing $DATE" \
       -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>" && git push -q 2>/dev/null ) || true
   docker exec aistack-qmd-1 sh -c 'qmd update >/dev/null 2>&1 && qmd embed >/dev/null 2>&1' || true

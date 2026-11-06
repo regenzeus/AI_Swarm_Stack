@@ -513,7 +513,7 @@ def follow(t, run_id, repo, tid, started, log=print):
         import mission_extras as X                     # the app's address (MC_URL), kept where the app's links are made
         pct = f"{100 * s['passed'] / s['total']:.0f}%" if s["total"] else "no score"
         N.send(f"Trial {t['title']}: {s['passed']} of {s['total']} cases ({pct}), clean room {'ok' if a['ok'] else 'BROKEN'}, "
-               f"similarity {sim['share']:.0%}, {m['minutes']} min", "result", title="Trials", push_on=True, event_kind="task",
+               f"similarity {sim['share']:.0%}, {m['minutes']} min", "result", by="stack", title="Trials", push_on=True, event_kind="task",
                buttons=[[("📄 The report", f"{X.APP}/#/read?path={rel}")]])
     except Exception as e:                               # the report is in the vault either way
         log(f"{run_id}: not notified: {type(e).__name__}: {e}")

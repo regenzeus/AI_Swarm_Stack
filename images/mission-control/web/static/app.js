@@ -75,6 +75,16 @@ const ic = {
   history: I('<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/>'),
   code: I('<path d="M8 7l-5 5 5 5M16 7l5 5-5 5M13.5 4l-3 16"/>'),
   tune: I('<path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/>'),
+  menu: I('<path d="M4 7h16M4 12h10M4 17h16"/>'),
+  more: I('<circle cx="5" cy="12" r="1.4" fill="currentColor"/><circle cx="12" cy="12" r="1.4" fill="currentColor"/><circle cx="19" cy="12" r="1.4" fill="currentColor"/>'),
+  copy: I('<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15H4V6a2 2 0 0 1 2-2h9v1"/>'),
+  edit: I('<path d="M4 20l1-4L16.5 4.5a2.1 2.1 0 0 1 3 3L8 19Z"/>'),
+  image: I('<rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="8.5" cy="9.5" r="1.6"/><path d="M21 16l-5-5L6 20"/>'),
+  camera: I('<path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z"/><circle cx="12" cy="13.5" r="3.5"/>'),
+  paste: I('<rect x="6" y="5" width="12" height="16" rx="2"/><rect x="9" y="3" width="6" height="4" rx="1"/>'),
+  up: I('<path d="M12 19V6M6 12l6-6 6 6"/>'),
+  down: I('<path d="M12 5v13M6 12l6 6 6-6"/>'),
+  stop: I('<rect x="7" y="7" width="10" height="10" rx="2" fill="currentColor"/>'),
 };
 
 // ---------- formatting (TSK-31): the only place the app turns a date, a time or a number into text, in English ----------
@@ -107,6 +117,7 @@ function rel(iso) {
 const dt = (x) => { const d = toDate(x); return d && !isNaN(d) ? `${day(d)}, ${clock(d)}` : "–"; };
 const when = (x) => { const d = toDate(x); return !d || isNaN(d) ? "–" : Math.abs(d - Date.now()) < 86400e3 ? rel(d) : dt(d); };
 const fmtMs = (ms) => (ms == null ? "" : ms >= 60000 ? `${Math.floor(ms / 60000)}m${String(Math.round((ms % 60000) / 1000)).padStart(2, "0")}s` : ms >= 1000 ? `${nf(ms / 1000, 1)} s` : `${ms} ms`);
+const fsize = (n) => (n >= 1e9 ? `${nf(n / 1e9, n % 1e9 ? 1 : 0)} GB` : n >= 1e6 ? `${nf(n / 1e6, 1)} MB` : n >= 1e3 ? `${nf(n / 1e3)} KB` : `${nf(n)} B`);   // a file's size (MIS-23)
 // ---------- end of formatting ----------
 const greet = () => { const h = new Date().getHours(); return h < 5 ? "Good night" : h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening"; };
 const STATUS = { active: "Active", paused: "Paused", archived: "Archived", ok: "Done", failed: "Failed", running: "Running", queued: "Queued", skipped: "Skipped", waiting: "Waiting for ChatGPT" };
@@ -219,7 +230,7 @@ function chrome() {
 }
 function mirrorChip() {                                   // on a phone the chat's bar is the only top bar: it shows the same state
   const chip = $("#live-chip"), cd = $("#chatchip");
-  if (cd && chip) { cd.className = chip.className + " chatchip"; cd.innerHTML = chip.innerHTML; cd.title = chip.title; cd.onclick = chip.onclick; }
+  if (cd && chip) { cd.className = chip.className + " chatchip"; cd.innerHTML = chip.innerHTML; cd.title = chip.title; cd.onclick = chip.onclick; cd.hidden = !updateReady && liveState() !== "off"; }   // APP-45: said only while something is off; the Stack tab's dot has the rest
 }
 // ok (Ready), run (an agent works), off (connecting, offline, no link): the dot on Stack and the sidebar's foot
 const liveState = () => (!S || Date.now() - lastState > 60000 ? "off" : S.running ? "run" : "ok");
@@ -288,14 +299,14 @@ function render(force = false) {
   if (!force && route.name === "missions" && missionsSig() === missionsSig.last) return swOverview();   // APP-32: nothing on the list changed:
                                                                  // only its live parts update in place, the page never moves
   if (!force && route.name === "live") return;
-  if (!force && !(LIVE.has(route.name) || ((route.name === "mission" || route.name === "crew") && agentSigOf() !== agentSig && !typing() && !$(".tl:not([hidden])") && !$("#tabbody details[open]")) || (route.name === "build" && !typing() && !$("#chbox:not([hidden])") && !$("#view details[open]") && !$("#blogbox:not([hidden])") && !($("#ar-url")?.value || $("#ar-name")?.value)))) return;
+  if (!force && !(LIVE.has(route.name) || (route.name === "files" && !$("#fplan")?.innerHTML && !typing()) || ((route.name === "mission" || route.name === "crew") && agentSigOf() !== agentSig && !typing() && !$(".tl:not([hidden])") && !$("#tabbody details[open]")) || (route.name === "build" && !typing() && !$("#chbox:not([hidden])") && !$("#view details[open]") && !$("#blogbox:not([hidden])") && !($("#ar-url")?.value || $("#ar-name")?.value)))) return;
   // views that load their own data draw at once; the others wait for the first state (they are drawn when it comes)
   if (!S && !["chat", "wiki", "read", "guide", "phone", "share", "live", "swarm", "taskmap", "telemetry", "task", "trials"].includes(route.name)) { view.innerHTML = noLink() ? offlineHtml() : `<div class="stack"><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div></div>`; return; }
   const y = window.scrollY;
   if (force) $("#homenew")?.remove();                  // Home's waiting updates belong to Home only
   if (force) { document.body.classList.add("anim"); clearTimeout(render.anim); render.anim = setTimeout(() => document.body.classList.remove("anim"), 600); }
   const open = force ? [] : [...view.querySelectorAll("details[open][id], details[open][data-keep]")].map((d) => d.id || d.dataset.keep);
-  const fn = { decide: vDecide, tasks: vTasks, task: vTask, trials: vTrials, home: vHome, missions: vMissions, mission: vMission, new: vNew, chat: vChat, system: vSystem, read: vRead, wiki: vWiki, build: vBuild, repo: vRepo, guide: vGuide, share: vShare, phone: vPhone, house: vHouse, crew: vCrew, live: vLive, swarm: vSwarm, taskmap: vTaskMap, telemetry: vTelemetry }[route.name] || vHome;
+  const fn = { decide: vDecide, tasks: vTasks, task: vTask, trials: vTrials, home: vHome, missions: vMissions, mission: vMission, new: vNew, chat: vChat, system: vSystem, read: vRead, file: vFile, files: vFiles, wiki: vWiki, build: vBuild, repo: vRepo, guide: vGuide, share: vShare, phone: vPhone, house: vHouse, crew: vCrew, live: vLive, swarm: vSwarm, taskmap: vTaskMap, telemetry: vTelemetry }[route.name] || vHome;
   fn();
   for (const k of open) {                          // a live redraw keeps what you opened open
     const d = view.querySelector(`details#${CSS.escape(k)}`) || view.querySelector(`details[data-keep="${CSS.escape(k)}"]`);
@@ -440,13 +451,15 @@ document.addEventListener("click", async (e) => {                     // grant b
   }
 });
 
+// the way to the AI phone's page, on Agents and Stack too (PHN-27)
+const phoneBanner = () => (S.phone ? `<a class="banner info" href="#/phone" style="margin-bottom:14px">${ic.bolt}<span class="grow"><b>AI phone</b> · ${S.phone.stopped ? "stopped" : S.phone.connected ? "connected" : "not connected"}${S.phone.pending ? ` · ${S.phone.pending} waiting for your OK` : ""}</span>${ic.next}</a>` : "");
 // ---------- your devices on Home: the AI phone's state and its allowance in one tap ----------
 function devicesHtml() {
   const p = S.phone;
   if (!p) return '<div id="homedev" hidden></div>';
   const now = Date.now() / 1000, trust = p.trust_until > now, forever = p.trust_until > now + 365 * 86400;
   const state = p.stopped ? ["failed", "Stopped"] : p.connected ? ["ok", "Connected"] : ["paused", "Not connected"];
-  return `<div id="homedev" class="card pad-l devcard" style="margin-bottom:14px">
+  return `<div id="homedev" class="card pad-l devcard" data-href="#/phone" style="margin-bottom:14px">
     <div class="row between wrap" style="gap:8px;align-items:center">
       <a class="row" style="gap:10px;align-items:center" href="#/phone"><div class="repo-ic">${ic.bolt}</div><div><b>AI phone</b> <span class="small muted">${esc(p.model || "")}</span>
         <div class="row wrap small muted" style="gap:6px;align-items:center"><span class="pill ${state[0]}" style="padding:1px 7px">${state[1]}</span>${p.connected ? esc(p.foreground || "home screen") : ""}${p.pending ? ` · <b class="err-t">${p.pending} waiting for your OK</b>` : ""}</div></div></a>
@@ -469,7 +482,7 @@ document.addEventListener("click", async (e) => {                     // the dev
   if (!t) return;
   const body = t.dataset.devstop ? { do: "stop" } : { do: "trust", minutes: +t.dataset.devtrust };
   const r = await api("/api/phone/control", { method: "POST", body: JSON.stringify(body) }).catch((err) => ({ error: err.message }));
-  toast(r.error || (body.do === "stop" ? "AI phone stopped" : body.minutes === 0 ? "It asks again for every action" : body.minutes < 0 ? "Works without asking until you stop it" : `Works without asking for ${body.minutes} minutes`), !!r.error);
+  toast(r.error || (body.do === "stop" ? "AI phone stopped" : body.minutes === 0 ? "It asks you once for each job again" : body.minutes < 0 ? "Works without asking until you stop it" : `Works without asking for ${body.minutes} minutes`), !!r.error);
 });
 
 // ---------- Tasks (TSK-01 to TSK-04): give a task in a sentence, or with its details set; every task on one board ----------
@@ -974,6 +987,7 @@ function needsItems() {
     out.push({ href: `#/mission/${encodeURIComponent(p.slug)}?shop=${p.id}`, icon: ic.coin, title: p.status === "proposed" ? "A purchase to approve" : "A purchase needs you", sub: `${p.item} · ${eur(p.total_eur)}` });
   const steps = ((S.crew || []).find((x) => x.id === "phone-cleanup")?.actions || []).filter((x) => x.status === "open");
   if (steps.length) out.push({ href: "#/crew/phone-cleanup", icon: ic.trash, title: `${steps.length} AI phone cleanup step${steps.length > 1 ? "s" : ""} to approve`, sub: `${gbOf(steps.reduce((a, x) => a + (x.size || 0), 0))} in all · one Approve each` });
+  if ((S.health?.items || []).some((it) => (it.issues || []).some((i) => i.kind === "phone-down"))) out.push({ href: "#/phone", icon: ic.alert, cls: "err", title: "The AI phone is not connected", sub: "tap to see why and fix it" });
   if (S.phone?.pending) out.push({ href: "#/phone", icon: ic.alert, cls: "err", title: `The AI phone asks for ${S.phone.pending} approval${S.phone.pending > 1 ? "s" : ""}`, sub: "it waits for your tap" });
   if (c?.pending) out.push({ href: "#/system?conn=1", icon: ic.alert, title: "Gmail: a Trash batch waits for your OK", sub: "nothing is moved without it" });
   for (const m of (S.missions || []).filter((m) => m.status === "active" && (m.needs || []).some((n) => { const [cn, sc] = n.split(":"); return !c?.[cn]?.grants?.[sc]; })))
@@ -1087,8 +1101,10 @@ function feedItems() {
   const out = [];
   for (const m of S.missions || []) for (const r of m.runs || []) {
     const ts = r.ended || r.started, kind = m.type === "shopping" ? "shopping" : m.type === "briefing" ? "briefing" : "research";
-    if (r.status === "ok" && r.summary) out.push({ id: `m:${m.slug}:${r.id || ts}`, ts, kind, agent: m.title, head: r.summary, path: r.output, big: true,
-      href: r.output ? `#/read?path=${encodeURIComponent(r.output)}&m=${encodeURIComponent(m.slug)}` : `#/mission/${encodeURIComponent(m.slug)}`,
+    const fr = S.files?.missions?.[m.slug]?.runs?.[r.id] || {};          // MIS-23: the files it made come first, then the report
+    if (r.status === "ok" && r.summary) out.push({ id: `m:${m.slug}:${r.id || ts}`, ts, kind, agent: m.title, head: r.summary, path: fr.saved?.length ? "" : r.output, big: true,
+      files: fr.saved || [], missing: fr.missing || [],
+      href: fr.saved?.length || fr.missing?.length ? `#/mission/${encodeURIComponent(m.slug)}?tab=payoff` : r.output ? `#/read?path=${encodeURIComponent(r.output)}&m=${encodeURIComponent(m.slug)}` : `#/mission/${encodeURIComponent(m.slug)}`,
       meta: [r.trigger === "event" ? "after an event" : r.trigger === "schedule" ? "scheduled" : "on request", dur(r.seconds), r.calls ? `${r.calls} model calls` : ""] });
     else if (r.status === "failed") out.push({ id: `m:${m.slug}:${r.id || ts}`, ts, kind: "failed", agent: m.title, tone: "err", head: `Did not finish${r.summary ? `: ${r.summary}` : ""}`,
       href: `#/mission/${encodeURIComponent(m.slug)}?tab=history` });
@@ -1128,7 +1144,8 @@ function feedHtml() {
     const ex = x.path ? homeEx.get(x.path) : "", [label, icon] = RKIND[x.kind] || RKIND.task;
     return `${head}<a class="fitem ${x.big ? "big" : ""} ${x.tone || ""}" href="${x.href}" data-fid="${esc(x.id)}"><div class="fi-ic k-${x.kind}">${ic[icon] || ic.doc}</div>
       <div class="grow" style="min-width:0"><div class="fi-top"><span class="fkind k-${x.kind}">${label}</span><span class="tiny faint wrap grow">${esc(x.agent)}</span><span class="tiny faint">${clockOf(toIso(x.ts))}</span></div>
-        <div class="fi-h">${esc(x.head)}</div>${x.sub ? `<div class="fi-x small muted wrap">${esc(x.sub)}</div>` : ""}${x.path ? `<div class="fi-x small muted" data-ex="${esc(x.path)}">${ex ? esc(ex) : ""}</div>` : ""}
+        <div class="fi-h">${esc(x.head)}</div>${x.sub ? `<div class="fi-x small muted wrap">${esc(x.sub)}</div>` : ""}
+        ${x.files?.length || x.missing?.length ? `<div class="small wrap" style="margin-top:4px">${x.files.length ? `${ic.doc} ${x.files.map(esc).join(" · ")}` : ""}${x.missing.length ? `${x.files.length ? " · " : ""}<span class="err-t">not delivered: ${x.missing.map(esc).join(", ")}</span>` : ""}</div>` : ""}${x.path ? `<div class="fi-x small muted" data-ex="${esc(x.path)}">${ex ? esc(ex) : ""}</div>` : ""}
         ${(x.meta || []).filter((v) => v && v !== "–").length ? `<div class="tiny faint" style="margin-top:4px">${x.meta.filter((v) => v && v !== "–").map(esc).join(" · ")}</div>` : ""}</div></a>`;
   }).join("");
   return `<div id="homefeed"><div class="section-h"><h2>Results</h2><span class="tiny faint">what your agents finished for you</span></div>
@@ -1178,8 +1195,8 @@ function vHome() {
   </div>
   <div class="home-side">
     ${needsHtml()}
-    ${nowHtml()}
     ${devicesHtml()}
+    ${nowHtml()}
     ${homeStatsHtml()}
   </div>
   <div class="home-feed">${feedHtml()}</div>
@@ -1240,21 +1257,33 @@ function phoneStepsHtml(c) {
   const gbs = gb;
   const open = c.actions.filter((s) => s.status === "open" || s.status === "failed" || s.status === "approved");
   const done = c.actions.filter((s) => s.status === "done");
-  const fresh = open.filter((s) => s.status === "open"), freshSize = fresh.reduce((a, s) => a + (s.size || 0), 0);
+  const fresh = open.filter((s) => s.status !== "approved"), freshSize = fresh.reduce((a, s) => a + (s.size || 0), 0);
+  const phoneUp = !!S.phone?.connected, approved = open.filter((s) => s.status === "approved" && !s.started).length;
+  const waitLine = (s) => (phoneUp ? "Approved. It runs when its turn comes." : `Approved. It runs when the AI phone connects${s.expires ? `, if that is before ${clock(s.expires)}` : ""}.`);
   const row = (s) => `<li><div class="row between wrap" style="gap:8px;align-items:flex-start"><div style="flex:1 1 240px;min-width:0"><div class="small"><b>${esc(s.title)}</b> · ${gbs(s.size)}</div>
-      <div class="tiny muted">${esc(s.why || "")}</div>${s.result ? `<div class="tiny ${s.status === "failed" ? "bad" : "muted"}">${esc(s.result)}</div>` : ""}</div>
-      ${s.status === "approved" ? `<span class="pill running"><span class="dot run"></span>On the AI phone…</span>` : s.status === "done" ? `<span class="pill ok">${ic.check}${gbs(s.freed || 0)} freed</span>`
+      <div class="tiny muted">${esc(s.why || "")}</div>${s.status === "approved" && !s.started ? `<div class="tiny muted">${esc(waitLine(s))}</div>` : s.result ? (phoneUp && /wireless debugging/i.test(s.result) ? `<div class="tiny muted">The AI phone was not connected then. It is now, so this can run.</div>` : `<div class="tiny ${s.status === "failed" ? "bad" : "muted"}">${esc(s.result)}</div>`) : ""}</div>
+      ${s.status === "approved" ? (s.started ? `<span class="pill running"><span class="dot run"></span>On the AI phone…</span>` : `<div class="row" style="gap:6px;align-items:center"><span class="pill ok">${ic.check}Approved</span><button class="btn sm ghost" data-pundo="${esc(s.id)}">Undo</button></div>`)
+        : s.status === "done" ? `<span class="pill ok">${ic.check}${gbs(s.freed || 0)} freed</span>`
         : `<div class="row" style="gap:6px"><button class="btn sm primary" data-pdo="${esc(s.id)}">${ic.check}${s.status === "failed" ? "Try again" : "Approve"}</button><button class="btn sm ghost" data-pdis="${esc(s.id)}">Dismiss</button></div>`}</div></li>`;
   return `<div class="card pad-l crews" style="margin-bottom:12px"><div class="row between wrap" style="gap:6px"><h2>${open.length ? `${open.length} cleanup step${open.length > 1 ? "s" : ""} for the AI phone` : "Cleanup steps"}</h2>
       ${c.free ? `<span class="tiny muted">${gbs(c.free)} free of ${gbs(c.total)}${c.freed_total ? ` · ${gbs(c.freed_total)} freed so far` : ""}</span>` : ""}</div>
-    ${fresh.length > 1 ? `<div class="row wrap" style="gap:8px;margin-top:10px;align-items:center"><button class="btn primary" data-pdoall="${esc(fresh.map((s) => s.id).join(","))}" data-n="${fresh.length}" data-size="${esc(gbs(freshSize))}">${ic.check}Approve all ${fresh.length} · ${gbs(freshSize)}</button><span class="tiny faint">The AI phone does them one after another.</span></div>` : ""}
+    ${open.length && S.phone && !phoneUp ? `<a class="banner" href="#/phone" style="margin-top:10px">${ic.alert}<span class="grow"><b>The AI phone is not connected, so nothing runs yet.</b>${approved ? ` ${approved} approved step${approved > 1 ? "s" : ""} wait${approved > 1 ? "" : "s"} for it.` : ""} Fix it on its page.</span>${ic.next}</a>` : ""}
+    ${fresh.length > 1 ? `<div class="row wrap" style="gap:8px;margin-top:10px;align-items:center"><button class="btn primary" data-pdoall="${esc(fresh.map((s) => s.id).join(","))}" data-n="${fresh.length}" data-size="${esc(gbs(freshSize))}">${ic.check}Approve all ${fresh.length} · ${gbs(freshSize)}</button><span class="tiny faint">${phoneUp ? "The AI phone does them one after another." : "They wait for the AI phone, then run one after another."}</span></div>` : ""}
     ${open.length ? `<ul class="crewf">${open.map(row).join("")}</ul>` : `<div class="small muted" style="margin-top:6px">Nothing waiting. The next weekly run looks again.</div>`}
     ${done.length ? `<details class="obsb"><summary class="small"><b>Done</b> <span class="muted">· ${done.length}</span></summary><ul class="crewf">${done.slice(-10).reverse().map(row).join("")}</ul></details>` : ""}
-    ${explain("each-approve-runs-exactl", `Each Approve runs exactly that step once on the AI phone (within 30 minutes), with its block list and path checks. Nothing is deleted without it; you can't approve from the AI phone itself.`, "About this")}</div>`;
+    ${explain("each-approve-runs-exactl", `Each Approve runs exactly that step once on the AI phone, with its block list and path checks. If the phone is not connected it waits up to 4 hours, then lapses. Undo works until the phone starts the step. Nothing is deleted without an Approve; you can't approve from the AI phone itself.`, "About this")}
+    <a class="small" href="#/phone" style="display:inline-block;margin-top:8px">AI phone page ${ic.next}</a></div>`;
 }
 function bindCrew() {
-  $$("[data-pdo]").forEach((b) => (b.onclick = async () => { b.disabled = true; if (!(await act({ action: "phone_cleanup_do", id: b.dataset.pdo }, "Approved: the AI phone does it now"))) b.disabled = false; }));
-  $$("[data-pdis]").forEach((b) => (b.onclick = async () => { b.disabled = true; if (!(await act({ action: "phone_cleanup_dismiss", id: b.dataset.pdis }, "Dismissed: the phone keeps it as it is"))) b.disabled = false; }));
+  const nextUp = () => (S.phone?.connected ? "the AI phone does it when its turn comes" : "it waits for the AI phone to connect");
+  const steps = (ids, patch) => {                                      // the row changes at once; the next state confirms it
+    for (const s of (S.crew || []).find((a) => a.id === "phone-cleanup")?.actions || []) if (ids.includes(s.id)) Object.assign(s, patch);
+    render();
+  };
+  const APPROVED = () => ({ status: "approved", started: false, result: "", expires: Date.now() / 1000 + 4 * 3600 });
+  $$("[data-pundo]").forEach((b) => (b.onclick = async () => { b.disabled = true; if (await act({ action: "phone_cleanup_undo", id: b.dataset.pundo }, "Undone: nothing ran, and the step is open again")) steps([b.dataset.pundo], { status: "open", result: "" }); else b.disabled = false; }));
+  $$("[data-pdo]").forEach((b) => (b.onclick = async () => { b.disabled = true; if (await act({ action: "phone_cleanup_do", id: b.dataset.pdo }, `Approved: ${nextUp()}. Undo stays until it starts`)) steps([b.dataset.pdo], APPROVED()); else b.disabled = false; }));
+  $$("[data-pdis]").forEach((b) => (b.onclick = async () => { b.disabled = true; if (await act({ action: "phone_cleanup_dismiss", id: b.dataset.pdis }, "Dismissed: the phone keeps it as it is")) steps([b.dataset.pdis], { status: "dismissed" }); else b.disabled = false; }));
   $$("[data-pdoall]").forEach((b) => (b.onclick = async () => {        // it deletes a lot at once: a second tap confirms, in place
     if (!b.dataset.armed) {
       b.dataset.armed = "1"; b.innerHTML = `${ic.check}Tap again: delete and uninstall all ${b.dataset.n} (${b.dataset.size})`;
@@ -1262,7 +1291,8 @@ function bindCrew() {
       return;
     }
     b.disabled = true;
-    if (!(await act({ action: "phone_cleanup_do_all", ids: b.dataset.pdoall.split(",") }, "Approved: the AI phone works through them one after another"))) b.disabled = false;
+    if (!(await act({ action: "phone_cleanup_do_all", ids: b.dataset.pdoall.split(",") }, `Approved ${b.dataset.n} steps: ${S.phone?.connected ? "the AI phone works through them one after another" : "they wait for the AI phone to connect"}. Each has Undo until it starts`))) { b.disabled = false; return; }
+    steps(b.dataset.pdoall.split(","), APPROVED());
   }));
   $$("[data-crun]").forEach((b) => (b.onclick = async () => { b.disabled = true; if (!(await act({ action: "crew_run", id: b.dataset.crun }, "Started: it shows as running here until it is done"))) b.disabled = false; }));
   const forget = async (ids, btn) => { btn.disabled = true; const r = await act({ action: "crew_memory_forget", ids }, (x) => (x?.forgotten !== undefined ? `${x.forgotten} forgotten (reversible): no agent recalls them now` : "")); if (r?.forgotten === undefined) btn.disabled = false; };
@@ -1360,6 +1390,7 @@ function vMissions() {                     // the Agents tab (the route keeps it
   view.innerHTML = `<div class="hero"><div><h1>Agents</h1>
       <p class="agtop">${need ? `<b class="warn-t">${need} need${need > 1 ? "" : "s"} you</b>` : "Nothing needs you"}${live ? ` · <span class="run-t">${live} live</span>` : ""}${bad ? ` · <a class="err-t" href="#/missions?f=problems">${bad} with problems</a>` : ""} · ${cur.length} agents${keys.length ? ` · <button class="linkbtn" id="ackall">acknowledge all ${keys.length}</button>` : ""}</p></div></div>
     ${agentViews("list")}
+    ${phoneBanner()}
     <div id="ovnow"></div>
     <div id="ovmap"><div class="card pad-l section"><div class="skeleton" style="height:320px"></div></div></div>
     <div class="section-h section wrap"><h2>Missions and housekeeping</h2><a class="btn sm" href="#/new">${ic.plus}New mission</a></div>
@@ -1412,7 +1443,9 @@ function agentSigOf() {
   const o = route.name === "mission" || route.name === "crew" ? agentOf(route.name, route.args[0]) : null;
   if (!o) return "";
   const { A, m, c } = o;
-  return JSON.stringify([A.live, A.queued, A.waiting, A.status, A.needs, A.issues.map((i) => i.key), A.last, A.next, A.step, m?.runs?.[0]?.id, m?.runs?.[0]?.status, c?.suggestions?.length, c?.enabled, c?.schedule]);
+  return JSON.stringify([A.live, A.queued, A.waiting, A.status, A.needs, A.issues.map((i) => i.key), A.last, A.next, A.step, m?.runs?.[0]?.id, m?.runs?.[0]?.status, c?.suggestions?.length, c?.enabled, c?.schedule,
+    c?.actions && [(c.actions || []).map((s) => [s.id, s.status, s.started, s.result, s.freed]), S.phone?.connected],   // PHN-24: a tap on a cleanup step shows
+    m && (S.files?.missions?.[m.slug]?.files || []).map((f) => [f.sha, f.pinned, (f.deliveries || []).length]), m?.files_asked, m?.mail?.map((x) => [x.path, x.report])]);   // MIS-23: its files
 }
 
 function vAgent(kind, id) {
@@ -1441,8 +1474,8 @@ function vAgent(kind, id) {
   const pill = kind === "mission" ? statusPill(m) : (([cls, l]) => `<span class="pill ${cls}">${A.live ? '<span class="dot run"></span>' : ""}${l}</span>`)(CREW_STATE[c.state] || ["archived", c.state]);
   view.innerHTML = `<a class="back" href="#/missions">${ic.back}Agents</a>
   <div class="aghead h-${agentHealth(A)}"><div class="agic lg">${A.icon}</div><div class="grow" style="min-width:0">
-    <h1 class="agh1">${esc(A.title)}</h1>
-    <div class="row wrap small muted" style="gap:4px 8px;margin-top:6px">${pill}<span>${A.group === "yours" ? "Yours" : "Housekeeping"} · ${esc(A.what)}</span><span>${ic.clock}${esc(A.schedule || "on request")}${A.next ? ` · next ${esc(when(A.next))}` : ""}</span></div>
+    <h1 class="agh1">${esc(A.title)}</h1>${kind === "mission" ? fromChat("mission:" + m.slug) : ""}
+    <div class="row wrap small muted" style="gap:4px 8px;margin-top:6px">${pill}${kind === "mission" && m.files_asked?.length ? ((F) => `<a class="tag ${F.done < F.total ? "warn" : ""}" href="${A.href}?tab=payoff">${ic.doc}${F.done} of ${F.total} file${F.total > 1 ? "s" : ""} ready</a>`)(filesOf(m)) : ""}<span>${A.group === "yours" ? "Yours" : "Housekeeping"} · ${esc(A.what)}</span><span>${ic.clock}${esc(A.schedule || "on request")}${A.next ? ` · next ${esc(when(A.next))}` : ""}</span></div>
     <div class="small muted agwhat">${esc(kind === "mission" ? (m.goal || "").replace(/[#*_>`]/g, "").split("\n").find((l) => l.trim()) || "" : c.what)}</div>
     ${m?.triggers?.length ? `<div class="chips" style="margin-top:8px">${m.triggers.map((x) => `<span class="tag trig">${ic.bolt}${esc(x.text)}</span>`).join("")}</div>` : ""}
   </div></div>
@@ -1472,6 +1505,20 @@ function vAgent(kind, id) {
      tasks: (box) => agentTasksInto(box, kind === "mission" ? `mission:${m.slug}` : c.id) })[atab]($("#tabbody"), kind, A, m, c);
 }
 
+// MIS-28: what came to this topic from the owner's e-mail, and what came of each mail
+function topicMailHtml(m) {
+  const of = (x) => {
+    if (!x.report) return `<span class="tag warn">Waiting for the next report</span>`;
+    const d = (x.report.match(/\d{4}-\d{2}-\d{2}/) || [""])[0], link = `<a href="#/read?path=${encodeURIComponent(x.report + ".md")}&m=${encodeURIComponent(m.slug)}">the report of ${d ? day(d) : "that day"}</a>`;
+    return x.cited ? `<span class="tag">Cited</span> <span class="tiny">in ${link}</span>` : `<span class="tag">Not used</span> <span class="tiny">read for ${link}; it had nothing the report needed</span>`;
+  };
+  return `<div class="card pad-l" id="agmail" style="margin-bottom:12px"><h2>From your e-mail</h2>
+    <div class="small muted" style="margin-top:4px">Newsletters that name this topic. Each goes to the next report as a source it must name, and never as instructions; through the report it reaches the wiki.</div>
+    <ul class="crewf">${m.mail.map((x) => `<li><a class="wrap" href="#/read?path=${encodeURIComponent(x.path)}&m=${encodeURIComponent(m.slug)}"><b>${esc(x.subject)}</b></a>
+      <div class="tiny muted wrap">${esc(x.from)}${x.at ? ` · ${dt(x.at)}` : ""}</div>${x.why ? `<div class="tiny muted wrap">${esc(x.why)}</div>` : ""}
+      <div style="margin-top:4px">${of(x)}</div></li>`).join("")}</ul>${moreOf(m.mail_total, m.mail.length)}</div>`;
+}
+
 // Now: what it needs from you, then the live log (or the latest run's), then the latest result
 async function agentNow(body, kind, A, m, c) {
   const needs = (m?.needs || []).map((n) => n.split(":"));
@@ -1483,6 +1530,7 @@ async function agentNow(body, kind, A, m, c) {
     ${c?.keeper ? keeperHtml(c.keeper) : ""}
     ${m?.type === "shopping" ? shopMissionHtml(m) : ""}
     ${c?.actions?.length ? phoneStepsHtml(c) : ""}
+    ${m?.mail?.length ? topicMailHtml(m) : ""}
     ${m?.outputs?.length && !A.live ? `<div class="card pad-l" id="latest" style="margin-bottom:12px"><h2>Latest result</h2><div class="muted small" style="margin-top:10px">Loading…</div></div>` : ""}
     <div id="agrun"><div class="skeleton" style="height:220px"></div></div>
     ${m?.outputs?.length && A.live ? `<div class="card pad-l section" id="latest"><h2>Latest result</h2><div class="muted small" style="margin-top:10px">Loading…</div></div>` : ""}`;
@@ -1601,15 +1649,141 @@ function parseJournal(text) {                          // the format ops/journal
   return J;
 }
 
+// ---------- MIS-23 to MIS-26: a mission's files, the things you asked for (docs/DELIVERABLES.md) ----------
+const fileHref = (slug, name, v) => `#/file?m=${encodeURIComponent(slug)}&n=${encodeURIComponent(name)}${v ? `&v=${encodeURIComponent(v)}` : ""}`;
+const fileUrl = (slug, name, v, dl) => `/api/files/${encodeURIComponent(slug)}/${encodeURIComponent(name)}?${v ? `v=${encodeURIComponent(v)}&` : ""}${dl ? "download=1" : ""}`;
+
+// what a mission was asked to make and what it saved: {asked: [{name, what, file}], extra, done, total, last (the newest run's check)}
+function filesOf(m) {
+  const F = S?.files?.missions?.[m.slug] || { files: [], runs: {} };
+  const by = Object.fromEntries(F.files.map((f) => [f.name, f]));
+  const asked = (m.files_asked || []).map((a) => ({ ...a, file: by[a.name] }));
+  const ids = Object.keys(F.runs || {}).map(Number).sort((a, b) => b - a);          // run ids: the newest first
+  return { asked, extra: F.files.filter((f) => !asked.some((a) => a.name === f.name)), done: asked.filter((a) => a.file).length,
+    total: asked.length, last: ids.length ? { id: ids[0], ...F.runs[ids[0]] } : null };
+}
+
+function deliveredHtml(f) {
+  const last = {};
+  for (const d of f.deliveries || []) if (!last[d.channel]) last[d.channel] = d;     // the newest per channel
+  const words = { email: "E-mailed as attachment", telegram: "Sent on Telegram" };
+  const parts = Object.entries(last).map(([ch, d]) => d.ok ? `<span class="ok-t">${words[ch] || ch} ✓ ${esc(when(d.ts))}</span>`
+    : `<span class="err-t" title="${esc(d.why || "")}">${words[ch] || ch}: not sent${d.why ? ` (${esc(d.why)})` : ""}</span>`);
+  return `<div class="tiny fc-sent">${parts.join(" · ") || "In the app (not sent yet)"}</div>`;
+}
+
+function fileCard(slug, f, a) {
+  if (!f) return `<div class="fcard missing"><div class="fc-ic">${ic.alert}</div><div class="grow fc-body">
+    <div class="fc-name"><b class="wrap">${esc(a.name)}</b><span class="pill failed">Asked for, not delivered</span></div>
+    ${a.what ? `<div class="small muted wrap">${esc(a.what)}</div>` : ""}
+    <div class="small wrap" style="margin-top:4px">${esc(a.why || "No run has saved it yet.")}</div>
+    <div class="row wrap fc-acts"><button class="btn sm primary" data-frun="${esc(slug)}">${ic.play}Run again for it</button></div></div></div>`;
+  const facts = [f.words ? `${nf(f.words)} words` : "", f.checkboxes ? `${nf(f.checkboxes)} checkboxes` : "", fsize(f.size),
+    `updated ${when(f.updated)}`, f.versions?.length ? `version ${f.versions.length + 1}` : ""].filter(Boolean).join(" · ");
+  return `<div class="fcard"><div class="fc-ic">${ic.doc}</div><div class="grow fc-body">
+    <div class="fc-name"><a class="wrap" href="${fileHref(slug, f.name)}"><b>${esc(f.name)}</b></a><span class="pill ${f.final ? "ok" : "queued"}">${f.final ? "Final" : "Draft"}</span>${f.pinned ? `<span class="tag" title="Kept by the cleanup">Pinned</span>` : ""}</div>
+    ${a?.what ? `<div class="small muted wrap">${esc(a.what)}</div>` : ""}<div class="small muted">${facts}</div>${deliveredHtml(f)}
+    <div class="row wrap fc-acts"><a class="btn sm" href="${fileHref(slug, f.name)}">${ic.doc}Open</a><a class="btn sm" href="${fileUrl(slug, f.name, "", true)}" download="${esc(f.name)}">Download</a>
+      <button class="btn sm ghost" data-fcopy="${esc(slug)}|${esc(f.name)}">Copy</button></div></div></div>`;
+}
+
+function bindFiles(root) {
+  $$("[data-fcopy]", root).forEach((b) => (b.onclick = async () => {
+    const [slug, name] = b.dataset.fcopy.split("|");
+    const t = await api(fileUrl(slug, name)).catch(() => null);
+    if (t && (await copyText(t))) toast(`Copied ${name}`); else toast("Could not copy it", true);
+  }));
+  $$("[data-frun]", root).forEach((b) => (b.onclick = () => { b.disabled = true; act({ action: "run", slug: b.dataset.frun }, "Run started: the files it saves land here"); }));
+}
+
+// Results: what you asked for first, then other files it saved, drafts it left in the Ledger, then the run reports
+function filesSection(m) {
+  const F = filesOf(m), why = F.last ? `The last run (#${F.last.id}) ended without saving it.` : "";
+  if (!F.total && !F.extra.length) return m.type === "briefing" ? "" : `<div class="card pad-l"><h2>What you asked for</h2>
+    <div class="small muted" style="margin-top:6px">No files asked of this mission. Name the files it should deliver under Settings (or tell Hermes when you make a mission): they land here, as a download and as e-mail attachments.</div></div>`;
+  return `<div class="card pad-l"><div class="row between wrap" style="gap:8px"><h2>What you asked for</h2>
+      <span class="tiny faint">${F.total ? `${F.done} of ${F.total} ready · ` : ""}<a href="#/files">All files</a></span></div>
+    <div class="fcards">${F.asked.map((a) => fileCard(m.slug, a.file, { ...a, why })).join("")}</div>
+    ${F.extra.length ? `<div class="tiny faint" style="margin:12px 0 6px">${F.total ? "Also saved" : "Files it saved"}</div><div class="fcards">${F.extra.map((f) => fileCard(m.slug, f)).join("")}</div>` : ""}</div>`;
+}
+
+async function draftsInto(el, m) {
+  const D = await api(`/api/mission/${encodeURIComponent(m.slug)}/drafts`).catch(() => []);
+  if (!el.isConnected || !Array.isArray(D) || !D.length) return;
+  el.innerHTML = `<div class="card pad-l section"><div class="row between wrap" style="gap:8px"><h2>Drafts in the Ledger</h2><span class="tiny faint">${D.length} report${D.length > 1 ? "s" : ""} its runs wrote, newest first</span></div>
+    <div class="small muted" style="margin-top:4px">Long texts the agent kept in the Ledger while it worked. A file above is the delivered version.</div>
+    <div class="list" style="margin-top:6px">${D.map((d) => `<a href="#/swarm/artifact/${d.id}"><div class="ic">${ic.layers}</div><div class="grow" style="min-width:0"><div class="ttl wrap">${esc(d.title)}</div><div class="sub">#${d.id} · ${esc(when(d.ts))}</div></div>${ic.next}</a>`).join("")}</div></div>`;
+}
+
+async function vFile() {
+  const slug = route.q.get("m") || "", name = route.q.get("n") || "", v = route.q.get("v") || "";
+  const m = (S?.missions || []).find((x) => x.slug === slug), f = (S?.files?.missions?.[slug]?.files || []).find((x) => x.name === name);
+  const back = m ? `#/mission/${encodeURIComponent(slug)}?tab=payoff` : "#/files";
+  if (!f) { view.innerHTML = `<a class="back" href="${back}">${ic.back}${m ? esc(m.title) : "Files"}</a><div class="card empty">${ic.doc}<div>No file ${esc(name)} here (it may be in the trash: <a href="#/files">Files</a>).</div></div>`; return; }
+  const old = v ? (f.versions || []).find((x) => x.file === v) : null;
+  view.innerHTML = `<a class="back" href="${back}">${ic.back}${m ? esc(m.title) : "Files"}</a>
+    <div class="row wrap between" style="gap:8px;align-items:flex-start"><div style="min-width:0"><h1 class="wrap" style="font-size:22px">${esc(name)}</h1>
+      <div class="small muted" style="margin-top:4px">${old ? `Earlier version of ${esc(when(old.ts))} · ${fsize(old.size)} · <a href="${fileHref(slug, name)}">open the current one</a>` : `${f.final ? "Final" : "Draft"} · ${nf(f.words)} words${f.checkboxes ? ` · ${nf(f.checkboxes)} checkboxes` : ""} · ${fsize(f.size)} · updated ${esc(when(f.updated))}`}</div>
+      ${old ? "" : deliveredHtml(f)}</div>
+      <div class="row wrap" style="gap:6px"><a class="btn sm primary" href="${fileUrl(slug, name, v, true)}" download>Download</a><button class="btn sm" id="fcopy">Copy</button>
+        ${old ? "" : `<button class="btn sm ghost" id="fpin">${f.pinned ? "Unpin" : "Pin"}</button><button class="btn sm ghost danger" id="fdel">${ic.trash}Delete</button>`}</div></div>
+    ${!old && f.versions?.length ? `<details class="card pad section"><summary class="small"><b>Earlier versions</b> · ${f.versions.length} kept (the newest ${S.files?.policy?.keep_versions || 5})</summary>
+      <div class="list" style="margin-top:6px">${f.versions.map((x) => `<a href="${fileHref(slug, name, x.file)}"><div class="grow"><div class="ttl">${esc(when(x.ts))}</div><div class="sub">${fsize(x.size)}${x.run ? ` · run #${x.run}` : ""}</div></div>${ic.next}</a>`).join("")}</div></details>` : ""}
+    <article class="card pad-l md reader section" id="fdoc"><div class="skeleton"></div></article>`;
+  const text = await api(fileUrl(slug, name, v)).catch(() => null);
+  if (route.name !== "file") return;
+  $("#fdoc").innerHTML = text == null ? "Not readable." : name.toLowerCase().endsWith(".md") ? md(text) : `<pre class="wrap">${esc(text)}</pre>`;
+  $("#fcopy").onclick = async () => toast((text != null && (await copyText(text))) ? `Copied ${name}` : "Could not copy it", text == null);
+  $("#fpin") && ($("#fpin").onclick = () => act({ action: "file_pin", slug, name, on: !f.pinned }, f.pinned ? "Unpinned: the cleanup may remove it later" : "Pinned: the cleanup keeps it"));
+  $("#fdel") && ($("#fdel").onclick = async () => {
+    if (!confirm(`Delete ${name}? It goes to the trash with its versions; you can restore it on Files for ${S.files?.policy?.trash_days || 30} days.`)) return;
+    if (await act({ action: "file_delete", slug, name }, "Moved to the trash: restore it on Files")) location.hash = back;
+  });
+}
+
+// the Files page: every mission's files, how much space they take, the trash, and the cleanup (MIS-26)
+function vFiles() {
+  const F = S?.files || { missions: {}, trash: [], usage: { used: 0, trash: 0, quota: 1, pct: 0 }, policy: {} }, u = F.usage, p = F.policy;
+  const title = (slug) => (S.missions || []).find((x) => x.slug === slug)?.title || slug;
+  const groups = Object.entries(F.missions).filter(([, x]) => x.files.length).sort((a, b) => (b[1].files[0]?.updated || 0) - (a[1].files[0]?.updated || 0));
+  const n = groups.reduce((k, [, x]) => k + x.files.length, 0);
+  view.innerHTML = `<div class="hero heading"><h1>Files</h1><p>What your missions made for you: documents, specs, tables. Each mission's Results shows its own; here are all of them, the space they take and the trash.</p></div>
+    <div class="card pad-l"><div class="row between wrap" style="gap:8px"><h2>Space</h2><span class="tiny faint">${nf(n)} file${n === 1 ? "" : "s"} in ${groups.length} mission${groups.length === 1 ? "" : "s"}</span></div>
+      <div class="fbar" title="${u.pct} % of ${fsize(u.quota)}"><span style="width:${Math.min(100, (100 * u.used) / u.quota)}%"></span><span class="tr" style="width:${Math.min(100, (100 * u.trash) / u.quota)}%"></span></div>
+      <div class="small muted">${fsize(u.used)} in files · ${fsize(u.trash)} in the trash · ${u.pct} % of ${fsize(u.quota)}${u.pct >= 80 ? ` · <b class="err-t">nearly full: clean up</b>` : ""}</div>
+      <div class="small" style="margin-top:10px">Kept until you delete them. Every day the cleanup removes versions beyond the newest ${p.keep_versions}, moves the files of missions archived ${p.archived_days} days ago (unless pinned) to the trash, and empties what has been in the trash ${p.trash_days} days.${F.last_cleanup ? ` Last cleanup ${esc(when(F.last_cleanup.ts))}: ${F.last_cleanup.steps} step${F.last_cleanup.steps === 1 ? "" : "s"}, ${fsize(F.last_cleanup.freed)} freed.` : ""}</div>
+      <div class="row wrap" style="gap:8px;margin-top:10px"><button class="btn sm" id="fclean">Clean up now…</button></div><div id="fplan"></div></div>
+    ${groups.map(([slug, x]) => `<div class="card pad-l section"><div class="row between wrap" style="gap:8px"><h2 class="wrap"><a href="#/mission/${encodeURIComponent(slug)}?tab=payoff">${esc(title(slug))}</a></h2><span class="tiny faint">${fsize(u.by_mission?.[slug] || 0)}</span></div>
+      <div class="list" style="margin-top:6px">${x.files.map((f) => `<a href="${fileHref(slug, f.name)}"><div class="ic ok">${ic.doc}</div><div class="grow" style="min-width:0"><div class="ttl wrap">${esc(f.name)}${f.pinned ? ` <span class="tag">Pinned</span>` : ""}</div>
+        <div class="sub">${fsize(f.size)} · ${nf(f.words)} words · updated ${esc(when(f.updated))}${f.versions?.length ? ` · ${f.versions.length} earlier version${f.versions.length > 1 ? "s" : ""}` : ""}</div></div>${ic.next}</a>`).join("")}</div></div>`).join("")}
+    ${!groups.length ? `<div class="card pad-l section empty">${ic.doc}<div>No files yet. Ask a mission for a document (in chat: “… and send me the spec as a Markdown file”) and it lands here.</div></div>` : ""}
+    <div class="card pad-l section"><div class="row between wrap" style="gap:8px"><h2>Trash</h2><span class="tiny faint">emptied after ${p.trash_days} days</span></div>
+      ${F.trash.length ? `<div class="list" style="margin-top:6px">${F.trash.map((t) => `<div class="litem"><div class="ic">${ic.trash}</div><div class="grow" style="min-width:0"><div class="ttl wrap">${esc(t.name)} <span class="faint">· ${esc(title(t.slug))}</span></div>
+        <div class="sub">${fsize(t.size)} · deleted ${esc(when(t.deleted))} (${esc(t.why)}) · gone for good ${esc(dt(t.purge_at))}</div></div><button class="btn sm" data-frestore="${esc(t.id)}">Restore</button></div>`).join("")}</div>`
+        : `<div class="small muted" style="margin-top:6px">Empty.</div>`}</div>`;
+  $$("[data-frestore]").forEach((b) => (b.onclick = () => { b.disabled = true; act({ action: "file_restore", id: b.dataset.frestore }, (r) => `Restored ${r.restored}: it is back under its mission's Results`); }));
+  $("#fclean").onclick = async () => {
+    const r = await act({ action: "files_cleanup", dry: true }, null);
+    if (!r) return;
+    $("#fplan").innerHTML = r.steps.length ? `<div class="card pad section"><b class="small">The cleanup would do ${r.steps.length} thing${r.steps.length > 1 ? "s" : ""}:</b>
+      <ul class="small" style="margin:6px 0 0 18px">${r.steps.map((s) => `<li>${esc(s.what)}: ${esc(title(s.slug))} · ${esc(s.name)} (${fsize(s.size)})</li>`).join("")}</ul>
+      <div class="row wrap" style="gap:8px;margin-top:10px"><button class="btn sm primary" id="fcleango">Clean up</button><button class="btn sm ghost" id="fcleanno">Cancel</button></div></div>`
+      : `<div class="small muted" style="margin-top:8px">Nothing to clean up: everything is within the rules above.</div>`;
+    $("#fcleanno") && ($("#fcleanno").onclick = () => ($("#fplan").innerHTML = ""));
+    $("#fcleango") && ($("#fcleango").onclick = () => act({ action: "files_cleanup" }, (x) => `Cleaned up: ${fsize(x.freed)} freed`));
+  };
+}
+
 // Payoff: what its runs cost and what came of them
 async function agentPayoff(body, kind, A, m, c) {
   const h = (S.health?.items || []).find((i) => (m ? i.kind === "mission" && i.slug === m.slug : i.kind === "crew" && i.id === c.id));
   if (m) {
     const st = m.stats, okRate = st.runs ? Math.round((st.ok / st.runs) * 100) + "%" : "–";
     const done = (m.runs || []).filter((r) => r.output && r.status === "ok").slice(0, 12);   // cap: list (the newest; History has every run)
-    body.innerHTML = `<div class="card pad-l"><div class="row between wrap" style="gap:8px"><h2>What it delivered</h2><span class="tiny faint">${m.outputs?.length || 0} results in the vault, newest first</span></div>
+    body.innerHTML = `${filesSection(m)}<div id="fdrafts"></div>
+    <div class="card pad-l section"><div class="row between wrap" style="gap:8px"><h2>Run reports</h2><span class="tiny faint">what each run did and found · ${m.outputs?.length || 0} in the vault, newest first</span></div>
       ${done.length ? `<div class="list" style="margin-top:6px">${done.map((r) => `<a href="#/read?path=${encodeURIComponent(r.output)}"><div class="ic ok">${ic.doc}</div>
-        <div class="grow" style="min-width:0"><div class="ttl">${esc(when(r.ended || r.started))}${r.trigger === "event" ? ` <span class="tag trig">${ic.bolt}event</span>` : ""}</div>
+        <div class="grow" style="min-width:0"><div class="ttl">${esc(when(r.ended || r.started))}${r.trigger === "event" ? ` <span class="tag trig">${ic.bolt}event</span>` : ""}${/^Partial: /.test(r.summary || "") ? ` <span class="pill paused">Partial</span>` : ""}</div>
         <div class="sub wrap">${esc(r.summary || "Open the result")}</div></div>${ic.next}</a>`).join("")}</div>`
         : `<div class="small muted" style="margin-top:6px">${m.task ? `Its runs are task #${m.task}'s now: <a href="#/task/${m.task}?tab=runs">their results are on the task</a>.` : "Nothing yet: its first result lands here."}</div>`}</div>
     ${h?.payoff ? `<div class="banner info section">${ic.coin}<span class="grow">${esc(h.payoff)}</span></div>` : ""}
@@ -1624,6 +1798,8 @@ async function agentPayoff(body, kind, A, m, c) {
     </div>
     <div class="card pad section"><div class="row between wrap"><h2>Tokens per run</h2><span class="tiny faint">${st.runs_all} runs · ${tok(st.tokens_all)} tokens in all · amber = event run</span></div><div style="margin-top:10px">${bars(m.runs || [])}</div></div>
     <div class="grid g2 section"><div class="card stat"><div class="l">Wiki pages</div><div class="v">${m.wiki_pages || 0}</div>${m.wiki_pages ? `<a class="tiny" href="#/wiki?root=${encodeURIComponent(m.wiki)}&back=${encodeURIComponent(`${A.href}?tab=payoff`)}">open the wiki</a>` : ""}</div></div>`;
+    bindFiles(body);
+    draftsInto($("#fdrafts"), m);
     return;
   }
   body.innerHTML = `<div class="grid g2 g4" id="ckpi"><div class="skeleton" style="height:80px"></div></div>`;
@@ -1981,7 +2157,7 @@ function liveHtml(V, opts = {}) {
        <div class="row wrap tiny muted" style="gap:2px 10px;margin-top:4px">${nums}</div>`
     : `<div class="row wrap" style="gap:8px;align-items:center"><span class="pill ${st[0]}">${V.live ? `<span class="dot run"></span>` : ""}${st[1]}</span><h1 class="grow lvh1" title="${esc(title)}">${esc(title)}</h1></div>
        ${V.title && V.name && !V.name.includes(V.title) && !/^##\s*Your memory/.test(V.title) ? `<div class="small muted wrap" style="margin-top:4px" title="${esc(V.title)}">${esc(V.title)}</div>` : ""}
-       <div class="row wrap small muted" style="gap:4px 12px;margin-top:6px"><span>${esc(agentName(V.agent))}</span>${nums}${parent}</div>`;
+       <div class="row wrap small muted" style="gap:4px 12px;margin-top:6px"><span>${esc(agentName(V.agent))}</span>${nums}${parent}</div>${/^claude-task:\d+$/.test(V.run) ? fromChat("claude:" + V.run.slice(12)) : ""}`;
   return `<div class="card pad-l lvcard">${head}
       ${V.children.length ? `<div class="row wrap" style="gap:6px;margin-top:8px">${V.children.map((c) => `<a class="tag" href="#/live/${encodeURIComponent(c.run)}" title="${esc(c.title || "")}">${esc(agentName(c.agent))}${c.end_state ? " · " + esc(c.end_state) : " · live"}</a>`).join("")}</div>` : ""}
       ${(V.drift || []).length ? `<div class="tiny muted" style="margin-top:6px">${ic.tune}Changed since its last run: ${V.drift.map(esc).join("; ")}</div>` : ""}
@@ -2108,7 +2284,9 @@ function settingsForm(body, m) {
     ${m.type === "task" ? `<div class="card pad" style="margin-top:16px;padding-top:4px;padding-bottom:4px"><label class="switch"><span><b>Deep research</b><div class="small muted">Every run plans 3–5 research steps, works through them, then combines the findings</div></span><input type="checkbox" name="deep" ${m.depth === "deep" ? "checked" : ""}></label></div>` : ""}
     <div class="field"><span>Cost</span><small style="font-size:13.5px">Runs only on your ChatGPT subscription: $0. If ChatGPT pauses the stack, runs wait and retry every 30 minutes.</small></div>
     ${deliverHtml(m.deliver || [])}
-    ${m.type === "task" ? `<label class="field"><span>Goal</span><textarea class="input" name="goal" rows="7">${esc(m.goal)}</textarea></label>` : `
+    ${m.type === "task" ? `<label class="field"><span>Goal</span><textarea class="input" name="goal" rows="7">${esc(m.goal)}</textarea></label>
+      <label class="field"><span>Files it must deliver</span><textarea class="input" name="files" rows="3" placeholder="spec.md: the checkbox spec">${esc((m.files_asked || []).map((a) => a.name + (a.what ? ": " + a.what : "")).join("\n"))}</textarea>
+        <small>One per line, “name.md: what it is”. Markdown, CSV, JSON or text. They show under Results and are attached to its e-mail; a run that does not save one is marked partial.</small></label>` : `
       <label class="field"><span>Key questions</span><textarea class="input" name="kq" rows="6">${esc((b.key_questions || []).join("\n"))}</textarea><small>One per line. The report follows this order.</small></label>
       <label class="field"><span>Google News searches</span><textarea class="input" name="search" rows="5">${esc((b.search || []).join("\n"))}</textarea><small>One search per line.</small></label>
       <label class="field"><span>Watchlist</span><textarea class="input" name="watch" rows="5">${esc((b.watchlist || []).map((w) => w.name + (w.symbol ? " | " + w.symbol : "")).join("\n"))}</textarea><small>“Name | ticker” (Yahoo), ticker optional.</small></label>
@@ -2132,7 +2310,10 @@ function settingsForm(body, m) {
       fields.watchlist = lines(f.watch.value).map((l) => { const [n, s] = l.split("|").map((x) => x.trim()); return { ...(old[n] || {}), name: n, symbol: s || undefined }; });
     }
     const btn = $("button[type=submit]", f); btn.disabled = true;
-    await act({ action: "update", slug: m.slug, fields }, (x) => `Saved ${(x.changed || []).join(", ") || "it"}: the next run uses it`);
+    const files = m.type === "task" && f.files ? lines(f.files.value).map((l) => { const i = l.indexOf(":"); return i > 0 ? { name: l.slice(0, i).trim(), what: l.slice(i + 1).trim() } : { name: l.trim() }; }) : null;
+    if (files && JSON.stringify(files) !== JSON.stringify((m.files_asked || []).map((a) => (a.what ? { name: a.name, what: a.what } : { name: a.name })))
+        && !(await act({ action: "files_asked", slug: m.slug, files }, null))) { btn.disabled = false; return; }   // a format it cannot make is refused, with why
+    await act({ action: "update", slug: m.slug, fields }, (x) => `Saved ${(x.changed || []).concat(files && files.length !== (m.files_asked || []).length ? ["files"] : []).join(", ") || "it"}: the next run uses it`);
     btn.disabled = false;
   };
 }
@@ -2180,6 +2361,14 @@ function vNew() {
 
 // ---------- chat: Hermes, with history on the server (Claude-style) ----------
 let chats = [], cur = null, streaming = false, follower = null, pending = [], editing = null, chatQuery = "";
+const LAST_CHAT = "mc-last-chat", chatScroll = {};       // APP-42: the chat you left, and where you were in each
+const draftKey = () => `mc-draft-${cur?.id || route.q.get("mission") || "new"}`;
+function saveDraft() {                                    // what you typed and attached waits for you, per chat, on this device
+  if (editing !== null) return;
+  const text = $("#cf")?.q.value || "";
+  try { if (text || pending.length) localStorage.setItem(draftKey(), JSON.stringify({ text, pending })); else localStorage.removeItem(draftKey()); } catch (_) {}
+}
+function readDraft() { try { return JSON.parse(localStorage.getItem(draftKey())) || {}; } catch (_) { return {}; } }
 let MODELS = null;
 const pref = (k, d) => { try { return localStorage.getItem(k) || d; } catch (_) { return d; } };
 const setPref = (k, v) => { try { localStorage.setItem(k, v); } catch (_) {} };
@@ -2187,45 +2376,109 @@ const EFFORT_LABEL = { low: "Low", medium: "Medium", high: "High", xhigh: "Extra
 
 async function loadChats() { try { chats = await api(`/api/chats${chatQuery ? "?q=" + encodeURIComponent(chatQuery) : ""}`); } catch (_) { chats = []; } }
 
+function chatGroup(c, now = new Date()) {                 // the list's headings, by the day you last used a chat on this device's clock
+  if (c.pinned) return "Pinned";
+  const at = new Date(c.updated * 1000), start = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime(), d = 86400000;
+  return at.getTime() >= start ? "Today" : at.getTime() >= start - d ? "Yesterday" : at.getTime() >= start - 6 * d ? "Last 7 days" : "Earlier";
+}
 function chatListHtml() {
-  const today = new Date().toDateString();
-  const groups = { Pinned: [], Today: [], Earlier: [] }, auto = chats.filter((c) => c.origin && c.origin !== "owner");
-  chats.filter((c) => !auto.includes(c)).forEach((c) => groups[c.pinned ? "Pinned" : new Date(c.updated * 1000).toDateString() === today ? "Today" : "Earlier"].push(c));
-  const item = (c) => `<a class="citem ${cur?.id === c.id ? "on" : ""}" href="#/chat?c=${c.id}">
-    <span class="grow wrap">${c.pending ? '<span class="dot run" style="display:inline-block;margin-right:6px"></span>' : ""}${c.mission ? `<span class="mtag">${ic.tune}</span>` : ""}${esc(c.title || "New chat")}</span>
-    <button class="del" data-pinchat="${c.id}" data-p="${c.pinned ? 1 : 0}" title="${c.pinned ? "Unpin" : "Pin"}">${c.pinned ? ic.x : ic.target}</button>
-    <button class="del" data-delchat="${c.id}" title="Delete">${ic.trash}</button></a>`;
+  const groups = { Pinned: [], Today: [], Yesterday: [], "Last 7 days": [], Earlier: [] }, auto = chats.filter((c) => c.origin && c.origin !== "owner");
+  chats.filter((c) => !auto.includes(c)).forEach((c) => groups[chatGroup(c)].push(c));
+  const when = (c) => (chatGroup({ updated: c.updated }) === "Today" ? clock(c.updated) : day(c.updated));
+  const item = (c) => `<div class="citem ${cur?.id === c.id ? "on" : ""}">
+    <a class="cmain" href="#/chat?c=${c.id}"><span class="cname">${c.pending ? '<span class="dot run"></span>' : ""}${c.mission ? `<span class="mtag">${ic.tune}</span>` : ""}<span class="cttl">${esc(c.title || "New chat")}</span></span>
+      <span class="cmeta"><span class="clast"><span class="cwhen">${esc(when(c))}</span>${c.last ? ` · ${esc(c.last)}` : ""}</span>${madeIcons(c.made)}</span></a>
+    <button type="button" class="cmore" data-cmore aria-label="More for this chat">${ic.more}</button>
+    <div class="cacts" hidden><button type="button" data-pinchat="${c.id}" data-p="${c.pinned ? 1 : 0}">${c.pinned ? "Unpin" : "Pin"}</button><button type="button" class="err-t" data-delchat="${c.id}">Delete</button></div></div>`;
   const mine = Object.entries(groups).filter(([, l]) => l.length).map(([g, l]) => `<div class="cgroup">${g}</div>${l.map(item).join("")}`).join("");
   const tests = auto.length ? `<details class="cauto" data-keep="cauto"><summary class="cgroup">From tests and agents · ${auto.length}</summary><div class="tiny faint" style="padding:0 10px 6px">Sent by the stack's own checks and helper agents, not from your devices.</div>${auto.map(item).join("")}</details>` : "";
   return (mine || (!auto.length ? `<div class="small muted" style="padding:10px">${chatQuery ? "Nothing found." : "No chats yet."}</div>` : "")) + tests;
 }
 
+function askTwice(b) {                                    // asks for 4 seconds, then a tap is a first tap again
+  const label = b.lastChild, was = label.textContent;
+  b.dataset.sure = "1"; label.textContent = "Tap again to delete";
+  setTimeout(() => { delete b.dataset.sure; label.textContent = was; }, 4000);
+}
+async function chatDelete(id) {
+  await api(`/api/chats/${id}`, { method: "DELETE" });
+  if (pref(LAST_CHAT, "") === id) setPref(LAST_CHAT, "");
+  if (cur?.id === id) location.replace("#/chat?new=1"); else { await loadChats(); refreshList(); }
+}
+function chatDrawer(on) {
+  const l = $("#clist");
+  if (!l) return;
+  l.classList.toggle("open", on); $("#cscrim").hidden = !on; document.body.classList.toggle("cdrawer", on);
+}
+const closeChatDrawer = () => (history.state?.drawer ? history.back() : chatDrawer(false));
+const openChatDrawer = () => { chatDrawer(true); history.pushState({ ...(history.state || {}), drawer: 1 }, ""); };
+// what a finished swipe means: right opens the list, left closes it; a mostly vertical move is a scroll, a short one nothing
+function chatSwipe(dx, dy, open, width) {
+  if (Math.abs(dy) > Math.abs(dx) || Math.abs(dx) < Math.min(70, width * 0.25)) return null;
+  return !open && dx > 0 ? "open" : open && dx < 0 ? "close" : null;
+}
+function bindChatSwipe(wrap, list, scrim) {               // the drawer follows the finger, anywhere on the chat; code blocks and the box keep their own swipes
+  let t = null;
+  const end = () => { list.classList.remove("dragging"); list.style.transform = ""; scrim.style.opacity = ""; scrim.hidden = !list.classList.contains("open"); };
+  wrap.addEventListener("touchstart", (e) => {
+    t = e.touches.length !== 1 || String(getSelection()) || e.target.closest("pre, table, .cquick, textarea, input, select, .chatmenu, .madesheet") ? null
+      : { x: e.touches[0].clientX, y: e.touches[0].clientY, open: list.classList.contains("open"), on: false };
+  }, { passive: true });
+  wrap.addEventListener("touchmove", (e) => {
+    if (!t) return;
+    const dx = e.touches[0].clientX - t.x, dy = e.touches[0].clientY - t.y, w = list.offsetWidth;
+    if (!t.on) {
+      if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return;
+      if (Math.abs(dy) > Math.abs(dx) || (dx > 0) === t.open) { t = null; return; }
+      t.on = true; list.classList.add("dragging"); scrim.hidden = false;
+    }
+    const at = t.open ? Math.min(0, dx) : Math.max(-w, Math.min(0, dx - w));
+    list.style.transform = `translateX(${at}px)`; scrim.style.opacity = String(1 + at / w);
+    t.dx = dx; t.dy = dy;
+  }, { passive: true });
+  wrap.addEventListener("touchend", () => {
+    if (!t?.on) { t = null; return; }
+    const what = chatSwipe(t.dx || 0, t.dy || 0, t.open, list.offsetWidth);
+    t = null; end();
+    if (what === "open") openChatDrawer(); else if (what === "close") closeChatDrawer();
+  });
+  wrap.addEventListener("touchcancel", () => { if (t?.on) end(); t = null; });
+}
+window.addEventListener("popstate", () => { if (!history.state?.drawer) chatDrawer(false); });   // the phone's Back closes the drawer first
+
 function refreshList() { if ($("#citems")) { $("#citems").innerHTML = chatListHtml(); bindChatList(); } }
 
 function bindChatList() {
+  $$("[data-cmore]").forEach((b) => (b.onclick = (e) => { e.preventDefault(); const a = b.nextElementSibling; a.hidden = !a.hidden; }));
   $$("[data-delchat]").forEach((b) => (b.onclick = async (e) => {
     e.preventDefault(); e.stopPropagation();
-    if (!confirm("Delete this chat?")) return;
-    await api(`/api/chats/${b.dataset.delchat}`, { method: "DELETE" });
-    if (cur?.id === b.dataset.delchat) location.hash = "#/chat"; else { await loadChats(); refreshList(); }
+    if (!b.dataset.sure) { askTwice(b); return; }        // two taps, in place: no system dialog over the chat
+    await chatDelete(b.dataset.delchat);
   }));
   $$("[data-pinchat]").forEach((b) => (b.onclick = async (e) => {
     e.preventDefault(); e.stopPropagation();
     await api(`/api/chats/${b.dataset.pinchat}`, { method: "PATCH", body: JSON.stringify({ pinned: b.dataset.p !== "1" }) });
+    if (cur?.id === b.dataset.pinchat) cur.pinned = b.dataset.p !== "1";
     await loadChats(); refreshList();
+  }));
+  $$(".citem .cmain, .chatlist [data-newchat]").forEach((a) => (a.onclick = (e) => {   // from the drawer: the drawer's step in the history makes way, so Back returns to the chat you came from
+    if (!history.state?.drawer) return;
+    e.preventDefault();
+    const to = a.getAttribute("href");
+    if (to === location.hash) history.back(); else location.replace(to);
   }));
 }
 
 function selectHtml() {
   const model = pref("mc-model", "gpt-sub"), effort = pref("mc-effort", "medium");
   return `<select class="pick" id="pmodel" title="Model">${(MODELS?.models || []).map((m) => `<option value="${m.id}" ${m.id === model ? "selected" : ""}>${esc(m.name)}</option>`).join("")}</select>
-    <select class="pick" id="peffort" title="Reasoning effort">${(MODELS?.efforts || []).map((e) => `<option value="${e}" ${e === effort ? "selected" : ""}>${EFFORT_LABEL[e] || e} effort</option>`).join("")}</select>`;
+    <select class="pick" id="peffort" title="Reasoning effort">${(MODELS?.efforts || []).map((e) => `<option value="${e}" ${e === effort ? "selected" : ""}>${EFFORT_LABEL[e] || e}</option>`).join("")}</select>`;
 }
 
 function toolsHtml(tools, live) {
   if (!tools?.length) return "";
   const ev = tools.map((t, i) => ({ id: "c" + i, kind: t.status === "error" ? "error" : "call", title: t.name, detail: t.detail || "", status: t.status }));   // the agent log, without times
-  return `<details class="tools" ${live ? "open" : ""}><summary>${live ? '<span class="spin" style="width:12px;height:12px;vertical-align:-1px"></span> ' : ""}${tools.length} step${tools.length > 1 ? "s" : ""}: ${esc([...new Set(tools.map((t) => t.name))].slice(0, 4).join(", "))}</summary>${logHtml(ev, { bare: true, level: "all", cls: "chatlog" })}</details>`;
+  return `<details class="tools" ${live ? "open" : ""}><summary>${live ? '<span class="spin" style="width:12px;height:12px;vertical-align:-1px"></span> ' : ""}${live ? "Working" : "Worked"} through ${tools.length} step${tools.length > 1 ? "s" : ""}</summary>${logHtml(ev, { bare: true, level: "all", cls: "chatlog" })}</details>`;
 }
 function reasoningHtml(r, live) {
   return r ? `<details class="tools"${live ? " open" : ""}><summary>Thinking</summary><div class="small muted" style="white-space:pre-wrap;margin-top:6px">${esc(r)}</div></details>` : "";
@@ -2238,13 +2491,90 @@ function attsHtml(atts) {
 }
 const modelName = (id) => (MODELS?.models || []).find((m) => m.id === id)?.name || id;
 
+// ---------- APP-39: what a chat made (docs/CHAT-MADE.md): a card under the message that made it, the Made here sheet, the way back ----------
+const MADE_IC = { mission: "rocket", build: "code", claude: "brain", repo: "layers", note: "doc", email: "send" };
+const MADE_KIND = { mission: "Mission", build: "Build", claude: "Claude task", repo: "Repository", note: "Note in the vault", email: "E-mail" };
+const MADE_STATE = { creating: ["queued", "Being created"], queued: ["queued", "Queued"], running: ["running", "Running"], done: ["ok", "Done"],
+  waits: ["paused", "Waits for you"], failed: ["failed", "Failed"], paused: ["paused", "Paused"], sent: ["ok", "Sent"], made: ["ok", "Made"],
+  gone: ["archived", "No longer there"] };
+const MADE_OPEN = ["creating", "queued", "running"];
+const madeIc = (k) => ic[MADE_IC[k]] || ic.doc;
+const madeCount = (made) => (made || []).filter((x) => x.verb !== "changed" && x.verb !== "failed").length;
+
+function madeCard(x) {
+  if (x.verb === "changed") return `<div class="madeline tiny muted">${madeIc(x.kind)}<span>${x.href ? `<a href="${x.href}">${esc(x.name || x.id)}</a>` : esc(x.name || x.id || "")}: ${esc(x.what || "changed")}</span></div>`;
+  const [cls, label] = MADE_STATE[x.state] || ["archived", x.state || ""];
+  const inner = `<span class="mc-ic">${madeIc(x.kind)}</span><span class="grow mc-body"><span class="tiny faint">${esc(MADE_KIND[x.kind] || x.kind)}${x.verb === "exists" ? " · already existed" : ""}</span>
+    <b class="wrap mc-name">${esc(x.name || x.id || "…")}</b>${x.line ? `<span class="small muted mc-line" title="${esc(x.line)}">${esc(x.line)}</span>` : ""}</span>
+    ${label ? `<span class="pill ${cls}">${x.state === "running" ? '<span class="dot run"></span>' : ""}${label}</span>` : ""}${x.href ? ic.next : ""}`;
+  const files = (x.files || []).length || (x.files_missing || []).length    // MIS-23: the files it made, each one tap away
+    ? `<div class="mc-files">${(x.files || []).map((f) => `<a class="tag" href="${f.href}">${ic.doc}${esc(f.name)}</a>`).join("")}${(x.files_missing || []).map((n) => `<span class="tag warn" title="Asked for, not delivered yet">${esc(n)}</span>`).join("")}</div>` : "";
+  return x.href ? `<div class="madewrap"><a class="madecard" data-mk="${x.key}" href="${x.href}">${inner}</a>${files}</div>` : `<div class="madecard" data-mk="${x.key}">${inner}</div>`;
+}
+
+// each item under the answer of the turn that made it; one whose turn was edited away is only in the Made here sheet
+function madeByMsg(msgs, made) {
+  const out = {};
+  for (const x of made || []) {
+    const j = msgs.findIndex((m) => m.role === "assistant" && !m.note && (m.ts || 0) >= x.ts);
+    if (j < 0) continue;
+    let u = j - 1;
+    while (u >= 0 && msgs[u].role !== "user") u--;
+    if (u >= 0 && (msgs[u].ts || 0) > x.ts) continue;
+    (out[j] = out[j] || []).push(x);
+  }
+  return out;
+}
+
+function drawMade() {
+  if (!cur) return;
+  const by = madeByMsg(cur.messages || [], cur.made);
+  $$("[data-mi]").forEach((el) => (el.innerHTML = (by[+el.dataset.mi] || []).map(madeCard).join("")));
+  const chip = $("#madechip"), n = madeCount(cur.made);
+  if (!chip) return;
+  chip.hidden = !n;
+  chip.innerHTML = `${ic.layers}<span class="ml">Made here · </span>${n}`;
+  const items = [...(cur.made || [])].reverse();
+  $("#madesheet").innerHTML = `<div class="row between" style="align-items:center"><b>Made in this chat</b><span class="tiny faint">newest first</span></div>
+    ${items.filter((x) => x.verb !== "changed").map(madeCard).join("")}
+    ${items.some((x) => x.verb === "changed") ? `<div class="tiny faint" style="margin-top:4px">Changed here</div>${items.filter((x) => x.verb === "changed").map(madeCard).join("")}` : ""}`;
+}
+
+// while something it made is still on its way, the chat looks again every 15 s: states, and the line when it ends
+let madeTimer = null;
+function watchMade() {
+  clearInterval(madeTimer);
+  madeTimer = setInterval(async () => {
+    if (route.name !== "chat" || !cur?.id) return clearInterval(madeTimer);
+    if (streaming || document.hidden || !(cur.made || []).some((x) => MADE_OPEN.includes(x.state) || (x.kind === "build" && x.state === "waits"))) return;
+    const id = cur.id, full = await api(`/api/chats/${id}`).catch(() => null);
+    if (!full?.messages || cur?.id !== id || streaming) return;
+    const more = full.messages.length !== (cur.messages || []).length;
+    cur = full;
+    if (more) { const b = $("#msgs"); b.innerHTML = ""; full.messages.forEach((x, i) => b.insertAdjacentHTML("beforeend", bubble(x, i))); codeCopy(b); bindMsgActions(); scrollChat(); }
+    drawMade();
+  }, 15000);
+}
+
+// on the page of something a chat made: the way back to the turn that made it
+function fromChat(key) {
+  const f = S?.from_chat?.[key];
+  return f ? `<a class="fromchat small" href="#/chat?c=${encodeURIComponent(f.chat)}&made=${f.key}">${ic.chat}<span class="wrap">From a chat: <b>${esc(f.title)}</b></span></a>` : "";
+}
+
+function madeIcons(made) {
+  const e = Object.entries(made || {});
+  return e.length ? `<span class="cmade">${e.map(([k, n]) => `<span title="${n} × ${esc(MADE_KIND[k] || k)} made here">${madeIc(k)}${n > 1 ? n : ""}</span>`).join("")}</span>` : "";
+}
+
 function bubble(x, i) {
+  if (x.note) return `<div class="mrow note" data-i="${i}"><div class="msgnote">${ic.bell}<div class="md grow">${md(x.content)}</div></div></div>`;
   if (x.role === "user") {
     return `<div class="mrow user" data-i="${i}"><div class="msg user">${attsHtml(x.attachments)}${x.content && x.content !== "(see attachment)" ? `<div class="utext">${esc(x.content)}</div>` : ""}</div>
-      <div class="macts"><button data-copy="${i}" title="Copy">${ic.doc}</button><button data-edit="${i}" title="Edit and resend">${ic.tune}</button></div></div>`;
+      <div class="macts"><button data-copy="${i}" title="Copy" aria-label="Copy">${ic.copy}</button><button data-edit="${i}" title="Edit and resend" aria-label="Edit and resend">${ic.edit}</button></div></div>`;
   }
-  return `<div class="mrow assistant" data-i="${i}"><div class="msg assistant">${toolsHtml(x.tools)}${reasoningHtml(x.reasoning)}<div class="md">${md(x.content)}</div>${x.limit ? limitHtml(x) : ""}</div>
-    <div class="macts"><button data-copy="${i}" title="Copy">${ic.doc}</button><button data-regen="${i}" title="Regenerate">${ic.repeat}</button>${x.model ? `<span class="tiny faint">${esc(modelName(x.model))}${x.effort ? " · " + esc(x.effort) : ""}</span>` : ""}</div></div>`;
+  return `<div class="mrow assistant" data-i="${i}"><div class="msg assistant">${toolsHtml(x.tools)}${reasoningHtml(x.reasoning)}<div class="md">${md(x.content)}</div>${x.limit ? limitHtml(x) : ""}<div class="madecards" data-mi="${i}"></div></div>
+    <div class="macts"><button data-copy="${i}" title="Copy" aria-label="Copy">${ic.copy}</button><button data-regen="${i}" title="Regenerate" aria-label="Regenerate">${ic.repeat}</button>${x.model ? `<span class="tiny faint">${esc(modelName(x.model))}${x.effort ? " · " + esc(x.effort) : ""}</span>` : ""}</div></div>`;
 }
 
 // AST-12: a message that waits for the subscription's usage limit says when it is tried again, in this device's time
@@ -2265,33 +2595,62 @@ function codeCopy(root) {
 }
 
 async function vChat() {
-  const cid = route.q.get("c"), mslug = route.q.get("mission");
+  let cid = route.q.get("c");
+  const mslug = route.q.get("mission");
+  if (!cid && !mslug && !route.q.get("new") && !route.q.get("prompt") && !route.q.get("share") && (cid = pref(LAST_CHAT, ""))) {   // APP-42: the Chat tab opens the chat you left
+    history.replaceState(history.state, "", `#/chat?c=${cid}`); route.q = new URLSearchParams(`c=${cid}`);
+  }
   if (!MODELS) MODELS = await api("/api/models").catch(() => ({ models: [{ id: "gpt-sub", name: "GPT-6.1 Sol" }], efforts: ["medium"] }));
   await loadChats();
   cur = cid ? await api(`/api/chats/${cid}`).catch(() => null) : null;
   if (route.name !== "chat") return;
-  if (cur?.error) cur = null;
-  pending = []; editing = null;
+  if (cur?.error) {                                      // deleted elsewhere: not an error to show, a new chat instead (a lost connection keeps it for next time)
+    if (pref(LAST_CHAT, "") === cid) setPref(LAST_CHAT, "");
+    cur = null; history.replaceState(history.state, "", "#/chat?new=1"); route.q = new URLSearchParams("new=1");
+  }
+  if (cur?.id) setPref(LAST_CHAT, cur.id);
+  editing = null;
+  const draft = readDraft();
+  pending = draft.pending || [];
   const mis = mslug || cur?.mission;
   const m = mis && S ? S.missions.find((x) => x.slug === mis) : null;
   const sugg = m ? [`What does this mission track right now?`, `Make it focus more on `, `Add a key question about `, `Alert me when ${m.brief?.filings?.[0] || "the company"} files with the SEC`]
     : ["What are my missions doing?", "What's new on uranium today?", "Research Boss Energy and e-mail me an analysis", "Watch ASPI and tell me if it moves 8 % in a day"];
   view.innerHTML = `<div class="chatwrap">
-    <aside class="chatlist card" id="clist">
-      <div class="row between" style="padding:8px 8px 4px"><b>Chats</b><a class="btn sm" href="#/chat" data-newchat>${ic.compose}New chat</a></div>
-      <div class="wsearch" style="padding:2px 6px 6px">${ic.search}<input class="input" id="cq" placeholder="Search chats" value="${esc(chatQuery)}"></div>
-      <div id="citems">${chatListHtml()}</div>
+    <div class="cscrim" id="cscrim" hidden></div>
+    <aside class="chatlist" id="clist" aria-label="Your chats">
+      <div class="clhead"><b>Chats</b><button type="button" class="icon-btn clclose" id="clclose" aria-label="Close">${ic.x}</button></div>
+      <a class="btn primary cnew" href="#/chat?new=1" data-newchat>${ic.compose}New chat</a>
+      <div class="wsearch clsearch">${ic.search}<input class="input" id="cq" placeholder="Search chats" value="${esc(chatQuery)}"></div>
+      <div id="citems" class="citems">${chatListHtml()}</div>
     </aside>
     <div class="chatpane">
       <div class="chathead">
-        <button class="icon-btn hist" id="histbtn" title="Chats">${ic.history}</button>
-        <h1 class="grow wrap" id="ctitle" title="Tap to rename">${m ? "Tune: " + esc(m.title) : cur ? esc(cur.title) : "New chat"}</h1>
-        <span id="chatchip" class="chip chatchip"></span>
-        ${cur ? `<a class="icon-btn" href="#/live/${encodeURIComponent("chat:" + cur.id)}" title="What Hermes did in its last answer">${ic.pulse}</a>` : ""}
-        <a class="icon-btn" href="#/chat" title="New chat" aria-label="New chat" data-newchat>${ic.compose}</a>
+        <button class="icon-btn hist" id="histbtn" title="Chats" aria-label="Your chats">${ic.menu}</button>
+        <div class="chatti">
+          <h1 class="grow wrap" id="ctitle">${m ? "Tune: " + esc(m.title) : cur ? esc(cur.title) : "New chat"}</h1>
+          <div class="chatstat">
+            <button type="button" id="madechip" class="chip madechip" title="What this chat made: missions, builds, Claude tasks, notes" hidden></button>
+            <span id="chatchip" class="chip chatchip" hidden></span>
+          </div>
+        </div>
+        ${cur ? `<button type="button" class="icon-btn cmenu" id="cmenubtn" aria-label="More for this chat" aria-expanded="false">${ic.more}</button>` : ""}
       </div>
+      ${cur ? `<div class="chatmenu card" id="chatmenu" hidden>
+        <button type="button" data-cm="rename">${ic.edit}Rename</button>
+        <button type="button" data-cm="pin">${ic.target}${cur.pinned ? "Unpin" : "Pin"}</button>
+        <a href="#/live/${encodeURIComponent("chat:" + cur.id)}">${ic.pulse}What Hermes did</a>
+        <button type="button" class="err-t" data-cm="delete">${ic.trash}Delete</button>
+      </div>` : ""}
+      <div class="madesheet card" id="madesheet" hidden></div>
       ${m ? `<div class="banner info" style="margin:0 0 10px">${ic.tune}<span class="grow small">Focus chat for <b>${esc(m.title)}</b>: say what to track more or less; it changes the mission.</span></div>` : ""}
-      <div class="msgs" id="msgs">${(cur?.messages || []).length ? "" : `<div class="empty-chat"><div class="muted">This is Hermes, your assistant. It knows your notes, reports, wikis and missions; it researches the web, starts missions and e-mails you. Attach pictures or documents with the clip.</div><div class="suggest">${sugg.map((x) => `<button type="button">${esc(x)}</button>`).join("")}</div></div>`}</div>
+      <div class="msgs" id="msgs">${(cur?.messages || []).length ? "" : `<div class="empty-chat"><h2 class="chello">What can I do for you?</h2><div class="suggest">${sugg.map((x) => `<button type="button">${esc(x)}</button>`).join("")}</div></div>`}</div>
+      <div class="tobwrap"><button type="button" class="tobottom" id="tobottom" aria-label="Go to the newest message" hidden>${ic.down}</button></div>
+      <div class="cquick" id="cquick">
+        <label class="qchip">${ic.image}Screenshot or photo<input type="file" id="cphoto" accept="image/*" multiple hidden></label>
+        <label class="qchip">${ic.camera}Camera<input type="file" id="ccam" accept="image/*" capture="environment" hidden></label>
+        ${navigator.clipboard?.read ? `<button type="button" class="qchip" id="cpaste">${ic.paste}Paste</button>` : ""}
+      </div>
       <form class="composer2" id="cf">
         <div class="pend" id="pend"></div>
         <div class="editing" id="editbar" hidden>Editing a message <button type="button" class="btn sm ghost" id="canceledit">Cancel</button></div>
@@ -2300,7 +2659,7 @@ async function vChat() {
           <label class="icon-btn" title="Attach pictures or documents" aria-label="Attach pictures or documents">${ic.clip}<input type="file" id="cfile" multiple hidden accept="image/*,.pdf,.docx,.xlsx,.csv,.txt,.md,.json,.html,.py,.js,.ts,.yaml,.yml,.log"></label>
           ${selectHtml()}
           <span class="grow"></span>
-          <button class="btn primary sendbtn" type="submit" id="sendbtn" aria-label="Send">${ic.send}</button>
+          <button class="btn primary sendbtn" type="submit" id="sendbtn" aria-label="Send">${ic.up}</button>
         </div>
       </form>
     </div>
@@ -2310,38 +2669,133 @@ async function vChat() {
   (cur?.messages || []).forEach((x, i) => box.insertAdjacentHTML("beforeend", bubble(x, i)));
   codeCopy(box);
   bindMsgActions();
-  const f = $("#cf"), ta = f.q;
-  ta.oninput = () => { ta.style.height = "auto"; ta.style.height = Math.min(180, ta.scrollHeight) + "px"; };
+  drawMade(); watchMade();
+  $("#madechip").onclick = (e) => {                      // the sheet opens under the header, however many lines its title takes
+    e.stopPropagation();
+    const sh = $("#madesheet"), head = $(".chathead");
+    sh.style.top = head.offsetTop + head.offsetHeight + 4 + "px"; sh.hidden = !sh.hidden;
+  };
+  view.onclick = (e) => {
+    const sh = $("#madesheet"), cm = $("#chatmenu");
+    if (sh && !sh.hidden && !sh.contains(e.target)) sh.hidden = true;
+    if (cm && !cm.hidden && !cm.contains(e.target)) cm.hidden = true;
+  };
+  const f = $("#cf"), ta = f.q, cpane = $(".chatpane");
+  const canSend = () => $("#sendbtn").classList.toggle("idle", !streaming && !ta.value.trim() && !pending.length);
+  ta.oninput = () => { ta.style.height = "auto"; ta.style.height = Math.min(180, ta.scrollHeight) + "px"; saveDraft(); canSend(); };
+  const pane = $("#msgs");                               // APP-40: the keyboard opens or closes: the newest message stays in sight
+  const scrollKey = cur?.id || "";
+  let atEnd = true;
+  pane.addEventListener("scroll", () => {
+    atEnd = pane.scrollHeight - pane.scrollTop - pane.clientHeight < 60;
+    $("#tobottom").hidden = atEnd;
+    if (atEnd) delete chatScroll[scrollKey]; else chatScroll[scrollKey] = pane.scrollTop;
+  }, { passive: true });
+  $("#tobottom").onclick = () => pane.scrollTo({ top: pane.scrollHeight, behavior: "smooth" });
+  pane.onclick = (e) => {                                // APP-45: a message's actions, on a tap: they do not sit under every message
+    if (e.target.closest("a, button, summary, pre, img") || String(getSelection())) return;
+    const row = e.target.closest(".mrow");
+    if (!row) return;
+    const was = row.classList.contains("show");
+    $$(".mrow.show", pane).forEach((r) => r.classList.remove("show"));
+    row.classList.toggle("show", !was);
+  };
+  new ResizeObserver(() => { if (atEnd) pane.scrollTop = pane.scrollHeight; }).observe(pane);
   ta.onkeydown = (e) => { if (e.key === "Enter" && !e.shiftKey && !matchMedia("(pointer:coarse)").matches) { e.preventDefault(); f.requestSubmit(); } };
   $$(".suggest button").forEach((b) => (b.onclick = () => { ta.value = b.textContent; ta.focus(); if (!b.textContent.endsWith(" ")) f.requestSubmit(); }));
-  $("#histbtn").onclick = () => $("#clist").classList.toggle("open");
+  $("#histbtn").onclick = openChatDrawer;
+  if (matchMedia("(max-width: 959px)").matches) bindChatSwipe($(".chatwrap"), $("#clist"), $("#cscrim"));
+  if (history.state?.drawer) history.replaceState({ ...history.state, drawer: 0 }, "");   // a page drawn afresh has its drawer closed
+  $("#cscrim").onclick = closeChatDrawer;
+  $("#clclose").onclick = closeChatDrawer;
+  const menu = $("#chatmenu"), menuBtn = $("#cmenubtn");
+  const showMenu = (on) => { if (menu) { menu.hidden = !on; menuBtn.setAttribute("aria-expanded", on); } };
+  if (menu) {
+    menuBtn.onclick = (e) => { e.stopPropagation(); showMenu(menu.hidden); };
+    $("#ctitle").onclick = (e) => { e.stopPropagation(); showMenu(menu.hidden); };   // the title is the chat's menu, as in other chat apps
+    menu.onclick = async (e) => {
+      const b = e.target.closest("[data-cm]");
+      if (!b) return;
+      e.stopPropagation();
+      if (b.dataset.cm === "rename") { showMenu(false); renameChat(); }
+      if (b.dataset.cm === "pin") {
+        await api(`/api/chats/${cur.id}`, { method: "PATCH", body: JSON.stringify({ pinned: !cur.pinned }) });
+        cur.pinned = !cur.pinned; showMenu(false); render(true);
+      }
+      if (b.dataset.cm === "delete") {
+        if (!b.dataset.sure) { askTwice(b); return; }
+        await chatDelete(cur.id);
+      }
+    };
+  }
+  const renameChat = () => {                             // in place, no system dialog
+    const h = $("#ctitle"), was = cur.title || "";
+    h.innerHTML = `<input class="input ctitlein" maxlength="120" aria-label="Chat title" value="${esc(was)}">`;
+    const inp = h.firstChild;
+    h.onclick = (e) => e.stopPropagation();
+    inp.focus(); inp.select();
+    let done = false;
+    const end = async (save) => {
+      if (done) return;
+      done = true;
+      const t = inp.value.trim();
+      h.textContent = save && t ? t : was;
+      h.onclick = (e) => { e.stopPropagation(); showMenu(menu.hidden); };
+      if (save && t && t !== was) { await api(`/api/chats/${cur.id}`, { method: "PATCH", body: JSON.stringify({ title: t }) }); cur.title = t; await loadChats(); refreshList(); }
+    };
+    inp.onkeydown = (e) => { if (e.key === "Enter") { e.preventDefault(); end(true); } if (e.key === "Escape") end(false); };
+    inp.onblur = () => end(true);
+  };
   $("#pmodel").onchange = (e) => setPref("mc-model", e.target.value);
   $("#peffort").onchange = (e) => setPref("mc-effort", e.target.value);
   $("#cq").oninput = async (e) => { chatQuery = e.target.value.trim(); await loadChats(); refreshList(); };
-  $("#ctitle").onclick = async () => {
-    if (!cur?.id) return;
-    const t = prompt("Rename chat", cur.title || "");
-    if (t && t.trim()) { await api(`/api/chats/${cur.id}`, { method: "PATCH", body: JSON.stringify({ title: t.trim() }) }); cur.title = t.trim(); $("#ctitle").textContent = t.trim(); await loadChats(); refreshList(); }
+  const pendChip = (r, chip = document.createElement("span")) => {
+    chip.className = "pchip";
+    chip.innerHTML = `${r.kind === "image" ? `<img src="/api/chat/files/${r.id}" alt="">` : ic.doc} <span class="wrap">${esc(r.name)}</span><button type="button" title="Remove" aria-label="Remove ${esc(r.name)}">${ic.x}</button>`;
+    chip.querySelector("button").onclick = () => { pending = pending.filter((p) => p.id !== r.id); chip.remove(); saveDraft(); canSend(); };
+    return chip;
   };
-  $("#cfile").onchange = async (e) => {
-    for (const file of e.target.files) {
+  const uploadFiles = async (files) => {                 // the clip, the row above the keyboard, a paste and a drop all come here
+    for (const file of files) {
       const chip = document.createElement("span"); chip.className = "pchip"; chip.innerHTML = `<span class="spin" style="width:12px;height:12px"></span> ${esc(file.name)}`;
       $("#pend").appendChild(chip);
       try {
         const r = await fetch("/api/chat/upload", { method: "POST", body: file, headers: { "X-Filename": file.name } }).then((x) => x.json());
         if (r.error) throw new Error(r.error);
         pending.push(r);
-        chip.innerHTML = `${r.kind === "image" ? `<img src="/api/chat/files/${r.id}">` : ic.doc} <span class="wrap">${esc(r.name)}</span><button type="button" title="Remove">${ic.x}</button>`;
-        chip.querySelector("button").onclick = () => { pending = pending.filter((p) => p.id !== r.id); chip.remove(); };
+        pendChip(r, chip);
+        saveDraft(); canSend();
       } catch (err) { chip.remove(); toast(`${file.name}: ${err.message}`, true); }
     }
-    e.target.value = "";
   };
-  $("#canceledit").onclick = () => { editing = null; $("#editbar").hidden = true; ta.value = ""; };
-  $$("[data-newchat]").forEach((a) => (a.onclick = (e) => {           // on #/chat already the link changes nothing: start afresh here
-    if (location.hash !== "#/chat") return;
-    e.preventDefault(); $("#clist").classList.remove("open"); render(true);
-  }));
+  for (const a of pending) $("#pend").appendChild(pendChip(a));
+  if (draft.text && !route.q.get("prompt")) { ta.value = draft.text; ta.oninput(); }
+  canSend();
+  ["cfile", "cphoto", "ccam"].forEach((id) => ($("#" + id).onchange = async (e) => { await uploadFiles([...e.target.files]); e.target.value = ""; }));
+  // APP-44: a web page cannot look through your photos unasked, so the way to them sits above the keyboard, one tap away
+  cpane.classList.toggle("cempty", !(cur?.messages || []).length);
+  ta.onfocus = () => cpane.classList.add("cfocus");
+  ta.onblur = () => setTimeout(() => { if (document.activeElement !== ta) cpane.classList.remove("cfocus"); }, 150);
+  $("#cquick").onpointerdown = (e) => e.preventDefault();   // a tap on the row keeps the keyboard up
+  const named = (blob, i = 0) => new File([blob], blob.name || `screenshot${i ? "-" + (i + 1) : ""}.${(blob.type.split("/")[1] || "png").split("+")[0]}`, { type: blob.type });
+  if ($("#cpaste")) $("#cpaste").onclick = async () => {
+    try {
+      const shots = [];
+      for (const it of await navigator.clipboard.read()) {
+        const t = it.types.find((x) => x.startsWith("image/"));
+        if (t) shots.push(named(await it.getType(t), shots.length));
+      }
+      if (shots.length) await uploadFiles(shots); else toast("No picture on the clipboard: copy a screenshot first, or use Screenshot or photo", true);
+    } catch (err) { toast("The browser did not allow reading the clipboard: use Screenshot or photo", true); }
+  };
+  ta.onpaste = (e) => {                                  // a keyboard's clipboard and Ctrl+V: a picture is attached, text is pasted as usual
+    const files = [...(e.clipboardData?.files || [])];
+    if (files.length) { e.preventDefault(); uploadFiles(files.map(named)); }
+  };
+  cpane.ondragover = (e) => { if ([...(e.dataTransfer?.types || [])].includes("Files")) { e.preventDefault(); cpane.classList.add("cdrop"); } };
+  cpane.ondragleave = (e) => { if (!cpane.contains(e.relatedTarget)) cpane.classList.remove("cdrop"); };
+  cpane.ondrop = (e) => { e.preventDefault(); cpane.classList.remove("cdrop"); uploadFiles([...(e.dataTransfer?.files || [])]); };
+  $("#canceledit").onclick = () => { editing = null; $("#editbar").hidden = true; ta.value = readDraft().text || ""; ta.oninput(); };
   bindChatList();
   f.onsubmit = (e) => {
     e.preventDefault();
@@ -2349,6 +2803,7 @@ async function vChat() {
     const q = ta.value.trim();
     if (!q && !pending.length) return;
     const trunc = editing;
+    try { localStorage.removeItem(draftKey()); } catch (_) {}
     ta.value = ""; ta.style.height = ""; editing = null; $("#editbar").hidden = true;
     send(q, mis, trunc);
   };
@@ -2357,11 +2812,15 @@ async function vChat() {
   const shared = route.q.get("share") ? await api(`/api/share/${route.q.get("share")}`).catch(() => null) : null;
   for (const a of shared?.files || []) {                  // what the phone shared comes along as attachments
     pending.push(a);
-    $("#pend").insertAdjacentHTML("beforeend", `<span class="pchip">${a.kind === "image" ? `<img src="/api/chat/files/${a.id}">` : ic.doc} <span class="wrap">${esc(a.name)}</span></span>`);
+    $("#pend").appendChild(pendChip(a));
   }
-  if ((pre || shared) && !cur) { ta.value = pre || ""; ta.oninput(); ta.focus(); history.replaceState(history.state, "", "#/chat" + (mslug ? `?mission=${encodeURIComponent(mslug)}` : "")); }
+  canSend();
+  if ((pre || shared) && !cur) { ta.value = pre || ""; ta.oninput(); ta.focus(); history.replaceState(history.state, "", mslug ? `#/chat?mission=${encodeURIComponent(mslug)}` : "#/chat?new=1"); route.q = new URLSearchParams(mslug ? `mission=${encodeURIComponent(mslug)}` : "new=1"); saveDraft(); canSend(); }
   if (route.q.get("send") && (pre || pending.length) && !cur) f.requestSubmit();
-  scrollChat(true);
+  const back = route.q.get("made") && $(`.madecards [data-mk="${CSS.escape(route.q.get("made"))}"]`);   // "From a chat": the turn that made it
+  if (back) { back.scrollIntoView({ block: "center" }); back.classList.add("flash"); }
+  else if (chatScroll[scrollKey] && !cur?.pending) pane.scrollTop = chatScroll[scrollKey];   // APP-42: where you were; the newest message when you were at the end
+  else scrollChat(true);
 }
 
 // ---------- the AI phone (images/phone): approvals, Stop, pairing, log ----------
@@ -2377,7 +2836,7 @@ async function vPhone() {
     toast(r.error ? `Too late: ${r.error}` : !r.taken ? PHONE_NOT_TAKEN : pre === "deny" ? "Declined" : pre === "allow5" ? "Allowed, and for the next 5 minutes" : "Allowed: the AI phone is doing it", !!r.error || !r.taken);
     if (route.name !== "phone") return;
   }
-  view.innerHTML = `<div class="hero"><div class="grow"><h1>AI phone</h1><p>Hermes' hands on your old phone. Every action waits for your OK here.</p></div>${liveLink("phone", "What it did")}</div><div id="ph"></div>`;
+  view.innerHTML = `<div class="hero"><div class="grow"><h1>AI phone</h1><p>Hermes' hands on your old phone. You approve whole jobs here, not single steps.</p></div>${liveLink("phone", "What it did")}</div><div id="ph"></div>`;
   let last = "";
   const draw = async () => {
     if (route.name !== "phone") return clearInterval(phoneTimer);
@@ -2404,7 +2863,7 @@ function phoneHtml(P) {
       <div><div class="row" style="gap:8px;align-items:center">${status}<b>${esc(st.model || "Phone")}</b>${st.android ? `<span class="small muted">Android ${esc(st.android)}</span>` : ""}</div>
         <div class="small muted" style="margin-top:4px">${st.connected ? `In front: <span class="mono">${esc(st.foreground || "home screen")}</span>` : esc(st.error || "")}${forever ? " · <b>actions allowed until you stop it</b>" : trust ? ` · <b>actions allowed until ${dt(st.trust_until)}</b>` : ""}</div></div>
       ${P.stopped ? `<button class="btn primary" id="phresume">${ic.play}Switch on</button>` : `<button class="btn danger" id="phstop">${ic.pause}Stop</button>`}
-    </div>${st.connected && !P.stopped ? phoneScreenHtml(st) : ""}${trust ? `<button class="btn sm ghost" id="phuntrust" style="margin-top:10px">Ask me again for every action</button>`
+    </div>${st.connected && !P.stopped ? phoneScreenHtml(st) : ""}${trust ? `<button class="btn sm ghost" id="phuntrust" style="margin-top:10px">Ask me for each job instead</button>`
       : st.connected && !P.stopped ? `<div class="row wrap" style="gap:8px;margin-top:10px;align-items:center"><span class="small"><b>Let it use the phone freely:</b></span>
         ${[[10, "10 min"], [60, "1 hour"], [480, "8 hours"], [-1, "Until I stop it"]].map(([m, l]) => `<button class="btn sm" data-trust="${m}">${l}</button>`).join("")}
         <input class="input" id="phmin" inputmode="numeric" placeholder="min" style="width:70px;padding:6px 8px"><button class="btn sm ghost" id="phcustom">Set</button></div>
@@ -2412,7 +2871,7 @@ function phoneHtml(P) {
     ${phoneTaskHtml(st)}
     ${P.pending.map((p) => `<div class="card pad-l phreq${p.money ? " money" : ""}">
       <div class="tag">Waiting for your OK · ${esc(p.app || "")}</div><h2 style="margin:8px 0 4px">${esc(p.text)}</h2><div class="small">${esc(p.why || "")}</div>
-      <div class="row wrap" style="gap:8px;margin-top:14px"><button class="btn primary" data-allow="${p.id}">${ic.check}Allow</button>${p.money ? "" : `<button class="btn" data-allow5="${p.id}">Allow 5 min</button>`}<button class="btn ghost" data-deny="${p.id}">${ic.x}Decline</button></div>
+      <div class="row wrap" style="gap:8px;margin-top:14px"><button class="btn primary" data-allow="${p.id}">${ic.check}${p.tool === "phone_task" ? "Allow this job" : "Allow"}</button><button class="btn ghost" data-deny="${p.id}">${ic.x}Decline</button></div>
       ${p.shot ? `<img class="phshot" src="/api/phone/shot/${p.shot}" alt="The phone's screen now; a red circle marks a planned tap">` : ""}
     </div>`).join("")}
     ${!st.connected && !P.stopped ? `<div class="card pad-l"><h2>${st.paired ? "Reconnect" : "Pair the phone"}</h2>
@@ -2422,7 +2881,7 @@ function phoneHtml(P) {
       <form id="phpair" class="row wrap" style="gap:8px;margin-top:10px"><input class="input" name="code" inputmode="numeric" maxlength="6" placeholder="Code (6 digits)" style="width:150px"><input class="input" name="port" inputmode="numeric" maxlength="5" placeholder="Port" style="width:110px"><button class="btn primary">Pair</button></form></div>` : ""}
     ${st.connected && st.boot ? `<div class="card pad-l"><div class="row between wrap" style="gap:8px;align-items:center"><h2>Starts in AI mode after a restart</h2>
       ${Object.values(st.boot).every(Boolean) ? `<span class="pill ok">Ready</span>` : `<button class="btn sm primary" id="phboot">Set it up</button>`}</div>
-      <ul class="phlog" style="margin-top:8px">${[["keepadb_allowed", "Wireless debugging switches itself on (KeepADB)"], ["tailscale_always_on", "Tailscale connects by itself (always-on VPN)"],
+      <ul class="phlog" style="margin-top:8px">${[["keepadb_allowed", "Wireless debugging switches itself on (KeepADB)"], ["keeps_pairing", "The pairing does not lapse (Android's 7-day limit is off)"], ["tailscale_always_on", "Tailscale connects by itself (always-on VPN)"],
         ["no_battery_limit", "Android never stops Tailscale or KeepADB (no battery limit)"]].map(([k, l]) => `<li>${st.boot[k] ? "✓" : "○"} ${esc(l)}</li>`).join("")}</ul>
       ${Object.values(st.boot).every(Boolean) ? "" : `<div class="tiny muted" style="margin-top:6px">Each change asks for your Allow (here and on Telegram) before it runs.</div>`}</div>` : ""}
     <div class="card pad-l"><h2>What it did</h2>${P.log.length ? `<ul class="phlog">${P.log.map((e) => `<li><span class="tiny faint">${e.ts ? clock(e.ts) : ""}</span> <b>${esc(e.tool)}</b> ${esc(e.decision || e.result || "")}${e.why ? `<div class="tiny muted">${esc(e.why)}</div>` : ""}</li>`).join("")}</ul>` : `<div class="small muted" style="margin-top:6px">Nothing yet. Ask Hermes in chat, e.g. “On the AI phone, open Chrome and look up the weather”.</div>`}</div>
@@ -2682,7 +3141,7 @@ function bindMsgActions() {
 function setSending(on) {
   streaming = on;
   const b = $("#sendbtn");
-  if (b) { b.innerHTML = on ? ic.pause : ic.send; b.classList.toggle("stopping", on); b.title = on ? "Stop" : "Send"; }
+  if (b) { b.innerHTML = on ? ic.stop : ic.up; b.classList.toggle("stopping", on); if (on) b.classList.remove("idle"); else b.classList.add("idle"); b.title = on ? "Stop" : "Send"; b.setAttribute("aria-label", on ? "Stop" : "Send"); }
 }
 
 async function stopChat() {
@@ -2707,7 +3166,7 @@ async function send(q, mis, truncate) {
     const r = await api("/api/chat", { method: "POST", body: JSON.stringify({ chat: cur?.id, mission: mis, message: q, truncate,
       model: $("#pmodel")?.value, effort: $("#peffort")?.value, attachments: atts.map((a) => ({ id: a.id })) }) });
     if (r.error) throw new Error(r.error);
-    if (!cur?.id) { cur = { id: r.chat, title: r.title, messages: [] }; history.replaceState(history.state, "", `#/chat?c=${r.chat}`); route.q = new URLSearchParams(`c=${r.chat}`); $("#ctitle").textContent = r.title; }
+    if (!cur?.id) { cur = { id: r.chat, title: r.title, messages: [] }; history.replaceState(history.state, "", `#/chat?c=${r.chat}`); route.q = new URLSearchParams(`c=${r.chat}`); $("#ctitle").textContent = r.title; setPref(LAST_CHAT, r.chat); }
     cur.messages = [...(cur.messages || []), userMsg];
     follow(r.chat);
     loadChats().then(refreshList);
@@ -2722,7 +3181,7 @@ function follow(cid) {
   const box = $("#msgs");
   if (!box) return;
   $("#curmsg")?.remove();
-  box.insertAdjacentHTML("beforeend", `<div class="mrow assistant" id="curmsg"><div class="msg assistant"><div class="typing"><span></span><span></span><span></span></div><div class="tiny faint" style="margin-top:6px">Working on it. You can close the app; the answer is saved here.</div></div></div>`);
+  box.insertAdjacentHTML("beforeend", `<div class="mrow assistant" id="curmsg"><div class="msg assistant"><div class="typing"><span></span><span></span><span></span></div></div></div>`);
   scrollChat(true);
   setSending(true);
   const es = (follower = new EventSource(`/api/chats/${cid}/stream`));
@@ -2737,7 +3196,7 @@ function follow(cid) {
         if (full?.messages && $("#msgs")) {
           cur = full; const b = $("#msgs"); b.innerHTML = "";
           full.messages.forEach((x, i) => b.insertAdjacentHTML("beforeend", bubble(x, i)));
-          codeCopy(b); bindMsgActions(); scrollChat(true);
+          codeCopy(b); bindMsgActions(); drawMade(); watchMade(); scrollChat(true);
         }
       }).catch(() => {});
       loadChats().then(refreshList);
@@ -3378,7 +3837,7 @@ async function vRepo() {
   view.innerHTML = `
   <a class="back" href="#/build">${ic.back}Code</a>
   <div class="row wrap between" style="gap:12px;align-items:flex-end">
-    <div><h1 style="font-size:26px">${esc(name)}</h1>
+    <div><h1 style="font-size:26px">${esc(name)}</h1>${fromChat("repo:" + name)}
       <div class="row wrap small muted" style="gap:8px;margin-top:6px"><span class="pill ${r.buildable ? "ok" : "archived"}">${r.buildable ? "builder can change it" : "studied only"}</span>
         ${r.source ? `<span class="wrap" style="max-width:340px">${esc(r.source)}</span>` : ""}${r.last ? `<span>· last commit ${rel(r.last.ts)}</span>` : ""}</div></div>
     <div class="row wrap" style="gap:8px">
@@ -3606,7 +4065,7 @@ function vBuildOne(id) {
   const canApprove = review && b.checks_ok && b.ci !== "failure" && !b.approve_on_ci;   // CI running: approve now, deploys when it passes
   view.innerHTML = `
   <a class="back" href="#/build">${ic.back}Code</a>
-  <h1 style="font-size:23px">#${b.id} ${esc(b.title)}</h1>
+  <h1 style="font-size:23px">#${b.id} ${esc(b.title)}</h1>${fromChat("build:" + b.id)}
   <div class="row wrap small muted" style="gap:8px;margin-top:6px"><span class="pill ${bcls(b.status)}">${BSTATUS[b.status] || b.status}</span><span>${esc(b.repo)}</span><span>· ${b.engine === "claude" ? "Claude Code" : "ChatGPT · Hermes"}</span><span>· ${esc(b.branch || "")}</span>${b.tokens ? `<span>· ${tok(b.tokens)} tokens${b.cached ? ` (${Math.round(100 * b.cached / b.tokens)} % cached)` : ""}, $0</span>` : ""}</div>
   <div class="row wrap" style="gap:6px;margin-top:10px">${liveLink("build:" + b.id)}</div>
   ${stepper(b.status)}
@@ -3947,11 +4406,12 @@ function vSystem() {
     ${down.length ? `<b class="err-t">${down.length} service${down.length > 1 ? "s" : ""} not running</b>` : "all services running"} · ${sy.failed?.length ? `<b class="err-t">failed: ${sy.failed.map((u) => {                // which one, one tap to it (UX review 2026-10-30)
       const c = (S.crew || []).find((x) => `${x.unit}.service` === u);
       return c ? `<a class="err-t" href="#/crew/${encodeURIComponent(c.id)}">${esc(c.name)}</a>` : esc(u.replace(/\.service$/, ""));
-    }).join(", ")}</b>` : "no errors"}</p></div></div>
+    }).join(", ")}</b>` : "no errors"}${sy.boot ? ` · last start ${rel(new Date(sy.boot.boot * 1000).toISOString())}, online in ${dur(sy.boot.ready_s)}` : ""}</p></div>
+    <a class="btn sm" href="#/files" title="What your missions made, the space it takes, the trash">${ic.doc}Files · ${fsize(S.files?.usage?.used || 0)}${(S.files?.usage?.pct || 0) >= 80 ? ` <b class="err-t">${S.files.usage.pct} %</b>` : ""}</a></div>
   <nav class="jump" id="stackjump" aria-label="Sections of this page"></nav>
+  ${phoneBanner()}
   <div class="section-h"><h2>Tools</h2><span class="tiny faint">every menu one tap away</span></div>
   <div id="toolsbox" style="margin-bottom:14px">${stackToolsHtml()}</div>
-  ${S.phone ? `<a class="banner info" href="#/phone" style="margin-bottom:14px">${ic.bolt}<span class="grow"><b>AI phone</b> · ${S.phone.stopped ? "stopped" : S.phone.connected ? "connected" : "not connected"}${S.phone.pending ? ` · ${S.phone.pending} waiting for your OK` : ""}</span>${ic.next}</a>` : ""}
   ${S.house ? `<a class="banner info" href="#/house" style="margin-bottom:14px">${ic.house}<span class="grow"><b>House</b> · ${S.house.connected ? `${(S.house.things || []).length} things, ${(S.house.echos || []).length} Echos` : S.house.reachable ? "setup not finished" : "Home Assistant not reachable"}</span>${ic.next}</a>` : ""}
   ${a2aCardHtml()}
   <div id="subs" style="margin-bottom:14px"></div>
@@ -4046,7 +4506,7 @@ function onState(s) {
   const wasRunning = S?.running?.id, first = !S;
   S = s;
   lastState = Date.now();
-  if (first && ["mission", "chat", "wiki", "new", "system", "build", "repo", "guide", "crew", "house", "tasks"].includes(route.name)) return render(true);
+  if (first && ["mission", "chat", "wiki", "new", "system", "build", "repo", "guide", "crew", "house", "tasks", "files", "file"].includes(route.name)) return render(true);
   if (route.name === "tasks" && !first) { tasksUpdate(); chrome(); return; }
   if (first && route.name === "swarm" && ["improve", "agents"].includes(swTab)) return render(true);   // FND-36: they read S
   if (route.name === "house" && !first) { houseUpdate(); chrome(); return; }

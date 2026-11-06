@@ -267,3 +267,100 @@ items:
     status: proposed
     parents: [SN-01, SN-18]
     sources: ['chat 2026-11-02: Briefings that change a decision', docs/NEXT-PHASE.md]
+  - id: MIS-23
+    title: "Results shows what you asked for, first"
+    statement: "A mission's Results shall begin with the files the owner asked it to make. Each file shall show its name,
+      words, checkboxes and size, whether it is final or a draft, how it was delivered, and Open, Download and Copy. A
+      file that was asked for and not saved shall be shown as asked for, not delivered, with the reason and a way to run
+      again. Drafts its runs left in the Ledger shall follow, then the run reports. The mission header, Home's result
+      card and the chat card shall show the files too. Files shall live outside the vault's git, so that deleting one
+      frees its space."
+    type: functional
+    priority: must
+    status: implemented
+    parents: [MIS-15, SN-01, SN-06]
+    sources: ['chat 2026-11-03: Why does it not show the actual result of the mission in results? Results should always
+        also show the results right? ... the mission files should be shown in the results section too or a dedicated files
+        section']
+    verify: {method: test, by: [tests/test_files.py::test_the_app_serves_a_file_for_reading_and_as_a_download_and_nothing_outside,
+      tests/test_files.py::test_results_lists_the_ledger_drafts_a_mission_s_runs_wrote]}
+    trace: [ops/files.py, images/mission-control/server.py, images/mission-control/runrecord.py, images/mission-control/web/static/app.js,
+      images/mission-control/web/static/app.css, images/mission-control/guide/04-missions.md, docs/DELIVERABLES.md, tests/test_files.py]
+  - id: MIS-24
+    title: "The mission saves the files it was asked for"
+    statement: "The files the owner asks for shall be recorded with the mission when it is made, and can be changed in its
+      Settings or by Hermes. The mission's agent shall be told them and shall save each one with file_save, either as
+      text or from a Ledger report unchanged. The tool is on its own server, given only to the mission agent. Saving a
+      file again shall keep the earlier version."
+    type: functional
+    priority: must
+    status: implemented
+    parents: [MIS-23]
+    sources: [docs/DELIVERABLES.md]
+    verify: {method: test, by: [tests/test_files.py::test_a_saved_file_keeps_its_earlier_versions_and_says_what_it_holds,
+      tests/test_files.py::test_a_ledger_report_is_saved_unchanged, tests/test_files.py::test_the_agent_is_told_what_to_save]}
+    trace: [ops/files.py, ops/missions.py, ops/mission_extras.py, prompts/mission.md, prompts/replays.json, config/agents.yaml,
+      config/litellm/config.yaml, ops/keys.sh]
+  - id: MIS-25
+    title: "Files arrive as real attachments; a missing one makes the run partial"
+    statement: "A run's delivery shall attach the files it saved: to the e-mail as attachments under their own names, and
+      on Telegram as documents after the result's message. Each file shall record its own delivery. A run that ends
+      without a file that was asked for shall be marked partial, and its notification and e-mail shall name the missing
+      file."
+    type: functional
+    priority: must
+    status: implemented
+    parents: [MIS-15, MIS-23]
+    sources: [docs/DELIVERABLES.md]
+    verify: {method: test, by: [tests/test_files.py::test_the_e_mail_carries_each_file_as_a_real_attachment,
+      tests/test_files.py::test_delivery_attaches_says_what_is_missing_and_records_it_per_file,
+      tests/test_files.py::test_the_run_s_end_names_what_is_missing_and_attaches_what_it_saved,
+      tests/test_files.py::test_the_run_is_partial_when_an_asked_file_is_missing]}
+    trace: [ops/mission_extras.py, ops/notify.py, ops/missions.py, ops/files.py]
+  - id: MIS-26
+    title: "Mission files are cleaned up by rules the owner sees"
+    statement: "Deleting a file shall move it, with its versions, to a trash it can be restored from for 30 days. Every
+      day a cleanup shall:
+      - keep only the newest 5 versions of each file;
+      - move to the trash the unpinned files of missions archived and untouched for 180 days;
+      - empty what has been in the trash for 30 days.
+      A Files page shall show every mission's files, the space they take against a limit, the trash and these rules,
+      and offer Clean up now, which first shows what it would do. Past 80 % of the limit the owner shall get a notice."
+    type: functional
+    priority: must
+    status: implemented
+    parents: [MIS-23, PLT-21]
+    sources: [docs/DELIVERABLES.md]
+    verify: {method: test, by: [tests/test_files.py::test_delete_goes_to_the_trash_and_restores,
+      tests/test_files.py::test_the_cleanup_follows_its_rules_and_a_dry_run_changes_nothing]}
+    trace: [ops/files.py, images/mission-control/web/static/app.js]
+  - id: MIS-27
+    title: "Hermes promises only what the stack can deliver"
+    statement: "When the owner asks for a file the stack cannot make (Word, PDF, images, archives), Hermes shall say so in
+      the chat and offer Markdown before any mission is made. mission_create shall refuse such a file. The tools'
+      descriptions shall say what can be made and how it is delivered."
+    type: functional
+    priority: must
+    status: implemented
+    parents: [MIS-24, AST-02]
+    sources: ['chat 2026-11-03: Check this mission i asked it to send me a md attachment ... Why does it not follow my instructions?']
+    verify: {method: test, by: [tests/test_files.py::test_hermes_says_at_once_what_the_stack_cannot_deliver,
+      tests/test_files.py::test_what_the_stack_cannot_make_is_refused_with_the_reason,
+      tests/test_files.py::test_the_app_and_the_runner_agree_on_what_a_file_can_be]}
+    trace: [images/mission-control/server.py, images/mission-control/web/static/guide.js]
+  - id: MIS-28
+    title: "A newsletter on a watched topic reaches that topic"
+    statement: "While the owner grants Gmail read, a newsletter that names an active briefing's topic (the watchlist and
+      searches of its TOPIC.md) and passes one check against its key questions shall go to that topic's folder and be read by
+      its next report as untrusted data, with the mail named as a source line; through the report it reaches the topic's wiki.
+      A mail without a List-Unsubscribe header, a protected mail and the stack's own briefings shall never go there, no link in a
+      mail shall be opened, and a mail's text shall never decide what the desk fetches. The topic's page shall list each mail with
+      what came of it: waiting for the next report, cited in a report, or read and not used."
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-10, SN-05]
+    sources: ['chat 2026-11-04: does everything in my uranium newsletter reach the wiki and make the AI smarter?', FND-121]
+    findings: [FND-121]
+    verify: {method: test, by: [tests/test_topic_mail.py::test_a_newsletter_on_a_watched_topic_goes_to_that_topic_as_untrusted_data, tests/test_topic_mail.py::test_only_a_list_s_mail_goes_to_a_topic_never_a_person_s_or_the_stack_s_own_or_a_protected_one, tests/test_topic_mail.py::test_a_mail_the_check_leaves_out_stays_out_and_says_why, tests/test_topic_mail.py::test_a_usage_limit_leaves_the_mails_for_the_next_run, tests/test_topic_mail.py::test_the_listing_reaches_back_to_the_last_finished_run_and_says_when_it_held_more, tests/test_topic_mail.py::test_a_topic_s_names_come_from_its_brief_and_short_capitals_match_exactly, tests/test_topic_mail.py::test_a_long_mail_is_narrowed_around_the_names_and_every_gap_is_marked, tests/test_topic_mail.py::test_the_next_report_reads_a_handed_mail_as_data_and_names_it_as_a_source, tests/test_topic_mail.py::test_a_filed_report_settles_its_mails_so_they_are_read_once, tests/test_topic_mail.py::test_the_topic_s_page_lists_each_mail_and_what_came_of_it, tests/test_topic_mail.py::test_the_e_mail_of_a_report_drops_the_link_only_the_app_can_open]}
+    trace: [ops/inbox.py, images/desk/desk.py, ops/desk.sh, ops/missions.py, ops/provenance.py, prompts/inbox.md, prompts/desk.md, images/mission-control/web/static/app.js]

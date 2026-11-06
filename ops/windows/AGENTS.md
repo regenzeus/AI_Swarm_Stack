@@ -11,6 +11,9 @@ by `host-setup.ps1`.
 | `offsite-copy.ps1` | copies the encrypted nightly backup to OneDrive |
 | `bitbucket-sync.ps1` | keeps Bitbucket level with Forgejo for TestRepo |
 | `rehearse-new-pc.ps1` | builds the whole stack from scratch in a throwaway WSL distro |
+| `desk.ps1`, `desk-common.ps1`, `desk-settings.json` | PLT-31: the stack's one way to ask Windows: status, and read-only questions to Claude Code in the folders of `C:\AI\ops\desk-folders.txt` |
+| `claude-remote.ps1` | PLT-32: keeps one `claude remote-control` running from logon, for the phone |
+| `desk-setup.ps1`, `desk-signin.ps1` | install or update those (no admin), and the one sign-in only the owner can do |
 | `disk-scan.ps1` | read-only disk analysis (like TreeSize) for the PC cleanup mission, started by `host-probe.ps1` on the runner's request; writes `C:\AI\exports\.host\diskscan.json` |
 
 ## Rules
@@ -18,3 +21,5 @@ by `host-setup.ps1`.
 - Windows PowerShell 5.1 syntax: no `&&`, `||`, `?:`, `??`. Write files with an explicit `-Encoding utf8`.
 - Never need admin rights, never change system or security settings, never touch router or firewall rules.
 - Scripts that are copied elsewhere say so in their header and are kept in sync from here.
+- WSL asks, Windows fetches (DEC-43). A request is data: never a command to run, never a generic "run this", and interop stays off.
+  The list of folders stays on Windows, where WSL cannot write. A level that changes anything needs the owner's tap on the whole job.

@@ -31,15 +31,21 @@ def crew_history(unit, days=30, limit=40):
         t = int(e.get("__REALTIME_TIMESTAMP", 0)) / 1e6
         msg = e.get("MESSAGE") if isinstance(e.get("MESSAGE"), str) else ""
         r = runs.setdefault(inv, {"start": t, "end": t, "state": "running", "log": []})
-        r["start"], r["end"] = min(r["start"], t), max(r["end"], t)
-        if "Failed with result" in msg or "Main process exited, code=exited, status=" in msg and "status=0/" not in msg:
+        r["end"] = max(r["end"], t)
+        if "Skipped due to" in msg or msg.startswith("stack gate: skipped"):      # the gate kept it from starting (PLT-28): no run
+            r["state"] = "skipped"
+        elif msg.startswith("stack gate: ready"):                                 # its wait for the stack is not its run time
+            r["start"] = t
+            r["log"].clear()
+            continue
+        elif "Failed with result" in msg or "Main process exited, code=exited, status=" in msg and "status=0/" not in msg:
             r["state"] = "failed"
         elif ("Deactivated successfully" in msg or msg.startswith("Finished ")) and r["state"] != "failed":
             r["state"] = "ok"
         if msg and not msg.startswith(("Started ", "Starting ", "Finished ", "Consumed ")) and "install out of sync" not in msg \
                 and f"{unit}.service" not in msg:
             r["log"].append(msg)
-    out = sorted(runs.values(), key=lambda r: -r["start"])[:limit]
+    out = sorted((r for r in runs.values() if r["state"] != "skipped"), key=lambda r: -r["start"])[:limit]
     for r in out:
         r["seconds"] = round(r["end"] - r["start"], 1)
         r["log"] = ([f"({len(r['log']) - 60} earlier lines: the unit's journal has all)"] if len(r["log"]) > 60 else []) + r["log"][-60:]  # cap: list

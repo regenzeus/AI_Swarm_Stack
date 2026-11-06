@@ -5,7 +5,7 @@ part: Everyday use
 icon: target
 minutes: 7
 summary: Give the stack an ongoing job, such as a daily briefing or a research project, and it keeps working on it on a schedule.
-views: [mission, new, read, live]
+views: [mission, new, read, live, files, file]
 ---
 A **mission** is a standing job. You describe it once, and an agent works on it on a schedule, on demand, or when
 something happens. "Mission" is the word for the job; the thing doing it is the **agent**. Each run's results, cost,
@@ -68,6 +68,18 @@ choose the detail (Everything adds every single model call). Builds (Code) and c
 
 **Daily briefing.** The Topic Desk reads news sources, filings and prices for a topic and writes a structured
 report: what happened, why it matters, sources. Good for markets, companies, industries.
+
+A newsletter can feed a briefing too. While you grant Gmail read, the Inbox digest reads each new newsletter for the names in
+the briefing's watchlist and searches, and asks one model whether the mail holds a fact for its key questions. A mail that does
+goes to the next report, which names it in its sources; through the report it reaches the topic's wiki. It is read as data, its
+links are never opened, and your own mail from people is never looked at for this. The briefing's page lists these under **From
+your e-mail**: waiting for the next report, cited, or read and not used. The Inbox digest's page says which mails it left out and why.
+
+```try
+label: See what your e-mail gave a briefing
+chat: Which newsletters fed my uranium briefing this week, and what did the report take from them?
+note: Hermes reads the topic's mail folder and its reports. The same list is on the briefing's page, under From your e-mail.
+```
 
 **Long-term task.** An agent works on a goal over many runs and keeps its own notes between them. It researches,
 compares and builds up an answer over days. Good for "find the best uranium producer to watch" or "track this
@@ -157,6 +169,28 @@ note: Hermes reads the mission, then updates the schedule and delivery, and tell
 
 "Research X and e-mail me" becomes a **one-off mission**: it runs once, delivers, and archives itself. You'll
 still find it in the archive later.
+
+## Files it delivers
+
+When you ask a mission for something you want to keep, such as a spec, a primer or a table, you name it as a
+**file**. "Send me the checkbox spec as a Markdown file" becomes `checkbox-spec.md`.
+
+- **Where you name files.** Hermes records the files when it creates the mission. You can also name them on the
+  agent page under Settings → **Files it must deliver**.
+- **What it can make.** Markdown, CSV, JSON and plain text, up to 2 MB each. It can't make Word, PDF, images or
+  archives, and Hermes says so before the mission starts.
+- **How the agent saves them.** The agent saves each file with `file_save`. Saving again keeps the earlier version.
+- **Results.** The agent page's Results starts with **What you asked for**: each file with Open, Download and Copy,
+  and how it was delivered (e-mailed as an attachment, sent on Telegram). A file that was asked for but not saved is
+  shown in red as **Asked for, not delivered**, with **Run again for it**. That run is marked **Partial**.
+- **Delivery.** The e-mail attaches the files and Telegram sends them as documents. Drafts the agent left in the
+  Ledger are listed below the files, then the run reports.
+- **Files page.** **Stack → Files** shows every mission's files, the space they take, and the trash.
+  - Deleting a file moves it to the trash, where you can restore it for 30 days.
+  - Each day the cleanup keeps the newest 5 versions of each file.
+  - It moves the files of missions archived 180 days ago to the trash, unless you pinned them.
+  - It empties the trash after 30 days.
+  - **Clean up now** shows what it would do before it does anything.
 
 ## What each run costs
 

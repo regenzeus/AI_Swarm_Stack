@@ -92,6 +92,12 @@ main { flex: 1; min-width: 0; }
 .rfilters .tag { padding: 4px 10px; font-size: 12.5px; min-height: 0; line-height: 1.4; white-space: nowrap; }
 .rfilters .chips { gap: 6px; }
 .rfilters .input { padding: 7px 10px; font-size: 14px; }
+.rfilters { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
+.rfilters .rsel { flex: none; width: auto; min-width: 0; }
+.rfilters .rfirst { padding-right: 30px; }             /* the info control sits at the end of this line */
+.rfilters .rfirst .grow { min-width: 0; flex: 1 1 0; width: 0; }
+.rfilters .rtopic { max-width: 118px; padding: 3px 6px; font-size: 12.5px; }
+.rfilters .explain { margin-bottom: -8px; }
 .rburst > summary { list-style: none; cursor: pointer; }
 .rburst > summary::-webkit-details-marker { display: none; }
 .rburst[open] > summary { border-bottom: 0; }
@@ -488,16 +494,34 @@ body.chatmode .view { padding-bottom: 0; }
 .chatpane { display: flex; flex-direction: column; height: 100%; min-height: 0; }
 .chathead { display: flex; align-items: center; gap: 10px; padding: 2px 0 10px; }
 .chathead h1 { font-size: 19px; cursor: text; }
+.chatti { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+.chatstat { display: flex; align-items: center; gap: 10px; flex: none; }
+.actl { display: none; }
 .chatchip { display: none; }
 @media (max-width: 959px) {                              /* on a phone the chat's own bar is the only top bar: no second banner */
-  body.chatmode .chathead .chatchip { display: inline-flex; flex: none; height: 28px; padding: 0 10px; font-size: 12px; gap: 6px; }
+  body.chatmode .chathead .chatchip { display: inline-flex; flex: none; height: 24px; padding: 0 9px; font-size: 12px; gap: 5px; }
   body.chatmode .view { padding-top: 0; }
-  body.chatmode .chatwrap { height: calc(100dvh - 64px - env(safe-area-inset-bottom)); }
+  /* APP-40: pinned between the screen's top and the tab bar. A height from 100dvh went stale when the keyboard closed and left a gap under the box. */
+  body.chatmode { overflow: hidden; overscroll-behavior: none; }
+  body.chatmode .chatwrap { position: fixed; top: 0; left: 16px; right: 16px; bottom: calc(65px + env(safe-area-inset-bottom)); height: auto; }
+  /* the title has the width and takes the lines it needs; what the chat is doing sits under it */
+  body.chatmode .chathead { align-items: flex-start; gap: 8px; }
+  body.chatmode .chatti { flex-direction: column; align-items: stretch; gap: 5px; align-self: center; }
+  body.chatmode .chatti h1 { font-size: 16px; font-weight: 650; line-height: 1.25; text-wrap: pretty; overflow-wrap: anywhere; }
+  body.chatmode .chatstat { flex-wrap: wrap; gap: 6px; flex: none; }
+  body.chatmode .chatstat .madechip { height: 24px; font-size: 12px; }
+  body.chatmode .chatstat .icon-btn { width: auto; height: 24px; display: inline-flex; align-items: center; gap: 5px; padding: 0 9px; border-radius: 999px; font-size: 12px; color: var(--muted); }
+  body.chatmode .chatstat .icon-btn svg { width: 13px; height: 13px; }
+  body.chatmode .actl { display: inline; }
   body.chatmode .chathead { position: sticky; top: 0; z-index: 5; margin: 0 -16px 6px; padding: calc(env(safe-area-inset-top) + 8px) 12px 8px;
     background: color-mix(in srgb, var(--bg) 78%, transparent); backdrop-filter: saturate(160%) blur(18px); -webkit-backdrop-filter: saturate(160%) blur(18px);
     border-bottom: 1px solid var(--border); }
   body.chatmode .chathead h1 { font-size: 17px; }
   body.chatmode .chatlist.open { top: calc(env(safe-area-inset-top) + 58px); }
+}
+@media (max-width: 959px) and (max-height: 560px) {       /* the keyboard is open: the tab bar steps aside, the box sits on the keyboard */
+  body.chatmode .tabbar { display: none; }
+  body.chatmode .chatwrap { bottom: 0; }
 }
 .msgs { flex: 1; min-height: 0; overflow-y: auto; padding: 4px 2px 12px; display: flex; flex-direction: column; gap: 14px; overscroll-behavior: contain; }
 .mrow { display: flex; flex-direction: column; max-width: 100%; }
@@ -512,6 +536,55 @@ body.chatmode .view { padding-bottom: 0; }
 .macts button { border: 0; background: transparent; color: var(--muted); padding: 5px; border-radius: 8px; cursor: pointer; display: grid; }
 .macts button:hover { background: var(--surface-2); color: var(--text); }
 .macts svg { width: 16px; height: 16px; }
+/* MIS-23 to MIS-26: a mission's files: Results' cards, the reader, the Files page */
+.fcards { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.fcard { display: flex; gap: 12px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); }
+.fcard.missing { border-color: var(--err); background: var(--err-bg); }
+.fc-ic { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; background: var(--ok-bg); color: var(--ok); flex: none; }
+.fcard.missing .fc-ic { background: transparent; color: var(--err); }
+.fc-ic svg { width: 18px; height: 18px; }
+.fc-body { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.fc-name { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; font-size: 15px; }
+.fc-name a { color: var(--text); }
+.fc-acts { gap: 6px; margin-top: 8px; }
+.fc-sent { margin-top: 2px; }
+.fitem .small > svg { width: 13px; height: 13px; vertical-align: -2px; color: var(--ok); }
+.mc-files { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 0 54px; }
+.ok-t { color: var(--ok); font-weight: 600; } .err-t { color: var(--err); font-weight: 600; }
+.tag.warn { color: var(--warn); background: var(--warn-bg); }
+.tag svg { width: 12px; height: 12px; margin-right: 4px; vertical-align: -1px; }
+.fbar { display: flex; height: 10px; border-radius: 6px; background: var(--surface-2); overflow: hidden; margin: 10px 0 6px; }
+.fbar span { background: var(--accent); } .fbar span.tr { background: var(--warn); }
+.litem { align-items: center; }
+/* APP-39: what a chat made: cards under the answer, the Made here sheet, the line when it ends, the way back */
+.madecards { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+.madecards:empty { display: none; }
+.madecard { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--text); text-decoration: none; }
+a.madecard:hover { background: var(--surface-2); }
+.madecard > svg { width: 16px; height: 16px; color: var(--faint); flex: none; }
+.madecard.flash { outline: 2px solid var(--accent); outline-offset: 2px; }
+.mc-ic { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 9px; background: var(--surface-2); color: var(--accent); flex: none; }
+.mc-ic svg { width: 17px; height: 17px; }
+.mc-body { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.mc-name { font-size: 14px; }
+.mc-line { overflow-wrap: anywhere; }
+.madeline { display: flex; align-items: center; gap: 6px; } .madeline svg { width: 13px; height: 13px; flex: none; }
+.chatpane { position: relative; }
+.madechip { cursor: pointer; border: 1px solid var(--border); background: var(--surface); color: var(--text); gap: 6px; }
+.madechip svg { width: 14px; height: 14px; color: var(--accent); }
+.madechip[hidden], .madesheet[hidden] { display: none; }
+.madesheet { position: absolute; right: 0; top: 46px; z-index: 30; width: min(440px, calc(100vw - 32px)); max-height: 60vh; overflow: auto; padding: 12px; display: flex; flex-direction: column; gap: 6px; box-shadow: var(--shadow); }
+.msgnote { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 12px; background: var(--ok-bg); font-size: 14px; }
+.msgnote > svg { width: 16px; height: 16px; color: var(--ok); flex: none; margin-top: 3px; }
+.msgnote .md p { margin: 0 0 6px; } .msgnote .md p:last-child { margin: 0; }
+.cmade { display: inline-flex; gap: 5px; margin-left: 7px; color: var(--faint); font-size: 11px; vertical-align: -1px; }
+.cmade span { display: inline-flex; align-items: center; gap: 1px; } .cmade svg { width: 12px; height: 12px; }
+.fromchat { display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; color: var(--muted); }
+.fromchat svg { width: 14px; height: 14px; color: var(--accent); flex: none; }
+@media (max-width: 600px) {                     /* a phone's chat bar holds six things: the title keeps the room for words */
+  .madechip .ml { display: none; } .madechip { padding: 0 8px; gap: 3px; }
+  .chathead { gap: 6px; } .chathead h1 { font-size: 16px; line-height: 1.25; }
+}
 .tools { margin: 0 0 8px; font-size: 13px; color: var(--muted); }
 .tools summary { cursor: pointer; list-style: none; padding: 5px 10px; border-radius: 10px; background: var(--surface); border: 1px solid var(--border); display: inline-flex; gap: 6px; align-items: center; }
 .tools summary::-webkit-details-marker { display: none; }
@@ -681,7 +754,7 @@ details[open].sugg > summary h2::after, details[open].section > summary h2::afte
 .cgrant:first-child { border-top: 0; padding-top: 0; }
 
 /* observability: files, statistics, agent health, crew pages */
-.obsb { margin-top: 8px; } .obsb > summary { cursor: pointer; }
+.obsb { margin-top: 8px; overflow-wrap: anywhere; } .obsb > summary { cursor: pointer; }   /* a long URL in a tool error stays inside the card (375 px) */
 .flist { display: grid; gap: 2px; margin-top: 4px; }
 .frow { display: flex; gap: 6px; align-items: center; min-width: 0; padding: 3px 0; border-bottom: 1px solid var(--border); }
 .tag.fmod { color: var(--warn); background: var(--warn-bg); }
@@ -862,7 +935,8 @@ a.agt { color: inherit; text-decoration: none; }
 .swflow.swscore td:first-child { white-space: normal; }
 
 /* the swarm's timeline, interaction map, delegations and team (SWM-103 to SWM-106) */
-.swtl { overflow-x: auto; margin-top: 4px; }
+.swtl { overflow-x: auto; margin-top: 4px; scrollbar-width: none; }
+.swtl::-webkit-scrollbar { display: none; }
 .swtl svg { display: block; }
 .swbar { cursor: pointer; }
 .swbar.sel { stroke: var(--text); stroke-width: 2; }
@@ -975,6 +1049,7 @@ a.swconn:hover { border-color: var(--accent); }
 
 /* Agents: the map (agents as dots, lines between who worked together), one agent's page (1 Nov 2026) */
 .swmapsvg { position: relative; width: 100%; border-radius: 12px; background: var(--surface-2); overflow: hidden; }
+.swmapsvg .chartbtns { flex-direction: row; }
 .swnum { font-size: 10px; font-weight: 600; fill: var(--text); paint-order: stroke; stroke: var(--surface-2); stroke-width: 3px; text-anchor: middle; dominant-baseline: middle; }
 .swlive { animation: swpulse 1.6s ease-in-out infinite; }
 @keyframes swpulse { 50% { opacity: 0.25; } }
@@ -984,12 +1059,15 @@ a.swconn:hover { border-color: var(--accent); }
 .swlbl.swag { text-anchor: middle; font-size: 11px; stroke-width: 3px; }
 
 /* APP-31: folded explanations (guide.js explain) */
-.explain { margin-top: 4px; }
-.explain > summary { list-style: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--faint); padding: 3px 0; }
+/* APP-41: an explanation is one small control at the end of the line above, and opens under it; it takes no room until asked for */
+.explain { height: 0; text-align: right; position: relative; }
+.explain[open] { height: auto; text-align: left; margin: 2px 0 4px; }
+.explain > summary { list-style: none; cursor: pointer; display: inline-grid; place-items: center; width: 28px; height: 28px; margin-top: -30px; position: relative; top: 0; color: var(--faint); vertical-align: top; }
+.explain[open] > summary { position: absolute; right: 0; top: 0; color: var(--muted); }
 .explain > summary::-webkit-details-marker { display: none; }
-.explain > summary:hover, .explain[open] > summary { color: var(--muted); }
-.explain .xi { display: inline-grid; place-items: center; width: 14px; height: 14px; border: 1px solid currentColor; border-radius: 50%; font-size: 9.5px; font-weight: 700; font-style: italic; }
-.explain > div { margin: 2px 0 4px; }
+.explain > summary:hover { color: var(--muted); }
+.explain .xi { display: inline-grid; place-items: center; width: 16px; height: 16px; border: 1px solid currentColor; border-radius: 50%; font-size: 10px; font-weight: 700; font-style: italic; }
+.explain > div { margin: 2px 0 4px; padding-top: 30px; margin-top: -30px; }
 
 /* APP-34: the calm theme. Section titles in sentence case, counts in grey, flat buttons and badges: colour is kept for
    what needs attention (failed, waiting for you, running) */
@@ -1067,3 +1145,116 @@ h2 { font-size: 15px; font-weight: 650; text-transform: none; letter-spacing: -.
 .fi-top { align-items: center; }
 .homenew { position: fixed; top: calc(env(safe-area-inset-top, 0px) + 10px); left: 50%; transform: translateX(-50%); z-index: 40;
   box-shadow: 0 4px 14px rgba(0,0,0,.35); }
+
+/* ---------- APP-42 to APP-45: the chat: a drawer of chats, a quiet header, one tap to a screenshot, room to read ---------- */
+.chatchip[hidden] { display: none !important; }
+.chatstat:not(:has(> :not([hidden]))) { display: none !important; }
+.chathead h1 { cursor: pointer; margin: 0; }
+.chathead .icon-btn { border: 0; background: transparent; color: var(--muted); flex: none; }
+.chathead .icon-btn svg { width: 22px; height: 22px; }
+body.chatmode .chathead { align-items: center; }
+.ctitlein { width: 100%; font: inherit; padding: 4px 8px; }
+.chatmenu { position: absolute; right: 0; top: 52px; z-index: 30; min-width: 210px; padding: 6px; display: flex; flex-direction: column; box-shadow: 0 16px 40px -12px rgba(0,0,0,.55); }
+.chatmenu[hidden] { display: none; }
+.chatmenu > * { display: flex; align-items: center; gap: 12px; width: 100%; padding: 11px 12px; border: 0; border-radius: 10px; background: none; color: var(--text); font: 500 15px Inter, sans-serif; cursor: pointer; text-align: left; }
+.chatmenu > *:hover { background: var(--surface-2); }
+.chatmenu svg { width: 18px; height: 18px; flex: none; color: var(--muted); }
+.chatmenu .err-t, .chatmenu .err-t svg { color: var(--err); }
+
+/* the list: a drawer on a phone, a side column on a big screen */
+.cscrim { position: fixed; inset: 0; z-index: 19; background: rgba(0,0,0,.5); animation: fadein .18s ease both; }
+.cscrim[hidden] { display: none; }
+.chatlist { display: flex; flex-direction: column; gap: 10px; min-height: 0; padding: 12px; background: var(--bg2); }
+.clhead { display: flex; align-items: center; justify-content: space-between; min-height: 38px; padding: 0 2px 0 6px; }
+.clhead b { font-size: 20px; font-weight: 650; }
+.clclose { border: 0; background: transparent; color: var(--muted); }
+.cnew { width: 100%; justify-content: center; min-height: 46px; border-radius: 14px; font-size: 15px; flex: none; }
+.clsearch { padding: 0 10px; border-radius: 12px; background: var(--surface-2); flex: none; }
+.clsearch .input { border: 0; background: transparent; padding: 10px 2px; font-size: 15px; box-shadow: none !important; }
+.citems { flex: 1; min-height: 0; overflow-y: auto; margin: 0 -4px; padding: 0 4px; overscroll-behavior: contain; }
+.citems .cgroup { padding: 14px 8px 6px; text-transform: none; letter-spacing: 0; font-size: 13px; font-weight: 600; color: var(--muted); }
+.citem { position: relative; display: block; padding: 0; border-radius: 12px; font-size: 15px; color: var(--text); }
+.citem:hover { background: var(--surface-2); }
+.citem.on { background: var(--surface-3); }
+.cmain { display: flex; flex-direction: column; gap: 2px; padding: 10px 40px 10px 10px; color: inherit; text-decoration: none; min-width: 0; }
+.cname { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
+.cname .dot { flex: none; align-self: center; }
+.cttl { flex: 1; min-width: 0; font-weight: 550; overflow-wrap: anywhere; line-height: 1.3; }
+.cwhen { color: var(--faint); }
+.cmeta { display: flex; align-items: center; gap: 6px; min-height: 18px; min-width: 0; color: var(--muted); font-size: 13px; }
+.clast { flex: 1; min-width: 0; overflow-wrap: anywhere; line-height: 1.35; }
+.cmeta .cmade { margin: 0; flex: none; }
+.cmore { position: absolute; right: 4px; top: 6px; width: 34px; height: 34px; display: grid; place-items: center; border: 0; border-radius: 10px; background: none; color: var(--faint); cursor: pointer; }
+.cmore:hover { background: var(--surface-3); color: var(--text); }
+.cmore svg { width: 18px; height: 18px; }
+.cacts { display: flex; gap: 6px; padding: 0 10px 10px; }
+.cacts[hidden] { display: none; }
+.cacts button { flex: 1; min-height: 38px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--text); font: 500 14px Inter, sans-serif; cursor: pointer; }
+.cacts .err-t { color: var(--err); }
+@media (max-width: 959px) {
+  .chatlist, .chatlist.open { display: flex; position: fixed; z-index: 20; top: 0; bottom: 0; left: 0; right: auto; width: min(86vw, 340px); max-height: none; height: auto; overflow: hidden;
+    padding: calc(env(safe-area-inset-top) + 10px) 12px calc(env(safe-area-inset-bottom) + 12px); border-right: 1px solid var(--border); box-shadow: 16px 0 44px -18px rgba(0,0,0,.7); }
+  .chatlist { transform: translateX(-104%); visibility: hidden; transition: transform .24s cubic-bezier(.2,.8,.2,1), visibility 0s .24s; }
+  .chatlist.open { transform: none; visibility: visible; transition: transform .24s cubic-bezier(.2,.8,.2,1); }
+  body.chatmode .chatlist.open { top: 0; }
+  .chatlist.dragging { transition: none; visibility: visible; }
+  body.chatmode .chatwrap, .msgs, .citems { touch-action: pan-y; }   /* a sideways swipe belongs to the drawer */
+  .md pre, .md table, .cquick { touch-action: auto; }
+  body.cdrawer .tabbar { display: none; }                /* the drawer has the whole screen's height */
+}
+@media (min-width: 960px) {
+  .chatlist, .chatlist.open { position: static; display: flex; height: 100%; max-height: none; border: 1px solid var(--border); border-radius: var(--r); background: var(--surface); }
+  .clclose, .cscrim { display: none; }
+  .chatmenu { top: 44px; }
+}
+
+/* messages: room to read; actions come on a tap */
+.msgs { gap: 18px; padding-top: 8px; }
+.msg { font-size: 16px; line-height: 1.6; }
+.msg.user { max-width: 85%; border-radius: 20px; border-bottom-right-radius: 6px; padding: 10px 15px; }
+.msg.assistant { padding: 0 2px; }
+.macts { display: none; opacity: 1; margin-top: 6px; gap: 2px; }
+.mrow:last-child .macts, .mrow.show .macts { display: flex; }
+.mrow.user .macts { justify-content: flex-end; }
+.macts button { padding: 7px; border-radius: 10px; }
+.macts svg { width: 17px; height: 17px; }
+@media (hover: hover) {
+  .macts { display: flex; visibility: hidden; }
+  .mrow:hover .macts, .mrow:last-child .macts, .mrow.show .macts { visibility: visible; }
+}
+#curmsg { animation: fadein .2s ease both; }
+.tools { margin: 0 0 8px; font-size: 14px; }
+.tools summary { background: none; border: 0; padding: 2px 0; color: var(--muted); }
+.tools summary::after { content: ""; width: 7px; height: 7px; margin-left: 2px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(-45deg); transition: transform .15s; }
+.tools[open] summary::after { transform: translateY(-2px) rotate(45deg); }
+.tobwrap { position: relative; height: 0; flex: none; }
+.tobottom { position: absolute; left: 50%; bottom: 10px; z-index: 4; width: 38px; height: 38px; margin-left: -19px; display: grid; place-items: center; border: 1px solid var(--border-2); border-radius: 50%; background: var(--surface-3); color: var(--text); box-shadow: 0 8px 22px -8px rgba(0,0,0,.6); cursor: pointer; }
+.tobottom[hidden] { display: none; }
+.tobottom svg { width: 18px; height: 18px; }
+.empty-chat { margin: auto 0; padding: 0 2px 8px; }
+.chello { font-size: 26px; font-weight: 600; letter-spacing: -.01em; line-height: 1.25; margin: 0 0 18px; }
+.suggest { flex-direction: column; align-items: stretch; gap: 8px; margin: 0; }
+.suggest button { text-align: left; border-radius: 14px; padding: 12px 14px; font-size: 15px; color: var(--text); background: var(--surface); border-color: var(--border); }
+.suggest button:hover { background: var(--surface-2); }
+
+/* the composer: one calm box; pictures one tap above it */
+.cquick { display: none; gap: 8px; padding: 2px 2px 8px; overflow-x: auto; flex: none; scrollbar-width: none; }
+.cquick::-webkit-scrollbar { display: none; }
+@media (pointer: coarse) { .chatpane.cfocus .cquick, .chatpane.cempty .cquick { display: flex; } }
+.qchip { display: inline-flex; align-items: center; gap: 7px; flex: none; min-height: 38px; padding: 0 13px; border: 1px solid var(--border-2); border-radius: 999px; background: var(--surface); color: var(--text); font: 500 14px Inter, sans-serif; white-space: nowrap; cursor: pointer; }
+.qchip:active { background: var(--surface-3); }
+.qchip svg { width: 17px; height: 17px; color: var(--accent); flex: none; }
+.composer2 { border-radius: 24px; padding: 6px 8px 8px; background: var(--surface-2); border-color: var(--border); }
+.composer2:focus-within { border-color: var(--border-2); }
+.chatpane.cdrop .composer2 { outline: 2px dashed var(--accent); outline-offset: 2px; }
+.composer2 textarea { font-size: 16px; line-height: 1.45; min-height: 40px; padding: 8px 10px; }
+.composer2 .crow { gap: 2px; }
+.composer2 .icon-btn { border: 0; background: transparent; color: var(--muted); }
+.composer2 .icon-btn svg { width: 20px; height: 20px; }
+.pick { border: 0; background: transparent right 6px center / 10px no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6' fill='none' stroke='%238e97ab' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 1l4 4 4-4'/%3E%3C/svg%3E"); padding: 7px 20px 7px 8px; font: 500 13px Inter, sans-serif; color: var(--muted); max-width: 34vw; border-radius: 10px; }
+.sendbtn, .btn.primary.sendbtn { width: 38px; height: 38px; border-radius: 50%; flex: none; transition: opacity .15s; }
+.sendbtn.idle { opacity: .35; }
+.sendbtn.stopping { background: var(--surface-3); color: var(--text); }
+.pend { padding: 2px 4px 4px; }
+.pchip { padding: 4px 8px 4px 4px; border-radius: 12px; background: var(--surface-3); }
+.pchip img { width: 44px; height: 44px; border-radius: 9px; }

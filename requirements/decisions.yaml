@@ -212,6 +212,15 @@ items:
 - {id: DEC-39, date: 2026-11-02, title: SQLite for the swarm, decision: 'The owner confirmed SQLite for the swarm''s Ledger ("keep
     SQLite for the swarm database ... Yes do all"): one writer (the Swarm service), WAL, a nightly snapshot the restore drill
     checks, 7 MB. Postgres would add a second failure point and buy nothing on one machine. Closes design decision 2 (SWM-73).'}
+- {id: DEC-43, date: 2026-11-06, title: The stack asks Windows; Windows fetches, decision: 'The owner wanted the stack to talk to Claude Code outside WSL. WSL stays cut off (interop and automount off, no port): a small script on Windows fetches requests from a folder and treats them as data, the way the host probe fetches a disk scan. Status needs no approval; a question goes to Claude with reading tools only, in folders listed on Windows where WSL cannot write; only a turn of the owner''s own chat can ask. Changes on Windows would need the owner''s tap on the whole job and are not built. Build 27, a second Claude inside WSL, was rejected: it could not reach the Windows sessions.'}
+- {id: DEC-42, date: 2026-11-04, title: The AI phone stays on Wi-Fi, decision: 'Asked whether the S22 will ever run without Wi-Fi, on a SIM only,
+    the owner answered "No, always Wi-Fi". Any Wi-Fi counts, the S25 hotspot included, so ADB over Wi-Fi and Tailscale stay the only way in and
+    the agent app of docs/PHONE-ANYWHERE.md Stage 2 is not built.'}
+- {id: DEC-41, date: 2026-11-04, title: The AI phone has no single-step approvals, decision: 'The owner again found approving single
+    actions too much ("I do not want to allow every singel action on AI Phone. I want to allow more macro."). DEC-38 had added one OK per
+    task but left a card per action as the fallback when an agent did not ask for a task. That fallback is gone: taps, swipes, keys,
+    typing and opening apps or addresses run only inside an approved job or free mode, and otherwise are refused with the instruction
+    to ask for the job. Money, settings, deleting, private text in free mode, passwords, blocked apps and Stop are unchanged.'}
 - {id: DEC-40, date: 2026-11-02, title: The Memory Keeper fixes the memory by rules, decision: 'The owner asked for one dedicated
     agent that runs periodically and fixes the memory systems, contradictions and false information included, designed
     carefully to best practice, and answered D2 ("Yes do all"): the memory agent may retire duplicates, test noise and facts

@@ -95,10 +95,41 @@ def test_a_snapshot_with_a_leftover_runs_no_tests_and_pushes_nothing(tmp_path, m
     monkeypatch.setattr(P, "WORK", tmp_path)
     monkeypatch.setattr(P, "committed", lambda: "0" * 40)
     monkeypatch.setattr(P, "load_map", lambda: TERMS)
-    monkeypatch.setattr(P, "build", lambda head, terms: ({"a.md": "JANE was here"}, set()))
+    monkeypatch.setattr(P, "build", lambda head, terms, assets=None: ({"a.md": "JANE was here"}, set()))
     monkeypatch.setattr(P, "tests", lambda dest: (_ for _ in ()).throw(AssertionError("tests ran")))
     monkeypatch.setattr(P, "push", lambda dest, head: (_ for _ in ()).throw(AssertionError("pushed")))
     monkeypatch.setattr(P, "record", lambda **r: rows.append(r))
     assert P.main("push") == 1 and rows[0]["result"] == "stopped" and rows[0]["problems"] == 2    # "Jane" and "jane"
     assert not (tmp_path / "tree").exists()                       # nothing personal stays on disk either
     assert json.dumps(rows).lower().count("jane") == 0
+
+
+def test_images_come_only_from_one_folder_and_hide_nothing(tmp_path):
+    jpg = b"\xff\xd8\xff\xe0" + b"\x00" * 64
+    buf = io.BytesIO()
+    with tarfile.open(fileobj=buf, mode="w") as tar:
+        for name, data in {"docs/screenshots/a.jpg": jpg, "README.md": b"Jane's page"}.items():
+            info = tarfile.TarInfo(name)
+            info.size = len(data)
+            tar.addfile(info, io.BytesIO(data))
+    assets = {}
+    files, executable = P.build(terms=TERMS, archive=buf.getvalue(), assets=assets)
+    assert assets == {"docs/screenshots/a.jpg": jpg} and "docs/screenshots/a.jpg" not in files and files["README.md"] == "The owner's page"
+    P.write(files, executable, tmp_path / "t", assets)
+    assert (tmp_path / "t/docs/screenshots/a.jpg").read_bytes() == jpg                     # byte for byte, no text rewrite
+    assert P.asset_problems({"docs/screenshots/a.jpg": jpg}) == []
+    assert P.asset_problems({"docs/screenshots/a.png": jpg})[0].endswith("not an image of an allowed kind")
+    assert P.asset_problems({"docs/screenshots/a.gif": b"GIF89a"})[0].endswith("not an image of an allowed kind")
+    assert P.asset_problems({"docs/screenshots/a.jpg": jpg + b"Exif"})[0].endswith("holds metadata")
+    assert "at most" in P.asset_problems({"docs/screenshots/a.jpg": jpg + b"\x00" * P.ASSET_MAX})[0]
+    assert any(p.startswith("docs/screenshots/jane.jpg") for p in P.scan({"docs/screenshots/jane.jpg": ""}, TERMS))   # a name is still scanned
+    other = io.BytesIO()
+    with tarfile.open(fileobj=other, mode="w") as tar:
+        info = tarfile.TarInfo("docs/photo.jpg")
+        info.size = len(jpg)
+        tar.addfile(info, io.BytesIO(jpg))
+    try:
+        P.build(terms=TERMS, archive=other.getvalue(), assets={})
+        raise AssertionError("a binary outside the folder must stop the snapshot")
+    except UnicodeDecodeError:
+        pass

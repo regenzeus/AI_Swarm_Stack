@@ -40,7 +40,7 @@ def record(**kw):
 
 def notify(text):
     import notify as N                            # the one notification path (OBS-16); a memory waiting for the owner's OK
-    N.send(text, "approval")
+    N.send(text, "approval", by="memory")
 
 
 def main():

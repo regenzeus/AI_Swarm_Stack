@@ -59,6 +59,20 @@ def model_call(model, ms, usage=None, error=""):
                   "reasoning": (u.get("completion_tokens_details") or {}).get("reasoning_tokens") or 0})
 
 
+LINKS = Path("/srv/ai/missions/public/links.jsonl")
+
+
+def link(to, via, text="", frm=None):
+    """SWM-113: this run handed something to another agent through a file or a folder (a mail filed for the curator): one
+    row of the map's hand-overs. Never raises into the caller."""
+    who = frm or str(getattr(_local, "agent", None) or "runner")
+    try:
+        with LINKS.open("a") as f:
+            f.write(json.dumps({"ts": time.time(), "from": who[5:] if who.startswith("crew:") else who, "to": to, "via": str(via), "text": str(text), "run": ref()}, ensure_ascii=False) + "\n")
+    except OSError:
+        pass
+
+
 def env_args():
     """`-e` arguments for a `docker exec` so the agent inside reports under the current run."""
     r = ref()

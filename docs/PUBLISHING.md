@@ -24,6 +24,15 @@ Each publish is the owner's call; nothing publishes by itself. Every run is logg
 | `requirements/REQUIREMENTS.md`, `docs/API.md` | generated | generated again from the public files |
 | History | every commit | one snapshot commit per publish, authored by `regenzeus` with GitHub's no-reply address |
 
+## Screenshots
+
+The public page's pictures are the one kind of binary file allowed, and only in `docs/screenshots/`: a JPEG or PNG under 1 MB
+with no metadata. Any binary elsewhere stops the publish. The scan can't read pixels, so **a picture must never show real data**:
+
+- Take it from demo data with nothing private behind it. Chats and missions are replaced; a screen that holds real addresses (such as Stack) is not used.
+- Check the screen's text with this scan before taking the picture, and look at the picture before committing it.
+- Say on the page which pictures show demo data.
+
 ## The private files
 
 The identifiers are in no repository. They live in `/srv/ai/private/` (mode 700, inside the nightly backup):

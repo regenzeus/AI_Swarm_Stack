@@ -21,7 +21,7 @@ KEYS=(
   "vk-spec|gpt-sub,gpt-sub-fast|0.01|"            # spec comprehension + code check (spec/): subscription only, never paid
   "vk-spec-cheap|gpt-sub-fast|0.05|"     # was the paid-model experiment key; subscription only now
   "vk-desk|gpt-sub,gpt-sub-fast|0.02|"   # Topic Desk briefings (images/desk)
-  "vk-mission|gpt-sub,gpt-sub-fast|0.05|qmd,research,claude,mail,swarm"   # Mission Control: long-running agent missions (hermes -z on this key)
+  "vk-mission|gpt-sub,gpt-sub-fast|0.05|qmd,research,claude,mail,swarm,files"   # Mission Control: long-running agent missions (hermes -z on this key)
   "vk-builder|gpt-sub,gpt-sub-fast|0.05|graphify"   # builder sandbox (Mission Control Build): code assignments; the code graph (read-only)
   "vk-guard|gpt-sub-fast|0.02|"          # research privacy check (images/research)
   # background jobs: one key each, so a mission run's cost window holds only its own calls (FND-03)

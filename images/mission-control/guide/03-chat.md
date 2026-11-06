@@ -48,13 +48,19 @@ things, *high* or *extra high* for hard analysis. Higher effort is slower but co
 
 ## Pictures and documents
 
-Tap **+** to attach images or documents (PDF, Word, Excel, CSV, text, code). Images go to the model as images.
+Tap the **clip** to attach images or documents (PDF, Word, Excel, CSV, text, code). Images go to the model as images. For a
+screenshot on a phone, **Screenshot or photo** sits above the keyboard; **Paste** adds a copied picture, and on a computer you
+can paste or drop one in. You can also share a screenshot to Mission Control from the phone's own share menu.
+
+In a chat, Hermes can also ask **Claude Code on your Windows PC** about your files there. It can only read, only in the folders
+listed in `C:\\AI\\ops\\desk-folders.txt`, and never key or password files. It cannot run or change anything. Its tools are
+`windows_status`, `windows_ask` and `windows_result`.
 Documents are turned into text in the app, so even a long annual report works.
 
 ```try
 label: Ask about a document
 chat: I'll attach a PDF. Summarise it in five bullet points and list anything I should act on.
-note: Attach any PDF with the + button before sending.
+note: Attach any PDF with the clip before sending.
 ```
 
 ## Working with messages
@@ -66,6 +72,19 @@ note: Attach any PDF with the + button before sending.
 - **Rename, pin, search, delete**: tap the title to rename; use the chat list (the clock icon on a phone) for the rest.
 
 You can close the app while Hermes is working. The answer is saved and appears on every device.
+
+## What the chat made
+
+When Hermes starts a mission, a build or a Claude task, adds a note to the vault or sends you an e-mail, the item
+appears as a card under that answer. The card shows the item's state now (Being created, Queued, Running, Done,
+Waits for you, Failed) and the headline of its latest result. One tap opens the item's page. A change, such as a
+mission paused or triggers set, is one small line.
+
+- **Made here · N** in the chat's header lists everything this chat made, newest first.
+- The chat list shows small icons for what each chat made, so you can find the chat that started something.
+- The item's page says **From a chat** under its title. Tap it to open the chat at the answer that made it.
+- When a one-off mission or a Claude task ends, or a build waits for your review, the chat gets a line that says so,
+  with a link. Daily briefings and other recurring missions don't write into the chat.
 
 ## Focus chats for a mission
 

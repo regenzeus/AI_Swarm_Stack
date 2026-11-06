@@ -1813,11 +1813,12 @@ items:
 - id: SWM-104
   group: Observability
   phase: 5
-  title: A map of who starts and messages whom
+  title: A map of who works with whom
   statement: The Agents overview shall show, for a chosen window, a map with every agent that ran as a named dot (its
-    size by its runs, a ring for failed runs and for running now) and a line between two agents that worked together
-    (an arrow from the one who asked, how often, dashed for Board messages only), where a tap on a dot or a line opens
-    Activity on that agent or that pair; and, one tap away, each connection in words with both named, their roles, what
+    size by its real work, a ring while its newest run failed and for running now) and a line between two that worked together
+    (an arrow per direction, how often, dashed for Board messages only, dotted for hand-overs only), where a tap on a dot or a line opens
+    Activity on that agent or that pair; each agent shall sit at the same place in fixed rows whatever the window, no
+    number shall cover another number, a dot or a name at phone width, and test runs shall be one chip away; and, one tap away, each connection in words with both named, their roles, what
     it was, how often, when last and how many run now, the agents that worked alone, and the ideas each agent wrote to.
   type: functional
   priority: should
@@ -1827,8 +1828,8 @@ items:
   verify:
     method: test
     by: ['tests/test_swarm_views.py::test_the_map_counts_who_starts_whom_and_shows_what_runs_now', 'tests/test_swarm_views.py::test_the_agents_tab_is_four_views_and_none_of_the_ten_is_lost',
-      'tests/test_swarm_views.py::test_the_map_is_agents_as_dots_and_lines_that_open_activity']
-  trace: [images/mission-control/runrecord.py, images/mission-control/web/static/swarm.js]
+      'tests/test_swarm_views.py::test_the_map_is_agents_as_dots_and_lines_that_open_activity', 'tests/test_swarm_views.py::test_the_map_keeps_fixed_rows_and_no_number_covers_anything']
+  trace: [images/mission-control/interactions.py, images/mission-control/runrecord.py, images/mission-control/web/static/swarm.js]
   findings: [FND-40, FND-89]
 - id: SWM-105
   group: Board
@@ -1941,3 +1942,99 @@ items:
       'tests/test_lane_discipline.py::test_the_helped_agent_or_the_owner_judges_and_the_work_s_fate_does_otherwise', 'tests/test_lane_discipline.py::test_the_coach_turns_unhelpful_steps_into_an_agent_change_for_quiet',
       'tests/test_lane_discipline.py::test_the_room_shows_why_and_lets_the_owner_judge']
   trace: [images/swarm/ledger.py, images/swarm/swarm.py, ops/coach.py, ops/swarm_client.py, images/mission-control/teamroom.py, images/mission-control/web/static/swarm.js]
+- id: SWM-110
+  group: Observability
+  phase: 5
+  title: One list of who works with whom
+  statement: 'The map, the Activity feed and the timeline shall be drawn from one list of interactions, so the number on a
+    line is exactly what a tap on that line opens, for every line and every window.'
+  type: functional
+  priority: should
+  status: implemented
+  parents: [SN-07, SN-17]
+  sources: *id001
+  verify:
+    method: test
+    by: ['tests/test_interactions.py::test_a_line_s_number_is_what_its_tap_opens', 'tests/test_interactions.py::test_the_app_draws_the_one_list']
+  trace: [images/mission-control/interactions.py, images/mission-control/teamroom.py, images/mission-control/server.py, images/mission-control/web/static/swarm.js]
+- id: SWM-111
+  group: Observability
+  phase: 5
+  title: Every run has one cause
+  statement: 'Every run shall have exactly one cause (you, an agent, its timer, a rule, an alert, a test, or unknown), crew
+    jobs recording theirs when they start; what is unknown or from before it was recorded shall be counted on
+    screen, never hidden, and a lumped starter such as Hermes shall be settled to the real agent.'
+  type: functional
+  priority: should
+  status: implemented
+  parents: [SN-07, SN-17]
+  sources: *id001
+  verify:
+    method: test
+    by: ['tests/test_interactions.py::test_every_run_has_one_cause_and_no_lumped_starter', 'tests/test_interactions.py::test_a_crew_job_keeps_why_it_started']
+  trace: [images/mission-control/interactions.py, ops/crew.py, images/mission-control/web/static/swarm.js]
+- id: SWM-112
+  group: Observability
+  phase: 5
+  title: What you asked and decided is on the map
+  statement: 'The list shall hold what the owner did: each chat and spoken turn with its answer, Run now, a typed task, a
+    question to Claude, and decisions at the app''s door and on the shared work, each reaching the agent concerned;
+    an arrow from the owner shall open those rows. Nothing the owner said or was told shall be shown to the AI
+    phone. Tests shall stay apart from work and one piece of work shall count once, a chip showing the tests when
+    asked.'
+  type: functional
+  priority: should
+  status: implemented
+  parents: [SN-07, SN-17]
+  sources: *id001
+  verify:
+    method: test
+    by: ['tests/test_interactions.py::test_what_the_owner_asked_about_is_on_the_map', 'tests/test_interactions.py::test_a_dot_counts_real_work_once_and_rings_only_while_its_newest_run_failed', 'tests/test_interactions.py::test_the_app_draws_the_one_list']
+  trace: [images/mission-control/interactions.py, images/mission-control/server.py, images/mission-control/web/static/swarm.js]
+- id: SWM-113
+  group: Observability
+  phase: 5
+  title: Tool use, hand-overs and messages to you are on the map
+  statement: 'The list shall hold what an agent does through another (Main on the AI phone, Inbox on Gmail), hand-overs
+    through a file or an output (a plan''s next step, a mail filed for the curator or a topic, an idea to the
+    builder), and every message to the owner with its named sender, all senders naming themselves; a link worked out
+    from timing shall say it is matched.'
+  type: functional
+  priority: should
+  status: implemented
+  parents: [SN-07, SN-17]
+  sources: *id001
+  verify:
+    method: test
+    by: ['tests/test_interactions.py::test_what_the_owner_asked_about_is_on_the_map', 'tests/test_interactions.py::test_a_message_names_its_sender', 'tests/test_interactions.py::test_a_session_is_tied_to_its_caller_or_marked_unknown', 'tests/test_interactions.py::test_the_records_for_it_are_kept']
+  trace: [images/mission-control/interactions.py, ops/notify.py, ops/runtime.py, ops/inbox.py]
+- id: SWM-114
+  group: Observability
+  phase: 5
+  title: A run the shutdown cut off is not stuck
+  statement: 'A run that fell silent while the stack itself was down shall end as stopped at its last activity, with that
+    reason, and raise no alert; a bar shall end at the run''s last activity when it was silent to its end.'
+  type: functional
+  priority: should
+  status: implemented
+  parents: [SN-07, SN-17]
+  sources: *id001
+  verify:
+    method: test
+    by: ['tests/test_runtime.py::test_a_run_the_shutdown_cut_off_is_not_called_stuck']
+  trace: [images/mission-control/runrecord.py, images/mission-control/web/static/swarm.js]
+- id: SWM-115
+  group: Observability
+  phase: 5
+  title: No channel slips past the map
+  statement: 'Every tool server of the gateway shall say what a call to it means for the map, or the build fails; a record the
+    map reads that can''t be read shall be named on screen instead of showing nothing.'
+  type: functional
+  priority: should
+  status: implemented
+  parents: [SN-07, SN-17]
+  sources: *id001
+  verify:
+    method: test
+    by: ['tests/test_interactions.py::test_no_tool_server_slips_past_the_map', 'tests/test_interactions.py::test_the_app_draws_the_one_list']
+  trace: [images/mission-control/interactions.py, images/mission-control/web/static/swarm.js]

@@ -76,9 +76,9 @@ def test_the_chatroom_is_the_team_room_with_its_filters():
     assert '"feed"' in (ROOT / "images/swarm/swarm.py").read_text().split("APP_OPS =")[1].split("}")[0]
     assert "teamroom.py" in (ROOT / "images/mission-control/Dockerfile").read_text()
     room = SWARM_JS[SWARM_JS.index("// ---------- the Chatroom: the team room"):SWARM_JS.index("// A success check in plain words")]
-    assert '[["ask", "Asks"], ["help", "Helps"], ["talk", "Talk"], ["work", "Work"], ["you", "You"], ["status", "Status"]]' in room
-    assert 'types: new Set(["ask", "help", "talk", "work", "you"])' in room                 # Status (routine runs) off at first
-    assert "inv.filter((a) => f.agents.has(a)).length < 2" in room                          # two agents: only what passes between them
+    assert '[["you", "You"], ["ask", "Asks"], ["hand", "Hand-overs"], ["talk", "Board"], ["work", "Work"], ["help", "Helps"], ["status", "Status"]]' in room
+    assert 'types: new Set(), agents: new Set()' in room and 'l.type === "status" && !f.agents.size' in room   # none picked: all but routine status
+    assert "!swBetween(l, f.agents)" in room                                                # two agents: only what passes between them
     assert "data-rtop" in room and "data-rh" in room and 'id="rq"' in room                  # topic, time, text
     assert "g.length < 3" in room and "times</span>" in room                                # a burst of asks folds into one line
     assert "no messages yet" not in room and "/api/swarm/room?hours=" in room                # no list of empty rooms

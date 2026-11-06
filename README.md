@@ -1,16 +1,56 @@
 # ai-stack
 
-A self-hosted, self-maintaining personal AI stack on one Windows 10 PC (WSL2, rootless Docker) with a Synology NAS
-for git, CI, Home Assistant and backups. Everything model-related runs on **subscriptions only (ChatGPT through the
-gateway, Claude for Claude Code): no paid model is configured**, so nothing can spend money (decided 2026-10-27;
-total ever spent: $0.0032, all in tests).
+**Your own team of AI agents, running at home on one PC and used from your phone.**
 
-You use it from your phone through **Mission Control** (an installable web app on the tailnet) and Telegram:
-chat with your assistant (Hermes); run missions (daily briefings, long-term research tasks, event alerts, shopping);
-browse the agents' wikis; study any codebase (code graph and code map) and let the builder change it with your
-approval; let the AI phone and the Gmail connector work under your approvals; watch every agent's health, resources
-and costs. Your Tailscale login is the only sign-in. The app has a built-in guide (Stack → Guide) that explains every
-screen with examples you can try.
+It chats with you, researches topics for weeks, writes briefings, watches shops and news for you, looks after its own
+health, and improves its own code in a sandbox. It can use a spare Android phone and your Gmail. Anything that matters
+waits for your tap. Every model runs on a flat-rate subscription (ChatGPT, and Claude for Claude Code), with no paid
+model configured, so it can't run up a bill.
+
+<table>
+  <tr>
+    <td width="25%"><img src="docs/screenshots/chat.jpg" alt="A chat with the assistant: an answer, its steps folded away, and a mission it started"></td>
+    <td width="25%"><img src="docs/screenshots/chats.jpg" alt="The list of chats as a drawer, with New chat first and chats grouped by day"></td>
+    <td width="25%"><img src="docs/screenshots/home.jpg" alt="Home: what needs you, a box to ask or give a task, and the AI phone"></td>
+    <td width="25%"><img src="docs/screenshots/map.jpg" alt="A map of which agents work with which, with how often on each line"></td>
+  </tr>
+  <tr>
+    <td><b>Chat</b>: it acts, and shows what it made</td>
+    <td><b>Your chats</b>: swipe right for the list</td>
+    <td><b>Home</b>: what needs you, and one box for anything else</td>
+    <td><b>The agents</b>: who works with whom</td>
+  </tr>
+</table>
+
+<sub>The chats and Home show demo data. The map shows a real week of runs, which holds only agent names and counts.</sub>
+
+## What it does
+
+- **Chat with an assistant that can act.** Attach pictures and documents. It knows your notes, starts missions, researches the web and e-mails you the result.
+- **Missions.** Daily briefings, research that runs for weeks and builds its own linked wiki, alerts on filings, prices and news, and shopping watches. A purchase always waits for your tap.
+- **A crew that runs the place.** 20 scheduled jobs check health, tidy memory, sort your inbox, run the tests and suggest improvements. You hear only what needs you.
+- **Code.** Study any repository as a graph and a code map. A builder changes code in a sandbox, and nothing deploys without your approval.
+- **Hands in the real world, on a short leash.** An old phone, Gmail and Home Assistant, each behind its own firewall. The AI phone can never approve itself.
+- **Your Windows PC, read-only.** The stack can ask Claude Code on Windows about your files, only in folders you list there. WSL still can't start anything on Windows.
+- **Everything visible.** One record of every agent run, a map of who works with whom, and costs and resources per agent.
+
+You use it from your phone through **Mission Control**, an installable web app on your private tailnet, and through
+Telegram. Your Tailscale login is the only sign-in. A built-in guide (Stack → Guide) explains every screen with examples
+you can try.
+
+## How it's built
+
+It runs on one Windows 10 PC (WSL2, rootless Docker), with a Synology NAS for git, CI, Home Assistant and backups.
+
+Most of the work here went into keeping agents honest and safe:
+
+- Every behaviour is a [requirement](requirements/README.md) claimed by a test, and each change must pass the full check before it lands.
+- Each agent has its own key and tool grants, web content stays in an isolated scout, and no secrets reach git except encrypted ones.
+- Nothing you read is cut off without saying so, and agent prompts are versioned and replay-tested.
+- Backups are encrypted every night and proven by a weekly restore drill, and moving to a new PC is rehearsed.
+
+This is one person's real setup, published as a reference, not an installer you can run in a minute. To build your own,
+start with [NEW-MACHINE.md](NEW-MACHINE.md). This public copy holds no personal data: see [docs/PUBLISHING.md](docs/PUBLISHING.md).
 
 ## Documents
 

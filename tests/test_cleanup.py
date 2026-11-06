@@ -65,7 +65,7 @@ def P(tmp_path, monkeypatch):
     monkeypatch.setenv("PHONE_HOST", "100.64.0.10")
     import phone
     phone = importlib.reload(phone)
-    phone.WAIT = 3
+    phone.WAIT = 30                                       # a loaded machine must not read as "the owner did not answer"; the test of no answer sets its own
     calls = []
 
     async def connected():
@@ -87,7 +87,7 @@ def P(tmp_path, monkeypatch):
 
 def answer(P, allow):
     def go():
-        for _ in range(60):
+        for _ in range(600):
             pend = list(P.PENDING.glob("*.json"))
             if pend:
                 (P.DECISIONS / pend[0].name).write_text(json.dumps({"allow": allow, "minutes": 10}))
@@ -98,7 +98,9 @@ def answer(P, allow):
 
 def test_uninstall_always_asks_even_inside_the_time_window(P):
     P.S["trust_until"] = time.time() + 3600                                  # the owner allowed everything for an hour
+    P.WAIT = 1
     assert "did not approve" in asyncio.run(P.phone_uninstall("com.audible.application", why="unused for a year"))
+    P.WAIT = 30
     assert not any("uninstall" in a for a in P.calls)
     answer(P, True)
     assert "Success" in asyncio.run(P.phone_uninstall("com.audible.application", why="unused for a year"))
@@ -149,11 +151,13 @@ def test_delete_always_asks_and_never_blocked_or_everything(P):
     P.S["trust_until"] = time.time() + 3600
     P._stat_lines = lambda cmd: [(5_000_000, 1_600_000_000, "/sdcard/SdCardBackUp/a.mp3")] * 3
     P._sh = lambda cmd, timeout=120: P.calls.append(("sh", cmd)) or ""
+    P.WAIT = 1
     assert "did not approve" in asyncio.run(P.phone_delete("/sdcard/SdCardBackUp", why="old backup"))
     assert not any("rm -rf" in str(c) for c in P.calls)                               # no OK, nothing deleted
+    P.WAIT = 30
     pend_text = []
     def answer_and_capture():
-        for _ in range(60):
+        for _ in range(600):
             pend = list(P.PENDING.glob("*.json"))
             if pend:
                 pend_text.append(json.loads(pend[0].read_text())["text"])

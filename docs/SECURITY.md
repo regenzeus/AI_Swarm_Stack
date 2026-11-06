@@ -91,6 +91,11 @@ people, spends money, deploys code, deletes data or acts on the AI phone. These 
 - A spoken turn is untrusted input like a chat message, and anyone in the room (or the TV) can be heard: the voice
   prompt says purchases, deploys, deletions, e-mail to others and the NAS and the network are never done by voice, and
   mail, calendar details and money are not read aloud. The approvals that guard them are unchanged.
+- **Newsletters on a watched topic (MIS-28)** reach a topic's report, and through it the topic's wiki. Only mail with a
+  List-Unsubscribe header goes there, never a person's mail, a protected one or the stack's own briefing. The digest finds the
+  topic's names in the text without a model, and one model call with mail tools nowhere near it judges the matches. The desk reads
+  each mail framed as untrusted data, without triage: a mail's text never decides what is fetched, and its links are never
+  opened. The worst a mail can do is put a false claim into a report, as a web page can; the report names the sender as its source.
 
 ## Accepted risks (deliberate, revisit when the setup changes)
 

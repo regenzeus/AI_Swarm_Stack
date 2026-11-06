@@ -11,6 +11,9 @@ import subprocess
 import time
 from pathlib import Path
 
+import stack_gate as SG
+
+FRESH_S = 3600
 SERVICES = ("qmd", "phoenix", "openwebui")
 STATE = Path("/srv/ai/missions/public/state.json")
 LOG = Path("/srv/ai/state/recycle.jsonl")
@@ -90,4 +93,7 @@ def run(sh=_sh, state=STATE, log=LOG, sleep=time.sleep, now=time.time, wait=WAIT
 
 
 if __name__ == "__main__":
-    run()
+    if SG.uptime() < FRESH_S:                        # the night's run, caught up after the PC was off: they have only just started
+        print("skipped: the stack has just started", flush=True)
+    else:
+        run()

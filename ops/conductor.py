@@ -1044,7 +1044,7 @@ def finish(c, t, ss, ok):
     alert = ok and not quiet and str(t.get("source") or "").startswith("rule:")      # P6: an alert's answer is read on the phone, not opened
     N.send(f"Task #{t['id']}{run} {'found nothing new' if quiet else 'is done' if ok else 'failed'}: {t['title']}"
            + (f"\n\n{textcap.cut(re.sub(r'(?m)^#+ .*\n?', '', result).strip(), ALERT_CHARS)}" if alert else "")  # cap: preview (the task page has all of it)
-           + ("" if ok else f"\n{textcap.cut(result, 600)}"), "result", title="Tasks",  # cap: preview (why it failed; the task page has all of it)
+           + ("" if ok else f"\n{textcap.cut(result, 600)}"), "result", by="conductor", title="Tasks",  # cap: preview (why it failed; the task page has all of it)
            push_on=not quiet, event_kind="task",
            buttons=[[("🔍 Open the task", f"{M.X.APP}/#/task/{t['id']}")]])
 

@@ -4,7 +4,7 @@ kicker: Your old phone, operated for you
 part: Everyday use
 icon: bolt
 minutes: 4
-summary: Hermes can use apps on your old Android phone (look, tap, type, scroll, open apps), and it asks your OK before it changes anything, unless you let it work for a while.
+summary: Hermes can use apps on your old Android phone (look, tap, type, scroll, open apps), and it asks your OK once per job, unless you let it work for a while.
 views: [phone]
 ---
 Your old phone (the S22) is the **AI phone**. Ask Hermes in chat to do something on it, and it looks at the screen,
@@ -13,19 +13,19 @@ then taps, types, scrolls and opens apps the way you would. It works on that one
 ```try
 label: Try it
 chat: On the AI phone, open Chrome and look up the weather in Berlin, then tell me what it says.
-note: Your phone buzzes for each step. Tap Allow, or Allow 5 min to let it work for a while without asking.
+note: Your phone buzzes once for the whole job. Tap Allow this job and it works it through.
 ```
 
 ## You stay in control
 
-- **Every action that changes something waits for your OK**, unless you let it work for a while (below). It waits up to 15 minutes. No answer means no. Only looking at the screen,
-  going back and going home happen without asking.
-- **Fastest way to answer**: the Telegram message has *Allow*, *Allow 5 min* and *Decline* buttons. One tap records
-  your answer. The Phone page shows the same request as a card with a screenshot and a red circle where it wants to tap.
-- **One OK for a whole task**: before it starts, Hermes asks once: what the task is, which apps, the exact texts it will
-  type, and for how long (at most an hour). After your Allow it goes through the task in those apps without asking;
-  only something outside it asks. The Phone page shows the task with *End task*; when it's done you get a summary with
-  how many actions ran under your OK.
+- **Where it is**: tap the **AI phone** card on Home, or the AI phone line at the top of Agents and of Stack. If it stays disconnected,
+  Home tells you under what needs you.
+- **You approve whole jobs, not steps**: before it starts, Hermes asks once: what the job is, which apps, the exact texts it will
+  type, and for how long (at most an hour). After your *Allow this job* it works through it in those apps without asking. A step
+  outside the job isn't done: Hermes asks again for the wider job. It waits up to 15 minutes; no answer means no. The Phone page shows
+  the job with *End task*; when it's done you get a summary with how many actions ran under your OK.
+- **Fastest way to answer**: the Telegram message has *Allow this job* and *Decline* buttons. One tap records your answer. The Phone
+  page shows the same request as a card with a screenshot.
 - **Let it use the phone freely**: pick a time on the Phone page: *10 min*, *1 hour*, *8 hours*, your own number of
   minutes, or *Until I stop it*. Taps, swipes, opening apps and typing then run without asking; a step that was already
   waiting goes ahead too. Everything is still logged, blocked apps stay blocked, and Stop ends it at once.

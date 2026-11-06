@@ -470,3 +470,103 @@ items:
     verify: {method: test, by: [tests/test_home_work.py::test_home_s_results_are_one_card_per_outcome_named_by_what_it_is_about,
       tests/test_home_work.py::test_home_holds_its_updates_while_you_scroll_or_touch]}
     trace: [images/mission-control/web/static/app.js, images/mission-control/web/static/app.css, images/mission-control/guide/01-welcome.md]
+  - id: APP-40
+    title: On a phone the chat fills the screen and its header is not cramped
+    statement: On a phone, the chat shall be pinned between the top of the screen and the tab bar, whatever the keyboard or the page did
+      before; the keyboard shall resize it, with the tab bar out of the way and the newest message in sight. Its header shall give the
+      title its own width with a line of status under it when there is something to say, and a first title shall end on a whole word with the cut marked.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-03]
+    sources: ['chat 2026-11-05: Headline looks badly formatted and cramped. Find good solution best practise chat window not flush at bottom?']
+    verify: {method: test, by: [tests/test_app_layout.py::test_the_phone_chat_is_pinned_to_the_screen_and_the_title_has_its_own_width,
+      tests/test_chat_made.py::test_a_chat_s_first_title_ends_on_a_whole_word_with_the_cut_marked]}
+    trace: [images/mission-control/web/static/app.css, images/mission-control/web/static/app.js, images/mission-control/web/index.html,
+      images/mission-control/server.py]
+  - id: APP-39
+    title: "What you make in a chat, you reach from the chat, and it leads back"
+    statement: "Every chat answer in which Hermes made something (a mission, a build, a Claude task, a repository, a note
+      in the vault, an e-mail) shall show it under the answer as a card with its kind, its name, its state now (being
+      created, queued, running, done, waits for you, failed) and its result's headline, opening its page in one tap; a
+      change to an item (paused, triggers set, sent back) shall be one line. The chat's header shall count what it made
+      (Made here · N) and list it, the chat list shall show it as icons, and the item's page shall say From a chat with
+      a link back to the answer that made it. A one-off item shall say in its chat when it ends; a recurring one shall
+      not. What the chat made shall be read from the run record's tool results and their ids, never guessed by time."
+    type: functional
+    priority: must
+    status: implemented
+    parents: [AST-02, SN-06]
+    sources: ['chat 2026-11-02: I dispatched a mission in chat. How can i jump from chat to the mission page? ... I feel if
+        we are creating items in chat they need to be accessible from chat. Can you design this out?']
+    verify: {method: test, by: [tests/test_chat_made.py::test_the_answer_that_made_a_mission_shows_it_with_its_live_state,
+      tests/test_chat_made.py::test_older_answers_are_read_by_their_wording_and_a_pending_one_by_its_title,
+      tests/test_chat_made.py::test_a_pending_request_resolves_through_the_runner_s_answer,
+      tests/test_chat_made.py::test_the_item_leads_back_and_a_one_off_says_in_the_chat_when_it_ends,
+      tests/test_chat_made.py::test_maker_tools_end_with_the_line_the_app_reads]}
+    trace: [images/mission-control/runrecord.py, images/mission-control/server.py, images/mission-control/web/static/app.js,
+      images/mission-control/web/static/app.css, docs/CHAT-MADE.md, tests/test_chat_made.py]
+  - id: APP-41
+    group: Layout
+    title: Explanations wait until asked for
+    statement: 'An explanation on a page shall be one small info control that takes no room until tapped, and Activity''s
+      filters shall fit three lines on a phone: search and time, kinds with something in them, and names with the picked
+      ones first; a page shall not spell out in always-visible text what a control already shows.'
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-03]
+    sources: ['chat 2026-11-05: Also hide the explanation text. We need more intiotive ux. Less verbose always visible ui explanations.']
+    verify:
+      method: test
+      by: ['tests/test_interactions.py::test_the_app_draws_the_one_list', 'tests/test_charts.py::test_explanations_fold_and_stay_open_through_redraws']
+    trace: [images/mission-control/web/static/guide.js, images/mission-control/web/static/app.css, images/mission-control/web/static/swarm.js]
+  - id: APP-42
+    title: The chat reopens where you left it
+    statement: Going to another page and back to Chat shall reopen the chat you left, at the place you were reading, with what you typed
+      and attached still there; a new chat starts only when you ask for one, and a chat deleted meanwhile opens a new one without an error.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-03]
+    sources: ['chat 2026-11-06: Also i am annoyee i always go to empty chat when i go somewhere else in mission control and then back to chat.']
+    verify: {method: test, by: [tests/test_chat_screen.py::test_the_chat_tab_reopens_the_chat_you_left_with_its_draft_and_place]}
+    trace: [images/mission-control/web/static/app.js]
+  - id: APP-43
+    title: New chat is in a proper list of chats
+    statement: New chat shall be the first thing in the list of chats and not in the chat's header. On a phone the list shall slide in as a
+      drawer that Back closes, with search, your chats under Pinned, Today, Yesterday, Last 7 days and Earlier, each with its title, when and
+      its last line; a swipe right shall open it and a swipe left close it, with the drawer following the finger; pin and delete shall be
+      one tap behind each chat, and delete shall ask by a second tap, not a system dialog.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-03]
+    sources: ['chat 2026-11-06: also dont like the new chat button top rights. Its tiny simple and should probably just be in chat selection and go to chat selection should be nicer.',
+      'chat 2026-11-06: I want to swip right to select chat and swipe left to close selection.']
+    verify: {method: test, by: [tests/test_chat_screen.py::test_new_chat_lives_in_a_drawer_of_chats_and_back_closes_it, tests/test_chat_screen.py::test_the_list_groups_chats_by_day_and_gives_each_a_line, tests/test_chat_screen.py::test_a_chat_s_last_line_is_plain_and_short, tests/test_chat_screen.py::test_a_swipe_opens_and_closes_the_drawer,
+      tests/test_app_layout.py::test_new_chat_starts_afresh_and_attaching_is_a_clip]}
+    trace: [images/mission-control/web/static/app.js, images/mission-control/web/static/app.css, images/mission-control/server.py]
+  - id: APP-44
+    title: A screenshot is one tap from the keyboard
+    statement: On a phone, while you type and in an empty chat, Screenshot or photo, Camera and Paste shall sit above the box, tapping them
+      shall keep the keyboard up, and a picture pasted or dropped into the chat shall be attached like one picked with the clip.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-03]
+    sources: ['chat 2026-11-06: Also want it easy to give it screenshots. In claude its always suggested above keyboard']
+    verify: {method: test, by: [tests/test_chat_screen.py::test_a_screenshot_is_one_tap_from_the_keyboard]}
+    trace: [images/mission-control/web/static/app.js, images/mission-control/web/static/app.css, images/mission-control/guide/03-chat.md]
+  - id: APP-45
+    title: The chat reads like a premium chat
+    statement: The chat shall put reading first. Its header shall hold the chat's title, what it made and a menu, and say the app's state only
+      while something is off; a message's actions shall come on a tap, except under the newest answer; an answer's steps shall be one quiet
+      line that opens; an empty chat shall ask what it can do, with no paragraph of explanation; a button shall bring you back to the newest message.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-03]
+    sources: ['chat 2026-11-06: I want the chat to feel like premium ai chat.. Overall chat doesnt feel that premium.']
+    verify: {method: test, by: [tests/test_chat_screen.py::test_the_chat_puts_reading_first]}
+    trace: [images/mission-control/web/static/app.js, images/mission-control/web/static/app.css]

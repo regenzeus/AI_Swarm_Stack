@@ -38,7 +38,7 @@ async function vSwarm() {                            // render() calls views wit
   swTab = SW_ALIAS[asked] || asked;
   if (!["activity", "agents", "improve"].includes(swTab)) swTab = "activity";
   if (swTab === "activity") swActivityFromUrl();
-  view.innerHTML = `<div class="hero heading" style="margin-bottom:10px"><h1>Agents</h1><p>Your agents as a team. They talk and propose; only your messages decide.</p></div>
+  view.innerHTML = `<div class="hero heading" style="margin-bottom:10px"><h1>Agents</h1></div>
     ${agentViews(swTab)}
     <div id="swbody"><div class="skeleton" style="height:200px"></div></div>`;
   const body = $("#swbody");
@@ -67,7 +67,8 @@ function swActivityFromUrl() {
   swCtx = q.get("ctx") || "";
   if (swCtx.startsWith("calls:")) { swRoomF.agents = new Set(swCtx.slice(6).split(/[+ ]/).filter(Boolean)); swCtx = ""; }   // the old map's rows ("+" reads as a space)
   else swRoomF.agents = new Set((q.get("agents") || "").split(",").filter(Boolean));
-  swRoomF.types = new Set(swRoomF.agents.size || swCtx ? SW_ROOM_TYPES.map(([k]) => k) : ["ask", "help", "talk", "work", "you"]);   // about someone: all of it
+  swRoomF.types = new Set();                             // none picked: all of it (routine status only when about someone)
+  swRoomF.tests = q.get("tests") === "1";
   const h = +q.get("h");
   swRoomF.hours = [6, 24, 72, 168].includes(h) ? h : swRoomF.agents.size ? 168 : 24;
   swRoomShow = 120;
@@ -77,6 +78,7 @@ function swSyncUrl() {
   const p = new URLSearchParams({ tab: "activity" });
   if (swRoomF.agents.size) p.set("agents", [...swRoomF.agents].join(","));
   if (swRoomF.hours !== 24) p.set("h", swRoomF.hours);
+  if (swRoomF.tests) p.set("tests", "1");
   if (swCtx) p.set("ctx", swCtx);
   route.q = p;
   history.replaceState(history.state, "", "#/swarm?" + p.toString().replace(/%2C/g, ","));
@@ -257,7 +259,7 @@ const SW_GCOL = { owner: "var(--ok)", assistant: "#60a5fa", research: "#2dd4bf",
 const SW_ROLEG = { assistant: "assistant", research: "research", missions: "missions", briefings: "missions", knowledge: "knowledge", memory: "knowledge",
   code: "code", tests: "code", reviewers: "reviewers", health: "health", phone: "phone", mail: "mail" };
 const SW_LANE = { you: ["you", "owner"], claude: ["Claude tasks", "code"], evals: ["experiments", "reviewers"], reviewers: ["build reviewers", "reviewers"],
-  gmail: ["Gmail", "mail"], phone: ["AI phone", "phone"], hermes: ["Hermes (your assistant or a mission)", "assistant"] };
+  gmail: ["Gmail", "mail"], phone: ["AI phone", "phone"], windows: ["Windows PC", "other"], hermes: ["Hermes (your assistant or a mission)", "assistant"] };
 let swCards = null;
 async function swWhoCards() {
   if (!swCards) swCards = await swApi("who").catch(() => []);
@@ -282,9 +284,9 @@ let swTlSel = null, swTlData = null;
 async function swTimeline(body, poll = false) {
   await swWhoCards();
   const hours = swRoomF.hours, pick = swRoomF.agents;
-  const t = await api(`/api/swarm/timeline?hours=${hours}`);
+  const t = await api(`/api/swarm/timeline?hours=${hours}${swRoomF.tests ? "&tests=1" : ""}`);
   const runs = pick.size ? t.runs.filter((r) => pick.has(r.lane) || pick.has(r.agent) || pick.has(r.by)) : t.runs;
-  const sig = JSON.stringify([hours, [...pick], runs.map((r) => [r.run, r.state, r.ended])]);
+  const sig = JSON.stringify([hours, swRoomF.tests, [...pick], runs.map((r) => [r.run, r.state, r.ended])]);
   if (poll && sig === body.dataset.sig) return;
   body.dataset.sig = sig;
   swTlData = t;
@@ -294,14 +296,12 @@ async function swTimeline(body, poll = false) {
   const lanes = Object.keys(count).sort((a, b) => (order[swGroupOf(a)] - order[swGroupOf(b)]) || count[b] - count[a]);
   const live = runs.filter((r) => r.state === "running").length;
   if (!runs.length) { body.innerHTML = `<div class="card pad-l small muted">No runs in this window${pick.size ? " for " + [...pick].map(swName).join(" and ") : ""}.</div>`; return; }
-  body.innerHTML = `<details class="card pad-l" id="swtlcard"${swTimeline.closed ? "" : " open"}><summary><b>When each ran</b> <span class="hcount">${runs.length}</span> <span class="small muted">${live ? `${live} running now` : "one bar per run"}</span></summary>
-    ${explain("one-row-per-agent-one-ba", `One row per agent, one bar per run, coloured by how it ended. A run another agent started (a mission's web searches by the scout) sits in its own row; tap a bar to see what started it and what it started.`, "How to read this")}
+  body.innerHTML = `<details class="card pad-l" id="swtlcard"${swTimeline.open ? " open" : ""}><summary><b>When each ran</b> <span class="hcount">${runs.length}</span>${live ? ` <span class="small muted">${live} running now</span>` : ""}</summary>
+    ${explain("one-row-per-agent-one-ba", `One row per agent, one bar per run, coloured by how it ended. Swipe for earlier days, and tap a bar to see what started it. <span class="row wrap" style="gap:10px;margin-top:6px">${Object.entries(SW_STATE).map(([, [c, l, hollow]]) => `<span class="row" style="gap:5px"><span style="width:12px;height:8px;border-radius:2px;${hollow ? `box-shadow:inset 0 0 0 1.5px ${c}` : `background:${c}`}"></span>${l}</span>`).join("")}</span>`, "How to read this")}
     <div class="swtl" style="margin-top:8px"></div>
-    <div class="row wrap tiny faint" style="gap:12px;margin-top:6px">${Object.entries(SW_STATE).map(([, [c, l, hollow]]) => `<span class="row" style="gap:5px"><span style="width:12px;height:8px;border-radius:2px;${hollow ? `box-shadow:inset 0 0 0 1.5px ${c}` : `background:${c}`}"></span>${l}</span>`).join("")}<span class="row" style="gap:5px"><span style="width:0;height:10px;border-left:1.5px dashed var(--muted)"></span>now</span></div>
-    <div class="tiny faint" style="margin-top:2px">Failed: the run ended with an error. Stuck: it went silent for 20 minutes and was closed.</div>
     <div id="swtldet"></div></details>`;
-  $("#swtlcard", body).ontoggle = (e) => { swTimeline.closed = !e.target.open; };
-  const sc = $(".swtl"), box = sc.clientWidth || 320, span = t.now - t.since;
+  $("#swtlcard", body).ontoggle = (e) => { swTimeline.open = e.target.open; if (e.target.open) { const x = $(".swtl", body); if (x) x.scrollLeft = x.scrollWidth; } };
+  const sc = $(".swtl"), box = sc.clientWidth || (($("#swbody")?.clientWidth || 368) - 48), span = t.now - t.since;
   const W = hours > 24 ? Math.round(Math.max(box, (hours / 24) * box * 0.9)) : box;    // a long window scrolls inside its card
   const X = (ts) => Math.max(0, Math.min(W, ((ts - t.since) / span) * W));
   const step = hours <= 6 ? 3600 : hours <= 24 ? 3 * 3600 : hours <= 72 ? 12 * 3600 : 86400;
@@ -313,7 +313,7 @@ async function swTimeline(body, poll = false) {
     <svg width="${W}" height="20" style="display:block">${ticks.map((s) => `<text x="${X(s) + 2}" y="13" font-size="10.5" fill="var(--muted)">${fmt(s)}</text>`).join("")}<text x="${W - 3}" y="13" font-size="10.5" text-anchor="end" fill="var(--muted)">now</text></svg>
     ${lanes.map((l, i) => `<div class="swlane" style="${i % 2 ? "" : "background:var(--surface-2)"}"><div class="swlname"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${SW_GCOL[swGroupOf(l)]};margin-right:5px"></span>${esc(swName(l))} · ${count[l]}</div>
       <svg width="${W}" height="16" style="display:block">${grid}${runs.filter((r) => r.lane === l).map((r) => {
-        const x = X(r.started), w = Math.max(3, X(r.ended || t.now) - x), [col, , hollow] = SW_STATE[r.state] || SW_STATE.done;
+        const x = X(r.started), w = Math.max(3, X(r.until || r.ended || t.now) - x), [col, , hollow] = SW_STATE[r.state] || SW_STATE.done;
         return `<rect class="swbar ${r.state === "running" ? "live" : ""}" data-run="${esc(r.run)}" x="${x.toFixed(1)}" y="${hollow ? 2.75 : 2}" width="${(hollow ? Math.max(1.5, w - 1.5) : w).toFixed(1)}" height="${hollow ? 10.5 : 12}" rx="3" ${hollow ? `fill="transparent" stroke="${col}" stroke-width="1.5"` : `fill="${col}"`}><title>${esc(r.name)}</title></rect>`;
       }).join("")}</svg></div>`).join("")}</div>`;
   const showRun = (id) => {
@@ -323,10 +323,10 @@ async function swTimeline(body, poll = false) {
     const kids = t.runs.filter((x) => x.parent === id), par = t.runs.find((x) => x.run === r.parent);
     $$(".swbar").forEach((b) => b.classList.toggle("sel", b.dataset.run === id));
     $$(".swbar").forEach((b) => b.classList.toggle("rel", [r.parent, ...kids.map((k) => k.run)].includes(b.dataset.run)));
-    const pair = r.by && r.by !== "you" && r.by !== r.lane ? swActHref([r.by, r.lane], hours) : "";
+    const pair = r.by && r.by !== r.lane ? swActHref([r.by, r.lane], hours) : "";
     $("#swtldet").innerHTML = `<div class="card pad-l section"><div class="row between wrap" style="gap:6px"><h2 class="wrap">${esc(r.name)}</h2>${swPill(r.state)}</div>
       <div class="small" style="margin-top:4px"><b>${esc(swName(r.lane))}</b>${r.agent !== r.lane ? ` <span class="tiny faint">(${esc(r.agent)})</span>` : ""} · ${swTime(r.started)}${r.ended ? ` to ${swTime(r.ended)}` : ", still running"} · ${swDur((r.ended || t.now) - r.started)}</div>
-      <div class="small muted">${r.calls} model call${r.calls === 1 ? "" : "s"}${r.tokens ? ` · ${tok(r.tokens)} tokens` : ""}${r.by ? ` · started by ${r.by === "you" ? "you (a chat)" : par ? `<a href="#" data-tlrun="${esc(par.run)}">${esc(swName(r.by))}</a>` : esc(swName(r.by))}` : ""}</div>
+      <div class="small muted">${r.calls} model call${r.calls === 1 ? "" : "s"}${r.tokens ? ` · ${tok(r.tokens)} tokens` : ""}${r.by ? ` · started by ${r.by === "you" ? "you (a chat)" : par ? `<a href="#" data-tlrun="${esc(par.run)}">${esc(swName(r.by))}</a>` : esc(swName(r.by))}` : r.cause ? ` · ${esc(swCauseWords(r.cause))}` : ""}</div>
       ${kids.length ? `<div class="small" style="margin-top:6px">It started ${kids.length} run${kids.length > 1 ? "s" : ""} (outlined on the timeline):</div>
         <div class="list" style="margin-top:4px">${kids.map((k) => `<a href="#" data-tlrun="${esc(k.run)}"><div class="grow"><div class="sub wrap">${esc(k.name)}</div><div class="tiny faint">${esc(swName(k.lane))} · ${swTime(k.started)} · ${esc((SW_STATE[k.state] || SW_STATE.done)[1])}</div></div></a>`).join("")}</div>` : ""}
       <div class="row wrap" style="gap:8px;margin-top:8px"><a class="btn sm" href="#/live/${encodeURIComponent(r.run)}">Open its log</a>${pair ? `<a class="btn sm ghost" href="${pair}">What they said</a>` : ""}</div></div>`;
@@ -342,9 +342,11 @@ async function swTimeline(body, poll = false) {
 // arrow who asked whom, dashed when they only wrote to each other, its number how often. Tapping a dot or a line opens
 // Activity on that agent or that pair. "Ideas too" adds the ideas each agent wrote to (the former "who works on what").
 // (Before: a list of rows called a map, and a second graph of ideas, the owner's review of 1 Nov 2026.)
-let swMapHours = 168, swMapIdeas = false, swOv = { el: null, t: 0, sig: "" };
-const SW_ROLE = { you: "you, in chat and in the app", claude: "Claude Code, a read-only analysis in the sandbox", evals: "replays of agents' past runs (agent-change tests)",
-  reviewers: "reviews of a build by the other engine", gmail: "your Gmail, through its connector", phone: "the AI phone",
+let swMapHours = 168, swMapIdeas = false, swMapTold = false, swMapTests = false, swOv = { el: null, t: 0, sig: "" };
+const swCauseWords = (c) => ({ you: "started by you", clock: "started by its timer", rule: "started by a rule", alert: "started by an alert", test: "a test",
+  unrecorded: "timer, Run now or an alert: not recorded for this run", unknown: "nothing on record says what started it", agent: `started by ${swName(c.who)}` }[c.kind] || "");
+const SW_ROLE = { stack: "the stack itself: its runner and its upkeep", you: "you, in chat and in the app", claude: "Claude Code, a read-only analysis in the sandbox", evals: "replays of agents' past runs (agent-change tests)",
+  reviewers: "reviews of a build by the other engine", gmail: "your Gmail, through its connector", phone: "the AI phone", windows: "your Windows PC, read-only",
   hermes: "Hermes, your assistant or a mission's agent", conductor: "the Conductor, which runs a task's plan step by step" };
 function swRole(id) {
   if (SW_ROLE[id]) return SW_ROLE[id];
@@ -352,20 +354,18 @@ function swRole(id) {
   return c?.purpose || "";
 }
 function swVerb(e) {                                     // what the connection was, in words
-  if (e.kind === "messages") return ["wrote on the Board with", "↔"];
-  if (e.from === "you") return [e.to === "main" ? "chatted with" : "started", "→"];
-  return [{ scout: "asked to research", claude: "asked Claude Code for an analysis", phone: "used", gmail: "read mail through", evals: "replayed through" }[e.to] || "started a run of", "→"];
+  if (e.kind === "ask") return [{ scout: "asked to research", claude: "asked Claude Code for an analysis", evals: "replayed through" }[e.to] || "started a run of", "→"];
+  return [{ talk: "wrote on the Board to", you: e.to === "main" ? "talked to" : "asked or decided for", tell: "told", use: "used", hand: "handed over to", help: "helped" }[e.kind] || e.kind, "→"];
 }
-const swShort = (id) => ({ hermes: "Hermes", claude: "Claude tasks", evals: "experiments", gmail: "Gmail", phone: "AI phone", reviewers: "reviewers" }[id] || id);   // a dot's name
+const swShort = (id) => ({ stack: "The stack", you: "You", claude: "Claude tasks", evals: "experiments", gmail: "Gmail", phone: "AI phone", windows: "Windows PC", reviewers: "reviewers" }[id] || id);   // a dot's name
 const swIdeaLabel = (x) => { const w = String(x.title || "").split(/\s+/).filter(Boolean); return `#${x.id} ${w.slice(0, 4).join(" ")}${w.length > 4 ? " …" : ""}`; };   // cap: preview: the dot's name; its card and the list name it whole
 async function swMapData() {
   await swWhoCards();
-  const [it, g] = await Promise.all([api(`/api/swarm/interactions?hours=${swMapHours}`),
-    swApi("graph", { days: swMapIdeas ? 30 : Math.max(1, Math.round(swMapHours / 24)) }).catch(() => ({ talk: [], agents: [], artifacts: [], touches: [] }))]);
-  const me = (x) => (swWho(x) === "you" ? "you" : x);
-  const talk = (g.talk || []).map((x) => ({ from: me(x.a), to: me(x.b), kind: "messages", n: x.n, live: 0 })).filter((x) => x.from !== x.to);
-  return { it, g, edges: [...it.edges, ...talk] };
+  const [it, g] = await Promise.all([api(`/api/swarm/interactions?hours=${swMapHours}${swMapTests ? "&tests=1" : ""}`),
+    swMapIdeas ? swApi("graph", { days: 30 }).catch(() => ({ agents: [], artifacts: [], touches: [] })) : { artifacts: [], touches: [] }]);
+  return { it, g, edges: it.edges };
 }
+const swCoverage = (c) => (c && c.runs ? `Cause known for ${c.known} of ${c.runs} runs${c.unrecorded ? ` · ${c.unrecorded} from before it was recorded` : ""}${c.unknown ? ` · ${c.unknown} unknown` : ""}` : "");
 function swMapMount(force) {                            // Overview's map survives the page's live redraws (state updates)
   const ph = $("#ovmap");
   if (!ph) return;
@@ -373,7 +373,7 @@ function swMapMount(force) {                            // Overview's map surviv
   if (force || !swOv.el || Date.now() - swOv.t > 60000) {
     swOv.t = Date.now();
     swMapData().then((d) => {
-      const sig = JSON.stringify([swMapHours, swMapIdeas, d.edges, d.it.nodes.map((n) => [n.id, n.runs, n.failed, n.live]), swMapIdeas ? d.g.touches : 0]);
+      const sig = JSON.stringify([swMapHours, swMapIdeas, swMapTests, d.edges, d.it.nodes.map((n) => [n.id, n.runs, n.failing, n.live]), d.it.coverage, swMapIdeas ? d.g.touches : 0]);
       const cur = $("#ovmap");
       if (!cur || (!force && sig === swOv.sig && swOv.el)) return;
       swOv.sig = sig;
@@ -381,7 +381,97 @@ function swMapMount(force) {                            // Overview's map surviv
     }).catch((e) => { const cur = $("#ovmap"); if (cur && !swOv.el) cur.innerHTML = `<div class="card pad-l small muted">The map could not load: ${esc(e.message)}</div>`; });
   }
 }
-function swMapCard(ph, { it, g, edges }) {
+// The map's rows, top to bottom: you; the reviewers only you answer; whom you ask; whom they ask; what they use; the task
+// team last (chosen on a week's real lines: fewest crossings, and no line has to go through a dot). An agent's place comes
+// from this list and the width alone, never from who ran in the window, so a dot is in the same place every time. An agent
+// not listed here gets a place in the last row.
+const SW_MAP_ROWS = [["stack", "you"], ["maintainability", "tests", "self-review", "coach"], ["intake", "main", "mission", "doctor", "checker"],
+  ["conductor", "scout", "claude", "phone-check"], ["desk", "phone", "house", "builder", "phone-cleanup"], ["journeys", "gmail", "inbox", "curator", "memory"],
+  ["planner", "analyst", "tester", "tracer"], ["breaker", "judge", "presenter", "evals", "reviewers"]];
+function swMapRows(ids, W, label, gap) {
+  const here = new Set(ids), known = new Set(SW_MAP_ROWS.flat()), slot = (id) => Math.max(label(id).length * 6.4, 28) + 10;   // a dot's name and its biggest dot fit its slot
+  const lines = [];
+  [...SW_MAP_ROWS, ids.filter((id) => !known.has(id)).sort()].forEach((row, i) => {
+    let line = [], used = 0;
+    for (const id of row) {
+      if (line.length && used + slot(id) > W) { lines.push({ line, keep: i < 6 }); line = []; used = 0; }   // a narrow screen wraps a row, it never squeezes names together
+      line.push(id); used += slot(id);
+    }
+    if (line.length) lines.push({ line, keep: i < 6 });
+  });
+  const at = {};
+  let y = 26, last = y;
+  for (const { line, keep } of lines) {
+    const someone = line.some((id) => here.has(id));
+    if (!someone && !keep) continue;                       // an empty row keeps its place, or everyone below would move; only the rows under the everyday map close up
+    const spare = (W - line.reduce((n, id) => n + slot(id), 0)) / line.length;
+    let x = 0;
+    for (const id of line) { const w = slot(id) + spare; if (here.has(id)) at[id] = { x: x + w / 2, y }; x += w; }   // an absent agent keeps its place empty
+    if (someone) last = y;
+    y += gap;
+  }
+  if (at.you) at.you.x = W / 2;                            // you are always top and centre
+  return { at, H: last + 46 };
+}
+// Each line: the smallest bend that passes no other dot and, where it can, no other name (a name's halo keeps it readable
+// over a line; a line through a dot reads as a connection). `blocked`: lines that could not miss a dot. Each number: the first free spot along its line, the
+// busiest first, away from other lines where it can be. `clashes`: numbers that found no free spot.
+function swMapRoute({ at, H }, W, rs, label, pairs) {
+  const ids = Object.keys(at), names = {}, routes = {}, curves = [];
+  for (const id of ids) { const w = label(id).length * 6.4 + 2, y = at[id].y + rs(id); names[id] = [at[id].x - w / 2, y + 3, at[id].x + w / 2, y + 16]; }
+  const point = (a, c, b, t) => [(1 - t) ** 2 * a.x + 2 * (1 - t) * t * c[0] + t ** 2 * b.x, (1 - t) ** 2 * a.y + 2 * (1 - t) * t * c[1] + t ** 2 * b.y];
+  const inBox = ([x, y], o) => x > o[0] && x < o[2] && y > o[1] && y < o[3], meets = (b, o) => b[0] < o[2] && b[2] > o[0] && b[1] < o[3] && b[3] > o[1];
+  let blocked = 0, clashes = 0;
+  for (const p of pairs) {
+    const a = at[p.a], b = at[p.b], mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2, len = Math.hypot(b.x - a.x, b.y - a.y) || 1, nx = (a.y - b.y) / len, ny = (b.x - a.x) / len;
+    const outward = (mx - W / 2) * nx + (a.y === b.y ? -ny * 40 : 0) >= 0 ? 1 : -1;   // bow away from the middle, and up within a row (a name sits under each dot)
+    let best = null;
+    for (const off of [0, 1, -1, 2, -2, 3, -3, 4, -4, 5, -5, 6, -6, 7, -7, 8, -8]) {
+      const c = [mx + nx * off * 20 * outward, my + ny * off * 20 * outward], pts = Array.from({ length: 39 }, (_, i) => point(a, c, b, (i + 1) / 40));
+      const others = ids.filter((id) => id !== p.a && id !== p.b);
+      const dots = pts.filter((q) => q[0] < 4 || q[0] > W - 4 || q[1] < 4 || others.some((id) => Math.hypot(q[0] - at[id].x, q[1] - at[id].y) < rs(id) + 5)).length;
+      const hits = dots * 10 + pts.filter((q) => others.some((id) => inBox(q, names[id]))).length;
+      if (!best || hits < best.hits) best = { c, hits, dots, pts };
+      if (!hits) break;
+    }
+    blocked += best.dots ? 1 : 0;
+    routes[p.a + "+" + p.b] = { c: best.c };
+    curves.push({ p, a, b, nx, ny, ...best });
+  }
+  const fixed = [[W - 122, 0, W, 46], ...Object.values(names), ...ids.map((id) => [at[id].x - rs(id) - 1, at[id].y - rs(id) - 1, at[id].x + rs(id) + 1, at[id].y + rs(id) + 1])], placed = [];
+  for (const l of [...curves].sort((x, y) => y.p.n - x.p.n)) {
+    const w = String(l.p.n).length * 6.2 + 5;
+    let best = null;
+    for (const side of [0, 11, -11]) for (const t of [0.5, 0.42, 0.58, 0.34, 0.66, 0.26, 0.74, 0.2, 0.8, 0.14, 0.86]) {   // on its line, or else just beside it
+      const q = point(l.a, l.c, l.b, t), x = q[0] + l.nx * side, y = q[1] + l.ny * side, box = [x - w / 2, y - 7, x + w / 2, y + 7];
+      if (box[0] < 0 || box[2] > W || box[1] < 0 || box[3] > H || fixed.some((o) => meets(box, o)) || placed.some((o) => meets(box, o))) continue;
+      const crossed = curves.filter((o) => o !== l && o.pts.some((r) => Math.hypot(r[0] - x, r[1] - y) < 8)).length + (side ? 1 : 0);
+      if (!best || crossed < best.crossed) best = { x, y, box, crossed };
+      if (!crossed) break;
+    }
+    if (!best) { clashes++; const q = point(l.a, l.c, l.b, 0.5); best = { x: q[0], y: q[1], box: [q[0] - w / 2, q[1] - 7, q[0] + w / 2, q[1] + 7] }; }
+    placed.push(best.box);
+    routes[l.p.a + "+" + l.p.b].num = [best.x, best.y];
+  }
+  return { at, H, routes, blocked, clashes };
+}
+function swMapPlan(ids, W, rs, label, pairs) {
+  let plan;
+  for (let gap = 78; gap <= 150; gap += 12) {              // taller only when a number found no free spot
+    plan = swMapRoute(swMapRows(ids, W, label, gap), W, rs, label, pairs);
+    if (!plan.clashes) break;
+  }
+  return plan;
+}
+function swMapArrow(l, forward, gap) {                     // the arrow at a line's end, just off the dot it points at
+  const a = l.source, b = l.target, c = l.c, len = Math.hypot(c[0] - a.x, c[1] - a.y) + Math.hypot(b.x - c[0], b.y - c[1]) || 1;
+  const t = Math.max(0, Math.min(1, forward ? 1 - gap / len : gap / len)), u = 1 - t;
+  const dx = u * (c[0] - a.x) + t * (b.x - c[0]), dy = u * (c[1] - a.y) + t * (b.y - c[1]);
+  return { x: u * u * a.x + 2 * u * t * c[0] + t * t * b.x, y: u * u * a.y + 2 * u * t * c[1] + t * t * b.y, a: (Math.atan2(forward ? dy : -dy, forward ? dx : -dx) * 180) / Math.PI };
+}
+function swMapCard(ph, { it, g, edges: every }) {
+  const told = every.filter((e) => e.kind === "tell"), edges = swMapTold ? every : every.filter((e) => e.kind !== "tell");   // the busiest kind of line: a chip away
+  const hrefOf = (ids) => swActHref(ids, swMapHours, swMapTests);   // a test's line opens with tests on, so the tap finds what the number counts
   const card = document.createElement("div");
   card.id = "ovmap";
   card.className = "card pad-l section";
@@ -390,7 +480,7 @@ function swMapCard(ph, { it, g, edges }) {
   for (const e of edges) {
     const [a, b] = [e.from, e.to].sort(), k = a + "+" + b, p = (pairs[k] = pairs[k] || { a, b, n: 0, dirs: new Set(), kinds: new Set(), live: 0, last: 0 });
     p.n += e.n; p.kinds.add(e.kind); p.live += e.live || 0; p.last = Math.max(p.last, e.last || 0);
-    if (e.kind !== "messages") p.dirs.add(e.from + ">" + e.to);
+    p.dirs.add(e.from + ">" + e.to);
   }
   const used = new Set(edges.flatMap((e) => [e.from, e.to]));
   const agentIds = [...new Set([...it.nodes.filter((n) => n.runs || used.has(n.id)).map((n) => n.id), ...used])];
@@ -400,90 +490,81 @@ function swMapCard(ph, { it, g, edges }) {
   const groups = [...new Set(agentIds.map(swGroupOf))];
   const conn = Object.values(pairs).sort((x, y) => y.n - x.n);
   const who = (id) => { const n = info[id]; return `<div class="swwho"><div class="row" style="gap:6px"><span class="swdot" style="background:${SW_GCOL[swGroupOf(id)]}"></span><b class="wrap">${esc(swName(id))}</b>
-      ${n?.runs ? `<span class="tiny faint">${n.runs} run${n.runs === 1 ? "" : "s"}${n.failed ? ` · <span class="err-t">${n.failed} failed</span>` : ""}</span>` : ""}</div>
+      ${n?.runs ? `<span class="tiny faint">${n.runs} run${n.runs === 1 ? "" : "s"}${n.failed ? ` · <span class="err-t">${n.failed} failed</span>` : ""}${n.causes?.clock === n.runs ? " · all on its timer" : ""}</span>` : ""}</div>
       ${swRole(id) ? `<div class="tiny muted wrap">${esc(swRole(id))}</div>` : ""}</div>`; };
   const row = (e) => { const [verb, arrow] = swVerb(e);
-    return `<a class="swconn" href="${swActHref([e.from, e.to], swMapHours)}">${who(e.from)}<div class="swverb"><span class="swarrow">${arrow}</span><span class="wrap"><b>${esc(verb)}</b> · ${e.n} time${e.n === 1 ? "" : "s"}${e.last ? ` · last ${swAgo(e.last)}` : ""}${e.live ? ` · <b class="ok-t">${e.live} now</b>` : ""}</span></div>${who(e.to)}</a>`; };
+    return `<a class="swconn" href="${hrefOf([e.from, e.to])}">${who(e.from)}<div class="swverb"><span class="swarrow">${arrow}</span><span class="wrap"><b>${esc(verb)}</b> · ${e.n} time${e.n === 1 ? "" : "s"}${e.last ? ` · last ${swAgo(e.last)}` : ""}${e.live ? ` · <b class="ok-t">${e.live} now</b>` : ""}</span></div>${who(e.to)}</a>`; };
   const alone = agentIds.filter((id) => !used.has(id));
   const shared = Object.entries(g.shared || {});
   card.innerHTML = `<div class="row between wrap" style="gap:8px"><h2>Who works with whom</h2><div class="chips">${[[24, "24 h"], [72, "3 days"], [168, "7 days"]].map(([h, l]) => `<button type="button" class="tag ${swMapHours === h ? "on" : ""}" data-mh="${h}">${l}</button>`).join("")}</div></div>
-    ${explain("each-dot-is-an-agent-the", `Each dot is an agent: the bigger, the more it ran; a red ring means some runs failed. A line joins two agents that worked together: the arrow points from the one who asked, the number says how often, dashed means they only wrote to each other. <b>Tap a dot or a line</b> for what they said and did.`, "How to read this")}
-    <div class="chips" style="margin-top:8px"><button type="button" class="tag ${swMapIdeas ? "on" : ""}" data-mideas>Ideas too</button></div>
-    <div class="swmapsvg" style="margin-top:6px"></div><div class="tiny faint" style="margin-top:4px">${CHART_HINT} or a line</div>
-    <div class="row wrap tiny faint" style="gap:12px;margin-top:6px">${groups.map((k) => `<span class="row" style="gap:5px"><span class="swdot" style="background:${SW_GCOL[k]}"></span>${esc((SW_GROUP.find(([x]) => x === k) || [, k])[1])}</span>`).join("")}${swMapIdeas ? `<span class="row" style="gap:5px"><span class="swdot" style="background:var(--warn);width:7px;height:7px"></span>an open idea</span>` : ""}</div>
+    ${explain("each-dot-is-an-agent-the", `Each dot is an agent: the bigger, the more real work it did; a red ring means its newest run failed. An arrow says who asked or told whom and how often. A dashed line is a Board message, a dotted line is a hand-over through a file or a plan. <b>Tap a dot or a line</b> for exactly what the number counts. ${CHART_HINT}. <span class="row wrap" style="gap:10px;margin-top:6px">${groups.map((k) => `<span class="row" style="gap:5px"><span class="swdot" style="background:${SW_GCOL[k]}"></span>${esc((SW_GROUP.find(([x]) => x === k) || [, k])[1])}</span>`).join("")}</span>`, "How to read this")}
+    <div class="chips" style="margin-top:8px"><button type="button" class="tag ${swMapIdeas ? "on" : ""}" data-mideas>Ideas too</button>${told.length ? `<button type="button" class="tag ${swMapTold ? "on" : ""}" data-mtold>Messages to you <span class="faint">${told.reduce((n, e) => n + e.n, 0)}</span></button>` : ""}${it.coverage?.tests || swMapTests ? `<button type="button" class="tag ${swMapTests ? "on" : ""}" data-mtests>Tests${it.coverage?.tests ? ` <span class="faint">${it.coverage.tests}</span>` : ""}</button>` : ""}</div>
+    <div class="swmapsvg" style="margin-top:6px"></div>
+    ${it.coverage?.runs ? `<div class="tiny faint" style="margin-top:6px">${esc(swCoverage(it.coverage))}</div>` : ""}
+    ${Object.keys(it.sources || {}).length ? `<div class="tiny warn-t" style="margin-top:4px">No data from: ${esc(Object.keys(it.sources).join(", "))}</div>` : ""}
     <details class="swmapwords" style="margin-top:10px"><summary class="small"><b>Every connection in words</b> <span class="muted">${conn.length}${alone.length ? ` · ${alone.length} worked alone` : ""}</span></summary>
-      ${edges.length ? `<div class="swconns" style="margin-top:6px">${edges.sort((x, y) => y.n - x.n).map(row).join("")}</div>` : `<div class="small muted" style="margin-top:6px">No agent started or wrote to another in this window.</div>`}
-      ${alone.length ? `<div class="small" style="margin-top:10px"><b>Worked alone</b> <span class="muted">ran without starting or messaging another agent</span></div><div class="swalone">${alone.map(who).join("")}</div>` : ""}
+      ${edges.length ? `<div class="swconns" style="margin-top:6px">${[...edges].sort((x, y) => y.n - x.n).map(row).join("")}</div>` : `<div class="small muted" style="margin-top:6px">Nothing passed between agents in this window.</div>`}
+      ${alone.length ? `<div class="small" style="margin-top:10px"><b>Worked alone</b></div><div class="swalone">${alone.map(who).join("")}</div>` : ""}
       ${swMapIdeas ? `<div class="small" style="margin-top:10px"><b>Ideas two or more work on</b></div>${shared.length ? `<div class="list">${shared.map(([aid, ws]) => { const a = (g.artifacts || []).find((x) => String(x.id) === aid) || {};
         return `<a href="#/swarm/artifact/${aid}"><div class="grow"><div class="ttl">#${aid} ${esc(a.title || "")}</div><div class="sub">${ws.map(esc).join(", ")} · ${esc(a.state || "")}</div></div>${ic.next}</a>`; }).join("")}</div>` : `<div class="small muted">None yet: so far each idea has one worker.</div>`}` : ""}
     </details>`;
   ph.replaceWith(card);
-  $$("[data-mh]", card).forEach((b) => (b.onclick = () => { swOv.pos = swOv.zoom = null; swMapHours = +b.dataset.mh; swMapMount(true); }));
-  $("[data-mideas]", card).onclick = () => { swOv.pos = swOv.zoom = null; swMapIdeas = !swMapIdeas; swMapMount(true); };
+  $$("[data-mh]", card).forEach((b) => (b.onclick = () => { swOv.zoom = null; swMapHours = +b.dataset.mh; swMapMount(true); }));
+  $("[data-mideas]", card).onclick = () => { swOv.zoom = null; swMapIdeas = !swMapIdeas; swMapMount(true); };
+  const toldChip = $("[data-mtold]", card);
+  if (toldChip) toldChip.onclick = () => { swOv.zoom = null; swMapTold = !swMapTold; swMapMount(true); };
+  const testsChip = $("[data-mtests]", card);
+  if (testsChip) testsChip.onclick = () => { swOv.zoom = null; swMapTests = !swMapTests; swMapMount(true); };
   const el = $(".swmapsvg", card);
   if (!agentIds.length) { el.innerHTML = emptyState("No agent ran in this window.", `<button type="button" class="btn sm" data-mh2="168">Show 7 days</button>`); $("[data-mh2]", el).onclick = () => { swMapHours = 168; swMapMount(true); }; return card; }
-  const W = el.clientWidth || 340, H = Math.max(340, Math.min(540, Math.round(window.innerHeight * 0.68)));
+  const W = el.clientWidth || 340;
+  const rs = (d) => (d.kind === "idea" ? 4 : d.id === "you" ? 9 : Math.min(14, 5 + 1.8 * Math.log2(1 + d.runs)));          // screen px at any zoom
+  const agents = agentIds.map((id) => ({ id, kind: "agent", label: swShort(id), runs: info[id]?.runs || 0, failed: info[id]?.failed || 0, failing: info[id]?.failing, live: info[id]?.live || 0 }));
+  const one = Object.fromEntries(agents.map((n) => [n.id, n]));
+  const plan = swMapPlan(agentIds, W, (id) => rs(one[id]), swShort, conn);
+  for (const n of agents) Object.assign(n, plan.at[n.id]);
+  const cols = W >= 520 ? 2 : 1;                           // the ideas: a list under the agents
+  const ideasAt = ideas.map((x, i) => ({ id: "x:" + x.id, kind: "idea", label: swIdeaLabel(x), aid: x.id, state: x.state, x: 14 + (i % cols) * (W / cols), y: plan.H + Math.floor(i / cols) * 24 }));
+  const H = plan.H + Math.ceil(ideas.length / cols) * 24;
   el.style.height = H + "px";
-  const nodes = [...agentIds.map((id) => ({ id, kind: "agent", label: swShort(id), runs: info[id]?.runs || 0, failed: info[id]?.failed || 0, live: info[id]?.live || 0 })),
-    ...ideas.map((x) => ({ id: "x:" + x.id, kind: "idea", label: swIdeaLabel(x), aid: x.id, state: x.state }))];
-  const ids = new Set(nodes.map((n) => n.id));
-  const links = [...conn.map((p) => ({ source: p.a, target: p.b, p, kind: "pair" })),
-    ...touches.map((t) => ({ source: t.agent, target: "x:" + t.artifact, n: t.n, kind: "idea" }))].filter((l) => ids.has(l.source) && ids.has(l.target));
-  const rs = (d) => (d.kind === "idea" ? 4 : Math.min(14, 5 + 1.8 * Math.log2(1 + d.runs)));          // screen px at any zoom
-  // laid out at screen size inside the box (the dots keep their size at any zoom, so a zoomed-out fit piled them up):
-  // the whole team shows at once, each name readable; zoom in for a crowded corner
-  const padX = 48, padY = 20, was = swOv.pos || {};
-  for (const n of nodes) if (was[n.id]) Object.assign(n, was[n.id], { fx: was[n.id].x, fy: was[n.id].y });   // a redraw keeps every dot where it was; a new one settles around them
-  const sim = d3.forceSimulation(nodes).force("link", d3.forceLink(links).id((d) => d.id).distance((l) => (l.kind === "idea" ? 34 : 70)).strength(0.35))
-    .force("charge", d3.forceManyBody().strength((d) => (d.kind === "idea" ? -40 : -170))).force("x", d3.forceX(W / 2).strength(0.05)).force("y", d3.forceY(H / 2).strength(0.07))
-    .force("collide", d3.forceCollide((d) => (d.kind === "idea" ? rs(d) + 6 : rs(d) + 20))).stop();      // room for the name under each dot
-  const settled = nodes.every((n) => was[n.id]);
-  for (let i = 0; i < (settled ? 0 : nodes.some((n) => was[n.id]) ? 120 : 500); i++) {   // laid out once: nothing drifts under a finger
-    sim.tick();
-    for (const n of nodes) { n.x = Math.max(padX, Math.min(W - padX, n.x)); n.y = Math.max(n.x > W - 96 ? 132 : padY, Math.min(H - padY - 14, n.y)); }   // the zoom buttons keep their corner
-  }
+  const nodes = [...agents, ...ideasAt], byId = Object.fromEntries(nodes.map((n) => [n.id, n]));
+  const pl = conn.map((p) => ({ p, source: byId[p.a], target: byId[p.b], ...plan.routes[p.a + "+" + p.b] }));
+  const il = touches.map((t) => ({ source: byId[t.agent], target: byId["x:" + t.artifact], n: t.n })).filter((l) => l.source && l.target);
+  const curve = (d) => `M${d.source.x},${d.source.y}Q${d.c[0]},${d.c[1]} ${d.target.x},${d.target.y}`;
   const svg = d3.select(el).append("svg").attr("width", W).attr("height", H);
   const root = svg.append("g");
-  const pl = links.filter((l) => l.kind === "pair"), il = links.filter((l) => l.kind === "idea");
   root.append("g").selectAll("line").data(il).join("line").attr("x1", (d) => d.source.x).attr("y1", (d) => d.source.y).attr("x2", (d) => d.target.x).attr("y2", (d) => d.target.y)
     .attr("vector-effect", "non-scaling-stroke").attr("stroke", "var(--border)").attr("stroke-width", 1);
-  root.append("g").selectAll("line").data(pl).join("line").attr("x1", (d) => d.source.x).attr("y1", (d) => d.source.y).attr("x2", (d) => d.target.x).attr("y2", (d) => d.target.y)
+  root.append("g").selectAll("path").data(pl).join("path").attr("d", curve).attr("fill", "none")
     .attr("vector-effect", "non-scaling-stroke").attr("stroke", (d) => (d.p.live ? "var(--accent)" : "var(--border-2)")).attr("stroke-linecap", "round")
-    .attr("stroke-dasharray", (d) => (d.p.dirs.size ? null : "6 5")).attr("stroke-width", (d) => Math.min(7, 1.5 + Math.log2(d.p.n)));
+    .attr("stroke-dasharray", (d) => (d.p.kinds.size === 1 && d.p.kinds.has("talk") ? "6 5" : d.p.kinds.size === 1 && d.p.kinds.has("hand") ? "1 6" : null)).attr("stroke-width", (d) => Math.min(5, 1.5 + 0.6 * Math.log2(d.p.n)));
   const go = (h) => { location.hash = h; };
-  root.append("g").selectAll("line").data(pl).join("line").attr("class", "swhit").attr("x1", (d) => d.source.x).attr("y1", (d) => d.source.y).attr("x2", (d) => d.target.x).attr("y2", (d) => d.target.y)
+  root.append("g").selectAll("path").data(pl).join("path").attr("class", "swhit").attr("d", curve).attr("fill", "none")
     .attr("vector-effect", "non-scaling-stroke").attr("stroke", "transparent").attr("stroke-width", 22).style("cursor", "pointer")
-    .on("click", (_, d) => go(swActHref([d.p.a, d.p.b], swMapHours))).append("title").text((d) => `${swName(d.p.a)} and ${swName(d.p.b)}: ${d.p.n} times`);
-  const arrows = [];                                       // one small arrow per direction, kept at screen size like the dots
-  for (const l of pl) for (const dir of l.p.dirs) {
-    const [f, t] = dir.split(">"), s = f === l.source.id ? l.source : l.target, e = f === l.source.id ? l.target : l.source;
-    arrows.push({ x: s.x + (e.x - s.x) * 0.6, y: s.y + (e.y - s.y) * 0.6, a: (Math.atan2(e.y - s.y, e.x - s.x) * 180) / Math.PI, t });
-  }
+    .on("click", (_, d) => go(hrefOf([d.p.a, d.p.b]))).append("title").text((d) => `${swName(d.p.a)} and ${swName(d.p.b)}: ${d.p.n} times`);
+  const arrows = pl.flatMap((l) => [...l.p.dirs].map((dir) => { const t = dir.split(">")[1]; return { l, forward: t === l.target.id, to: byId[t] }; }));   // one small arrow per direction, at the dot it points to
   const arr = root.append("g").selectAll("path").data(arrows).join("path").attr("d", "M-5,-4 L4,0 L-5,4 Z").attr("fill", "var(--muted)").style("pointer-events", "none");
   const nums = root.append("g").selectAll("text").data(pl).join("text").attr("class", "swnum").text((d) => d.p.n).style("pointer-events", "none");
-  const mid = (d) => [(d.source.x + d.target.x) / 2, (d.source.y + d.target.y) / 2];
   const node = root.append("g").selectAll("g").data(nodes).join("g").attr("transform", (d) => `translate(${d.x},${d.y})`).style("cursor", "pointer")
-    .on("click", (_, d) => go(d.kind === "idea" ? `#/swarm/artifact/${d.aid}` : swActHref([d.id], swMapHours)));
+    .on("click", (_, d) => go(d.kind === "idea" ? `#/swarm/artifact/${d.aid}` : hrefOf([d.id])));
   node.append("title").text((d) => (d.kind === "idea" ? d.label : `${swName(d.id)}: ${d.runs} run${d.runs === 1 ? "" : "s"}${d.failed ? `, ${d.failed} failed` : ""}`));
-  const ring = node.filter((d) => d.kind === "agent" && (d.failed || d.live)).append("circle").attr("fill", "none").attr("vector-effect", "non-scaling-stroke")
-    .attr("stroke", (d) => (d.failed ? "var(--err)" : "var(--accent)")).attr("stroke-width", 2.5).attr("class", (d) => (d.live ? "swlive" : ""));
+  const ring = node.filter((d) => d.kind === "agent" && (d.failing || d.live)).append("circle").attr("fill", "none").attr("vector-effect", "non-scaling-stroke")
+    .attr("stroke", (d) => (d.failing ? "var(--err)" : "var(--accent)")).attr("stroke-width", 2.5).attr("class", (d) => (d.live ? "swlive" : ""));
   const dot = node.append("circle").attr("fill", (d) => (d.kind === "idea" ? (d.state === "done" ? "var(--ok)" : "var(--warn)") : SW_GCOL[swGroupOf(d.id)] || "var(--faint)"))
     .attr("stroke", "var(--surface)").attr("vector-effect", "non-scaling-stroke").attr("stroke-width", 1.5);
-  const agentsN = nodes.filter((d) => d.kind === "agent"), ideasN = nodes.filter((d) => d.kind === "idea");
-  const name = root.append("g").selectAll("text").data(agentsN).join("text").text((d) => d.label).attr("class", "swlbl swag").attr("y", (d) => rs(d) + 13)
+  const name = root.append("g").selectAll("text").data(agents).join("text").text((d) => d.label).attr("class", "swlbl swag").attr("y", (d) => rs(d) + 13)
     .style("pointer-events", "none");                       // an agent's name always shows, centred under its dot
-  const text = root.append("g").selectAll("text").data(ideasN).join("text").attr("transform", (d) => `translate(${d.x},${d.y})`)
+  const text = root.append("g").selectAll("text").data(ideasAt).join("text").attr("transform", (d) => `translate(${d.x},${d.y})`)
     .text((d) => d.label).attr("class", "swlbl idea").style("pointer-events", "none");
-  const items = ideasN.map((d, i) => ({ x: d.x, y: d.y, rs: rs(d), text: d.label, el: text.nodes()[i], prio: 0 }));
+  const items = ideasAt.map((d, i) => ({ x: d.x, y: d.y, rs: rs(d), text: d.label, el: text.nodes()[i], prio: 0 }));
   const onZoom = (t) => {
     dot.attr("r", (d) => rs(d) / t.k);
     ring.attr("r", (d) => (rs(d) + 3.5) / t.k);
-    arr.attr("transform", (d) => `translate(${d.x},${d.y}) rotate(${d.a}) scale(${1 / t.k})`);
-    nums.attr("transform", (d) => { const [x, y] = mid(d); return `translate(${x},${y}) scale(${1 / t.k})`; });
+    arr.attr("transform", (d) => { const q = swMapArrow(d.l, d.forward, (rs(d.to) + 7) / t.k); return `translate(${q.x},${q.y}) rotate(${q.a}) scale(${1 / t.k})`; });
+    nums.attr("transform", (d) => `translate(${d.num[0]},${d.num[1]}) scale(${1 / t.k})`);
     name.attr("transform", (d) => `translate(${d.x},${d.y}) scale(${1 / t.k})`);
     placeLabels(items, t.k);
   };
-  swOv.pos = Object.fromEntries(nodes.map((n) => [n.id, { x: n.x, y: n.y }]));
   const fit = (animate) => (animate ? svg.transition().duration(250) : svg).call(zoom.transform, d3.zoomIdentity);   // laid out to fit already
   const zoom = chartZoom(el, svg, root, { onZoom: (tr) => { swOv.zoom = tr; onZoom(tr); }, fit });
   svg.call(zoom.transform, swOv.zoom || d3.zoomIdentity);     // and the zoom you left it at
@@ -501,7 +582,7 @@ function swAgentHref(id) {
   if ((S?.swarm?.cards || []).includes(id) || (swCards || []).some((c) => c.id === id)) return `#/swarm/agent/${encodeURIComponent(id)}`;
   return "";
 }
-const swActHref = (ids, hours) => `#/swarm?tab=activity&agents=${ids.map(encodeURIComponent).join(",")}${hours ? `&h=${hours}` : ""}`;
+const swActHref = (ids, hours, tests) => `#/swarm?tab=activity&agents=${ids.map(encodeURIComponent).join(",")}${hours ? `&h=${hours}` : ""}${tests ? "&tests=1" : ""}`;
 async function swTeamData() {
   const who = await swWhoCards();
   const [tokens, it] = await Promise.all([api("/api/swarm/tokens").catch(() => ({})), api("/api/swarm/interactions?hours=168").catch(() => ({ nodes: [], edges: [] }))]);
@@ -600,22 +681,28 @@ function swFold(text, n = 1200) {                     // a long text folds behin
   if (s.length <= n + 600) return esc(s);                // folding away a few lines is not worth a tap
   return `${esc(s.slice(0, n))}<span hidden>${esc(s.slice(n))}</span> <button type="button" class="tag swmore">Show all (${nf(s.length - n)} more characters)</button>`;   // cap: preview: one tap shows the rest
 }
-const SW_ROOM_TYPES = [["ask", "Asks"], ["help", "Helps"], ["talk", "Talk"], ["work", "Work"], ["you", "You"], ["status", "Status"]];
-const swRoomF = { types: new Set(["ask", "help", "talk", "work", "you"]), agents: new Set(), topic: "", hours: 24, q: "" };
+const SW_ROOM_TYPES = [["you", "You"], ["ask", "Asks"], ["hand", "Hand-overs"], ["talk", "Board"], ["work", "Work"], ["help", "Helps"], ["status", "Status"]];
+// a chip's lines: tool use counts under Asks, messages to you under You
+const SW_KIND = { use: "ask", tell: "you" };
+const swKind = (l) => SW_KIND[l.type] || l.type;
+const SW_LINE = { ask: "Ask", use: "Uses", hand: "Hand-over", tell: "Message to you", you: "You", talk: "Board", work: "Work", status: "Status" };
+const swRoomF = { types: new Set(), agents: new Set(), topic: "", hours: 24, q: "", tests: false };
 let swRoom = { t: 0, h: 0, d: null }, swRoomShow = 120;
 async function swRoomLoad(force) {
-  if (force || !swRoom.d || swRoom.h !== swRoomF.hours || Date.now() - swRoom.t > 15000)
-    swRoom = { t: Date.now(), h: swRoomF.hours, d: await api(`/api/swarm/room?hours=${swRoomF.hours}`).catch(() => swRoom.d || { lines: [], error: "Mission Control did not answer" }) };
+  if (force || !swRoom.d || swRoom.h !== swRoomF.hours || swRoom.tests !== swRoomF.tests || Date.now() - swRoom.t > 15000)
+    swRoom = { t: Date.now(), h: swRoomF.hours, tests: swRoomF.tests, d: await api(`/api/swarm/room?hours=${swRoomF.hours}${swRoomF.tests ? "&tests=1" : ""}`).catch(() => swRoom.d || { lines: [], error: "Mission Control did not answer" }) };
   return swRoom.d;
 }
-const swInvolved = (l) => [l.actor, ...String(l.target || "").split(", ")].filter((x) => x && !x.startsWith("#"));
+const swInvolved = (l) => [l.actor, ...(l.to || [])].filter(Boolean);
+// interactions.py between: what a line's number counts
+const swBetween = (l, picked) => picked.has(l.actor) && (l.to || []).some((t) => picked.has(t) && t !== l.actor);
 const swTopicOf = (l) => swGroupOf(l.type === "help" || l.type === "ask" ? l.target : l.actor === "you" || l.actor === "stack" || l.actor === "checker" ? (l.target || l.actor) : l.actor);
 function swRoomMatch(l, skip) {
   const f = swRoomF, inv = swInvolved(l);
-  if (skip !== "type" && !f.types.has(l.type)) return false;
+  if (skip !== "type" && (f.types.size ? !f.types.has(swKind(l)) : l.type === "status" && !f.agents.size)) return false;
   if (swCtx && !(l.ref?.context === swCtx || (swCtx.startsWith("artifact:") && String(l.ref?.artifact) === swCtx.slice(9)))) return false;
   if (skip !== "agent" && f.agents.size === 1 && !inv.some((a) => f.agents.has(a))) return false;
-  if (skip !== "agent" && f.agents.size > 1 && inv.filter((a) => f.agents.has(a)).length < 2) return false;   // between the ones picked
+  if (skip !== "agent" && f.agents.size > 1 && !swBetween(l, f.agents)) return false;   // between the ones picked
   if (skip !== "topic" && f.topic && swTopicOf(l) !== f.topic) return false;
   if (f.q) { const q = f.q.toLowerCase(); if (![l.actor, l.target, l.verb, l.title, l.text, l.detail].join(" ").toLowerCase().includes(q)) return false; }
   return true;
@@ -625,22 +712,23 @@ function swRoomLine(l) {
   const g = swGroupOf(l.actor === "you" ? "you" : l.actor), col = SW_GCOL[g] || "var(--faint)", name = l.actor === "you" ? "You" : swName(l.actor);
   const [scol, slabel] = l.state ? SW_STATE[l.state] || [null, l.state] : [null, ""];
   const art = l.ref?.artifact, links = [art ? `<a href="#/swarm/artifact/${art}">#${art}'s timeline</a>` : "", l.ref?.run ? `<a href="#/live/${encodeURIComponent(l.ref.run)}">its log</a>` : "",
+    l.ref?.chat ? `<a href="#/chat?c=${encodeURIComponent(l.ref.chat)}">the chat</a>` : "", l.ref?.task ? `<a href="#/task/${l.ref.task}">the task</a>` : "", l.ref?.build ? `<a href="#/build/${l.ref.build}">the build</a>` : "",
     l.ref?.context && !swCtx ? `<a href="#" data-rctx="${esc(l.ref.context)}">this conversation</a>` : ""].filter(Boolean);
   return `<div class="rline t-${l.type}"><span class="rav" style="background:${col}" aria-hidden="true">${esc(name.slice(0, 1).toUpperCase())}</span>
     <div class="grow" style="min-width:0">
-      <div class="rhead"><span class="wrap"><b>${esc(name)}</b> ${esc(l.verb)}${l.target ? ` <b>${esc(l.target.split(", ").map((x) => (x.startsWith("#") ? x : swName(x))).join(", "))}</b>` : ""}</span><span class="tiny faint rtime">${clockOf(new Date(l.ts * 1000).toISOString())}</span></div>
+      <div class="rhead"><span class="wrap"><b>${esc(name)}</b> ${esc(l.verb)}${l.target ? ` <b>${esc(l.target.split(", ").map((x) => (x.startsWith("#") ? x : x === "you" ? "you" : swName(x))).join(", "))}</b>` : ""}</span><span class="tiny faint rtime">${clockOf(new Date(l.ts * 1000).toISOString())}</span></div>
       ${l.title ? `<div class="small rtitle wrap">${art ? `<a href="#/swarm/artifact/${art}">${esc(l.title)}</a>` : esc(l.title)}</div>` : ""}
       ${l.text ? `<div class="small rtext">${swFold(l.text, 600)}</div>` : ""}
-      ${l.detail ? `<details class="rdet"><summary class="tiny muted">${l.type === "ask" ? `${esc(swName(l.target))}'s answer` : "More"}</summary><div class="small rtext">${swFold(l.detail)}</div></details>` : ""}
+      ${l.detail ? `<details class="rdet"><summary class="tiny muted">${l.type === "ask" ? `${esc(swName(l.target))}'s answer` : esc(l.detail_label || "More")}</summary><div class="small rtext">${swFold(l.detail)}</div></details>` : ""}
       ${l.ref?.help ? (swJudged[l.ref.help] ? `<div class="tiny rjudged">${esc(swJudged[l.ref.help].actor === "you" ? "You" : swName(swJudged[l.ref.help].actor))} ${esc(swJudged[l.ref.help].verb.replace(/^judged /, "judged this "))}</div>`
         : `<div class="row wrap" style="gap:6px;margin-top:6px"><span class="tiny faint">Was it useful to ${esc(swName(l.target))}?</span><button type="button" class="btn sm" data-hv="${l.ref.help}" data-useful="1">Useful</button><button type="button" class="btn sm ghost" data-hv="${l.ref.help}" data-useful="0">Not useful</button></div>`) : ""}
-      <div class="tiny faint rmeta">${l.type === "help" ? `<span class="rhelp">helps ${esc(swName(l.target))}</span>` : `<span>${esc(SW_ROOM_TYPES.find(([k]) => k === l.type)?.[1].replace(/s$/, "") || l.type)}</span>`}${slabel ? ` · <span style="color:${scol || "inherit"}">${esc(slabel)}</span>` : ""}${links.length ? " · " + links.join(" · ") : ""}</div>
+      <div class="tiny faint rmeta">${l.type === "help" ? `<span class="rhelp">helps ${esc(swName(l.target))}</span>` : `<span>${esc(SW_LINE[l.type] || l.type)}</span>`}${l.via ? ` · ${esc(l.via)}` : ""}${l.ref?.channels ? ` · ${esc(l.ref.channels.join(", "))}` : ""}${l.certainty === "matched" ? ` · <span title="Worked out from the timing, not recorded">matched</span>` : ""}${l.world === "test" ? " · test" : ""}${slabel ? ` · <span style="color:${scol || "inherit"}">${esc(slabel)}</span>` : ""}${links.length ? " · " + links.join(" · ") : ""}</div>
     </div></div>`;
 }
 async function swChat(body, poll = false) {
   await swWhoCards();
   const d = await swRoomLoad(!poll), all = d.lines || [];
-  const sig = JSON.stringify([all.length, all.at(-1)?.ts, [...swRoomF.types], [...swRoomF.agents], swRoomF.topic, swRoomF.hours, swRoomF.q, swCtx, swRoomShow]);
+  const sig = JSON.stringify([all.length, all.at(-1)?.ts, [...swRoomF.types], [...swRoomF.agents], swRoomF.topic, swRoomF.hours, swRoomF.q, swRoomF.tests, swCtx, swRoomShow]);
   if (poll && sig === swLastSig) return;                       // nothing new: keep what the owner is typing
   swLastSig = sig;
   const typed = $("#swtext")?.value || "", qFocus = document.activeElement?.id === "rq";
@@ -649,7 +737,7 @@ async function swChat(body, poll = false) {
   const shown = all.filter((l) => swRoomMatch(l)).reverse(), page = shown.slice(0, swRoomShow);   // cap: list: "Show earlier" shows the rest
   const count = (pred) => all.filter(pred).length;
   const agents = {};
-  for (const l of all.filter((l) => swRoomMatch(l, "agent"))) for (const a of swInvolved(l)) if (a !== "you") agents[a] = (agents[a] || 0) + 1;
+  for (const l of all.filter((l) => swRoomMatch(l, "agent"))) for (const a of swInvolved(l)) agents[a] = (agents[a] || 0) + 1;
   for (const a of swRoomF.agents) agents[a] = agents[a] || 0;            // a picked agent keeps its chip, also with nothing to show
   const topics = {};
   for (const l of all.filter((l) => swRoomMatch(l, "topic"))) { const t = swTopicOf(l); topics[t] = (topics[t] || 0) + 1; }
@@ -670,38 +758,40 @@ async function swChat(body, poll = false) {
       <div class="rburstin">${g.map(swRoomLine).join("")}</div></details>`;
   }).join("");
   const cards = S?.swarm?.cards || [], rooms = ["all", "health", "code", "research", "house", "shopping", "ops"];
-  const helps = count((l) => l.type === "help" && swRoomMatch(l, "type"));
+  const kinds = SW_ROOM_TYPES.map(([k, l]) => [k, l, count((x) => swKind(x) === k && swRoomMatch(x, "type"))]).filter(([k, , n]) => n || swRoomF.types.has(k));
+  const people = Object.entries(agents).sort((a, b) => swRoomF.agents.has(b[0]) - swRoomF.agents.has(a[0]) || b[1] - a[1]);   // who is picked comes first, so it is always in sight
+  const topicList = SW_GROUP.filter(([k]) => topics[k]);
+  const cov = d.coverage || {};
   body.innerHTML = `<div class="card pad-l rfilters">
-      <div class="tiny muted">What the agents do together, drawn from their work: nobody has to post here. <b>Helps</b> are the rare steps into another agent's lane.</div>
-      <div class="chips" style="margin-top:8px">${SW_ROOM_TYPES.map(([k, l]) => `<button type="button" class="tag ${swRoomF.types.has(k) ? "on" : ""}" data-rt="${k}">${l} <span class="faint">${count((x) => x.type === k && swRoomMatch(x, "type"))}</span></button>`).join("")}</div>
-      <div class="chips scroll-x" style="margin-top:8px"><button type="button" class="tag ${swRoomF.agents.size ? "" : "on"}" data-ra="">Everyone</button>${Object.entries(agents).sort((a, b) => b[1] - a[1]).map(([a, n]) => `<button type="button" class="tag ${swRoomF.agents.has(a) ? "on" : ""}" data-ra="${esc(a)}"><span class="fdot" style="background:${SW_GCOL[swGroupOf(a)] || "var(--faint)"}"></span>${esc(swName(a))} <span class="faint">${n}</span></button>`).join("")}</div>
-      ${swRoomF.agents.size ? `<div class="tiny faint" style="margin-top:4px">${swRoomF.agents.size > 1 ? "Only what passes between" : "Only what involves"} ${[...swRoomF.agents].map((a) => esc(swName(a))).join(" and ")}${[...swRoomF.agents].some(swAgentHref) ? ` · ${[...swRoomF.agents].filter(swAgentHref).map((a) => `<a href="${swAgentHref(a)}">${esc(swName(a))}'s page</a>`).join(" · ")}` : ""}</div>` : ""}
-      <div class="chips scroll-x" style="margin-top:8px"><button type="button" class="tag ${swRoomF.topic ? "" : "on"}" data-rtop="">All topics</button>${SW_GROUP.filter(([k]) => topics[k]).map(([k, l]) => `<button type="button" class="tag ${swRoomF.topic === k ? "on" : ""}" data-rtop="${k}">${esc(l)} <span class="faint">${topics[k]}</span></button>`).join("")}</div>
-      <div class="row wrap" style="gap:8px;margin-top:10px"><div class="chips">${[[6, "6 h"], [24, "24 h"], [72, "3 days"], [168, "7 days"]].map(([h, l]) => `<button type="button" class="tag ${swRoomF.hours === h ? "on" : ""}" data-rh="${h}">${l}</button>`).join("")}</div>
-        <input class="input grow" id="rq" type="search" placeholder="Search what they said" value="${esc(swRoomF.q)}" style="min-width:150px"></div>
-      ${swCtx ? `<div class="chips" style="margin-top:8px"><button type="button" class="tag on" data-rctx="">${esc(swCtxName(swCtx))} ×</button></div>` : ""}
+      <div class="row rfirst" style="gap:8px"><input class="input grow" id="rq" type="search" placeholder="Search" aria-label="Search what they said" value="${esc(swRoomF.q)}">
+        <select class="input rsel" data-rh aria-label="Time window">${[[6, "6 h"], [24, "24 h"], [72, "3 days"], [168, "7 days"]].map(([h, l]) => `<option value="${h}"${swRoomF.hours === h ? " selected" : ""}>${l}</option>`).join("")}</select></div>
+      ${explain("activity-what-passes", `Everything that passes between your agents and you, drawn from their work: nobody has to post here. Pick one name for what involves it, two for what passed between them. <b>Helps</b> are the rare steps into another agent's lane.${[...swRoomF.agents].some(swAgentHref) ? ` Open ${[...swRoomF.agents].filter(swAgentHref).map((a) => `<a href="${swAgentHref(a)}">${esc(swName(a))}'s page</a>`).join(" · ")}.` : ""}`, "About Activity")}
+      <div class="chips scroll-x"><button type="button" class="tag ${swRoomF.types.size ? "" : "on"}" data-rt="">All</button>${kinds.map(([k, l, n]) => `<button type="button" class="tag ${swRoomF.types.has(k) ? "on" : ""}" data-rt="${k}">${l} <span class="faint">${n}</span></button>`).join("")}${cov.tests ? `<button type="button" class="tag ${swRoomF.tests ? "on" : ""}" data-rtests>Tests <span class="faint">${cov.tests}</span></button>` : ""}</div>
+      ${people.length ? `<div class="chips scroll-x">${topicList.length > 1 || swRoomF.topic ? `<select class="input rsel rtopic" data-rtop aria-label="Topic"><option value="">All topics</option>${topicList.map(([k, l]) => `<option value="${k}"${swRoomF.topic === k ? " selected" : ""}>${esc(l)}</option>`).join("")}</select>` : ""}${people.map(([a, n]) => `<button type="button" class="tag ${swRoomF.agents.has(a) ? "on" : ""}" data-ra="${esc(a)}"><span class="fdot" style="background:${SW_GCOL[swGroupOf(a)] || "var(--faint)"}"></span>${esc(a === "you" ? "You" : swName(a))} ${swRoomF.agents.has(a) ? "×" : `<span class="faint">${n}</span>`}</button>`).join("")}</div>` : ""}
+      ${swCtx ? `<div class="chips"><button type="button" class="tag on" data-rctx="">${esc(swCtxName(swCtx))} ×</button></div>` : ""}
     </div>
     ${d.error ? `<div class="banner section">${ic.alert}<span class="small">${esc(d.error)}</span></div>` : ""}
-    <details class="card pad-l section" id="rpost" ${swCtx || typed ? "open" : ""}><summary><b>Write to the agents</b> <span class="small muted">they read it at the start of their next run</span></summary>
+    <div class="card pad-l section rroom">${rows || emptyState("Nothing here.", [swRoomF.hours < 168 ? `<button type="button" class="btn sm" data-rwide="h">Show 7 days</button>` : "",
+        swRoomF.types.size ? `<button type="button" class="btn sm ghost" data-rwide="t">Every kind</button>` : "", swRoomF.agents.size || swCtx ? `<button type="button" class="btn sm ghost" data-rwide="a">Everyone</button>` : ""].join(""))}
+      ${shown.length > page.length ? `<button type="button" class="btn sm ghost" id="rmore" style="margin-top:10px">Show earlier (${shown.length - page.length} more)</button>` : ""}
+      ${cov.runs ? `<div class="tiny faint" style="margin-top:10px">${esc(swCoverage(cov))}</div>` : ""}</div>
+    <details class="card pad-l section" id="rpost" ${swCtx || typed ? "open" : ""}><summary><b>Write to the agents</b></summary>
       <form id="swpost" class="swpost" style="margin-top:8px">
         <select name="to" class="input">${(swCtx.startsWith("room:") || swCtx.startsWith("artifact:") || swCtx.startsWith("dm:") ? [swCtx.startsWith("dm:") ? "agent:" + swCtx.slice(3).split("+").find((x) => !x.startsWith("owner")) : swCtx] : []).concat(rooms.map((r) => "room:" + r), cards.map((c) => "agent:" + c))
           .filter((v, i, a) => a.indexOf(v) === i).map((v) => `<option value="${esc(v)}">${esc(v.startsWith("agent:") ? "to " + v.slice(6) : swCtxName(v))}</option>`).join("")}</select>
-        <textarea id="swtext" name="text" class="input" rows="2" placeholder="Write to an agent or a room">${esc(typed)}</textarea>
+        <textarea id="swtext" name="text" class="input" rows="2" placeholder="They read it at the start of their next run">${esc(typed)}</textarea>
         <div class="row between wrap" style="gap:8px"><label class="tiny"><input type="checkbox" name="request"> as a request (tracked until answered)</label><button class="btn sm primary">Send</button></div>
-      </form></details>
-    <div class="card pad-l section rroom">${rows || emptyState("Nothing in this window with these filters.", [swRoomF.hours < 168 ? `<button type="button" class="btn sm" data-rwide="h">Show 7 days</button>` : "",
-        swRoomF.types.size < SW_ROOM_TYPES.length ? `<button type="button" class="btn sm ghost" data-rwide="t">Every kind, status too</button>` : "", swRoomF.agents.size || swCtx ? `<button type="button" class="btn sm ghost" data-rwide="a">Everyone</button>` : ""].join(""))}
-      ${shown.length > page.length ? `<button type="button" class="btn sm ghost" id="rmore" style="margin-top:10px">Show earlier (${shown.length - page.length} more)</button>` : ""}
-      ${!helps && swRoomF.types.has("help") ? `${explain("no-agent-stepped-into-an", `No agent stepped into another's lane in this window. That is by design: an agent works on another's artifact only with something new.`, "About this")}` : ""}</div>`;
-  if (swTlBox) $(".rfilters", body)?.after(swTlBox);
+      </form></details>`;
+  if (swTlBox) $(".rroom", body)?.after(swTlBox);
   const redraw = () => { swLastSig = ""; swSyncUrl(); swChat(body, true); if (swTlBox) swTimeline(swTlBox); };
   $$("[data-rwide]", body).forEach((b) => (b.onclick = () => { const k = b.dataset.rwide;
-    if (k === "h") swRoomF.hours = 168; else if (k === "t") swRoomF.types = new Set(SW_ROOM_TYPES.map(([x]) => x)); else { swRoomF.agents.clear(); swCtx = ""; }
+    if (k === "h") swRoomF.hours = 168; else if (k === "t") swRoomF.types.clear(); else { swRoomF.agents.clear(); swCtx = ""; }
     redraw(); }));
-  $$("[data-rt]", body).forEach((b) => (b.onclick = () => { const k = b.dataset.rt; swRoomF.types.has(k) ? swRoomF.types.delete(k) : swRoomF.types.add(k); redraw(); }));
-  $$("[data-ra]", body).forEach((b) => (b.onclick = () => { const a = b.dataset.ra; if (!a) swRoomF.agents.clear(); else swRoomF.agents.has(a) ? swRoomF.agents.delete(a) : swRoomF.agents.add(a); redraw(); }));
-  $$("[data-rtop]", body).forEach((b) => (b.onclick = () => { swRoomF.topic = b.dataset.rtop; redraw(); }));
-  $$("[data-rh]", body).forEach((b) => (b.onclick = () => { swRoomF.hours = +b.dataset.rh; swRoomShow = 120; redraw(); }));
+  $$("[data-rt]", body).forEach((b) => (b.onclick = () => { const k = b.dataset.rt; if (!k) swRoomF.types.clear(); else swRoomF.types.has(k) ? swRoomF.types.delete(k) : swRoomF.types.add(k); redraw(); }));
+  $$("[data-rtests]", body).forEach((b) => (b.onclick = () => { swRoomF.tests = !swRoomF.tests; redraw(); }));
+  $$("[data-ra]", body).forEach((b) => (b.onclick = () => { const a = b.dataset.ra; swRoomF.agents.has(a) ? swRoomF.agents.delete(a) : swRoomF.agents.add(a); redraw(); }));
+  $$("[data-rtop]", body).forEach((b) => (b.onchange = () => { swRoomF.topic = b.value; redraw(); }));
+  $$("[data-rh]", body).forEach((b) => (b.onchange = () => { swRoomF.hours = +b.value; swRoomShow = 120; redraw(); }));
   $$("[data-rctx]", body).forEach((a) => (a.onclick = (e) => { e.preventDefault(); swCtx = a.dataset.rctx; redraw(); }));
   $$(".swmore", body).forEach((b) => (b.onclick = () => { b.previousElementSibling.hidden = false; b.remove(); }));
   $$("[data-hv]", body).forEach((b) => (b.onclick = async () => {        // the owner's verdict on a help counts over the agent's
