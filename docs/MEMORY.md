@@ -1,5 +1,7 @@
 # Memory: how the stack remembers, and the design it grows into
 
+The concept and the Memory tab are in [MEMORY-TAB.md](MEMORY-TAB.md): each kind of knowledge has one home. This document is the design and its history.
+
 Written 2 November 2026 after the owner asked: do we use the swarm database, should we use it more, is the memory
 design sensible (agent context, LLM wiki, database), should the wikis go into the database, are the wikis and the
 database curated, are contradictions and false facts corrected, what is best practice, and what the trials' failures

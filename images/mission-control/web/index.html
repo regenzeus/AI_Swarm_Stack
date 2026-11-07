@@ -5,8 +5,22 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
 <title>Mission Control</title>
 <meta name="description" content="Missions, agents, knowledge and costs of your AI stack">
-<meta name="theme-color" content="#0c1115" media="(prefers-color-scheme: dark)">
-<meta name="theme-color" content="#edf0f3" media="(prefers-color-scheme: light)">
+<meta name="theme-color" id="themecolor" content="#0c1115">
+<script>
+// the theme before the first paint, so a light page never flashes dark: this device's choice, else the system's
+(function () {
+  var mq = matchMedia("(prefers-color-scheme: light)");
+  window.applyTheme = function (pick) {
+    var t = pick === "light" || pick === "dark" ? pick : mq.matches ? "light" : "dark";
+    document.documentElement.dataset.theme = t;
+    document.getElementById("themecolor").content = t === "light" ? "#edf0f3" : "#0c1115";
+  };
+  var saved = function () { try { return localStorage.getItem("mc-theme"); } catch (e) { return null; } };
+  applyTheme(saved());
+  mq.addEventListener("change", function () { applyTheme(saved()); });
+  try { var start = localStorage.getItem("mc-start"); if (start && (!location.hash || location.hash === "#/")) location.replace(start); } catch (e) {}
+})();
+</script>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">

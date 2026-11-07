@@ -9,9 +9,13 @@ ROOT = Path(__file__).resolve().parent.parent
 MC = ROOT / "images/mission-control"
 APP_JS = (MC / "web/static/app.js").read_text()
 GUIDE = (MC / "guide/01-welcome.md").read_text()
-FUNCS = ("needsItems", "needsHtml", "nowHtml", "upkeepHtml", "healthAlerts", "feedItems", "feedHtml", "workBuildRow", "statusPill", "runningCard", "stepsHtml", "dayOf")
-CONSTS = ("RKIND", "NOT_YOURS", "esc", "BSTATUS", "bcls", "VERDICT", "STATUS", "typeIcon", "toIso", "gbOf", "clockOf", "CREW_IC", "TRIG", "firstLine", "ctAsker", "ctTitle", "ideasWaiting")
+FUNCS = ("needsRows", "needsRow", "needsHtml", "nowHtml", "upkeepHtml", "healthAlerts", "feedItems", "feedHtml", "workBuildRow", "statusPill", "runningCard", "stepsHtml", "dayOf")
+CONSTS = ("RKIND", "NOT_YOURS", "esc", "BSTATUS", "bcls", "VERDICT", "STATUS", "typeIcon", "toIso", "clockOf", "HOME_ICON", "homeMany", "CREW_IC", "TRIG", "firstLine", "ctAsker", "ctTitle", "ideasWaiting")
 FORMAT = re.search(r"// ---------- formatting \(TSK-31\).*?// ---------- end of formatting ----------", APP_JS, re.S)[0]   # the app's own helpers
+
+
+def item(id, cls, what, href, why="", routine=False):
+    return {"id": id, "cls": cls, "what": what, "why": why, "href": href, "answers": [{"label": "Look", "href": href}], "routine": routine}
 
 
 def run(state, expr):
@@ -45,16 +49,50 @@ def test_needs_you_lists_only_decisions_and_says_so_when_there_are_none():
     assert "Nothing needs you" in calm
     html = run({"builds": [{"id": 1, "status": "review", "title": "Review <me>", "checks_ok": True, "checks": "x", "ci": "success"},
                            {"id": 2, "status": "working", "title": "Busy"}],
-                "shopping": {"proposals": [{"id": "p-1", "slug": "ram", "status": "proposed", "item": "RAM kit", "total_eur": 99},
-                                           {"id": "p-2", "slug": "ram", "status": "watching", "item": "Other", "total_eur": 189}]},
-                "crew": [{"id": "phone-cleanup", "actions": [{"status": "open", "size": 2e9}, {"status": "done", "size": 1e9}]}],
-                "phone": {"pending": 2}, "health": {"alerts": 1}, "proposals": [{"status": "proposed", "title": "Fix the watchdog"}]},
+                "shopping": {"proposals": [{"id": "p-2", "slug": "ram", "status": "watching", "item": "Other", "total_eur": 189}]},
+                "decisions": [item("build:1", "coding", "Deploy build #1: Review <me>", "#/build/1"), item("shop:p-1", "shopping-buy", "Buy RAM kit for EUR 99 at Alternate?", "#/mission/ram?shop=p-1"),
+                              item("phone-step:a1", "phone-routine", "AI phone cleanup: caches", "#/crew/phone-cleanup", why="frees 2.0 GB"),
+                              item("phone-ask", "phone", "The AI phone asks for 2 approvals", "#/phone")],
+                "health": {"alerts": 1}, "proposals": [{"status": "proposed", "title": "Fix the watchdog"}]},
                "needsHtml()")
-    for want in ('href="#/build/1"', "Review &lt;me&gt;", "#/mission/ram?shop=p-1", "1 AI phone cleanup step to approve", "2.0 GB",
-                 "2 approvals", '<span class="hcount">4</span>'):
+    for want in ('href="#/build/1"', "Review &lt;me&gt;", "#/mission/ram?shop=p-1", "AI phone cleanup: caches", "2.0 GB",
+                 "2 approvals", '<span class="hcount">4</span>', 'href="#/decide"'):
         assert want in html, want
     assert "#/build/2" not in html and "p-2" not in html           # working builds are Now, a watched price is not a decision
     assert "health alert" not in html and "improvement" not in html  # the stack's own upkeep is not the owner's decision
+
+
+def test_home_and_the_queue_draw_one_list_and_a_kind_with_many_items_is_a_count_row():
+    """GEN-02: Home built its own list and left out ideas and agent changes. Now both read S.decisions; the rows add up to it."""
+    assert "const n = (S.decisions || []).length" in re.search(r"^function homeHeadHtml\(.*?^\}", APP_JS, re.M | re.S)[0]
+    for src in ("needsRows", "needsHtml"):
+        body = re.search(rf"^function {src}\(.*?^\}}", APP_JS, re.M | re.S)[0]
+        assert "S.decisions" in body and "S.builds || []).filter" not in body and "S.tasks" not in body and "S.swarm" not in body, src
+    assert "S.decisions" in re.search(r"^function vDecide\(.*?^\}", APP_JS, re.M | re.S)[0]
+    assert "needsItems" not in APP_JS and "ideasWaiting" not in re.search(r"^function upkeepHtml\(.*?^\}", APP_JS, re.M | re.S)[0]
+    ideas = [item(f"idea:{n}", "ideas", f"Take this idea? {n}", "#/swarm?tab=improve") for n in range(22)]
+    ds = [item("build:1", "coding", "Deploy build #1", "#/build/1"), item("phone-step:a", "phone-routine", "Cache a", "#/crew/phone-cleanup", routine=True),
+          item("agent-1", "agent-change", "Take the change to scout?", "#/swarm?tab=improve"), item("phone-step:b", "phone-routine", "Cache b", "#/crew/phone-cleanup", routine=True),
+          item("memory:1", "memory", "Remember this?", "#/system", routine=True), item("keeper:1", "memory", "Forget this?", "#/crew/memory", routine=True), *ideas,
+          item("test:abc", "journey-test", "Test item", "#/decide")]
+    state = {"decisions": ds, "decide": {"classes": {"ideas": {"title": "Ideas"}, "phone-routine": {"title": "Phone routine"}, "memory": {"title": "Memory"}}}}
+    rows = json.loads(run(state, "JSON.stringify(needsRows().map((x) => [x.title, x.n, x.href]))"))
+    assert rows == [["Deploy build #1", 1, "#/build/1"], ["Phone routine · 2 waiting", 2, "#/crew/phone-cleanup"], ["Take the change to scout?", 1, "#/swarm?tab=improve"],
+                    ["Memory · 2 waiting", 2, "#/decide"], ["Ideas · 22 waiting", 22, "#/swarm?tab=improve"], ["Test item", 1, "#/decide"]]
+    assert sum(r[1] for r in rows) == len(ds)                      # nothing is hidden: the rows add up to the queue
+    html = run(state, "needsHtml()")
+    assert f'<span class="hcount">{len(ds)}</span>' in html and "first: Take this idea? 0" in html
+    few = run({"decisions": ideas[:3]}, "JSON.stringify(needsRows().map((x) => x.title))")
+    assert json.loads(few) == [d["what"] for d in ideas[:3]]       # three of a kind are still rows of their own
+
+
+def test_what_the_owner_cannot_answer_stays_on_the_health_board_and_under_stack_upkeep():
+    """GEN-02: the AI phone being down and health alerts are states: not in the queue, still one tap from Home."""
+    state = {"health": {"alerts": 1, "items": [{"kind": "crew", "id": "phone-check", "issues": [{"severity": "alert", "kind": "phone-down", "text": "The AI phone: disconnected"}]}]},
+             "crew": [{"id": "phone-check", "name": "Phone check"}], "decisions": []}
+    assert "Nothing needs you" in run(state, "needsHtml()")
+    html = run(state, "upkeepHtml()")
+    assert "The AI phone is not connected" in html and 'href="#/phone"' in html and "1 health alert" in html
 
 
 def test_stack_upkeep_sits_under_now_not_needs_you():
@@ -62,7 +100,8 @@ def test_stack_upkeep_sits_under_now_not_needs_you():
                                                   {"kind": "crew", "id": "doctor", "issues": [{"severity": "note", "text": "slow"}]}]},
                 "swarm": {"board": {"open": [{"id": 3, "title": "Fix the watchdog", "state": "open"}], "recent": [{"id": 1, "state": "declined"}]}},
                 "crew": [{"id": "backup", "name": "Backup", "state": "failed"}]}, "nowHtml()")
-    assert "Stack upkeep" in html and "2 health alerts" in html and "Backup: failed 2 times" in html and "1 improvement idea" in html
+    assert "Stack upkeep" in html and "2 health alerts" in html and "Backup: failed 2 times" in html
+    assert "improvement idea" not in html                       # ideas wait for an answer: they are under Needs you (GEN-02)
     assert 'href="#/crew/backup"' in html                       # one agent with an alert: its page, not the Agents overview
     two = run({"health": {"alerts": 2, "items": [{"kind": "crew", "id": "a", "issues": [{"severity": "alert", "text": "x"}]},
                                                  {"kind": "mission", "slug": "m", "issues": [{"severity": "alert", "text": "y"}]}]},
@@ -137,6 +176,7 @@ def test_home_s_results_are_one_card_per_outcome_named_by_what_it_is_about():
 
 
 def test_home_holds_its_updates_while_you_scroll_or_touch():
-    """APP-38: a card came in above the one tapped and the tap opened another; Home waits behind a button instead."""
+    """APP-38: a card came in above the one tapped and the tap opened another; what arrives waits, silently, and comes in at the top."""
     fn = re.search(r"^function homeUpdate\(.*?^\}", APP_JS, re.M | re.S)[0]
-    assert "window.scrollY > 120 || Date.now() - homeTouch < 2500" in fn and 'id="homenew"' in fn and "homeUpdate(true)" in fn
+    assert "window.scrollY > 120 || Date.now() - homeTouch < 2500" in fn and "homeHeld = held" in fn
+    assert "homenew" not in APP_JS and "New on Home" not in APP_JS.replace('"New on Home" button', "")

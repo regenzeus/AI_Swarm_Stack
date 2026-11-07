@@ -1,8 +1,9 @@
 // The journey checks' browser half (TSK-32), run by ops/journeys.py in the scout's browser image (headless Chromium, the
 // Playwright that @playwright/mcp brings): every route of the app at 375 px on the live data, then again on an emptied
 // state, and the e-mail at phone width. Nothing is changed: a write is answered here and never reaches the stack, and
-// nothing outside the app is reached. One JSON report on stdout.
-//   node journeys.mjs /j/config.json        config: { base, web, routes, email, wide }   (web: the checkout's front end)
+// nothing outside the app is reached. The one exception is the decide journey (GEN-03), where the tap on the nightly test
+// item's own answer is sent, and only that. One JSON report on stdout.
+//   node journeys.mjs /j/config.json        config: { base, web, routes, email, wide, decide }   (web: the checkout's front end)
 import { createRequire } from "module";
 import { readFileSync, existsSync } from "fs";
 import { extname, join, normalize } from "path";
@@ -58,6 +59,13 @@ const kind = (h) => h.replace(/\?.*$/, (q) => "?" + [...new URLSearchParams(q.sl
   .replace(/^(#\/(?:mission|crew|repo|live|swarm\/artifact|build|guide))\/[^?]+/, "$1/:id")
   + (/[?&]tab=([\w-]+)/.exec(h) ? ":" + /[?&]tab=([\w-]+)/.exec(h)[1] : "");      // each tab is its own screen
 
+// the checkout's front end, when the journey was given one
+function fromWeb(route, u) {
+  if (!cfg.web || !(u.pathname === "/" || u.pathname.startsWith("/static/") || u.pathname === "/sw.js" || u.pathname.endsWith(".webmanifest"))) return null;
+  const f = normalize(join(cfg.web, u.pathname === "/" ? "index.html" : u.pathname));
+  return f.startsWith(cfg.web) && existsSync(f) ? route.fulfill({ status: 200, contentType: TYPES[extname(f)] || "application/octet-stream", body: readFileSync(f) }) : null;
+}
+
 async function sweep(browser, emptied) {
   const ctx = await browser.newContext({ ...PHONE, extraHTTPHeaders: { "Tailscale-User-Login": "journeys@stack.local", "Tailscale-User-Name": "Journey check" } });
   const writes = [], errs = [];
@@ -69,10 +77,8 @@ async function sweep(browser, emptied) {
       else writes.push(`${req.method()} ${u.pathname}`);
       return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ ok: true, pending: false, result: {} }) });
     }
-    if (cfg.web && (u.pathname === "/" || u.pathname.startsWith("/static/") || u.pathname === "/sw.js" || u.pathname.endsWith(".webmanifest"))) {
-      const f = normalize(join(cfg.web, u.pathname === "/" ? "index.html" : u.pathname));
-      if (f.startsWith(cfg.web) && existsSync(f)) return route.fulfill({ status: 200, contentType: TYPES[extname(f)] || "application/octet-stream", body: readFileSync(f) });
-    }
+    const own = fromWeb(route, u);
+    if (own) return own;
     if (emptied && u.pathname === "/api/state") {                                       // the same app with nothing in it
       const r = await route.fetch(), s = await r.json();
       for (const [k, v] of Object.entries(s)) if (Array.isArray(v)) s[k] = [];
@@ -111,6 +117,67 @@ async function sweep(browser, emptied) {
   return { results, writes, errors: errs };
 }
 
+// The decide journey (GEN-03): the test item read from the app's list, Home and #/decide, answered by a tap on its own
+// button, and then gone from all three with its answer recorded. That tap is the only write this page may send.
+async function decide(browser) {
+  const { token, wait = 120 } = cfg.decide, id = `test:${token}`, button = `[data-dact*="${token}"]`, ms = wait * 1000;
+  const out = { id, writes: [], errors: [], still_shown: [] };
+  const ctx = await browser.newContext({ ...PHONE, extraHTTPHeaders: { "Tailscale-User-Login": "journeys@stack.local", "Tailscale-User-Name": "Journey check" } });
+  await ctx.route("**/*", async (route) => {
+    const req = route.request(), u = new URL(req.url());
+    if (u.host !== base.host) return route.abort();                                    // nothing outside the app
+    if (req.method() !== "GET" && !(u.pathname === "/api/swarm" && req.method() === "POST")) {   // /api/swarm reads only
+      let body = {};
+      try { body = JSON.parse(req.postData() || "{}"); } catch { body = {}; }
+      if (u.pathname === "/api/request" && body.action === "decision_test_answer" && body.token === token) { out.tapped = true; return route.continue(); }
+      if (u.pathname === "/api/clienterror") out.errors.push("the app reported: " + (req.postData() || "").slice(0, 300));   // cap: preview
+      else out.writes.push(`${req.method()} ${u.pathname}`);
+      return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ ok: true, pending: false, result: {} }) });
+    }
+    return fromWeb(route, u) || route.continue();
+  });
+  const page = await ctx.newPage();
+  page.on("pageerror", (e) => out.errors.push(e.message));
+  page.on("response", async (r) => {
+    const u = new URL(r.url()), tap = u.pathname === "/api/request" && (r.request().postData() || "").includes(token);
+    if (tap || u.pathname.startsWith("/api/result/")) out.answer = await r.json().catch(() => ({ ok: false, error: `HTTP ${r.status()} from ${u.pathname}` }));
+  });
+  await page.addInitScript(() => { window.confirm = () => false; window.prompt = () => null; window.alert = () => {}; });
+  const until = async (fn, limit) => { const end = Date.now() + limit; for (;;) { const v = await fn(); if (v || Date.now() >= end) return v; await sleep(1000); } };
+  const state = () => page.evaluate(() => fetch("/api/state").then((r) => r.json())).catch(() => ({}));
+  const look = (where, count) => page.evaluate(([where, count, id]) => {
+    const item = (S?.decisions || []).find((d) => d.id === id), el = document.querySelector(where);
+    return { shown: !!item && !!el && (el.innerText || "").includes(item.what), count: +(document.querySelector(count)?.textContent || "").replace(/\D/g, ""), list: (S?.decisions || []).length };
+  }, [where, count, id]);
+  const go = (h) => page.evaluate((x) => { location.hash = x; }, h);
+  try {
+    await page.goto(cfg.base + "/", { waitUntil: "domcontentloaded" });
+    await sleep(2500);
+    out.started = await page.evaluate(() => typeof render === "function" && typeof route === "object");
+    const before = await until(async () => { const s = await state(); return (s.decisions || []).some((d) => d.id === id) ? s : null; }, ms);
+    if (!before) return out;                                                            // it never reached the list: the report says so
+    out.listed = true;
+    out.marked = !!before.decisions.find((d) => d.id === id).test;
+    out.no_answer = before.decisions.filter((d) => !(d.answers || []).some((a) => a.act || a.href)).map((d) => d.id);
+    await go("#/");
+    out.home = await until(async () => { const v = await look("#homeneeds", "#homeneeds .hcount"); return v.shown && v.count === v.list ? v : null; }, ms) || await look("#homeneeds", "#homeneeds .hcount");
+    await go("#/decide");
+    out.queue = await until(async () => { const v = await look("#view", "#dcount"); return v.shown && v.count === v.list ? v : null; }, ms) || await look("#view", "#dcount");
+    await page.locator(button).first().click({ timeout: 15000 }).catch((e) => out.errors.push(`no answer to tap: ${e.message.split("\n")[0]}`));
+    const after = await until(async () => { const s = await state(); return !(s.decisions || []).some((d) => d.id === id) ? s : null; }, ms);
+    out.still_listed = !after;
+    out.record = (after || await state()).decision_test || null;
+    if (after) {
+      if (!await until(() => page.evaluate((b) => !document.querySelector(b), button), 30000)) out.still_shown.push("#/decide");
+      await go("#/");
+      if (!await until(async () => !(await look("#homeneeds", "#homeneeds .hcount")).shown && await page.evaluate((id) => !(S?.decisions || []).some((d) => d.id === id), id), 30000)) out.still_shown.push("Home");
+    }
+    return out;
+  } finally {
+    await ctx.close();
+  }
+}
+
 async function email(browser) {
   const ctx = await browser.newContext(PHONE);
   await ctx.route("**/*", (r) => (r.request().url().startsWith("data:") ? r.continue() : r.abort()));   // a mail app shows no remote parts first
@@ -143,6 +210,7 @@ const browser = await chromium.launch({ headless: true, args: ["--no-sandbox", "
 const report = {};
 try {
   if (cfg.wide) report.wide = await wide(browser);
+  if (cfg.decide) report.decide = await decide(browser);
   if (cfg.routes?.length) {
     report.live = await sweep(browser, false);
     report.empty = await sweep(browser, true);

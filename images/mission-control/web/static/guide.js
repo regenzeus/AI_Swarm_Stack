@@ -148,6 +148,7 @@ const TOOL_HELP = {
   send_email: "E-mails you a designed report (only ever to your own address).",
   vault_add: "Saves a note or a web page into your vault, where search finds it.",
   change_request: "Starts a change request: the swarm specifies, tests, implements and checks it, and comes back with one branch for your review.",
+  task_start: "Start a task for a job of several steps: it is planned, done and followed on its page",
   build_assign: "Gives the builder a coding assignment on one of your repositories.",
   builds_overview: "Lists the builder's assignments and what's waiting for your review, with the AI review's verdict.",
   build_details: "Reads one build in full: assignment, summary, files, checks, CI, every AI-review finding, and the diff if you ask.",

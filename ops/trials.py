@@ -148,7 +148,8 @@ def audit(t, sources):
 
 def fingerprints(src, k=12):
     """Winnowed hashes of normalised Python tokens (names, strings and numbers stand for their kind, as in MOSS and
-    JPlag): renaming and reformatting do not hide copied code."""
+    JPlag): renaming and reformatting do not hide copied code. None: the code could not be read (QA-26); an empty set
+    is code too short to hash."""
     toks = []
     try:
         for tk in tokenize.generate_tokens(io.StringIO(src).readline):
@@ -157,8 +158,8 @@ def fingerprints(src, k=12):
             toks.append("N" if tk.type == tokenize.NAME and not __import__("keyword").iskeyword(tk.string) else
                         "S" if tk.type == tokenize.STRING else "0" if tk.type == tokenize.NUMBER else tk.string)
     except (tokenize.TokenError, IndentationError, SyntaxError):
-        return set()
-    grams = [int(hashlib.blake2b(" ".join(toks[i:i + k]).encode(), digest_size=6).hexdigest(), 16) for i in range(len(toks) - k + 1)]
+        return None
+    grams =[int(hashlib.blake2b(" ".join(toks[i:i + k]).encode(), digest_size=6).hexdigest(), 16) for i in range(len(toks) - k + 1)]
     w = 4
     return {min(grams[i:i + w]) for i in range(max(0, len(grams) - w + 1))} or set(grams)
 
@@ -169,18 +170,35 @@ def py_files(d):
 
 
 def similarity(code, reference):
-    """The share of the delivered code's fingerprints found in the reference implementation (0 to 1), and the files
-    that share most."""
-    ref = set()
-    for f in py_files(reference):
-        ref |= fingerprints(f.read_text(errors="replace"))
+    """The share of the delivered code's fingerprints found in the reference implementation (0 to 1), the files that
+    share most, and the files that could not be read. The share is None when nothing could be compared: unreadable code
+    is not code unlike the reference (QA-26)."""
+    ref, unread, refs = set(), [], py_files(reference)
+    for f in refs:
+        fp = fingerprints(f.read_text(errors="replace"))
+        if fp is None:
+            unread.append(f"the reference's {f.relative_to(reference)}")
+        else:
+            ref |= fp
     rows, mine = [], set()
+    delivered_unread = False
     for f in py_files(code):
         fp = fingerprints(f.read_text(errors="replace"))
+        if fp is None:
+            delivered_unread = True
+            unread.append(str(f.relative_to(code)))
+            continue
         mine |= fp
         if fp:
             rows.append({"file": str(f.relative_to(code)), "share": round(len(fp & ref) / len(fp), 3)})
-    return {"share": round(len(mine & ref) / len(mine), 3) if mine else 0.0, "files": sorted(rows, key=lambda r: -r["share"])[:5]}   # cap: list
+    known = bool(ref) and (bool(mine) or not delivered_unread)
+    return {"share": (round(len(mine & ref) / len(mine), 3) if mine else 0.0) if known else None,
+            "files": sorted(rows, key=lambda r: -r["share"])[:5], "unread": unread}   # cap: list
+
+
+def similar_text(sim):
+    """The share in words: a percentage, or that it is not known (QA-26)."""
+    return "not known" if sim.get("share") is None else f"{sim['share']:.0%}"
 
 
 # ---------- talking to the runner like the app does ----------
@@ -361,8 +379,10 @@ def report(t, r):
     lines += ["## Clean room", "",
               "No forbidden read or action found." if a["ok"] else f"**{len(a['forbidden'])} forbidden reads or actions:**",
               *[f"- {h['where']}: `{h['pattern']}`: …{h['excerpt']}…" for h in a["forbidden"]],
-              f"Similarity to the upstream implementation: {sim['share']:.0%} of the delivered code's fingerprints"
-              + (f" (**above {t['flag_similarity']:.0%}: look at it**)" if sim["share"] > t["flag_similarity"] else ""), ""]
+              ("Similarity to the upstream implementation: **not known**, nothing could be compared" if sim.get("share") is None else
+               f"Similarity to the upstream implementation: {sim['share']:.0%} of the delivered code's fingerprints"
+               + (f" (**above {t['flag_similarity']:.0%}: look at it**)" if sim["share"] > t["flag_similarity"] else ""))
+              + (f". Could not be read, so left out: {', '.join(sim['unread'])}" if sim.get("unread") else ""), ""]
     lines += ["## How it went", "",
               f"- Task: {m['status']}{' · ' + m['error'] if m.get('error') else ''}; judged {m.get('verdict') or 'not yet'} by the model judge"
               + (" (**it disagrees with the answer key**)" if m.get("verdict") in ("not met", "partly") and s["total"] and s["passed"] == s["total"]
@@ -514,7 +534,7 @@ def follow(t, run_id, repo, tid, started, log=print):
         import mission_extras as X                     # the app's address (MC_URL), kept where the app's links are made
         pct = f"{100 * s['passed'] / s['total']:.0f}%" if s["total"] else "no score"
         N.send(f"Trial {t['title']}: {s['passed']} of {s['total']} cases ({pct}), clean room {'ok' if a['ok'] else 'BROKEN'}, "
-               f"similarity {sim['share']:.0%}, {m['minutes']} min", "result", by="stack", title="Trials", push_on=True, event_kind="task",
+               f"similarity {similar_text(sim)}, {m['minutes']} min", "result", by="stack", title="Trials", push_on=True, event_kind="task",
                buttons=[[("📄 The report", f"{X.APP}/#/read?path={rel}")]])
     except Exception as e:                               # the report is in the vault either way
         log(f"{run_id}: not notified: {type(e).__name__}: {e}")
@@ -522,7 +542,7 @@ def follow(t, run_id, repo, tid, started, log=print):
         publish(log=log)
     except OSError as e:                                 # the run's record is in its folder either way
         log(f"{run_id}: scoreboard not written: {e}")
-    log(f"{run_id}: {s['passed']}/{s['total']} · clean room {'ok' if a['ok'] else 'broken'} · similarity {sim['share']:.0%} · report {rel}")
+    log(f"{run_id}: {s['passed']}/{s['total']} · clean room {'ok' if a['ok'] else 'broken'} · similarity {similar_text(sim)} · report {rel}")
     return r
 
 

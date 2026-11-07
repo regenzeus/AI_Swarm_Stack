@@ -242,13 +242,14 @@ services:
       HINDSIGHT_API_WORKER_ID: hindsight             # stable id, so queued jobs survive restarts
       # What to keep, and what never to keep (the curated MEMORY.md/USER.md core keeps its approval gate).
       HINDSIGHT_API_RETAIN_MISSION: >-
-        Remember what helps a personal assistant serve the owner over time: his projects, decisions, preferences,
-        plans, tools, people he works with and what was concluded. Write every fact in English, whatever language was
-        spoken. Do not store a fact that is already known (it is confirmed, not repeated), nor facts about the assistant's
-        own runs, tools, errors or tests (the run record and the journals hold those). Never store passwords, API keys,
-        tokens, account or ID numbers, health or medical details, or financial details; skip test or benchmark questions.
+        Remember only what is about the owner, the owner, and helps a personal assistant serve him over time: his preferences, decisions,
+        plans, projects, his setup and the people he works with. Call him the owner, never "the user". Write every fact in English, whatever
+        language was spoken. Do not store knowledge about the world, such as companies, products, prices, news or research results: the
+        wikis keep those, with their sources. Do not store a fact that is already known (it is confirmed, not repeated), nor facts about the
+        assistant's own runs, tools, errors or tests (the run record and the journals hold those). Never store passwords, API keys, tokens,
+        account or ID numbers, health or medical details, or financial details; skip test or benchmark questions.
       HINDSIGHT_API_ENABLE_BANK_CONFIG_API: "false"  # config comes from here only, not from API clients
-      HINDSIGHT_API_ENABLE_DRY_RUN_EXTRACT: "false"
+      HINDSIGHT_API_ENABLE_DRY_RUN_EXTRACT: "true"     # shows what the mission above would keep from a text, and stores nothing
       # German + English: multilingual models instead of the English-only defaults, downloaded once into
       # hindsight-models (ops/hindsight-models.sh); offline at runtime.
       HINDSIGHT_API_EMBEDDINGS_LOCAL_MODEL: sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2

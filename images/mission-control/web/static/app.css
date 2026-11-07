@@ -19,8 +19,7 @@
   --mono: "JetBrains Mono", ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
   color-scheme: dark;
 }
-@media (prefers-color-scheme: light) {
-  :root {
+:root[data-theme="light"] {
     --bg: #edf0f3; --bg2: #e4e8ec;
     --surface: #ffffff; --surface-2: #f3f5f7; --surface-3: #e8ecf0; --seg-on: #ffffff;
     --border: #dce1e6; --border-2: #c6cdd4;
@@ -33,7 +32,6 @@
     --shadow: 0 1px 2px rgba(14,27,36,.05);
     color-scheme: light;
   }
-}
 
 * { box-sizing: border-box; }
 html, body { margin: 0; background: var(--bg); color: var(--text); }
@@ -229,7 +227,7 @@ body.chatmode .pagehelp { display: none; }
   background: linear-gradient(180deg, var(--run-bg), transparent 70%), var(--surface); }
 .log { margin-top: 12px; padding: 12px; border-radius: 12px; background: rgba(0,0,0,.28); font: 12px/1.55 var(--mono); color: var(--muted);
   max-height: 220px; overflow: auto; white-space: pre-wrap; word-break: break-word; }
-@media (prefers-color-scheme: light) { .log { background: rgba(15,23,42,.05); } }
+:root[data-theme="light"] .log { background: rgba(15,23,42,.05); }
 
 /* lists */
 .list > * { display: flex; gap: 12px; padding: 12px 14px; align-items: flex-start; }
@@ -600,7 +598,7 @@ a.madecard:hover { background: var(--surface-2); }
 .tools li.failed .tname { color: var(--err); }
 .tname { font-weight: 600; color: var(--text); }
 .md pre { position: relative; background: rgba(0,0,0,.35); border: 1px solid var(--border); border-radius: 12px; padding: 12px; overflow-x: auto; font: 13px/1.5 var(--mono); }
-@media (prefers-color-scheme: light) { .md pre { background: #f2f4f8; } }
+:root[data-theme="light"] .md pre { background: #f2f4f8; }
 .md pre code { background: none; padding: 0; }
 .ccopy { position: absolute; top: 6px; right: 6px; font: 600 11.5px Inter, sans-serif; padding: 3px 8px; border-radius: 7px; border: 1px solid var(--border-2); background: var(--surface-2); color: var(--muted); cursor: pointer; }
 .atts { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
@@ -840,11 +838,9 @@ details.crun { display: block; padding: 10px 12px; } details.crun > summary { li
 :root { --lg-bg: #0d1117; --lg-text: #d6dde8; --lg-muted: #8792a6;
   --lk-plain: #94a3b8; --lk-read: #60a5fa; --lk-write: #f59e0b; --lk-tool: #a78bfa; --lk-web: #2dd4bf; --lk-mail: #f472b6; --lk-phone: #818cf8;
   --lk-says: #4ade80; --lk-wait: #fb923c; --lk-propose: #facc15; --lk-error: #f87171; }
-@media (prefers-color-scheme: light) {
-  :root { --lg-bg: #fbfcfe; --lg-text: #1d2433; --lg-muted: #667085;
+:root[data-theme="light"] { --lg-bg: #fbfcfe; --lg-text: #1d2433; --lg-muted: #667085;
     --lk-plain: #64748b; --lk-read: #2563eb; --lk-write: #b45309; --lk-tool: #7c3aed; --lk-web: #0f766e; --lk-mail: #be185d; --lk-phone: #4f46e5;
     --lk-says: #15803d; --lk-wait: #c2410c; --lk-propose: #a16207; --lk-error: #dc2626; }
-}
 .lgchips { display: flex; flex-wrap: wrap; gap: 5px; margin: 8px 0; }
 .lgchip { --k: var(--muted); border: 1px solid color-mix(in srgb, var(--k) 35%, transparent); background: color-mix(in srgb, var(--k) 10%, transparent); color: var(--k);
   font: 600 11px/1 var(--mono); padding: 5px 8px; border-radius: 7px; cursor: pointer; letter-spacing: .03em; }
@@ -1104,7 +1100,7 @@ h2 { font-size: 15px; font-weight: 650; text-transform: none; letter-spacing: -.
 /* APP-36: the task page's map of who worked on it, its bars and its folded answer. The three parts' colours are the
    reference palette's first three slots, checked with the dataviz validator on both surfaces (all pairs, colour-blind) */
 :root { --tp-coord: #3987e5; --tp-step: #199e70; --tp-call: #d95926; }
-@media (prefers-color-scheme: light) { :root { --tp-coord: #2a78d6; --tp-step: #1baf7a; --tp-call: #eb6834; } }
+:root[data-theme="light"] { --tp-coord: #2a78d6; --tp-step: #1baf7a; --tp-call: #eb6834; }
 .tbub { position: relative; width: 100%; border-radius: 12px; background: var(--surface-2); overflow: hidden; margin-top: 8px; }
 .tblbl { fill: var(--text); font-size: 11px; font-weight: 600; text-anchor: middle; paint-order: stroke; stroke: var(--surface-2); stroke-width: 3px; pointer-events: none; }
 .tblbl.tbsub { fill: var(--muted); font-size: 10px; font-weight: 500; }
@@ -1375,3 +1371,36 @@ details.rtrials > summary { cursor: pointer; }
 .stackseg { margin-bottom: 18px; }
 .wgrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; align-items: start; }
 @media (max-width: 1099px) { .wgrid { grid-template-columns: minmax(0, 1fr); } }
+
+/* APP-48: memory by the question it answers; skills as a list to read */
+.memflow { list-style: none; counter-reset: s; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 0 0 8px; padding: 0; }
+.memflow li { counter-increment: s; padding: 12px; border-radius: var(--r); background: var(--surface-2); border: 1px solid var(--border); display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
+.memflow li b { color: var(--text); font-family: var(--display); font-size: 14px; }
+@media (max-width: 1099px) { .memflow { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 480px) { .memflow { grid-template-columns: minmax(0, 1fr); } }
+.memgroup { margin-top: 22px; }
+.memgroup h3 { margin: 0; font-size: 14px; font-family: var(--display); }
+.memorigin { font-size: 11.5px; color: var(--faint); font-family: var(--mono); }
+.memlink { display: inline-flex; align-items: center; gap: 4px; color: var(--accent); }
+.memlink svg { width: 14px; height: 14px; }
+.memmore { margin-top: 6px; }
+.memmore > summary { cursor: pointer; }
+.skname { font-family: var(--mono); font-weight: 600; }
+
+/* Tools: the search box keeps its distance from the cards under it */
+#toolsbox .gsearch { margin-bottom: 12px; }
+/* Search memory */
+.memres { margin: 12px 0 4px; font-size: 13px; font-family: var(--display); }
+.memfact { display: block; padding: 10px 0; border-top: 1px solid var(--border); }
+a.memfact:hover { background: var(--surface-2); }
+.memfrom { color: var(--accent); display: inline-flex; align-items: center; gap: 2px; }
+.memfrom svg { width: 12px; height: 12px; }
+#themeseg { width: auto; }
+
+/* APP-50: the Memory tab */
+.memsearch { margin-bottom: 10px; }
+.memsearch .input { font-size: 15px; padding: 11px 12px; }
+.memtabs { margin-bottom: 20px; }
+@media (max-width: 480px) { .memtabs a { padding: 8px 4px; font-size: 12.5px; } }
+.linkbtn { background: none; border: 0; padding: 4px 0 0; color: var(--faint); cursor: pointer; text-decoration: underline; }
+.linkbtn:hover { color: var(--err); }

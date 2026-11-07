@@ -75,7 +75,7 @@ CREW = [
     {"id": "coach", "name": "Coach", "unit": "crew-coach", "area": "ops", "agent": True,
      "what": "Monthly: reads every agent's scorecard and turns a real problem (many declined ideas, duplicates, refused writes) into an agent change with its evidence and a target score. Each change is replayed on the agent's past runs first; you tap Build it only after it passed."},
     {"id": "journeys", "name": "Journey checks", "unit": "crew-journeys", "area": "ops", "agent": True,
-     "what": "Nightly, without a model: follows your journeys end to end. A task given in a sentence to its result (on replayed answers), every screen of the app at phone width, the newest briefing's e-mail on a phone, every make target dry-run. A failure is an alert here."},
+     "what": "Nightly, without a model: follows your journeys end to end. A task given in a sentence to its result (on replayed answers), a test item decided through the queue, every screen of the app at phone width, the newest briefing's e-mail on a phone, every make target dry-run. A failure is an alert here."},
     {"id": "checker", "name": "Checker", "unit": "crew-checker", "area": "ops", "agent": True,
      "what": "Every hour, without a model: checks whether each shipped idea worked (its health issue stays away, CI is green, a log line is gone) and marks it proved, or reopens it with the evidence. Starts ideas your autonomy rules allow, pauses an agent whose runs keep failing."},
     {"id": "swarm-sync", "name": "Swarm sync", "unit": "swarm-sync", "area": "ops",
@@ -452,7 +452,7 @@ def mission_health(c, m):
 # human; everything else is a note on the card and in the run log. A good next run clears an issue; Acknowledge
 # hides it until it happens again (health-ack.json, logged in the activity feed).
 ALERTS = {"failing", "overdue", "stalled", "limit-long", "drift", "over-limit", "app-error", "drill-old", "memory-low",
-          "network-cut", "journey", "phone-down", "swarm-fault", "report-unknown"}
+          "network-cut", "journey", "phone-down", "swarm-fault", "report-unknown", "check-unknown", "network-unknown"}
 CURATOR_ITEM = {"wiki-curator": "curator"}           # a memory store's curator -> its crew item (the vault lint runs in curate)
 ENGINES = {"main": "Hermes (chat)", "mission": "Hermes (missions)", "scout": "Research (scout)", "curator": "Wiki curator",
            "builder": "Builder", "claude-builder": "Builder", "claude-task": "Claude worker", "claude-review": "Claude worker",
@@ -495,6 +495,40 @@ def acknowledge(keys, by="The owner"):
     return {"acknowledged": len(done)}
 
 
+def read_log(path, what, about, never=""):
+    """QA-26: a JSON-lines log -> (its rows, issues about what could not be read). One bad line costs that line, not the
+    whole log, so what the rest says still counts; a log that cannot be read at all is an alert, because a check stopped
+    working. `about` finishes the sentence "so ... is not known"; `never` is the note for a log not written yet."""
+    try:
+        lines = [x for x in path.read_text().splitlines() if x.strip()]
+    except FileNotFoundError:
+        return [], ([{"kind": "report-none", "at": 0, "text": never}] if never else [])
+    except (OSError, ValueError) as e:
+        return [], [{"kind": "check-unknown", "at": 0, "text": f"{what} could not be read ({type(e).__name__}), so {about} is not known"}]
+    rows, bad = [], 0
+    for x in lines:
+        try:
+            r = json.loads(x)
+        except ValueError:
+            r = None
+        if isinstance(r, dict):
+            rows.append(r)
+        else:
+            bad += 1
+    if bad and not rows:
+        return [], [{"kind": "check-unknown", "at": 0, "text": f"{what}: none of its {bad} lines could be read, so {about} is not known"}]
+    return rows, ([{"kind": "report-partial", "at": 0, "text": f"{what}: {bad} of its {bad + len(rows)} lines could not be read and are not counted"}] if bad else [])
+
+
+def job_unknown(aid):
+    """QA-26: what a crew job could not read on its last run (`unknown` in its report: sentences) as one alert on its card,
+    which its next clean run clears. One issue, because the board and its notifications know one issue per card and kind.
+    The self-review's is a note: it runs weekly, so a NAS asleep at that moment would otherwise alert for a week."""
+    weekly = BY_ID.get(aid, {}).get("thread") == "improve" and I
+    said = (I.last_scan() if weekly else agent_file(aid)).get("unknown") or []
+    return [{"kind": "report-partial" if weekly else "check-unknown", "at": 0, "text": "; ".join(said)}] if said else []
+
+
 def _merge_runtime(items):
     """The runtime record's problems, rolled up per owning agent, into the mission, crew or engine item."""
     import runtime as RTM
@@ -522,24 +556,24 @@ CLIENT_ERRORS = Path("/srv/ai/missions/app/client-errors.jsonl")     # the app's
 
 def app_errors(now=None, path=None):
     """APP-24: errors the app hit in the last 24 h as one alert on "Mission Control (the app)" (FND-53: a broken Start
-    mission was reported only to a log nobody read). [] when there were none."""
+    mission was reported only to a log nobody read). [] when there were none and the log could be read (QA-26)."""
     now = now or time.time()
-    try:
-        rows = [json.loads(x) for x in (path or CLIENT_ERRORS).read_text().splitlines() if x.strip()]
-    except (OSError, ValueError):
+    rows, issues = read_log(path or CLIENT_ERRORS, "The app's error log", "whether the app hit errors")
+    rows = [r for r in rows if isinstance(r.get("ts"), (int, float)) and now - r["ts"] < 86400]
+    last = None
+    if rows:
+        by = {}
+        for r in rows:
+            by.setdefault(r.get("msg") or "?", []).append(r)
+        msg, top = max(by.items(), key=lambda kv: len(kv[1]))
+        where, last = top[-1].get("url") or "", top[-1].get("ts")
+        text = (f"{len(rows)} error{'s' if len(rows) != 1 else ''} in the app in 24 h; most often “{msg}” ({len(top)}×"
+                + (f", on {where}" if where else "") + ")" + (f" and {len(by) - 1} other kind{'s' if len(by) > 2 else ''}" if len(by) > 1 else ""))
+        issues = [{"kind": "app-error", "text": text, "at": max(r["ts"] for r in rows)}] + issues
+    if not issues:
         return []
-    rows = [r for r in rows if now - float(r.get("ts") or 0) < 86400]
-    if not rows:
-        return []
-    by = {}
-    for r in rows:
-        by.setdefault(r.get("msg") or "?", []).append(r)
-    msg, top = max(by.items(), key=lambda kv: len(kv[1]))
-    where = top[-1].get("url") or ""
-    text = (f"{len(rows)} error{'s' if len(rows) != 1 else ''} in the app in 24 h; most often “{msg}” ({len(top)}×"
-            + (f", on {where}" if where else "") + ")" + (f" and {len(by) - 1} other kind{'s' if len(by) > 2 else ''}" if len(by) > 1 else ""))
-    return [{"name": "Mission Control (the app)", "kind": "engine", "id": "app", "status": "issues", "last": top[-1].get("ts"), "runs_7d": None,
-             "success_7d": None, "issues": [{"kind": "app-error", "text": text, "at": max(float(r.get("ts") or 0) for r in rows)}], "payoff": ""}]
+    return [{"name": "Mission Control (the app)", "kind": "engine", "id": "app", "status": "issues", "last": last, "runs_7d": None,
+             "success_7d": None, "issues": issues, "payoff": ""}]
 
 
 JOURNEYS = OUT / "journeys.json"                  # the journey checks' last report (ops/journeys.py)
@@ -608,7 +642,7 @@ def health(c, missions):
     items = [mission_health(c, m) for m in missions if m.get("status") == "active"]
     for a in status():
         hc = _hist.get(a["id"])
-        iss = [{**i, "at": i.get("at") or a.get("last") or 0} for i in (hc or {}).get("issues", [])] if a.get("enabled", True) else []
+        iss = [{**i, "at": i.get("at") or a.get("last") or 0} for i in (hc or {}).get("issues", [])] + job_unknown(a["id"]) if a.get("enabled", True) else []
         if a["id"] == "journeys":
             iss += journey_issues()
         if a["id"] == "checker":
@@ -702,13 +736,16 @@ def image_drift(lock=None, run=None):
 
 
 _cut = {}                                             # container -> when its network was first seen cut (one issue, not one per refresh)
+_net_unread = {"since": None}                         # when docker first could not be read for this check
+NET_UNREAD_S = 600                                    # a busy PC can miss one docker answer: a note first, an alert after 10 min
 
 
 def cut_networks(run=None, now=None):
     """FND-74: a container that shares another's network (network_mode service:x) keeps the old network when x is
     recreated without it, and nothing reaches it any more (the Hermes dashboard's gate, 31 Oct 2026: HTTP 000).
-    -> network-cut issues for This PC, [] when every shared network belongs to a running container."""
-    run = run or (lambda *a: subprocess.run(["docker", *a], capture_output=True, text=True, timeout=30).stdout)
+    -> network-cut issues for This PC, [] when every shared network belongs to a running container. Docker failing or
+    timing out says nothing about the networks: that is one issue of its own, never [] (QA-26)."""
+    run = run or (lambda *a: subprocess.run(["docker", *a], capture_output=True, text=True, timeout=30, check=True).stdout)
     now = now or time.time()
     try:
         alive = set(run("ps", "-q", "--no-trunc").split())
@@ -716,8 +753,11 @@ def cut_networks(run=None, now=None):
                        if ln.strip())                 # every running container: ua-viewer-port is not in compose
         mode = dict(ln.lstrip("/").split("\t") for ln in run("inspect", "-f", "{{.Name}}\t{{.HostConfig.NetworkMode}}", *service).splitlines()
                     if ln.strip()) if service else {}
-    except (OSError, ValueError, subprocess.SubprocessError):
-        return []
+    except (OSError, ValueError, subprocess.SubprocessError) as e:
+        since = _net_unread["since"] = _net_unread["since"] or now
+        return [{"kind": "network-unknown" if now - since >= NET_UNREAD_S else "network-unread", "at": since,
+                 "text": f"Docker could not be read ({type(e).__name__}), so whether a container lost the network it shares is not known"}]
+    _net_unread["since"] = None
     cut = sorted(n for n, m in mode.items() if m.startswith("container:") and m.split(":", 1)[1] not in alive)
     for n in set(_cut) - set(cut):
         del _cut[n]
@@ -755,17 +795,18 @@ def phone_down(now, d=None):
 def recovery_alarms(items, now=None, backups=None, meminfo=None, drift=None, nets=None, phone=None):
     """FND-66, FND-67, FND-74: an alert on the Restore drill when no drill has passed for 8 days; a note on This PC when
     swap is over 90 % full (an alert when RAM is short too, CST-14) and when the running images drifted from their tags
-    or the lock file; an alert on This PC when a container is cut off from the network it shares (PLT-23).
+    or the lock file; an alert on This PC when a container is cut off from the network it shares (PLT-23). What could not
+    be read says so, in the same places (QA-26).
     -> new engine items (This PC); the drill's issue goes onto its crew item."""
     now = now or time.time()
-    try:
-        rows = [json.loads(x) for x in (backups or BACKUPS).read_text().splitlines() if x.strip()]
-    except (OSError, ValueError):
-        rows = []
+    rows, unread = read_log(backups or BACKUPS, "The backup log", "whether a restore drill passed",
+                            never="No backup or restore drill has been logged yet, so whether a restore works is not known")
     drills = [r for r in rows if r.get("kind") == "restore-drill" and r.get("result") == "ok"]
     newest = max((r for r in rows if r.get("kind") == "backup"), key=lambda r: r.get("ts", 0), default=None)
     last = max((r.get("ts", 0) for r in drills), default=0)
     it = next((x for x in items if x.get("kind") == "crew" and x.get("id") == "restore-drill"), None)
+    if it is not None:
+        it["issues"] += unread
     if it is not None and rows and now - last > DRILL_DAYS * 86400:
         days = round((now - last) / 86400) if last else None
         it["issues"].append({"kind": "drill-old", "at": now, "text": (f"no restore drill has passed for {days} days" if days else "no restore drill has passed yet")
@@ -780,8 +821,8 @@ def recovery_alarms(items, now=None, backups=None, meminfo=None, drift=None, net
             pc.append({"kind": "memory-low" if low else "swap-full", "at": now,
                        "text": f"swap is {round(100 * (mi['SwapTotal'] - mi['SwapFree']) / mi['SwapTotal'])} % full and {mi['MemAvailable'] / 1048576:.1f} GB of RAM is free"
                        + (": close a Claude session or stop a build" if low else ": memory runs at its limit (CST-14)")})
-    except (OSError, ValueError, KeyError, ZeroDivisionError):
-        pass
+    except (OSError, ValueError, KeyError, ZeroDivisionError) as e:
+        pc.append({"kind": "check-unknown", "at": 0, "text": f"The PC's memory could not be read ({type(e).__name__}), so whether it is running short is not known"})
     d = image_drift() if drift is None else drift
     if d:
         pc.append({"kind": "image-drift", "at": now, "text": d})
@@ -1015,8 +1056,9 @@ def memory(c):
         rep = K.run_pass(c)
         res = K.summary(rep)
     except Exception as e:
-        rep, res = {"suggestions": [], "changed": [], "gate": {"open": False, "why": "the pass failed"}}, f"the pass failed: {type(e).__name__}: {e}"
-    tidied = J.curate()                                   # the agents' journals: old entries fold into standing notes
+        rep, res = ({"suggestions": [], "changed": [], "gate": {"open": False, "why": "the pass failed"}, "pass": {"error": f"{type(e).__name__}: {e}"}},
+                    f"the pass failed: {type(e).__name__}: {e}")
+    tidied = J.curate()                                  # the agents' journals: old entries fold into standing notes
     lib = ""
     if rep.get("deep"):
         save("memory", result="tidying the wikis…")
@@ -1040,7 +1082,7 @@ def memory(c):
     save("memory", result=result, suggestions=sug[:60], more=max(0, len(sug) - 60), findings=[],  # cap: list
          keeper={"gate": rep.get("gate"), "changes": K.changes(40)[::-1], "changes_total": len(K.changes()),
                  "disputes": rep.get("disputes"), "rechecks": rep.get("rechecks"), "cross": rep.get("cross")},
-         seconds=round(time.time() - t0), last=time.time())
+         unknown=K.unknown(rep), seconds=round(time.time() - t0), last=time.time())
     if rep.get("changed") or (rep.get("disputes") or {}).get("tasks"):
         M.event("memory", "", f"Memory Keeper: {res} (its page under Agents lists each change with its Undo)", title="Crew")
     return len(sug)

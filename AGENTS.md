@@ -179,6 +179,10 @@ file traced or listed in `requirements/untraced-files.txt`), and the pytest suit
 API reference `docs/API.md` current, every path and target the docs name exists, silent broad catches only fewer). CI and the builder run the
 same script. Never weaken a check to make it pass; fix the cause.
 
+**A check that could not run is unknown (QA-26), never a pass and never silence.** In `ops/check.sh` a missing tool fails, unless
+`CHECK_NOT_HERE` names it (the builder has no Docker compose), and then the summary line says so. A crew job puts what it could not read
+in `unknown` in its report (`crew.job_unknown`), and the health board shows it; `crew.read_log` and `crew.read_report` read logs and reports.
+
 ## Commits
 
 A supervised session lands with `bash ops/land.sh <branch> "<owner approval>"` (the checks first, both locks, the deploy, the

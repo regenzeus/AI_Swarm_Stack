@@ -5,7 +5,9 @@ reports on the copy; it reads no message text, calls no model and removes nothin
      address>". from:me to:me is no such mark: it also holds what the owner mails himself, like papers and tickets.
      Mail from before the Postmaster's first run stays where it is until the owner says so (past file).
   2. The mail copy on the NAS (nas/mailvault): status.json and census.json come over to /srv/ai/missions/mail for the app. A
-     copy that stops, or a refused password, is said once a day; the end of the first copy once.
+     copy that stops, or a refused password, is said once a day; the end of the first copy once. A NAS that gives no
+     answer is asleep and stays quiet (its copy going silent for STALE_S is the alarm); any other ssh failure is unknown,
+     on the Postmaster's card on the health board (QA-26).
 
   python3 ops/crew.py postmaster            (crew-postmaster.service, hourly)
   python3 ops/postmaster.py past list       the stack's past mail, read-only
@@ -77,22 +79,47 @@ def file_mail(rows, tool=None):
     return len(ids)
 
 
+class CopyUnread(Exception):
+    """ssh failed for a reason other than sleep: the sentence for the health board."""
+
+
+ASLEEP = re.compile(r"timed out|no route to host|host is down", re.I)   # what ssh says when nothing at that address answers
+
+
 def fetch(name):
-    """One file of the copy, over ssh -> its text, or None (the NAS asleep, nothing there yet)."""
+    """One file of the copy, over ssh -> its text, or None (the NAS asleep, nothing there yet). ssh exits 255 for its own
+    failures: a connection nobody answers is sleep; a refused key, an unknown host or a closed port is not (QA-26). So is
+    a NAS that took the connection and then stopped answering, or a read it refused."""
+    why = None
     try:
         p = subprocess.run(["ssh", "-o", "ConnectTimeout=20", "synology", f"cat {NAS}/{name}"], capture_output=True, text=True, timeout=120)
-    except (OSError, subprocess.TimeoutExpired):       # no ssh here, or no answer: the same as the NAS asleep
-        return None
-    return p.stdout if p.returncode == 0 and p.stdout.strip() else None
+    except OSError as e:
+        why = f"ssh could not start: {type(e).__name__}"
+    except subprocess.TimeoutExpired:
+        why = "the NAS took the connection but did not answer in 120 s"
+    else:
+        err = " ".join(p.stderr.split())
+        if p.returncode == 0:
+            return p.stdout if p.stdout.strip() else None
+        if p.returncode == 255 and ASLEEP.search(err) or p.returncode != 255 and "No such file" in err:
+            return None
+        why = err or f"ssh exit code {p.returncode}"
+    raise CopyUnread(f"The mail copy's {name} on the NAS could not be read ({why}), so the state of the copy is not known")
 
 
-def bring_over(get=fetch):
-    """-> the copy's status, kept for the app."""
+def bring_over(get=None, unread=None):
+    """-> the copy's status, kept for the app. `unread` collects the sentence when the NAS could not be read."""
+    get = get or fetch
     OUT.mkdir(parents=True, exist_ok=True)
     OUT.chmod(0o755)
     st = None
     for name in ("status.json", "census.json"):
-        text = get(name)
+        try:
+            text = get(name)
+        except CopyUnread as e:
+            if unread is not None:
+                unread.append(str(e))
+            break                                        # the next file would say the same
         if text:
             json.loads(text)                             # a half-read file never replaces a good one
             tmp = OUT / f".{name}"
@@ -143,9 +170,10 @@ def run(c):
             said.append(f"{filed} of the stack's mails filed under {LABEL}")
     else:
         said.append("Gmail read and organize are not granted, so the stack's mail stays in the inbox")
-    said.append(say_copy(bring_over(), cur, now))
-    C.save("postmaster", result="; ".join(said), last=time.time())
-    return 0                                             # no push of its own: say_copy tells what matters
+    unread = []
+    said.append(say_copy(bring_over(unread=unread), cur, now))
+    C.save("postmaster", result="; ".join(said + unread), last=time.time(), unknown=unread)
+    return 0                                          # no push of its own: say_copy tells what matters
 
 
 def past(cmd, tool=None):

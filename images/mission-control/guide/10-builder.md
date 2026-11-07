@@ -86,7 +86,9 @@ note: Hermes calls claude_task, then claude_task_result for the answer; the task
 Before a build reaches you, the **other engine reviews it**: Claude Code reviews ChatGPT's builds, ChatGPT reviews
 Claude's (ChatGPT reviews both while Claude isn't connected). It reads the assignment, the diff and the check results
 and gives a verdict on the build page: **Fine to deploy**, **Improve first** or **Do not deploy**, with each finding's
-severity, file and line. You still decide; approving a "do not deploy" build asks you to confirm.
+severity, file and line. You still decide; approving a "do not deploy" build asks you to confirm. When one of its
+reviewers could not finish, the verdict says **Review incomplete** and names what was not reviewed: such a build stays
+out of *Approve all ready* until *Re-run checks* completes the review, or you open it and approve it yourself.
 
 The checks also run **Semgrep** with the stack's own rules: no service published beyond the PC, no Docker access for
 containers, no credentials in the code, and the usual dangerous patterns.

@@ -49,8 +49,7 @@ def test_new_chat_starts_afresh_and_attaching_is_a_clip():
 
 
 def test_the_wiki_s_new_button_is_one_line_on_the_title_row():
-    hero = re.search(r'<div class="hero heading"[^>]*><div class="row between"[^>]*><h1>Wiki</h1>.*?</div><p>', JS, re.S)[0]
-    assert "<h1>Wiki</h1>" in hero and 'class="btn sm" id="wnewb"' in hero
+    assert 'class="btn sm" id="wnewb"' in JS                                             # beside Add to the vault, under the tab's frame (APP-50)
     assert ".btn.sm { white-space: nowrap; flex: none; }" in CSS and ".hero.heading { display: block; }" in CSS
 
 
@@ -83,7 +82,7 @@ def test_every_idea_is_in_one_list_under_agents():
     assert '[["all", "All"], ["stack", "The stack"], ["agent", "The agents"]]' in ideas
     assert ideas.index("changesOpen.filter(passed)") < ideas.index("(b.open || []).map((p, n)") < ideas.index("changesOpen.filter((a) => !passed(a))")
     assert "function swImprove" not in SWARM and "${swLoopNumbers()}" in SWARM                   # its numbers are under Flow
-    assert JS.count('href="#/swarm?tab=improve"') >= 2 and "const props = ideasWaiting()" in JS   # Code and Home only link to it
+    assert JS.count('href="#/swarm?tab=improve"') >= 2 and "ideasWaiting()" in JS   # Code only links to it; Home's count row comes from the queue (GEN-02)
 
 
 def test_the_phone_chat_is_pinned_to_the_screen_and_the_title_has_its_own_width():
@@ -100,11 +99,11 @@ def test_the_phone_chat_is_pinned_to_the_screen_and_the_title_has_its_own_width(
 
 def test_the_look_is_opaque_and_exact_with_its_type_vendored():
     """APP-46, from photos of a fresh install on a light screen: washed-out see-through surfaces and faint small print."""
-    light = CSS[CSS.index("@media (prefers-color-scheme: light)"):]
-    light = light[:light.index("}\n}")]
+    light = CSS[CSS.index(':root[data-theme="light"]'):]
+    light = light[:light.index("}")]
     assert "--surface: #ffffff" in light and "rgba(255,255,255" not in light          # surfaces are solid
     assert "--faint: #66737e" in light                                                 # small print stays readable on white
-    assert "--rail:" in CSS[:CSS.index("@media (prefers-color-scheme: light)")] and "--rail:" in light
+    assert "--rail:" in CSS[:CSS.index(':root[data-theme="light"]')] and "--rail:" in light
     assert "bg-glow" not in CSS or "transparent" in CSS
     docker = (STATIC.parent.parent / "Dockerfile").read_text()
     sw = (STATIC.parent / "sw.js").read_text()

@@ -1,9 +1,17 @@
 """The decision queue and its shadow (AUT-05, AUT-07, docs/NEXT-PHASE.md Part 1).
 
-Everything that waits for the owner is one ranked list, `decisions` in state.json (#/decide, Home's "Needs you"),
-each with what, why, the stack's recommendation, what happens without an answer and when, and its answers. The
-runner's sources are gathered here; the Mission Control server adds the two only it sees (the AI phone's approval
-requests and Gmail's Trash batch) with the same shape.
+Everything that waits for the owner is one ranked list, `decisions` in state.json. #/decide and Home's "Needs you" both
+draw that list and build none of their own, so they cannot disagree (GEN-02). Each item has what, why, the stack's
+recommendation, what happens without an answer and when, and its answers: a tap, or a link to where the owner acts. The
+runner's sources are gathered here; the Mission Control server adds the three only it sees (the AI phone's approval
+requests, Gmail's Trash batch and a mission that needs access) with the same shape.
+
+What is not here is what the owner cannot answer: the AI phone being down and health alerts are states, on the health
+board and under Home's Stack upkeep.
+
+The test item (GEN-03): the nightly journey (ops/journeys.py decide) makes one through the inbox, sees it in the queue,
+answers it with the owner's tap and removes it. It is marked as a test, the shadow never records it, and answering it
+changes only its own file: it touches no build, purchase, phone or mail.
 
 The shadow: for each decision of a class that takes a yes or no, the stack records once what it *would* decide and
 why (/srv/ai/state/autonomy.jsonl, "seen"). When the decision leaves the queue its outcome is looked up where the
@@ -16,10 +24,12 @@ last AGREE answers is the evidence a licence needs; nothing here acts or promote
 import datetime as dt
 import json
 import os
+import re
 import statistics
 import sys
 import time
 from pathlib import Path
+from urllib.parse import quote
 
 import yaml
 
@@ -28,6 +38,10 @@ import textcap as TC                              # visible caps (AGENTS.md, tru
 ROOT = Path(__file__).resolve().parent.parent
 CONFIG = ROOT / "config/autonomy.yaml"
 LOG = Path(os.environ.get("AUTONOMY_LOG", "/srv/ai/state/autonomy.jsonl"))
+MOVE_LIST = Path(os.environ.get("MEMORY_MOVE", "/srv/ai/state/memory-move.json"))      # ops/missions.py memory_browse
+TEST_ITEM = Path(os.environ.get("DECISION_TEST", "/srv/ai/missions/decision-test.json"))   # the journey's test item, one at a time
+ACTIONS = {"decision_test_make", "decision_test_answer", "decision_test_remove"}           # only _answer is the app's (server.py ACTIONS)
+NOT_THE_OWNERS = ("trial", "probe", "crew", "gate")   # a task the stack gave itself (= app.js NOT_YOURS): its stop waits for nobody
 AGREE = 20                                     # the owner's last answers a class's agreement is measured on  # cap: list
 DAYS = 14                                      # the queue's numbers look this far back
 TARGET = {"per_day": 5, "answer_h": 12}        # AUT-07's target
@@ -71,12 +85,12 @@ def _builds(st):
     for b in st.get("builds") or []:
         if b.get("status") != "review":
             continue
-        rv = (b.get("ai_review") or {}).get("verdict")
-        ok = b.get("checks_ok") and rv == "approve" and str(b.get("ci") or "").lower() in ("passed", "success", "green")
+        rv, missing = (b.get("ai_review") or {}).get("verdict"), (b.get("ai_review") or {}).get("missing") or []
+        ok = b.get("checks_ok") and rv == "approve" and not missing and str(b.get("ci") or "").lower() in ("passed", "success", "green")   # QA-26
         cls = "coding" if b.get("sensitive") else "coding-low-risk"
         yield _d(f"build:{b['id']}", cls, f"Deploy build #{b['id']}: {b.get('title') or ''}",
                  f"checks {'passed' if b.get('checks_ok') else 'failed' if b.get('checks') else 'not run'}, CI {b.get('ci') or 'not pushed'}, "
-                 f"AI review {rv or 'not done'}", f"#/build/{b['id']}", would="yes" if ok else "no",
+                 f"AI review {rv or 'not done'}" + (f", not done: {', '.join(missing)}" if missing else ""), f"#/build/{b['id']}", would="yes" if ok else "no",
                  because="its checks, CI and AI review all passed" if ok else "not every check passed",
                  unanswered="it waits; nothing deploys without you", created=b.get("updated") or b.get("created"),
                  answers=[{"label": "Review", "href": f"#/build/{b['id']}"}], weight=2)
@@ -128,14 +142,20 @@ def _tasks(st):
             yield _d(f"task-q:{t['id']}", "task-questions", f"Task #{t['id']} asks you", "; ".join(str(q) for q in qs) or t.get("title") or "",
                      f"#/task/{t['id']}", unanswered="it waits for your answer", expires=t.get("deadline"), created=t.get("updated"),
                      answers=[{"label": "Answer", "href": f"#/task/{t['id']}"}])
+        elif t.get("status") == "failed" and t.get("kind") == "change" and t.get("door") == "plan" and not str(t.get("source") or "").startswith(NOT_THE_OWNERS):
+            yield _d(f"stopped:{t['id']}", "task-start", f"Change #{t['id']} stopped: go on? {t.get('title') or ''}", t.get("error") or "it stopped at its budget or a failed step",
+                     f"#/task/{t['id']}", unanswered="it stays stopped", created=t.get("updated"),
+                     answers=[{"label": "Go on, with its budget doubled", "act": {"action": "change_resume", "id": t["id"]}},
+                              {"label": "Leave it stopped", "act": {"action": "change_leave", "id": t["id"]}},
+                              {"label": "Look first", "href": f"#/task/{t['id']}"}])
 
 
 def _swarm(st):
     sw = st.get("swarm") or {}
     for m in sw.get("owner_requests") or []:
+        room = f"#/swarm?tab=chat&ctx={quote(str(m.get('context') or ''), safe='')}"     # a context holds ":" and "+": a link must keep them
         yield _d(f"ask:{m.get('id') or m.get('context')}", "agent-request", f"{m.get('sender')} asks you", m.get("text") or "",
-                 f"#/swarm?tab=chat&ctx={m.get('context') or ''}", unanswered="the agent waits", created=m.get("ts"),
-                 answers=[{"label": "Answer", "href": f"#/swarm?tab=chat&ctx={m.get('context') or ''}"}])
+                 room, unanswered="the agent waits", created=m.get("ts"), answers=[{"label": "Answer", "href": room}])
     for i in (sw.get("board") or {}).get("open") or []:
         dispute = i.get("kind") == "dispute"
         good = (i.get("priority") or 0) >= 4 and i.get("effort") in ("small", None)
@@ -148,9 +168,54 @@ def _swarm(st):
             yield _d(f"change:{a.get('id')}:{a.get('version')}", "agent-change", f"Take the change to {a.get('agent') or a.get('id')}?",
                      a.get("summary") or a.get("why") or "its experiment passed", "#/swarm?tab=improve", would="yes", because="its experiment passed",
                      unanswered="the agent stays as it is", created=a.get("updated"), answers=[{"label": "Decide", "href": "#/swarm?tab=improve"}], weight=0)
+    for a in sw.get("to_confirm") or []:
+        yield _d(f"confirm:{a['id']}", "owner-confirm", f"Does it work? {a.get('title') or ''}", (sw.get("checks") or {}).get(str(a["id"])) or "it shipped, and its check is your word",
+                 f"#/swarm/artifact/{a['id']}", unanswered="it stays unproved: the Checker waits for your word", created=a.get("state_since"),
+                 answers=[{"label": "It works", "act": {"action": "swarm_confirm", "id": a["id"]}},
+                          {"label": "Still broken", "act": {"action": "swarm_reopen", "id": a["id"]}, "ask": "What is still broken?", "into": "reason"}])
 
 
-SOURCES = (_builds, _purchases, _phone_steps, _memory, _tasks, _swarm)
+def _memory_move(st):
+    """APP-50: what long-term memory holds that does not concern the owner, for his eyes before anything moves."""
+    try:
+        n = len([m for m in json.loads(MOVE_LIST.read_text()) if not m.get("kept")])
+    except (OSError, ValueError):
+        return
+    if n:
+        yield _d("memory-move", "memory", f"{n} long-term facts are not about you: move them?", "Company news and what agents did. They go to the wikis or are retired, and each can be undone.",
+                 "#/longterm?move=1", unanswered="they stay in long-term memory", answers=[{"label": "See them", "href": "#/longterm?move=1"}], routine=True)
+
+
+def _keeper(st):
+    """The Memory Keeper's suggestions: facts it would retire and leaves to the owner (MEM-21)."""
+    for s in next((x.get("suggestions") or [] for x in st.get("crew") or [] if x.get("id") == "memory"), []):
+        yield _d(f"keeper:{s['id']}", "memory", f"Forget this? {s.get('text') or ''}", s.get("why") or "", "#/crew/memory", would="yes", because="the Memory Keeper suggests it",
+                 unanswered="Hermes keeps recalling it", answers=[{"label": "Forget", "act": {"action": "crew_memory_forget", "ids": [s["id"]]}},
+                                                                  {"label": "Look first", "href": "#/crew/memory"}], routine=True)
+
+
+def _house(st):
+    """The next House setup step only the owner can do (the required steps of app.js houseSteps); a NAS that is off is no step."""
+    h = st.get("house") or {}
+    if not h.get("reachable"):
+        return
+    has = {x.get("domain") for x in h.get("integrations") or []}
+    step = ("Create your Home Assistant account" if not h.get("onboarded") else "Connect it to the AI stack" if not h.get("connected")
+            else "Sign in to Amazon (Alexa)" if "alexa_devices" not in has else None)
+    if step:
+        yield _d("house:setup", "setup", "Finish setting up the House", f"next: {step.lower()}", "#/house", unanswered="the House cannot be used from the stack yet",
+                 answers=[{"label": "Open the House", "href": "#/house"}])
+
+
+def _test_item(st):
+    t = st.get("decision_test") or {}
+    if t.get("state") == "open":
+        yield {**_d(f"test:{t['token']}", "journey-test", "Test item: the nightly journey checks this list", "it removes itself; an answer changes nothing else", "#/decide",
+                    unanswered="the journey removes it", created=t.get("created"), weight=0,
+                    answers=[{"label": "Answer the test", "act": {"action": "decision_test_answer", "token": t["token"], "answer": "yes"}}]), "test": True}
+
+
+SOURCES = (_builds, _purchases, _phone_steps, _memory, _tasks, _swarm, _keeper, _memory_move, _house, _test_item)
 
 
 def rank(items, now=None):
@@ -169,7 +234,8 @@ def gather(st, now=None):
         try:
             out += list(f(st))
         except Exception as e:                       # one broken source does not hide the others
-            out.append(_d(f"error:{f.__name__}", "agent-request", "A source of decisions could not be read", f"{f.__name__}: {type(e).__name__}: {e}", "#/decide"))
+            out.append(_d(f"error:{f.__name__}", "agent-request", "A source of decisions could not be read", f"{f.__name__}: {type(e).__name__}: {e}", "#/missions?f=problems",
+                          answers=[{"label": "Look at the health board", "href": "#/missions?f=problems"}]))
     return rank(out, now)
 
 
@@ -213,6 +279,9 @@ def outcome(id, st):
         i = next((x for x in ((st.get("swarm") or {}).get("board") or {}).get("recent") or [] if str(x.get("id")) == ref), None)
         s = (i or {}).get("state")
         return "no" if s in ("dismissed", "rejected", "gone") else "yes" if s in ("accepted", "planned", "building", "done") else None
+    if kind == "stopped":
+        s = next((x.get("status") for x in st.get("tasks") or [] if str(x.get("id")) == ref), None)
+        return "no" if s == "cancelled" else "yes" if s in ("running", "done") else None
     return None
 
 
@@ -229,7 +298,7 @@ def shadow(items, st, now=None):
         _loaded["t"] = now
     ids = {d["id"] for d in items}
     for d in items:
-        if d["id"] not in _seen and not d["id"].startswith("error:"):
+        if d["id"] not in _seen and not d["id"].startswith(("error:", "test:")):   # a test is no decision: it never reaches the numbers
             r = {"t": round(now), "event": "seen", "id": d["id"], "cls": d["cls"], "what": TC.cut(d["what"], 200),  # cap: preview (the source keeps it whole)
                  "would": (d.get("recommend") or {}).get("answer"), "why": (d.get("recommend") or {}).get("why", ""), **({"backlog": True} if first else {})}
             _seen[d["id"]] = r
@@ -265,14 +334,60 @@ def stats(now=None, recs=None):
 
 def state(st, now=None):
     """For state.json: the queue, its numbers, and each class's level (AUT-05, AUT-07)."""
-    items = gather(st, now)
+    test = test_record()
+    items = gather({**st, "decision_test": test}, now)
     try:
         shadow(items, st, now)
     except Exception as e:
         print(f"decisions: shadow not recorded: {type(e).__name__}: {e}", file=sys.stderr)
     cs = classes()
-    return {"decisions": items, "decide": {**stats(now), "classes": {k: {"title": v.get("title"), "level": level(k, cs), "floor": v.get("floor"),
+    return {"decisions": items, "decision_test": test, "decide": {**stats(now), "classes": {k: {"title": v.get("title"), "level": level(k, cs), "floor": v.get("floor"),
                                                                       "exam": v.get("exam"), "what": v.get("what")} for k, v in cs.items()}}}
+
+
+# ---------- the journey's test item (GEN-03) ----------
+def test_record():
+    try:
+        return json.loads(TEST_ITEM.read_text())
+    except (FileNotFoundError, ValueError):
+        return None
+
+
+def _write_test(rec):
+    TEST_ITEM.parent.mkdir(parents=True, exist_ok=True)
+    tmp = TEST_ITEM.with_suffix(".tmp")
+    tmp.write_text(json.dumps(rec))
+    tmp.replace(TEST_ITEM)
+
+
+def make_test(req):
+    token = str(req.get("token") or "")
+    if not re.fullmatch(r"[a-f0-9]{8,32}", token):
+        raise ValueError("a test item needs a token")
+    _write_test({"token": token, "state": "open", "answer": None, "created": time.time()})   # one at a time: a leftover is replaced
+    return {"token": token}
+
+
+def answer_test(req):
+    """What the owner's tap on the test item does: the same way in as any answer (app, server, inbox, runner), and only this file changes."""
+    rec = test_record()
+    if not rec or rec.get("token") != req.get("token") or rec.get("state") != "open":
+        raise ValueError("this test item does not wait for an answer")
+    if req.get("answer") not in ("yes", "no"):
+        raise ValueError("a test item is answered yes or no")
+    _write_test({**rec, "state": "answered", "answer": req["answer"], "answered": time.time()})
+    return {"token": rec["token"], "answer": req["answer"]}
+
+
+def remove_test(req):
+    rec = test_record()
+    if rec and rec.get("token") == req.get("token"):
+        TEST_ITEM.unlink(missing_ok=True)
+    return {"removed": True}
+
+
+def handle(req):
+    return {"decision_test_make": make_test, "decision_test_answer": answer_test, "decision_test_remove": remove_test}[req["action"]](req)
 
 
 if __name__ == "__main__":

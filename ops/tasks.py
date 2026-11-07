@@ -726,11 +726,12 @@ def publish(c, ids):
 
 
 def state(c):
-    """The task board: every open task and every task of the last 7 days, newest first (TSK-04). Each also gets its task
+    """The task board: every open task, every stopped change and every task of the last 7 days, newest first (TSK-04). Each also gets its task
     page's file; the first call writes every older task's once (APP-35)."""
     table(c)
     since = (dt.datetime.now().astimezone() - dt.timedelta(seconds=WINDOW)).isoformat(timespec="seconds")
-    rows = c.execute(f"select id from tasks where status in ({','.join('?' * len(OPEN))}, 'planning') or updated >= ? order by id desc",
+    rows = c.execute(f"select id from tasks where status in ({','.join('?' * len(OPEN))}, 'planning') or updated >= ? "
+                     "or (kind='change' and status='failed' and door='plan') order by id desc",   # a stopped change waits for the owner's answer (GEN-02)
                      (*OPEN, since)).fetchall()
     out = []
     import conductor as CD

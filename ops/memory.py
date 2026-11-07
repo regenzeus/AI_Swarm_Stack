@@ -21,6 +21,7 @@ RUNTIME_DB = Path(os.environ.get("RUNTIME_DB_HOST", "/srv/ai/missions/app/runtim
 MISSIONS_DB = Path(os.environ.get("MISSIONS_DB", "/srv/ai/missions/missions.sqlite"))
 CHATS = Path(os.environ.get("MISSIONS_CHATS", "/srv/ai/missions/app/chats"))
 CODE = Path(DEPLOY.CODE_DIR)
+PROMPTS = Path(__file__).resolve().parent.parent / "prompts"
 EVERY = 3600                  # an inventory is a dozen docker and file calls: once an hour is enough to see a trend
 HISTORY_DAYS = 120            # snapshots kept (one a day) for growth  # cap: store
 ORPHAN_SHARE = 0.10           # qmd: embedding chunks of files that are gone, above this share the index needs a cleanup
@@ -28,48 +29,76 @@ ALARM_DAYS = 8                # over its limit this long, its weekly curator had
 
 # kind: what the memory is for (CoALA): working = what one task's steps hand on, episodic = what happened, semantic =
 # what is true, procedural = how to act, shared = the team's shared work, index = the search over the others. limit: [number, unit] the store should stay under.
+# group: the question the owner asks of it (the app's headings). origin: where its content comes from, said plainly: the app never calls
+# anything "true", because a wiki compiled from filed mail is what was found, not what is so.
+GROUPS = [["you", "What it knows about you"], ["world", "What it has found out"], ["happened", "What happened"],
+          ["how", "How to do things"], ["work", "Work in progress"], ["find", "How it finds things"]]
 STORES = [
-    {"id": "vault-notes", "name": "Vault notes", "kind": "semantic", "holds": "your sources and clippings, never rewritten",
-     "writes": "you, imports", "reads": "search (qmd), the curator", "curator": None, "limit": [2000, "notes"],
-     "tidy": "nothing to tidy: your sources are never rewritten"},
-    {"id": "vault-wiki", "name": "Vault wiki", "kind": "semantic", "holds": "knowledge compiled from your notes, the top layer",
-     "writes": "the curator; the Librarian writes its hub pages", "reads": "search (qmd): your assistant, missions, the curator",
+    {"id": "vault-notes", "group": "world", "name": "Filed sources", "kind": "semantic", "origin": "as it came, not checked",
+     "holds": "Mail, articles and documents kept for reading: what the inbox job files by itself, imports, and anything you add. Never rewritten.",
+     "writes": "the inbox job, imports, you", "reads": "the curator, and search", "curator": None, "limit": [2000, "items"],
+     "tidy": "Nothing to tidy: sources stay as they came."},
+    {"id": "vault-wiki", "group": "world", "name": "Vault wiki", "kind": "semantic", "origin": "compiled by AI",
+     "holds": "Pages the curator compiles from those sources: people, companies, topics. Each names its source.",
+     "writes": "the curator; the Memory Keeper adds the pages that join the wikis", "reads": "your assistant, missions and the curator, through search",
      "curator": "wiki-curator", "limit": [500, "pages"]},
-    {"id": "agent-wikis", "name": "Agent wikis", "kind": "semantic", "holds": "one wiki per mission or topic, from its results",
-     "writes": "its one writer (the runner, after each result), folding in other agents' helps; the Librarian merges and marks",
-     "reads": "missions at a run's start (their own first, then the vault and related wikis), search (qmd)", "curator": "memory",
+    {"id": "agent-wikis", "group": "world", "name": "Mission wikis", "kind": "semantic", "origin": "compiled by AI",
+     "holds": "One wiki per mission or topic, built from its research results, each fact with its source. What a briefing draws on.",
+     "writes": "the mission's own writer, after each result", "reads": "that mission at the start of each run, then the related wikis and search", "curator": "memory",
      "limit": [200, "pages per wiki"]},
-    {"id": "journals", "name": "Agent journals", "kind": "episodic", "holds": "each agent's working state and own runs (its Memory tab)",
-     "writes": "the runner, after each run", "reads": "that agent at a run's start", "curator": "memory", "limit": [20000, "bytes per journal"]},
-    {"id": "mission-notes", "name": "Old mission notes", "kind": "episodic", "holds": "NOTES.md files not yet moved into their journals",
-     "writes": "nobody since MEM-05", "reads": "until its mission's next run", "curator": None, "limit": [0, "files"],
-     "tidy": "moved into the mission's journal at its next run"},
-    {"id": "hindsight", "name": "Long-term memory (Hindsight)", "kind": "semantic", "holds": "facts about you (no copies of journal entries)",
-     "writes": "your chats (through the gatekeeper)", "reads": "your assistant, a run's start (recall)", "curator": "memory",
+    {"id": "repo-wikis", "group": "world", "name": "Repository wikis", "kind": "semantic", "origin": "compiled by AI, cites commits",
+     "holds": "One wiki per repository: how it is built and tested, and what past changes taught. Each fact cites its commit.",
+     "writes": "the Scribe, when a repository is onboarded and after each change", "reads": "the agents changing that repository", "curator": None,
+     "limit": [200, "pages per wiki"], "tidy": "The Scribe checks a page against today's code; a page it cannot confirm is marked."},
+    {"id": "journals", "group": "happened", "name": "Agent journals", "kind": "episodic", "origin": "written by each agent",
+     "holds": "Each agent's own notebook: what it is in the middle of, lessons it keeps, its last runs.",
+     "writes": "the runner, after each run", "reads": "that agent, at the start of each run", "curator": "memory", "limit": [20000, "bytes per journal"]},
+    {"id": "mission-notes", "group": "happened", "name": "Old mission notes", "kind": "episodic", "origin": "being retired",
+     "holds": "Notes from before journals existed. Each file moves into its mission's journal at that mission's next run.",
+     "writes": "nobody any more", "reads": "that mission, until then", "curator": None, "limit": [0, "files"],
+     "tidy": "Moved into the mission's journal at its next run."},
+    {"id": "hindsight", "group": "you", "name": "Long-term memory", "kind": "semantic", "origin": "extracted by AI, no source shown",
+     "holds": "Facts a model extracted from chats and, earlier, from agents' journals: about you, and much about other things (docs/MEMORY-TAB.md). You can search and forget them.",
+     "writes": "your chats, through the gatekeeper; earlier also agents' journals", "reads": "your assistant, and every agent at the start of a run", "curator": "memory",
      "limit": [5000, "facts"]},
-    {"id": "ledger", "name": "The Ledger", "kind": "shared", "holds": "ideas, findings, evidence, your decisions and reasons",
-     "writes": "agents, the runner, you", "reads": "every swarm agent (its start pack)", "curator": "checker", "limit": [200, "MB"]},
-    {"id": "skills", "name": "Skills", "kind": "procedural", "holds": "how Hermes does things",
-     "writes": "the skill keeper", "reads": "Hermes' agents", "curator": "curator", "limit": [60, "skills"]},
-    {"id": "run-records", "name": "Run records", "kind": "episodic", "holds": "every run's steps, reads and writes (raw)",
-     "writes": "every agent's runs", "reads": "you (run logs), the doctor, replay tests", "curator": None, "limit": [500, "MB"],
-     "tidy": "the run record drops a run's full events after 90 days; its summary stays"},
-    {"id": "qmd", "name": "Search index (qmd)", "kind": "index", "holds": "the search over the vault, wikis, journals and specs",
-     "writes": "qmd, from the vault", "reads": "every agent with vault search, a run's start", "curator": "memory", "limit": [ORPHAN_SHARE, "orphaned share"]},
-    # MEM-19: the four the first inventory did not have (FND-108)
-    {"id": "task-handoffs", "name": "Task hand-offs", "kind": "working", "holds": "each task step's result, which the steps after it build on (MEM-15)",
-     "writes": "every task step", "reads": "the steps after it, the Orchestrator's checkpoint, the judge, the task page", "curator": None,
-     "limit": [200, "MB"], "tidy": "kept with its task, whose page shows them; a long one is also a file in the vault (tasks/)"},
-    {"id": "hermes-memory", "name": "Hermes' own memory", "kind": "semantic", "holds": "Hermes' notes and your profile (USER.md, MEMORY.md), in every prompt",
-     "writes": "Hermes, each write approved by the memory gatekeeper or by you", "reads": "Hermes, every turn", "curator": "memory-review",
+    {"id": "ledger", "group": "work", "name": "The Ledger", "kind": "shared", "origin": "the team's shared board",
+     "holds": "Ideas, findings, evidence and your decisions with their reasons: what the agents are working on together.",
+     "writes": "agents, the runner, you", "reads": "every swarm agent, at the start of a run", "curator": "checker", "limit": [200, "MB"]},
+    {"id": "skills", "group": "how", "name": "Skills", "kind": "procedural", "origin": "written instructions", "href": "#/skills",
+     "holds": "Instructions your assistant looks up for a particular job. Most came with Hermes; some it wrote itself.",
+     "writes": "Hermes, the skill keeper", "reads": "your assistant, when a job calls for one", "curator": "curator", "limit": [100, "skills"]},
+    {"id": "prompts", "group": "how", "name": "Agent instructions", "kind": "procedural", "origin": "versioned files",
+     "holds": "Each agent's standing prompts. A changed prompt must first pass a replay of real cases.",
+     "writes": "you, and agent changes you approve", "reads": "each agent, in every run", "curator": None, "limit": [200, "prompts"],
+     "tidy": "Changed only through a landing, with a replay."},
+    {"id": "run-records", "group": "happened", "name": "Run records", "kind": "episodic", "origin": "exact record",
+     "holds": "Every step of every run, as it happened: what was read, called and written.",
+     "writes": "every agent's runs", "reads": "you (run logs), the Health doctor, replay tests", "curator": None, "limit": [500, "MB"],
+     "tidy": "A run's full events go after 90 days; its summary stays."},
+    {"id": "qmd", "group": "find", "name": "Search index", "kind": "index", "origin": "holds no knowledge of its own",
+     "holds": "What makes the wikis, sources, journals and specs searchable, by words and by meaning.",
+     "writes": "the search service, from the vault", "reads": "every agent with vault search, and each run's opening", "curator": "memory", "limit": [ORPHAN_SHARE, "orphaned share"]},
+    {"id": "task-handoffs", "group": "happened", "name": "Task hand-offs", "kind": "working", "origin": "exact record",
+     "holds": "Each task step's result, which the steps after it build on.",
+     "writes": "every task step", "reads": "the steps after it, the judge, the task page", "curator": None,
+     "limit": [200, "MB"], "tidy": "Kept with its task, whose page shows them."},
+    {"id": "hermes-memory", "group": "you", "name": "Your profile", "kind": "semantic", "origin": "from your chats",
+     "holds": "A few lines your assistant sees in every prompt: how you like answers, your setup.",
+     "writes": "your assistant, each write approved by the gatekeeper or by you", "reads": "your assistant, every turn", "curator": "memory-review",
      "limit": [4400, "characters"]},
-    {"id": "code-graphs", "name": "Code graphs", "kind": "index", "holds": "each repository's graph of files, symbols and calls (graphify)",
-     "writes": "graphify-sync, at each new commit", "reads": "the builder's context packs, the code map", "curator": None,
-     "limit": [1000, "MB"], "tidy": "rebuilt from the code at each commit: one graph per repository"},
-    {"id": "chats", "name": "Chats", "kind": "episodic", "holds": "your chats with Hermes in the app", "writes": "you and Hermes",
+    {"id": "code-graphs", "group": "find", "name": "Code graphs", "kind": "index", "origin": "built from the code",
+     "holds": "Each repository's map of files, symbols and calls.",
+     "writes": "rebuilt at each new commit", "reads": "the builder, your assistant, the code map", "curator": None,
+     "limit": [1000, "MB"], "tidy": "Rebuilt from the code at each commit."},
+    {"id": "chats", "group": "happened", "name": "Chats", "kind": "episodic", "origin": "exact record",
+     "holds": "Your chats with your assistant in the app.", "writes": "you and your assistant",
      "reads": "you; long-term memory keeps what is worth keeping from them", "curator": None, "limit": [2000, "chats"],
-     "tidy": "you delete a chat; what matters lives on in long-term memory"},
+     "tidy": "You delete a chat; what matters lives on in long-term memory."},
 ]
+# what the run record can count: a store's use over USE_DAYS, by the tools that reach it
+USE_DAYS = 14
+USE = {"hindsight": ("Read", r"memory_recall|hindsight"), "qmd": ("Searched", r"qmd_|wiki_search"), "ledger": ("Read", r"swarm_context|ledger_(find|get)"),
+       "skills": ("Opened", r"skill_view"), "code-graphs": ("Queried", r"graphify_"), "journals": ("Written", r"journal_write|agent_note")}
 WIKI_CURATOR_AGENT = "curator"      # the Hermes curator profile in the run record: who curates the vault wiki
 
 _cache = {"t": 0.0, "data": None, "busy": False}
@@ -97,9 +126,9 @@ def measure(sid, now):
     week = now - 7 * 86400
     if sid == "vault-notes":
         f = md_files(VAULT / "raw")
-        return {"count": len(f), "unit": "notes", "bytes": sum(p.stat().st_size for p in f)}
+        return {"count": len(f), "unit": "items", "bytes": sum(p.stat().st_size for p in f), "from_mail": sum("-mail-" in p.name for p in f)}
     if sid in ("vault-wiki", "agent-wikis"):
-        dirs = [d for d in wiki_dirs() if (d == VAULT / "wiki") == (sid == "vault-wiki")]
+        dirs = [d for d in wiki_dirs() if (d == VAULT / "wiki") == (sid == "vault-wiki") and d.parent.parent != VAULT / "repos"]   # repository wikis are their own store
         parts = []
         for d in dirs:
             f = md_files(d)
@@ -110,6 +139,16 @@ def measure(sid, now):
             out["count_label"] = f"{len(parts)} wikis"
             out["largest"] = max((p["pages"] for p in parts), default=0)
         return out
+    if sid == "repo-wikis":
+        parts = []
+        for d in sorted((VAULT / "repos").glob("*/wiki")) if (VAULT / "repos").exists() else []:
+            f = md_files(d)
+            parts.append({"root": d.parent.name, "pages": len(f), "bytes": sum(p.stat().st_size for p in f)})
+        return {"count": sum(p["pages"] for p in parts), "unit": "pages", "bytes": sum(p["bytes"] for p in parts), "parts": parts,
+                "count_label": f"{len(parts)} wikis", "largest": max((p["pages"] for p in parts), default=0)}
+    if sid == "prompts":
+        f = sorted(PROMPTS.glob("**/*.md")) if PROMPTS.exists() else []
+        return {"count": len(f), "unit": "prompts", "bytes": sum(p.stat().st_size for p in f)}
     if sid == "journals":
         f = sorted((VAULT / "agents").glob("*/MEMORY.md")) if (VAULT / "agents").exists() else []
         sizes = {p.parent.name: p.stat().st_size for p in f}
@@ -135,7 +174,8 @@ def measure(sid, now):
         st = r.get("result") or {} if r.get("ok") else {}
         return {"count": st.get("artifacts") or 0, "unit": "artifacts", "bytes": size, "events": st.get("events") or 0}
     if sid == "skills":
-        out = sh("docker", "exec", "aistack-hermes-1", "sh", "-c", "ls /opt/data/skills | wc -l; du -sb /opt/data/skills | cut -f1").split()
+        # each SKILL.md, not the folders: "ls" counted 13 categories while 63 skills were there (7 Nov 2026)
+        out = sh("docker", "exec", "aistack-hermes-1", "sh", "-c", "find /opt/data/skills -name SKILL.md -not -path '*/.archive/*' | wc -l; du -sb /opt/data/skills | cut -f1").split()
         return {"count": int(out[0]), "unit": "skills", "bytes": int(out[1])}
     if sid == "run-records":
         c = sqlite3.connect(f"file:{RUNTIME_DB}?mode=ro", uri=True)
@@ -186,7 +226,7 @@ def problems(store, m):
         share = m.get("orphaned_share") or 0.0
         if share > lim[0]:
             out.append(f"{m['orphaned']} embedding chunks ({share:.0%}) belong to files that are gone: the Memory Keeper cleans them tonight")
-    elif sid == "agent-wikis":
+    elif sid in ("agent-wikis", "repo-wikis"):
         big = [p["root"] for p in m.get("parts") or [] if p["pages"] > lim[0]]
         out += [f"{r} is over {lim[0]} pages" for r in big]
     elif sid == "journals":
@@ -200,7 +240,7 @@ def problems(store, m):
     elif sid in ("ledger", "run-records"):
         if m["bytes"] > lim[0] * 1e6:
             out.append(f"{m['bytes'] / 1e6:.0f} MB, over {lim[0]} MB")
-    elif sid in ("vault-wiki", "vault-notes", "skills") and m["count"] > lim[0]:
+    elif sid in ("vault-wiki", "vault-notes", "skills", "prompts") and m["count"] > lim[0]:
         out.append(f"{m['count']} {m['unit']}, over {lim[0]}")
     if store.get("curator") is None and not store.get("tidy"):
         out.append("nobody curates it")
@@ -214,7 +254,7 @@ def over(store, m):
         return False
     if sid == "qmd":
         return (m.get("orphaned_share") or 0.0) > lim
-    if sid in ("agent-wikis", "journals"):
+    if sid in ("agent-wikis", "repo-wikis", "journals"):
         return (m.get("largest") or 0) > lim
     if store["limit"][1] == "MB":
         return (m.get("bytes") or 0) > lim * 1e6
@@ -240,6 +280,16 @@ def last():
         return None
 
 
+def uses(now):
+    """{store id: {verb, n}}: what the run record saw of each store over USE_DAYS; what it cannot count stays out."""
+    try:
+        c = sqlite3.connect(f"file:{RUNTIME_DB}?mode=ro", uri=True)
+        rows = c.execute("select title, count(*) from events where ts>? and kind in ('call', 'read', 'tool') group by title", (now - USE_DAYS * 86400,)).fetchall()
+    except sqlite3.Error:
+        return {}
+    return {sid: {"verb": verb, "n": sum(n for t, n in rows if re.search(pat, t or "")), "days": USE_DAYS} for sid, (verb, pat) in USE.items()}
+
+
 def collect(crew=None, now=None):
     """The whole inventory now, with the growth over 7 days from the daily snapshots."""
     now = now or time.time()
@@ -252,6 +302,7 @@ def collect(crew=None, now=None):
     week_ago = (dt.date.fromtimestamp(now) - dt.timedelta(days=7)).isoformat()
     base = next((h for h in hist if h["date"] >= week_ago), None)
     before = {s["id"]: s for s in (last() or {}).get("stores", [])}
+    used = uses(now)
     out = []
     for s in STORES:
         try:
@@ -262,7 +313,7 @@ def collect(crew=None, now=None):
         since = (before.get(s["id"]) or {}).get("over_since") or now if over(s, m) else None
         out.append({**s, **m, "growth_7d": None if not prev or "count" not in m else {"count": m["count"] - prev.get("count", 0),
                                                                                           "bytes": m.get("bytes", 0) - prev.get("bytes", 0), "since": base["date"]},
-                    "curated": curated(s, crew, curator_last), "problems": problems(s, m), "over_since": since})
+                    "curated": curated(s, crew, curator_last), "problems": problems(s, m), "over_since": since, "used": used.get(s["id"])})
     lib = {}
     try:
         lib = json.loads((PUBLIC / "librarian.json").read_text())
@@ -270,7 +321,7 @@ def collect(crew=None, now=None):
         lib.pop("apart", None)
     except (FileNotFoundError, ValueError):
         pass
-    return {"at": now, "stores": out, "librarian": lib or None}
+    return {"at": now, "groups": GROUPS, "stores": out, "librarian": lib or None}
 
 
 def history():
@@ -288,10 +339,54 @@ def remember(inv):
     (PUBLIC / "memory-history.json").write_text(json.dumps(hist[-HISTORY_DAYS:]))   # cap: rotate (one snapshot a day for HISTORY_DAYS)
 
 
+def skill_catalog(now=None):
+    """Every skill with its instructions, for the app's Skills page (public/skills.json): whether it came with Hermes, is archived, and how
+    often it was opened over 30 days."""
+    import yaml
+    now = now or time.time()
+    code = ("import json,pathlib\nb=pathlib.Path('/opt/data/skills');o=[]\n"
+            "for f in sorted(b.rglob('SKILL.md')):\n"
+            " d=f.parent;o.append({'path':str(d.relative_to(b)),'text':f.read_text(errors='replace'),'files':sorted(str(x.relative_to(d)) for x in d.rglob('*') if x.is_file() and x!=f)})\n"
+            "m=b/'.bundled_manifest'\nprint(json.dumps({'skills':o,'bundled':[l.split(':')[0] for l in m.read_text().split()] if m.exists() else []}))")
+    raw = json.loads(sh("docker", "exec", "aistack-hermes-1", "python3", "-c", code, timeout=120))
+    opened = {}
+    try:
+        c = sqlite3.connect(f"file:{RUNTIME_DB}?mode=ro", uri=True)
+        for (detail,) in c.execute("select detail from events where ts>? and kind='call' and title like '%skill_view%'", (now - 30 * 86400,)):
+            m = re.search(r'"name":\s*"([^"]+)"', detail or "")
+            if m:
+                opened[m.group(1)] = opened.get(m.group(1), 0) + 1
+    except sqlite3.Error:
+        pass
+    out = []
+    for x in raw["skills"]:
+        meta, body = {}, x["text"]
+        if body.startswith("---"):
+            head, _, rest = body[3:].partition("\n---")
+            try:
+                meta = yaml.safe_load(head) or {}
+            except yaml.YAMLError:
+                meta = {}
+            body = rest.lstrip("\n") if rest else body
+        path = x["path"]
+        name = str(meta.get("name") or path.rsplit("/", 1)[-1])
+        archived = path.startswith(".archive")
+        parts = path.split("/")
+        out.append({"path": path, "name": name, "category": "Archived" if archived else (parts[0] if len(parts) > 1 else "other"), "description": str(meta.get("description") or ""),
+                    "version": str(meta.get("version") or ""), "author": str(meta.get("author") or ""), "platforms": meta.get("platforms") or [],
+                    "archived": archived, "bundled": name in raw["bundled"] or path.rsplit("/", 1)[-1] in raw["bundled"],
+                    "opened_30d": opened.get(name, 0), "files": x["files"], "body": body})
+    return {"at": now, "skills": out}
+
+
 def refresh(crew=None):
     try:
         inv = collect(crew)
         (PUBLIC / "memory.json").write_text(json.dumps(inv, default=str))
+        try:
+            (PUBLIC / "skills.json").write_text(json.dumps(skill_catalog(inv["at"])))
+        except Exception as e:                             # the page says when its list could not be read; the inventory goes on
+            (PUBLIC / "skills.json").write_text(json.dumps({"at": inv["at"], "skills": [], "error": f"{type(e).__name__}: {e}"}))
         if not any(h["date"] == dt.date.fromtimestamp(inv["at"]).isoformat() for h in history()):
             remember(inv)
         with _lock:

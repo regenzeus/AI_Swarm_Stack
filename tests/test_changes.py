@@ -631,6 +631,23 @@ def test_a_stopped_change_goes_on_from_there_with_its_budget_doubled(K):
     assert step(K, t, "change-judge")["status"] == "pending"
 
 
+def test_a_stopped_change_waits_on_the_board_until_it_is_answered_and_can_be_left_stopped(K):
+    """GEN-02: the queue reads the board, so a stopped change stays on it past the week; the owner's no ends the wait."""
+    import decisions as DQ
+    t = req(K, "S")
+    TK.put(K.c, t, status="failed", error="spent", door="plan")
+    K.c.execute("update tasks set updated='2020-01-01T00:00:00+00:00' where id=?", (t,))
+    K.c.commit()
+    assert f"stopped:{t}" in {d["id"] for d in DQ.gather(TK.state(K.c))}
+    with pytest.raises(ValueError):
+        CH.handle({"action": "change_leave", "id": req(K, "S", text="Another change to the map's legend")}, K.c)   # one still at work is not left
+    assert CH.handle({"action": "change_leave", "id": t}, K.c) == {"task": t} and TK.row(K.c, t)["status"] == "cancelled"
+    st = TK.state(K.c)
+    assert f"stopped:{t}" not in {d["id"] for d in DQ.gather(st)} and DQ.outcome(f"stopped:{t}", {"tasks": [{"id": t, "status": "cancelled"}]}) == "no"
+    with pytest.raises(ValueError):                                  # and it cannot go on now
+        CH.handle({"action": "change_resume", "id": t}, K.c)
+
+
 def test_the_report_and_the_wiki_come_even_at_a_spent_budget(K):
     assert {"change-deliver", "change-scribe"} == set(CD.KINDS.even_spent)
     src = (ROOT / "ops/conductor.py").read_text()
@@ -673,7 +690,7 @@ def test_the_step_lines_are_read_from_summaries():
 # ---------- the doors ----------
 def test_the_app_and_the_chat_reach_it():
     server = (ROOT / "images/mission-control/server.py").read_text()
-    for a in ("change_request", "change_go", "change_resume", "change_rule"):
+    for a in ("change_request", "change_go", "change_resume", "change_leave", "change_rule"):
         assert f'"{a}"' in server and a in CH.ACTIONS
     assert "async def change_request(repo: str, request: str)" in server and "/api/change/{tid:int}/{name}" in server
     js = (ROOT / "images/mission-control/web/static/task.js").read_text()

@@ -971,10 +971,71 @@ def handle_stack(req):
         if len(q) < 2:
             return {"facts": []}
         rows = sh("docker", "exec", "aistack-hindsight-db-1", "psql", "-U", "hindsight", "-d", "hindsight", "-tAF", "\t", "-c",
-                  f"select fact_type, to_char(created_at, 'YYYY-MM-DD'), left(text, 400) from memory_units "
+                  f"select fact_type, to_char(created_at, 'YYYY-MM-DD'), coalesce(metadata->>'chat_id', ''), replace(replace(text, E'\\t', ' '), E'\\n', ' ') from memory_units "
                   f"where text ilike '%{q}%' order by created_at desc limit 40").splitlines()  # cap: list (the 40 newest matches; a narrower search finds the rest)
-        return {"facts": [dict(zip(("type", "date", "text"), r.split("\t"))) for r in rows if r.count("\t") == 2]}
+        return {"facts": [dict(zip(("type", "date", "chat", "text"), r.split("\t"))) for r in rows if r.count("\t") == 3]}
+    if a == "memory_browse":
+        return memory_browse()
+    if a == "memory_move":
+        return memory_move([str(x) for x in req.get("ids") or []], [str(x) for x in req.get("keep") or []])
     raise ValueError("unknown action")
+
+
+FACTS_SQL = ("select u.id, u.fact_type, to_char(u.created_at, 'YYYY-MM-DD'), coalesce(u.metadata->>'chat_id', ''), coalesce(u.metadata->>'source', ''), "
+             "replace(replace(u.text, E'\\t', ' '), E'\\n', ' '), coalesce((select string_agg(e.canonical_name, '|') from unit_entities ue join entities e on e.id = ue.entity_id where ue.unit_id = u.id), '') "
+             "from memory_units u order by u.created_at desc")
+MOVE_LIST = Path(os.environ.get("MEMORY_MOVE", "/srv/ai/state/memory-move.json"))     # what is not about the owner, for his eyes (APP-50)
+
+
+def long_term_facts():
+    rows = sh("docker", "exec", "aistack-hindsight-db-1", "psql", "-U", "hindsight", "-d", "hindsight", "-tAF", "\t", "-c", FACTS_SQL).splitlines()
+    out = []
+    for r in rows:
+        x = r.split("\t")
+        if len(x) == 7:
+            out.append({"id": x[0], "type": x[1], "date": x[2], "chat": x[3], "source": x[4], "text": x[5], "entities": [e for e in x[6].split("|") if e]})
+    return out
+
+
+def memory_browse():
+    """The Memory tab's Long-term: the owner's profile, every fact whole, and what waits for his eyes because it is not about him."""
+    facts = long_term_facts()
+    try:
+        move = json.loads(MOVE_LIST.read_text())
+    except (OSError, ValueError):
+        move = []
+    live = {f["id"]: f for f in facts}
+    move = [{**m, "text": live[m["id"]]["text"]} for m in move if m["id"] in live and not m.get("kept")]
+    prof = sh("docker", "exec", HERMES, "sh", "-c", "cat /opt/data/memories/USER.md /opt/data/memories/MEMORY.md 2>/dev/null").replace("\n§\n", "\n").strip()
+    return {"facts": facts, "profile": prof, "move": move}
+
+
+def memory_move(ids, keep):
+    """The owner's tap on the list: each ticked fact goes to a wiki as a filed source, naming the chat it came from, and is retired softly with its Undo."""
+    import keeper as K
+    K.M = sys.modules[__name__]
+    facts = {f["id"]: f for f in long_term_facts()}
+    try:
+        items = json.loads(MOVE_LIST.read_text())
+    except (OSError, ValueError):
+        items = []
+    want = [m for m in items if m["id"] in ids and m["id"] in facts]
+    by_topic = {}
+    for m in want:
+        if m.get("file", True):                           # what an agent did needs no wiki: its journal and the run record hold it
+            by_topic.setdefault(m.get("topic") or "Other", []).append(facts[m["id"]])
+    day = now().strftime("%Y-%m-%d")
+    for topic, fs in by_topic.items():
+        slug = re.sub(r"[^a-z0-9]+", "-", topic.lower()).strip("-")
+        body = "\n".join(f"- {f['text']} (kept {f['date']}" + (f", chat {f['chat']}" if f["chat"] else "") + ")" for f in fs)
+        (VAULT / "raw/_inbox" / f"{day}-long-term-{slug}.md").write_text(f"# {topic}: facts moved from long-term memory\n\nExtracted by a model from chats, not checked.\n\n{body}\n")
+    done = K.apply([{"id": m["id"], "class": "moved_to_wiki", "why": f"not about the owner: filed for the wikis under {m.get('topic') or 'Other'}"} for m in want], list(facts.values()))
+    for m in items:
+        if m["id"] in keep:
+            m["kept"] = True
+    MOVE_LIST.write_text(json.dumps([m for m in items if m["id"] not in ids]))
+    event("memory", "", f"Long-term memory: {len(done)} facts moved to the wikis, as you asked", title="Crew")
+    return {"moved": len(done)}
 
 
 def handle_memory(req):
@@ -989,7 +1050,7 @@ def handle_memory(req):
     return {"output": tailcut(out.strip(), 4000)}  # cap: store
 
 
-STACK_ACTIONS = {"email", "vault_add", "understand", "forget", "memory_search"}
+STACK_ACTIONS = {"email", "vault_add", "understand", "forget", "memory_search", "memory_browse", "memory_move"}
 BUILD_ACTIONS = {"build_assign", "build_revise", "build_approve", "build_approve_all", "build_reject", "build_recheck", "build_revert"}
 IMPROVE_ACTIONS = {"improve_scan", "proposal_accept", "proposal_dismiss"}
 REPO_ACTIONS = {"codemap", "repo_create", "repo_buildable", "repo_remove"}
@@ -1060,7 +1121,7 @@ def respond(rid, req):
                else R.handle(req, c) if a in REPO_ACTIONS else CR.handle(req, c) if a in CREW_ACTIONS else J.handle(req) if a in J.ACTIONS
                else WD.handle(req) if a in WD.ACTIONS else SH.handle(req, c) if a in SH.ACTIONS else W.handle(req) if a in W.ACTIONS else H.handle(req) if a in H.ACTIONS
                else SW.handle(req, c) if a in SW.ACTIONS else FL.handle(req) if a in FL.ACTIONS else handle_notify(req) if a in ("notify_prefs", "chat_ready") else TK.handle(req, c) if a in TK.ACTIONS else EV.handle(req, c) if a in EV.ACTIONS else A2.handle(req) if a in A2.ACTIONS
-               else handle(req, load_missions(), c))
+               else DQ.handle(req) if a in DQ.ACTIONS else handle(req, load_missions(), c))
         res = {"ok": True, **res}
     except Exception as e:
         res = {"ok": False, "error": str(e)}

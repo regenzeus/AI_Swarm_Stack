@@ -22,3 +22,6 @@ classes:
   agent-change:    {title: Agent change,       level: 0, highest: 1, exam: replay,          what: "take an agent change whose experiment passed"}
   ideas:           {title: Ideas,              level: 0, highest: 1, exam: null,            what: "turn an agent's idea into a task"}
   agent-request:   {title: An agent asks,      level: 0, highest: 0, exam: null,            what: "what an agent asks of the owner", words: true}
+  owner-confirm:   {title: "Does it work?",    level: 0, highest: 0, exam: null,            what: "say whether a shipped idea works, when the owner's word is its check"}
+  setup:           {title: Setup,              level: 0, highest: 0, exam: null,            what: "a setup step only the owner can do"}
+  journey-test:    {title: Journey test,       level: 0, highest: 0, exam: null,            what: "the nightly journey's own test item: it decides nothing"}

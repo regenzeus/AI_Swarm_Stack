@@ -161,11 +161,13 @@ source whose address the report or the answer links is marked `cited`. Each chan
 ## Journey checks (TSK-32)
 
 Unit tests check parts; the owner uses journeys. `ops/journeys.py` follows them end to end every night at 04:10 (the
-Journey checks crew job) and on `make journeys`, without a model and without changing anything live:
+Journey checks crew job) and on `make journeys`, without a model and, but for one marked test item that removes itself,
+without changing anything live:
 
 | Journey | What it proves |
 |---|---|
 | task | a task given in a sentence goes through the real intake check, the Conductor, the result file, the done message, the judge and the Tasks board, on the newest finished task's recorded answers, in a sandbox database |
+| decide | a test item marked as one goes in through the runner's inbox, shows in the app's list, on Home and on #/decide with the same count, is answered by a tap on its own button (the real `/api/request`, inbox and runner), and leaves all three with its answer recorded; then it is removed, also on a failure. The browser sends no other write, the shadow never records it, and its answer changes only its own file |
 | routes | every route opens at 375 px in headless Chromium (the scout's browser image) on the live data and with an emptied state: no sideways scrolling, script error or empty screen; a card opens its page; an empty state offers an action; dates and numbers the app's way. Writes are answered in the browser, never sent; no other host is reached |
 | email | the newest briefing rendered as its e-mail: the headline once in the header, no Markdown marks or twice-escaped text, nothing wider than a phone |
 | make | every make target dry-runs and every script its recipe names exists |

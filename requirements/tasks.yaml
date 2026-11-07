@@ -582,24 +582,30 @@ items:
   phase: 8
   title: Journey checks
   statement: Checks shall follow the owner's journeys end to end, giving a task and following it to its result,
-    opening every route at 375 px in a browser, rendering an email at phone width and dry-running every make target,
-    on demand and nightly, and a failure shall reach the health board.
+    taking a test item through the decision queue with the owner's tap and checking its result, opening every route at
+    375 px in a browser, rendering an email at phone width and dry-running every make target, on demand and nightly, and
+    a failure shall reach the health board.
   type: quality
   priority: must
   status: implemented
   findings: [FND-86]
   parents: [SN-19, SN-20]
   sources: [docs/SWARM-DESIGN.md]
-  acceptance: 'Test: a route that scrolls sideways at 375 px, a broken make target and a mangled email headline each
-    fail the check.'
+  acceptance: 'Test: a route that scrolls sideways at 375 px, a broken make target, a mangled email headline and a
+    decision action that stopped working each fail the check.'
   verify: {method: test, by: ['tests/test_journeys.py::test_a_route_that_scrolls_sideways_at_375_px_and_each_other_screen_fault_fail_the_check',
     'tests/test_journeys.py::test_a_broken_make_target_fails_the_check_and_every_real_target_dry_runs',
     'tests/test_journeys.py::test_a_mangled_email_headline_fails_the_check_and_the_desk_s_email_passes_it',
     'tests/test_journeys.py::test_a_task_given_in_a_sentence_is_followed_to_its_result_and_a_broken_hand_over_fails_it',
     'tests/test_journeys.py::test_the_replay_is_the_newest_finished_planned_task',
     'tests/test_journeys.py::test_a_failed_journey_is_an_alert_on_the_health_board_and_runs_nightly',
-    'tests/test_journeys.py::test_the_browser_half_measures_what_the_owner_sees']}
-  trace: [ops/journeys.py, ops/journeys.mjs, ops/crew.py, ops/systemd/crew-journeys.service, ops/systemd/crew-journeys.timer, Makefile]
+    'tests/test_journeys.py::test_the_browser_half_measures_what_the_owner_sees',
+    'tests/test_journeys.py::test_the_decide_journey_takes_a_test_item_through_the_queue_and_leaves_nothing_behind',
+    'tests/test_journeys.py::test_the_decide_journey_fails_when_deciding_stops_working',
+    'tests/test_journeys.py::test_the_decide_journey_says_so_when_the_runner_does_not_answer_or_the_browser_dies',
+    'tests/test_journeys.py::test_the_decide_journey_judges_what_the_browser_saw',
+    'tests/test_decisions.py::test_the_test_item_is_marked_and_changes_nothing_but_itself']}
+  trace: [ops/journeys.py, ops/journeys.mjs, ops/decisions.py, ops/crew.py, ops/systemd/crew-journeys.service, ops/systemd/crew-journeys.timer, Makefile]
 - id: TSK-33
   group: Event fabric
   phase: 9

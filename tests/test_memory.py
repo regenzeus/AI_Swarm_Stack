@@ -2,6 +2,7 @@
 its kind, writers, readers, size, growth, limit, curator and problems; the wikis' map with the subjects they share; and
 who read and wrote which wiki, from the run record."""
 import json
+import re
 import sqlite3
 import time
 from pathlib import Path
@@ -18,12 +19,12 @@ H = {"Tailscale-User-Login": "owner@test"}
 
 def test_every_memory_store_is_declared_with_its_kind_writers_readers_limit_and_curator():
     ids = [s["id"] for s in MEM.STORES]
-    assert ids == ["vault-notes", "vault-wiki", "agent-wikis", "journals", "mission-notes", "hindsight", "ledger", "skills", "run-records", "qmd",
-                   "task-handoffs", "hermes-memory", "code-graphs", "chats"]                  # MEM-19: the four FND-108 found missing
+    assert set(ids) == {"vault-notes", "vault-wiki", "agent-wikis", "repo-wikis", "journals", "mission-notes", "hindsight", "ledger", "skills", "prompts", "run-records", "qmd",
+                        "task-handoffs", "hermes-memory", "code-graphs", "chats"} and len(ids) == 16    # MEM-19: every store, the repository wikis and prompts too
     for s in MEM.STORES:
         assert s["kind"] in ("working", "episodic", "semantic", "procedural", "shared", "index"), s["id"]
         assert s["holds"] and s["writes"] and s["reads"] and len(s["limit"]) == 2 and "curator" in s, s["id"]
-    assert {s["id"] for s in MEM.STORES if s["curator"] is None} == {"vault-notes", "mission-notes", "run-records", "task-handoffs", "code-graphs", "chats"}
+    assert {s["id"] for s in MEM.STORES if s["curator"] is None} == {"vault-notes", "repo-wikis", "prompts", "mission-notes", "run-records", "task-handoffs", "code-graphs", "chats"}
     assert all(s.get("tidy") for s in MEM.STORES if s["curator"] is None)              # each says how it stays small without one
     assert {s["id"] for s in MEM.STORES if s["curator"] == "memory"} == {"agent-wikis", "journals", "hindsight", "qmd"}   # the Librarian
 
@@ -34,7 +35,7 @@ def vault(tmp_path, monkeypatch):
     for rel, text in {"raw/a.md": "a source", "wiki/entities/acme-mining.md": "---\ntitle: Acme Mining\n---\nx",
                       "missions/ram/wiki/entities/acme-mining.md": "---\ntitle: Acme Mining (ACME)\n---\ny", "missions/ram/wiki/concepts/dram.md": "z",
                       "agents/mission-ram/MEMORY.md": "# Memory\n## Journal\n### one\n- Did: a\n### two\n- Did: b\n" + "x" * 21000,
-                      "missions/ram/NOTES.md": "# Working notes\n\n- one\n- two\n"}.items():
+                      "missions/ram/NOTES.md": "# Working notes\n\n- one\n- two\n", "repos/demo/wiki/how.md": "built with make"}.items():
         (v / rel).parent.mkdir(parents=True, exist_ok=True)
         (v / rel).write_text(text)
     rt = tmp_path / "runtime.db"
@@ -78,6 +79,7 @@ def test_the_inventory_measures_each_store_names_its_problems_and_reads_growth_f
     inv = MEM.collect(crew=[{"id": "memory", "last": now - 86400}], now=now)
     st = {s["id"]: s for s in inv["stores"]}
     assert st["agent-wikis"]["count"] == 2 and st["agent-wikis"]["count_label"] == "1 wikis" and st["agent-wikis"]["growth_7d"]["count"] == 1
+    assert st["repo-wikis"]["count"] == 1 and st["repo-wikis"]["count_label"] == "1 wikis"      # counted once, on its own row
     assert st["vault-wiki"]["count"] == 1 and st["vault-wiki"]["curated"] and st["journals"]["curated"] == now - 86400
     assert st["journals"]["entries"] == 2 and any("over 20 KB" in p for p in st["journals"]["problems"])
     assert st["hindsight"]["count"] == 194 and st["hindsight"]["by_kind"]["world"] == 51
@@ -165,9 +167,9 @@ def test_who_read_and_wrote_which_wiki_comes_from_the_run_record(tmp_path, monke
 
 def test_the_app_draws_the_map_the_access_and_the_memory_section():
     assert "async function wikiMap()" in APP_JS and "/api/wiki/map" in APP_JS and "/api/wiki/access?hours=168" in APP_JS
-    assert 'data-wuse="${esc(r.root)}"' in APP_JS and "read in the last 7 days by" in APP_JS
-    assert "function memoryHtml()" in APP_JS and "${memoryHtml()}" in APP_JS and "Nobody tidies it yet" in APP_JS
-    assert "${librarianHtml(mem.librarian)}" in APP_JS and 'contradiction: ["page with a marked contradiction", "pages with a marked contradiction"]' in APP_JS
+    assert 'data-wuse="${esc(r.root)}"' in APP_JS and "in the last 7 days by ${readers.length} agent" in APP_JS
+    assert "function memoryHtml()" in APP_JS and "${memoryHtml()}" in APP_JS
+    assert "librarianHtml(S.memory.librarian)" in APP_JS and 'contradiction: ["page with a marked contradiction", "pages with a marked contradiction"]' in APP_JS
     missions = (ROOT / "ops/missions.py").read_text()
     assert "**MEM.state(CR.status())" in missions
     assert 'M.RTM.touched(f"{root}/{path}.md", changed=True' in (ROOT / "ops/mission_extras.py").read_text()
@@ -213,3 +215,85 @@ process.stdout.write(JSON.stringify({ bad, map, pair }));"""
     assert out["pair"] == ["below", "above"]                                # the smaller wiki's name moves up, not onto the other
     assert 'at = wikiMapLabels(nodes, rad, W, H, (d) => wikiShort(d.title));' in APP_JS and "if (!at.clashes || H >= 520) break;" in APP_JS
     assert "of archived missions (kept, not on the map)" in APP_JS
+
+
+def test_memory_says_where_its_content_comes_from_and_never_calls_it_true():
+    """The owner, 7 Nov 2026: "All say what is true? From my notes?" Filed mail is not a note of his, and a wiki is what was found."""
+    groups = {k for k, _ in MEM.GROUPS}
+    for s in MEM.STORES:
+        assert s["group"] in groups and s["origin"], s["id"]
+        assert "true" not in s["origin"] and "true" not in s["holds"], s["id"]
+    assert "your sources" not in " ".join(s["holds"] for s in MEM.STORES)
+    assert '"what is true"' not in APP_JS and "memflow" in APP_JS
+
+
+def test_the_skill_count_is_of_skills_and_not_of_their_folders(monkeypatch):
+    seen = []
+    monkeypatch.setattr(MEM, "sh", lambda *c, timeout=60: seen.append(" ".join(c)) or "63\n8360000\n")
+    assert MEM.measure("skills", time.time())["count"] == 63
+    assert "-name SKILL.md" in seen[0] and "*/.archive/*" in seen[0]
+
+
+def test_every_skill_opens_with_its_whole_instructions(tmp_path, monkeypatch):
+    body = "# Obsidian\n\n" + "x" * 30000
+    raw = {"bundled": ["obsidian"], "skills": [
+        {"path": "note-taking/obsidian", "text": f"---\nname: obsidian\ndescription: Read notes.\nplatforms: [linux]\n---\n{body}", "files": ["refs/a.md"]},
+        {"path": ".archive/old-way", "text": "no front matter", "files": []}]}
+    rt = tmp_path / "runtime.db"
+    c = sqlite3.connect(rt)
+    c.execute("create table events(ts real, kind text, title text, detail text)")
+    c.execute("insert into events values(?, 'call', 'skill_view', ?)", (time.time(), '{"name": "obsidian"}'))
+    c.commit()
+    monkeypatch.setattr(MEM, "RUNTIME_DB", rt)
+    monkeypatch.setattr(MEM, "sh", lambda *a, timeout=60: json.dumps(raw))
+    got = {x["path"]: x for x in MEM.skill_catalog()["skills"]}
+    one = got["note-taking/obsidian"]
+    assert one["body"] == body and one["description"] == "Read notes." and one["bundled"] and one["opened_30d"] == 1 and one["files"] == ["refs/a.md"]
+    assert got[".archive/old-way"]["archived"] and got[".archive/old-way"]["category"] == "Archived"
+    src = (ROOT / "images/mission-control/server.py").read_text()
+    assert 'Route("/api/skills", api_skills)' in src and 'k != "body"' in src
+    assert "async function vSkills()" in APP_JS and "skills: vSkills" in APP_JS and "md(x.body)" in APP_JS
+
+
+def test_search_memory_shows_whole_facts_with_their_source_and_the_wiki_pages():
+    """The owner, 7 Nov 2026: a result ended "no impact o", and he asked what kind of memory it was and whether it could be a link."""
+    src = (ROOT / "ops/missions.py").read_text()
+    assert "left(text, 400)" not in src and "metadata->>'chat_id'" in src
+    assert "FACT_KIND" in APP_JS and "/api/wiki/search_all" in APP_JS and "#/chat?c=${encodeURIComponent(f.chat)}" in APP_JS
+    assert 'Route("/api/wiki/search_all", api_wiki_search_all)' in (ROOT / "images/mission-control/server.py").read_text()
+
+
+def test_the_memory_tab_has_one_home_per_kind_and_one_search():
+    """APP-50: the owner asked for the kinds of memory, not for the agents, history and health pages over again."""
+    tabs = re.search(r"const MEM_TABS = \[(.*?)\];", APP_JS).group(1)
+    assert [x for x in re.findall(r'\["(\w+)", "#/', tabs)] == ["wiki", "longterm", "codemem", "skills", "journals"]
+    assert 'Memory", ic.wiki]' in APP_JS and 'data-sp="knowledge"' not in APP_JS
+    for fn in ("vLongTerm", "vCodeMem", "vJournals", "vSources", "vMemSearch"):
+        assert f"{fn}" in APP_JS
+    assert "api_journals" in (ROOT / "images/mission-control/server.py").read_text()
+
+
+def test_a_moved_fact_is_filed_with_its_chat_and_retired_with_its_undo(tmp_path, monkeypatch):
+    import missions as MS
+    import keeper as K
+    vault = tmp_path / "vault"
+    (vault / "raw/_inbox").mkdir(parents=True)
+    lst = tmp_path / "move.json"
+    lst.write_text(json.dumps([{"id": "a1", "topic": "Gamma Metals"}, {"id": "b2", "topic": "Gamma Metals"}, {"id": "c3", "topic": "Gamma Metals"}, {"id": "d4", "topic": "What agents did", "file": False}]))
+    facts = [{"id": "a1", "type": "world", "date": "2026-11-01", "chat": "mc-1", "source": "hermes", "text": "Boss produced 362 klbs", "entities": []},
+             {"id": "b2", "type": "world", "date": "2026-11-02", "chat": "", "source": "hermes", "text": "Stays", "entities": []},
+             {"id": "c3", "type": "world", "date": "2026-11-02", "chat": "", "source": "hermes", "text": "Not ticked", "entities": []},
+             {"id": "d4", "type": "world", "date": "2026-11-02", "chat": "", "source": "hermes", "text": "An agent ran", "entities": []}]
+    monkeypatch.setattr(MS, "VAULT", vault)
+    monkeypatch.setattr(MS, "MOVE_LIST", lst)
+    monkeypatch.setattr(MS, "long_term_facts", lambda: facts)
+    monkeypatch.setattr(MS, "event", lambda *a, **k: None)
+    sent = []
+    monkeypatch.setattr(K, "hindsight", lambda ops: sent.extend(ops) or [True] * len(ops))
+    monkeypatch.setattr(K, "log", lambda e: None)
+    assert MS.memory_move(["a1", "d4"], ["c3"]) == {"moved": 2}
+    filed = next((vault / "raw/_inbox").glob("*.md")).read_text()
+    assert "Boss produced 362 klbs" in filed and "chat mc-1" in filed and "Stays" not in filed and "An agent ran" not in filed
+    assert sent[0][0] == "a1" and sent[0][1]["state"] == "invalidated" and len(sent) == 2
+    left = {m["id"]: m for m in json.loads(lst.read_text())}
+    assert "a1" not in left and left["c3"]["kept"] and not left["b2"].get("kept")

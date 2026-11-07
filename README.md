@@ -29,10 +29,11 @@ model configured, so it can't run up a bill.
 - **Chat with an assistant that can act.** Attach pictures and documents. It knows your notes, starts missions, researches the web and e-mails you the result.
 - **Missions.** Daily briefings, research that runs for weeks and builds its own linked wiki, alerts on filings, prices and news, and shopping watches. A purchase always waits for your tap.
 - **A crew that runs the place.** 20 scheduled jobs check health, tidy memory, sort your inbox, run the tests and suggest improvements. You hear only what needs you.
-- **Code.** Study any repository as a graph and a code map. A builder changes code in a sandbox, and nothing deploys without your approval.
+- **Code.** Study any repository as a graph and a code map. Ask for a change in a sentence: a tester writes the tests first, a coder makes them pass, a breaker attacks the result, a program judges it, and nothing merges without your tap.
 - **Hands in the real world, on a short leash.** An old phone, Gmail and Home Assistant, each behind its own firewall. The AI phone can never approve itself.
 - **Your Windows PC, read-only.** The stack can ask Claude Code on Windows about your files, only in folders you list there. WSL still can't start anything on Windows.
 - **Everything visible.** One record of every agent run, a map of who works with whom, and costs and resources per agent.
+- **A memory you can read.** Wikis with their sources, what it knows about you, what it knows about each repository, its skills and each agent's journal, under one search. Each fact shows where it came from, and you can take it out.
 
 You use it from your phone through **Mission Control**, an installable web app on your private tailnet, and through
 Telegram. Your Tailscale login is the only sign-in. A built-in guide (Stack → Guide) explains every screen with examples
@@ -65,6 +66,17 @@ built to do. Checked in November 2026 against the
 5. *"Why did last night's backup fail?"* An agent reads the real logs and run records. A fix goes to the builder's sandbox, the other engine reviews it, you tap to deploy, and a failed check rolls it back.
 
 **What it costs you.** A Windows PC that stays on (16 GB is tight), a NAS for git and backups, and real time to set it up and keep it running: this is one person's setup, not a product. Your prompts still go to OpenAI and Anthropic, so the privacy gain is in what stays at home (your files, memory and keys), not in the model calls. And it depends on subscription access that the vendors can change.
+
+## Does the swarm of coding agents earn its cost?
+
+Measured by replaying real commits of [click](https://github.com/pallets/click): the agents get the commit's message and a snapshot without it, and a program scores the commit's own tests. Two fair cases so far, so read it as a first signal:
+
+| Commit | One coder | Swarm | Swarm with a wiki |
+|---|---|---|---|
+| Help option order (102 tests) | 99, 224k tokens | 102, 746k | 102, 1,024k |
+| Sentinel copying (10 tests) | 10, 343k | 10, 481k | 10, 1,052k |
+
+The swarm stopped three regressions the one coder caused, and tied on the small change, at 1.4 to 3.3 times its tokens. The wiki changed no score here. Most of its extra tokens came from extra fix rounds, which vary from run to run. A third case was dropped because its one-line message left out what its tests required.
 
 ## How it's built
 

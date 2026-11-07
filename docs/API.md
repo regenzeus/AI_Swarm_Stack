@@ -81,6 +81,10 @@ Every `/api/` and `/share` route needs the `Tailscale-User-Login` header that `t
 | `/api/guide` | GET | The guide's chapters (with their text when full=1). |
 | `/api/guide/live` | GET | What the guide shows live besides the state: the tools Hermes has here, the chat models. |
 | `/api/guide/{gid}` | GET | One guide chapter with its text and live blocks. |
+| `/api/journals` | GET | APP-50: each agent's journal: who, how big, when written, its newest entry; with q, those that hold the words. |
+| `/api/sources` | GET | APP-50: the filed sources the vault's wiki is compiled from, newest first. |
+| `/api/skills` | GET | Every skill Hermes can look up, without its instructions (APP-48). |
+| `/api/skills/one` | GET | One skill with its whole instructions. |
 | `/api/wiki/roots` | GET | Every wiki (the vault's and each mission's) with pages, links, summary and whether its mission is archived. |
 | `/api/wiki/graph` | GET | One wiki's pages and links, for its graph. |
 | `/api/wiki/map` | GET | MEM-09: the top layer of the wikis: every wiki as a bubble (pages, links, pages changed in 7 days, who writes it) and the subjects two or more of them share (a page with the same title or alias), so you see how they connect. |
@@ -92,6 +96,7 @@ Every `/api/` and `/share` route needs the `Tailscale-User-Login` header that `t
 | `/api/wiki/access` | GET | MEM-10: who read and wrote which wiki in the window (runrecord.wiki_access), at most 30 days. |
 | `/api/wiki/page` | GET | One wiki page with its rendered text, links and backlinks. |
 | `/api/wiki/search` | GET | Pages of one wiki whose title, summary or text contains the search text. |
+| `/api/wiki/search_all` | GET | APP-48: pages of every wiki whose title or text contains the search text, the best first. |
 | `/api/push/key` | GET | The public key devices need to subscribe to push. |
 | `/api/push/subscribe` | POST | Subscribes or (on /unsubscribe) unsubscribes a device for push. |
 | `/api/push/unsubscribe` | POST | Subscribes or (on /unsubscribe) unsubscribes a device for push. |
@@ -153,6 +158,7 @@ Offered to the agents through LiteLLM's MCP gateway, each under its server's key
 | mcp | `repo_make_buildable` | Move a studied repository (cloned from GitHub into ~/code) to the owner's Forgejo so the builder can change it; the original stays as the 'upstream' remote. Needs the Forgejo token. |
 | mcp | `repos_overview` | The owner's code repositories: whether the builder may change each one (on Forgejo) or it is only studied, its code graph size, whether it has a code map, how far its onboarding is (the step, or why it stopped), and its last commit. Use the names with build_assign and understand_repo. |
 | mcp | `send_email` | Send the owner an e-mail (to his own address only) in the designed report layout. markdown: the full content, starting with '# Headline'; use headings, bullets, tables and source links. Use it when he asks to get something by e-mail. |
+| mcp | `task_start` | Start a task for work that takes several steps and agents: the task keeper writes what done means, plans it and does it, and the owner follows it on its page. Use it when the owner asks you to get something done that you cannot finish yourself in this chat, rather than answering a question. Say in one line that it started, and give the link. |
 | mcp | `understand_repo` | Onboard a code repository, the whole package: copy it (an https git URL, or the name of a repo in ~/code), its code graph, its code map, every file explained, the search index and a written analysis by Claude Code (what it is, how the stack could use it, risks, a verdict). No size limit; it waits for usage limits by itself and takes minutes to an hour. The owner gets a message when it ends, either way. Do not start your own analysis as well: repos_overview shows the step it is at or why it stopped, and when it is done the analysis is at qmd_get code-docs/<name>.analysis.md. |
 | mcp | `vault_add` | Add knowledge to the owner's vault: either text (a note, findings, a summary) or a public web page URL (its text is fetched). It goes to raw/_inbox; the curator turns it into linked wiki pages within minutes. |
 | mcp | `windows_ask` | Ask Claude Code on the owner's Windows PC about files there, for example a project in C:\Programming. It can only read, only inside the folders the owner allows (see windows_status), and not key or password files. It cannot run anything, change anything or go on the web. folder: a full Windows path inside an allowed folder; empty for the first allowed one. Returns a number at once; then call windows_result(id, wait_seconds=45) until it is done and pass the answer on. |

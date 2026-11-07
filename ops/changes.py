@@ -28,7 +28,7 @@ import runtime as RTM
 import textcap as TC                              # visible caps (AGENTS.md, truncation)
 
 M = None                                          # ops/missions.py (set by its main)
-ACTIONS = {"change_request", "change_go", "change_resume", "change_rule"}
+ACTIONS = {"change_request", "change_go", "change_resume", "change_leave", "change_rule"}
 SIZES = ("S", "M", "L")
 # limit: stops, a change past its class's budget stops with the reason; shown on the specification, and the owner's Go or Resume raises it
 BUDGETS = {"S": {"tokens": 1_500_000}, "M": {"tokens": 5_000_000}, "L": {"tokens": 12_000_000}}   # no hours: a change waits for memory and usage limits, and that is no spending (task 170)
@@ -165,6 +165,16 @@ def resume(req, c):
     return {"task": t["id"], "budget": b}
 
 
+def leave(req, c):
+    """The owner's no to a stopped change: it stays as it stopped and leaves the queue (GEN-02); its page and branch are kept."""
+    import tasks as TK
+    t = TK.row(c, int(req.get("id") or 0))
+    if t["kind"] != "change" or t["status"] != "failed":
+        raise ValueError("only a change that stopped can be left stopped")
+    TK.put(c, t["id"], status="cancelled")
+    return {"task": t["id"]}
+
+
 def rule(req, c):
     """A sentence of the owner's that holds from now on: on the repository wiki's Conventions, as his decision (CHG-11)."""
     repo, text = str(req.get("repo") or ""), TC.limit(str(req.get("text") or "").strip(), 2000, "the rule")
@@ -176,7 +186,7 @@ def rule(req, c):
 
 
 def handle(req, c):
-    return {"change_request": create, "change_go": go, "change_resume": resume, "change_rule": rule}[req["action"]](req, c)
+    return {"change_request": create, "change_go": go, "change_resume": resume, "change_leave": leave, "change_rule": rule}[req["action"]](req, c)
 
 
 # ---------- the plan ----------
@@ -738,7 +748,7 @@ def report(c, t, s):
     for what, key in (("Touches what it may not", "protected"), ("Changed the acceptance tests", "tampered")):
         if j.get(key):
             lines.append(f"- {what}: {', '.join(j[key])}")
-    lines += ["", "## Reviewers", "", f"- Verdict: {rv.get('verdict') or 'none finished'}", *(f"- [{f.get('lens')}, {f['severity']}] {f['file']}: {f['issue']}" for f in rv.get("findings") or [])]
+    lines += ["", "## Reviewers", "", f"- Verdict: {rv.get('verdict') or 'none finished'}" + (f", not done: {', '.join(rv['missing'])}" if rv.get("missing") else ""), *(f"- [{f.get('lens')}, {f['severity']}] {f['file']}: {f['issue']}" for f in rv.get("findings") or [])]
     if pr is not None:
         lines += ["", "## Tried for real", "", f"- {'It works' if pr['ok'] else 'It did not work' if pr['ran'] else 'It could not be tried'}. {pr['notes']}"]
         if pr.get("evidence"):

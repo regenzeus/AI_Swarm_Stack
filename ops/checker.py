@@ -14,7 +14,8 @@ Success checks, typed (images/swarm/ledger.py CHECKS); "since" is when the idea 
   owner_confirms {why}                          the owner tapped "It works" (only when no code can check it)
 A check that holds for its window moves the idea to done; one that fails moves it back to open with the evidence. A
 done idea whose check fails again within 30 days reopens (a regression) and climbs the ranking. Only the Checker
-moves to done: no agent certifies its own work (SWM-46).
+moves to done: no agent certifies its own work (SWM-46). A check that could not read what it needs is unknown: the idea
+stays where it is and the sentence goes on the Checker's card on the health board (QA-26).
 """
 import json
 import os
@@ -39,6 +40,7 @@ REFUSALS_QUIET = 2 * 3600                      # ... unless none came for 2 h: i
 PROPOSERS = ("doctor", "maintainability", "tests", "self-review")
 OPS = {"<": lambda a, b: a < b, "<=": lambda a, b: a <= b, ">": lambda a, b: a > b, ">=": lambda a, b: a >= b, "==": lambda a, b: a == b}
 METRICS = ("health_alerts", "failed_runs")
+READS_STATE = ("health_issue_absent", "ci_green", "test_passes")     # the check types that read the app's state file
 
 
 # ---------------------------------------------------------------- facts from the running stack
@@ -46,10 +48,13 @@ class Facts:
     """What the checks read, gathered once per run (and replaced by fakes in the tests)."""
 
     def __init__(self):
+        self.unread = ""                               # QA-26: why the health board could not be read: no board is no pass
         try:
             self.state = json.loads((PUBLIC / "state.json").read_text())
-        except (OSError, ValueError):
-            self.state = {}
+        except (OSError, ValueError) as e:
+            self.state, self.unread = {}, f"the app's state file could not be read ({type(e).__name__})"
+        if not self.unread and "items" not in (self.state.get("health") or {}):
+            self.unread = "the app's state file holds no health board"     # missions.py writes {} when the board failed
         issues = [i for it in (self.state.get("health") or {}).get("items") or [] for i in it.get("issues") or []]
         self.issue_keys = {i.get("key") for i in issues}
         self.issue_kinds = {i.get("kind") for i in issues}
@@ -149,11 +154,25 @@ def validate(check, facts):
     return out
 
 
+def owner_confirmed(a, since=None):
+    since = (a.get("state_since") or 0) if since is None else since
+    return any(e.get("origin") == "owner" and str(e.get("text", "")).startswith("confirmed") and e.get("ts", 0) >= since
+               for e in a.get("evidence") or [])
+
+
+def waits_for_owner(a):
+    """GEN-02: a shipped idea whose check is the owner's word, not given yet: a decision in the queue."""
+    return (a.get("check") or {}).get("type") == "owner_confirms" and not owner_confirmed(a)
+
+
 def evaluate(a, facts, now=None):
-    """-> ("pass" | "fail" | "wait", one sentence). `a` is the artifact as ledger.get returns it."""
+    """-> ("pass" | "fail" | "wait" | "unknown", one sentence). `a` is the artifact as ledger.get returns it. Unknown: the
+    check could not run (QA-26); nothing may be concluded from it, neither done nor reopened."""
     now = now or time.time()
     c, since = a.get("check") or {}, a.get("state_since") or now
     t, age = c.get("type"), now - since
+    if (t in READS_STATE or (t == "metric" and c.get("name") == "health_alerts")) and facts.unread:
+        return "unknown", f"{facts.unread}, so this check could not run"
     if t == "health_issue_absent":
         days = float(c.get("days") or 7)
         keys = set(c.get("keys") or ([c["key"]] if c.get("key") else []))
@@ -167,7 +186,7 @@ def evaluate(a, facts, now=None):
         n = facts.log_count(c.get("container"), c.get("pattern"), since)
         mx, hours = int(c.get("max") or 0), float(c.get("hours") or 24 * float(c.get("days") or 1))   # days counts too
         if n is None:
-            return "wait", f"no logs from {c.get('container')}"
+            return "unknown", f"the logs of {c.get('container')} could not be read"
         if n > mx:
             return "fail", f"{n} log lines match {c.get('pattern')!r} since it shipped (at most {mx})"
         return ("pass" if age >= hours * 3600 else "wait"), f"{n} matching log lines in {age / 3600:.0f} of {hours:g} hours"
@@ -190,22 +209,22 @@ def evaluate(a, facts, now=None):
     if t == "metric":
         val = facts.alerts if c.get("name") == "health_alerts" else facts.failed_runs(since)
         if val is None or c.get("op") not in OPS:
-            return "wait", f"metric {c.get('name')} is not readable"
+            return "unknown", f"metric {c.get('name')} could not be read"
         if not OPS[c["op"]](val, float(c.get("value") or 0)):
             return "fail", f"{c['name']} is {val}, not {c['op']} {c.get('value')}"
         days = float(c.get("days") or 7)
         return ("pass" if age >= days * 86400 else "wait"), f"{c['name']} is {val} ({age / 86400:.1f} of {days:g} days)"
     if t == "owner_confirms":
-        ok = any(e.get("origin") == "owner" and str(e.get("text", "")).startswith("confirmed") and e.get("ts", 0) >= since
-                 for e in a.get("evidence") or [])
-        return ("pass", "the owner confirmed it works") if ok else ("wait", "waits for your \"It works\"")
-    return "wait", f"no check of a known type ({t})"
+        return ("pass", "the owner confirmed it works") if owner_confirmed(a, since) else ("wait", "waits for your \"It works\"")
+    return "unknown", f"it has no check of a known type ({t})"
 
 
 # ---------------------------------------------------------------- the run
-def check_all(facts, now=None, send=None):
-    """Checking -> done or open; done within 30 days -> open again on a regression. -> (done, reopened, waiting)."""
+def check_all(facts, now=None, send=None, unknown=None):
+    """Checking -> done or open; done within 30 days -> open again on a regression. -> (done, reopened, waiting). The
+    dict `unknown` collects each check that could not run: {its sentence: [idea ids]} (QA-26)."""
     send = send or SW.call
+    unknown = {} if unknown is None else unknown
     now = now or time.time()
     done = reopened = 0
     progress = {}
@@ -227,6 +246,8 @@ def check_all(facts, now=None, send=None):
         else:
             progress[str(a["id"])] = why
             tell(send, ["room:health"], f"Checking #{a['id']} {a['title']}: {why}.", a["id"], f"checking:{a['id']}:{a['version']}")
+            if verdict == "unknown":
+                unknown.setdefault(why, []).append(a["id"])
     for a in (send("artifacts_in", {"states": ["done"]}, "checker").get("result") or []):
         if now - (a.get("state_since") or now) > REGRESSION_DAYS * 86400 or (a.get("check") or {}).get("type") not in ("health_issue_absent", "log_count", "metric"):
             continue
@@ -238,6 +259,8 @@ def check_all(facts, now=None, send=None):
             reopened += bool(r.get("ok"))
             if r.get("ok"):
                 ask(send, a, f"Your idea #{a['id']} was proved, but its problem is back: {why}. Look at it again.")
+        elif verdict == "unknown":
+            unknown.setdefault(why, []).append(a["id"])
     send("expire", {}, "checker")                             # SWM-50: requests past their expiry are canceled
     SW._save("checker.json", {"progress": progress, "ts": now})
     return done, reopened, len(progress)
@@ -407,12 +430,15 @@ def run(c):
     import observe as O
     import registry
     facts = Facts()
-    done, reopened, waiting = check_all(facts)
+    unread = {}
+    done, reopened, waiting = check_all(facts, unknown=unread)
     started = autonomy(c, facts)
     paused = self_pause(registry.load().get("agents") or [], lambda unit: O.crew_history(unit))
     bad = signals() + watch_changes()
     SW.publish()
     res = (f"{done} proven, {reopened} reopened, {waiting} still being checked" + (f" · started {len(started)} by your rules" if started else "")
-           + (f" · paused {', '.join(paused)} (3 failed runs)" if paused else "") + (f" · {len(bad)} fault{'s' if len(bad) != 1 else ''} in the swarm" if bad else ""))
-    C.save("checker", result=res, last=time.time(), faults=bad)
+           + (f" · paused {', '.join(paused)} (3 failed runs)" if paused else "") + (f" · {len(bad)} fault{'s' if len(bad) != 1 else ''} in the swarm" if bad else "")
+           + (f" · {sum(len(v) for v in unread.values())} could not be checked" if unread else ""))
+    C.save("checker", result=res, last=time.time(), faults=bad,
+           unknown=[f"{why} (idea{'s' if len(ids) != 1 else ''} {', '.join(f'#{i}' for i in ids)})" for why, ids in unread.items()])
     return done + reopened

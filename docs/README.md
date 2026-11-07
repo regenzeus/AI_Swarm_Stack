@@ -20,6 +20,8 @@ into `requirements/findings.yaml`.
 | [NEXT-PHASE.md](NEXT-PHASE.md) | Proposed: the next phase. Earned autonomy (licences per kind of action, one decision queue), four flagships with an outcome number each, a weekly benchmark, one kind of job, the memory budget, and the probes |
 | [SWARM-ROADMAP.md](SWARM-ROADMAP.md) | Where the swarm goes next: give a task and the stack does the rest; the phases, gates and the owner's decisions |
 | [CHANGE-REQUESTS.md](CHANGE-REQUESTS.md) | Proposed: the stack as the developer of the onboarded repositories: a change request becomes a specification, a swarm with a program as judge, a wiki per repository, a replay exam (CHG-01 to CHG-18) |
+| [GENERALISATION.md](GENERALISATION.md) | Generalising the stack: core, domains and deployment, from an audit of the code |
+| [MEMORY-TAB.md](MEMORY-TAB.md) | The memory concept: one home per kind of knowledge, the Memory tab, the leak in long-term memory, and what helps a coding task |
 | [SWARM-TRIALS.md](SWARM-TRIALS.md) | Proposed (phase 10): trials with an answer key so the swarm gets better by being used; the roles software work needs; the improvement loop; the owner's open decisions |
 | [SWARM-DESIGN.md](SWARM-DESIGN.md) | How the swarm works after phase 4: every task a plan graph, fan-out, artifacts and the swarm map, telemetry, customisation, UX standards, reach (phases 6-9) |
 | [HOME-VOICE.md](HOME-VOICE.md) | Hermes at home by voice (V0 measured, V1 next): its own wake word, one running conversation in every room, the AI phone as the first speaker, missions by voice; the phases and the owner's decisions |

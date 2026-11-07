@@ -593,4 +593,32 @@ items:
     parents: [SN-01]
     sources: [images/mission-control/web/AGENTS.md]
     verify: {method: test, by: [tests/test_ux_polish.py::test_the_code_tab_keeps_the_repositories_apart_from_the_work, tests/test_ux_polish.py::test_the_stack_page_shows_one_part_at_a_time_and_jobs_carry_their_names, tests/test_ux_polish.py::test_the_agents_and_wiki_pages_lead_with_their_lists]}
+  - id: APP-48
+    title: Memory explains itself and skills can be read
+    statement: Each skill the assistant can look up shall open as a page with its whole instructions, and each memory store's figures shall name where its content comes from without calling it true.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-01]
+    sources: [chat 2026-11-07, images/mission-control/web/AGENTS.md]
+    verify: {method: test, by: [tests/test_memory.py::test_memory_says_where_its_content_comes_from_and_never_calls_it_true, tests/test_memory.py::test_every_skill_opens_with_its_whole_instructions, tests/test_memory.py::test_the_skill_count_is_of_skills_and_not_of_their_folders, tests/test_memory.py::test_search_memory_shows_whole_facts_with_their_source_and_the_wiki_pages]}
+  - id: APP-49
+    title: The owner chooses how the app looks and where it opens
+    statement: Settings shall offer the theme (system, light or dark) and the page the app opens on, kept per device and applied before the first paint.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-01]
+    sources: [chat 2026-11-07]
+    verify: {method: test, by: [tests/test_ux_polish.py::test_the_theme_is_a_choice_and_is_applied_before_the_first_paint]}
+  - id: APP-50
+    title: The Memory tab shows each kind of knowledge under one search
+    statement: The Memory tab shall show the wikis, long-term memory, each repository's knowledge, the skills and the agents' journals, each readable, under one search
+      across them; each long-term fact shall show its kind and where it came from and have its own Forget, and a fact that does not concern the owner shall move to a wiki only after he saw it on a list.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-01]
+    sources: [chat 2026-11-07, docs/MEMORY-TAB.md]
+    verify: {method: test, by: [tests/test_memory.py::test_the_memory_tab_has_one_home_per_kind_and_one_search, tests/test_memory.py::test_a_moved_fact_is_filed_with_its_chat_and_retired_with_its_undo]}
 

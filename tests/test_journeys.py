@@ -1,7 +1,13 @@
 """Journey checks (TSK-32, ops/journeys.py): each journey fails on the fault it is for. A route that scrolls sideways at
 375 px, a broken make target and a mangled e-mail headline each fail the check; a task given in a sentence is followed
-through the real intake, Conductor, judge and board to its result; a failed journey is an alert on the health board."""
+through the real intake, Conductor, judge and board to its result; a test item decided through the real server, inbox
+and runner proves deciding works, and the journey fails when it does not (GEN-03); a failed journey is an alert on the
+health board."""
 import json
+import sqlite3
+import threading
+import time
+import types
 
 import pytest
 import shutil
@@ -12,6 +18,7 @@ from pathlib import Path
 import journeys as JY
 
 ROOT = Path(__file__).resolve().parent.parent
+H = {"Tailscale-User-Login": "journeys@test"}
 
 
 def route(**k):
@@ -103,6 +110,126 @@ def test_the_replay_is_the_newest_finished_planned_task(tmp_path):
     assert rec["task"] == 1 and rec["outputs"] == {1: "answer 1", 2: "answer 2"} and rec["answer"]["plan"] == spec["plan"]   # a schedule's is not a once-task
     # 3 and 4, newer, are a trial's and one in a repository: the sandbox has no repositories to give them
     assert JY.recorded_task(tmp_path / "none.sqlite") is None
+
+
+@pytest.fixture
+def stack(tmp_path, monkeypatch):
+    """The way a tap really goes, on temporary folders: the app's /api/state and /api/request (server.py), the inbox, the
+    runner's process_inbox and respond (missions.py), the queue (decisions.py)."""
+    import decisions as DQ
+    import missions as MM
+    import server as SV
+    from starlette.testclient import TestClient
+    m = tmp_path / "missions"
+    for d in ("inbox", "public/results"):
+        (m / d).mkdir(parents=True)
+    monkeypatch.setattr(DQ, "LOG", tmp_path / "autonomy.jsonl")
+    monkeypatch.setattr(DQ, "TEST_ITEM", m / "decision-test.json")
+    DQ._seen.clear()
+    DQ._loaded["t"] = 0
+
+    def conn():
+        c = sqlite3.connect(tmp_path / "m.sqlite")
+        c.row_factory = sqlite3.Row
+        return c
+    for o, a, v in ((MM, "INBOX", m / "inbox"), (MM, "PUBLIC", m / "public"), (MM, "db", conn), (MM, "log", lambda *a: None),
+                    (SV, "INBOX", m / "inbox"), (SV, "RESULTS", m / "public/results"), (SV, "STATE", m / "public/state.json"),
+                    (SV, "PHONE", tmp_path / "phone"), (SV, "CONN", tmp_path / "conn")):
+        monkeypatch.setattr(o, a, v)
+    stop = threading.Event()
+
+    def runner():
+        while not stop.is_set():
+            MM.process_inbox()
+            tmp = m / "public/state.tmp"
+            tmp.write_text(json.dumps(DQ.state({})))
+            tmp.replace(m / "public/state.json")
+            stop.wait(0.05)
+    client = TestClient(SV.app)
+
+    def tap(token, wait=1.5):
+        """Stands in for ops/journeys.mjs: what the page reads and sends, through the real server."""
+        id, rep = f"test:{token}", {"started": True, "writes": [], "errors": [], "still_shown": []}
+
+        def until(ok):
+            end = time.time() + wait
+            while True:
+                s = client.get("/api/state", headers=H).json()
+                if ok(s) or time.time() > end:
+                    return s, ok(s)
+                time.sleep(0.05)
+        before, rep["listed"] = until(lambda s: any(d["id"] == id for d in s["decisions"]))
+        if not rep["listed"]:
+            return rep
+        d, n = next(x for x in before["decisions"] if x["id"] == id), len(before["decisions"])
+        rep.update(marked=d.get("test"), no_answer=[], home={"shown": True, "count": n, "list": n}, queue={"shown": True, "count": n, "list": n}, tapped=True)
+        rep["answer"] = client.post("/api/request", headers=H, json=d["answers"][0]["act"]).json()
+        after, gone = until(lambda s: not any(x["id"] == id for x in s["decisions"]))
+        rep.update(still_listed=not gone, record=after.get("decision_test"))
+        return rep
+    t = threading.Thread(target=runner, daemon=True)
+    t.start()
+    yield types.SimpleNamespace(DQ=DQ, MM=MM, SV=SV, tap=tap, run=lambda: JY.check_decide(tap=tap, inbox=m / "inbox", results=m / "public/results", state=m / "public/state.json", wait=2))
+    stop.set()
+    t.join(5)
+
+
+def test_the_decide_journey_takes_a_test_item_through_the_queue_and_leaves_nothing_behind(stack):
+    assert stack.run() == {"checked": 1, "failures": []}
+    assert stack.DQ.test_record() is None and stack.DQ._records() == []   # gone, and never in the shadow or the queue's numbers
+    assert "decide" in JY.JOURNEYS
+
+
+def test_the_decide_journey_fails_when_deciding_stops_working(stack, monkeypatch):
+    """GEN-03: each way the owner's tap can stop working fails the journey, and the test item is removed all the same."""
+    def raises(req):
+        raise ValueError("the action is broken")
+
+    def forgets(req):
+        stack.DQ.TEST_ITEM.unlink()
+        return {}
+    no_item = tuple(f for f in stack.DQ.SOURCES if f.__name__ != "_test_item")
+    no_tap = stack.SV.ACTIONS - {"decision_test_answer"}
+    cases = [(stack.DQ, "answer_test", raises, "the answer was refused: the action is broken"),
+             (stack.DQ, "answer_test", lambda req: {}, "the test item is still in the list after its answer: deciding does not work"),
+             (stack.DQ, "answer_test", forgets, "the answer was not recorded: the item is gone, answer None"),
+             (stack.SV, "ACTIONS", no_tap, "the answer was refused: unknown action"),
+             (stack.DQ, "SOURCES", no_item, "the test item did not reach the app's list")]
+    for obj, attr, broken, want in cases:
+        with monkeypatch.context() as m:
+            m.setattr(obj, attr, broken)
+            got = stack.run()["failures"]
+        assert want in got, (attr, got)
+        assert stack.DQ.test_record() is None, attr                    # removed, also when the journey failed
+    assert stack.run()["failures"] == []                               # mended: it passes again
+
+
+def test_the_decide_journey_says_so_when_the_runner_does_not_answer_or_the_browser_dies(tmp_path):
+    (tmp_path / "inbox").mkdir()
+    (tmp_path / "results").mkdir()
+    dead = JY.check_decide(tap=lambda t: {}, inbox=tmp_path / "inbox", results=tmp_path / "results", state=tmp_path / "s.json", wait=0.1)["failures"]
+    assert dead == ["the test item could not be made: the runner did not answer in 0.1 s", "the test item could not be removed: the runner did not answer in 0.1 s"]
+
+
+def test_the_decide_journey_judges_what_the_browser_saw():
+    good = {"started": True, "listed": True, "marked": True, "home": {"shown": True, "count": 4, "list": 4}, "queue": {"shown": True, "count": 4, "list": 4}, "no_answer": [],
+            "tapped": True, "answer": {"ok": True}, "still_listed": False, "record": {"state": "answered", "answer": "yes"}, "still_shown": [], "writes": [], "errors": []}
+    assert JY.judge_decide(good) == []
+    assert JY.judge_decide({"started": True}) == ["the test item did not reach the app's list"]
+    assert JY.judge_decide({**good, "home": {"shown": False, "count": 3, "list": 4}}) == ["Home does not show the test item", "Home counts 3 waiting and the list holds 4"]
+    assert JY.judge_decide({**good, "marked": False}) == ["the item in the app's list is not marked as a test"]
+    assert JY.judge_decide({**good, "tapped": False}) == ["the tap on the test item's answer sent nothing"]
+    assert JY.judge_decide({**good, "no_answer": ["idea:3"]}) == ["idea:3 in the queue has no answer and no link"]
+    assert JY.judge_decide({**good, "still_shown": ["#/decide"], "writes": ["POST /api/request"], "errors": ["boom"]}) == [
+        "#/decide still shows the test item after its answer", "the page tried another write, which was not sent: POST /api/request", "a script error: boom"]
+    assert len(JY.judge_decide(JY.BAD_DECIDE)) >= 4
+    js = (ROOT / "ops/journeys.mjs").read_text()
+    decide = js[js.index("async function decide("):js.index("async function email(")]
+    for key in ("started", "listed", "marked", "home", "queue", "no_answer", "tapped", "answer", "still_listed", "record", "still_shown", "writes", "errors"):
+        assert re.search(rf"\bout\.{key}\b|\b{key}:", decide), key     # the report the judge reads is the report the browser writes
+    assert 'body.action === "decision_test_answer" && body.token === token' in decide and decide.count("route.continue()") == 2   # the one write sent, and reads
+    assert 'u.host !== base.host) return route.abort()' in decide
+    subprocess.run(["node", "--check", str(ROOT / "ops/journeys.mjs")], check=True)
 
 
 def test_a_failed_journey_is_an_alert_on_the_health_board_and_runs_nightly(tmp_path):

@@ -52,7 +52,7 @@ decrypts the secrets it needs for itself and never prints them.
 | `make req` | check the stack's requirements and rewrite their readable list (`requirements/REQUIREMENTS.md`) |
 | `make trial NAME=semver` | a trial in the background: a task with an answer key no agent sees, given like you would give it, scored, checked for copying; its report lands in the vault under trials/ |
 | `make trial-check NAME=semver` | does a trial's answer key score its own reference fully (changes nothing) |
-| `make journeys` | the journey checks now: a task followed to its result on replayed answers, every screen at 375 px on your data and with none, the newest e-mail on a phone, every make target dry-run (no model; nightly anyway) |
+| `make journeys` | the journey checks now: a task followed to its result on replayed answers, a test item decided through the queue, every screen at 375 px on your data and with none, the newest e-mail on a phone, every make target dry-run (no model; nightly anyway) |
 | `make retrieval` | measure how well search finds things |
 | `make bench-gate` / `make bench` | the quality benchmark, quick or full |
 | `make skill-approve NAME=<skill>` | approve a skill Hermes parked for review |

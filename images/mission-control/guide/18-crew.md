@@ -33,7 +33,7 @@ note: A red edge means its last run failed: open it and look at Now or History. 
 | **Phone cleanup** | turns the AI phone's storage into steps you approve one by one (below) | Sundays |
 | **Phone check** | battery, storage, security patch and connection of the AI phone | Mondays |
 | **Inbox digest** | while you grant Gmail read: hands a newsletter on a topic you watch to that topic's next report, and files others worth keeping into your vault. It only reads. | daily 07:15 |
-| **Journey checks** | follows your journeys end to end without a model: a task to its result (on replayed answers), every screen at phone width, the newest briefing's e-mail on a phone, every make target; a failure is an alert | nightly 04:10 |
+| **Journey checks** | follows your journeys end to end without a model: a task to its result (on replayed answers), a test item decided through the queue, every screen at phone width, the newest briefing's e-mail on a phone, every make target; a failure is an alert | nightly 04:10 |
 | **Checker** | decides whether each shipped idea worked, starts what your autonomy rules allow, pauses an agent that keeps failing | hourly |
 | **Coach** | reads every agent's scorecard and turns a real problem into an agent change with its evidence; each change is replayed on the agent's past runs before you tap Build | monthly, on the 2nd |
 | **Token probe** | measured once whether the ChatGPT prompt cache hits (docs/TOKENS.md) | one-off |
@@ -67,6 +67,10 @@ started it, so one bad session doesn't become an agent of its own.
   a run much slower or more tokens than usual. They show on the card and in the run's log.
 - **This PC** joins the list when the machine needs attention: swap over 90 % full (an alert when RAM is short too),
   or a container running another build than its image tag names, or an image `versions.lock` lacks.
+- **Not known** is never read as fine. A check that could not run says what it could not read and that its result is not
+  known, as an alert on its card: a log that cannot be read, Docker not answering for 10 minutes, the NAS refusing ssh. A
+  NAS that gives no answer is asleep and stays quiet, until the mail copy has been silent for 26 hours. A few unreadable
+  lines in a log are a note, and the self-review's gaps are notes too.
 - An issue clears itself with the agent's next run that doesn't have it, whatever notes that run has. **Acknowledge** (on the agent page, on an engine's card,
   or *acknowledge all* at the top of the list) hides it until it happens again; the activity feed records it.
 

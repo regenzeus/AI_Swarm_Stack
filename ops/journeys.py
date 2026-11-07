@@ -4,13 +4,18 @@ journeys (six faults the tests missed: the e-mail headline, the weekly window, C
 was no link, a page wider than the phone). On demand (`make journeys`) and nightly (the Journey checks crew job,
 crew-journeys.timer); each failure is an alert on the health board (ops/crew.py journey_issues).
 
-  python3 ops/journeys.py [all|make|task|email|routes|tools|selftest]      exit 1 when a journey fails
+  python3 ops/journeys.py [all|make|task|decide|email|routes|tools|selftest]      exit 1 when a journey fails
 
 - make: every make target dry-run (make -n), and each script its recipe names exists.
 - task: a task given in a sentence and followed to its result, on replayed answers: the newest finished planned task's
   intake answer, step results and judgement (read only from the live database) go through the real intake check, the
   Conductor, the result file, the done message, the judge and the Tasks board, in a sandbox. Nothing live is written
   and no model is called.
+- decide: the one journey that writes (GEN-03). A test item, marked as one, goes into the runner's inbox as an app request
+  does, is read from the app's list, Home and #/decide, is answered in the browser by a tap on its own button (the real
+  /api/request, inbox and runner), and must leave the list with its answer recorded; then it is removed, also when the
+  journey fails. Answering it changes only its own file (ops/decisions.py), the browser lets no other write through, and
+  the shadow never records it: it touches no real decision, build, purchase, phone or mail.
 - email: the newest briefing rendered as its e-mail (the desk image, no network) and opened at phone width: the
   headline once, in the header, unmangled; nothing wider than the phone.
 - routes: every route of the app at 375 px, on the live data and on an emptied state, in the scout's browser image
@@ -33,6 +38,7 @@ import tempfile
 import threading
 import time
 import types
+import uuid
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -40,6 +46,10 @@ sys.path.insert(0, str(ROOT / "ops"))
 import deployment as DEPLOY  # noqa: E402  (config/deployment.env)
 OUT = Path("/srv/ai/missions/crew/journeys.json")     # the health board reads it (ops/crew.py journey_issues)
 LIVE_DB = Path("/srv/ai/missions/missions.sqlite")
+INBOX, RESULTS = Path("/srv/ai/missions/inbox"), Path("/srv/ai/missions/public/results")   # where the app drops a request and reads its answer
+STATE = Path("/srv/ai/missions/public/state.json")
+# limit: stops, the decide journey gives the runner and the app this many seconds at each step; past it the journey fails and says which step
+DECIDE_TIMEOUT = 120
 VAULT = Path("/srv/vault")
 BROWSER, DESK = "aistack/browser:1", "aistack/desk:1"
 APP, NET = "http://mission-control:8090", "aistack_mcui"   # the app as Tailscale serve reaches it; the browser allows no other host
@@ -208,6 +218,86 @@ def check_task(rec=None):
                 fails.append(f"the Tasks board does not show it done with its result and verdict: {card and {k: card[k] for k in ('status', 'verdict', 'result')}}")
             c.close()
     return {"checked": 1, "failures": fails, "replay": rec["task"], "steps": len(plan)}
+
+
+# ---------- decide: a test item through the queue, answered and checked (GEN-03) ----------
+def drop(req, inbox=INBOX, results=RESULTS, wait=DECIDE_TIMEOUT):
+    """A request as the app's server drops it (server.py submit), and the runner's answer."""
+    rid = uuid.uuid4().hex[:16]                         # cap: id
+    tmp = inbox / f".{rid}.tmp"
+    tmp.write_text(json.dumps(req))
+    tmp.rename(inbox / f"{rid}.json")
+    end = time.time() + wait
+    while time.time() < end:
+        f = results / f"{rid}.json"
+        if f.exists():
+            return json.loads(f.read_text())
+        time.sleep(0.5)
+    return {"ok": False, "error": f"the runner did not answer in {wait} s"}
+
+
+def judge_decide(rep):
+    """What the browser saw -> each fault, said where the owner meets it."""
+    out = []
+    if not rep.get("started"):
+        out.append("the app's scripts did not start")
+    if not rep.get("listed"):
+        return out + ["the test item did not reach the app's list"]
+    if not rep.get("marked"):
+        out.append("the item in the app's list is not marked as a test")
+    for name, part in (("Home", rep.get("home") or {}), ("#/decide", rep.get("queue") or {})):
+        if not part.get("shown"):
+            out.append(f"{name} does not show the test item")
+        if part.get("count") != part.get("list"):
+            out.append(f"{name} counts {part.get('count')} waiting and the list holds {part.get('list')}")
+    out += [f"{i} in the queue has no answer and no link" for i in rep.get("no_answer") or []]
+    answer = rep.get("answer") or {}
+    if not rep.get("tapped"):
+        out.append("the tap on the test item's answer sent nothing")
+    elif answer.get("ok") is False:
+        out.append(f"the answer was refused: {answer.get('error') or 'no reason given'}")
+    if rep.get("still_listed"):
+        out.append("the test item is still in the list after its answer: deciding does not work")
+    rec = rep.get("record") or {}
+    if rec.get("state") != "answered" or rec.get("answer") != "yes":
+        out.append(f"the answer was not recorded: the item is {rec.get('state') or 'gone'}, answer {rec.get('answer')!r}")
+    out += [f"{where} still shows the test item after its answer" for where in rep.get("still_shown") or []]
+    out += [f"the page tried another write, which was not sent: {w}" for w in dict.fromkeys(rep.get("writes") or [])]
+    out += [f"a script error: {e}" for e in dict.fromkeys(rep.get("errors") or [])]
+    return out
+
+
+def left_the_state(token, state=STATE, wait=DECIDE_TIMEOUT):
+    """True once the runner's state holds neither the item nor its record."""
+    end = time.time() + wait
+    while True:
+        try:
+            s = json.loads(state.read_text())
+            if not s.get("decision_test") and not any(d.get("id") == f"test:{token}" for d in s.get("decisions") or []):
+                return True
+        except (OSError, ValueError):
+            pass                                        # the runner replaces the file; the next look reads it
+        if time.time() >= end:
+            return False
+        time.sleep(0.5)
+
+
+def check_decide(tap=None, inbox=INBOX, results=RESULTS, state=STATE, wait=DECIDE_TIMEOUT, run=subprocess.run):
+    """Make a test item through the inbox, let `tap` read it in the queue and answer it (the browser, ops/journeys.mjs),
+    judge what it saw, and remove the item, also when the journey fails."""
+    token = uuid.uuid4().hex[:16]                       # cap: id
+    tap = tap or (lambda t: browser({"decide": {"token": t, "wait": wait}}, web=ROOT / "images/mission-control/web", run=run)["decide"])
+    fails, made = [], drop({"action": "decision_test_make", "token": token}, inbox, results, wait)
+    try:
+        fails += judge_decide(tap(token)) if made.get("ok") else [f"the test item could not be made: {made.get('error')}"]
+    except Exception as e:                              # the journey's failure; the removal below must still run
+        fails.append(f"the browser could not take the test item through the queue: {type(e).__name__}: {e}")
+    gone = drop({"action": "decision_test_remove", "token": token}, inbox, results, wait)
+    if not gone.get("ok"):
+        fails.append(f"the test item could not be removed: {gone.get('error')}")
+    elif not left_the_state(token, state, wait):
+        fails.append("the test item is still in the state after its removal")
+    return {"checked": 1, "failures": fails}
 
 
 # ---------- email: the newest briefing at phone width ----------
@@ -402,10 +492,16 @@ BAD_EMAIL = ('<html><head></head><body><div>Daily · 1 Nov</div><div>Daily · 1 
              '<p>**In 60 seconds:** BYD &amp;amp; VW</p></body></html>')
 
 
+BAD_DECIDE = {"started": True, "listed": True, "marked": True, "home": {"shown": True, "count": 3, "list": 4}, "queue": {"shown": True, "count": 4, "list": 4},
+              "tapped": True, "answer": {"ok": False, "error": "unknown action"}, "still_listed": True, "record": {"state": "open", "answer": None}}
+
+
 def selftest(run=subprocess.run):
     fails = []
     if len(judge_email(BAD_EMAIL, "China Weekly", "Daily · 1 Nov")) < 5:
         fails.append("the e-mail check passed a mangled headline")
+    if len(judge_decide(BAD_DECIDE)) < 4:
+        fails.append("the decide check passed a queue where deciding does not work")
     with tempfile.TemporaryDirectory() as d:
         (Path(d) / "Makefile").write_text("good:\n\techo ok\nbroken:\n\tpython3 ops/gone.py\nworse:\n\t$(error a broken rule)\n")
         got = check_make(Path(d), run)["failures"]
@@ -421,7 +517,7 @@ def selftest(run=subprocess.run):
     return {"checked": 3, "failures": fails}
 
 
-JOURNEYS = {"selftest": selftest, "make": check_make, "task": check_task, "email": check_email, "routes": check_routes, "tools": check_tools}
+JOURNEYS = {"selftest": selftest, "make": check_make, "task": check_task, "decide": check_decide, "email": check_email, "routes": check_routes, "tools": check_tools}
 
 
 def run_all(names=None, out=OUT):

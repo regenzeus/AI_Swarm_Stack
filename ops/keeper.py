@@ -209,7 +209,7 @@ def apply(auto, fs, send=None, dry=False):
     for x in auto:
         f = by[x["id"]]
         cid = hashlib.sha1(f"{x['id']}:{x['class']}:{time.time()}".encode()).hexdigest()[:12]
-        if x["class"] in ("duplicate", "test_noise", "agent_run"):
+        if x["class"] in ("duplicate", "test_noise", "agent_run", "moved_to_wiki"):
             body, before, after = {"state": "invalidated", "reason": f"Memory Keeper: {x['class'].replace('_', ' ')}: {x['why']}"}, {"state": "valid"}, {"state": "invalidated"}
         elif x["class"] == "not_english":
             body, before, after = {"text": x["text"]}, {"text": f["text"]}, {"text": x["text"]}
@@ -439,16 +439,24 @@ def run_pass(c, dry=False, deep=None, create=None, send=None, read_recently=None
 
 
 def recently_read(days=30):
-    """The wiki pages agents read in the last days (the run record's file reads, MEM-10)."""
+    """The wiki pages agents read in the last days (the run record's file reads, MEM-10). A database error reaches the
+    pass, which reports it (QA-26): a record that cannot be read is not a record of nothing read."""
     import sqlite3
     db = Path(os.environ.get("RUNTIME_DB_HOST", "/srv/ai/missions/app/runtime.db"))
-    try:
-        cc = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
-        rows = cc.execute("select detail from events where kind in ('read', 'call') and ts > ? and detail like '%/wiki/%'",
-                          (time.time() - days * 86400,)).fetchall()
-    except sqlite3.Error:
-        return set()
+    cc = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
+    rows = cc.execute("select detail from events where kind in ('read', 'call') and ts > ? and detail like '%/wiki/%'",
+                      (time.time() - days * 86400,)).fetchall()
     return {m.group(1) for (d,) in rows for m in re.finditer(r"((?:missions|topics)/[a-z0-9-]+/wiki/[a-z0-9/_-]+\.md)", d or "")}
+
+
+UNKNOWN = {"pass": "The Memory Keeper's pass", "disputes": "The check of the wikis' disputes", "rechecks": "The check of stale pages agents still read",
+           "cross": "The check across wikis"}
+
+
+def unknown(rep):
+    """QA-26: the parts of a pass that could not run, as sentences for the health board."""
+    return [f"{name} could not run ({rep[k]['error']}), so what it would have found is not known"
+            for k, name in UNKNOWN.items() if isinstance(rep.get(k), dict) and rep[k].get("error")]
 
 
 def summary(rep):
@@ -463,6 +471,8 @@ def summary(rep):
     parts.append(f"{len(rep.get('suggestions') or [])} for you to look at")
     if isinstance(d, dict) and "open" in d:
         parts.append(f"{d['open']} open disputes, {len(d['tasks'])} researched, {d['settled']} settled")
+    if unknown(rep):
+        parts.append(f"{len(unknown(rep))} part{'s' if len(unknown(rep)) != 1 else ''} could not run")
     return " · ".join(parts)
 
 

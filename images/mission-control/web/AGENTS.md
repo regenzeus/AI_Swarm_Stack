@@ -54,3 +54,7 @@ Archivo and JetBrains Mono fonts are vendored by the Dockerfile into `static/ven
   belongs on the server.
 
 `make check` parses every `static/*.js` with `node --check`.
+
+## Words on a screen
+
+Say it once, after it happens. A sentence on how something works does not sit on the page: the screen shows it by what it holds, the action's own message reports it ("Added: search and chat find it within minutes"), and what a reader may still want sits behind the small `explain()` control. A promise the owner must know before he acts stays beside the action.

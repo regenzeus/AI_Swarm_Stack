@@ -79,7 +79,6 @@ def test_a_container_cut_off_from_the_network_it_shares_is_an_alert_until_it_is_
     assert pc[0]["name"] == "This PC" and pc[0]["issues"] == cut
     healed = lambda *a: run(*a).replace("container:idhermesold", "container:idhermesnew").replace("idviewerold", "idgate")
     assert crew.cut_networks(run=healed, now=300) == [] and crew._cut == {}
-    assert crew.cut_networks(run=lambda *a: (_ for _ in ()).throw(OSError("no docker"))) == []
 
 
 def silent_catches():
@@ -173,13 +172,15 @@ def test_a_test_touches_no_folder_of_this_machine(tmp_path):
     for path in (notify.STATE, notify.EVENTS, journal.VAULT, crew.OUT, crew.BACKUPS):
         assert str(path).startswith(str(tmp_path)), path
     import postmaster
+    import pytest
     import subprocess
 
     def no_ssh(*a, **k):
         raise FileNotFoundError("ssh")
     real, subprocess.run = subprocess.run, no_ssh
     try:
-        assert postmaster.fetch("status.json") is None                               # no ssh: the same as the NAS asleep
+        with pytest.raises(postmaster.CopyUnread, match="ssh could not start"):      # no ssh: said, and never a real ssh in a test
+            postmaster.fetch("status.json")
     finally:
         subprocess.run = real
 

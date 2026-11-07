@@ -912,7 +912,8 @@ def publish(send=None):
             out["scorecards"][agent] = r["result"]
     out["checks"] = _load("checker.json", {}).get("progress", {})      # how far each shipped idea's check is
     for name, op, args in (("tasks", "tasks", {}), ("leases", "leases", {}), ("flow", "flow", {"weeks": 8}),
-                           ("unfinished", "unfinished", {}), ("inbox", "owner_inbox", {}), ("changes", "agent_changes", {"limit": 30})):
+                           ("unfinished", "unfinished", {}), ("inbox", "owner_inbox", {}), ("changes", "agent_changes", {"limit": 30}),
+                           ("checking", "artifacts_in", {"states": ["checking"]})):
         try:
             r = send(op, args, "system")
         except Down:
@@ -927,6 +928,7 @@ def publish(send=None):
     out["requirements"] = ((out.get("stats") or {}).get("by_kind") or {}).get("requirement")      # SWM-20: by state
     out["requirements_sync"] = _load("requirements.json", {})
     import checker as CK
+    out["to_confirm"] = [{k: a.get(k) for k in ("id", "title", "state_since")} for a in out.pop("checking") or [] if CK.waits_for_owner(a)]   # GEN-02
     on = {r["title"] for r in out.get("rules") or []}
     out["autonomy"] = [{"id": k, "title": t["title"], "on": t["title"] in on} for k, t in CK.TEMPLATES.items()]
     if out["paused"] is not None:

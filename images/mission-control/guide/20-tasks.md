@@ -12,13 +12,13 @@ chat. Most of the time you just say what you want, and the stack works out the r
 
 ## Give a task
 
-On **Home**, type into the bar at the top and tap **Do it** (**Ask** still starts a chat). Or open **Tasks** and use
+On **Home**, type into the box at the top and tap **Send**: your assistant answers a question and starts a job as a task (its `task_start` tool). Or open **Tasks** and use
 the box there. One sentence is enough:
 
 ```try
 label: Give the stack a research task
 open: "#/tasks"
-note: Type "Find out what a 32 GB DDR4 kit for my laptop costs" and tap Do it.
+note: Type "Find out what a 32 GB DDR4 kit for my laptop costs" and tap Send.
 ```
 
 The **intake** agent then writes the task's specification, which you see on the task's card:

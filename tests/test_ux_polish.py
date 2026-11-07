@@ -21,10 +21,10 @@ def test_the_greeting_uses_a_display_name_and_never_an_e_mail_address():
 
 def test_the_stack_page_shows_one_part_at_a_time_and_jobs_carry_their_names():
     v = re.search(r"^function vSystem\(\).*?^\}$", APP, re.M | re.S)[0]
-    for part in ("tools", "health", "knowledge", "guide", "settings"):
+    for part in ("tools", "health", "guide", "settings"):
         assert f'data-sp="{part}"' in v
     assert '(S.crew || []).find((c) => c.unit === t.unit)?.name || t.unit' in v
-    for moved in ("Notifications", "Scheduled jobs", "Connections", "How it fits together", "Health and costs"):
+    for moved in ("Notifications", "Scheduled jobs", "Connections", "How it fits together", "Health and costs", "Appearance"):
         assert f"<h2>{moved}</h2>" in v                       # nothing left the page
 
 
@@ -63,3 +63,12 @@ def test_the_crew_rows_carry_their_unit_so_the_app_can_name_a_job(monkeypatch):
     rows = crew.status()
     tests = next(r for r in rows if r["id"] == "tests")
     assert tests["unit"] == "crew-tests" and tests["name"] == "Test agent"
+
+
+def test_the_theme_is_a_choice_and_is_applied_before_the_first_paint():
+    """APP-49: the app followed each device's system theme, with no way to choose."""
+    html = (ROOT / "images/mission-control/web/index.html").read_text()
+    css = (ROOT / "images/mission-control/web/static/app.css").read_text()
+    assert html.index("window.applyTheme") < html.index('rel="stylesheet"')
+    assert "prefers-color-scheme" not in css and ':root[data-theme="light"]' in css
+    assert 'data-theme-pick="${k}"' in APP and 'id="startpick"' in APP

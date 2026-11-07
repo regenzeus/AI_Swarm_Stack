@@ -5,7 +5,7 @@ part: Knowledge
 icon: brain
 minutes: 6
 summary: The vault holds everything you and your agents write. Search finds it, and long-term memory remembers you.
-views: []
+views: [skills, longterm, codemem, journals, memsearch, sources]
 ---
 The stack has two kinds of knowledge: the **vault**, which holds documents, and **long-term memory**, which holds
 facts about you. Both feed every answer Hermes gives.
@@ -56,33 +56,17 @@ conversation with that text is removed from long-term memory.
 
 > [!note] Memory runs on local models on your PC. Your conversations aren't sent anywhere to build it.
 
-## All your memory in one view
+## The Memory tab
 
-The stack keeps fourteen kinds of memory, and **Stack → Memory** shows them all in one list: what each holds, what it is for
-(*what a task hands on*, *what happened*, *what is true*, *how to act*, *shared work*, *search*), who writes and who reads it, how big it is, how
-much it grew this week, how full it is against its limit, who keeps it tidy and when that last ran, and what is wrong with
-it. It refreshes every hour.
+Memory is what the stack knows and can look up. Each kind of knowledge has one home, and the **Memory** tab has a part for each, under one search:
 
-| Memory | For | Kept tidy by |
-|---|---|---|
-| Vault notes | your sources, never rewritten | (nothing to tidy) |
-| Vault wiki | knowledge compiled from your notes | the wiki curator |
-| Agent wikis | one per mission or topic | the Memory Keeper |
-| Agent journals | each agent's own runs (its Memory tab) | the Memory Keeper |
-| Old mission notes | NOTES.md files not moved yet (a mission's working state is now in its journal) | moved at its next run |
-| Long-term memory | facts about you; what agents found stays in their wikis and journals | the memory gatekeeper and the Memory Keeper |
-| The Ledger | ideas, findings, your decisions | the Checker |
-| Skills | how Hermes does things | the skill curator |
-| Run records | every run's steps | a run's full steps go after 90 days; its summary stays |
-| Search index | the search over all of it | the Memory Keeper |
-| Task hand-offs | each task step's result, which the steps after it build on | kept with its task |
-| Hermes' own memory | Hermes' notes and your profile, in every prompt | the memory gatekeeper |
-| Code graphs | each repository's files, symbols and calls, for the builder | rebuilt at each commit |
-| Chats | your chats with Hermes | you; what matters lives on in long-term memory |
+- **Wikis**: what it has found out about a topic, each fact naming its source. *Filed sources* are what the vault's wiki is compiled from, as they came.
+- **Long-term**: what it knows about you, with where each fact came from. *Forget* takes one fact out, and it can be restored.
+- **Code**: what it knows about each repository: its wiki, code map and graph.
+- **Skills**: how your assistant does a particular job, each readable.
+- **Journals**: each agent's own notebook of what it is in the middle of.
 
-An agent's **Memory** tab is its own diary: what it did in its runs, what it found, what failed. A wiki is shared knowledge
-about the world, with sources. A problem the list shows (a full store, an index full of chunks of files that are gone)
-says who fixes it. A memory that stays over its limit for 8 days becomes an alert on its curator in Agent health.
+The rule behind it: a fact about you goes to long-term memory, a fact about the world to a wiki, how to do something to a skill, what an agent did to its journal. Chats, runs and tasks are records, and keep their own pages. The figures for each store are under **Stack → Health**.
 
 ## The Memory Keeper
 

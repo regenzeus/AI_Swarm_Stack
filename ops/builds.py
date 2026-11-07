@@ -159,7 +159,8 @@ def handle(req, c):
     if a == "build_approve_all":
         ready = [r for r in c.execute("select * from builds where status='review' order by id").fetchall()
                  if "PASSED" in (r["checks"] or "") and (r["repo"] not in ("ai-stack", "TestRepo") or r["ci"] != "failure")
-                 and (json.loads(r["ai_review"]).get("verdict") if r["ai_review"] else None) != "block"]
+                 and (json.loads(r["ai_review"]).get("verdict") if r["ai_review"] else None) != "block"
+                 and not review_open(json.loads(r["ai_review"]) if r["ai_review"] else None)]
         for r in ready:                                  # CI still running: approved now, deployed when it passes
             if r["repo"] in ("ai-stack", "TestRepo") and r["ci"] != "success":
                 put(c, r["id"], approve_on_ci=1, error=None, approved_at=M.now().isoformat(timespec="seconds"))
@@ -856,7 +857,8 @@ def review(c, b, path, main, summary, slot=None, **kw):
     ok = "PASSED" in out
     open_pr(c, bid)
     rv = ai_review(c, b, path, diff, ok, slot=slot, context=CG.text(blast), reqs=reqs, files=[f[-1] for f in files])   # two lenses + the agents rule
-    said = {"approve": "AI review: fine", "changes": "AI review: improve first", "block": "AI review: do not deploy"}.get(rv.get("verdict"), "AI review: not done")
+    said = {"approve": "AI review: fine", "changes": "AI review: improve first", "block": "AI review: do not deploy",
+            "incomplete": f"AI review: incomplete, not done: {', '.join(rv.get('missing') or [])}"}.get(rv.get("verdict"), "AI review: not done")
     M.event("build", "", f"Build #{bid} ready for review: {len(files)} files, checks {'passed' if ok else 'FAILED'}, {said}", push=True, title="Builder")
     M.X.telegram(f"<b>Build #{bid} ready for review</b>\n{b['title']} ({repo})\n{len(files)} files changed · checks {'passed ✓' if ok else 'failed ✗'} · {said}",
                  [[("🔍 Review", f"{M.X.APP}/#/build/{bid}")]], category="build")
@@ -948,16 +950,24 @@ def one_review(engine, b, path, diff, checks_ok, lens, slot, context, reqs):
 
 
 def combine(reviews):
-    """The reviews as one verdict for the page and Approve: the worst one wins; a review that failed counts as none."""
+    """The reviews as one verdict for the page and Approve: the worst one wins. A lens that failed is a look nobody took,
+    so what the others approved reads "incomplete", never "approve" (QA-26), and `missing` names it."""
     done = [r for r in reviews if r.get("verdict")]
     if not done:
         return {"engine": reviews[0].get("engine") if reviews else None, "error": "; ".join(r.get("error", "") for r in reviews),
                 "reviews": reviews, "at": M.now().isoformat(timespec="seconds")}
     worst = max(done, key=lambda r: WORST[r["verdict"]])
-    return {"engine": worst["engine"], "verdict": worst["verdict"], "summary": " ".join(f"[{r['lens']}] {r.get('summary', '')}" for r in done),
+    missing = [r["lens"] for r in reviews if not r.get("verdict")]
+    return {"engine": worst["engine"], "verdict": "incomplete" if missing and worst["verdict"] == "approve" else worst["verdict"],
+            "summary": " ".join(f"[{r['lens']}] {r.get('summary', '')}" for r in done),
             "findings": TC.first([{**f, "lens": r["lens"]} for r in done for f in r.get("findings") or []], 30, "findings of all lenses"),  # cap: untrusted
             "same_engine": any(r.get("same_engine") for r in done), "note": " ".join(r["note"] for r in done if r.get("note")),
-            "reviews": reviews, "missing": [r["lens"] for r in reviews if not r.get("verdict")], "at": M.now().isoformat(timespec="seconds")}
+            "reviews": reviews, "missing": missing, "at": M.now().isoformat(timespec="seconds")}
+
+
+def review_open(rv):
+    """QA-26: a review that is still going, or where a lens or all of them failed: no look was had, so it is not "ready"."""
+    return bool(rv) and bool(rv.get("pending") or rv.get("missing") or (rv.get("error") and not rv.get("verdict")))
 
 
 def agent_gate(b, files, send=None):

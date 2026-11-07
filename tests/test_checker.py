@@ -15,6 +15,8 @@ OWNER, SYSTEM = {"id": "owner:owner", "cls": "owner"}, {"id": "system", "cls": "
 
 
 class Facts:
+    unread = ""
+
     def __init__(self, keys=(), kinds=(), ci=None, head="abc1234", deploys=(), logs=0, alerts=0, tests=("tests/test_x.py::test_y",)):
         self.issue_keys, self.issue_kinds, self.alerts = set(keys), set(kinds), alerts
         self.ci = {"ai-stack": ci or {"repo": "ai-stack", "status": "running", "sha": "abc1234"}}
@@ -188,7 +190,7 @@ def test_the_facts_read_as_empty_where_the_stack_is_not(tmp_path, monkeypatch):
     monkeypatch.setattr(CK, "PUBLIC", tmp_path / "nowhere")
     f = CK.Facts()
     assert (f.head, f.issue_keys, f.alerts, f.ci) == ("", set(), 0, {})
-    assert CK.evaluate(art({"type": "ci_green"}, time.time()), f)[0] == "wait"          # unknown is never "proved"
+    assert CK.evaluate(art({"type": "ci_green"}, time.time()), f)[0] == "unknown"       # unknown is never "proved" (QA-26)
 
 
 def test_a_log_count_can_read_a_host_units_journal(monkeypatch):

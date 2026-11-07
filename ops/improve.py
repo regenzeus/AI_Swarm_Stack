@@ -61,9 +61,11 @@ def since(days):
     return (M.now() - dt.timedelta(days=days)).isoformat(timespec="seconds")
 
 
-def signals(c):
+def signals(c, unread=None):
+    """The week's signals. `unread` collects, as sentences, what could not be read (QA-26): a silent gap reads as a quiet week."""
+    unread = [] if unread is None else unread
     out = []
-    runs = c.execute("select slug, started, summary from runs where status='failed' and started >= ? order by started desc limit 15",  # cap: list (the self-review's sample: the newest 15)
+    runs =c.execute("select slug, started, summary from runs where status='failed' and started >= ? order by started desc limit 15",  # cap: list (the self-review's sample: the newest 15)
                      (since(7),)).fetchall()
     for r in runs:
         if not M.paused(r["summary"] or ""):                  # usage-limit pauses are normal, not a defect
@@ -93,9 +95,11 @@ def signals(c):
         for ci in M.stack_info().get("ci", []):
             if ci.get("status") == "failure":
                 out.append(f"CI failing on {ci['repo']} at {ci['sha']}")
-    except Exception:
-        pass
-    reviews = sorted((STACK / "docs").glob("REVIEW-*.md"))
+            elif ci.get("status") == "unknown":              # missions.stack_info: Forgejo did not answer for it
+                unread.append(f"CI's status of {ci['repo']} could not be read, so whether it is failing is not known")
+    except Exception as e:
+        unread.append(f"CI's status could not be read ({type(e).__name__}: {e}), so whether CI is failing is not known")
+    reviews =sorted((STACK / "docs").glob("REVIEW-*.md"))
     if reviews:
         text = reviews[-1].read_text()
         for head in ("Half-built or not thought to the end", "Technical debt", "Recommended next steps"):
@@ -107,8 +111,10 @@ def signals(c):
         newer = [ln for ln in p.stdout.splitlines() if re.search(r"newer|->|→", ln)]
         if newer:
             out.append("newer releases of pinned components:\n" + "\n".join(TC.more(newer, 20, "more")))  # cap: prompt
-    except Exception:
-        pass
+        if p.returncode:
+            unread.append(f"The upgrade check ended with exit code {p.returncode}, so which pinned components are out of date is not fully known")
+    except Exception as e:
+        unread.append(f"The upgrade check could not run ({type(e).__name__}: {e}), so which pinned components are out of date is not known")
     return out
 
 
@@ -123,10 +129,11 @@ def known(c):
 
 def scan(c, trigger="weekly"):
     """One pass: signals -> ideas in the Ledger. Returns the number of new ideas (or raises on a model error)."""
-    sig = signals(c)
-    save_scan(last=now(), signals=len(sig), trigger=trigger)
+    unread = []
+    sig = signals(c, unread)
+    save_scan(last=now(), signals=len(sig), trigger=trigger, unknown=unread)     # crew.job_unknown: on the self-review's card
     if not sig:
-        save_scan(result="no signals: nothing to improve this week", new=0)
+        save_scan(result="no signals: nothing to improve this week" + (f", but {len(unread)} could not be read" if unread else ""), new=0)
         return 0
     amap = re.search(r"## Repository map\n(.*?)\n## ", (STACK / "AGENTS.md").read_text(), re.S)
     prompt = PROMPT.format(max=MAX, map=amap[1].strip() if amap else "", signals=TC.cut("\n".join(f"- {s}" for s in sig), 14000),  # cap: prompt

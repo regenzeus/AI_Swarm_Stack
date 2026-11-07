@@ -209,13 +209,14 @@ function bars(runs) {
 
 // ---------- navigation ----------
 // one navigation on every screen (no top bar): the swarm's views live under Agents, the live state is a dot on Stack
-const NAV = [["home", "#/", "Home", ic.home], ["missions", "#/missions", "Agents", ic.target], ["wiki", "#/wiki", "Wiki", ic.wiki], ["build", "#/build", "Code", ic.code],
+const MEM_ROUTES = ["longterm", "codemem", "skills", "journals", "memsearch", "sources"];   // the Memory tab's parts (APP-50); the wikis keep their route
+const NAV = [["home", "#/", "Home", ic.home], ["missions", "#/missions", "Agents", ic.target], ["wiki", "#/wiki", "Memory", ic.wiki], ["build", "#/build", "Code", ic.code],
   ["chat", "#/chat", "Chat", ic.chat], ["system", "#/system", "Stack", ic.layers]];
 function navHtml(bottom) {
   const pend = S?.system?.pending_memory?.length || 0;
   return NAV.map(([k, href, label, icon]) => {
     const on = route.name === k || (k === "home" && ["tasks", "task", "taskmap", "decide"].includes(route.name))   // tasks are given on Home ("Do it")
-      || (k === "missions" && ["mission", "crew", "new", "swarm"].includes(route.name)) || (k === "system" && ["mail", "guide", "telemetry", "trials"].includes(route.name)) || (k === "build" && route.name === "repo");
+      || (k === "missions" && ["mission", "crew", "new", "swarm"].includes(route.name)) || (k === "system" && ["mail", "guide", "telemetry", "trials"].includes(route.name)) || (k === "wiki" && MEM_ROUTES.includes(route.name)) || (k === "build" && route.name === "repo");
     const toReview = (S?.builds || []).filter((b) => b.status === "review").length;        // the badge = what waits for you
     const n = k === "system" && pend ? `<span class="tab-n">${pend}</span>` : k === "build" && toReview ? `<span class="tab-n">${toReview}</span>`
       : k === "system" ? `<span class="tab-dot ${liveState()}" title="${liveState() === "run" ? "An agent is running" : liveState() === "ok" ? "Ready" : "Not connected"}"></span>` : "";
@@ -312,12 +313,11 @@ function render(force = false) {
   if (!force && route.name === "repo") return repoLive();
   if (!force && !(LIVE.has(route.name) || (route.name === "files" && !$("#fplan")?.innerHTML && !typing()) || ((route.name === "mission" || route.name === "crew") && agentSigOf() !== agentSig && !typing() && !$(".tl:not([hidden])") && !$("#tabbody details[open]")) || (route.name === "build" && !typing() && !$("#chbox:not([hidden])") && !$("#view details[open]") && !$("#blogbox:not([hidden])") && !$("#nb:not([hidden])") && !$("#addrepo:not([hidden])")))) return;
   // views that load their own data draw at once; the others wait for the first state (they are drawn when it comes)
-  if (!S && !["mail", "chat", "wiki", "read", "guide", "phone", "share", "live", "swarm", "taskmap", "telemetry", "task", "trials"].includes(route.name)) { view.innerHTML = noLink() ? offlineHtml() : `<div class="stack"><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div></div>`; return; }
+  if (!S && !["mail", "chat", "wiki", "read", "guide", "phone", "share", "live", "swarm", "skills", "longterm", "codemem", "journals", "memsearch", "sources", "taskmap", "telemetry", "task", "trials"].includes(route.name)) { view.innerHTML = noLink() ? offlineHtml() : `<div class="stack"><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div></div>`; return; }
   const y = window.scrollY;
-  if (force) $("#homenew")?.remove();                  // Home's waiting updates belong to Home only
   if (force) { document.body.classList.add("anim"); clearTimeout(render.anim); render.anim = setTimeout(() => document.body.classList.remove("anim"), 600); }
   const open = force ? [] : [...view.querySelectorAll("details[open][id], details[open][data-keep]")].map((d) => d.id || d.dataset.keep);
-  const fn = { mail: vMail, decide: vDecide, tasks: vTasks, task: vTask, trials: vTrials, home: vHome, missions: vMissions, mission: vMission, new: vNew, chat: vChat, system: vSystem, read: vRead, file: vFile, files: vFiles, wiki: vWiki, build: vBuild, repo: vRepo, guide: vGuide, share: vShare, phone: vPhone, house: vHouse, crew: vCrew, live: vLive, swarm: vSwarm, taskmap: vTaskMap, telemetry: vTelemetry }[route.name] || vHome;
+  const fn = { mail: vMail, decide: vDecide, tasks: vTasks, task: vTask, trials: vTrials, home: vHome, missions: vMissions, mission: vMission, new: vNew, chat: vChat, system: vSystem, read: vRead, file: vFile, files: vFiles, wiki: vWiki, build: vBuild, repo: vRepo, guide: vGuide, share: vShare, phone: vPhone, house: vHouse, crew: vCrew, live: vLive, swarm: vSwarm, skills: vSkills, longterm: vLongTerm, codemem: vCodeMem, journals: vJournals, memsearch: vMemSearch, sources: vSources, taskmap: vTaskMap, telemetry: vTelemetry }[route.name] || vHome;
   if (force) {                                      // a page that loads for a moment: not the page you left under the new tab's name
     const was = view.firstChild, n = (render.nav = (render.nav || 0) + 1);
     setTimeout(() => { if (render.nav === n && view.firstChild === was) view.innerHTML = `<div class="stack"><div class="skeleton" style="height:96px"></div><div class="skeleton" style="height:280px"></div></div>`; }, 180);
@@ -809,14 +809,14 @@ async function vTelemetry() {
   const agents = Object.entries(byAgent).map(([a, rs]) => [a, telSum(rs), rs]).sort((x, y) => y[1].runs - x[1].runs);
   const judged = s.met + s.partly + s.not_met;
   view.innerHTML = `<a class="back" href="#/system">${ic.back}Stack</a>
-  <div class="hero heading"><div class="row between" style="gap:10px"><h1>Telemetry</h1><a class="btn sm" href="#/trials">${ic.target}Trials</a></div><p>How each agent did, day by day: runs, how many ended well, the judge's verdicts on their tasks, tokens, time, and what the tokens would cost at list price (the subscriptions cost $0 a call).${telData.prices?.date ? ` Prices of ${esc(telData.prices.date)}, from the gateway's table.` : ""}</p></div>
+  <div class="hero heading"><div class="row between" style="gap:10px"><h1>Telemetry</h1><a class="btn sm" href="#/trials">${ic.target}Trials</a></div>${explain("telemetry-numbers", `Runs, how many ended well, the judge's verdicts, tokens, time, and what the tokens would cost at list price (the subscriptions cost $0 a call).${telData.prices?.date ? ` Prices of ${esc(telData.prices.date)}, from the gateway's table.` : ""}`, "What these numbers are")}</div>
   ${telData.error ? `<div class="card pad small muted">${esc(telData.error)}</div>` : ""}
   <div class="row wrap telf"><div class="seg">${[7, 30, 90, 365].map((d) => `<button data-td="${d}" class="${telF.days === d ? "on" : ""}">${d === 365 ? "Year" : d + " days"}</button>`).join("")}</div>${sel("agent", "Agent")}${sel("model", "Model")}${sel("kind", "Kind")}</div>
   <div class="tmnums" style="margin-top:12px">${[[nf(s.runs), "runs", ""], [pct(s.ok, s.runs), `ended well (${nf(s.failed)} failed)`, ""], [judged ? pct(s.met + 0.5 * s.partly, judged) : "–", `of ${nf(judged)} judged tasks met`, ""],
     [tok(s.tin + s.tout), "tokens", ""], [ifPaid(s.cost) || "–", "at list price", ""], [s.runs ? dur(s.p50) : "–", `median run · p95 ${s.runs ? dur(s.p95) : "–"}`, ""]]
     .map(([v, l]) => `<div class="card pad tmnum"><b>${esc(v)}</b><span class="tiny faint">${esc(l)}</span></div>`).join("")}</div>
   <div class="stack section">${telBars(rows, (r) => r.runs, "Runs", nf)}${telBars(rows, (r) => (r.tin || 0) + (r.tout || 0), "Tokens", tok)}</div>
-  <div class="section-h section"><h2>Agents · ${agents.length}</h2><span class="tiny faint">busiest first; tap one for its days and runs</span></div>
+  <div class="section-h section"><h2>Agents · ${agents.length}</h2></div>
   <div class="card list telag">${agents.map(([a, x, rs]) => `<details data-ta="${esc(a)}"${telOpen === a ? " open" : ""}><summary><div class="grow" style="min-width:0"><div class="ttl wrap">${esc(agentName(a) || a)}${x.runs >= 3 && x.ok / x.runs < 0.7 ? ` <span class="pill failed" style="padding:1px 7px">fails often</span>` : ""}</div>
       <div class="sub wrap">${nf(x.runs)} runs · ${pct(x.ok, x.runs)} well${x.met + x.partly + x.not_met ? ` · judged ${x.met} met, ${x.partly} partly, ${x.not_met} not` : ""} · ${tok(x.tin + x.tout)} tokens${x.cost ? ` · ${ifPaid(x.cost)}` : ""} · median ${dur(x.p50)}, p95 ${dur(x.p95)}</div></div></summary>
       <div class="telruns" data-truns="${esc(a)}"><div class="tiny faint">${[...new Set(rs.map((r) => `${r.model || "no model"} · ${r.harness} · ${r.kind}`))].map(esc).join(" · ")}</div><div class="skeleton" style="height:60px;margin-top:8px"></div></div></details>`).join("")
@@ -882,7 +882,7 @@ function vTasks() {
   if (+route.q.get("t")) return location.replace(`#/task/${+route.q.get("t")}`);   // APP-35: a task has its own page
   taskOpen = null;
   const details = route.q.get("new") === "1";
-  view.innerHTML = `<div class="hero"><div><h1>Tasks</h1><p>Say what the stack should do. It writes what done means, plans it, picks the agents and starts it; you see the plan here and answer only real questions.</p></div></div>
+  view.innerHTML = `<div class="hero"><div><h1>Tasks</h1></div></div>
   <form class="card pad tform" id="taskform"><textarea class="input" name="text" rows="2" placeholder="What should the stack do? One sentence is enough." required></textarea>
     <details id="tdet"${details ? " open" : ""}><summary class="small">Details: leave any as it is, and the stack decides it</summary><div class="tgrid">
       <label>Kind<select class="input" name="kind"><option value="">The stack decides</option>${Object.entries(TKINDS).map(([k, v]) => `<option value="${k}">${v}</option>`).join("")}</select></label>
@@ -898,10 +898,10 @@ function vTasks() {
       <label class="wide">Done when (one point per line; empty: the stack writes it)<textarea class="input" name="done" rows="2"></textarea></label></div></details>
     <div class="row" style="justify-content:flex-end;margin-top:10px"><button class="btn primary">${ic.rocket}Do it</button></div></form>
   <div id="taskboard">${taskBoardHtml()}</div>
-  <div class="section-h section" id="triggers"><h2>Triggers</h2><span class="tiny faint">events that start tasks by themselves</span></div>
+  <div class="section-h section" id="triggers"><h2>Triggers</h2></div>
   <div id="trigboard">${trigBoardHtml()}</div>
   ${ruleFormHtml()}
-  <div class="section-h section"><h2>Agents, measured</h2><span class="tiny faint">how each agent did, per kind of task, last 30 days</span></div>
+  <div class="section-h section"><h2>Agents, measured</h2></div>
   <div id="staffboard">${staffHtml()}</div>`;
   bindTasks();
   bindTriggers();
@@ -1052,40 +1052,39 @@ const ctTitle = (t) => /^crew:/.test(t.source || "") ? `Asked by the ${ctAsker(t
 const homeEx = new Map();                                // result file -> its first lines (fetched once per file)
 const homeLast = {};
 const toIso = (x) => (x == null ? "" : typeof x === "number" ? new Date(x > 1e12 ? x : x * 1000).toISOString() : String(x));
-const gbOf = gb;
 
-function needsItems() {
-  const out = [], c = S.connections, sy = S.system || {};
-  for (const b of (S.builds || []).filter((x) => x.status === "review")) out.push({ build: b });
-  for (const p of (typeof shopProposals === "function" ? shopProposals() : []).filter((p) => ["proposed", "needs_owner"].includes(p.status)))
-    out.push({ href: `#/mission/${encodeURIComponent(p.slug)}?shop=${p.id}`, icon: ic.coin, title: p.status === "proposed" ? "A purchase to approve" : "A purchase needs you", sub: `${p.item} · ${eur(p.total_eur)}` });
-  const steps = ((S.crew || []).find((x) => x.id === "phone-cleanup")?.actions || []).filter((x) => x.status === "open");
-  if (steps.length) out.push({ href: "#/crew/phone-cleanup", icon: ic.trash, title: `${steps.length} AI phone cleanup step${steps.length > 1 ? "s" : ""} to approve`, sub: `${gbOf(steps.reduce((a, x) => a + (x.size || 0), 0))} in all · one Approve each` });
-  if ((S.health?.items || []).some((it) => (it.issues || []).some((i) => i.kind === "phone-down"))) out.push({ href: "#/phone", icon: ic.alert, cls: "err", title: "The AI phone is not connected", sub: "tap to see why and fix it" });
-  if (S.phone?.pending) out.push({ href: "#/phone", icon: ic.alert, cls: "err", title: `The AI phone asks for ${S.phone.pending} approval${S.phone.pending > 1 ? "s" : ""}`, sub: "it waits for your tap" });
-  if (c?.pending) out.push({ href: "#/system?conn=1", icon: ic.alert, title: "Gmail: a Trash batch waits for your OK", sub: "nothing is moved without it" });
-  for (const m of (S.missions || []).filter((m) => m.status === "active" && (m.needs || []).some((n) => { const [cn, sc] = n.split(":"); return !c?.[cn]?.grants?.[sc]; })))
-    out.push({ href: `#/mission/${encodeURIComponent(m.slug)}`, icon: ic.lock || ic.alert, title: `${m.title} needs access`, sub: `grant ${m.needs.join(", ")} on its page` });
-  const pend = sy.pending_memory?.length || 0;
-  if (pend) out.push({ href: "#/system", icon: ic.brain, title: `${pend} memor${pend > 1 ? "ies wait" : "y waits"} for your OK`, sub: "Hermes wants to remember it" });
-  const hs = S.house?.reachable ? houseSteps(S.house).find((x) => !x.done && !x.optional) : null;
-  if (hs) out.push({ href: "#/house", icon: ic.house, title: "Finish setting up the House", sub: `next: ${hs.title.toLowerCase()}` });
-  for (const t of (S.tasks || []).filter((x) => ["needs_answer", "waiting_approval"].includes(x.status)))   // TSK-04
-    out.push({ href: `#/task/${t.id}`, icon: ic.target, title: t.status === "needs_answer" ? `Task #${t.id} asks you` : `Task #${t.id} waits for your OK`, sub: t.title });
-  for (const m of S.swarm?.owner_requests || [])        // SWM-98: what an agent asks of you waits here until you answer
-    out.push({ href: `#/swarm?tab=chat&ctx=${encodeURIComponent(m.context || "")}`, icon: ic.chat || ic.alert, title: `${m.sender} asks you`, sub: m.text });
+// GEN-02: Home draws the queue and builds no list of its own. S.decisions (ops/decisions.py and server.py owner_decisions) is
+// the one list; these are its rows in its order. A kind with many items is one row with its count, so Home stays short and
+// nothing is hidden: the rows always add up to the list.
+const HOME_ICON = { coding: "code", "coding-low-risk": "code", "shopping-buy": "coin", "phone-routine": "trash", memory: "brain", setup: "house", access: "lock",
+  "task-start": "target", "task-questions": "target", research: "target", "agent-request": "chat", ideas: "rocket", "agent-change": "rocket", "owner-confirm": "check" };
+const homeMany = (kin) => kin.length > 3 || (kin.length > 1 && kin.every((d) => d.routine));
+function needsRows() {
+  const ds = S.decisions || [], cls = S.decide?.classes || {}, kinds = new Map(), out = [];
+  for (const d of ds) kinds.set(d.cls, [...(kinds.get(d.cls) || []), d]);
+  for (const d of ds) {
+    const kin = kinds.get(d.cls);
+    if (!homeMany(kin)) out.push({ d, kind: d.cls, n: 1, href: d.href, title: d.what, sub: d.why });
+    else if (!out.some((x) => x.kind === d.cls)) out.push({ kind: d.cls, n: kin.length, href: new Set(kin.map((x) => x.href)).size === 1 ? d.href : "#/decide",
+      title: `${cls[d.cls]?.title || d.cls} · ${kin.length} waiting`, sub: `first: ${d.what}` });
+  }
   return out;
 }
 
-function needsHtml() {
-  const it = needsItems();
-  if (!it.length) return notConnected() ? `<div id="homeneeds" class="needs-calm off">${ic.alert}<span>Not connected: what needs you can't be read now.</span></div>`
-    : `<div id="homeneeds" class="needs-calm">${ic.check}<span>Nothing needs you right now.</span></div>`;
-  return `<div id="homeneeds"><div class="section-h"><h2>Needs you <span class="hcount">${it.length}</span></h2>${(S.decisions || []).length ? `<a class="tiny" href="#/decide">All decisions</a>` : ""}</div>
-    <div class="card list hneeds">${it.map((x) => x.build ? workBuildRow(x.build) : `<a href="${x.href}"><div class="ic ${x.cls || "warn"}">${x.icon}</div><div class="grow" style="min-width:0"><div class="ttl">${esc(x.title)}</div><div class="sub wrap">${esc(x.sub || "")}</div></div>${ic.next}</a>`).join("")}</div></div>`;
+function needsRow(x) {
+  const build = x.d && (S.builds || []).find((b) => `build:${b.id}` === x.d.id);    // a build's row shows its checks, CI and AI review
+  return build ? workBuildRow(build) : `<a href="${esc(x.href)}"><div class="ic ${x.kind === "phone" ? "err" : "warn"}">${ic[HOME_ICON[x.kind]] || ic.alert}</div><div class="grow" style="min-width:0"><div class="ttl wrap">${esc(x.title)}</div><div class="sub wrap">${esc(x.sub || "")}</div></div>${ic.next}</a>`;
 }
 
-// AUT-05, AUT-07: every decision that waits for you in one ranked list (ops/decisions.py and the server's two), each
+function needsHtml() {
+  const n = (S.decisions || []).length;
+  if (!n) return notConnected() ? `<div id="homeneeds" class="needs-calm off">${ic.alert}<span>Not connected: what needs you can't be read now.</span></div>`
+    : `<div id="homeneeds" class="needs-calm">${ic.check}<span>Nothing needs you right now.</span></div>`;
+  return `<div id="homeneeds"><div class="section-h"><h2>Needs you <span class="hcount">${n}</span></h2><a class="tiny" href="#/decide">All decisions</a></div>
+    <div class="card list hneeds">${needsRows().map(needsRow).join("")}</div></div>`;
+}
+
+// AUT-05, AUT-07: every decision that waits for you in one ranked list (ops/decisions.py and the server's), each
 // with what, why, what the stack would decide, what happens without an answer, and its answers; routine ones of a
 // class are answered together. Under it, the queue's numbers against the target and the shadow's agreement per class.
 function decideGroups(ds) {
@@ -1098,29 +1097,45 @@ function decideGroups(ds) {
   return out.map((g) => (g.items && g.items.length === 1 ? { one: g.items[0] } : g));
 }
 
+// routine items whose first answer takes a list of ids are answered together with one tap
+function decideAll(items) {
+  const acts = items.map((d) => (d.answers || [])[0]), first = acts[0]?.act;
+  if (!first?.ids || !acts.every((a) => a?.act?.ids && a.act.action === first.action)) return null;
+  return { label: acts[0].label, act: { action: first.action, ids: acts.flatMap((a) => a.act.ids) } };
+}
+
 function decideCard(d, cls) {
   const r = d.recommend, c = cls[d.cls] || {};
   return `<div class="card pad dcard"><div class="row between" style="gap:8px"><span class="tiny faint">${esc(c.title || d.cls)}${c.floor ? " · always yours" : ""}</span>${d.expires ? `<span class="tiny">answer by ${dt(d.expires)}</span>` : ""}</div>
     <div class="ttl wrap" style="margin-top:4px">${esc(d.what)}</div>${d.why ? `<div class="sub wrap">${esc(d.why)}</div>` : ""}
     ${r ? `<div class="small" style="margin-top:6px">The stack would say <b>${r.answer === "yes" ? "yes" : "no"}</b>${r.why ? `: ${esc(r.why)}` : ""}</div>` : ""}
     ${d.unanswered ? `<div class="tiny muted">Without an answer: ${esc(d.unanswered)}</div>` : ""}
-    <div class="row wrap" style="gap:8px;margin-top:10px">${(d.answers || []).map((a, i) => a.act ? `<button class="btn sm${i ? " ghost" : ""}" data-dact='${esc(JSON.stringify(a.act))}'>${esc(a.label)}</button>` : `<a class="btn sm${i ? " ghost" : ""}" href="${esc(a.href)}">${esc(a.label)}</a>`).join("")}</div></div>`;
+    <div class="row wrap" style="gap:8px;margin-top:10px">${(d.answers || []).map((a, i) => a.act ? `<button class="btn sm${i ? " ghost" : ""}" data-dact='${esc(JSON.stringify(a.act))}'${a.ask ? ` data-dask="${esc(a.ask)}" data-dinto="${esc(a.into)}"` : ""}>${esc(a.label)}</button>` : `<a class="btn sm${i ? " ghost" : ""}" href="${esc(a.href)}">${esc(a.label)}</a>`).join("")}</div></div>`;
 }
 
 function vDecide() {
   const ds = S.decisions || [], st = S.decide || {}, cls = st.classes || {}, tg = st.target || {};
   const groups = decideGroups(ds);
   const agree = Object.entries(st.agreement || {});
-  view.innerHTML = `<div class="hero heading"><h1>Decisions</h1><p>Everything that waits for you, in one list: what expires first and what costs most to wait comes first. Each says what the stack would decide; nothing happens without your answer.</p></div>
-  <div class="card pad small"><b>${nf(ds.length)}</b> waiting · ${st.per_day ?? "–"} a day (target at most ${tg.per_day ?? 5}) · answered in ${st.median_h != null ? `${st.median_h} h` : "–"} at the median (target ${tg.answer_h ?? 12} h) · ${nf(st.expired || 0)} expired, over ${st.days ?? 0} day${st.days === 1 ? "" : "s"}</div>
+  view.innerHTML = `<div class="hero heading"><h1>Decisions</h1></div>
+  <div class="card pad small"><b id="dcount">${nf(ds.length)}</b> waiting · ${st.per_day ?? "–"} a day (target at most ${tg.per_day ?? 5}) · answered in ${st.median_h != null ? `${st.median_h} h` : "–"} at the median (target ${tg.answer_h ?? 12} h) · ${nf(st.expired || 0)} expired, over ${st.days ?? 0} day${st.days === 1 ? "" : "s"}</div>
   ${groups.length ? `<div class="stack" style="margin-top:12px">${groups.map((g) => g.one ? decideCard(g.one, cls) : `<div class="card pad dcard"><div class="tiny faint">${esc((cls[g.cls] || {}).title || g.cls)} · routine, answered together</div>
       <details data-keep="dg-${esc(g.cls)}"><summary class="ttl">${g.items.length} ${esc(((cls[g.cls] || {}).title || g.cls).toLowerCase())} decisions</summary><div class="stack" style="margin-top:8px">${g.items.map((d) => decideCard(d, cls)).join("")}</div></details>
-      ${g.items.every((d) => (d.answers || [])[0]?.act?.action === "phone_cleanup_do_all") ? `<button class="btn sm" style="margin-top:10px" data-dact='${esc(JSON.stringify({ action: "phone_cleanup_do_all", ids: g.items.map((d) => d.answers[0].act.ids[0]) }))}'>Approve all ${g.items.length}</button>` : ""}</div>`).join("")}</div>`
+      ${decideAll(g.items) ? `<button class="btn sm" style="margin-top:10px" data-dact='${esc(JSON.stringify(decideAll(g.items).act))}'>${esc(decideAll(g.items).label)} all ${g.items.length}</button>` : ""}</div>`).join("")}</div>`
     : `<div class="needs-calm" style="margin-top:12px">${ic.check}<span>Nothing needs you right now.</span></div>`}
   <div class="section-h" style="margin-top:18px"><h2>The shadow</h2></div>
   <div class="card pad small">For every yes-or-no decision the stack records what it would have decided, then what you decided. A kind of action may only ever act on its own after it agreed with you on 20 decisions in a row (at least 90 %), passed its exam, and you allowed it; money, people, deleting and security never do.
     ${agree.length ? `<div class="list" style="margin-top:8px">${agree.map(([k, a]) => `<div class="row between"><span>${esc((cls[k] || {}).title || k)}</span><span class="tiny">${a.agreed} of ${a.n} agreed${a.unsafe ? ` · <span class="err-t">${a.unsafe} said yes where you said no</span>` : ""}</span></div>`).join("")}</div>` : `<div class="tiny muted" style="margin-top:8px">No answers recorded yet: the shadow started on 2 Nov 2026.</div>`}</div>`;
-  $$("[data-dact]").forEach((b) => (b.onclick = async () => { b.disabled = true; if (!(await act(JSON.parse(b.dataset.dact), "Done: it leaves the list once the stack has it"))) b.disabled = false; }));
+  $$("[data-dact]").forEach((b) => (b.onclick = async () => {
+    const req = JSON.parse(b.dataset.dact);
+    if (b.dataset.dask) {                               // an answer in words: "Still broken" says what is
+      const said = prompt(b.dataset.dask, "");
+      if (said === null) return;
+      req[b.dataset.dinto] = said;
+    }
+    b.disabled = true;
+    if (!(await act(req, "Done: it leaves the list once the stack has it"))) b.disabled = false;
+  }));
 }
 
 // each agent with a health alert, named, with its first alert and its page
@@ -1132,15 +1147,16 @@ function healthAlerts() {
   });
 }
 
-// the stack's own upkeep (health alerts the doctor looks at, its improvement ideas): visible, but not "Needs you"
+// GEN-02: what the owner reads but cannot answer: states, not decisions (health alerts the doctor looks at, the AI phone
+// being down). They are not in the queue; ideas and agent changes are, so they are under Needs you.
 function upkeepHtml() {
-  const props = ideasWaiting(), alerts = S.health?.alerts || 0;
-  if (!props && !alerts) return "";
+  const alerts = S.health?.alerts || 0, down = (S.health?.items || []).some((it) => (it.issues || []).some((i) => i.kind === "phone-down"));
+  if (!alerts && !down) return "";
   const bad = healthAlerts();                         // the owner's review of 2 Nov: the row opened the Agents overview, not the problem
   const href = bad.length === 1 ? bad[0].href : "#/missions?f=problems";
   return `<div class="hsub">Stack upkeep</div><div class="card list">
-    ${alerts ? `<a href="${href}"><div class="ic">${ic.pulse}</div><div class="grow" style="min-width:0"><div class="ttl">${alerts} health alert${alerts > 1 ? "s" : ""}</div><div class="sub wrap">${esc(bad.map((b) => `${b.name}: ${b.text}`).join(" · ") || "the Health doctor looks at them")}</div></div>${ic.next}</a>` : ""}
-    ${props ? `<a href="#/swarm?tab=improve"><div class="ic">${ic.rocket}</div><div class="grow" style="min-width:0"><div class="ttl">${props} improvement idea${props > 1 ? "s" : ""}</div><div class="sub wrap">the stack's own fixes and changes to its agents, in Agents → Ideas</div></div>${ic.next}</a>` : ""}</div>`;
+    ${down ? `<a href="#/phone"><div class="ic err">${ic.alert}</div><div class="grow" style="min-width:0"><div class="ttl">The AI phone is not connected</div><div class="sub wrap">tap to see why and fix it</div></div>${ic.next}</a>` : ""}
+    ${alerts ? `<a href="${href}"><div class="ic">${ic.pulse}</div><div class="grow" style="min-width:0"><div class="ttl">${alerts} health alert${alerts > 1 ? "s" : ""}</div><div class="sub wrap">${esc(bad.map((b) => `${b.name}: ${b.text}`).join(" · ") || "the Health doctor looks at them")}</div></div>${ic.next}</a>` : ""}</div>`;
 }
 
 function nowHtml() {
@@ -1223,7 +1239,7 @@ function feedHtml() {
         ${x.files?.length || x.missing?.length ? `<div class="small wrap" style="margin-top:4px">${x.files.length ? `${ic.doc} ${x.files.map(esc).join(" · ")}` : ""}${x.missing.length ? `${x.files.length ? " · " : ""}<span class="err-t">not delivered: ${x.missing.map(esc).join(", ")}</span>` : ""}</div>` : ""}${x.path ? `<div class="fi-x small muted" data-ex="${esc(x.path)}">${ex ? esc(ex) : ""}</div>` : ""}
         ${(x.meta || []).filter((v) => v && v !== "–").length ? `<div class="tiny faint" style="margin-top:4px">${x.meta.filter((v) => v && v !== "–").map(esc).join(" · ")}</div>` : ""}</div></a>`;
   }).join("");
-  return `<div id="homefeed"><div class="section-h"><h2>Results</h2><span class="tiny faint">what your agents finished for you</span></div>
+  return `<div id="homefeed"><div class="section-h"><h2>Results</h2></div>
     <div class="chips scroll-x" style="margin-bottom:6px">${kinds.map(([k, l]) => `<button type="button" class="tag hf ${homeFilter === k ? "on" : ""}" data-hf="${k}">${l}</button>`).join("")}</div>
     ${rows || `<div class="card empty small">Nothing here yet. A result shows up the moment an agent finishes.</div>`}
     ${mine.length > items.length ? `<button type="button" class="btn sm ghost" id="hfmore" style="margin-top:8px">Show older (${mine.length - items.length} more)</button>` : ""}
@@ -1245,7 +1261,7 @@ function loadExcerpts() {
 }
 
 function homeHeadHtml() {
-  const n = needsItems().length, next = (S.missions || []).filter((m) => m.status === "active" && m.next_run).sort((a, b) => a.next_run.localeCompare(b.next_run))[0];
+  const n = (S.decisions || []).length, next = (S.missions || []).filter((m) => m.status === "active" && m.next_run).sort((a, b) => a.next_run.localeCompare(b.next_run))[0];
   const busy = (S.running ? 1 : 0) + (S.builds || []).filter((b) => ["working", "checking", "deploying"].includes(b.status)).length + (S.claude_tasks || []).filter((t) => t.status === "running").length;
   if (notConnected()) return `<p id="homehead">${day(new Date(), true)} · <b class="err-t">not connected</b>: what you see may be out of date</p>`;
   return `<p id="homehead">${day(new Date(), true)} · ${n ? `<b class="warn-t">${n} thing${n > 1 ? "s need" : " needs"} you</b>` : "nothing needs you"} · ${busy ? `${busy} working now` : "all quiet"}${next ? ` · next: ${esc(next.title)} ${rel(next.next_run)}` : ""}</p>`;
@@ -1266,7 +1282,7 @@ function vHome() {
   <div class="home-head">
     <div class="hero" style="margin-bottom:6px"><div><h1>${greet()}${S.viewer_name ? ", " + esc(String(S.viewer_name).split(" ")[0]) : ""}</h1>${homeHeadHtml()}</div></div>
     ${!Object.keys(gp.read).length && !Object.keys(gp.tried).length && !gp.hideTour ? `<div class="banner info tour" style="margin-bottom:10px">${ic.doc}<a class="grow" href="#/guide/first-ten-minutes"><b>New here?</b> Take the ten-minute tour of everything your stack can do.</a><button class="icon-btn" id="hidetour" title="Hide">${ic.x}</button></div>` : ""}
-    <form class="askbar" id="askbar"><input class="input" name="q" autocomplete="off" placeholder="Ask or give a task"><button class="btn ask" type="submit" data-to="chat" title="Ask Hermes in a chat">${ic.chat}<span>Ask</span></button><button class="btn primary" type="submit" data-to="task" title="The stack plans it and does it">${ic.rocket}<span>Do it</span></button></form>
+    <form class="askbar" id="askbar"><input class="input" name="q" autocomplete="off" placeholder="Ask anything, or say what to do"><button class="btn primary" type="submit" aria-label="Send">${ic.send || ic.next}<span>Send</span></button></form>
     <div class="chips hquick"><a class="tag" href="#/tasks">${ic.target}Tasks${openTasks() ? ` · ${openTasks()}` : ""}</a><a class="tag" href="#/tasks?new=1">${ic.tune}Task with details</a><a class="tag" href="#/new">${ic.plus}New mission</a><a class="tag" href="#/wiki?new=1">${ic.wiki}New wiki</a><a class="tag" href="#/chat">${ic.chat}Chats</a><a class="tag" href="#/missions">${ic.target}All agents</a></div>
   </div>
   <div class="home-side">
@@ -1284,13 +1300,10 @@ function vHome() {
 function bindHome() {
   const ht = $("#hidetour"); if (ht) ht.onclick = () => { gp.hideTour = 1; gsave(); ht.closest(".banner").remove(); };
   const f = $("#askbar");
-  if (f) f.onsubmit = async (e) => {                      // TSK-02: Ask goes to a chat, Do it makes a task the stack plans and does
+  if (f) f.onsubmit = (e) => {                            // TSK-02: one box: the assistant answers a question and starts a job as a task
     e.preventDefault();
     const v = f.q.value.trim();
-    if (!v) return;
-    if (e.submitter?.dataset.to !== "task") { location.hash = `#/chat?prompt=${encodeURIComponent(v)}&send=1`; return; }
-    const r = await act({ action: "task_create", text: v }, "The stack is planning it");
-    if (r?.task) { f.q.value = ""; location.hash = `#/task/${r.task}`; }
+    if (v) location.hash = `#/chat?prompt=${encodeURIComponent(v)}&send=1`;
   };
   $$("[data-hf]").forEach((b) => (b.onclick = () => { homeFilter = b.dataset.hf; homeShow = 12; const el = $("#homefeed"); el.outerHTML = feedHtml(); homeLast.homefeed = $("#homefeed").outerHTML; bindHome(); }));
   if ($("#hfmore")) $("#hfmore").onclick = () => { homeShow += 40; const el = $("#homefeed"); el.outerHTML = feedHtml(); homeLast.homefeed = $("#homefeed").outerHTML; bindHome(); };
@@ -1298,13 +1311,13 @@ function bindHome() {
 }
 
 // a live update on Home: only the parts whose content changed are replaced (no full redraw, no twitch)
-// APP-38: Home never moves under your finger. While you are scrolled down or touching it, its updates wait behind a
-// "New on Home" button at the top; at the top of the page it updates in place (the owner's review of 2 Nov: a new
-// card came in above the one tapped and the tap opened another)
-let homeTouch = 0;
+// APP-38: Home never moves under your finger. While you are scrolled down or touching it, its updates wait, with no
+// button and no message; back at the top of the page they come in (2 Nov: a new card came in above the one tapped and
+// the tap opened another; 7 Nov: the owner found the button that announced them nonsense)
+let homeTouch = 0, homeHeld = false;
 window.addEventListener("touchstart", () => { homeTouch = Date.now(); }, { passive: true });
 window.addEventListener("scroll", () => {                 // back at the top: what waited comes in
-  if (window.scrollY < 60 && $("#homenew")) { $("#homenew").remove(); if (route.name === "home") homeUpdate(true); }
+  if (window.scrollY < 60 && homeHeld) { homeHeld = false; if (route.name === "home") homeUpdate(true); }
 }, { passive: true });
 function homeUpdate(force) {
   const parts = [["homehead", homeHeadHtml], ["homeneeds", needsHtml], ["homenow", nowHtml], ["homedev", devicesHtml], ["homestats", homeStatsHtml], ["homefeed", feedHtml]];
@@ -1317,11 +1330,7 @@ function homeUpdate(force) {
     el.outerHTML = html;
     homeLast[id] = html;
   }
-  const pill = $("#homenew");
-  if (held && !pill) {
-    document.body.insertAdjacentHTML("beforeend", `<button type="button" id="homenew" class="btn sm primary homenew">${ic.next}New on Home</button>`);
-    $("#homenew").onclick = () => { $("#homenew").remove(); window.scrollTo(0, 0); homeUpdate(true); };
-  } else if (!held && pill && !hold) pill.remove();
+  homeHeld = held;
   bindHome();
 }
 
@@ -1822,7 +1831,7 @@ function vFiles() {
   const title = (slug) => (S.missions || []).find((x) => x.slug === slug)?.title || slug;
   const groups = Object.entries(F.missions).filter(([, x]) => x.files.length).sort((a, b) => (b[1].files[0]?.updated || 0) - (a[1].files[0]?.updated || 0));
   const n = groups.reduce((k, [, x]) => k + x.files.length, 0);
-  view.innerHTML = `<div class="hero heading"><h1>Files</h1><p>What your missions made for you: documents, specs, tables. Each mission's Results shows its own; here are all of them, the space they take and the trash.</p></div>
+  view.innerHTML = `<div class="hero heading"><h1>Files</h1></div>
     <div class="card pad-l"><div class="row between wrap" style="gap:8px"><h2>Space</h2><span class="tiny faint">${nf(n)} file${n === 1 ? "" : "s"} in ${groups.length} mission${groups.length === 1 ? "" : "s"}</span></div>
       <div class="fbar" title="${u.pct} % of ${fsize(u.quota)}"><span style="width:${Math.min(100, (100 * u.used) / u.quota)}%"></span><span class="tr" style="width:${Math.min(100, (100 * u.trash) / u.quota)}%"></span></div>
       <div class="small muted">${fsize(u.used)} in files · ${fsize(u.trash)} in the trash · ${u.pct} % of ${fsize(u.quota)}${u.pct >= 80 ? ` · <b class="err-t">nearly full: clean up</b>` : ""}</div>
@@ -2396,7 +2405,7 @@ function settingsForm(body, m) {
 function vNew() {
   const kind = route.q.get("type") || "briefing";
   view.innerHTML = `<a class="back" href="#/missions">${ic.back}Agents</a>
-  <div class="hero"><div><h1>New mission</h1><p>Describe what should get done. The agents set up the rest.</p></div></div>
+  <div class="hero"><div><h1>New mission</h1></div></div>
   <form class="card pad-l" id="nf" autocomplete="off">
     <div class="choice">
       <label><input type="radio" name="type" value="briefing" ${kind === "briefing" ? "checked" : ""}><div class="type-ic">${ic.news}</div><div><b>Daily briefing</b><small>Researches the news on a topic and writes a report with sources. Builds a topic wiki over time.</small></div></label>
@@ -2911,7 +2920,7 @@ async function vPhone() {
     toast(r.error ? `Too late: ${r.error}` : !r.taken ? PHONE_NOT_TAKEN : pre === "deny" ? "Declined" : pre === "allow5" ? "Allowed, and for the next 5 minutes" : "Allowed: the AI phone is doing it", !!r.error || !r.taken);
     if (route.name !== "phone") return;
   }
-  view.innerHTML = `<div class="hero"><div class="grow"><h1>AI phone</h1><p>Hermes' hands on your old phone. You approve whole jobs here, not single steps.</p></div>${liveLink("phone", "What it did")}</div><div id="ph"></div>`;
+  view.innerHTML = `<div class="hero"><div class="grow"><h1>AI phone</h1></div>${liveLink("phone", "What it did")}</div><div id="ph"></div>`;
   let last = "";
   const draw = async () => {
     if (route.name !== "phone") return clearInterval(phoneTimer);
@@ -3097,7 +3106,7 @@ let houseSig = "";
 function vHouse() {
   const err = route.q.get("err"), ok = route.q.get("connected");
   if (err || ok) { history.replaceState(history.state, "", "#/house"); toast(err || "Home Assistant is connected. The stack restarts briefly to load it.", !!err); }
-  view.innerHTML = `<div class="hero"><div class="grow"><h1>House</h1><p>Your flat through Home Assistant on the NAS: lights, plugs, Echos. Hermes can switch them too; protected plugs only you.</p></div></div><div id="housebody"></div>`;
+  view.innerHTML = `<div class="hero"><div class="grow"><h1>House</h1></div></div><div id="housebody"></div>`;
   houseSig = "";
   houseUpdate();
   if (!TOOLS) toolsLoad().then(() => { houseSig = ""; houseUpdate(); });   // Home Assistant's menus come from the tools list
@@ -3297,17 +3306,21 @@ function wikiIndex() {
   const pages = live.reduce((n, r) => n + (r.pages || 0), 0);
   const row = (r) => `<a href="#/wiki?root=${encodeURIComponent(r.root)}"><div class="ic">${r.mission ? ic.target : ic.brain}</div><div class="grow" style="min-width:0"><div class="ttl wrap">${esc(r.title)}</div>
     <div class="sub wrap">${r.pages} pages · ${r.links} links${r.mission ? "" : " · your vault"}${r.archived ? " · its mission is archived" : ""}</div><div class="sub wrap wuse" data-wuse="${esc(r.root)}"></div></div>${ic.next}</a>`;
-  view.innerHTML = `<div class="hero heading" style="margin-bottom:12px"><div class="row between" style="gap:10px"><h1>Wiki</h1>
-    <button class="btn sm" id="wnewb">${ic.plus}New wiki</button></div><p>${live.length} wiki${live.length === 1 ? "" : "s"} · ${pages} page${pages === 1 ? "" : "s"}: what your agents learned, each as linked pages and a graph.</p></div>
+  view.innerHTML = `${memFrame("wiki")}<div class="row between wrap" style="gap:10px;margin-bottom:10px">
+    <div class="row wrap" style="gap:8px"><button class="btn sm" id="wnewb">${ic.plus}New wiki</button><button class="btn sm" id="vaddb">${ic.plus}Add to the vault</button><a class="btn sm ghost" href="#/sources">${ic.doc}Filed sources</a></div></div>
+    <div class="tiny faint" style="margin-bottom:10px">${live.length} wiki${live.length === 1 ? "" : "s"} · ${pages} page${pages === 1 ? "" : "s"}</div>
+    ${addVaultHtml()}
   ${wikiNewForm()}
   <div class="wgrid"><div>
   <div class="card list wikis">${live.map(row).join("") || `<div class="pad small muted">No wiki yet. New wiki starts one; every agent's results build its own.</div>`}</div>
   ${old.length ? `<details class="section"><summary class="small muted">${old.length} wiki${old.length > 1 ? "s" : ""} of archived missions (kept, not on the map)</summary><div class="card list wikis" style="margin-top:8px">${old.map(row).join("")}</div></details>` : ""}
   </div>
-  <div class="card pad-l wmap"><div class="section-h" style="margin:0"><h2>How they connect</h2><span class="tiny faint">bubble = a wiki, tap to open · line = subjects both have</span></div>
+  <div class="card pad-l wmap"><div class="section-h" style="margin:0"><h2>How they connect</h2></div>
     <div id="wmapsvg" class="wmapsvg"><div class="skeleton" style="height:260px"></div></div><div id="wmapinfo" class="small"></div></div>
   </div>`;
   bindWikiAdmin("", {});
+  bindMemFrame();
+  bindAddVault();
   wikiMap();
 }
 
@@ -3344,7 +3357,9 @@ async function wikiMap() {
   for (const n of map.nodes) {
     const el = $(`[data-wuse="${CSS.escape(n.root)}"]`), use = byRoot[n.root] || [];
     const readers = use.filter((x) => x.reads).map((x) => `${n.mission && x.agent === "mission:" + n.mission ? "its agent" : wikiAgentName(x.agent)} (${x.reads})`);
-    if (el) el.textContent = `${readers.length ? `read in the last 7 days by ${readers.join(", ")}` : "not read by an agent in the last 7 days"} · written by ${n.mission ? "its agent" : "the curator"}${n.changed_7d ? `, ${n.changed_7d} page${n.changed_7d > 1 ? "s" : ""} changed this week` : ""}`;
+    if (el) el.title = readers.join(", ");
+    const times = use.reduce((k, x) => k + (x.reads || 0), 0);
+    if (el) el.textContent = `${readers.length ? `read ${times} time${times === 1 ? "" : "s"} in the last 7 days by ${readers.length} agent${readers.length === 1 ? "" : "s"}` : "not read by an agent in the last 7 days"} · written by ${n.mission ? "its agent" : "the curator"}${n.changed_7d ? `, ${n.changed_7d} page${n.changed_7d > 1 ? "s" : ""} changed this week` : ""}`;
   }
   const W = box.clientWidth || 340;
   let H = Math.max(260, Math.min(380, W * 0.8));
@@ -3805,11 +3820,11 @@ function vBuild() {
       <div class="row between"><b class="repo-n" style="margin:0">Add a repository</b><button class="icon-btn" id="addclose" title="Close">${ic.x}</button></div>
       <div class="seg sm" style="margin-top:8px"><button type="button" data-ar="study" class="on">Study GitHub repo</button><button type="button" data-ar="new">New repo</button></div>
       <div id="ar-study"><input class="input" id="ar-url" placeholder="https://github.com/owner/name" style="margin-top:8px"><button class="btn sm primary" id="ar-go" style="margin-top:8px">${ic.search}Study it</button>
-        <div class="tiny faint" style="margin-top:6px">Clones it, builds its code graph and code map (minutes). The code is never run.</div></div>
+        </div>
       <div id="ar-new" hidden><input class="input" id="ar-name" placeholder="name (lowercase)" style="margin-top:8px"><input class="input" id="ar-desc" placeholder="What is it for? (optional)" style="margin-top:6px">
         <button class="btn sm primary" id="ar-create" style="margin-top:8px" ${S.code?.forgejo_token ? "" : "disabled"}>${ic.plus}Create on Forgejo</button>
         ${S.code?.forgejo_token ? "" : `<div class="tiny faint" style="margin-top:6px">Needs the Forgejo connection (below, one time).</div>`}</div>
-      <div class="tiny faint" style="margin-top:8px">Or in Chat: "study github.com/owner/repo", "create a repo called …"</div>
+      
   </div>
   <div class="card pad-l newbuild" id="nb" ${route.q.get("new") ? "" : "hidden"} style="margin-bottom:14px">
     <div class="row between"><b>${ic.rocket} New build</b><button class="icon-btn" id="nbclose" title="Close">${ic.x}</button></div>
@@ -3827,7 +3842,7 @@ function vBuild() {
     ${repoDir(repos)}
     <div class="codework">
       <div class="section-h codeask"><h2>Waiting for you${asking ? ` · ${asking}` : ""}</h2>${readyAll(review) ? `<button class="btn sm primary" id="appall">${ic.check}Approve all ready (${readyAll(review)})</button>` : ""}</div>
-      ${asking ? `${typeof explain === "function" && review.length ? explain("approve-all-", "Tap one to see the change. <i>Approve all</i> deploys every build whose checks and CI passed, one after another; a conflict goes back to you.", "How Approve all works") : ""}
+      ${asking ? `${typeof explain === "function" && review.length ? explain("approve-all-", "Tap one to see the change. <i>Approve all</i> deploys every build whose checks and CI passed and whose AI review finished without a block, one after another; a conflict goes back to you.", "How Approve all works") : ""}
         <div class="card list waiting">${asks.map(changeRow).join("")}${review.map(buildRow).join("")}</div>` : `<div class="card pad small muted">Nothing waits for your review.</div>`}
       ${working.length || busy.length ? `<div class="section-h section"><h2>Working · ${working.length + busy.length}</h2>${how("builder")}</div><div class="card list">${working.map(changeRow).join("")}${busy.map(buildRow).join("")}</div>` : ""}
       ${stoppedChanges.length || stopped.length ? `<div class="section-h section"><h2>Stopped · ${stoppedChanges.length + stopped.length}</h2></div><div class="card list">${stoppedChanges.map(changeRow).join("")}${stopped.map(buildRow).join("")}</div>` : ""}
@@ -3871,6 +3886,178 @@ function vBuild() {
   };
 }
 
+// ---------- Memory (APP-50): what the stack knows and can look up. Each kind of knowledge has one home ----------
+const MEM_TABS = [["wiki", "#/wiki", "Wikis"], ["longterm", "#/longterm", "Long-term"], ["codemem", "#/codemem", "Code"], ["skills", "#/skills", "Skills"], ["journals", "#/journals", "Journals"]];
+const MEM_HOW = `<ol class="memflow">${[["Before a run", "An agent gets one opening: its instructions and your messages, its journal, wiki pages on the topic, then what is known about you."],
+  ["During a run", "It can search all of this, by words and by meaning."],
+  ["After a run", "The result goes into its journal and its wiki, with sources. What you say in chat reaches long-term memory through a gatekeeper."],
+  ["Every night", "The Memory Keeper retires duplicates and marks contradictions and stale pages. Nothing is deleted, and each change can be undone."]].map(([t, d]) => `<li><b>${t}</b><span>${d}</span></li>`).join("")}</ol>`;
+function memFrame(cur) {
+  return `<div class="hero heading" style="margin-bottom:10px"><div class="row between" style="gap:10px"><h1>Memory</h1>${how("knowledge")}</div></div>
+    <form class="wsearch memsearch" id="memq">${ic.search}<input class="input" name="q" autocomplete="off" placeholder="What does it know about…" value="${esc(route.name === "memsearch" ? route.q.get("q") || "" : "")}"></form>
+    <nav class="seg memtabs" aria-label="Kinds of memory">${MEM_TABS.map(([k, h, l]) => `<a class="${cur === k ? "on" : ""}" href="${h}">${l}</a>`).join("")}</nav>
+    ${explain("memory-how", MEM_HOW, "How memory reaches an agent")}`;
+}
+function bindMemFrame() {
+  const f = $("#memq");
+  if (f) f.onsubmit = (e) => { e.preventDefault(); const q = f.q.value.trim(); if (q.length > 1) location.hash = `#/memsearch?q=${encodeURIComponent(q)}`; };
+}
+
+// Long-term: what it knows about you. Each fact whole, with its kind, where it came from and its own Forget
+const FACT_KIND = { world: "Fact", experience: "Something that happened", observation: "Drawn from several" };
+const factSource = (f) => (f.chat ? `<a class="memfrom" href="#/chat?c=${encodeURIComponent(f.chat)}">from a chat ${ic.next}</a>` : f.source === "agent journal" ? `<span class="tiny faint">from an agent's journal</span>` : f.type === "observation" ? `<span class="tiny faint">from other facts</span>` : `<span class="tiny faint">source not recorded</span>`);
+const factRow = (f, tools = true) => `<div class="memfact" data-fact="${esc(f.id)}"><div class="row wrap" style="gap:6px"><span class="tag">${esc(FACT_KIND[f.type] || f.type)}</span><span class="tiny faint">${esc(f.date)}</span>${factSource(f)}</div>
+  <div class="small wrap" style="margin-top:4px">${esc(f.text)}</div>${(f.entities || []).length ? `<div class="tiny faint wrap" style="margin-top:3px">${f.entities.map(esc).join(" · ")}</div>` : ""}
+  ${tools ? `<button type="button" class="linkbtn tiny" data-forget="${esc(f.id)}">Forget</button>` : ""}</div>`;
+let ltShow = "all";
+async function vLongTerm() {
+  view.innerHTML = `${memFrame("longterm")}<div class="skeleton" style="height:240px"></div>`;
+  bindMemFrame();
+  const r = await act({ action: "memory_browse" }, null);
+  if (route.name !== "longterm") return;
+  const facts = r?.facts || [], kinds = [["all", "All"], ["world", "Facts"], ["experience", "Happened"], ["observation", "Drawn from several"]];
+  const moved = r?.move?.length ? `<a class="banner info" href="#/longterm?move=1" style="margin-bottom:12px">${ic.alert}<span class="grow"><b>${nf(r.move.length)} are not about you.</b> See them before they move to a wiki.</span>${ic.next}</a>` : "";
+  if (route.q.get("move") && r?.move?.length) return memMove(r.move);
+  view.innerHTML = `${memFrame("longterm")}${moved}
+    ${r?.profile ? `<div class="section-h memgroup"><h3>Your profile</h3><span class="tiny faint">in every prompt</span></div><div class="card pad small wrap" style="white-space:pre-wrap">${esc(r.profile)}</div>` : ""}
+    <div class="section-h memgroup"><h3>Facts · ${nf(facts.length)}</h3><a class="tiny" href="#/crew/memory">Retired, with Undo</a></div>
+    <div class="agf" style="margin-bottom:10px">${kinds.map(([k, l]) => `<button class="fchip ${ltShow === k ? "on" : ""}" data-lt="${k}">${l}</button>`).join("")}</div>
+    <div class="card memlist" id="ltlist"></div>`;
+  bindMemFrame();
+  const draw = () => {
+    $("#ltlist").innerHTML = facts.filter((f) => ltShow === "all" || f.type === ltShow).map((f) => factRow(f)).join("") || `<div class="small muted" style="padding:12px 0">None of this kind.</div>`;
+    $$("[data-forget]").forEach((b) => (b.onclick = async () => {
+      b.disabled = true;
+      if (await act({ action: "crew_memory_forget", ids: [b.dataset.forget], why: "forgotten by the owner, on the Memory tab" }, "Forgotten: it is out of recall, and can be restored under Retired")) { const i = facts.findIndex((f) => f.id === b.dataset.forget); if (i >= 0) facts.splice(i, 1); draw(); } else b.disabled = false;
+    }));
+  };
+  draw();
+  $$("[data-lt]").forEach((b) => (b.onclick = () => { ltShow = b.dataset.lt; $$("[data-lt]").forEach((x) => x.classList.toggle("on", x === b)); draw(); }));
+}
+// The leak (docs/MEMORY.md): what is not about the owner, shown before anything happens. Each can stay; each moved one has its Undo
+function memMove(list) {
+  const topics = [...new Set(list.map((x) => x.topic))].sort();
+  view.innerHTML = `<a class="back" href="#/longterm">${ic.back}Long-term</a><div class="hero heading" style="margin-bottom:10px"><h1>Not about you · ${nf(list.length)}</h1></div>
+    ${explain("mem-move", "These go to a wiki as filed sources, with the chat they came from, and leave long-term memory. Untick any that should stay. Each can be undone under Retired.", "What happens to these")}
+    ${topics.map((t) => { const l = list.filter((x) => x.topic === t); return `<details class="card pad memtopic" style="margin-top:10px"><summary><label class="row" style="gap:10px;display:inline-flex" onclick="event.stopPropagation()"><input type="checkbox" data-mvall="${esc(t)}" checked></label> <b class="small">${esc(t)}</b> <span class="num tiny faint">${l.length}</span></summary>
+      <div style="margin-top:8px">${l.map((x) => `<label class="memfact row" style="gap:10px;align-items:flex-start"><input type="checkbox" data-mv="${esc(x.id)}" data-mvt="${esc(t)}" checked style="margin-top:3px"><span class="small wrap">${esc(x.text)}</span></label>`).join("")}</div></details>`; }).join("")}
+    <div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn primary" id="mvgo">${ic.check}Move the ticked ones</button></div>`;
+  $$("[data-mvall]").forEach((b) => (b.onchange = () => $$("[data-mv]").filter((x) => x.dataset.mvt === b.dataset.mvall).forEach((x) => (x.checked = b.checked))));
+  $("#mvgo").onclick = async () => {
+    const ids = $$("[data-mv]").filter((b) => b.checked).map((b) => b.dataset.mv), keep = $$("[data-mv]").filter((b) => !b.checked).map((b) => b.dataset.mv);
+    $("#mvgo").disabled = true;
+    const r = await act({ action: "memory_move", ids, keep }, (x) => `Moved ${x?.moved ?? 0}: filed for the wikis, and each can be undone under Retired`);
+    if (r) location.hash = "#/longterm"; else $("#mvgo").disabled = false;
+  };
+}
+
+// Code: what it knows about each repository
+function vCodeMem() {
+  const repos = (S?.code?.repos || []).filter((r) => !isTrial(r.name));
+  view.innerHTML = `${memFrame("codemem")}<div class="card list skills">${repos.map((r) => `<a href="#/wiki?root=${encodeURIComponent(`repos/${r.name}/wiki`)}"><div class="grow" style="min-width:0"><div class="ttl wrap skname">${esc(r.name)}</div>
+      <div class="tiny faint wrap" style="margin-top:3px">${[r.codemap ? "code map" : "no code map", r.graph ? `graph of ${nf(r.graph.nodes)} nodes` : "no graph yet", r.files && `${nf(r.files)} files`, r.last && `changed ${rel(r.last.ts)}`].filter(Boolean).map(esc).join(" · ")}</div></div>${ic.next}</a>`).join("") || emptyState(`${ic.code}<div>No repository yet.</div>`, `<a class="btn sm" href="#/build?add=1">Add a repository</a>`)}</div>`;
+  bindMemFrame();
+}
+
+// Journals: each agent's own notebook; its agent page keeps the reading of it
+const journalHref = (id) => (id.startsWith("crew-") ? `#/crew/${encodeURIComponent(id.slice(5))}?tab=memory` : id.startsWith("mission-") ? `#/mission/${encodeURIComponent(id.slice(8))}?tab=memory` : `#/swarm/agent/${encodeURIComponent(id)}`);
+async function vJournals() {
+  view.innerHTML = `${memFrame("journals")}<div class="skeleton" style="height:240px"></div>`;
+  bindMemFrame();
+  const l = await api("/api/journals").catch(() => []);
+  if (route.name !== "journals") return;
+  view.innerHTML = `${memFrame("journals")}<div class="card list skills">${l.map((j) => `<a href="${journalHref(j.id)}"><div class="grow" style="min-width:0"><div class="ttl wrap">${esc(j.name)}</div><div class="sub wrap">${esc(j.last || "")}</div>
+      <div class="tiny faint" style="margin-top:3px">${[j.entries != null && `${nf(j.entries)} entries`, fsize(j.bytes), j.at && `written ${rel(new Date(j.at * 1000).toISOString())}`].filter(Boolean).join(" · ")}</div></div>${ic.next}</a>`).join("") || emptyState(`${ic.doc}<div>No journal yet: an agent writes one after its first run.</div>`, `<a class="btn sm" href="#/missions">See the agents</a>`)}</div>`;
+  bindMemFrame();
+}
+
+// Filed sources: what the vault's wiki is compiled from, as it came
+async function vSources() {
+  view.innerHTML = `<a class="back" href="#/wiki">${ic.back}Wikis</a><div class="hero heading" style="margin-bottom:10px"><h1>Filed sources</h1></div><div class="skeleton" style="height:240px"></div>`;
+  const l = await api("/api/sources").catch(() => []);
+  if (route.name !== "sources") return;
+  view.innerHTML = `<a class="back" href="#/wiki">${ic.back}Wikis</a><div class="hero heading" style="margin-bottom:10px"><h1>Filed sources · ${nf(l.length)}</h1></div>
+    <div class="card list skills">${l.map((x) => `<a href="#/read?path=${encodeURIComponent(x.path)}"><div class="grow" style="min-width:0"><div class="ttl wrap">${esc(x.title)}</div><div class="tiny faint" style="margin-top:3px">${esc(x.kind)} · ${esc(x.date)}</div></div>${ic.next}</a>`).join("") || emptyState(`${ic.doc}<div>Nothing filed yet.</div>`, `<a class="btn sm" href="#/wiki">Add to the vault</a>`)}</div>`;
+}
+
+// One search over all of it, grouped by where each result lives
+async function vMemSearch() {
+  const q = route.q.get("q") || "";
+  view.innerHTML = `${memFrame("")}<div class="skeleton" style="height:240px"></div>`;
+  bindMemFrame();
+  const [r, pages, skills, journals] = await Promise.all([act({ action: "memory_search", q }, null), api(`/api/wiki/search_all?q=${encodeURIComponent(q)}`).catch(() => []), api("/api/skills").catch(() => ({ skills: [] })), api(`/api/journals?q=${encodeURIComponent(q)}`).catch(() => [])]);
+  if (route.name !== "memsearch" || route.q.get("q") !== q) return;
+  const facts = r?.facts || [], low = q.toLowerCase(), sk = (skills.skills || []).filter((x) => !x.archived && `${x.name} ${x.description}`.toLowerCase().includes(low));
+  const head = (t, n) => `<div class="section-h memgroup"><h3>${t} · ${nf(n)}</h3></div>`;
+  view.innerHTML = `${memFrame("")}
+    ${pages.length ? `${head("Wikis", pages.length)}<div class="card list skills">${pages.map((p) => `<a href="#/wiki?root=${encodeURIComponent(p.root)}&page=${encodeURIComponent(p.id)}"><div class="grow" style="min-width:0"><div class="ttl wrap">${esc(p.title)}</div><div class="sub wrap">${esc(p.wiki)}</div></div>${ic.next}</a>`).join("")}</div>` : ""}
+    ${facts.length ? `${head("Long-term", facts.length)}<div class="card memlist">${facts.map((f) => factRow(f, false)).join("")}</div>` : ""}
+    ${sk.length ? `${head("Skills", sk.length)}<div class="card list skills">${sk.map((x) => `<a href="#/skills?s=${encodeURIComponent(x.path)}"><div class="grow" style="min-width:0"><div class="ttl wrap skname">${esc(x.name)}</div><div class="sub wrap">${esc(x.description)}</div></div>${ic.next}</a>`).join("")}</div>` : ""}
+    ${journals.length ? `${head("Journals", journals.length)}<div class="card list skills">${journals.map((j) => `<a href="${journalHref(j.id)}"><div class="grow" style="min-width:0"><div class="ttl wrap">${esc(j.name)}</div><div class="sub wrap">${esc(j.hit || "")}</div></div>${ic.next}</a>`).join("")}</div>` : ""}
+    ${!pages.length && !facts.length && !sk.length && !journals.length ? emptyState(`${ic.search}<div>Nothing found for “${esc(q)}”.</div>`, `<a class="btn sm" href="#/wiki">See the wikis</a>`) : ""}`;
+  bindMemFrame();
+}
+
+// Add to the vault, with the wikis it feeds
+function addVaultHtml() {
+  return `<div class="card pad-l" id="addk" hidden style="margin-bottom:12px">
+    <div class="seg sm">${[["text", "Note"], ["url", "Web page"], ["file", "File"]].map(([k, l], i) => `<button type="button" data-k="${k}" class="${i ? "" : "on"}">${l}</button>`).join("")}</div>
+    <input class="input" id="k_title" placeholder="Title (optional)" style="margin-top:10px">
+    <textarea class="input" id="k_text" rows="4" placeholder="Paste or write a note…" style="margin-top:8px"></textarea>
+    <input class="input" id="k_url" placeholder="https://…" style="margin-top:8px" hidden>
+    <input class="input" id="k_file" type="file" accept=".pdf,.docx,.md,.txt,.html,.pptx,.xlsx,.csv" style="margin-top:8px" hidden>
+    <button class="btn primary" id="k_go" style="margin-top:10px">${ic.plus}Add</button></div>`;
+}
+
+// ---------- Skills (APP-48): what the assistant can look up, each readable ----------
+let skillQ = "", skillF = "all", skillList = null;
+const SKILL_F = [["all", "All"], ["here", "Made here"], ["used", "Used"], ["archived", "Archived"]];
+const skillNeeds = (x) => { const p = x.platforms || []; return p.length && !p.includes("linux") ? `Needs ${p.map((n) => ({ macos: "a Mac", windows: "Windows" })[n] || n).join(" or ")}` : ""; };
+async function vSkills() {
+  const want = route.q.get("s");
+  if (want) return vSkillOne(want);
+  view.innerHTML = `${memFrame("skills")}<div class="skeleton" style="height:240px"></div>`;
+  bindMemFrame();
+  const d = await api("/api/skills").catch((e) => ({ skills: [], error: e.message }));
+  if (route.name !== "skills" || route.q.get("s")) return;
+  skillList = d.skills || [];
+  const live = skillList.filter((x) => !x.archived), used = live.filter((x) => x.opened_30d).length, here = live.filter((x) => !x.bundled).length;
+  view.innerHTML = `${memFrame("skills")}<div class="tiny faint" style="margin-bottom:10px">${nf(live.length)} your assistant can look up · ${nf(here)} made here · ${nf(used)} used in the last 30 days</div>
+    ${d.error ? `<div class="banner" style="margin-bottom:12px">${ic.alert}<span class="small">${esc(d.error)}</span></div>` : ""}
+    <div class="wsearch" style="margin-bottom:10px">${ic.search}<input class="input" id="skq" placeholder="Find a skill: mail, video, research…" value="${esc(skillQ)}"></div>
+    <div class="agf" style="margin-bottom:12px">${SKILL_F.map(([k, l]) => `<button class="fchip ${skillF === k ? "on" : ""}" data-skf="${k}">${l}</button>`).join("")}</div>
+    <div id="sklist"></div>`;
+  const draw = () => {
+    const q = skillQ.toLowerCase();
+    const l = skillList.filter((x) => (skillF === "archived" ? x.archived : !x.archived) && (skillF !== "here" || !x.bundled) && (skillF !== "used" || x.opened_30d)
+      && (!q || `${x.name} ${x.description} ${x.category}`.toLowerCase().includes(q)));
+    const usedIn = (c) => l.filter((x) => x.category === c).reduce((n, x) => n + (x.opened_30d || 0), 0);
+    const cats = [...new Set(l.map((x) => x.category))].sort((a, b) => usedIn(b) - usedIn(a) || a.localeCompare(b));   // what is used first
+    l.sort((a, b) => (b.opened_30d || 0) - (a.opened_30d || 0) || a.name.localeCompare(b.name));
+    $("#sklist").innerHTML = cats.map((c) => `<div class="section-h memgroup"><h3>${esc(c.replace(/-/g, " "))}</h3><span class="num tiny faint">${l.filter((x) => x.category === c).length}</span></div>
+      <div class="card list skills">${l.filter((x) => x.category === c).map((x) => `<a href="#/skills?s=${encodeURIComponent(x.path)}"><div class="grow" style="min-width:0"><div class="ttl wrap skname">${esc(x.name)}</div>
+        <div class="sub wrap">${esc(x.description)}</div>
+        <div class="tiny faint wrap" style="margin-top:3px">${[x.bundled ? "Came with Hermes" : "Made here", x.opened_30d ? `opened ${nf(x.opened_30d)} time${x.opened_30d === 1 ? "" : "s"} in 30 days` : "", skillNeeds(x)].filter(Boolean).map(esc).join(" · ")}</div></div>${ic.next}</a>`).join("")}</div>`).join("")
+      || emptyState(`${ic.search}<div>No skill matches this.</div>`, `<button type="button" class="btn sm" id="skclear">Show all skills</button>`);
+    if ($("#skclear")) $("#skclear").onclick = () => { skillQ = ""; skillF = "all"; $("#skq").value = ""; $$("[data-skf]").forEach((x) => x.classList.toggle("on", x.dataset.skf === "all")); draw(); };
+  };
+  bindMemFrame();
+  draw();
+  $("#skq").oninput = (e) => { skillQ = e.target.value; draw(); };
+  $$("[data-skf]").forEach((b) => (b.onclick = () => { skillF = b.dataset.skf; $$("[data-skf]").forEach((x) => x.classList.toggle("on", x === b)); draw(); }));
+}
+async function vSkillOne(path) {
+  const back = `<a class="back" href="#/skills">${ic.back}Skills</a>`;
+  view.innerHTML = `${back}<div class="skeleton" style="height:240px"></div>`;
+  const x = await api(`/api/skills/one?path=${encodeURIComponent(path)}`).catch(() => null);
+  if (route.name !== "skills") return;
+  if (!x || x.error) { view.innerHTML = `${back}<div class="card pad small muted">This skill is not there any more.</div>`; return; }
+  view.innerHTML = `${back}<div class="hero heading" style="margin-bottom:10px"><h1 class="skname">${esc(x.name)}</h1><p>${esc(x.description)}</p></div>
+    <div class="tiny faint wrap" style="margin-bottom:12px">${[x.category.replace(/-/g, " "), x.bundled ? "Came with Hermes" : "Made here", x.version && `version ${x.version}`, x.author, x.opened_30d ? `opened ${nf(x.opened_30d)} time${x.opened_30d === 1 ? "" : "s"} in 30 days` : "not opened in the last 30 days", skillNeeds(x), x.archived && "Archived"].filter(Boolean).map(esc).join(" · ")}</div>
+    <div class="card pad-l md">${md(x.body)}</div>
+    ${(x.files || []).length ? `<div class="section-h section"><h2>Files with it · ${x.files.length}</h2></div><div class="card pad"><div class="tiny wrap" style="font-family:var(--mono);line-height:1.8">${x.files.map(esc).join("<br>")}</div></div>` : ""}`;
+}
+
 // ---------- Claude tasks (ops/claude_tasks.py): Hermes' questions to Claude Code, with Claude's steps and thinking ----------
 const CT_STATUS = { queued: ["queued", "Queued"], running: ["running", "Working"], done: ["ok", "Answered"], failed: ["failed", "Failed"], waiting: ["paused", "Waits for Claude's limit"] };
 function ctRow(t) {
@@ -3909,8 +4096,9 @@ document.addEventListener("toggle", async (e) => {                   // load a t
       <div style="margin-top:6px">${T.steps.length ? logHtml(T.steps, { level: "all" }) : `<div class="small muted">No steps yet.</div>`}</div></details>`;
 }, true);
 
+const reviewOpen = (r) => !!r && !!(r.pending || r.missing?.length || (r.error && !r.verdict));   // QA-26: as ops/builds.py review_open
 function readyAll(list) {
-  return list.filter((b) => b.checks_ok && (!["ai-stack", "TestRepo"].includes(b.repo) || b.ci === "success") && b.ai_review?.verdict !== "block").length;
+  return list.filter((b) => b.checks_ok && (!["ai-stack", "TestRepo"].includes(b.repo) || b.ci === "success") && b.ai_review?.verdict !== "block" && !reviewOpen(b.ai_review)).length;
 }
 
 function buildRow(b) {
@@ -4148,7 +4336,7 @@ function bindCodeMap(el) {
 }
 
 // the second pair of eyes (ops/builds.py ai_review): the other engine's verdict on the diff
-const VERDICT = { approve: ["ok", "Fine to deploy"], changes: ["paused", "Improve first"], block: ["failed", "Do not deploy"] };
+const VERDICT = { approve: ["ok", "Fine to deploy"], changes: ["paused", "Improve first"], block: ["failed", "Do not deploy"], incomplete: ["paused", "Review incomplete"] };
 const LENS = { requirements: "Requirements and correctness", security: "Security and data flow", agents: "Agents rule (no agent rewrites itself)" };
 function findingsHtml(fs) {
   return fs?.length ? `<ul class="findings">${fs.map((f) => `<li class="${f.severity}"><div class="row wrap" style="gap:6px"><span class="tag sev">${esc(f.severity)}</span>${f.file ? `<span class="mono tiny">${esc(f.file)}${f.line ? `:${f.line}` : ""}</span>` : ""}</div>
@@ -4164,7 +4352,8 @@ function aiReviewHtml(b) {
   const lenses = r.reviews || [];                        // SWM-95: one reviewer per lens, each with its own verdict
   return `<div class="card pad-l aireview"><div class="row between wrap" style="gap:8px"><h2>AI review</h2><span class="tiny faint">${lenses.length ? `${lenses.length} reviewers` : `by ${who(r.engine)}`} · ${rel(r.at)}</span></div>
     <div class="row wrap" style="gap:8px;margin-top:8px;align-items:center"><span class="pill ${cls}">${label}</span>${lenses.length ? `<span class="small muted">the strictest verdict counts${b.override ? `; you overrode the block: “${esc(b.override.reason)}”` : ""}</span>` : `<span class="small">${esc(r.summary)}</span>`}</div>
-    ${r.note ? `<div class="tiny muted" style="margin-top:6px">${esc(r.note)}${r.same_engine ? " Same engine as the builder, so less independent." : ""}</div>` : ""}
+    ${r.missing?.length ? `<div class="small err-t wrap" style="margin-top:6px">Not reviewed: ${r.missing.map((l) => esc(LENS[l] || l)).join(", ")}. It stays out of Approve all; Re-run checks to try again.</div>` : ""}
+    ${r.note ?`<div class="tiny muted" style="margin-top:6px">${esc(r.note)}${r.same_engine ? " Same engine as the builder, so less independent." : ""}</div>` : ""}
     ${lenses.length ? lenses.map((x) => { const [c2, l2] = VERDICT[x.verdict] || ["queued", "not done"]; return `<div class="lens" style="margin-top:12px;border-top:1px solid var(--border);padding-top:10px">
       <div class="row between wrap" style="gap:6px"><b class="small">${esc(LENS[x.lens] || x.lens)}</b><span class="tiny faint">${who(x.engine)}${x.same_engine ? " (same engine as the builder)" : ""}</span></div>
       <div class="row wrap" style="gap:8px;margin-top:6px;align-items:center"><span class="pill ${c2}">${l2}</span><span class="small">${esc(x.summary || x.error || "")}</span></div>${x.verdict ? findingsHtml(x.findings) : ""}</div>`; }).join("")
@@ -4357,34 +4546,6 @@ function stackChecks(sy) {
   const ciCls = (s) => (s === "success" ? "ok" : s === "failure" ? "err" : s === "running" || s === "waiting" ? "run" : "");
   return `<div class="card pad-l section"><div class="row between"><h2>Checks (CI)</h2>${how("stack-page")}</div><div class="list" style="margin-top:6px">${ci.map((c) => `<div style="padding:8px 2px"><span class="dot ${ciCls(c.status)}"></span><div class="grow">${esc(c.repo)}</div><span class="tiny faint">${esc(c.status)} ${esc(c.sha)}</span></div>`).join("")}</div></div>`;
 }
-function stackTop(sy) {
-  const skills = sy.skills || [];
-  return `
-  <div class="split section">
-    <div class="stack">
-      <div class="card pad-l" id="addk">
-        <div class="row between"><h2>Add knowledge to the vault</h2>${how("knowledge")}</div>
-        <div class="small muted" style="margin-top:4px">The curator turns it into linked wiki pages within minutes.</div>
-        <div class="seg" style="margin-top:12px">${[["text", "Note"], ["url", "Web page"], ["file", "File"]].map(([k, l], i) => `<button type="button" data-k="${k}" class="${i ? "" : "on"}">${l}</button>`).join("")}</div>
-        <input class="input" id="k_title" placeholder="Title (optional)" style="margin-top:10px">
-        <textarea class="input" id="k_text" rows="4" placeholder="Paste or write a note…" style="margin-top:8px"></textarea>
-        <input class="input" id="k_url" placeholder="https://…" style="margin-top:8px" hidden>
-        <input class="input" id="k_file" type="file" accept=".pdf,.docx,.md,.txt,.html,.pptx,.xlsx,.csv" style="margin-top:8px" hidden>
-        <button class="btn primary" id="k_go" style="margin-top:10px">${ic.plus}Add to vault</button>
-      </div>
-      <div class="card pad-l">
-        <div class="row between"><h2>Long-term memory</h2>${how("knowledge")}</div>
-        <div class="small muted" style="margin-top:4px">${nf(sy.memory?.facts)} facts, ${nf(sy.memory?.observations)} observations from your conversations.</div>
-        <div class="row" style="margin-top:10px"><input class="input" id="m_q" placeholder="Search what it remembers…"><button class="btn" id="m_go">${ic.search}</button></div>
-        <div id="m_res" class="stack" style="margin-top:10px"></div>
-      </div>
-    </div>
-    <div class="stack">
-      <div class="card pad-l"><div class="row between"><h2>Skills · ${skills.length}</h2>${how("stack-page")}</div><div class="small muted" style="margin-top:4px">What Hermes has learned; saved in Forgejo (hermes-skills).</div><div class="chips" style="margin-top:10px">${skills.map((k) => `<span class="tag">${esc(k)}</span>`).join("")}</div></div>
-    </div>
-  </div>`;
-}
-
 function bar(used, total, warnAt = 0.8) {
   const r = total ? Math.min(1, used / total) : 0;
   return `<div class="meter" style="margin-top:6px"><i style="width:${(r * 100).toFixed(1)}%;${r >= warnAt ? "background:var(--warn)" : ""}${r >= 0.93 ? ";background:var(--err)" : ""}"></i></div>`;
@@ -4401,7 +4562,9 @@ function resourcesHtml(R) {
   return `<div class="grid g2 g4">${tiles.join("")}</div><div class="card pad" style="margin-top:12px"><div class="tiny faint" style="margin-bottom:6px">Per service: CPU · RAM against its limit</div>${svc}</div>`;
 }
 
-function bindStack() {
+function bindAddVault() {
+  const box = $("#addk");
+  if ($("#vaddb")) $("#vaddb").onclick = () => { box.hidden = !box.hidden; if (!box.hidden) $("#k_title").focus(); };
   let kind = "text";
   $$("#addk [data-k]").forEach((b) => (b.onclick = () => {
     kind = b.dataset.k; $$("#addk [data-k]").forEach((x) => x.classList.toggle("on", x === b));
@@ -4422,50 +4585,30 @@ function bindStack() {
       }
     } finally { btn.disabled = false; }
   };
-  const msearch = async () => {
-    const q = $("#m_q").value.trim();
-    if (q.length < 2) return;
-    $("#m_res").innerHTML = `<div class="skeleton" style="height:40px"></div>`;
-    const r = await act({ action: "memory_search", q }, null);   // a search: its answer shows below
-    const facts = r?.facts || [];
-    $("#m_res").innerHTML = (facts.map((f) => `<div class="small"><span class="tag">${esc(f.type)}</span> <span class="faint">${esc(f.date)}</span><div>${esc(f.text)}</div></div>`).join("") || `<div class="small muted">Nothing found.</div>`)
-      + (facts.length ? `<button class="btn sm ghost danger" id="m_forget">${ic.trash}Forget conversations containing “${esc(q)}”</button>` : "");
-    const fb = $("#m_forget");
-    if (fb) fb.onclick = async () => { if (confirm(`Forget every stored conversation containing “${q}”?`)) { await act({ action: "forget", text: q }, "Forgotten: those conversations are gone from long-term memory"); msearch(); } };
-  };
-  $("#m_go").onclick = msearch;
-  $("#m_q").onkeydown = (e) => { if (e.key === "Enter") msearch(); };
 }
 
 // The Stack tab is one page: how the stack works (live map, guide chapters, search) and how it is doing (status),
 // each status section linked to the chapter that explains it. Chapters open as #/guide/<id> (guide.js).
 // MEM-01, MEM-07: every memory the stack keeps (ops/memory.py, refreshed hourly): kind, size, growth, limit, who tidies it, problems
-const MEM_KIND = { working: "what a task hands on", episodic: "what happened", semantic: "what is true", procedural: "how to act", shared: "shared work", index: "search" };
-const fmtBytes = (b) => (b >= 1e9 ? `${nf(b / 1e9, 1)} GB` : b >= 1e6 ? `${nf(b / 1e6, 1)} MB` : `${nf(Math.round((b || 0) / 1e3))} KB`);
 function memUse(m) {                                          // how full it is against its limit: [value, limit, label]
   const [n, unit] = m.limit || [];
   const v = unit === "MB" ? m.bytes / 1e6 : unit === "orphaned share" ? m.orphaned_share || 0 : /per wiki|per journal|lines each/.test(unit || "") ? m.largest || 0 : m.count;
   return n ? [v, n, unit === "orphaned share" ? `${Math.round(100 * v)} % orphaned of ${Math.round(100 * n)} %` : `${nf(Math.round(v))} of ${nf(n)} ${unit}`] : null;
 }
+// Stack → Health: each memory store's figures; reading them is the Memory tab's (APP-50)
 function memoryHtml() {
-  const mem = S.memory, st = mem?.stores || [];
-  if (!st.length) return `<div class="section-h section"><h2>Memory</h2>${how("knowledge")}</div><div class="card pad small muted">The memory inventory comes within the hour.</div>`;
+  const st = S.memory?.stores || [];
+  if (!st.length) return `<div class="section-h section"><h2>Memory</h2></div><div class="card pad small muted">The figures come within the hour.</div>`;
   const row = (m) => {
     const u = m.error ? null : memUse(m), g = m.growth_7d, pct = u ? Math.min(100, (100 * u[0]) / u[1]) : 0;
-    return `<div class="memrow"><div class="row between wrap" style="gap:6px"><b>${esc(m.name)}</b><span class="tag">${esc(MEM_KIND[m.kind] || m.kind)}</span></div>
-      <div class="tiny muted wrap">${esc(m.holds)}</div>
-      ${m.error ? "" : `<div class="small" style="margin-top:4px">${nf(m.count)} ${esc(m.count_label ? `${m.unit} in ${m.count_label}` : m.unit)} · ${fmtBytes(m.bytes)}${g ? ` · <span class="${g.count > 0 ? "warn-t" : "muted"}">${g.count >= 0 ? "+" : ""}${nf(g.count)} since ${esc(g.since)}</span>` : ""}</div>`}
-      ${u ? `<div class="meter" title="${esc(u[2])}"><i style="width:${pct}%;${pct > 90 ? "background:var(--err)" : pct > 70 ? "background:var(--warn)" : ""}"></i></div><div class="tiny faint">${esc(u[2])}</div>` : ""}
-      <div class="tiny faint wrap" style="margin-top:4px">Writes: ${esc(m.writes)} · Reads: ${esc(m.reads)}</div>
-      <div class="tiny wrap ${m.curator || m.tidy ? "faint" : "warn-t"}">${m.tidy && !m.curator ? esc(m.tidy[0].toUpperCase() + m.tidy.slice(1)) : m.curator ? `Tidied by the ${esc(({ memory: "Librarian", checker: "Checker", curator: "skill curator", "wiki-curator": "wiki curator" })[m.curator] || m.curator)}${m.curated ? `, last ${rel(new Date((m.curated > 1e12 ? m.curated : m.curated * 1000)).toISOString())}` : ", not yet"}` : "Nobody tidies it yet"}</div>
+    const count = m.error ? "" : `${nf(m.count)} ${esc(m.count_label ? `${m.unit} in ${m.count_label}` : m.unit)}`;
+    const moved = g?.count ? ` · ${g.count > 0 ? "+" : ""}${nf(g.count)} in 7 days` : "";
+    return `<div class="memrow"><div class="row between wrap" style="gap:6px"><b class="small">${esc(m.name)}</b><span class="small num">${count}${moved}${m.used?.n ? ` · ${esc(m.used.verb)} ${nf(m.used.n)} times in ${m.used.days} days` : ""}</span></div>
+      ${u && pct >= 70 ? `<div class="meter" title="${esc(u[2])}"><i style="width:${pct}%;${pct > 90 ? "background:var(--err)" : "background:var(--warn)"}"></i></div><div class="tiny faint">${esc(u[2])}</div>` : ""}
       ${m.over_since ? `<div class="tiny warn-t wrap">Over its limit since ${day(m.over_since)}; after 8 days its curator gets an alert</div>` : ""}
       ${(m.problems || []).map((p) => `<div class="tiny err-t wrap">${ic.alert} ${esc(p)}</div>`).join("")}</div>`;
   };
-  const bad = st.reduce((n, m) => n + (m.problems || []).length, 0);
-  return `<div class="section-h section"><h2>Memory</h2>${how("knowledge")}</div>
-    ${explain("every-memory-the-stack-k", `Every memory the stack keeps: what it is for, who writes and reads it, how big it is and who keeps it tidy · ${st.length} stores${bad ? ` · <span class="err-t">${bad} problem${bad > 1 ? "s" : ""}</span>` : ""} · as of ${rel(new Date(mem.at * 1000).toISOString())} (hourly)`, "About this")}
-    <div class="card memlist">${st.map(row).join("")}</div>
-    ${librarianHtml(mem.librarian)}`;
+  return `<div class="section-h section"><h2>Memory</h2><a class="tiny" href="#/wiki">Open Memory</a></div><div class="card memlist">${st.map(row).join("")}</div>`;
 }
 
 // MEM-08: the Librarian's last pass over the wikis and the search index (public/librarian.json, via memory.json)
@@ -4486,7 +4629,7 @@ function librarianHtml(lib) {
       ${(w.refused || []).map((x) => `<div class="tiny warn-t wrap">Kept apart ${esc(x.drop)} and ${esc(x.keep)}: ${esc(x.why)}</div>`).join("")}
       ${w.error || w.not_judged ? `<div class="tiny err-t wrap">${ic.alert} ${esc(w.error || `not judged: ${w.not_judged}`)}</div>` : ""}</div>`;
   };
-  return `<div class="section-h section"><h2>The Librarian</h2><span class="tiny faint">last pass ${rel(new Date(lib.at * 1000).toISOString())} · ${nf(lib.seconds || 0)} s${lib.commit ? ` · vault commit ${esc(lib.commit)}` : " · nothing changed"}</span></div>
+  return `<div class="section-h section"><h2>The Memory Keeper's wiki tidy</h2><span class="tiny faint">last pass ${rel(new Date(lib.at * 1000).toISOString())} · ${nf(lib.seconds || 0)} s${lib.commit ? ` · vault commit ${esc(lib.commit)}` : " · nothing changed"}</span></div>
     ${explain("weekly-merges-duplicate-", `Weekly: merges duplicate pages, marks contradictions and stale pages, writes the hub pages that join the wikis, cleans the search index. It adds no facts, and everything it changes can be restored from the vault's history.
       ${n("merged")} merged · ${n("contradictions")} contradictions marked · ${n("stale")} marked stale · ${nf(h.hubs || 0)} hub pages${ix.before ? ` · search index: ${nf(ix.before.orphaned)} → ${nf(ix.after.orphaned)} orphaned chunks` : ix.error ? ` · <span class="err-t">search index cleanup failed: ${esc(ix.error)}</span>` : ""}`, "About this")}
     <div class="card memlist">${ws.map(wrow).join("")}</div>`;
@@ -4505,7 +4648,7 @@ function notifyHtml(sy) {
       ${Object.entries(n.categories).map(([c, d]) => { const [what, ...more] = d.split(": "); return `<tr><td><b>${esc(what)}</b>${more.length ? `<div class="tiny faint">${esc(more.join(": "))}</div>` : ""}</td><td>${box("telegram", c)}</td><td>${box("push", c)}</td></tr>`; }).join("")}</tbody></table>
     <div class="nquiet"><label><input type="checkbox" id="nquiet"${q ? " checked" : ""}> Quiet hours from</label>
       <input class="input" type="time" id="nfrom" value="${esc(q?.from || "22:00")}"> <span>to</span> <input class="input" type="time" id="nto" value="${esc(q?.to || "07:00")}"></div>
-    <div class="tiny faint" style="margin-top:6px">In quiet hours only approvals reach you; the Telegram messages wait and come as one message when they end.${n.quiet_now ? ` <b>Quiet hours now${n.held ? `: ${n.held} waiting` : ""}.</b>` : ""}</div>
+    ${n.quiet_now ? `<div class="tiny faint" style="margin-top:6px"><b>Quiet hours now${n.held ? `: ${n.held} waiting` : ""}.</b></div>` : ""}${explain("quiet-hours-", "In quiet hours only approvals reach you; the Telegram messages wait and come as one message when they end.", "What quiet hours do")}
     <div class="row" style="justify-content:flex-end;margin-top:10px"><button class="btn sm primary" id="nsave">${ic.check}Save</button></div>
   </div>
   <details class="card pad small nrecent" data-keep="nrecent" style="margin-top:10px"><summary>What the stack sent lately · ${n.recent.length}</summary>
@@ -4544,7 +4687,7 @@ async function subsInto(box) {
 }
 
 // APP-47: five parts, one at a time: the page was 21 sections and 13,000 pixels long
-const STACK_TABS = [["tools", "Tools"], ["health", "Health"], ["knowledge", "Knowledge"], ["guide", "Guide"], ["settings", "Settings"]];
+const STACK_TABS = [["tools", "Tools"], ["health", "Health"], ["guide", "Guide"], ["settings", "Settings"]];
 let stackTab = "";
 function vSystem() {
   const sy = S.system || {};
@@ -4554,21 +4697,21 @@ function vSystem() {
   const svc = sy.services || [];
   const down = svc.filter((s) => s.state !== "running");
   view.innerHTML = `
-  <div class="hero stackhero"><div class="grow"><h1>Stack</h1><p>How your AI stack works, and how it is doing right now ·
+  <div class="hero stackhero"><div class="grow"><h1>Stack</h1><p>
     ${notConnected() || !svc.length ? `<b class="err-t">not connected: its state is not known</b>` : down.length ? `<b class="err-t">${down.length} service${down.length > 1 ? "s" : ""} not running</b>` : "all services running"}${notConnected() || !svc.length ? "" : " · "}${notConnected() || !svc.length ? "" : sy.failed?.length ? `<b class="err-t">failed: ${sy.failed.map((u) => {                // which one, one tap to it (UX review 2026-10-30)
       const c = (S.crew || []).find((x) => `${x.unit}.service` === u);
       return c ? `<a class="err-t" href="#/crew/${encodeURIComponent(c.id)}">${esc(c.name)}</a>` : esc(u.replace(/\.service$/, ""));
     }).join(", ")}</b>` : "no errors"}${sy.boot ? ` · last start ${rel(new Date(sy.boot.boot * 1000).toISOString())}, online in ${dur(sy.boot.ready_s)}` : ""}</p></div>
     <a class="btn sm" href="#/files" title="What your missions made, the space it takes, the trash">${ic.doc}Files · ${fsize(S.files?.usage?.used || 0)}${(S.files?.usage?.pct || 0) >= 80 ? ` <b class="err-t">${S.files.usage.pct} %</b>` : ""}</a></div>
-  <nav class="seg stackseg" aria-label="Parts of this page">${STACK_TABS.map(([k, l]) => `<button type="button" data-st="${k}" class="${tab === k ? "on" : ""}">${l}${k === "knowledge" && (sy.pending_memory || []).length ? ` · ${sy.pending_memory.length}` : ""}</button>`).join("")}</nav>
+  <nav class="seg stackseg" aria-label="Parts of this page">${STACK_TABS.map(([k, l]) => `<button type="button" data-st="${k}" class="${tab === k ? "on" : ""}">${l}</button>`).join("")}</nav>
   <div data-sp="tools" ${tab === "tools" ? "" : "hidden"}>
   ${phoneBanner()}
-  <div class="section-h"><h2>Tools</h2><span class="tiny faint">every menu one tap away</span></div>
+  <div class="section-h"><h2>Tools</h2></div>
   <div id="toolsbox" style="margin-bottom:14px">${stackToolsHtml()}</div>
   ${S.house ? `<a class="banner info" href="#/house" style="margin-bottom:14px">${ic.house}<span class="grow"><b>House</b> · ${S.house.connected ? `${(S.house.things || []).length} things, ${(S.house.echos || []).length} Echos` : S.house.reachable ? "setup not finished" : "Home Assistant not reachable"}</span>${ic.next}</a>` : ""}
   ${a2aCardHtml()}
   <div id="subs" style="margin-bottom:14px"></div>
-  <div class="section-h"><h2>Connections</h2><span class="tiny faint">apps the agents may use, only while you allow it</span></div>
+  <div class="section-h"><h2>Connections</h2></div>
   <div id="conncard" class="stack" style="margin-bottom:14px"><div class="skeleton" style="height:90px"></div></div>
   </div>
   <div data-sp="health" ${tab === "health" ? "" : "hidden"}>
@@ -4594,30 +4737,40 @@ function vSystem() {
     </div>
   </div>
   ${stackChecks(sy)}
-  <a class="banner info" href="#/telemetry" style="margin-bottom:14px">${ic.pulse}<span class="grow"><b>Telemetry</b> · how each agent did, day by day: runs, verdicts, tokens, time, cost if paid</span>${ic.next}</a>
-  </div>
-  <div data-sp="knowledge" ${tab === "knowledge" ? "" : "hidden"}>
   ${(sy.pending_memory || []).length ? `<div class="section-h section"><h2>Waiting for you</h2>${how("knowledge")}</div>
     <div class="card list">${sy.pending_memory.map((p) => `<div style="flex-direction:column;gap:8px"><div class="row"><div class="ic warn">${ic.brain}</div><div class="grow small">${esc(p.text)}</div></div>
       <div class="row" style="justify-content:flex-end"><button class="btn sm ghost danger" data-mem="reject" data-id="${esc(p.id)}">${ic.x}Discard</button><button class="btn sm primary" data-mem="approve" data-id="${esc(p.id)}">${ic.check}Remember</button></div></div>`).join("")}</div>` : ""}
-  ${stackTop(sy)}
   ${memoryHtml()}
+  ${S.memory?.stores?.length ? librarianHtml(S.memory.librarian) : ""}
+  <a class="banner info" href="#/telemetry" style="margin-bottom:14px">${ic.pulse}<span class="grow"><b>Telemetry</b> · how each agent did, day by day: runs, verdicts, tokens, time, cost if paid</span>${ic.next}</a>
   </div>
   <div data-sp="guide" ${tab === "guide" ? "" : "hidden"}>
   <div class="wsearch gsearch">${ic.search}<input class="input" id="gq" placeholder="How do I…? Search the guide: triggers, memory, deploy…" value="${esc(guideQuery)}"></div>
   <div id="gresults"></div>
   ${startHereHtml()}
-  <div class="section"><div class="section-h"><h2>How it fits together</h2><span class="tiny faint">live · tap a box to learn about it</span></div>
+  <div class="section"><div class="section-h"><h2>How it fits together</h2></div>
     <div class="card pad-l"><div class="glive" data-live="architecture"></div></div></div>
   <div class="section" id="learn">${learnHtml()}</div>
   </div>
   <div data-sp="settings" ${tab === "settings" ? "" : "hidden"}>
-      <div class="section-h"><h2>Notifications</h2>${how("delivery")}</div>
+      <div class="section-h"><h2>Appearance</h2></div>
+      <div class="card pad">
+        <div class="row between wrap" style="gap:10px"><b class="small">Theme</b><div class="seg sm" id="themeseg">${[["system", "System"], ["light", "Light"], ["dark", "Dark"]].map(([k, l]) => `<button type="button" data-theme-pick="${k}" class="${pref("mc-theme", "system") === k ? "on" : ""}">${l}</button>`).join("")}</div></div>
+        <div class="row between wrap" style="gap:10px;margin-top:12px"><b class="small">Opens on</b><select class="input" id="startpick" style="width:auto">${[["", "Home"], ["#/build", "Code"], ["#/missions", "Agents"], ["#/wiki", "Wiki"], ["#/chat", "Chat"], ["#/system", "Stack"]].map(([k, l]) => `<option value="${k}" ${pref("mc-start", "") === k ? "selected" : ""}>${l}</option>`).join("")}</select></div>
+      </div>
+      <div class="section-h section"><h2>Notifications</h2>${how("delivery")}</div>
       ${notifyHtml(sy)}
       <div class="section-h section"><h2>This device</h2>${how("first-ten-minutes")}</div>
       <div class="card pad" id="device"></div>
   </div>`;
   subsInto($("#subs"));
+  $$("[data-theme-pick]").forEach((b) => (b.onclick = () => {
+    const v = b.dataset.themePick;
+    try { localStorage.setItem("mc-theme", v); } catch (_) { /* then it holds until the page reloads */ }
+    window.applyTheme?.(v);
+    $$("[data-theme-pick]").forEach((x) => x.classList.toggle("on", x === b));
+  }));
+  if ($("#startpick")) $("#startpick").onchange = (e) => { try { localStorage.setItem("mc-start", e.target.value); } catch (_) { /* nothing to keep it in */ } };
   $$("[data-st]").forEach((b) => (b.onclick = () => {
     stackTab = b.dataset.st;
     try { localStorage.setItem("mc-stack-tab", stackTab); } catch (_) { /* a remembered tab is a convenience */ }
@@ -4628,7 +4781,6 @@ function vSystem() {
   bindA2a();                                            // TSK-19: outside agents
   bindStackTools();
   if (!TOOLS) toolsLoad().then(() => { const b = $("#toolsbox"); if (b) { b.innerHTML = stackToolsHtml(); bindStackTools(); } });
-  bindStack();
   bindLearn();
   fillLive();
   $$("[data-mem]").forEach((b) => (b.onclick = async () => { b.disabled = true; await act({ action: "memory", id: b.dataset.id, decision: b.dataset.mem }, b.dataset.mem === "approve" ? "Remembered: Hermes knows it from the next chat" : "Discarded: it is not remembered"); }));

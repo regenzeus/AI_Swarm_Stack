@@ -301,6 +301,21 @@ def test_approve_all_takes_only_what_is_ready(B):
     assert c.execute("select approve_on_ci from builds where id=?", (ids[2],)).fetchone()[0] == 1   # CI still running: deploys later
 
 
+def test_approve_all_leaves_out_a_review_with_a_lens_not_done(B):
+    """QA-26: the audit: a failed lens left "approve" standing, and `missing` was read nowhere. A review that failed whole, or
+    is still going, is no look either; a build with no review record at all stays as it was."""
+    c = mem_db(B)
+    ids = []
+    for rv in ({"verdict": "approve", "missing": []}, {"verdict": "incomplete", "missing": ["security"]}, {"verdict": "approve", "missing": ["security"]},
+               {"error": "review not done: boom"}, {"pending": True}, None):
+        r = B.handle({"action": "build_assign", "repo": "ai-stack", "title": "a build", "description": "something long enough"}, c)
+        B.put(c, r["id"], status="review", checks="ALL CHECKS PASSED, but not run here: compose files valid", ci="success", ai_review=json.dumps(rv) if rv else None)
+        ids.append(r["id"])
+    assert B.handle({"action": "build_approve_all"}, c)["approved"] == [ids[0], ids[5]]
+    B.handle({"action": "build_approve", "id": ids[1]}, c)                                 # your own look at the build still can
+    assert c.execute("select status from builds where id=?", (ids[1],)).fetchone()[0] == "approved"
+
+
 def test_switch_engine_allowed_and_refused(B, monkeypatch):
     c = mem_db(B)
     monkeypatch.setenv("CLAUDE_CODE_OAUTH_TOKEN", "test")

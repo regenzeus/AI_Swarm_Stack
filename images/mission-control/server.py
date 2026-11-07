@@ -39,14 +39,15 @@ PHOENIX = os.environ.get("PHOENIX_URL", "http://phoenix:6006")
 PHOENIX_PORT = 8443                                       # tailscale serve: https://<pc>.ts.net:8443 (tailnet only)
 HERMES_KEY = os.environ.get("API_SERVER_KEY", "")
 ACTIONS = {"claude_task", "windows_ask", "forgejo_connect", "create", "run", "pause", "resume", "archive", "update", "memory", "email", "vault_add", "understand",
-           "forget", "memory_search", "build_assign", "build_revise", "build_approve", "build_approve_all", "build_reject", "build_revert",
+           "forget", "memory_search", "memory_browse", "memory_move", "build_assign", "build_revise", "build_approve", "build_approve_all", "build_reject", "build_revert",
            "improve_scan", "proposal_accept", "proposal_dismiss", "build_recheck", "build_switch_engine", "codemap", "repo_create", "repo_buildable", "repo_remove", "crew_run", "crew_memory_forget", "crew_memory_undo", "crew_schedule",
            "journal_note", "journal_edit", "health_ack", "swarm_pause", "swarm_confirm", "swarm_reopen", "swarm_autonomy", "swarm_post", "swarm_help_verdict", "swarm_agent_change", "phone_cleanup_do", "phone_cleanup_do_all", "phone_cleanup_undo", "phone_cleanup_dismiss",
            "shop_decide", "shop_limits",           # shop_*: only through /api/shop/* (the owner, never the AI phone or an agent)
            "house_connect", "house_switch", "house_alexa", "house_say", "house_settings", "house_status",   # house_*: /api/house* and the house MCP tools
            "notify_prefs", "chat_ready",           # notify_*: the owner's notification preferences; chat_ready: from the app itself
            "task_create", "task_answer", "task_approve", "task_cancel", "task_retry", "task_run", "task_conduct",   # task_*: the task kernel (TSK-01 to TSK-04, TSK-21, TSK-22)
-           "change_request", "change_go", "change_resume", "change_rule",   # change_*: change requests (CHG-01, ops/changes.py)
+           "change_request", "change_go", "change_resume", "change_leave", "change_rule",   # change_*: change requests (CHG-01, ops/changes.py)
+           "decision_test_answer",                 # GEN-03: the tap on the nightly journey's test item; it changes only that item (ops/decisions.py)
            "rule_save", "rule_toggle", "rule_delete", "event_rate", "calendar_set", "calendar_clear",
            "a2a_settings", "a2a_token", "a2a_revoke",
            "wiki_delete",
@@ -106,8 +107,9 @@ def display_name(name, login):
 
 
 def owner_decisions(s):
-    """AUT-05: the two waits only the server sees (the AI phone's approval requests, Gmail's first-Trash batch), in the
-    shape of ops/decisions.py, before the runner's ranked list: both are floor classes, never licensed."""
+    """AUT-05, GEN-02: the waits only the server sees (the AI phone's approval requests, Gmail's first-Trash batch, a
+    mission whose access is not granted), in the shape of ops/decisions.py, before the runner's ranked list: floor classes,
+    never licensed. This is the one list: Home and #/decide both draw what this returns."""
     out, ph, cs = [], s.get("phone") or {}, s.get("connections") or {}
     if ph.get("pending"):
         n = ph["pending"]
@@ -118,6 +120,12 @@ def owner_decisions(s):
         out.append({"id": "gmail-trash", "cls": "delete", "what": "Gmail: a Trash batch waits for your OK", "why": "nothing is moved without it",
                     "href": "#/system?conn=1", "recommend": None, "unanswered": "the mail stays where it is", "expires": None,
                     "answers": [{"label": "Look", "href": "#/system?conn=1"}], "created": None, "weight": 1, "routine": False})
+    for m in s.get("missions") or []:
+        missing = [n for n in m.get("needs") or [] if not ((cs.get(n.split(":")[0]) or {}).get("grants") or {}).get(n.partition(":")[2])]
+        if m.get("status") == "active" and missing:
+            out.append({"id": f"access:{m['slug']}", "cls": "access", "what": f"{m.get('title') or m['slug']} needs access", "why": f"grant {', '.join(missing)} on its page",
+                        "href": f"#/mission/{m['slug']}", "recommend": None, "unanswered": "its tools refuse until you grant it", "expires": None,
+                        "answers": [{"label": "Grant on its page", "href": f"#/mission/{m['slug']}"}], "created": None, "weight": 1, "routine": False})
     return out + list(s.get("decisions") or [])
 
 
@@ -1365,6 +1373,55 @@ def root_ok(root):
     return root in {r["root"] for r in wiki_roots()}
 
 
+def skills_file():
+    try:
+        return json.loads((M / "public/skills.json").read_text())
+    except (OSError, ValueError):
+        return {"skills": [], "error": "The list comes within the hour, once the runner has read them."}
+
+
+async def api_skills(request):
+    """Every skill Hermes can look up, without its instructions (APP-48)."""
+    d = skills_file()
+    return JSONResponse({**d, "skills": [{k: v for k, v in x.items() if k != "body"} for x in d.get("skills") or []]})
+
+
+async def api_skill(request):
+    """One skill with its whole instructions."""
+    want = request.query_params.get("path", "")
+    x = next((x for x in skills_file().get("skills") or [] if x["path"] == want), None)
+    return JSONResponse(x) if x else JSONResponse({"error": "not found"}, status_code=404)
+
+
+async def api_journals(request):
+    """APP-50: each agent's journal: who, how big, when written, its newest entry; with q, those that hold the words."""
+    q = request.query_params.get("q", "").strip().lower()
+    out = []
+    for f in sorted((VAULT / "agents").glob("*/MEMORY.md")):
+        try:
+            txt = f.read_text(errors="replace")
+        except OSError:
+            continue
+        hit = next((ln.strip() for ln in txt.splitlines() if q in ln.lower()), None) if q else None
+        if q and hit is None:
+            continue
+        heads = re.findall(r"^### (.+)$", txt, re.M)
+        out.append({"id": f.parent.name, "name": f.parent.name.replace("crew-", "").replace("mission-", "").replace("-", " ").capitalize(), "bytes": f.stat().st_size,
+                    "at": f.stat().st_mtime, "entries": len(heads), "last": heads[-1] if heads else "", "hit": hit})
+    return JSONResponse(sorted(out, key=lambda x: -x["at"]))
+
+
+async def api_sources(request):
+    """APP-50: the filed sources the vault's wiki is compiled from, newest first."""
+    raw = VAULT / "raw"
+    out = []
+    for f in raw.rglob("*.md") if raw.is_dir() else []:
+        rel = str(f.relative_to(VAULT))
+        name = re.sub(r"^\d{4}-\d{2}-\d{2}-", "", f.stem).replace("-", " ")
+        out.append({"path": rel, "kind": f.parent.name.strip("_"), "title": name.capitalize(), "date": dt.datetime.fromtimestamp(f.stat().st_mtime).strftime("%Y-%m-%d"), "at": f.stat().st_mtime})
+    return JSONResponse(sorted(out, key=lambda x: -x["at"]))
+
+
 async def api_wiki_roots(request):
     """Every wiki (the vault's and each mission's) with pages, links, summary and whether its mission is archived."""
     out = []
@@ -1689,6 +1746,22 @@ async def api_wiki_page(request):
     back = [{"id": b, "title": w["pages"][b]["title"]} for b in sorted(w["back"].get(pid, ())) if b in w["pages"]]
     return JSONResponse({"id": pid, "title": p["title"], "type": p["type"], "meta": meta, "body": p["body"], "links": resolved,
                          "backlinks": back, "path": f"{root}/{pid}.md", "markdown": p["markdown"]})
+
+
+async def api_wiki_search_all(request):
+    """APP-48: pages of every wiki whose title or text contains the search text, the best first."""
+    q = request.query_params.get("q", "").strip().lower()
+    if len(q) < 2:
+        return JSONResponse([])
+    hits = []
+    for r in wiki_roots():
+        if r.get("archived"):
+            continue
+        for p in wiki(r["root"])["pages"].values():
+            txt = f"{p['title']}\n{p['summary']}\n{p['body']}".lower()
+            if q in txt:
+                hits.append({"root": r["root"], "wiki": r.get("title") or r["root"], "id": p["id"], "title": p["title"], "score": (q in p["title"].lower()) * 10 + txt.count(q)})
+    return JSONResponse(sorted(hits, key=lambda h: -h["score"])[:20])  # cap: list (the 20 best pages; a narrower search finds the rest)
 
 
 async def api_wiki_search(request):
@@ -2561,9 +2634,9 @@ app = Starlette(routes=[
     Route("/api/repo/{name}/graph", api_repo_graph), Route("/api/repo/{name}/overview", api_repo_overview),
     Route("/api/repo/{name}/node", api_repo_node), Route("/api/repo/{name}/map", api_repo_map),
     Route("/api/guide", api_guide), Route("/api/guide/live", api_guide_live), Route("/api/guide/{gid}", api_guide_one),
-    Route("/api/wiki/roots", api_wiki_roots), Route("/api/wiki/graph", api_wiki_graph), Route("/api/wiki/map", api_wiki_map), Route("/api/task/map", api_task_map), Route("/api/a2a/token", api_a2a_token, methods=["POST"]),
+    Route("/api/journals", api_journals), Route("/api/sources", api_sources), Route("/api/skills", api_skills), Route("/api/skills/one", api_skill), Route("/api/wiki/roots", api_wiki_roots), Route("/api/wiki/graph", api_wiki_graph), Route("/api/wiki/map", api_wiki_map), Route("/api/task/map", api_task_map), Route("/api/a2a/token", api_a2a_token, methods=["POST"]),
     Route("/.well-known/agent-card.json", a2a_card), Route("/a2a", api_a2a, methods=["POST"]), Route("/api/telemetry", api_telemetry), Route("/api/wiki/access", api_wiki_access),
-    Route("/api/wiki/page", api_wiki_page), Route("/api/wiki/search", api_wiki_search),
+    Route("/api/wiki/page", api_wiki_page), Route("/api/wiki/search", api_wiki_search), Route("/api/wiki/search_all", api_wiki_search_all),
     Route("/api/push/key", api_push_key), Route("/api/push/subscribe", api_push_sub, methods=["POST"]),
     Route("/api/push/unsubscribe", api_push_sub, methods=["POST"]), Route("/api/push/test", api_push_test, methods=["POST"]),
     Mount("/static", StaticFiles(directory=WEB / "static")),
@@ -3018,7 +3091,7 @@ async def build_assign(repo: str, title: str, description: str, engine: str = ""
             else f"Error: {r.get('error')}")
 
 
-VERDICTS = {"approve": "fine to deploy", "changes": "improve first", "block": "do not deploy"}
+VERDICTS = {"approve": "fine to deploy", "changes": "improve first", "block": "do not deploy", "incomplete": "incomplete: a reviewer did not finish"}
 
 
 def review_line(x):
@@ -3061,6 +3134,15 @@ async def build_details(id: int, diff: bool = False) -> str:
     if diff and (BUILDS / f"{x['id']}.diff").exists():
         out.append("Diff:\n" + TC.cut((BUILDS / f"{x['id']}.diff").read_text(errors="replace"), 30000))  # cap: prompt
     return "\n".join(out)
+
+
+@mcp.tool()
+async def task_start(text: str) -> str:
+    """Start a task for work that takes several steps and agents: the task keeper writes what done means, plans it and does it,
+    and the owner follows it on its page. Use it when the owner asks you to get something done that you cannot finish yourself in this
+    chat, rather than answering a question. Say in one line that it started, and give the link."""
+    r = await submit({"action": "task_create", "text": text, "source": "chat"})
+    return f"Task #{r.get('task')} started." + made("task", r.get("task"), "started") if r.get("ok") and r.get("task") else f"Error: {r.get('error')}"
 
 
 @mcp.tool()

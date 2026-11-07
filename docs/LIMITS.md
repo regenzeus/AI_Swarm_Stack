@@ -56,7 +56,7 @@ left out, and the reason says where that is shown.
 | `ops/tasks.py` | `len(text) > 4000` | a task given in a sentence, with its size: the rest goes in a document |
 | `ops/windows_desk.py` | `QUESTION_MAX` | a question for the Windows desk, with its size |
 
-## stops (25)
+## stops (26)
 
 | Where | Limit | Why |
 |---|---|---|
@@ -76,6 +76,7 @@ left out, and the reason says where that is shown.
 | `ops/crew.py` | `--max-turns` | the maintainer's pass past 60 turns is reported as stopped |
 | `ops/crew.py` | `--max-turns` | a crew agent's Board answer past 20 turns is reported as stopped |
 | `ops/evals.py` | `--max-turns` | a replay is one answer, no tools |
+| `ops/journeys.py` | `DECIDE_TIMEOUT` | the decide journey gives the runner and the app this many seconds at each step; past it the journey fails and says which step |
 | `ops/missions.py` | `TASK_TIMEOUT` | one mission run past this counts as failed |
 | `ops/onboard.py` | `ATTEMPTS` | a step that failed this often names its reason and waits for the owner's Try again (BLD-26) |
 | `ops/onboard.py` | `RESTARTS` | a job that died this often without finishing a step says so instead of looping (BLD-26) |

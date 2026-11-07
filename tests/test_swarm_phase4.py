@@ -320,8 +320,8 @@ def test_an_agents_request_to_the_owner_waits_in_needs_you_until_he_answers(ledg
     monkeypatch.undo()
     assert SW.publish()["owner_requests"] == []
     assert L.db.execute("select state, state_reason from messages where mid=?", (m["mid"],)).fetchone()[0] == "completed"
-    js = (Path(__file__).resolve().parent.parent / "images/mission-control/web/static/app.js").read_text()
-    assert "S.swarm?.owner_requests" in js
+    root = Path(__file__).resolve().parent.parent
+    assert '"owner_requests"' in (root / "ops/decisions.py").read_text()     # the one queue (GEN-02) carries it to Home
 
 
 # ---------------------------------------------------------------- SWM-99 flow metrics
