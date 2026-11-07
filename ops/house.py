@@ -30,11 +30,12 @@ import urllib.request
 from pathlib import Path
 
 import runtime as RTM
+import deployment as DEPLOY                        # this deployment's hosts and paths (config/deployment.env)
 import prompts as P                               # MEM-11: the agent prompts live in prompts/<owner>.md
 
 M = None                                          # ops/missions.py (set by missions.main)
 ACTIONS = {"house_connect", "house_switch", "house_alexa", "house_say", "house_settings", "house_status"}
-HA = os.environ.get("HA_URL", "http://192.168.1.10:8123")
+HA = DEPLOY.HA_URL
 TOKEN = os.environ.get("HA_TOKEN", "")
 HOME = Path("/srv/ai/house")
 LOG, SETTINGS = HOME / "log.jsonl", HOME / "settings.json"

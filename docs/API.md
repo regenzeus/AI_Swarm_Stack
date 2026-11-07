@@ -9,7 +9,7 @@ Every `/api/` and `/share` route needs the `Tailscale-User-Login` header that `t
 
 | Route | Methods | What it does |
 |---|---|---|
-| `/` | GET | The app's page (index.html), always revalidated. |
+| `/` | GET | The app's page (index.html) with this deployment's addresses in it, always revalidated. |
 | `/sw.js` | GET | The service worker (offline shell, push, self-update), always revalidated. |
 | `/manifest.webmanifest` | GET | The PWA manifest that makes the app installable. |
 | `/healthz` | GET | Liveness for the deploy's smoke test: whether the runner's state file exists and how old it is. |
@@ -40,6 +40,7 @@ Every `/api/` and `/share` route needs the `Tailscale-User-Login` header that `t
 | `/api/claude/{tid}` | GET | A Claude task (ops/claude_tasks.py): question, answer, status and its steps (with Claude's thinking). |
 | `/api/phoenix` | GET | Open in Phoenix: ?ts=<epoch>&ms=<duration>&model=<name> -> that call's trace; ?from=&to= -> the project's traces. |
 | `/api/build/{bid}/{kind}` | GET | One file of a build (diff, log, steps, files or context) as text. |
+| `/api/change/{tid:int}/{name}` | GET | CHG-14: what the Prober kept of trying a change for real: a log or a screenshot. |
 | `/api/files/{slug}/{name}` | GET | MIS-23: a mission's file: as text for the reader, or with ?download=1 as the file itself (its own name). |
 | `/api/mission/{slug}/drafts` | GET | MIS-23: the Ledger reports a mission's runs wrote (drafts the agent kept there), newest first, from the run record. |
 | `/api/chat` | POST | Start a chat turn: stored at once, answered in the background; follow it with /api/chats/<id>/stream. Body: message, chat?, mission?, model?, effort?, attachments? [ids from /api/chat/upload], truncate? (edit/regenerate: drop messages from this index first). |
@@ -72,6 +73,7 @@ Every `/api/` and `/share` route needs the `Tailscale-User-Login` header that `t
 | `/api/phone/shot/{sid}` | GET | A screenshot the AI phone took, for the owner. |
 | `/api/share/{sid}` | GET | One shared item, for its page with the one-tap choices. |
 | `/api/share/{sid}/save` | POST | Save a shared item into the knowledge base: the link's page, the text, and every document or picture. |
+| `/api/mail` | GET | The mail copy on the NAS and the sender report from its headers (CNX-07, CNX-08): no message text. |
 | `/api/repo/{name}/graph` | GET | The repo's Graphify graph, reduced for drawing: the best-connected nodes (max 200, so phones keep up), their links, communities. |
 | `/api/repo/{name}/overview` | GET | What the repo is: the code map digest (Understand Anything) if there is one, else its README; and the written analysis of its onboarding. |
 | `/api/repo/{name}/node` | GET | Everything about one code graph node: what it is, where it lives, its source, what it calls and what calls it, and what the code map (Understand Anything) says about it and its file. |
@@ -138,6 +140,7 @@ Offered to the agents through LiteLLM's MCP gateway, each under its server's key
 | mcp | `build_request_changes` | Send a build in review (or failed) back to the builder with what to change, exactly as the owner's 'Request changes' button does. Only when the owner asks for it in this chat; write his points as clear, numbered instructions. You can never approve or deploy a build: that is the owner's tap in Mission Control. |
 | mcp | `build_switch_engine` | Move a build to the other engine: 'hermes' (ChatGPT) or 'claude' (Claude Code). Use it when the owner asks, or when a build waits for a usage limit and the owner agrees to switch. A waiting build starts right away; a build in review or failed gets a second attempt that continues from its branch. Not possible while it is working, deploying or merged. |
 | mcp | `builds_overview` | The builder's assignments: number, repo, title, status (queued, working, review, deployed, ...), checks, CI and the AI review's verdict. |
+| mcp | `change_request` | A change request for a repository the builder may change: the swarm specifies it, writes the tests, implements and checks it the repository's way, and comes back with one branch, a report and a pull request for the owner's review. A medium or large change waits for the owner's Go on its specification. Prefer this over build_assign for anything but a tiny edit. request: what should change, in the owner's words. |
 | mcp | `health_issues` |  |
 | mcp | `improvement_proposals` | The stack's own improvement ideas (the swarm's Ledger: from the crew and the weekly self-review): id, state (open, ready, active = being built, checking = shipped, declined, merged, gone), the agent that proposed it, title, and the owner's reason when he decided. The owner decides in Mission Control (Code) whether an idea becomes a build. scan_now=True starts a new self-review now (takes a minute or two). |
 | mcp | `mission_control` | Control a mission: action 'run' (run it now, on demand), 'deep_run' (run a task now as multi-step deep research), 'pause', 'resume' or 'archive' (stops it for good; its files stay in the vault). Use missions_overview for the slug. |

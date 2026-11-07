@@ -67,7 +67,7 @@ def test_the_answer_key_must_score_its_own_reference_fully_and_scores_by_area(tm
     (tmp_path / "demo").symlink_to(k)
     s = T.check(t, run=local)
     assert (s["passed"], s["total"], s["areas"]) == (3, 3, {"add": [3, 3]})
-    (k / "reference/demolib/__init__.py").write_text("def add(a, b):\n    return a * b\n")      # a key that disagrees with itself
+    (k / "reference/demolib/__init__.py").write_text("def add(a, b):\n    return (a * b)  # wrong\n")      # a key that disagrees with itself (another size: Python's bytecode cache goes by size and second)
     with pytest.raises(RuntimeError, match="does not pass its own reference"):
         T.check(t, run=local)
     bad = T.score(tmp_path, k, run=lambda *a, **kw: subprocess.CompletedProcess(a, 1, "", "Traceback: boom"))

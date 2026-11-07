@@ -20,6 +20,8 @@ import urllib.request
 import uuid
 from pathlib import Path
 
+import deployment as DEPLOY                        # this deployment's hosts and paths (config/deployment.env)
+
 STATE = Path("/srv/ai/state")
 PREFS, LOG, HELD, KEYS = (STATE / "notify-prefs.json", STATE / "notifications.jsonl", STATE / "notify-held.jsonl",
                           STATE / "notify-keys.json")
@@ -173,7 +175,7 @@ def telegram_document(name, data, caption="", mime="text/plain"):
 
 
 def _telegram_hermes(text):
-    env = {**os.environ, "DOCKER_HOST": os.environ.get("DOCKER_HOST", "unix:///run/user/1000/docker.sock")}
+    env = {**os.environ, "DOCKER_HOST": os.environ.get("DOCKER_HOST", DEPLOY.DOCKER_SOCKET)}
     r = subprocess.run(["docker", "exec", "-u", "hermes", "aistack-hermes-1", "sh", "-c",
                         'hermes send -t "telegram:$TELEGRAM_ALLOWED_USERS" "$0"', text], capture_output=True, timeout=60, env=env)
     return r.returncode == 0

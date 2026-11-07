@@ -321,7 +321,7 @@ items:
     sources: [docs/REVIEW-2026-10-30.md]
     findings: [FND-73]
     verify: {method: test, by: [tests/test_ux_polish.py::test_the_greeting_uses_a_display_name_and_never_an_e_mail_address,
-      tests/test_ux_polish.py::test_the_stack_page_links_each_section_and_jobs_carry_their_names,
+      tests/test_ux_polish.py::test_the_stack_page_shows_one_part_at_a_time_and_jobs_carry_their_names,
       tests/test_ux_polish.py::test_home_opens_short_and_the_code_tab_never_shows_an_empty_name,
       tests/test_ux_polish.py::test_the_crew_rows_carry_their_unit_so_the_app_can_name_a_job]}
     trace: [images/mission-control/web/static/app.js, images/mission-control/web/static/app.css, images/mission-control/server.py, ops/crew.py]
@@ -437,7 +437,7 @@ items:
       tests/test_provenance.py::test_the_desk_s_chosen_items_are_read_and_a_delivery_comes_from_the_report,
       tests/test_conductor.py::test_a_delivered_briefing_grows_its_topic_wiki_and_a_deleted_one_stays_deleted]}
     trace: [images/mission-control/web/static/task.js, images/mission-control/runrecord.py, images/mission-control/server.py,
-      images/mission-control/web/static/app.css, ops/provenance.py, ops/conductor.py, images/mission-control/guide/20-tasks.md]
+      images/mission-control/web/static/app.css, ops/provenance.py, ops/conductor.py, ops/desk_steps.py, images/mission-control/guide/20-tasks.md]
   - id: APP-37
     title: A card on Home opens its subject
     statement: Each card of Home's feed shall open its subject (the task it names, the mission, the agent a health
@@ -570,3 +570,27 @@ items:
     sources: ['chat 2026-11-06: I want the chat to feel like premium ai chat.. Overall chat doesnt feel that premium.']
     verify: {method: test, by: [tests/test_chat_screen.py::test_the_chat_puts_reading_first]}
     trace: [images/mission-control/web/static/app.js, images/mission-control/web/static/app.css]
+  - id: APP-46
+    title: The look is exact and premium in both themes
+    statement: The app shall use opaque surfaces and readable small print in both themes, one dark console rail with the stack's state in its foot,
+      titles in a wide display face and figures in their own, with its fonts vendored and no glow; and a screen without a connection
+      shall say so instead of claiming that all is quiet.
+    type: constraint
+    priority: should
+    status: implemented
+    parents: [SN-01]
+    sources: [images/mission-control/web/AGENTS.md]
+    verify: {method: test, by: [tests/test_app_layout.py::test_the_look_is_opaque_and_exact_with_its_type_vendored, tests/test_app_layout.py::test_a_screen_without_a_connection_claims_nothing, tests/test_app_layout.py::test_a_fresh_install_sees_no_one_else_s_topics, tests/test_app_layout.py::test_a_page_that_loads_shows_it_is_coming_and_a_tool_without_an_address_has_no_tile, tests/test_app_layout.py::test_an_app_no_runner_ever_wrote_to_is_not_connected]}
+    trace: [images/mission-control/web/static/app.css, images/mission-control/web/static/app.js, images/mission-control/Dockerfile, images/mission-control/web/sw.js, images/mission-control/server.py]
+  - id: APP-47
+    title: Every page opens on its main thing
+    statement: Each page of the app shall show its main objects on the first screen and keep what is secondary one tap away, so that the Code tab shows the
+      repositories in a panel of their own beside the work, the Stack page shows one part at a time, the Agents overview shows the missions without the map above them,
+      and the Wiki tab lists the wikis before their map.
+    type: constraint
+    priority: should
+    status: implemented
+    parents: [SN-01]
+    sources: [images/mission-control/web/AGENTS.md]
+    verify: {method: test, by: [tests/test_ux_polish.py::test_the_code_tab_keeps_the_repositories_apart_from_the_work, tests/test_ux_polish.py::test_the_stack_page_shows_one_part_at_a_time_and_jobs_carry_their_names, tests/test_ux_polish.py::test_the_agents_and_wiki_pages_lead_with_their_lists]}
+

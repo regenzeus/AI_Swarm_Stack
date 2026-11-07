@@ -76,3 +76,24 @@ def ledger(tmp_path, monkeypatch):
     monkeypatch.setattr(SW, "call", send)
     return svc
 
+
+@pytest.fixture(autouse=True)
+def no_machine_folders(tmp_path, monkeypatch):
+    """QA-24: a test never touches this machine's /srv: CI's container has none, so a test that did passed in the builder and
+    failed there, and CI stayed red for days unnoticed. Every folder these modules keep state in points into the test's own."""
+    import crew
+    import journal
+    import notify
+    for mod in (notify, journal, crew):
+        for name, value in list(vars(mod).items()):
+            if isinstance(value, Path) and str(value).startswith("/srv/"):
+                monkeypatch.setattr(mod, name, tmp_path / "srv" / str(value).removeprefix("/srv/"))
+    yield
+
+
+@pytest.fixture(autouse=True)
+def no_steps_in_flight():
+    """A test that keeps a step's job without running it leaves its id behind; the next test's database reuses that id."""
+    import conductor
+    conductor.inflight.clear()
+    yield

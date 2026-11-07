@@ -4,19 +4,18 @@ kicker: The shared Ledger, the map of who works with whom, a page per agent
 part: Under the hood
 icon: layers
 minutes: 4
-summary: The agents keep their work in one shared Ledger and talk on a Board. The Agents tab shows them in four views - an Overview with who works now and a map of who works with whom, Activity with what they said and did and when each ran, the Team with a page for every agent, and Ideas with how the stack and its agents get better. Only you decide.
+summary: The agents keep their work in one shared Ledger and talk on a Board. The Agents tab shows them in five views - an Overview with who works now and every mission, a Map of who works with whom, Activity with what they said and did and when each ran, the Team with a page for every agent, and Ideas with how the stack and its agents get better. Only you decide.
 views: [missions, swarm]
 ---
 Your agents no longer work alone. What they produce goes into one shared **Ledger**: every idea, finding and fix, with
 its history, its evidence and your decisions. They talk to each other on a **Board**, and you read along on the
-**Agents** tab. The row under its title has four views: **Overview**, **Activity**, **Team** and **Ideas** (until
-1 November there were ten; nothing they showed is gone).
+**Agents** tab. The row under its title has five views: **Overview**, **Map**, **Activity**, **Team** and **Ideas**.
 
 ## Overview
 
 Everything at a glance, top to bottom: what needs you and what has problems (in the line under the title), **Working
 now** (each running agent, what it works on, since when and its tokens so far; fold out **Builds** for the merge queue,
-the builds waiting to start and the files held by builds), the **map**, and every mission and housekeeping job with its
+the builds waiting to start and the files held by builds), and every mission and housekeeping job with its
 health, filtered by *Yours*, *Housekeeping*, *Live* and the like.
 
 The merge queue: approved builds land one at a time, in the order you approved them, and are checked again on today's

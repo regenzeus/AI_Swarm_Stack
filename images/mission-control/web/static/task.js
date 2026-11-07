@@ -98,12 +98,13 @@ function taskPage(t) {
   ${many ? `<label class="row small" style="gap:8px;margin-top:12px"><span class="muted">Showing</span><select class="input sm" id="tocc" style="width:auto;max-width:100%">${t.runs.map((r) => `<option value="${r.occ}" ${r.occ === run.occ ? "selected" : ""}>Run ${r.occ} of ${t.runs.length} · ${esc(day(r.started))}${r.verdict ? ` · ${esc((VWORD[r.verdict] || [r.verdict])[0])}` : r.status ? ` · ${esc(r.status)}` : ""}</option>`).join("")}</select></label>` : ""}
   ${blocked ? `<div class="banner" style="margin-top:12px">${ic.alert}<span class="grow wrap"><b>Not done: step ${blocked.idx} (${esc(taskWho(blocked.agent))}) was blocked.</b> ${esc(blocked.error.slice(9))}</span></div>`
     : t.error ? `<div class="banner" style="margin-top:12px">${ic.alert}<span class="grow wrap">${esc(t.error)}</span></div>` : ""}
+  ${changeHtml(t)}
   ${t.status === "needs_answer" ? `<form class="card pad tans" data-tans="${t.id}" style="margin-top:12px"><b>It asks you</b>${(t.questions || []).map((q, i) => `<label><span>${esc(q)}</span><input class="input" name="a${i}" required></label>`).join("")}<div class="row" style="justify-content:flex-end"><button class="btn sm primary">${ic.check}Answer</button></div></form>` : ""}
   <div class="actions">${String(t.source || "").startsWith("trial:") ? `<a class="btn" href="#/trials?t=${encodeURIComponent(t.source.slice(6))}">${ic.target}Trial scoreboard</a>` : ""}
     ${t.door === "plan" && (t.runs || []).length ? `<a class="btn" href="#/taskmap?t=${t.id}${many ? `&o=${run.occ}` : ""}">${ic.wiki}Swarm map</a><a class="btn" href="#/live/${encodeURIComponent(`task:${t.id}${run && run.occ > 1 ? `.${run.occ}` : ""}`)}">${ic.pulse}Live trace</a>` : ""}
     ${t.door && t.ref && TDOOR[t.door] && t.door !== "plan" ? (([h, l]) => `<a class="btn" href="${h}">${ic.next}${esc(l)}</a>`)(TDOOR[t.door](t.ref)) : ""}
-    ${t.status === "waiting_approval" ? `<button class="btn primary" data-tok="${t.id}">${ic.check}Start it</button>` : ""}
-    ${["failed", "cancelled"].includes(t.status) && t.door === "plan" ? `<button class="btn" data-tretry="${t.id}">${ic.repeat}Plan it again</button>` : ""}
+    ${t.status === "waiting_approval" && t.kind !== "change" ? `<button class="btn primary" data-tok="${t.id}">${ic.check}Start it</button>` : ""}
+    ${["failed", "cancelled"].includes(t.status) && t.door === "plan" && t.kind !== "change" ? `<button class="btn" data-tretry="${t.id}">${ic.repeat}Plan it again</button>` : ""}
     ${!["done", "failed", "cancelled"].includes(t.status) && (t.door === "plan" || !t.ref) ? `<button class="btn ghost danger" data-tcancel="${t.id}">${ic.x}Cancel</button>` : ""}</div>
   <div class="seg agtabs">${tabs.map(([k, l]) => `<button data-tt="${k}" class="${ttab === k ? "on" : ""}">${l}${k === "agents" ? ` · ${a.agents.length}` : k === "memory" ? ` · ${a.memory.read.length + a.memory.write.length}` : k === "sources" ? ` · ${(t.prov?.sources || []).filter((s) => s.kind !== "search").length}` : k === "runs" ? ` · ${t.runs.length}` : ""}</button>`).join("")}</div>
   <div id="ttbody" class="section" style="margin-top:14px"></div></div>`;
@@ -111,6 +112,7 @@ function taskPage(t) {
   $$("[data-tt]").forEach((b) => (b.onclick = () => { ttab = b.dataset.tt; history.replaceState(history.state, "", `#/task/${t.id}?tab=${ttab}`); taskPage(t); }));
   if ($("#tocc")) $("#tocc").onchange = (e) => { taskOcc[t.id] = +e.target.value; vTask(); };
   if (typeof bindTasks === "function") bindTasks();
+  changeBind(t);
   const body = $("#ttbody");
   ({ overview: taskOverview, timeline: taskTimeline, agents: taskAgents, sources: taskSources, memory: taskMemory, runs: taskRuns })[ttab](body, t, a, steps);
   $$("[data-tab-go]", body).forEach((b) => (b.onclick = (e) => { e.preventDefault(); go(b.dataset.tabGo); }));
@@ -213,6 +215,40 @@ function taskBubbles(box, t, a, steps, H) {
   const fit = (anim) => (anim ? svg.transition().duration(250) : svg).call(zoom.transform, chartFit(pts, W, H, 8, 1.3, 0));
   const zoom = chartZoom(el, svg, root, { fit });
   fit(false);
+}
+
+// ---------- CHG-16: a change request: its specification, the evidence per criterion, the branch and your review ----------
+function changeCrit(x, st) {
+  const s = st[x.id] || {}, met = s.after === "passes" && s.before !== "passes";
+  const word = met ? "met" : !s.after || s.after === "not run" ? "no test run yet" : "not met";
+  return `<li class="${met ? "" : s.after === "fails" ? "err-t" : ""}">${met ? "✓" : s.after === "fails" ? "✗" : "·"} <b>${esc(x.id)}</b> ${esc(x.text)}<div class="tiny faint wrap">${esc(word)}${s.test ? ` · ${esc(s.test)}: before ${esc(s.before || "not run")}, after ${esc(s.after || "not run")}` : ""}</div></li>`;
+}
+function changeHtml(t) {
+  const ch = t.change || {};
+  if (!(ch.criteria || []).length) return "";
+  const st = ch.acceptance || {}, j = ch.judge || {}, rv = ch.review || {}, pr = ch.probe, go = t.status === "waiting_approval";
+  const words = (k, label) => ((ch[k] || []).length ? `<div class="small" style="margin-top:6px"><b>${label}</b><ul class="tiny" style="margin:2px 0 0">${ch[k].map((x) => `<li class="wrap">${esc(x)}</li>`).join("")}</ul></div>` : "");
+  const budget = t.budget ? `${nf(t.budget.tokens || 0)} tokens` : "";
+  const rounds = Object.entries(ch.rounds || {}).filter(([, n]) => n).map(([k, n]) => `${taskWho(k)} ${n}`).join(", ");
+  return `<div class="card pad-l section" id="tchange"><div class="row between wrap" style="gap:8px"><h2>The change · ${esc(ch.size || "")}</h2>
+      <span class="row wrap" style="gap:6px">${ch.carrier ? `<a class="btn sm primary" href="#/build/${ch.carrier}">${ic.next}Review it</a>` : ""}</span></div>
+    <div class="tiny faint wrap">${[t.repo, ch.branch, budget && `budget ${budget}`, rounds && `fix rounds: ${rounds}`, ch.outcome].filter(Boolean).map(esc).join(" · ")}</div>
+    ${go ? `<form id="chgo" style="margin-top:10px"><label class="small"><b>Acceptance criteria</b><textarea class="input" name="criteria" rows="${Math.min(12, ch.criteria.length + 2)}">${esc(ch.criteria.map((x) => x.text).join("\n"))}</textarea></label>
+        <div class="row" style="justify-content:flex-end;margin-top:8px"><button class="btn primary sm">${ic.check}Go</button></div></form>`
+      : `<ul class="tjudge" style="margin-top:8px">${ch.criteria.map((x) => changeCrit(x, st)).join("")}</ul>`}
+    ${words("scope", "In scope")}${words("out_of_scope", "Out of scope")}${words("files", "Files it expects to touch")}${words("risks", "Risks")}${words("assumptions", "Assumptions")}
+    ${ch.judge ? `<div class="small" style="margin-top:8px"><b>The suite</b> <span class="${j.ok ? "" : "err-t"}">${j.ok ? "passes against the baseline" : "does not pass"}</span>${(j.known || []).length ? ` <span class="tiny faint">· ${nf(j.known.length)} failed already before it</span>` : ""}${(j.flaky || []).length ? ` <span class="tiny faint">· ${nf(j.flaky.length)} flaky</span>` : ""}</div>` : ""}
+    ${rv.verdict ? `<div class="small"><b>Reviewers</b> ${esc(rv.verdict)}${(rv.findings || []).length ? ` · ${nf(rv.findings.length)} findings` : ""}</div>` : ""}
+    ${pr ? `<div class="small"><b>Tried for real</b> ${pr.ok ? "it works" : pr.ran ? '<span class="err-t">it did not work</span>' : "it could not be tried"}<div class="tiny faint wrap">${esc(pr.notes || "")}</div>
+        ${(pr.evidence || []).map((n) => (/\.(png|jpg)$/.test(n) ? `<a href="/api/change/${t.id}/${encodeURIComponent(n)}" target="_blank" rel="noopener"><img src="/api/change/${t.id}/${encodeURIComponent(n)}" alt="${esc(n)}" style="max-width:100%;margin-top:6px;border-radius:8px"></a>` : `<a class="tiny" href="/api/change/${t.id}/${encodeURIComponent(n)}" target="_blank" rel="noopener">${esc(n)}</a> `)).join("")}</div>` : ""}
+    ${t.status === "failed" && t.door === "plan" ? `<div class="row" style="justify-content:flex-end;margin-top:8px"><button class="btn sm" id="chres">${ic.repeat}Go on, with its budget doubled</button></div>` : ""}
+  </div>`;
+}
+function changeBind(t) {
+  const f = $("#chgo");
+  if (f) f.onsubmit = (e) => { e.preventDefault(); act({ action: "change_go", id: t.id, criteria: f.criteria.value }, "Started: its steps show here as they run"); };
+  const r = $("#chres");
+  if (r) r.onclick = () => act({ action: "change_resume", id: t.id }, "It goes on from the step that stopped");
 }
 
 // ---------- the overview: the result first, then how it came about ----------

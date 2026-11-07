@@ -18,7 +18,7 @@ import prompts as P                               # MEM-11: the agent prompts li
 
 M = None                                         # ops/missions.py (set by missions.main)
 ACTIONS = {"wiki_delete"}
-ROOT = re.compile(r"^(missions|topics)/[a-z0-9][a-z0-9-]{0,80}/wiki$")
+ROOT = re.compile(r"^(missions|topics|repos)/[A-Za-z0-9][A-Za-z0-9._-]{0,99}/wiki$")
 EVERY = 6 * 3600                                 # a changed wiki is summarised again at most this often
 PER_PASS = 3
 V = 2                                            # summaries written by an older version are written again
@@ -51,6 +51,8 @@ def roots():
         r = M.X.wiki_root(m)
         if not m.get("wiki_off") and (M.VAULT / r).is_dir() and r not in {x for x, _ in out}:
             out.append((r, m["title"]))
+    for d in sorted((M.VAULT / "repos").glob("*/wiki")) if (M.VAULT / "repos").is_dir() else ():   # CHG-08: one wiki per repository
+        out.append((str(d.relative_to(M.VAULT)), f"{d.parent.name} (repository)"))
     try:                                         # a briefing task's topic without a mission of its own (TSK-22)
         c = M.db()
         for row in c.execute("select title, spec from tasks where door='plan' and status <> 'cancelled' and json_extract(spec, '$.topic') is not null"):

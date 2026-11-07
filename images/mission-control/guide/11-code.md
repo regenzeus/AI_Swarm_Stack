@@ -41,11 +41,42 @@ Tap a repository to open its page:
   the ChatGPT limit stops it, it carries on later where it stopped.
 - **Ask about it**: a chat with Hermes about this repository.
 - **New build**: an assignment for the builder (only for repositories on your Forgejo).
+- **Request a change**: the whole swarm on one change, see below.
 
 ```try
 label: Open the stack's own repository
 open: "#/repo/ai-stack"
 note: The stack studies itself too. Scroll to the graph and tap a node.
+```
+
+## Change requests
+
+Say what should change, on a repository's page or in the chat ("Change ai-stack: ..."), and the swarm takes over. You get
+back one branch where it is done the repository's way, with the evidence, and nothing lands without your tap.
+
+1. **The specification.** The intake writes acceptance criteria a test can check, the scope, the risks and a size. A small
+   change starts at once. A medium or large one waits for your **Go** on its task page, where you can edit the criteria.
+2. **The work.** The suite runs first, so failures that were there already are no fault of the change. For a medium change
+   a tester writes the acceptance tests before the code exists, and each must fail before the coder starts. The coder works
+   on the branch; a breaker tries to make it fail. A program judges: what fails goes back to the coder, up to three rounds.
+3. **The look.** Three reviewers on the other engine (requirements, security, this repository's conventions), then a
+   prober that starts it and uses it, and keeps a log or a screenshot.
+4. **Your review.** The task page shows each criterion with its test before and after the change. **Review it** opens the
+   build page with its diff and report: Approve merges (ai-stack: and deploys), Request changes sends your words back to
+   the coder and the steps after it, Reject ends it.
+
+**One wiki per repository.** What the swarm learns stays: the Scribe writes it at onboarding from the code map and the
+analysis, and after each change from its retro. Each fact names its evidence and each page the commit it held at; a page
+whose files changed since is marked to re-verify, and an agent is told the code wins. What you say in a review becomes a
+lesson there. It sits under Wikis with the others.
+
+**Budgets.** Each size has a budget of tokens, shown on the task page. A change past it stops with the reason, and
+**Go on** carries on from there with the budget doubled. docs/LIMITS.md lists it.
+
+```try
+label: Ask for a change in the chat
+chat: Change TestRepo: add a --version flag to its command line
+note: Hermes calls change_request. A small change starts by itself and shows up under Tasks.
 ```
 
 ## Adding a repository
@@ -82,10 +113,14 @@ note: Hermes calls repos_overview. To create one by chat, say "create a repo cal
 
 ## Where things are
 
-The Code tab starts with **Waiting for you**: every build that is ready for your review, newest first. Tap one to
-see the change (the git diff) right under *Approve & deploy*. Below: what is **being built**, then your
-**repositories**, each with a badge when something waits or is being built there, then *New build*, the stack's own
-suggestions and earlier builds (folded). The red number on **Code** in the menu counts the builds waiting for you.
+**Repositories** have their own panel on the left, always in view: the ones the builder can change come first in bright type,
+then the ones it has only studied, with a number on each that has something waiting for you; exam trials stay folded at the end. On a phone they are one
+of two tabs, **Repositories** and **Work**, and the app remembers the one you used last.
+
+Beside them is the work. **Waiting for you** comes first: every build ready for your review, newest first. Tap one to see the
+change (the git diff) right under *Approve & deploy*. Below it, what is **working** and what has **stopped**; a change is one
+row however many builds its steps are. Earlier builds and the questions your agents asked Claude Code stay folded at the end.
+**New build** and **Add repository** open at the top of the page. The red number on **Code** in the menu counts the builds waiting for you.
 
 ## Removing a repository
 

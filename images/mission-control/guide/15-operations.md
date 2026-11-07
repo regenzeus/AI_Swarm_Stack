@@ -25,6 +25,8 @@ decrypts the secrets it needs for itself and never prints them.
 | `make wiki-rebuild MISSION=<slug>` | compile a mission's wiki again from all its results |
 | `make understand REPO=<url>` | onboard a repository: the whole package, step by step |
 | `make understand-dashboard REPO=<name>` | open its code map |
+| `make mailvault-deploy` | put the copy of your Gmail on the NAS, or update it; never touches the copy |
+| `make mailvault-password` | type the mail copy's own Gmail app password; it goes straight to the NAS |
 | `make ua-enrich REPO=<name>` | explain the files and functions its code map left as placeholders (carries on where it stopped) |
 
 ## One-time setup

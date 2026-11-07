@@ -3,7 +3,8 @@
 # NAS key). One file per run: /volume1/docker/ai-backup/aistack-<date>.tar.gz.age, encrypted to the sops age key,
 # the 14 newest are kept. Restore: ops/restore.sh (see there). Usage: ops/backup.sh
 set -euo pipefail
-export DOCKER_HOST=${DOCKER_HOST:-unix:///run/user/1000/docker.sock}
+eval "$(python3 "$(dirname "$0")/deployment.py" shell)"   # this deployment's hosts and paths (config/deployment.env)
+export DOCKER_HOST=${DOCKER_HOST:-$DOCKER_SOCKET}
 DEST=/volume1/docker/ai-backup
 KEEP=14
 OUTBOX=/srv/ai/backup-outbox; mkdir -p $OUTBOX

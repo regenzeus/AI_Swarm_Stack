@@ -284,6 +284,75 @@ agents:
     budgets: {wakes_per_day: 0, messages_per_hour: 5}
     tools: [mail]
     autonomy: {}
+  - id: postmaster
+    purpose: Looks after the owner's Gmail, carefully. Files the stack's own mail under its label and watches the copy on the NAS.
+    responsibilities: [file only the stack's own mail by its exact sender, report the mail copy's problems, read no message text, remove nothing]
+    owns: {}
+    harness: python
+    model: none
+    key: vk-postmaster
+    jobs: [crew-postmaster]
+    schedule: hourly
+    roles: [mail]
+    rooms: [all]
+    contact: ["*"]
+    wake: never
+    budgets: {wakes_per_day: 0, messages_per_hour: 5}
+    tools: [mail]
+    autonomy: {}
+  - id: scribe
+    purpose: The one writer of every repository's wiki. Seeds it at onboarding, finds how a repository is built and tested, and folds what each change learned into it.
+    responsibilities: [write only facts with their evidence and commit, keep the owner's decisions, never change code]
+    owns: {wiki: every fact names its evidence and the commit it held at}
+    harness: python
+    model: gpt-sub
+    key: vk-scribe
+    prompts: prompts/scribe.md
+    jobs: []
+    schedule: on demand
+    roles: [code, knowledge]
+    rooms: [all, code]
+    contact: ["*"]
+    wake: never
+    budgets: {wakes_per_day: 0, messages_per_hour: 5}
+    memory: {wikis: [own]}
+    tools: []
+    autonomy: {}
+  - id: reviewer
+    purpose: Reviews a whole change through three lenses (requirements, security, this repository's conventions) on the other engine than the code's.
+    responsibilities: [judge the change against its criteria and the repository's rules, change nothing]
+    owns: {}
+    harness: claude-code
+    model: gpt-sub                       # the other engine than the code's (ops/builds.py reviewer_for): the limit it waits for is ChatGPT's
+    key: none
+    jobs: []
+    schedule: on demand
+    roles: [reviewers, code]
+    rooms: [all, code]
+    contact: ["*"]
+    wake: never
+    budgets: {wakes_per_day: 0, messages_per_hour: 5}
+    memory: {wikis: [own]}
+    tools: []
+    autonomy: {}
+  - id: prober
+    purpose: Tries a change for real in the sandbox (starts it, calls it, drives its pages) and keeps the evidence.
+    responsibilities: [use the changed behaviour the way a user would, keep a log or a screenshot, say plainly when it could not be tried, change no code]
+    owns: {}
+    harness: claude-code
+    model: claude-subscription
+    key: none
+    prompts: prompts/prober.md
+    jobs: []
+    schedule: on demand
+    roles: [code, tests]
+    rooms: [all, code]
+    contact: ["*"]
+    wake: never
+    budgets: {wakes_per_day: 0, messages_per_hour: 5}
+    memory: {wikis: [own]}
+    tools: []
+    autonomy: {}
   - id: phone-check
     purpose: Checks the AI phone's battery, storage, patch level and connection.
     responsibilities: [report real faults only]

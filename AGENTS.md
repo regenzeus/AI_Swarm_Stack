@@ -16,6 +16,7 @@ docs it points to. `README.md` is the product overview; `docs/` holds architectu
 | `config/hermes/` | One idempotent script per Hermes profile | [config/hermes/AGENTS.md](config/hermes/AGENTS.md) |
 | `config/litellm/` | The model gateway: models, routing, MCP servers | [config/litellm/AGENTS.md](config/litellm/AGENTS.md) |
 | `prompts/` | Every agent's prompts, one file per agent; each change replay-tested | [prompts/AGENTS.md](prompts/AGENTS.md) |
+| `config/skills/` | Pinned methods for the code roles, off unless a run asks | [config/skills/AGENTS.md](config/skills/AGENTS.md) |
 | `config/gate/` | Single sign-in: the tailnet gates in front of apps with their own login | [config/gate/AGENTS.md](config/gate/AGENTS.md) |
 | `images/` | One directory per custom container image | [images/AGENTS.md](images/AGENTS.md) |
 | `images/mission-control/` | The app (API, MCP tools, web front end, in-app guide) | [images/mission-control/AGENTS.md](images/mission-control/AGENTS.md) |
@@ -46,10 +47,11 @@ docs it points to. `README.md` is the product overview; `docs/` holds architectu
 | `converters/` | Mail and chat export conversion | [converters/AGENTS.md](converters/AGENTS.md) |
 | `nas/` | What runs on the NAS (Forgejo, Home Assistant) | [nas/AGENTS.md](nas/AGENTS.md) |
 | `nas/homeassistant/` | Home Assistant on the NAS: the House (Echos, lights, plugs) | [nas/homeassistant/AGENTS.md](nas/homeassistant/AGENTS.md) |
+| `nas/mailvault/` | The copy of Gmail on the NAS: one way, read-only | [nas/mailvault/AGENTS.md](nas/mailvault/AGENTS.md) |
 | `nas/voice/` | Hermes' voice on the NAS: speech to text and Piper for Home Assistant | [nas/voice/AGENTS.md](nas/voice/AGENTS.md) |
 | `secrets/` | sops-encrypted secrets: never read or edit | [secrets/AGENTS.md](secrets/AGENTS.md) |
 | `vault-template/` | The Obsidian vault's own contract (copied into the vault) | [vault-template/README.md](vault-template/README.md) |
-| root files | `Makefile` (every operation), `versions.env` (pins), `versions.lock` (digests), `README.md`, `NEW-MACHINE.md`, `UPGRADE.md` | this file |
+| root files | `Makefile` (every operation), `versions.env` (pins; this deployment's hosts and paths are in `config/deployment.env`), `versions.lock` (digests), `README.md`, `NEW-MACHINE.md`, `UPGRADE.md` | this file |
 
 ## How to work: the loop
 

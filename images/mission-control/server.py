@@ -22,7 +22,7 @@ from mcp.server.transport_security import TransportSecuritySettings
 from starlette.applications import Starlette
 from starlette.middleware import Middleware
 from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.responses import FileResponse, JSONResponse, PlainTextResponse, RedirectResponse, StreamingResponse
+from starlette.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse, StreamingResponse
 from starlette.routing import Mount, Route
 from starlette.staticfiles import StaticFiles
 from textcap import cut, tail                    # visible caps and input limits (AGENTS.md, truncation)
@@ -46,6 +46,7 @@ ACTIONS = {"claude_task", "windows_ask", "forgejo_connect", "create", "run", "pa
            "house_connect", "house_switch", "house_alexa", "house_say", "house_settings", "house_status",   # house_*: /api/house* and the house MCP tools
            "notify_prefs", "chat_ready",           # notify_*: the owner's notification preferences; chat_ready: from the app itself
            "task_create", "task_answer", "task_approve", "task_cancel", "task_retry", "task_run", "task_conduct",   # task_*: the task kernel (TSK-01 to TSK-04, TSK-21, TSK-22)
+           "change_request", "change_go", "change_resume", "change_rule",   # change_*: change requests (CHG-01, ops/changes.py)
            "rule_save", "rule_toggle", "rule_delete", "event_rate", "calendar_set", "calendar_clear",
            "a2a_settings", "a2a_token", "a2a_revoke",
            "wiki_delete",
@@ -239,6 +240,16 @@ def mission_file(slug, name, version=""):
     return p if p.is_file() and p.resolve().is_relative_to(MFILES.resolve()) else None
 
 
+async def api_change_file(request):
+    """CHG-14: what the Prober kept of trying a change for real: a log or a screenshot."""
+    name = request.path_params["name"]
+    p = M / "public/changes" / str(request.path_params["tid"]) / name
+    if not FILE_NAME.match(name) or not p.is_file():
+        return JSONResponse({"error": "not found"}, status_code=404)
+    types = {".png": "image/png", ".jpg": "image/jpeg", ".log": "text/plain", ".txt": "text/plain", ".json": "application/json"}
+    return FileResponse(p, media_type=types.get(p.suffix.lower(), "text/plain"))
+
+
 async def api_mission_file(request):
     """MIS-23: a mission's file: as text for the reader, or with ?download=1 as the file itself (its own name)."""
     q = request.query_params
@@ -356,7 +367,11 @@ async def api_swarm_timeline(request):
 
 async def api_swarm_interactions(request):
     """SWM-110: the map's dots and lines in the window, counted from the same rows Activity shows, with how much of it has a known cause."""
-    p = await asyncio.to_thread(_picture_of, request, 168)
+    try:
+        p = await asyncio.to_thread(_picture_of, request, 168)
+    except Exception as e:                                # a fresh install has no run record yet: said in words, not as an HTTP 500
+        print(f"swarm interactions: {type(e).__name__}: {e}", flush=True)
+        return JSONResponse({"error": "its run record cannot be read yet"}, status_code=503)
     return JSONResponse({k: p[k] for k in ("since", "now", "nodes", "edges", "coverage", "sources")})
 
 
@@ -1917,7 +1932,7 @@ def phone_seen(request, what):
     print(f"phone {what}: {request.headers.get('tailscale-user-login', '?')} {TC.cut(request.headers.get('user-agent', ''), 80)}", flush=True)  # cap: untrusted
 
 
-AI_PHONE_IP = os.environ.get("PHONE_HOST", "100.64.0.10")
+AI_PHONE_IP = os.environ.get("PHONE_HOST") or "no-phone-host"   # compose always sets it (config/deployment.env); never a client's address
 
 
 def client_ip(request):
@@ -1943,7 +1958,7 @@ async def api_forgejo_connect(request):
 
 
 # ---------- House: Home Assistant on the NAS (ops/house.py) ----------
-HA_BROWSER = os.environ.get("HA_BROWSER_URL", "http://192.168.1.10:8123")   # where the owner's browser reaches it (home Wi-Fi)
+HA_BROWSER = os.environ.get("HA_BROWSER_URL", os.environ.get("HA_URL", ""))   # where the owner's browser reaches it (home Wi-Fi)
 _house_states = {}                                       # OAuth state → (client_id, expiry)
 
 
@@ -2236,9 +2251,33 @@ async def api_version(request):
     return JSONResponse({"version": APP_VERSION}, headers={"Cache-Control": "no-store"})
 
 
+async def api_mail(request):
+    """The mail copy on the NAS and the sender report from its headers (CNX-07, CNX-08): no message text."""
+    d = M / "mail"
+    def read(name):
+        try:
+            return json.loads((d / name).read_text())
+        except (OSError, ValueError):
+            return None
+    crew = read_crew_file("postmaster")
+    return JSONResponse({"status": read("status.json"), "census": read("census.json"), "postmaster": {k: crew.get(k) for k in ("result", "last", "total_filed", "since")}})
+
+
+def read_crew_file(aid):
+    try:
+        return json.loads((M / "crew" / f"{aid}.json").read_text())
+    except (OSError, ValueError):
+        return {}
+
+
+# This deployment's addresses for the front end: compose hands them over (config/deployment.env), the page carries them.
+DEPLOY = {k: os.environ.get(k, "") for k in ("PC_TAILNET_HOST", "NAS_HOST", "HA_URL", "ROUTER_URL", "FORGEJO_URL", "FORGEJO_OWNER", "DEPLOY_USER", "STACK_DIR")}
+
+
 async def index(request):
-    """The app's page (index.html), always revalidated."""
-    return FileResponse(WEB / "index.html", headers={"Cache-Control": "no-cache"})
+    """The app's page (index.html) with this deployment's addresses in it, always revalidated."""
+    page = (WEB / "index.html").read_text().replace("{/*DEPLOY*/}", json.dumps(DEPLOY).replace("<", "\\u003c"))
+    return HTMLResponse(page, headers={"Cache-Control": "no-cache"})
 
 
 async def sw(request):
@@ -2503,7 +2542,7 @@ app = Starlette(routes=[
     Route("/api/file", api_file), Route("/api/runlog/{rid}", api_runlog), Route("/api/run/{rid}/timeline", api_run_timeline), Route("/api/rt/runs", api_rt_runs), Route("/api/task/{tid:int}", api_task),
     Route("/api/agent/{aid}/tasks", api_agent_tasks), Route("/api/trials", api_trials), Route("/api/usage", api_usage), Route("/api/rt/run/{run}", api_rt_run),
     Route("/api/rt/run/{run}/stream", api_rt_stream), Route("/api/crew/{cid}", api_crew_one), Route("/api/swarm", api_swarm, methods=["POST"]), Route("/api/swarm/tokens", api_swarm_tokens), Route("/api/swarm/now", api_swarm_now), Route("/api/swarm/timeline", api_swarm_timeline), Route("/api/swarm/interactions", api_swarm_interactions), Route("/api/swarm/delegations", api_swarm_delegations), Route("/api/swarm/room", api_swarm_room), Route("/api/health/issues", api_health_issues), Route("/api/claude/{tid}", api_claude_task), Route("/api/phoenix", api_phoenix), Route("/api/build/{bid}/{kind}", api_build_file),
-    Route("/api/files/{slug}/{name}", api_mission_file), Route("/api/mission/{slug}/drafts", api_mission_drafts),   # MIS-23
+    Route("/api/change/{tid:int}/{name}", api_change_file), Route("/api/files/{slug}/{name}", api_mission_file), Route("/api/mission/{slug}/drafts", api_mission_drafts),   # MIS-23
     Route("/api/chat", api_chat, methods=["POST"]), Route("/api/chats", api_chats),
     Route("/api/chats/{cid}", api_chat_one, methods=["GET", "DELETE", "PATCH"]), Route("/api/chats/{cid}/stream", api_chat_stream),
     Route("/api/chats/{cid}/stop", api_chat_stop, methods=["POST"]), Route("/api/chats/{cid}/retry", api_chat_retry, methods=["POST"]),
@@ -2518,6 +2557,7 @@ app = Starlette(routes=[
     Route("/api/shop/decide", api_shop_decide, methods=["POST"]), Route("/api/shop/limits", api_shop_limits, methods=["POST"]), Route("/api/clienterror", api_clienterror, methods=["POST"]), Route("/api/view", api_view, methods=["POST"]), Route("/api/views", api_views), Route("/api/phone/decide", api_phone_decide, methods=["POST"]),
     Route("/api/phone/control", api_phone_control, methods=["POST"]), Route("/api/phone/shot/{sid}", api_phone_shot), Route("/api/share/{sid}", api_share),
     Route("/api/share/{sid}/save", api_share_save, methods=["POST"]),
+    Route("/api/mail", api_mail),
     Route("/api/repo/{name}/graph", api_repo_graph), Route("/api/repo/{name}/overview", api_repo_overview),
     Route("/api/repo/{name}/node", api_repo_node), Route("/api/repo/{name}/map", api_repo_map),
     Route("/api/guide", api_guide), Route("/api/guide/live", api_guide_live), Route("/api/guide/{gid}", api_guide_one),
@@ -2944,6 +2984,20 @@ async def vault_add(title: str, text: str = "", url: str = "") -> str:
     if r.get("pending"):
         return "Adding..." + made("note", f"request-{r['id']}")
     return f"Added: {r.get('path')}" + made("note", r.get("path")) if r.get("ok") else f"Error: {r.get('error')}"
+
+
+@mcp.tool()
+async def change_request(repo: str, request: str) -> str:
+    """A change request for a repository the builder may change: the swarm specifies it, writes the tests, implements and
+    checks it the repository's way, and comes back with one branch, a report and a pull request for the owner's review. A
+    medium or large change waits for the owner's Go on its specification. Prefer this over build_assign for anything but a
+    tiny edit. request: what should change, in the owner's words."""
+    r = await submit({"action": "change_request", "repo": repo, "text": request, "source": "chat"}, wait=10)
+    if r.get("ok") and (r.get("result") or {}).get("task"):
+        return f"Change request taken as task #{r['result']['task']}: it shows under Tasks in Mission Control, with its specification first."
+    if r.get("pending"):
+        return "Taking the change request now; it shows under Tasks in Mission Control within a minute. Do not call change_request again for this."
+    return f"Error: {r.get('error') or 'the stack gave no answer'}"
 
 
 @mcp.tool()

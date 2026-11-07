@@ -10,6 +10,7 @@
                         and Claude Code as AISTACK_REF so their runs show up under it.
 Never raises into the caller; observability must not break a run.
 """
+import re
 import json
 import os
 import threading
@@ -200,3 +201,12 @@ def forwarder(stop):
         except Exception:
             pass
         stop.wait(2)
+
+
+
+UNREACHABLE = re.compile(r"no route to host|network is unreachable|could not resolve host|name resolution|connection timed out|connection refused|connection reset", re.I)
+
+
+def unreachable(text):
+    """True when a run failed because the network or the NAS was away for a moment, not because of what it did (task 171)."""
+    return bool(UNREACHABLE.search(text or ""))

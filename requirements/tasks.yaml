@@ -151,7 +151,7 @@ items:
     and starts when memory returns.'
   rationale: 'The first rule asked 1.5 GB free for every step and held the phase 2 gate at 0.7 GB while the owner played
     a game; a step asks for what its harness starts (owner, 31 Oct 2026: "You can make due with less RAM").'
-  verify: {method: test, by: ['tests/test_conductor.py::test_a_step_starts_only_with_headroom_and_says_what_it_waits_for']}
+  verify: {method: test, by: ['tests/test_conductor.py::test_a_step_starts_only_with_headroom_and_says_what_it_waits_for', tests/test_changes.py::test_changes_in_review_take_no_slot_from_the_work]}
   trace: [ops/conductor.py, ops/windows/host-probe.ps1]
 - id: TSK-09
   group: Plan graph and durable steps
@@ -397,7 +397,7 @@ items:
     'tests/test_conductor.py::test_the_owner_can_cancel_and_every_planned_task_goes_to_the_conductor',
     'tests/test_conductor.py::test_a_build_step_waits_for_its_build_and_the_owner_s_tap_and_a_task_runs_again_on_request',
     'tests/test_tasks.py::test_a_sentence_gets_a_specification_and_reaches_its_door']}
-  trace: [ops/missions.py, ops/mission_extras.py, ops/shopping.py, ops/conductor.py, ops/tasks.py]
+  trace: [ops/missions.py, ops/mission_extras.py, ops/shopping.py, ops/conductor.py, ops/shop_steps.py, ops/desk_steps.py, ops/tasks.py]
 - id: TSK-22
   group: Plan graph and durable steps
   phase: 6
@@ -423,7 +423,7 @@ items:
     'tests/test_conductor.py::test_a_briefing_runs_collect_scouts_write_and_deliver_and_each_desk_step_hands_on_its_work',
     'tests/test_conductor.py::test_a_scheduled_task_runs_at_once_then_each_time_from_its_template_with_its_own_trace',
     'tests/test_conductor.py::test_a_step_with_items_fans_out_in_parallel_and_the_next_waits_for_every_copy']}
-  trace: [ops/staffing.py, images/desk/desk.py, ops/desk.sh, ops/conductor.py, ops/tasks.py, images/mission-control/web/static/app.js]
+  trace: [ops/staffing.py, images/desk/desk.py, ops/desk.sh, ops/conductor.py, ops/desk_steps.py, ops/tasks.py, images/mission-control/web/static/app.js]
 - id: TSK-23
   group: Observability of the swarm
   phase: 7
@@ -654,3 +654,27 @@ items:
   verify: {method: test, by: ['tests/test_conductor.py::test_a_step_that_says_it_is_blocked_fails_its_task_at_once_and_says_why',
     'tests/test_tasks.py::test_the_plan_sees_what_each_agent_can_reach']}
   trace: [ops/conductor.py, ops/tasks.py, prompts/shared.md]
+- id: TSK-36
+  group: Plan graph and durable steps
+  phase: 6
+  title: A step kind is declared by the module that owns it
+  statement: The Conductor shall build its adapters, step owners, memory needs and waiting harnesses from the step kinds
+    declared by itself and by each module in its list of domain modules, and shall reach a task kind's own briefing, build
+    and checkpoint logic only through that kind's hooks; when two modules claim one harness or task kind, or a step kind has
+    no function, the import of the Conductor shall fail with a message that names it.
+  type: quality
+  priority: should
+  status: implemented
+  parents: [SN-19]
+  sources: ['task brief 2026-11-06: a small step-kind registry in the Conductor, behaviour unchanged, not a plugin system']
+  acceptance: 'Test: a harness two modules claim and a step kind without its function stop the import with a message naming
+    them; the tables hold the values they held before; a task kind''s hooks are reached through a running task; the
+    shopping and desk steps run from their own modules.'
+  verify: {method: test, by: ['tests/test_conductor.py::test_two_modules_claiming_one_step_or_task_kind_are_refused_at_import',
+    'tests/test_conductor.py::test_a_step_kind_without_its_function_or_with_an_unknown_field_is_refused',
+    'tests/test_conductor.py::test_the_conductor_s_tables_keep_their_names_and_values_from_the_declarations',
+    'tests/test_conductor.py::test_a_task_kind_s_hooks_are_reached_and_the_conductor_names_no_change_logic',
+    'tests/test_conductor.py::test_the_moved_shopping_and_desk_steps_keep_their_place_in_the_plan_and_the_wiring',
+    'tests/test_conductor.py::test_a_price_watch_runs_its_shopping_agent_s_check_and_a_reached_target_starts_its_next_run',
+    'tests/test_conductor.py::test_a_briefing_runs_collect_scouts_write_and_deliver_and_each_desk_step_hands_on_its_work']}
+  trace: [ops/stepkinds.py, ops/conductor.py, ops/changes.py, ops/shop_steps.py, ops/desk_steps.py, ops/missions.py, ops/tasks.py]

@@ -1633,7 +1633,7 @@ items:
   sources: [DEC-24, DEC-25]
   verify:
     method: test
-    by: ['tests/test_swarm_phase4.py::test_leases_keep_tasks_on_the_same_file_apart_and_a_stale_one_expires', 'tests/test_swarm_phase4.py::test_builds_run_together_only_when_their_files_do_not_overlap']
+    by: ['tests/test_swarm_phase4.py::test_leases_keep_tasks_on_the_same_file_apart_and_a_stale_one_expires', 'tests/test_swarm_phase4.py::test_builds_run_together_only_when_their_files_do_not_overlap', 'tests/test_changes.py::test_rechecking_a_build_waits_for_no_other_build_s_files']
   trace: [images/swarm/ledger.py, ops/builds.py]
 - id: SWM-93
   group: Parallel work
@@ -1807,7 +1807,7 @@ items:
   verify:
     method: test
     by: ['tests/test_swarm_views.py::test_runs_are_drawn_in_the_lane_of_their_swarm_agent', 'tests/test_swarm_views.py::test_the_timeline_has_every_run_with_its_lane_its_end_and_what_started_it',
-      'tests/test_swarm_views.py::test_the_agents_tab_is_four_views_and_none_of_the_ten_is_lost']
+      'tests/test_swarm_views.py::test_the_agents_tab_is_five_views_and_none_of_the_ten_is_lost']
   trace: [images/mission-control/runrecord.py, images/mission-control/web/static/swarm.js]
   findings: [FND-40]
 - id: SWM-104
@@ -1827,7 +1827,7 @@ items:
   sources: *id001
   verify:
     method: test
-    by: ['tests/test_swarm_views.py::test_the_map_counts_who_starts_whom_and_shows_what_runs_now', 'tests/test_swarm_views.py::test_the_agents_tab_is_four_views_and_none_of_the_ten_is_lost',
+    by: ['tests/test_swarm_views.py::test_the_map_counts_who_starts_whom_and_shows_what_runs_now', 'tests/test_swarm_views.py::test_the_agents_tab_is_five_views_and_none_of_the_ten_is_lost',
       'tests/test_swarm_views.py::test_the_map_is_agents_as_dots_and_lines_that_open_activity', 'tests/test_swarm_views.py::test_the_map_keeps_fixed_rows_and_no_number_covers_anything']
   trace: [images/mission-control/interactions.py, images/mission-control/runrecord.py, images/mission-control/web/static/swarm.js]
   findings: [FND-40, FND-89]
@@ -1844,7 +1844,7 @@ items:
   sources: *id001
   verify:
     method: test
-    by: ['tests/test_swarm_views.py::test_tool_calls_between_agents_are_exchanges_with_the_whole_question_and_answer', 'tests/test_swarm_views.py::test_the_agents_tab_is_four_views_and_none_of_the_ten_is_lost']
+    by: ['tests/test_swarm_views.py::test_tool_calls_between_agents_are_exchanges_with_the_whole_question_and_answer', 'tests/test_swarm_views.py::test_the_agents_tab_is_five_views_and_none_of_the_ten_is_lost']
   trace: [images/mission-control/runrecord.py, images/mission-control/web/static/swarm.js]
   findings: [FND-40]
 - id: SWM-106
@@ -1863,7 +1863,7 @@ items:
   sources: *id001
   verify:
     method: test
-    by: ['tests/test_swarm_views.py::test_every_team_agent_has_one_page', 'tests/test_swarm_views.py::test_the_agents_tab_is_four_views_and_none_of_the_ten_is_lost']
+    by: ['tests/test_swarm_views.py::test_every_team_agent_has_one_page', 'tests/test_swarm_views.py::test_the_agents_tab_is_five_views_and_none_of_the_ten_is_lost']
   trace: [images/mission-control/web/static/swarm.js, images/swarm/swarm.py]
   findings: [FND-40]
 - id: SWM-107

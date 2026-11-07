@@ -37,6 +37,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "ops"))
+import deployment as DEPLOY  # noqa: E402  (config/deployment.env)
 OUT = Path("/srv/ai/missions/crew/journeys.json")     # the health board reads it (ops/crew.py journey_issues)
 LIVE_DB = Path("/srv/ai/missions/missions.sqlite")
 VAULT = Path("/srv/vault")
@@ -349,12 +350,12 @@ def check_email(run=subprocess.run):
 
 # ---------- tools: every link of the Stack tab's tools opens (APP-30) ----------
 TOOLS = ROOT / "images/mission-control/web/static/tools.json"
-TAILNET = "https://pc.example.ts.net"            # = app.js HOSTURL off the tailnet
+TAILNET = f"https://{DEPLOY.PC_TAILNET_HOST}"       # = app.js HOSTURL off the tailnet
 
 
 def tool_links(tools=None):
     """-> [(tool, menu, url)] of every menu at home or on the tailnet (tailscale.com and the like are not called)."""
-    tools = tools or json.loads(TOOLS.read_text())
+    tools = tools or json.loads(DEPLOY.fill(TOOLS.read_text()))
     out = []
     for t in tools["tools"]:
         base = TAILNET + t["host"][7:] if t["host"].startswith("tailnet") else t["host"]

@@ -362,7 +362,7 @@
  "memory/KEEPER_FACTS": [
   {
    "at": "2026-11-02",
-   "baseline": "new prompt: the Memory Keeper’s look at the owner’s long-term facts (MEM-21, replaces FACTS); tried 3 times in the memory trial (eval/trials/memory.yaml, 32 planted facts): precision 1.0 each time, recall 0.87 to 1.0, no true fact touched",
+   "baseline": "new prompt: the Memory Keeper\u2019s look at the owner\u2019s long-term facts (MEM-21, replaces FACTS); tried 3 times in the memory trial (eval/trials/memory.yaml, 32 planted facts): precision 1.0 each time, recall 0.87 to 1.0, no true fact touched",
    "sha": "304b84691fa0"
   }
  ],
@@ -696,6 +696,83 @@
    "at": "2026-11-06",
    "baseline": "new: the written analysis of an onboarding, 6 Nov 2026",
    "sha": "3f47211c2011"
+  }
+ ],
+ "intake/CHANGE_SPEC": [
+  {
+   "at": "2026-11-06",
+   "baseline": "new: the change-request pipeline (CHG-01 to CHG-18)",
+   "sha": "cd69a6091d0e"
+  }
+ ],
+ "shared/CHANGE_STEP": [
+  {
+   "at": "2026-11-06",
+   "baseline": "new: the change-request pipeline (CHG-01 to CHG-18)",
+   "sha": "c732529b34d4"
+  }
+ ],
+ "builder/ROLE_CODER": [
+  {
+   "at": "2026-11-06",
+   "baseline": "new: the change-request pipeline (CHG-01 to CHG-18)",
+   "sha": "4d5565db32ce"
+  }
+ ],
+ "builder/ROLE_TESTER": [
+  {
+   "at": "2026-11-06",
+   "baseline": "new: the change-request pipeline (CHG-01 to CHG-18)",
+   "sha": "6359ea78bf09"
+  }
+ ],
+ "builder/ROLE_BREAKER": [
+  {
+   "at": "2026-11-06",
+   "baseline": "new: the change-request pipeline (CHG-01 to CHG-18)",
+   "sha": "a2d7b0e93bf1"
+  }
+ ],
+ "prober/PROBE": [
+  {
+   "at": "2026-11-06",
+   "baseline": "new: the change-request pipeline (CHG-01 to CHG-18)",
+   "sha": "71ab45bae987"
+  }
+ ],
+ "scribe/SEED": [
+  {
+   "at": "2026-11-06",
+   "baseline": "new: the change-request pipeline (CHG-01 to CHG-18)",
+   "sha": "80af0a31a18a"
+  }
+ ],
+ "scribe/FOLD_RULE": [
+  {
+   "at": "2026-11-06",
+   "baseline": "new: the change-request pipeline (CHG-01 to CHG-18)",
+   "sha": "b50641e30374"
+  }
+ ],
+ "scribe/PROFILE": [
+  {
+   "at": "2026-11-06",
+   "baseline": "new: the change-request pipeline (CHG-01 to CHG-18)",
+   "sha": "9088d923e886"
+  }
+ ],
+ "builder/ROLE_ANALYST": [
+  {
+   "at": "2026-11-06",
+   "baseline": "new: the change-request pipeline (CHG-01 to CHG-18)",
+   "sha": "21077d7e76ed"
+  }
+ ],
+ "builder/ROLE_ARCHITECT": [
+  {
+   "at": "2026-11-06",
+   "baseline": "new: the change-request pipeline (CHG-01 to CHG-18)",
+   "sha": "b03de8a9403b"
   }
  ]
 }

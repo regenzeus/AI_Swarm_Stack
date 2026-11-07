@@ -15,10 +15,11 @@ from pathlib import Path
 from textcap import tail                    # visible caps and input limits (AGENTS.md, truncation)
 import textcap as TC
 import onboard as O
+import deployment as DEPLOY                        # this deployment's hosts and paths (config/deployment.env)
 
 M = B = None
-CODE = Path.home() / "code"
-STACK = Path.home() / "ai-stack"
+CODE = Path(DEPLOY.CODE_DIR)
+STACK = Path(DEPLOY.STACK_DIR)
 DOCS = Path("/srv/ai/code-docs")
 NAME = re.compile(r"^[a-z0-9][a-z0-9._-]{1,99}$")   # as GitHub allows: a studied repository must stay removable
 _cache = {"t": 0, "data": []}

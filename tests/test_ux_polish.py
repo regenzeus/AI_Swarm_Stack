@@ -19,10 +19,32 @@ def test_the_greeting_uses_a_display_name_and_never_an_e_mail_address():
     assert "${S.viewer_name ? \", \" + esc(String(S.viewer_name).split(\" \")[0]) : \"\"}" in APP
 
 
-def test_the_stack_page_links_each_section_and_jobs_carry_their_names():
-    assert '<nav class="jump" id="stackjump"' in APP and re.search(r"function fillJump\(\) \{.*?scrollIntoView", APP, re.S)
+def test_the_stack_page_shows_one_part_at_a_time_and_jobs_carry_their_names():
     v = re.search(r"^function vSystem\(\).*?^\}$", APP, re.M | re.S)[0]
-    assert "fillJump();" in v and '(S.crew || []).find((c) => c.unit === t.unit)?.name || t.unit' in v
+    for part in ("tools", "health", "knowledge", "guide", "settings"):
+        assert f'data-sp="{part}"' in v
+    assert '(S.crew || []).find((c) => c.unit === t.unit)?.name || t.unit' in v
+    for moved in ("Notifications", "Scheduled jobs", "Connections", "How it fits together", "Health and costs"):
+        assert f"<h2>{moved}</h2>" in v                       # nothing left the page
+
+
+def test_the_agents_and_wiki_pages_lead_with_their_lists():
+    """APP-47: the map stood 1,300 pixels above the missions and 900 above the wikis."""
+    missions = re.search(r"^function vMissions\(\).*?^\}$", APP, re.M | re.S)[0]
+    assert "ovmap" not in missions and '["map", "Map"]' in APP
+    swarm = (ROOT / "images/mission-control/web/static/swarm.js").read_text()
+    assert 'swTab === "map"' in swarm and '<div id="ovmap">' in swarm
+    wiki = re.search(r"^function wikiIndex\(\).*?^\}$", APP, re.M | re.S)[0]
+    assert wiki.index('class="card list wikis"') < wiki.index('class="card pad-l wmap"')
+
+
+def test_the_code_tab_keeps_the_repositories_apart_from_the_work():
+    """APP-47: they were 2,100 pixels down, after 15 questions to Claude, in the same cards as everything else."""
+    v = re.search(r"^function vBuild\(\).*?^\}$", APP, re.M | re.S)[0]
+    assert v.index("repoDir(repos)") < v.index("Waiting for you") < v.index("Earlier builds") < v.index("Questions to Claude Code")
+    css = (ROOT / "images/mission-control/web/static/app.css").read_text()
+    assert re.search(r"\.repodir \{ position: sticky", css) and re.search(r'\.codegrid\[data-pane="work"\] \.repodir', css)
+    assert '<details class="section codehist" data-keep="questions">' in v     # the agents' questions stay folded
 
 
 def test_home_opens_short_and_the_code_tab_never_shows_an_empty_name():

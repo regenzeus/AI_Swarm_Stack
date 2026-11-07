@@ -247,7 +247,7 @@ def test_api_answers_are_never_cached(app):
 
 def test_purchases_are_decided_only_by_the_owner(app):
     c = TestClient(app.app)
-    s22 = {**H, "X-Forwarded-For": "100.64.0.10"}
+    s22 = {**H, "X-Forwarded-For": app.AI_PHONE_IP}
     assert c.post("/api/shop/decide", headers=s22, json={"id": "p-0000abcd", "decision": "approve"}).status_code == 403
     assert c.post("/api/shop/limits", headers=s22, json={"per_purchase_eur": 5000}).status_code == 403
     assert c.post("/api/request", headers=H, json={"action": "shop_decide", "id": "p-0000abcd", "decision": "approve"}).status_code == 403

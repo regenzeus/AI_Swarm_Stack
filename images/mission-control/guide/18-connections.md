@@ -5,7 +5,7 @@ part: Everyday use
 icon: news
 minutes: 4
 summary: Let agents search, read, sort and clean up your Gmail, for a time you choose, with Trash only and an undo.
-views: [system]
+views: [system, mail]
 ---
 Agents can work with your apps through **connections**. Gmail is the first. You decide what they may do and for how
 long; without a grant, every mail tool refuses and tells the agent to ask you.
@@ -39,3 +39,12 @@ note: The mission page then shows "Needs access" with grant buttons. Grant read 
 - Everything the connection does is logged: on the Stack page, and in the mission run's **Log**.
 
 > [!note] More apps follow the same pattern: a sealed connector, scopes you grant for a time, a log.
+
+## Your mail
+
+**Your mail** (a link on the Gmail card) shows two things, made from the headers of your mail alone. No message text is read.
+
+- **The copy on the NAS.** Every mail as a file, kept current every 15 minutes, one way: nothing here can change Gmail, and a mail you delete in Gmail stays on the NAS, marked as gone. The first copy takes days, because Google limits downloads to 2,500 MB a day and the copy stays under it. It uses an app password of its own, which you can revoke alone.
+- **Who writes to you.** One line per sender: how many mails, how many unread, how much space, whether it is a mailing list, and whether you ever wrote back.
+
+The **Postmaster** files the stack's own mail under the label **AI Stack**, out of the inbox. It knows that mail by its exact sender, so what you mail yourself stays where it is. It removes nothing.

@@ -34,3 +34,11 @@ RUN python3 -m venv /opt/serena && /opt/serena/bin/pip install --no-cache-dir se
 # Login shells (Claude Code's Bash tool) reset PATH from /etc/profile and lost the check tools (ruff, pytest, the
 # Python with pyyaml): put them first there too.
 RUN printf 'export PATH=/opt/tools/bin:/opt/hermes/bin:$PATH\n' > /etc/profile.d/10-builder-tools.sh
+# CHG-13: a change request builds and tests a repository in this sandbox, so it carries each repository's toolchain: Go, Rust,
+# Java with Maven, pnpm. CHG-14: the Prober drives web pages with Playwright on the distribution's Chromium (no browser download).
+RUN apt-get update -qq && apt-get install -y -qq --no-install-recommends golang-go cargo default-jdk-headless maven chromium \
+ && rm -rf /var/lib/apt/lists/* \
+ && npm install -g --no-fund --no-audit pnpm@10.18.0 && ln -sf "$(npm prefix -g)/bin/pnpm" /usr/local/bin/pnpm \
+ && /opt/tools/bin/pip install --no-cache-dir playwright==1.55.0 \
+ && go version && cargo --version && mvn --version | head -1 && pnpm --version && chromium --version
+

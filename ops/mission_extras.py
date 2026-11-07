@@ -14,9 +14,10 @@ from textcap import cut, tail                    # visible caps and input limits
 import textcap as TC
 import prompts as P                               # MEM-11: the agent prompts live in prompts/<owner>.md
 import notify as N                                # OBS-16: the one notification path
+import deployment as DEPLOY                        # this deployment's hosts and paths (config/deployment.env)
 
 M = None                      # the missions module
-APP = os.environ.get("MC_URL", "https://pc.example.ts.net:8447")
+APP = DEPLOY.MC_URL
 FORMS = ["8-K", "6-K", "10-Q", "10-K", "20-F", "40-F", "S-1", "S-3", "F-10", "424B5", "SC 13D", "SC 13G", "4", "DEF 14A", "425"]
 DEFAULT_FORMS = ["8-K", "6-K", "10-Q", "10-K", "20-F", "40-F", "S-3", "424B5", "SC 13D", "425"]
 WATCH_EVERY = 600             # seconds between event checks
@@ -430,7 +431,8 @@ def compile_into(root, title, source_rel, text, key, touched=None):
         meta = {"title": TC.cut(str(pg.get("title") or path.split("/")[-1]), 100), "type": KIND.get(path.split("/")[0]) or old.get("type") or "page",  # cap: untrusted
                 "summary": str(pg.get("summary", "")), "aliases": [TC.cut(str(a), 60) for a in pg.get("aliases") or []][:8],  # cap: top (untrusted)
                 "sources": sorted(set((old.get("sources") or []) + [src])), "created": old.get("created", today),   # every source stays (it was the newest 30)
-                "last_validated": today, "trust": "contested" if "[!contradiction]" in body else "news"}
+                "last_validated": today, "trust": "contested" if "[!contradiction]" in body else "news",
+                **{k: old[k] for k in ("repo", "commit", "files", "by") if k in old}}       # CHG-09: a repository page keeps what it cites
         M.write_front(M.VAULT / root / f"{path}.md", meta, body)
         M.RTM.touched(f"{root}/{path}.md", changed=True, note="wiki page compiled from the result")   # MEM-10: the access map sees it
         written.append(path)
@@ -454,6 +456,9 @@ def write_index(root, title):
     for g in ("entities", "projects", "concepts", "events"):
         if groups.get(g):
             idx += [f"## {g.title()}", ""] + [f"- [[{p['path']}|{p['title']}]] — {p['summary']}" for p in groups[g]] + [""]
+    other = [p for g, ps in groups.items() if g not in ("entities", "projects", "concepts", "events") for p in ps]
+    if other:                                    # CHG-08: a repository's wiki has plain pages, not folders
+        idx += ["## Pages", ""] + [f"- [[{p['path']}|{p['title']}]] — {p['summary']}" for p in other] + [""]
     M.write_front(M.VAULT / root / "index.md", {"title": f"{title}: wiki", "type": "index"}, "\n".join(idx))
 
 

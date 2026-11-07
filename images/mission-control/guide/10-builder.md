@@ -72,13 +72,13 @@ branch (or on text Hermes passes), in the builder's sandbox, on your Claude subs
 anything. In *analyse* mode it may also run tests and linters in that copy. Changes still go through builds, which
 now use Claude Code by default when it is connected.
 
-Every task shows in **Code → Claude tasks**: the question, the answer, and what Claude did step by step, including
+Every task shows in **Code → Questions to Claude Code**: the question, the answer, and what Claude did step by step, including
 its thinking. A task that hits the Claude usage limit waits and continues by itself.
 
 ```try
 label: Ask Claude about the stack
 chat: Ask Claude Code how a build gets rolled back in the ai-stack repo, and which files are involved.
-note: Hermes calls claude_task, then claude_task_result for the answer; the task appears under Code → Claude tasks.
+note: Hermes calls claude_task, then claude_task_result for the answer; the task appears under Code → Questions to Claude Code.
 ```
 
 ## A second pair of eyes

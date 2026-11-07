@@ -1,7 +1,7 @@
 {
- "_about": "Every tool the stack runs on, with the menus the owner needs (APP-30): the Stack tab's Tools, the Go-to search and the House page read it; ops/journeys.py opens every link each night. host 'tailnet' = the PC through tailscale serve (anywhere), an address = the home network only.",
+ "_about": "Every tool the stack runs on, with the menus the owner needs (APP-30): the Stack tab's Tools, the Go-to search and the House page read it; ops/journeys.py opens every link each night. host 'tailnet' = the PC through tailscale serve (anywhere), an address = the home network only; a name in double braces = this deployment's value (config/deployment.env).",
  "tools": [
-  {"id": "homeassistant", "name": "Home Assistant", "what": "The house: Echos, lights, plugs, Hermes' voice", "host": "http://192.168.1.10:8123", "status": "house",
+  {"id": "homeassistant", "name": "Home Assistant", "what": "The house: Echos, lights, plugs, Hermes' voice", "host": "{{HA_URL}}", "status": "house",
    "menus": [
     {"name": "Overview", "path": "/", "words": "dashboard home"},
     {"name": "Settings", "path": "/config/dashboard", "words": "configuration"},
@@ -10,19 +10,19 @@
     {"name": "People", "path": "/config/person", "words": "users login person account ai phone"},
     {"name": "Devices", "path": "/config/devices/dashboard", "words": "echo phone plug"},
     {"name": "Logs", "path": "/config/logs", "words": "errors problems"}]},
-  {"id": "nas", "name": "NAS (Synology DSM)", "what": "Storage, backups, Docker, users", "host": "https://192.168.1.10:5001",
+  {"id": "nas", "name": "NAS (Synology DSM)", "what": "Storage, backups, Docker, users", "host": "https://{{NAS_HOST}}:5001",
    "menus": [
     {"name": "Desktop", "path": "/", "words": "dsm synology"},
     {"name": "Control Panel", "path": "/?launchApp=SYNO.SDS.ControlPanel.Instance", "words": "users notification security ssh settings"},
     {"name": "Storage Manager", "path": "/?launchApp=SYNO.SDS.StorageManager.Instance", "words": "disks volume raid space"},
     {"name": "Package Center", "path": "/?launchApp=SYNO.SDS.PkgManApp.Instance", "words": "apps install update"}]},
-  {"id": "fritzbox", "name": "Router", "what": "Internet, Wi-Fi, home network", "host": "http://fritz.box",
+  {"id": "fritzbox", "name": "Router", "what": "Internet, Wi-Fi, home network", "host": "{{ROUTER_URL}}",
    "menus": [
     {"name": "Overview", "path": "/", "words": "router internet wifi wlan guest home network heimnetz fixed address"}]},
-  {"id": "forgejo", "name": "Forgejo", "what": "Code history on the NAS (its own login)", "host": "http://192.168.1.10:3000",
+  {"id": "forgejo", "name": "Forgejo", "what": "Code history on the NAS (its own login)", "host": "{{FORGEJO_URL}}",
    "menus": [
-    {"name": "Repositories", "path": "/regenzeus", "words": "repos git code"},
-    {"name": "ai-stack Actions", "path": "/regenzeus/ai-stack/actions", "words": "ci builds"},
+    {"name": "Repositories", "path": "/{{FORGEJO_OWNER}}", "words": "repos git code"},
+    {"name": "ai-stack Actions", "path": "/{{FORGEJO_OWNER}}/ai-stack/actions", "words": "ci builds"},
     {"name": "Access tokens", "path": "/user/settings/applications", "words": "token key"}]},
   {"id": "hermes", "name": "Hermes admin", "what": "Skills, cron jobs, logs, sessions, settings", "host": "tailnet:8448",
    "menus": [{"name": "Open", "path": "/", "words": "skills cron logs sessions config"}]},

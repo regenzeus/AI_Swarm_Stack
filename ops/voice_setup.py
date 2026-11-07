@@ -12,13 +12,14 @@ pipeline  the Assist pipeline "Hermes" in English: speech to text → Hermes (ho
 """
 import json
 import textcap as TC                              # visible caps (AGENTS.md, truncation)
+import deployment as DEPLOY                        # this deployment's hosts and paths (config/deployment.env)
 import os
 import sys
 import urllib.error
 import urllib.request
 
-HA = os.environ.get("HA_URL", "http://192.168.1.10:8123")
-GATEWAY = "http://192.168.1.20:11434"          # the PC on the LAN; Windows passes 11434 to the gateway (11435), from the NAS only
+HA = DEPLOY.HA_URL
+GATEWAY = f"http://{DEPLOY.PC_LAN_HOST}:11434"    # the PC on the LAN; Windows passes 11434 to the gateway (11435), from the NAS only
 SPEECH = {"stt": ("127.0.0.1", 10300), "tts": ("127.0.0.1", 10200)}
 ROOMS = ("home", "living-room", "kitchen", "office", "bedroom", "bathroom", "hallway", "guest-bath")   # = server.py VOICE_ROOMS
 PIPELINE = "Hermes"

@@ -131,6 +131,27 @@ def test_maker_tools_end_with_the_line_the_app_reads(app, monkeypatch):
     assert asyncio.run(S.mission_set_triggers("lith", [])).endswith("\nchanged: mission:lith")
 
 
+def test_a_change_request_from_the_chat_says_where_it_went(app, monkeypatch):
+    S, sent = app, []
+
+    async def answer(req, wait=8.0):
+        sent.append(req)
+        return {"ok": True, "result": {"task": 12}}
+    monkeypatch.setattr(S, "submit", answer)
+    assert "task #12" in asyncio.run(S.change_request("TestRepo", "Add a version flag"))
+    assert sent == [{"action": "change_request", "repo": "TestRepo", "text": "Add a version flag", "source": "chat"}]
+
+    async def later(req, wait=8.0):
+        return {"ok": True, "pending": True, "id": "x"}
+    monkeypatch.setattr(S, "submit", later)
+    assert "Do not call change_request again" in asyncio.run(S.change_request("TestRepo", "Add a version flag"))
+
+    async def no(req, wait=8.0):
+        return {"ok": False, "error": "that repository is not one the builder may change"}
+    monkeypatch.setattr(S, "submit", no)
+    assert asyncio.run(S.change_request("x", "Add a version flag")).startswith("Error: that repository")
+
+
 def test_a_chat_s_first_title_ends_on_a_whole_word_with_the_cut_marked():
     import server as S
     assert S.chat_title("short  and\nplain") == "short and plain"

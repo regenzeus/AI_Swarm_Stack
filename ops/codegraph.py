@@ -14,8 +14,9 @@ import re
 import sys
 from pathlib import Path
 import textcap as TC                              # visible caps (AGENTS.md, truncation)
+import deployment as DEPLOY                        # this deployment's hosts and paths (config/deployment.env)
 
-GRAPH = Path(os.environ.get("CODE_GRAPH", str(Path.home() / "code/.graphify/merged-graph.json")))
+GRAPH = Path(os.environ.get("CODE_GRAPH", f"{DEPLOY.CODE_DIR}/.graphify/merged-graph.json"))
 EDGES = {"calls", "imports", "imports_from", "references", "indirect_call", "uses", "inherits"}
 TOP = 8
 _cache = {"mtime": None, "edges": {}}

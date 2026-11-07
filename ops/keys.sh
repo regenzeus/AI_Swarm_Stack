@@ -28,6 +28,8 @@ KEYS=(
   "vk-review|gpt-sub,gpt-sub-fast|0.02|"       # the weekly self-review (ops/improve.py)
   "vk-intake|gpt-sub,gpt-sub-fast|0.02|"       # the task intake: a task given in a sentence becomes its specification (ops/tasks.py)
   "vk-inbox|gpt-sub-fast|0.02|mail"            # the Inbox digest: Gmail read under the owner's grant (ops/inbox.py)
+  "vk-postmaster|gpt-sub-fast|0.02|mail"       # the Postmaster: the stack's own mail under its label (ops/postmaster.py); no model yet
+  "vk-scribe|gpt-sub,gpt-sub-fast|0.05|"       # the Scribe: every repository's wiki (ops/repowiki.py, CHG-08); no tools
   "vk-journal|gpt-sub-fast|0.05|"              # agent journals: entries and the curator's folds (ops/journal.py)
   "vk-wikis|gpt-sub-fast|0.02|"                # wiki summaries for the Wiki tab (ops/wikis.py)
   "vk-eval|gpt-sub,gpt-sub-fast|0.05|"         # agent-change experiments: replays of past runs, no tools (ops/evals.py, SWM-18)

@@ -27,7 +27,7 @@ left out, and the reason says where that is shown.
 | `ops/planner.py` | `MAX_TASKS` | a planner's answer with more falls back to one build, which does all of it |
 | `ops/wikis.py` | `len(done) >= PER_PASS` | wiki summaries a pass; the rest the next pass |
 
-## refuses (23)
+## refuses (24)
 
 | Where | Limit | Why |
 |---|---|---|
@@ -49,13 +49,14 @@ left out, and the reason says where that is shown.
 | `ops/files.py` | `ATTACH_MAX` | a mail's attachments together: Gmail takes 25 MB, encoding adds a third |
 | `ops/files.py` | `len(out) > 20` | files asked of one mission, with the limit (MIS-23) |
 | `ops/files.py` | `len(data) > MAX_BYTES` | as MAX_BYTES |
+| `ops/mailvault-password.sh` | `[ ${#pw} -ge 16 ]` | a Gmail app password has 16 letters |
 | `ops/publish.py` | `ASSET_MAX` | an image over this stops a publish, with its name (SEC-19) |
 | `ops/swarm_client.py` | `MAX_INSTRUCTIONS` | a card's standing instructions: more is a prompt change |
 | `ops/swarm_client.py` | `len(ins) > MAX_INSTRUCTIONS` | as MAX_INSTRUCTIONS |
 | `ops/tasks.py` | `len(text) > 4000` | a task given in a sentence, with its size: the rest goes in a document |
 | `ops/windows_desk.py` | `QUESTION_MAX` | a question for the Windows desk, with its size |
 
-## stops (24)
+## stops (25)
 
 | Where | Limit | Why |
 |---|---|---|
@@ -66,6 +67,7 @@ left out, and the reason says where that is shown.
 | `ops/builds.py` | `TIMEOUT` | one build past this fails with its log and can be asked again |
 | `ops/builds.py` | `--max-turns` | a Claude Code build past 200 turns is reported with its turn limit and can be asked again |
 | `ops/builds.py` | `--max-turns` | a Claude Code review past 20 turns is reported as stopped |
+| `ops/changes.py` | `--max-turns` | a probe past 40 turns is reported as stopped; the change goes on to the owner with that said |
 | `ops/checker.py` | `GUARD_TRIPS` | an agent refused this often by the Board's guards in 24 h pauses itself, with a note (SWM-71) |
 | `ops/claude_tasks.py` | `--max-turns` | a Claude task past its mode's turns and time (MODES) is reported as stopped |
 | `ops/conductor.py` | `ATTEMPTS` | a step that failed twice fails its task with the reason; a limit or a restart is no attempt |

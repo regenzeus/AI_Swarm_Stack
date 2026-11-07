@@ -16,12 +16,14 @@ Harness adapters, one contract (run the step's prompt as its agent, give back it
   claude-code  a read-only Claude task in the task's repository; the step waits for it, also across restarts
   build        a builder assignment; the step waits for the build, its checks and the owner's deploy tap
   python       one model call on the agent's own key
-  desk-collect, desk-write, desk-alert, deliver
-               the Topic Desk's steps of a briefing (ops/desk.sh, the desk's container) and its delivery
   opencode     one `opencode run` in a throwaway container on the internal network (the gateway only), the card's model
                and key, the task's repository read-only, no shell, edits or web; its tool and model calls recorded
-  shop         a check of a price watch's shopping agent (ops/shopping.py research: offers, a proposal or watching)
   wiki         a refinement's findings folded into its wiki (mission_extras.compile_into), its page first
+Other modules add their own (TSK-36, DOMAINS, loaded by ops/stepkinds.py, which refuses a harness two of them claim):
+  changes      a change request's judge, reviewers, prober, delivery and scribe, and what a task of kind change does differently
+  shop_steps   shop: a check of a price watch's shopping agent (ops/shopping.py research: offers, a proposal or watching)
+  desk_steps   desk-collect, desk-write, desk-alert, deliver: the Topic Desk's steps of a briefing (ops/desk.sh, the desk's
+               container) and its delivery
 A step starts only with headroom (TSK-08): the memory its harness needs available on the PC (NEED_GB) and its
 subscription below its usage limit; otherwise it waits and the board says why.
 
@@ -50,23 +52,19 @@ from pathlib import Path
 
 import yaml
 
+import changes                                   # TSK-36: the modules that add step kinds (DOMAINS)
+import desk_steps
+import shop_steps
+import stepkinds
 import textcap
 import textcap as TC
+import deployment as DEPLOY                        # this deployment's hosts and paths (config/deployment.env)
 
 ROOT = Path(__file__).resolve().parent.parent
 # limit: waits, steps at once: the PC's memory and the subscriptions decide (DEC-24)
 SLOTS = 2                                         # steps at once: RAM (16 GB) and the subscriptions decide, as for builds (DEC-24)
 # limit: stops, a step that failed twice fails its task with the reason; a limit or a restart is no attempt
 ATTEMPTS = 2                                      # a step that fails twice fails its task (a limit or a restart is no attempt)
-# TSK-08: what a step needs available on the PC (Windows' available memory: free plus the cache it hands back). A model
-# call starts nothing; a Hermes turn starts one process in the running Hermes container; Claude Code starts its own
-# process. The owner keeps playing on this PC (31 Oct 2026): steps ask for what they use, not for a fixed margin.
-NEED_GB = {"python": 0.25, "temp": 0.25, "hermes": 0.5, "claude-code": 0.75, "build": 0.25,   # build: the builder admits its own work
-           "desk-collect": 0.4, "desk-write": 0.3, "desk-alert": 0.3, "deliver": 0.1,       # the desk's container; a delivery
-           "shop": 0.5, "wiki": 0.25,                                                         # a Hermes turn; a model call
-           "opencode": 1.0, "check": 0.3}                                                      # its container; the builder's tests
-OWN_STEPS = {"desk": ("desk-collect", "desk-write", "desk-alert", "deliver"),   # the Topic Desk's steps of a briefing (TSK-22)
-             "mission": ("shop", "wiki")}                                       # the shopping agent's check (TSK-21), a wiki write (TSK-34)
 # limit: drops, the oldest event waiting for one task's next run; said in the activity feed (TSK-21)
 QUEUE = 5                                         # cap: list (events waiting for one task's next run; the oldest are dropped, said in the feed)
 BLOCKED = re.compile(r"\A\s*(?:\**\s*)?(?:step \d+ (?:is )?)?BLOCKED\**\s*:\s*\**\s*(.+)", re.I)         # a step that could not do its work says so first (TASK_STEP): it fails,
@@ -80,11 +78,10 @@ STEP_TIMEOUT = 40 * 60
 HARNESSES = ("hermes", "claude-code", "python", "opencode")   # the harnesses a step can run on (TSK-07)
 OPENCODE_IMAGE = "aistack/opencode:1.19.4-ua1"    # as ops/onboard.py: the pinned OpenCode with its plugins
 OPENCODE_CFG = ROOT / "config/opencode-step.json"  # a step may read, never run, edit or fetch (permission: deny)
-CODE = Path("/home/owner/code")                    # the repositories a task may name (read-only in the step)
+CODE = Path(DEPLOY.CODE_DIR)                      # the repositories a task may name (read-only in the step)
 BUILDER = "builder"                               # its steps run as build assignments (the builder's checks, the owner's deploy tap)
 EACH = 50                                         # limit: refuses, a plan fanning out over more names the limit on the task: SLOTS already paces the copies
-WAITS = ("claude-code", "build")                  # adapters whose steps wait for work elsewhere and are looked at again
-STEP_KINDS = ("build", "check")                   # TRL-07, TRL-08: a card's steps are builds in its lane, or the judge's checks
+CARD_STEPS = ("build", "check")                   # TRL-07, TRL-08: a card's steps are builds in its lane, or the judge's checks
 # limit: stops, fix rounds a check may send back (TRL-08)
 LOOP_MAX = 4                                      # fix rounds a check may send back (TRL-08)
 SEEN = 6000                                       # of each finished step's result, the checkpoint reads (its prompt stays small)
@@ -95,6 +92,8 @@ MAX_STEPS = 12
 FINISHED = ("done", "skipped")                    # a step the Orchestrator dropped counts as settled for those after it
 checkpoint_ask = None                             # tests: the Orchestrator's answer; else the intake's own key (M.ask_json)
 looking = set()                                   # tasks whose checkpoint runs now (a thread; the next tick waits for it)
+resting = {}                                      # step id -> when it may try again, after the network or the NAS was away
+inflight = set()                                  # steps a job works on now: a waiting step is looked at again each tick, and a slow look must not run twice
 HOST = Path("/srv/win-exports/.host/host.json")   # Windows' free memory, written every 30 s by ops/windows/host-probe.ps1
 RESULTS = Path("/srv/vault/tasks")                # the finished task's answer, for the vault's search
 M = None                                          # ops/missions.py, set by its main()
@@ -164,7 +163,7 @@ def cards():
 def runs_steps(card):
     """Can this agent do a step? Its steps are builds or checks (TRL-07), or its harness has an adapter and a python agent
     has its own key."""
-    if card.get("step_kind") in STEP_KINDS:
+    if card.get("step_kind") in CARD_STEPS:
         return True
     return card.get("harness") in HARNESSES and (card["harness"] != "python" or card.get("key") not in (None, "none"))
 
@@ -234,7 +233,7 @@ def graph(plan, agents=None):
             raise ValueError(f"step {i}: {a!r} is no agent that can do a step (one on {', '.join(HARNESSES)})")
         items = TC.limit_items([str(x).strip() for x in p.get("each") or [] if str(x).strip()], EACH, f"items to fan out in step {i}")
         harness = (p["harness"] if p.get("harness") in OWN_STEPS.get(a, ()) else "build" if a == BUILDER
-                   else card["step_kind"] if card.get("step_kind") in STEP_KINDS else card["harness"])
+                   else card["step_kind"] if card.get("step_kind") in CARD_STEPS else card["harness"])
         lp = p.get("loop")
         if lp is not None:                                 # TRL-08: a check may send failures back to an earlier step
             to, mx = lp.get("to") if isinstance(lp, dict) else None, lp.get("max", 2) if isinstance(lp, dict) else None
@@ -459,17 +458,20 @@ def run_build(c, t, s, prompt, card):
         if fb:
             prompt += ("\n\n## Fix round " + str(s["resume"].get("round", 1)) + ": the checks failed after the last build\n"
                        "Make the failing tests pass without weakening or deleting them; then run them all.\n\n```\n" + fb + "\n```")
-        if card.get("lane"):
+        if card.get("lane") and hooks(t).get("lane", True):
             prompt += ("\n\n## Your lane\nChange only files under: " + ", ".join(card["lane"]) + ". A change anywhere else fails this step.")
         res = B.handle({"action": "build_assign", "repo": t["spec"]["repo"], "title": f"{s['agent']}: {t['title']}"[:80], "description": prompt, "context": context,  # cap: id
-                         "source": f"{run_of(t['id'], s.get('occ') or 1)}:step:{s['idx']}"}, c)       # FND-101: its run nests in the step's
+                         "source": f"{run_of(t['id'], s.get('occ') or 1)}:step:{s['idx']}",       # FND-101: its run nests in the step's
+                         **(hooks(t)["assign"](t, s) if "assign" in hooks(t) else {})}, c)
         bid = res.get("build") or res.get("id")
-        put(c, s["id"], resume={"build": bid})
+        put(c, s["id"], resume={**s["resume"], "build": bid})   # its feedback stays for an attempt after this one
         step_ref(c, "build", bid, t["id"])
         M.event("task", "", f"Task #{t['id']} step {s['idx']} became build #{bid}", title="Tasks")
     r = c.execute("select * from builds where id=?", (bid,)).fetchone()
     if r and r["status"] in BUILD_DONE:
         return f"Build #{bid} {r['status']}.\n\n{r['summary'] or ''}".strip()
+    if r and r["status"] == "review" and "built" in hooks(t):                 # its task kind takes it from here
+        return hooks(t)["built"](c, t, s, r)
     if r and r["status"] == "review" and card.get("lane"):                    # TRL-07: a role's build stays in its lane
         outside = [f[-1] for f in json.loads(r["files"] or "[]") if not any(f[-1].startswith(p) for p in card["lane"])]
         if outside:
@@ -486,7 +488,7 @@ def run_build(c, t, s, prompt, card):
         return (f"Build #{bid} is ready (a trial: its answer key scores branch {r['branch']} at {r['head']}; it is never "   # scored, never merged
                 f"merged or deployed).\n\n{r['summary'] or ''}").strip()
     if r and r["status"] in BUILD_FAILED:
-        put(c, s["id"], resume={})                         # the next attempt assigns a new build
+        put(c, s["id"], resume={k: v for k, v in s["resume"].items() if k != "build"})   # the next attempt assigns a new build
         raise RuntimeError(f"build #{bid} {r['status']}: {r['error'] or ''}")
     raise Waiting(f"build #{bid}: " + ("waits for your review" if r and r["status"] == "review" else (r["status"] if r else "starting")))
 
@@ -539,6 +541,8 @@ def spent(c, t, s):
 
 
 def over_budget(c, t, s):
+    if s["harness"] in KINDS.even_spent:
+        return None
     b = t["spec"].get("budget") or (t["spec"].get("preset") or {}).get("budget") or {}
     if not b:
         return None
@@ -548,105 +552,6 @@ def over_budget(c, t, s):
     if b.get("tokens") and tokens > int(b["tokens"]):
         return f"its budget of {int(b['tokens']):,} tokens is spent ({tokens:,})"
     return None
-
-
-# ---------- a briefing as a plan (TSK-22): collect, research per key question, write, deliver ----------
-def briefing_plan(t, topic):
-    """The plan of every occurrence of a briefing task, from its topic (topics/<slug>/TOPIC.md)."""
-    qs = [str(q).strip() for q in topic.get("key_questions") or [] if str(q).strip()][:6] or [t["goal"]]   # cap: list (scouts per run)
-    days = max(1, round(int(topic.get("window_hours") or 36) / 24))
-    span = "the last day" if days <= 1 else f"the last {days} days"
-    return [{"step": "Collect the news, feeds, filings, job openings and prices", "agent": "desk", "harness": "desk-collect", "after": [],
-             "why": "the Topic Desk reads the brief's sources on its isolated network and keeps what is new and on topic"},
-            {"step": f"Research {span}", "agent": "scout", "each": qs, "after": [1],
-             "why": "one scout per key question, at the same time: the web and the job board beyond what the desk collected"},
-            {"step": "Write the briefing, every claim cited", "agent": "desk", "harness": "desk-write", "after": [2],
-             "why": "the Topic Desk writes from the collected events and the scouts' findings and checks each citation"},
-            {"step": "Deliver it", "agent": "desk", "harness": "deliver", "after": [3],
-             "why": "files it in the vault and sends it the ways the task asked"}]
-
-
-def alert_plan(t):
-    """The plan of each occurrence of a briefing task that runs on an event: the desk's alert, then its delivery."""
-    return [{"step": "Write the alert from the event's sources", "agent": "desk", "harness": "desk-alert", "after": [],
-             "why": "the Topic Desk reads what the event points to and writes a short alert against the topic's key questions"},
-            {"step": "Deliver it", "agent": "desk", "harness": "deliver", "after": [1], "why": "sends it the ways the task asked"}]
-
-
-def shop_plan(t):
-    """The plan of each occurrence of a price watch (TSK-21): one check by its shopping agent."""
-    return [{"step": "Check the offers and prices, propose within your limits", "agent": "mission", "harness": "shop", "after": [],
-             "why": "the shopping agent reads the PC's facts, your limits and the price history, researches the offers and "
-                    "proposes or keeps watching; it never buys without your approval"}]
-
-
-def desk_run(slug, mode, date, findings=None):
-    """One step of the Topic Desk through ops/desk.sh -> its last line (collected: ..., filed: <path>)."""
-    if findings is not None:
-        (DESK / slug / "out").mkdir(parents=True, exist_ok=True)
-        (DESK / slug / "out/findings.json").write_text(json.dumps(findings, ensure_ascii=False))
-    p = subprocess.run(["bash", str(ROOT / "ops/desk.sh"), slug, "--date", date], capture_output=True, text=True, timeout=STEP_TIMEOUT,
-                       env=dict(os.environ, DESK_TELEGRAM="0", DESK_MODE=mode))
-    lines = p.stdout.strip().splitlines()
-    last = lines[-1] if lines else ""
-    if p.returncode or not last or " failed: " in last or " NOT filed: " in last:
-        raise RuntimeError(f"Topic Desk ({mode}): {last or TC.tail(p.stderr.strip(), 400) or 'no output'}")  # cap: preview
-    return last
-
-
-def run_desk_collect(c, t, s, prompt, card):
-    slug, date = t["spec"]["topic"], s["resume"].get("date") or dt.date.today().isoformat()
-    desk_run(slug, "collect", date)
-    put(c, s["id"], resume={"date": date})              # the writing step files under the same date, also after midnight
-    saved = json.loads((DESK / slug / "out" / f"{date}.collected.json").read_text())
-    st, chosen = saved["stats"], saved["chosen"]
-    return (f"{st['items']} items collected, {st['new']} new in the window, {st['events']} events; {len(chosen)} chosen:\n"
-            + "\n".join(f"- {g['items'][0]['title']} · {g['items'][0]['source']} · {g['items'][0]['url']}" for g, _ in chosen))
-
-
-def run_desk_write(c, t, s, prompt, card):
-    ss = steps(c, t["id"], s.get("occ") or 1)
-    col = next(x for x in ss if x["harness"] == "desk-collect")
-    date = col["resume"].get("date") or dt.date.today().isoformat()
-    findings = [{"question": x["item"] or x["title"], "text": x["output"] or ""} for x in ss if x["idx"] in s["after"]]
-    m = re.search(r"filed: (\S+)", desk_run(t["spec"]["topic"], "write", date, findings))
-    if not m:
-        raise RuntimeError("Topic Desk (write): the report was not filed")
-    put(c, s["id"], resume={"report": m.group(1), "date": date})
-    return (M.VAULT / m.group(1)).read_text()
-
-
-def run_desk_alert(c, t, s, prompt, card):
-    """An event-triggered briefing's alert (TSK-21): the desk writes it from the event's sources; it is filed under the
-    topic's alerts, as a briefing mission's event run files it."""
-    ev = t.get("event")
-    if not ev:
-        raise RuntimeError("an alert step needs the event that started its run")
-    a, log = M.X.alert_of(t["spec"]["topic"], ev)
-    if not a:
-        raise RuntimeError(f"Topic Desk (alert): {(log.strip().splitlines() or ['no output'])[-1]}")
-    rel = M.X.file_alert(t["spec"]["topic"], a, ev)
-    put(c, s["id"], resume={"report": rel, "short": a.get("short", ""), "title": a.get("title") or ev.get("summary", "")[:80]})  # cap: id
-    return a["markdown"]
-
-
-def run_shop(c, t, s, prompt, card):
-    """A price watch's check (TSK-21): its shopping agent researches the offers within the owner's limits and proposes
-    or keeps watching. Buying stays the agent's own run, after the owner's approval in Mission Control."""
-    import shopping as SH
-    slug = t["spec"].get("shop") or ""
-    m = M.load_missions().get(slug)
-    if not m or m.get("status") != "active":
-        raise RuntimeError(f"the shopping agent {slug!r} is not active")
-    prev, ev = m.get("best_price_eur"), t.get("event")
-    st, summary, rel = SH.research(m, str(M.RUNLOGS / f"task-{t['id']}.{s.get('occ') or 1}-{s['idx']}.log"), ev)
-    if st != "ok":
-        raise RuntimeError(f"shopping agent: {summary}")
-    p = next((x for x in SH.proposals(slug) if x.get("status") in ("proposed", "watching", "over_limit")), None)
-    said = (f"No price drop of {float(m['watch_pct']):g} % or more: kept in the app, not sent" if SH.is_quiet(m, prev, m.get("best_price_eur"), ev)
-            else "Reported the ways the task asked")
-    prop = (f"Proposal {p['id']}: {p['status']}, {p['item']} for {p['total_eur']:.2f} € at {p['shop']}" if p else "No proposal this run")
-    return f"{said} ({rel}). {prop}.\n\n{(M.VAULT / rel).read_text()}"
 
 
 WIKI_GROUP, WIKI_GROUPS = 6, 4                     # cap: prompt (pages per write call; calls per refinement: 24 pages, said in its answer)
@@ -688,47 +593,6 @@ def run_wiki(c, t, s, prompt, card):
     return (f"{len(written)} page{'s' if len(written) != 1 else ''} of the wiki “{w['title']}” written"
             + (": " + ", ".join(written) if written else ": the findings changed nothing") + f" (findings: {src})."
             + (f" {len(left)} more pages the findings name were not looked at in this run: {', '.join(left)}." if left else ""))
-
-
-def topic_wiki(t, slug, rel, text, card):
-    """The topic's wiki grows with each report, as a briefing mission's does (missions.run_briefing), unless the owner
-    deleted it (wiki_off on the mission that holds the topic). The pages it wrote, for the step's answer (its task page
-    and swarm map list them, APP-36)."""
-    import mission_extras as X
-    try:                                                  # nothing here can fail the delivery
-        if any(m.get("wiki_off") and (m.get("topic") or m["slug"]) == slug for m in M.load_missions().values()):
-            return []
-        n = X.compile_into(f"topics/{slug}/wiki", t["title"], rel, text, os.environ["VK_" + card["key"][3:].upper().replace("-", "_")])
-        M.vault_commit([f"topics/{slug}/wiki"], f"wiki: {slug} from {rel}")
-        M.log(f"conductor: task {t['id']}: wiki {slug}: {len(n)} pages updated")
-        return list(n)
-    except Exception as e:                                # the report is delivered all the same; logged
-        M.log(f"conductor: task {t['id']}: the wiki of {slug} not updated: {type(e).__name__}: {e}")
-        return []
-
-
-def run_deliver(c, t, s, prompt, card):
-    """The report or alert the ways the task asked (the app always; Telegram, e-mail), as a briefing mission delivers (MIS-15)."""
-    w = next(x for x in steps(c, t["id"], s.get("occ") or 1) if x["harness"] in ("desk-write", "desk-alert"))
-    rel, slug = w["resume"]["report"], t["spec"]["topic"]
-    text = (M.VAULT / rel).read_text()
-    ways = t["spec"].get("deliver") or ["telegram", "app"]
-    if w["harness"] == "desk-alert":
-        sent = M.X.deliver({"slug": slug, "title": t["title"], "deliver": ways}, w["resume"].get("title") or t["title"], w["resume"].get("short", ""),
-                           rel, f"Alert · {(t.get('event') or {}).get('trigger', 'an event')}", text)
-    else:
-        head = re.search(r'^headline: "?(.*?)"?$', text, re.M)
-        title = json.loads(f'"{head.group(1)}"') if head else t["title"]
-        tg = DESK / slug / "out" / f"{w['resume']['date']}.telegram.txt"
-        sent = M.X.deliver({"slug": slug, "title": t["title"], "deliver": ways}, title, tg.read_text() if tg.exists() else "", rel,
-                           f"{M.period({'schedule': t['rhythm'].get('schedule')})} briefing · {M.now():%d %b %Y}", text, empty=M.X.briefing_empty(text))
-    pages = topic_wiki(t, slug, rel, text, card) if sent and w["harness"] != "desk-alert" else []
-    how = " and ".join({"telegram": "Telegram", "email": "e-mail"}[x] for x in ways if x in ("telegram", "email"))
-    body = re.sub(r"^---\n.*?\n---\n", "", text, flags=re.S).strip()
-    said = ("Nothing new was chosen: kept in the app, not sent" if not sent else
-            f"Delivered by {how} and kept in the app" if how else "Kept in the app")
-    wiki = f" Topic wiki pages updated: {', '.join(pages)}." if pages else ""
-    return f"{said} ({rel}).{wiki}\n\n{body}"
 
 
 def run_opencode(c, t, s, prompt, card, run=subprocess.run):
@@ -798,9 +662,26 @@ def run_temp(c, t, s, prompt, card):
     return ST.run_temp(c, t, {**s, "agent": d["name"]}, prompt_of(t, {**s, "agent": d["name"]}, steps(c, t["id"]), {}, d["purpose"]), d)
 
 
-ADAPTERS = {"hermes": run_hermes, "claude-code": run_claude, "build": run_build, "python": run_python, "temp": run_temp, "check": run_check,
-            "desk-collect": run_desk_collect, "desk-write": run_desk_write, "desk-alert": run_desk_alert, "deliver": run_deliver,
-            "shop": run_shop, "wiki": run_wiki, "opencode": run_opencode}
+# TSK-36: the Conductor's own step kinds, declared as a domain module declares its own (ops/stepkinds.py).
+# gb, TSK-08: what a step needs available on the PC (Windows' available memory: free plus the cache it hands back). A model
+# call starts nothing; a Hermes turn starts one process in the running Hermes container; Claude Code starts its own
+# process. The owner keeps playing on this PC (31 Oct 2026): steps ask for what they use, not for a fixed margin.
+OWN_KINDS = {"hermes": {"run": run_hermes, "gb": 0.5},
+             "claude-code": {"run": run_claude, "gb": 0.75, "waits": True},
+             "build": {"run": run_build, "gb": 0.25, "waits": True},                                  # the builder admits its own work
+             "python": {"run": run_python, "gb": 0.25},
+             "temp": {"run": run_temp, "gb": 0.25},
+             "check": {"run": run_check, "gb": 0.3},                                                  # the builder's tests
+             "opencode": {"run": run_opencode, "gb": 1.0},                                            # its container
+             "wiki": {"run": run_wiki, "owners": ("mission",), "gb": 0.25, "fixed_plan": True}}       # a wiki write (TSK-34): a model call
+DOMAINS = (changes, shop_steps, desk_steps)        # what else runs as steps; missions.main wires its M onto each
+KINDS = stepkinds.load(DOMAINS, OWN_KINDS)         # a clash or a kind without its function stops the import here, with the reason
+ADAPTERS, OWN_STEPS, NEED_GB, WAITS = KINDS.adapters, KINDS.own_steps, KINDS.need_gb, KINDS.waits
+
+
+def hooks(t):
+    """What the task's kind does differently (ops/stepkinds.py), nothing for most."""
+    return KINDS.tasks.get(t.get("kind"), {})
 
 
 def mapped(c, task, occ, t=None, s=None):
@@ -847,7 +728,8 @@ def _run_step(c, t, s, all_steps, agents):
     RTM.set_ref(run, s["agent"])
     t0 = time.time()
     try:
-        out = ADAPTERS[s["harness"]](c, t, s, prompt_of(t, s, all_steps, agents), agents.get(s["agent"]) or {})   # a temporary agent has no card
+        made = (hooks(t).get("brief") or prompt_of)(t, s, all_steps, agents)
+        out = ADAPTERS[s["harness"]](c, t, s, made, agents.get(s["agent"]) or {})   # a temporary agent has no card
     except Waiting as w:
         put(c, s["id"], status="waiting", waiting_for=str(w), error=None)
         return
@@ -861,6 +743,10 @@ def _run_step(c, t, s, all_steps, agents):
             return
         if M.paused(msg):                                 # a usage limit is no attempt: the count goes back
             put(c, s["id"], status="pending", waiting_for="the subscription's usage limit", attempts=s["attempts"] or 0)
+            RTM.end(run, s["agent"], "limit", msg, time.time() - t0)
+        elif RTM.unreachable(msg):                          # nor is the network or the NAS away for a moment: it looks again in a minute
+            resting[s["id"]] = time.time() + 60
+            put(c, s["id"], status="pending", waiting_for="the NAS could not be reached", attempts=s["attempts"] or 0)
             RTM.end(run, s["agent"], "limit", msg, time.time() - t0)
         else:
             put(c, s["id"], status="pending" if (s["attempts"] or 0) + (1 if first else 0) < ATTEMPTS else "failed", error=msg, waiting_for=None)
@@ -885,8 +771,10 @@ def between_waves(t, ss):
     still to come, and it has looks left. A briefing's, a price watch's or a wiki's plan is fixed and never looked at."""
     if t["rhythm"].get("type") not in ("once", None) or t["door"] != "plan" or len(ss) < 2:
         return False
-    if any(s["harness"] in OWN_STEPS["desk"] + OWN_STEPS["mission"] for s in ss):
+    if any(s["harness"] in KINDS.fixed_plan for s in ss):
         return False
+    if "checkpoints" in hooks(t) and not hooks(t)["checkpoints"](t):
+        return False                                      # its task kind says this plan needs no second look
     if (checkpoint_ask or getattr(M, "ask_json", None)) is None:
         return False                                      # a runner without a model to ask (tests of other things)
     if any(s["status"] in ("running", "waiting") for s in ss) or not any(s["status"] == "pending" for s in ss):
@@ -930,7 +818,7 @@ def checkpoint(c, t, ss, ask=None):
         raise
     changes = []
     if not d.get("keep", True):
-        pend = {s["idx"]: s for s in ss if s["status"] == "pending" and not again(s)}   # not yet started: a fix round is held
+        pend = {s["idx"]: s for s in ss if s["status"] == "pending" and not again(s) and s["harness"] not in KINDS.held}   # not yet started: a fix round is held, and so is a step its module keeps out of the plan's reach
         for n in [int(x) for x in d.get("drop") or [] if str(x).isdigit()][:len(pend)]:
             if n in pend:
                 put(c, pend[n]["id"], status="skipped", why=f"{pend[n]['why']} (dropped at the checkpoint: {d.get('why', '')})".strip())
@@ -1130,8 +1018,10 @@ def tick(c, start_thread=None):
             continue
         for s in go:
             if (s["status"] == "pending" and not s["attempts"] and "(routed:" not in (s["why"] or "") and "(your choice" not in (s["why"] or "")
-                    and not (agents.get(s["agent"]) or {}).get("step_kind")):            # a role's step stays its role's
+                    and hooks(t).get("routing", True) and not (agents.get(s["agent"]) or {}).get("step_kind")):        # a role's step stays its role's
                 s = routed(c, t, s, agents)                   # TSK-14: before its first attempt; never away from the owner's choice
+            if resting.get(s["id"], 0) > time.time():
+                continue
             if s["status"] == "pending":
                 why = headroom(s)
                 if why:
@@ -1140,9 +1030,14 @@ def tick(c, start_thread=None):
                     continue
             if s["status"] == "waiting" and s["harness"] not in WAITS:
                 continue
-            if not slots.acquire(blocking=False):
-                return
-            def job(t=t, s=s, ss=ss):
+            if s["id"] in inflight:
+                continue
+            looks = s["status"] == "waiting"              # TSK-08: looking at what a step waits for is no work: two changes in review took both slots
+            if not looks and not slots.acquire(blocking=False):  # on every pass, and no other step of any task started for four hours
+                continue
+            inflight.add(s["id"])
+
+            def job(t=t, s=s, ss=ss, looks=looks):
                 cc = M.db()
                 try:
                     run_step(cc, t, s, ss, agents)
@@ -1150,7 +1045,9 @@ def tick(c, start_thread=None):
                     M.log(f"conductor: task {t['id']} step {s['idx']}: {type(e).__name__}: {e}")
                     put(cc, s["id"], status="failed", error=f"{type(e).__name__}: {e}")
                 finally:
-                    slots.release()
+                    inflight.discard(s["id"])
+                    if not looks:
+                        slots.release()
                     cc.close()
             if s["status"] == "pending":
                 put(c, s["id"], status="running")         # claimed before the thread starts: never started twice

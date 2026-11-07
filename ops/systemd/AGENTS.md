@@ -21,9 +21,10 @@ Each job is a `name.service` (what to run) plus, if scheduled, a `name.timer` (w
 
 ## Rules
 
+- No home folder or user id in a unit (PLT-33): `%h` for the user's home, `unix://%t/docker.sock` for its Docker.
 - Secrets: `ExecStart=sops exec-env <file> '<command>'`, never `EnvironmentFile=` with plain values.
 - `Persistent=true` on timers that must catch up after the PC was off.
-- Every scheduled job starts with `ExecCondition=/usr/bin/python3 /home/owner/ai-stack/ops/stack_gate.py` (PLT-28; a test
+- Every scheduled job starts with `ExecCondition=/usr/bin/python3 %h/ai-stack/ops/stack_gate.py` (PLT-28; a test
   holds all of them to it). Not up means skipped, not failed. A job that runs every few minutes takes no arguments; one that
   runs daily or less often takes `--wait 1800 --slot <minutes after boot>`, its own slot so the jobs the PC slept through
   catch up one at a time. The wait counts against `TimeoutStartSec`, so add it there.

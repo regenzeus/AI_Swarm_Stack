@@ -1,7 +1,7 @@
 """Skills -> git: mirror Hermes's skills folder into the hermes-skills repo, tag capabilities, park risky skills.
 
 Runs every 5 min (systemd user timer); needs no secrets. Every change becomes one commit in
-forgejo:regenzeus/hermes-skills, so a learned skill is a reviewable diff and `git revert` undoes it.
+the hermes-skills repository on Forgejo, so a learned skill is a reviewable diff and `git revert` undoes it.
 
 Capability tags come from Hermes's own skill scanner (tools/skills_guard.py): execution/persistence/privilege
 -> cap:shell, destructive/traversal -> cap:fs-write, network/exfiltration -> cap:net. An agent-written skill
@@ -13,9 +13,10 @@ import hashlib, io, json, subprocess, sys, tarfile, tempfile, time
 from pathlib import Path
 from textcap import cut                    # visible caps and input limits (AGENTS.md, truncation)
 import textcap as TC
+import deployment as DEPLOY                        # this deployment's hosts and paths (config/deployment.env)
 
 C = "aistack-hermes-1"
-REPO = Path.home() / "hermes-skills"
+REPO = Path(DEPLOY.SKILLS_DIR)
 STATE = Path("/srv/ai/state"); APPROVED = STATE / "skills-approved.json"; LOG = STATE / "approvals.jsonl"
 EXCLUDE = {".usage.json", ".usage.json.lock", ".curator_state", ".curator_backups"}
 CAPS = {"execution": "cap:shell", "persistence": "cap:shell", "privilege_escalation": "cap:shell",
@@ -125,7 +126,7 @@ def main(note=()):
     learned = [l for l in lines if "[learned" in l]
     if learned:
         notify("Hermes learned/changed skills: " + cut("; ".join(learned), 3000, "the full list is in the skills repo") +  # cap: api
-               f"\nDiff: http://192.168.1.10:3000/regenzeus/hermes-skills/commit/{sha}")
+               f"\nDiff: {DEPLOY.FORGEJO_URL}/{DEPLOY.FORGEJO_OWNER}/hermes-skills/commit/{sha}")
 
 
 def approve(name):

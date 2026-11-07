@@ -47,11 +47,14 @@ import provenance as PV                           # TSK-23, TSK-24: what each st
 import history as HI                              # TSK-25: the daily telemetry history per agent, model, harness, kind
 import prune as PN                                 # PLT-21: growing files pruned once a day
 import prices as PR                               # TSK-27: tokens at list price
+import deployment as DEPLOY                        # this deployment's hosts and paths (config/deployment.env)
 import a2a as A2                                  # TSK-19: outside agents over A2A, off until the owner switches it on
 from textcap import limit, limit_items, tail as tailcut                    # visible caps and input limits (AGENTS.md, truncation)
 import textcap as TC
 import prompts as P                               # MEM-11: the agent prompts live in prompts/<owner>.md
 import windows_desk as WD                         # PLT-31: asking Windows, through a folder it fetches from
+import changes as CHG                             # CHG-01: change requests
+import repowiki as RW                             # CHG-08: one wiki per repository
 import onboard as O                        # onboarding a repository: the whole package (BLD-26)
 import files as FL                                # MIS-23: the files a mission was asked to make (docs/DELIVERABLES.md)
 import decisions as DQ                            # AUT-05: everything that waits for the owner, one ranked list, and its shadow
@@ -79,7 +82,7 @@ PAUSED = re.compile(r"\b429\b|rate.?limit|usage.?limit|too many requests|quota|n
 def paused(text):
     """True when a run failed because ChatGPT paused the stack (usage limit), not because of a real error."""
     return bool(PAUSED.search(text or ""))
-os.environ.setdefault("DOCKER_HOST", "unix:///run/user/1000/docker.sock")
+os.environ.setdefault("DOCKER_HOST", DEPLOY.DOCKER_SOCKET)
 
 lock = threading.Lock()
 running = {}          # the run holding the run slot: id, slug, title, started, log
@@ -1052,7 +1055,7 @@ def respond(rid, req):
     c = db()
     try:
         a = req.get("action")
-        res = (CT.handle(req, c) if a == "claude_task" else handle_forgejo_connect(req) if a == "forgejo_connect" else handle_memory(req) if a == "memory" else handle_stack(req) if a in STACK_ACTIONS
+        res = (CHG.handle(req, c) if a in CHG.ACTIONS else CT.handle(req, c) if a == "claude_task" else handle_forgejo_connect(req) if a == "forgejo_connect" else handle_memory(req) if a == "memory" else handle_stack(req) if a in STACK_ACTIONS
                else B.handle(req, c) if a in BUILD_ACTIONS else I.handle(req, c) if a in IMPROVE_ACTIONS
                else R.handle(req, c) if a in REPO_ACTIONS else CR.handle(req, c) if a in CREW_ACTIONS else J.handle(req) if a in J.ACTIONS
                else WD.handle(req) if a in WD.ACTIONS else SH.handle(req, c) if a in SH.ACTIONS else W.handle(req) if a in W.ACTIONS else H.handle(req) if a in H.ACTIONS
@@ -1158,7 +1161,7 @@ def system_info():
 
 
 _stack = {"t": 0, "data": {}}
-STACK_REPO = Path.home() / "ai-stack"
+STACK_REPO = Path(DEPLOY.STACK_DIR)
 
 
 def guide_facts():
@@ -1179,7 +1182,7 @@ def stack_info():
         return _stack["data"]
     skills = sorted(p.split("/skills/")[1].rsplit("/SKILL.md", 1)[0] for p in
                     sh("docker", "exec", HERMES, "sh", "-c", "find /opt/data/skills -name SKILL.md 2>/dev/null").split())
-    code = Path.home() / "code"
+    code = Path(DEPLOY.CODE_DIR)
     repos = []
     for d in sorted(code.iterdir()) if code.exists() else []:
         if d.is_dir() and not d.name.startswith("."):
@@ -1189,7 +1192,7 @@ def stack_info():
     tok = os.environ.get("FORGEJO_TOKEN") or os.environ.get("FORGEJO_STATUS_TOKEN", "")      # one token is enough
     for repo in ("ai-stack", "TestRepo", "vault", "hermes-skills"):
         try:
-            req = urllib.request.Request(f"http://192.168.1.10:3000/api/v1/repos/regenzeus/{repo}/actions/tasks?limit=1",
+            req = urllib.request.Request(f"{B.FORGEJO}/repos/{DEPLOY.FORGEJO_OWNER}/{repo}/actions/tasks?limit=1",
                                          headers={"Authorization": f"token {tok}"})
             runs = json.load(urllib.request.urlopen(req, timeout=10)).get("workflow_runs") or []
             ci.append({"repo": repo, "status": runs[0]["status"] if runs else "none", "sha": runs[0]["head_sha"][:7] if runs else ""})
@@ -1400,7 +1403,10 @@ def watcher():
 
 
 def main():
+    CHG.M = RW.M = sys.modules[__name__]
     X.M = B.M = I.M = R.M = SH.M = CL.M = T.M = CT.M = CR.M = J.M = W.M = H.M = TK.M = CD.M = EV.M = ST.M = PV.M = HI.M = A2.M = PN.M = FL.M = WD.M = sys.modules[__name__]
+    for domain in CD.DOMAINS:                      # TSK-36: the modules whose steps the Conductor runs
+        domain.M = sys.modules[__name__]
     CT.B = B
     CR.I = I
     I.B = R.B = B

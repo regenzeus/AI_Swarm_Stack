@@ -189,7 +189,7 @@ services:
     image: aistack/graphify:0.9.85
     restart: unless-stopped
     command: ["python", "-m", "graphify.serve", "/code/.graphify/merged-graph.json", "--transport", "http", "--host", "0.0.0.0", "--port", "8000"]
-    volumes: ["/home/owner/code:/code:ro"]
+    volumes: ["${CODE_DIR:?run via make}:/code:ro"]
     networks: [backend]
     read_only: true
     tmpfs: [/tmp]
@@ -216,7 +216,7 @@ services:
       # No OpenCode password: only your tailnet devices can reach it (tailscale serve) plus local processes.
       # To add one back: OPENCODE_SERVER_PASSWORD: ${OPENCODE_SERVER_PASSWORD}   (user: opencode)
     volumes:
-      - /home/owner/code:/code
+      - ${CODE_DIR:?run via make}:/code
       - opencode-cache:/root/.cache/opencode
       - opencode-data:/root/.local/share/opencode
     networks: [backend, pkg]
@@ -277,6 +277,7 @@ services:
     # Forgejo Actions runner (CI for ai-stack, TestRepo, ...). Jobs run inside this container: no Docker socket,
     # no stack network, no secrets; registered once with a token from the NAS (see images/ci-runner).
     image: aistack/ci-runner:13.2.0
+    init: true            # QA-25: the runner as PID 1 reaps nothing: git's background children piled up until no job could start
     restart: unless-stopped
     volumes: [ci-runner:/data]
     networks: [edge]
@@ -326,10 +327,20 @@ services:
       API_SERVER_KEY: ${API_SERVER_KEY:?run via make}   # chat with Hermes (main profile), as Open WebUI does
       SWARM_APP_TOKEN: ${SWARM_APP_TOKEN:-}           # the Swarm page's read-only door (ops/swarm_setup.py)
       VOICE_KEY: ${VOICE_KEY:-}                       # the voice gateway's key, held by Home Assistant (VOI-03)
+      # this deployment's addresses (config/deployment.env): the app's links, and which device is the AI phone
+      PHONE_HOST: ${PHONE_HOST:?run via make}
+      PC_TAILNET_HOST: ${PC_TAILNET_HOST:?run via make}
+      NAS_HOST: ${NAS_HOST:?run via make}
+      HA_URL: ${HA_URL:?run via make}
+      ROUTER_URL: ${ROUTER_URL:?run via make}
+      FORGEJO_URL: ${FORGEJO_URL:?run via make}
+      FORGEJO_OWNER: ${FORGEJO_OWNER:?run via make}
+      DEPLOY_USER: ${DEPLOY_USER:?run via make}
+      STACK_DIR: ${STACK_DIR:?run via make}
     volumes:
       - /srv/ai/missions:/missions        # inbox (write), public state + run logs (read), app/ (push keys, devices)
       - /srv/vault:/vault:ro              # reports and mission results, read-only
-      - /home/owner/code:/code:ro          # code graphs (graphify-out) and READMEs for the Code tab, read-only
+      - ${CODE_DIR:?run via make}:/code:ro   # code graphs (graphify-out) and READMEs for the Code tab, read-only
       - /srv/ai/code-docs:/code-docs:ro   # code map digests (Understand Anything), read-only
       - /srv/ai/phone:/phone              # the AI phone: its state (read), the owner's decisions and Stop (write)
       - /srv/ai/connections:/connections  # app connections: grants and decisions (write), status and log (read)
@@ -351,7 +362,7 @@ services:
     image: aistack/phone:1
     restart: unless-stopped
     environment:
-      PHONE_HOST: ${PHONE_HOST:-100.64.0.10}   # ai-phone on the tailnet (the old phone; never the main phone)
+      PHONE_HOST: ${PHONE_HOST:?run via make}   # ai-phone on the tailnet (the old phone; never the main phone)
       TZ: Europe/Berlin
     volumes:
       - /srv/ai/phone:/phone              # state, approvals, log, screenshots, ADB pairing key (home/.android)

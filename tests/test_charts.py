@@ -93,7 +93,7 @@ def test_the_theme_is_calm():
     """APP-34: graphite and opaque surfaces, no glow behind the pages, section titles in sentence case, grey counts."""
     css = (ROOT / "images/mission-control/web/static/app.css").read_text()
     html = (ROOT / "images/mission-control/web/index.html").read_text()
-    assert "--bg: #111317;" in css and "--glow-1: transparent;" in css and ".bg-glow { display: none; }" in css
+    assert "--bg: #0c1115;" in css and "--glow-1: transparent;" in css and ".bg-glow { display: none; }" in css
     assert "h2 { font-size: 15px; font-weight: 650; text-transform: none;" in css and ".hcount { background: var(--surface-3)" in css
     assert "bg-glow" not in html and ".btn.primary { background: var(--accent); box-shadow: none; }" in css
 

@@ -7,7 +7,9 @@
 | `rehearsal.yaml` | Override for the new-PC rehearsal (`ops/windows/rehearse-new-pc.ps1`): scales host-bound services to 0 |
 
 Run through `make` only (`make up`, `make ps`, `make logs`): the Makefile decrypts the secrets into compose's
-environment. Project name `aistack`; images pinned in `../versions.env` or built from `../images/<name>`.
+environment. Project name `aistack`; images pinned in `../versions.env` or built from `../images/<name>`. This deployment's
+hosts and paths come from `../config/deployment.env`, the second `--env-file` of every compose call (PLT-33); a container
+gets what it needs under `environment:`, as `${NAME:?run via make}`.
 
 ## Every service by name
 

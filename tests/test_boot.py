@@ -93,7 +93,7 @@ def test_every_scheduled_job_waits_for_the_stack_except_the_job_that_brings_it_u
             assert "ExecCondition" not in text
             continue
         lines = [ln for ln in text.splitlines() if ln.startswith("ExecCondition=")]
-        assert lines and "/home/owner/ai-stack/ops/stack_gate.py" in lines[0], name
+        assert lines and "%h/ai-stack/ops/stack_gate.py" in lines[0], name
         assert text.index("ExecCondition=") < text.index("ExecStart="), name
 
 

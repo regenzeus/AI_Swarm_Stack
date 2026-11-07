@@ -196,7 +196,8 @@ items:
     trace: [ops/ua_enrich.py]
   - id: BLD-18
     title: Studied code is never run
-    statement: Analysing a third-party repository shall only read it, in a sandbox without internet access or keys.
+    statement: Analysing a third-party repository shall only read it, in a sandbox without internet access or keys. Running
+      its tests shall take the owner's tap Let the builder change it, and then happens in the sealed sandbox only (CHG-12).
     type: constraint
     priority: must
     status: implemented
@@ -280,7 +281,7 @@ items:
     title: Onboarding always ends in the whole package
     statement: Onboarding a repository, from its page, from Add a repository, through Hermes or with make understand, shall
       run one job that ends in the whole package whatever the repository's size (a copy of the code, its code graph, its
-      code map, every file explained, its digest in the search index, a written analysis on its page). It shall wait by
+      code map, every file explained, its digest in the search index, a written analysis on its page, its wiki). It shall wait by
       itself for usage limits, the PC's memory and the gateway without using up a try, and go on at its first unfinished
       step after a crash, a deploy or a restart of the PC. The repo page and repos_overview shall show the step it is at.
       A step that failed three times shall stop the job with the reason on the page, in repos_overview and in a message,

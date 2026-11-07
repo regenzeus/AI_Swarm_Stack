@@ -2,6 +2,7 @@
 # MVP 0 smoke test: proves the pipes are connected. Answer quality is irrelevant.
 # Run via `make smoke` (needs LITELLM_MASTER_KEY and the agent keys in the environment).
 set -uo pipefail
+eval "$(python3 "$(dirname "$0")/../ops/deployment.py" shell)"   # this deployment's hosts and paths (config/deployment.env)
 API=http://127.0.0.1:4000
 pass=0; fail=0
 ok()   { echo "PASS  $1"; pass=$((pass+1)); }
@@ -41,7 +42,7 @@ n=$(curl -fsS "http://127.0.0.1:6006/v1/projects" 2>/dev/null | python3 -c 'impo
 [ "${n:-0}" -ge 1 ] && ok "Phoenix has trace projects ($n)" || bad "Phoenix traces" "no projects visible"
 
 for r in ai-stack vault hermes-skills; do
-  git ls-remote "forgejo:${FORGEJO_USER:-regenzeus}/$r.git" >/dev/null 2>&1 && ok "Forgejo repo $r reachable" || bad "Forgejo repo $r"
+  git ls-remote "forgejo:${FORGEJO_USER:-$FORGEJO_OWNER}/$r.git" >/dev/null 2>&1 && ok "Forgejo repo $r reachable" || bad "Forgejo repo $r"
 done
 
 [ -z "$(ls -A /mnt/c 2>/dev/null)" ] && ok "Windows drives not auto-mounted" || bad "automount still on"

@@ -3,12 +3,13 @@
 # (tree-sitter, offline, no LLM), then rebuild the merged cross-repo graph the MCP server serves.
 # The server hot-reloads graph.json on change. Runs every 60 s from a systemd user timer.
 set -uo pipefail
-CODE=/home/owner/code; STATE=/srv/ai/state/graphify; mkdir -p "$STATE" "$CODE/.graphify"
+eval "$(python3 "$(dirname "$0")/deployment.py" shell)"   # this deployment's hosts and paths (config/deployment.env)
+CODE=$CODE_DIR; STATE=/srv/ai/state/graphify; mkdir -p "$STATE" "$CODE/.graphify"
 exec 9>"$STATE/lock"; flock -n 9 || exit 0
 G="docker run --rm --network none -v $CODE:/code aistack/graphify:0.9.85"
 # ai-stack itself is studied through a mirror clone in ~/code (graph, code map; never built from): keep it level with the
 # live checkout. The builder works on its own clone, so this one only ever fast-forwards.
-[ -d "$CODE/ai-stack/.git" ] || git clone -q /home/owner/ai-stack "$CODE/ai-stack"
+[ -d "$CODE/ai-stack/.git" ] || git clone -q "$STACK_DIR" "$CODE/ai-stack"
 git -C "$CODE/ai-stack" pull -q --ff-only 2>/dev/null || true
 changed=0
 for repo in "$CODE"/*/; do
@@ -41,6 +42,6 @@ done
 if [ "$changed" = 1 ] || [ ! -f "$CODE/.graphify/merged-graph.json" ]; then
   graphs=$(for g in "$CODE"/*/graphify-out/graph.json; do echo "/code/${g#$CODE/}"; done)
   $G graphify merge-graphs $graphs --out /code/.graphify/merged-graph.json >/dev/null 2>&1 \
-    && python3 /home/owner/ai-stack/ops/graph_repos.py "$CODE/.graphify/merged-graph.json" >/dev/null \
+    && python3 "$STACK_DIR/ops/graph_repos.py" "$CODE/.graphify/merged-graph.json" >/dev/null \
     && echo "$(date '+%F %T') merged graph rebuilt ($(echo $graphs | wc -w) repos)"
 fi

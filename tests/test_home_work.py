@@ -23,6 +23,7 @@ def run(state, expr):
         "let homeFilter = 'all', homeShow = 40; const homeEx = new Map();",
         f"let S = {json.dumps({'missions': [], **state})};",
         "const shopProposals = () => (S.shopping || {}).proposals || [];",
+        "const notConnected = () => false;",
         *constants, *functions, f"process.stdout.write(String({expr}));"])
     return subprocess.run(["node", "-e", script], check=True, capture_output=True, text=True).stdout
 

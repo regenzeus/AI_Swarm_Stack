@@ -1,7 +1,7 @@
 # images/mission-control/web/: the front end
 
-Plain JavaScript and CSS, **no build step, no framework, no CDN at run time** (marked, DOMPurify, d3 and the Inter
-font are vendored by the Dockerfile into `static/vendor/`).
+Plain JavaScript and CSS, **no build step, no framework, no CDN at run time** (marked, DOMPurify, d3 and the Inter,
+Archivo and JetBrains Mono fonts are vendored by the Dockerfile into `static/vendor/`).
 
 | File | What it is |
 |---|---|

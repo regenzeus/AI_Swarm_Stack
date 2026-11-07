@@ -1,7 +1,7 @@
 """Add repository nodes to the merged code graph (Graphify has none): one node per repo that `contains` its
 file nodes, plus one "code repositories" node linking every repo. Without them a tiny repo (hello-world: one
 file, no functions) is nearly invisible to graph search, and "which repos do I have?" has no answer in the graph.
-  python3 ops/graph_repos.py /home/owner/code/.graphify/merged-graph.json      (run by graphify-sync.sh)"""
+  python3 ops/graph_repos.py <CODE_DIR>/.graphify/merged-graph.json      (run by graphify-sync.sh)"""
 import json, os, sys
 from collections import defaultdict
 

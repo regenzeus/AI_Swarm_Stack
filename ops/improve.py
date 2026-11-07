@@ -16,9 +16,10 @@ import swarm_client as SW
 from textcap import limit                    # visible caps and input limits (AGENTS.md, truncation)
 import textcap as TC
 import prompts as P                               # MEM-11: the agent prompts live in prompts/<owner>.md
+import deployment as DEPLOY                        # this deployment's hosts and paths (config/deployment.env)
 
 M = B = None
-STACK = Path.home() / "ai-stack"
+STACK = Path(DEPLOY.STACK_DIR)
 EVERY = dt.timedelta(days=7)
 # limit: drops, ideas past 5 a self-review; its prompt names the limit and the log says
 MAX = 5

@@ -10,6 +10,9 @@ views: [system]
 The **Stack** page is the control room's dashboard. Most of the time it's all green and you don't need it.
 When something is off, this is where it shows.
 
+It has five parts, one at a time, and opens on the one you used last: **Tools**, **Health**, **Knowledge**, **Guide** and
+**Settings**. The line under the title says how the stack is doing whichever part is open.
+
 ## Tools
 
 Every tool the stack runs on, at the top of the page: Home Assistant, the NAS, the router, Forgejo, Hermes admin,

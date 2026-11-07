@@ -414,3 +414,25 @@ items:
     rationale: The desktop app starts at logon, but its old sessions stay offline after a restart until a new message runs in them.
     verify: {method: test, by: [tests/test_windows_desk.py::test_remote_control_keeps_one_server_and_passes_no_permission_flags]}
     trace: [ops/windows/claude-remote.ps1, ops/windows/desk-setup.ps1]
+  - id: PLT-33
+    title: This deployment's hosts, paths and accounts live in one file
+    statement: The addresses of the NAS, the PC and the AI phone, the Forgejo address and owner, the Home Assistant and app addresses, the
+      home, stack, code and skills folders, the Docker socket, and the git and Windows account names shall be set once, in
+      config/deployment.env. Compose shall read that file as an env file and hand a container what it needs through its environment, host-side
+      Python, shell and Make shall read it through ops/deployment.py, and a variable of the same name in the environment shall win over the
+      file. A test shall fail when one of these values is written out in running code outside its named allowlist.
+    type: constraint
+    priority: should
+    status: implemented
+    parents: [SN-09, SN-15]
+    sources: ['review 2026-11-06: the NAS address, the code folder and the Forgejo owner counted 27 times across 18 files']
+    rationale: A move to another machine or address then means one file, and the public snapshot's rewrite (docs/PUBLISHING.md) works on it as on any other file.
+    verify: {method: test, by: [tests/test_deployment.py::test_no_converted_value_is_hard_coded_in_running_code,
+      tests/test_deployment.py::test_the_guard_finds_a_value_written_out_and_respects_its_allowlist,
+      tests/test_deployment.py::test_a_line_may_name_a_line_above_and_the_environment_wins,
+      tests/test_deployment.py::test_shell_and_python_read_the_same_values_and_the_environment_wins_in_the_shell_too,
+      tests/test_deployment.py::test_every_compose_call_reads_the_file_and_a_changed_file_is_applied,
+      tests/test_deployment.py::test_the_page_carries_the_apps_addresses_and_the_tools_name_only_those,
+      tests/test_deployment.py::test_units_name_the_home_and_docker_by_specifier]}
+    trace: [config/deployment.env, ops/deployment.py, compose/apps.yaml, Makefile, ops/deploy.py, ops/ci-compose-check.sh, images/mission-control/server.py,
+      images/mission-control/web/index.html, images/mission-control/web/static/app.js, images/mission-control/web/static/tools.json, ops/systemd/missions.service]

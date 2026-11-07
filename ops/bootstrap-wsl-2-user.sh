@@ -5,8 +5,9 @@
 set -euo pipefail
 export XDG_RUNTIME_DIR=/run/user/$(id -u)
 cd ~/ai-stack
+eval "$(python3 ops/deployment.py shell)"   # this deployment's hosts and accounts (config/deployment.env)
 
-# Rootless Docker for owner
+# Rootless Docker for this user
 if ! systemctl --user is-active -q docker; then
   dockerd-rootless-setuptool.sh install --skip-iptables >/dev/null
 fi
@@ -42,8 +43,8 @@ fi
 # Git identity (repo-local)
 for d in ~/ai-stack /srv/vault; do
   git -C "$d" init -q -b main 2>/dev/null || true
-  git -C "$d" config user.name "Owner"
-  git -C "$d" config user.email "owner@example.com"
+  git -C "$d" config user.name "$GIT_NAME"
+  git -C "$d" config user.email "$GIT_EMAIL"
 done
 
 # Vault skeleton (Karpathy LLM Wiki layout)
@@ -61,7 +62,7 @@ git add -A && git commit -qm "Vault skeleton (LLM Wiki layout)" 2>/dev/null || t
 # Skills repo placeholder until Hermes exists (MVP 1 points ~/.hermes/skills at it)
 mkdir -p ~/hermes-skills && cd ~/hermes-skills
 git init -q -b main 2>/dev/null || true
-git config user.name "Owner"; git config user.email "owner@example.com"
+git config user.name "$GIT_NAME"; git config user.email "$GIT_EMAIL"
 [ -f README.md ] || printf '# hermes-skills\n\nSkills learned by Hermes (agentskills.io SKILL.md). Auto-committed by the curation glue.\n' > README.md
 printf '.usage.json\n.curator_backups/\n' > .gitignore
 git add -A && git commit -qm "Initialise skills repo" 2>/dev/null || true
@@ -71,7 +72,7 @@ cd ~/ai-stack && git add -A && git commit -qm "MVP 0: core stack, keys, smoke te
 # Push all three (Forgejo creates private repos on first push)
 for r in ai-stack:$HOME/ai-stack vault:/srv/vault hermes-skills:$HOME/hermes-skills; do
   name=${r%%:*}; dir=${r#*:}
-  git -C "$dir" remote get-url origin >/dev/null 2>&1 || git -C "$dir" remote add origin "forgejo:regenzeus/$name.git"
+  git -C "$dir" remote get-url origin >/dev/null 2>&1 || git -C "$dir" remote add origin "forgejo:$FORGEJO_OWNER/$name.git"
   git -C "$dir" push -q -u origin main && echo "pushed $name"
 done
 echo "STAGE2_DONE"

@@ -27,7 +27,7 @@ import textcap as TC                              # visible caps (AGENTS.md, tru
 ROOT = Path(__file__).resolve().parent.parent
 CHATS = Path("/srv/ai/missions/app/chats")       # the app's chats (images/mission-control/server.py)
 WINDOW = 7 * 86400                                # the board shows the work of the last 7 days, and every open task
-KINDS = {"coding": "build", "code_question": "claude", "research": "mission", "analysis": "mission", "errand": "mission",
+KINDS = {"change": "change", "coding": "build", "code_question": "claude", "research": "mission", "analysis": "mission", "errand": "mission",
          "watching": "mission", "briefing": "mission", "shopping": "mission"}
 MISSION_TYPE = {"briefing": "briefing", "shopping": "shopping"}           # every other mission kind is a task mission
 EFFORTS = ("light", "standard", "deep")
@@ -273,7 +273,7 @@ def create(req, c):
                     "answers, status, source, created, updated) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                     (text, title_of(text), text, p.get("kind"), None, None, json.dumps(p.get("done") or []), p.get("effort", "standard"),
                      p.get("deadline"), autonomy, json.dumps(p.get("rhythm") or {"type": "once"}), after,
-                     json.dumps({"preset": p, **({"wiki": w} if w else {})}),
+                     json.dumps({"preset": p, **({"wiki": w} if w else {}), **({"repo": p.get("repo"), "change": req["change"]} if isinstance(req.get("change"), dict) else {})}),
                      "[]", "[]", "intake", req.get("source") or "app", t, t))
     c.commit()
     M.event("task", "", f"Task #{cur.lastrowid}: {text[:120]}", title="Tasks")  # cap: list (the feed line; the task holds all of it)
@@ -374,7 +374,7 @@ def validate(spec, preset, repos, agents):
     if r.get("type") == "event":
         r = {"type": "event", "triggers": M.X.clean_triggers(r.get("triggers"))}
     repo = s.get("repo") if s.get("repo") in repos else None
-    if KINDS[s["kind"]] in ("build",) and not repo and not qs:
+    if KINDS[s["kind"]] in ("build", "change") and not repo and not qs:
         qs = ["Which repository should this change go into: " + ", ".join(repos) + "?"]
     title = title_of(s.get("title") or s.get("goal")) or "Task"
     return {"title": title if len(title) >= 3 else "Task " + title, "goal": str(s.get("goal") or title).strip(), "kind": s["kind"],
@@ -388,6 +388,9 @@ def intake(c, tid, ask=None):
     import os
     import runtime as RTM
     t = row(c, tid)
+    if t["kind"] == "change" and (t["spec"].get("repo") or (t["spec"].get("preset") or {}).get("repo")):    # CHG-02: its own specification
+        import changes as CH
+        return CH.specify(c, t, ask)
     repos, agents = B_repos(), cards()
     run, t0 = f"task-intake:{tid}-{len(t['answers'])}", time.time()      # one run per pass (a pass after answers is another)
     RTM.start(run, "intake", f"Task #{tid}: specification", detail=t["text"])
@@ -404,6 +407,11 @@ def intake(c, tid, ask=None):
     RTM.end(run, "intake", "done", f"{s['kind']}: {len(s['done'])} done criteria, {len(s['plan'])} steps, {len(s['questions'])} questions",
             time.time() - t0)
     RTM.set_ref(None)
+    if (s["kind"] in ("coding", "change") and s["repo"] and not s["questions"] and not str(t.get("source") or "").startswith("trial:")
+            and not (t["spec"].get("preset") or {}).get("agents")):     # the owner's own agents keep their plan
+        import changes as CH                           # CHG-01: a sentence that changes code is a change request
+        put(c, tid, kind="change", spec={**t["spec"], "repo": s["repo"], "change": t["spec"].get("change") or {}})
+        return CH.specify(c, row(c, tid), ask)
     spec = {**t["spec"], **s}
     put(c, tid, title=s["title"], goal=s["goal"], kind=s["kind"], done=s["done"], rhythm=s["rhythm"], effort=s["effort"],
         deadline=s["deadline"], spec=spec, questions=s["questions"], error=None)
@@ -455,7 +463,7 @@ def shop_agent(c, t, deliver):
     """A price watch's shopping agent (ops/shopping.py: its limits, proposals, purchase approvals, order tracking), made
     once and held by the task: the Conductor runs its checks, at once, on the schedule or on an event, and when a waiting
     proposal reaches its price or date; buying and following an order stay the agent's own runs (TSK-21)."""
-    import conductor as CD
+    import shop_steps as SS
     s = t["spec"]
     if not s.get("shop"):
         res = M.handle({"action": "create", "type": "shopping", "title": t["title"], "description": door_brief(t), "schedule": "manual",
@@ -464,7 +472,7 @@ def shop_agent(c, t, deliver):
         if not m or m.get("task") != t["id"]:          # a shopping agent of the same name, made minutes ago, is not this one
             raise ValueError(f"a shopping agent “{t['title']}” was made in the last 30 minutes: give the task another title")
         s = {**s, "shop": m["slug"]}
-    s = {**s, "plan": CD.shop_plan(t), "intake_plan": s.get("intake_plan") or s.get("plan") or [], "deliver": deliver}
+    s = {**s, "plan": SS.shop_plan(t), "intake_plan": s.get("intake_plan") or s.get("plan") or [], "deliver": deliver}
     put(c, t["id"], spec=s)
     return row(c, t["id"])
 
@@ -483,7 +491,7 @@ def watchers(c):
 def briefing_topic(c, t, deliver):
     """A briefing task's topic (topics/<slug>/TOPIC.md, drafted and its sources checked once) and the desk's plan, which
     replaces the intake's: the plan the owner sees is the plan that runs (TSK-22)."""
-    import conductor as CD
+    import desk_steps as DS
     s = t["spec"]
     if not s.get("topic"):
         slug, n = M.slugify(t["title"], M.load_missions()), 2
@@ -493,7 +501,7 @@ def briefing_topic(c, t, deliver):
         M.vault_commit([f"topics/{slug}"], f"task {t['id']}: the briefing's topic {slug}")
         s = {**s, "topic": slug}
     (meta, _), _ = M.topic_of({"slug": s["topic"], "topic": s["topic"]})
-    plan = CD.alert_plan(t) if t["rhythm"].get("type") == "event" else CD.briefing_plan(t, meta)     # on an event: an alert
+    plan = DS.alert_plan(t) if t["rhythm"].get("type") == "event" else DS.briefing_plan(t, meta)     # on an event: an alert
     s = {**s, "plan": plan, "intake_plan": s.get("intake_plan") or s.get("plan") or [], "deliver": deliver}
     put(c, t["id"], spec=s)
     return row(c, t["id"])
@@ -501,6 +509,9 @@ def briefing_topic(c, t, deliver):
 
 def dispatch(c, t):
     """Hand the task to its door; the door keeps its own approvals (deploy taps, purchases, the AI phone)."""
+    if t["kind"] == "change":
+        import changes as CH
+        return CH.begin(c, t)
     s, door = t["spec"], KINDS.get(t["kind"])
     asked = " ".join([t["text"] or "", t["goal"] or "", *t["done"]])
     deliver = ["telegram", "app"] + (["email"] if re.search(r"\be-?mail", asked, re.I) else [])   # the task asked for e-mail
@@ -566,6 +577,8 @@ def conduct(c, t):
     history) but runs no more by itself; the task runs it on the mission's schedule (or trigger), the next run when it
     is due. A briefing's event alerts stay the mission's while the task runs its schedule."""
     import conductor as CD
+    import desk_steps as DS
+    import shop_steps as SS
     m = M.load_missions().get(t["ref"] or "")
     if t["door"] != "mission" or not m or m.get("type") not in ("briefing", "shopping") or m.get("status") != "active":
         raise ValueError("only an active briefing or price watch that runs as its mission can move to the Conductor")
@@ -576,9 +589,9 @@ def conduct(c, t):
          "intake_plan": t["spec"].get("intake_plan") or t["spec"].get("plan") or []}
     if m["type"] == "briefing":
         (meta, _), _ = M.topic_of(m)
-        s.update(topic=m.get("topic") or m["slug"], plan=CD.alert_plan(t) if rhythm["type"] == "event" else CD.briefing_plan(t, meta))
+        s.update(topic=m.get("topic") or m["slug"], plan=DS.alert_plan(t) if rhythm["type"] == "event" else DS.briefing_plan(t, meta))
     else:
-        s.update(shop=m["slug"], plan=CD.shop_plan(t))
+        s.update(shop=m["slug"], plan=SS.shop_plan(t))
     CD.graph(s["plan"])                                    # refused before anything changes
     m.update(task=t["id"], schedule="manual", triggers=m.get("triggers") if sched else [])
     M.save_mission(m)
@@ -690,7 +703,7 @@ def detail(c, tid):
     occs = CD.occurrences(c, tid) if t["door"] == "plan" else []
     sp = t["spec"]
     return ({k: t.get(k) for k in FIELDS} | {"judgement": sp.get("judgement"), "plan": sp.get("plan") or [], "result": sp.get("result"),
-                                           "repo": sp.get("repo"), "budget": sp.get("budget"), "shop": sp.get("shop"), "topic": sp.get("topic"),
+                                           "repo": sp.get("repo"), "budget": sp.get("budget"), "shop": sp.get("shop"), "topic": sp.get("topic"), "change": sp.get("change"),
                                            "wiki": sp.get("wiki"), "runs": occs, "checkpoints": sp.get("checkpoints") or [],
                                            "steps": {str(o["occ"]): CD.steps(c, tid, o["occ"]) for o in occs}})
 

@@ -2,6 +2,6 @@
 Description=Rebuild code graphs for repos whose HEAD moved
 [Service]
 Type=oneshot
-Environment=DOCKER_HOST=unix:///run/user/1000/docker.sock
-ExecCondition=/usr/bin/python3 /home/owner/ai-stack/ops/stack_gate.py
-ExecStart=/home/owner/ai-stack/ops/graphify-sync.sh
+Environment=DOCKER_HOST=unix://%t/docker.sock
+ExecCondition=/usr/bin/python3 %h/ai-stack/ops/stack_gate.py
+ExecStart=%h/ai-stack/ops/graphify-sync.sh

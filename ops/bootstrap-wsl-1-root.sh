@@ -7,11 +7,12 @@
 # age-key.txt (OneDrive\AI-Keys) into C:\AI\_staging; they are copied in, then stage 2 is ops/new-machine.sh.
 # Overridable for a rehearsal (ops/windows/rehearse-new-pc.ps1): STAGE, VAULT_WIN, EXPORTS_WIN.
 set -euo pipefail
-U=owner
 STAGE=${STAGE:-/mnt/c/AI/_staging/ai-stack}
 VAULT_WIN=${VAULT_WIN:-C:/AI/vault}
 EXPORTS_WIN=${EXPORTS_WIN:-C:/AI/exports}
 source "$STAGE/versions.env"
+source "$STAGE/config/deployment.env"     # not ops/deployment.py: this script is what installs python3
+U=$DEPLOY_USER
 
 # Fresh Ubuntu images already have a uid-1000 user (the image's "ubuntu", or whoever the installer created):
 # take it over as owner, since the stack's volumes and files belong to uid 1000.
@@ -78,13 +79,13 @@ if [ -f "$STAGE/../age-key.txt" ]; then
   install -d -m 700 -o "$U" -g "$U" /home/$U/.config /home/$U/.config/sops /home/$U/.config/sops/age
   install -m 600 -o "$U" -g "$U" "$STAGE/../age-key.txt" /home/$U/.config/sops/age/keys.txt
 fi
-if [ -f /mnt/c/Users/Owner/.ssh/id_ed25519_forgejo ] && [ -z "${REHEARSAL:-}" ]; then
-  cp /mnt/c/Users/Owner/.ssh/id_ed25519_forgejo /mnt/c/Users/Owner/.ssh/id_ed25519_forgejo.pub /home/$U/.ssh/
+if [ -f "/mnt/c/Users/$WIN_USER/.ssh/id_ed25519_forgejo" ] && [ -z "${REHEARSAL:-}" ]; then
+  cp "/mnt/c/Users/$WIN_USER/.ssh/id_ed25519_forgejo" "/mnt/c/Users/$WIN_USER/.ssh/id_ed25519_forgejo.pub" /home/$U/.ssh/
   chmod 600 /home/$U/.ssh/id_ed25519_forgejo
 fi
-cat > /home/$U/.ssh/config <<'EOF'
+cat > /home/$U/.ssh/config <<EOF
 Host forgejo
-  HostName 192.168.1.10
+  HostName $NAS_HOST
   Port 2222
   User git
   IdentityFile ~/.ssh/id_ed25519_forgejo

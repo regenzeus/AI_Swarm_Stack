@@ -1,4 +1,4 @@
-// The Agents tab (the row under its title is app.js's agentViews; four views since 1 Nov 2026): Overview (app.js vMissions with
+// The Agents tab (the row under its title is app.js's agentViews; five views since 7 Nov 2026): Overview (app.js vMissions with
 // swOverview: working now, the map of who works with whom, every mission and housekeeping job), Activity (the room: what
 // the agents do together, with filters, and the run timeline under them), Team (every agent, each with its own page,
 // #/swarm/agent/<id> or its housekeeping page's Team tab) and Ideas (ideas, the task graph, the loop's numbers); an
@@ -28,15 +28,15 @@ function swCtxName(c) {
 }
 function swTime(ts) { return ts ? dt(ts) : ""; }
 
-const SW_ALIAS = { chat: "activity", timeline: "activity", tasks: "improve", flow: "improve" };   // links from before the four views
+const SW_ALIAS = { chat: "activity", timeline: "activity", tasks: "improve", flow: "improve", graph: "map" };   // links from before the four views
 async function vSwarm() {                            // render() calls views without arguments; view is app.js's #view
   clearInterval(swTimer);
   if (route.args[0] === "artifact") return swArtifact(view, +route.args[1]);
   if (route.args[0] === "agent") return swAgentPage(view, decodeURIComponent(route.args[1] || ""));
   const asked = route.q.get("tab") || swTab;
-  if (["map", "graph", "now", "list"].includes(asked)) { location.replace("#/missions"); return; }   // on the Overview now
+  if (["now", "list"].includes(asked)) { location.replace("#/missions"); return; }   // on the Overview now
   swTab = SW_ALIAS[asked] || asked;
-  if (!["activity", "agents", "improve"].includes(swTab)) swTab = "activity";
+  if (!["activity", "agents", "improve", "map"].includes(swTab)) swTab = "activity";
   if (swTab === "activity") swActivityFromUrl();
   view.innerHTML = `<div class="hero heading" style="margin-bottom:10px"><h1>Agents</h1></div>
     ${agentViews(swTab)}
@@ -44,6 +44,12 @@ async function vSwarm() {                            // render() calls views wit
   const body = $("#swbody");
   try {
     if (swTab === "agents") return await swAgents(body);
+    if (swTab === "map") {                             // APP-47: its own view: above the missions it pushed them 1,300 pixels down
+      body.innerHTML = `<div id="ovmap"><div class="card pad-l"><div class="skeleton" style="height:320px"></div></div></div>`;
+      swMapMount();
+      swTimer = setInterval(() => (route.name === "swarm" && swTab === "map" ? swMapMount() : clearInterval(swTimer)), 30000);
+      return;
+    }
     if (swTab === "improve") {
       body.innerHTML = `<div id="swideas"></div><div class="section-h section" id="swtasksh"><h2>Being built</h2><span class="tiny faint">approved ideas split into tasks</span></div><div id="swtasks"></div>
         <details class="card pad-l section" id="swflowd"${asked === "flow" ? " open" : ""}><summary><b>The improvement loop in numbers</b> <span class="small muted">ideas per week, replay sets, failures, requirements</span></summary><div id="swflow" style="margin-top:8px"></div></details>`;
@@ -378,7 +384,7 @@ function swMapMount(force) {                            // Overview's map surviv
       if (!cur || (!force && sig === swOv.sig && swOv.el)) return;
       swOv.sig = sig;
       swOv.el = swMapCard(cur, d);
-    }).catch((e) => { const cur = $("#ovmap"); if (cur && !swOv.el) cur.innerHTML = `<div class="card pad-l small muted">The map could not load: ${esc(e.message)}</div>`; });
+    }).catch((e) => { const cur = $("#ovmap"); if (cur && !swOv.el) cur.innerHTML = `<div class="card pad-l small muted">The map has no data to show${notConnected() ? ": it fills once the stack's runner has run here" : `: ${esc(e.message)}`}.</div>`; });
   }
 }
 // The map's rows, top to bottom: you; the reviewers only you answer; whom you ask; whom they ask; what they use; the task

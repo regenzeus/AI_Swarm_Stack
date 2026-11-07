@@ -3,7 +3,7 @@ Description=Nightly encrypted backup to the NAS
 [Service]
 Type=oneshot
 TimeoutStartSec=2h
-Environment=DOCKER_HOST=unix:///run/user/1000/docker.sock
-WorkingDirectory=/home/owner/ai-stack
-ExecCondition=/usr/bin/python3 /home/owner/ai-stack/ops/stack_gate.py --wait 1800 --slot 15
+Environment=DOCKER_HOST=unix://%t/docker.sock
+WorkingDirectory=%h/ai-stack
+ExecCondition=/usr/bin/python3 %h/ai-stack/ops/stack_gate.py --wait 1800 --slot 15
 ExecStart=/bin/bash -c "ops/backup.sh || { ops/notify.sh \"Nightly backup failed, see: journalctl --user -u backup\"; exit 1; }"

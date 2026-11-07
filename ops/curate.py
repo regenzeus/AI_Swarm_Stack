@@ -17,6 +17,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "eval")); sys.path.insert(0, str(ROOT / "ops"))
 import bench  # noqa: E402
 import skills_sync  # noqa: E402
+import deployment as DEPLOY  # noqa: E402
 
 LOG = Path("/srv/ai/state/approvals.jsonl")
 
@@ -109,7 +110,7 @@ def main():
     head = subprocess.run(["git", "-C", str(skills_sync.REPO), "rev-parse", "--short", "HEAD"],
                           capture_output=True, text=True).stdout.strip()
     msg = (f"Weekly {what} run: {verdict}\nSkills history: "
-           f"http://192.168.1.10:3000/regenzeus/hermes-skills/commit/{head}")
+           f"{DEPLOY.FORGEJO_URL}/{DEPLOY.FORGEJO_OWNER}/hermes-skills/commit/{head}")
     print(msg)
     skills_sync.notify(msg)
 

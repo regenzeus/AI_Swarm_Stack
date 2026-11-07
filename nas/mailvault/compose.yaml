@@ -1,0 +1,25 @@
+# The mail copy on the NAS (CNX-07): Gmail -> NAS, one way, read-only. Deployed by `make mailvault-deploy` to
+# /volume1/docker/mailvault. It listens on nothing, and its only connection is to imap.gmail.com, on the Python standard library.
+name: mailvault
+
+services:
+  vault:
+    image: python:3.12-slim@sha256:a0f57064cbdcd6285fa45f51237ab0b35ea8ebaed06a1f5973e89e19dfb86704   # already on the NAS (testrepo)
+    container_name: mailvault
+    restart: unless-stopped
+    user: "1026:100"
+    command: ["python3", "-u", "/app/vault.py"]
+    environment:
+      TZ: Europe/Berlin
+      PYTHONDONTWRITEBYTECODE: "1"
+    volumes:
+      - /volume1/docker/mailvault/vault.py:/app/vault.py:ro
+      - /volume1/docker/mailvault/data:/data
+      - /volume1/docker/mailvault/secret:/secret:ro
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+    mem_limit: 256m
+    logging: { driver: json-file, options: { max-size: "5m", max-file: "2" } }

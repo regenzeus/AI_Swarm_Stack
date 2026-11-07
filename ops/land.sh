@@ -9,7 +9,8 @@
 # 5. one activity event ("Session deploy …", with the approval) so Mission Control shows what shipped and why
 #   bash ops/land.sh --restart-runner-when-idle      (internal: step 4's wait, started through systemd-run)
 set -uo pipefail
-REPO=${AISTACK:-$HOME/ai-stack}          # the live checkout: the branch is landed there, wherever this script runs from
+eval "$(python3 "$(dirname "$0")/deployment.py" shell)"   # this deployment's hosts and paths (config/deployment.env)
+REPO=${AISTACK:-$STACK_DIR}             # the live checkout: the branch is landed there, wherever this script runs from
 cd "$REPO" || exit 2
 EVENTS=/srv/ai/missions/public/events.jsonl
 DB=/srv/ai/missions/missions.sqlite

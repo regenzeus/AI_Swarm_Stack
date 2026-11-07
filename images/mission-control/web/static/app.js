@@ -2,6 +2,9 @@
 // actions go to /api/request, which the host runner validates and executes. Chats and wikis come from their own APIs.
 "use strict";
 
+// This deployment's addresses: the server puts them into the page (config/deployment.env, index.html)
+const DEPLOY = window.DEPLOY || {};
+
 // a script error on a phone is invisible from the PC: report it to the server log (docker logs mission-control)
 let errSent = 0;
 // a cut that shows itself, like textcap.cut (AGENTS.md, truncation): how many characters follow
@@ -212,7 +215,7 @@ function navHtml(bottom) {
   const pend = S?.system?.pending_memory?.length || 0;
   return NAV.map(([k, href, label, icon]) => {
     const on = route.name === k || (k === "home" && ["tasks", "task", "taskmap", "decide"].includes(route.name))   // tasks are given on Home ("Do it")
-      || (k === "missions" && ["mission", "crew", "new", "swarm"].includes(route.name)) || (k === "system" && ["guide", "telemetry", "trials"].includes(route.name)) || (k === "build" && route.name === "repo");
+      || (k === "missions" && ["mission", "crew", "new", "swarm"].includes(route.name)) || (k === "system" && ["mail", "guide", "telemetry", "trials"].includes(route.name)) || (k === "build" && route.name === "repo");
     const toReview = (S?.builds || []).filter((b) => b.status === "review").length;        // the badge = what waits for you
     const n = k === "system" && pend ? `<span class="tab-n">${pend}</span>` : k === "build" && toReview ? `<span class="tab-n">${toReview}</span>`
       : k === "system" ? `<span class="tab-dot ${liveState()}" title="${liveState() === "run" ? "An agent is running" : liveState() === "ok" ? "Ready" : "Not connected"}"></span>` : "";
@@ -233,17 +236,24 @@ function mirrorChip() {                                   // on a phone the chat
   if (cd && chip) { cd.className = chip.className + " chatchip"; cd.innerHTML = chip.innerHTML; cd.title = chip.title; cd.onclick = chip.onclick; cd.hidden = !updateReady && liveState() !== "off"; }   // APP-45: said only while something is off; the Stack tab's dot has the rest
 }
 // ok (Ready), run (an agent works), off (connecting, offline, no link): the dot on Stack and the sidebar's foot
-const liveState = () => (!S || Date.now() - lastState > 60000 ? "off" : S.running ? "run" : "ok");
+const liveState = () => (!S || !S.generated || Date.now() - lastState > 60000 ? "off" : S.running ? "run" : "ok");   // the app answers, but no runner ever wrote: not connected
+const notConnected = () => liveState() === "off";           // then "all quiet" and "nothing needs you" would be guesses
+function footState() {                                       // the rail's foot: the one place that always says how the stack is
+  const st = liveState(), word = st === "off" ? (S || noLink() ? "Not connected" : "Connecting…") : S.running ? "Running" : "Ready";
+  const f = $("#side-foot");
+  if (f) f.innerHTML = `<span class="dot ${st === "off" ? "err" : st}"></span><b>${word}</b><span class="when">${S?.generated ? `updated ${clock(S.generated, true)}` : "no data yet"}</span>`;
+}
 function liveChip(chip) {
+  footState();
   const bar = $("#livebar");                                // shown only when something is off: an update, no link, offline
   if (bar) bar.hidden = !updateReady && liveState() !== "off";
   chip.onclick = updateReady ? () => location.reload() : null;
   if (updateReady) { chip.className = "chip live upd"; chip.innerHTML = `${ic.repeat}Update ready · tap`; return; }
   if (!S) { chip.innerHTML = noLink() ? `<span class="dot err"></span>No connection` : `<span class="dot"></span>Connecting…`; chip.className = "chip"; return; }
-  if (Date.now() - lastState > 60000) { chip.className = "chip"; chip.innerHTML = `<span class="dot err"></span>Offline · ${clock(S.generated)}`; return; }
+  if (!S.generated) { chip.className = "chip"; chip.innerHTML = `<span class="dot err"></span>Not connected · the runner has written nothing here`; return; }
+  if (Date.now() - lastState > 60000) { chip.className = "chip"; chip.innerHTML = `<span class="dot err"></span>Not connected${S.generated ? ` · last update ${clock(S.generated)}` : " · no data yet"}`; return; }
   if (S.running) { chip.className = "chip live"; chip.title = S.running.title; chip.innerHTML = `<span class="dot run"></span>Running`; }   // a title does not fit the header: Home's Now has it whole
   else { chip.className = "chip"; chip.title = ""; chip.innerHTML = `<span class="dot ok"></span>Ready`; }
-  $("#side-foot").innerHTML = `<span class="dot ${S.running ? "run" : "ok"}"></span> ${S.running ? "Running" : "Ready"} · updated ${clock(S.generated, true)}`;
 }
 
 function parseRoute() {
@@ -300,14 +310,18 @@ function render(force = false) {
                                                                  // only its live parts update in place, the page never moves
   if (!force && route.name === "live") return;
   if (!force && route.name === "repo") return repoLive();
-  if (!force && !(LIVE.has(route.name) || (route.name === "files" && !$("#fplan")?.innerHTML && !typing()) || ((route.name === "mission" || route.name === "crew") && agentSigOf() !== agentSig && !typing() && !$(".tl:not([hidden])") && !$("#tabbody details[open]")) || (route.name === "build" && !typing() && !$("#chbox:not([hidden])") && !$("#view details[open]") && !$("#blogbox:not([hidden])") && !($("#ar-url")?.value || $("#ar-name")?.value)))) return;
+  if (!force && !(LIVE.has(route.name) || (route.name === "files" && !$("#fplan")?.innerHTML && !typing()) || ((route.name === "mission" || route.name === "crew") && agentSigOf() !== agentSig && !typing() && !$(".tl:not([hidden])") && !$("#tabbody details[open]")) || (route.name === "build" && !typing() && !$("#chbox:not([hidden])") && !$("#view details[open]") && !$("#blogbox:not([hidden])") && !$("#nb:not([hidden])") && !$("#addrepo:not([hidden])")))) return;
   // views that load their own data draw at once; the others wait for the first state (they are drawn when it comes)
-  if (!S && !["chat", "wiki", "read", "guide", "phone", "share", "live", "swarm", "taskmap", "telemetry", "task", "trials"].includes(route.name)) { view.innerHTML = noLink() ? offlineHtml() : `<div class="stack"><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div></div>`; return; }
+  if (!S && !["mail", "chat", "wiki", "read", "guide", "phone", "share", "live", "swarm", "taskmap", "telemetry", "task", "trials"].includes(route.name)) { view.innerHTML = noLink() ? offlineHtml() : `<div class="stack"><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div></div>`; return; }
   const y = window.scrollY;
   if (force) $("#homenew")?.remove();                  // Home's waiting updates belong to Home only
   if (force) { document.body.classList.add("anim"); clearTimeout(render.anim); render.anim = setTimeout(() => document.body.classList.remove("anim"), 600); }
   const open = force ? [] : [...view.querySelectorAll("details[open][id], details[open][data-keep]")].map((d) => d.id || d.dataset.keep);
-  const fn = { decide: vDecide, tasks: vTasks, task: vTask, trials: vTrials, home: vHome, missions: vMissions, mission: vMission, new: vNew, chat: vChat, system: vSystem, read: vRead, file: vFile, files: vFiles, wiki: vWiki, build: vBuild, repo: vRepo, guide: vGuide, share: vShare, phone: vPhone, house: vHouse, crew: vCrew, live: vLive, swarm: vSwarm, taskmap: vTaskMap, telemetry: vTelemetry }[route.name] || vHome;
+  const fn = { mail: vMail, decide: vDecide, tasks: vTasks, task: vTask, trials: vTrials, home: vHome, missions: vMissions, mission: vMission, new: vNew, chat: vChat, system: vSystem, read: vRead, file: vFile, files: vFiles, wiki: vWiki, build: vBuild, repo: vRepo, guide: vGuide, share: vShare, phone: vPhone, house: vHouse, crew: vCrew, live: vLive, swarm: vSwarm, taskmap: vTaskMap, telemetry: vTelemetry }[route.name] || vHome;
+  if (force) {                                      // a page that loads for a moment: not the page you left under the new tab's name
+    const was = view.firstChild, n = (render.nav = (render.nav || 0) + 1);
+    setTimeout(() => { if (render.nav === n && view.firstChild === was) view.innerHTML = `<div class="stack"><div class="skeleton" style="height:96px"></div><div class="skeleton" style="height:280px"></div></div>`; }, 180);
+  }
   fn();
   for (const k of open) {                          // a live redraw keeps what you opened open
     const d = view.querySelector(`details#${CSS.escape(k)}`) || view.querySelector(`details[data-keep="${CSS.escape(k)}"]`);
@@ -402,6 +416,64 @@ function workBuildRow(b) {
     <div class="grow small"><span class="ttl">#${b.id} ${esc(b.title)}</span> · <span class="pill ${cls}" style="padding:1px 7px">${BSTATUS[b.status] || b.status}</span>${b.status === "review" ? ` · Checks: ${b.checks ? (b.checks_ok ? "Passed" : "Failed") : "Not run yet"} · CI: ${esc(b.ci || "Not pushed yet")} · AI review: ${esc(verdict)}` : ""}</div></a>`;
 }
 
+// ---------- your mail: the copy on the NAS and the sender report, from headers only (CNX-07, CNX-08) ----------
+let mailData = null, mailFilter = "all", mailShown = 100, mailFind = "";
+const MAIL_FILTERS = [["all", "All senders"], ["bulk", "Mailing lists you never answer"], ["people", "People you write to"], ["big", "Biggest"], ["protected", "Banks and security"]];
+function mailRows() {
+  let rows = mailData?.census?.senders || [];
+  const q = mailFind.trim().toLowerCase();
+  if (q) rows = rows.filter((r) => `${r.name} ${r.addr}`.toLowerCase().includes(q));
+  if (mailFilter === "bulk") rows = rows.filter((r) => r.list > 0 && !r.wrote_to && !r.protected && !r.starred);
+  if (mailFilter === "people") rows = rows.filter((r) => r.wrote_to > 0);
+  if (mailFilter === "protected") rows = rows.filter((r) => r.protected);
+  if (mailFilter === "big") rows = [...rows].sort((a, b) => b.bytes - a.bytes);
+  return rows;
+}
+const mailMb = (n) => gb(n || 0);
+function mailCopyHtml(st) {
+  if (!st) return `<div class="small muted">The copy on the NAS has not reported yet.</div>`;
+  if (st.state === "waiting") return `<div class="small">It waits for its app password: <code>make mailvault-password</code> on the PC.</div>`;
+  const left = Math.max(0, (st.total_bytes || 0) - (st.copied_bytes || 0)), days = Math.ceil(left / (st.daily_bytes || 2e9));
+  const pct = st.total ? Math.floor((100 * st.copied) / st.total) : 0;
+  return `<div class="kpi-v" style="font-size:20px">${pct} %</div><div class="small muted wrap">${nf(st.copied)} of ${nf(st.total)} mails, ${mailMb(st.copied_bytes)} of ${mailMb(st.total_bytes)}${left ? ` · about ${days} day${days === 1 ? "" : "s"} to go` : ""} · ${rel(new Date(st.at * 1000).toISOString())}</div>
+    ${st.state === "failed" ? `<div class="small err-t wrap" style="margin-top:6px">${esc(st.why || "It stopped.")}</div>` : ""}${st.gone ? `<div class="tiny muted" style="margin-top:6px">${nf(st.gone)} have left Gmail and stay here.</div>` : ""}`;
+}
+function mailListHtml() {
+  const rows = mailRows(), shown = rows.slice(0, mailShown);  /* cap: list */
+  const total = rows.reduce((a, r) => a + r.n, 0);
+  return `<div class="tiny muted" style="margin-bottom:8px">${nf(rows.length)} sender${rows.length === 1 ? "" : "s"} · ${nf(total)} mails</div>
+    <div class="card list">${shown.map((r) => `<div class="mailrow"><div class="grow wrap"><b>${esc(r.name || r.addr)}</b><div class="tiny muted wrap">${esc(r.addr)}</div>
+      <div class="tiny faint wrap">${nf(r.unread)} unread · ${mailMb(r.bytes)} · last ${r.last ? rel(new Date(r.last * 1000).toISOString()) : "unknown"}${r.list ? " · mailing list" : ""}${r.wrote_to ? ` · you wrote ${nf(r.wrote_to)}` : ""}${r.protected ? " · protected" : ""}</div></div><div class="kpi-v" style="font-size:18px">${nf(r.n)}</div></div>`).join("") || `<div class="muted small">No sender here.</div>`}</div>
+    ${rows.length > shown.length ? `<button class="btn" id="mailmore" style="margin-top:10px">Show ${nf(Math.min(100, rows.length - shown.length))} more of ${nf(rows.length - shown.length)}</button>` : ""}`;
+}
+function bindMail() {
+  $$("[data-mf]").forEach((b) => (b.onclick = () => { mailFilter = b.dataset.mf; mailShown = 100; $$("[data-mf]").forEach((x) => x.classList.toggle("on", x === b)); $("#maillist").innerHTML = mailListHtml(); bindMailMore(); }));
+  const f = $("#mailfind");
+  if (f) f.oninput = () => { mailFind = f.value; mailShown = 100; $("#maillist").innerHTML = mailListHtml(); bindMailMore(); };
+  bindMailMore();
+}
+function bindMailMore() {
+  const m = $("#mailmore");
+  if (m) m.onclick = () => { mailShown += 100; $("#maillist").innerHTML = mailListHtml(); bindMailMore(); };
+}
+async function vMail() {
+  view.innerHTML = `<a class="back" href="#/system?conn=1">${ic.back}Connections</a><h1 style="font-size:26px">Your mail</h1><div class="skeleton" style="height:200px;margin-top:14px"></div>`;
+  let got, why = "";
+  try { got = await api("/api/mail"); } catch (e) { why = e.message; }
+  if (route.name !== "mail") return;                          // FND-95: you moved on while it loaded
+  if (!got) { view.innerHTML = `<a class="back" href="#/system?conn=1">${ic.back}Connections</a><div class="card empty">${esc(why)}</div>`; return; }
+  mailData = got;
+  const p = mailData.postmaster || {}, c = mailData.census;
+  view.innerHTML = `<a class="back" href="#/system?conn=1">${ic.back}Connections</a><div class="row between"><h1 style="font-size:26px">Your mail</h1>${explain("this-page-is-made-from", "This page is made from the headers of your mail: who wrote, how much, whether you read it, whether you answer. No message text is read, and nothing here changes Gmail. The copy on the NAS only reads Gmail and keeps a mail even after it leaves Gmail.", "About this")}</div>
+    <div class="grid g2 section"><div class="card kpi"><div class="kpi-l">Copy on the NAS</div>${mailCopyHtml(mailData.status)}</div>
+      <div class="card kpi"><div class="kpi-l">AI Stack label</div><div class="kpi-v" style="font-size:20px">${nf(p.total_filed || 0)}</div><div class="kpi-s wrap">${esc(p.result || "The Postmaster has not run yet.")}</div></div></div>
+    <div class="section"><div class="section-h"><h2>Who writes to you</h2></div>${c ? `
+      <input id="mailfind" class="input" placeholder="Find a sender" value="${esc(mailFind)}" style="width:100%;margin-bottom:10px">
+      <div class="row wrap" style="gap:6px;margin-bottom:10px">${MAIL_FILTERS.map(([k, t]) => `<button class="chip ${mailFilter === k ? "on" : ""}" data-mf="${k}">${t}</button>`).join("")}</div>
+      <div id="maillist">${mailListHtml()}</div>` : `<div class="card empty small">The report appears when the copy has read the headers.</div>`}</div>`;
+  bindMail();
+}
+
 // ---------- app connections (Gmail first): time-limited grants, first-Trash approvals, log ----------
 const CONN_NAME = { gmail: "Gmail" };
 const GRANT_FOR = [[60, "1 hour"], [480, "8 hours"], [-1, "Until I revoke"]];
@@ -432,6 +504,7 @@ async function drawConnections() {
     const st = c.status || {};
     return `<div class="card pad-l"><div class="row between wrap" style="gap:8px;align-items:center"><div><b>${esc(CONN_NAME[c.id] || c.id)}</b> <span class="small muted">${esc(st.account || "")}</span>
         <div class="tiny muted">${st.ok ? `connected · ${nf(st.inbox_unread || 0)} unread in the inbox · ${nf(st.spam || 0)} in spam` : st.configured === false ? "not set up (make email-setup)" : esc(st.error || "checking…")}</div></div></div>
+      ${c.id === "gmail" ? `<a class="btn sm" href="#/mail" style="margin-top:10px">${ic.wiki}Your mail</a>` : ""}
       <div class="stack" style="margin-top:10px;gap:10px">${Object.entries(c.scopes).map(([s, what]) => grantRow(c.id, s, what, c.grants[s]?.until)).join("")}</div>
       ${connPendingHtml(C.pending.filter((p) => p.conn === c.id))}
       <details style="margin-top:10px"><summary class="small muted">What it did · ${C.log.filter((e) => e.conn === c.id).length}</summary><ul class="phlog">${C.log.filter((e) => e.conn === c.id).map((e) => `<li><span class="tiny faint">${dt(e.at)}</span> <b>${esc(e.action)}</b> ${esc(e.scope || e.query || e.reason || "")}${e.count != null ? ` · ${e.count}` : ""}${e.found != null ? ` · ${e.found} found` : ""}${e.batch ? ` · batch ${esc(e.batch)}` : ""}${e.mission ? ` · ${esc(e.mission)}` : ""}</li>`).join("")}</ul></details></div>`;
@@ -491,7 +564,7 @@ const TGROUPS = [["Waiting on you", ["needs_answer", "waiting_approval", "waitin
   ["Scheduled", ["scheduled"]], ["Done", ["done", "failed", "cancelled"]]];
 const TSTATUS = { intake: "being planned", planning: "being planned", planned: "starting", needs_answer: "has a question", waiting_approval: "waits for your OK",
   waiting_owner: "waits for your review", running: "running", after: "waits for another task", scheduled: "scheduled", done: "done", failed: "failed", cancelled: "cancelled" };
-const TKINDS = { coding: "Coding", code_question: "Question about code", research: "Research", analysis: "Analysis", watching: "Watching", briefing: "Briefing", shopping: "Shopping", errand: "Errand" };
+const TKINDS = { change: "Change request", coding: "Coding", code_question: "Question about code", research: "Research", analysis: "Analysis", watching: "Watching", briefing: "Briefing", shopping: "Shopping", errand: "Errand" };
 const TDOOR = { mission: (r) => [`#/mission/${encodeURIComponent(r)}`, "Open the mission"], build: (r) => [`#/build/${r}`, `Open build #${r}`],
   claude: (r) => [`#/live/claude-task:${r}`, `Open Claude task #${r}`], chat: (r) => [`#/chat?c=${r}`, "Open the chat"] };
 const openTasks = () => (S?.tasks || []).filter((t) => !["done", "failed", "cancelled"].includes(t.status)).length;
@@ -1006,7 +1079,8 @@ function needsItems() {
 
 function needsHtml() {
   const it = needsItems();
-  if (!it.length) return `<div id="homeneeds" class="needs-calm">${ic.check}<span>Nothing needs you right now.</span></div>`;
+  if (!it.length) return notConnected() ? `<div id="homeneeds" class="needs-calm off">${ic.alert}<span>Not connected: what needs you can't be read now.</span></div>`
+    : `<div id="homeneeds" class="needs-calm">${ic.check}<span>Nothing needs you right now.</span></div>`;
   return `<div id="homeneeds"><div class="section-h"><h2>Needs you <span class="hcount">${it.length}</span></h2>${(S.decisions || []).length ? `<a class="tiny" href="#/decide">All decisions</a>` : ""}</div>
     <div class="card list hneeds">${it.map((x) => x.build ? workBuildRow(x.build) : `<a href="${x.href}"><div class="ic ${x.cls || "warn"}">${x.icon}</div><div class="grow" style="min-width:0"><div class="ttl">${esc(x.title)}</div><div class="sub wrap">${esc(x.sub || "")}</div></div>${ic.next}</a>`).join("")}</div></div>`;
 }
@@ -1081,7 +1155,7 @@ function nowHtml() {
     ...builds.map(workBuildRow),
     ...queued.map((m) => `<a href="#/mission/${encodeURIComponent(m.slug)}"><div class="ic">${typeIcon(m.type)}</div><div class="grow"><div class="ttl wrap">${esc(m.title)}</div><div class="sub">waits for the run slot</div></div><span class="pill queued">Queued</span></a>`),
     ...tasks.map((t) => `<a href="#/build"><div class="ic ${t.status === "running" ? "run" : ""}">${ic.code}</div><div class="grow"><div class="ttl wrap">Claude task #${t.id}</div><div class="sub wrap">${esc(ctTitle(t))}</div></div><span class="pill ${t.status === "running" ? "running" : "queued"}">${t.status === "running" ? "Running" : "Queued"}</span></a>`)];
-  return `<div id="homenow"><div class="section-h"><h2>Now</h2>${busy ? `<span class="pill running"><span class="dot run"></span>working</span>` : `<span class="tiny faint">all quiet</span>`}</div>
+  return `<div id="homenow"><div class="section-h"><h2>Now</h2>${busy ? `<span class="pill running"><span class="dot run"></span>working</span>` : `<span class="tiny faint">${typeof notConnected === "function" && notConnected() ? "not known" : "all quiet"}</span>`}</div>
     ${S.running ? runningCard() : ""}
     ${rows.length ? `<div class="card list" ${S.running ? 'style="margin-top:10px"' : ""}>${rows.join("")}</div>` : S.running ? "" : `<div class="card pad small muted">No agent is working right now.</div>`}
     ${upkeepHtml()}
@@ -1153,7 +1227,7 @@ function feedHtml() {
     <div class="chips scroll-x" style="margin-bottom:6px">${kinds.map(([k, l]) => `<button type="button" class="tag hf ${homeFilter === k ? "on" : ""}" data-hf="${k}">${l}</button>`).join("")}</div>
     ${rows || `<div class="card empty small">Nothing here yet. A result shows up the moment an agent finishes.</div>`}
     ${mine.length > items.length ? `<button type="button" class="btn sm ghost" id="hfmore" style="margin-top:8px">Show older (${mine.length - items.length} more)</button>` : ""}
-    <div class="tiny faint" style="margin-top:10px">The stack's own work is not here: its health under Now, deploys under <a href="#/build">Code</a>, the agents' activity under <a href="#/swarm?tab=activity">Agents</a>.</div></div>`;
+    ${typeof explain === "function" ? explain("what-is-not-here-", `The stack's own work is not here: its health under Now, deploys under <a href="#/build">Code</a>, the agents' activity under <a href="#/swarm?tab=activity">Agents</a>.`, "What is not here") : ""}</div>`;
 }
 
 // the first lines of a result under its headline, fetched once per file
@@ -1173,6 +1247,7 @@ function loadExcerpts() {
 function homeHeadHtml() {
   const n = needsItems().length, next = (S.missions || []).filter((m) => m.status === "active" && m.next_run).sort((a, b) => a.next_run.localeCompare(b.next_run))[0];
   const busy = (S.running ? 1 : 0) + (S.builds || []).filter((b) => ["working", "checking", "deploying"].includes(b.status)).length + (S.claude_tasks || []).filter((t) => t.status === "running").length;
+  if (notConnected()) return `<p id="homehead">${day(new Date(), true)} · <b class="err-t">not connected</b>: what you see may be out of date</p>`;
   return `<p id="homehead">${day(new Date(), true)} · ${n ? `<b class="warn-t">${n} thing${n > 1 ? "s need" : " needs"} you</b>` : "nothing needs you"} · ${busy ? `${busy} working now` : "all quiet"}${next ? ` · next: ${esc(next.title)} ${rel(next.next_run)}` : ""}</p>`;
 }
 
@@ -1369,7 +1444,7 @@ async function ackIssues(keys, btn) {
 }
 
 // the Agents tab's views in one row under its title: the list (#/missions) and the swarm's (swarm.js, #/swarm?tab=)
-const AGENT_VIEWS = [["list", "Overview"], ["activity", "Activity"], ["agents", "Team"], ["improve", "Ideas"]];   // ten views became four (1 Nov 2026)
+const AGENT_VIEWS = [["list", "Overview"], ["map", "Map"], ["activity", "Activity"], ["agents", "Team"], ["improve", "Ideas"]];   // ten views became four (1 Nov 2026)
 function agentViews(cur) {
   setTimeout(() => {                    // the row scrolls sideways on a phone: show the chosen one. Only the row moves: centring the tab
     const a = $(".agviews a.on"), row = a?.parentElement;   // into view also scrolled the page up to the row on every live redraw (FND-96)
@@ -1389,11 +1464,10 @@ function vMissions() {                     // the Agents tab (the route keeps it
   const need = cur.filter((a) => a.needs.length).length, live = cur.filter((a) => a.live).length, bad = cur.filter((a) => agentHealth(a) === "bad").length;
   const keys = issueKeys(cur);
   view.innerHTML = `<div class="hero"><div><h1>Agents</h1>
-      <p class="agtop">${need ? `<b class="warn-t">${need} need${need > 1 ? "" : "s"} you</b>` : "Nothing needs you"}${live ? ` · <span class="run-t">${live} live</span>` : ""}${bad ? ` · <a class="err-t" href="#/missions?f=problems">${bad} with problems</a>` : ""} · ${cur.length} agents${keys.length ? ` · <button class="linkbtn" id="ackall">acknowledge all ${keys.length}</button>` : ""}</p></div></div>
+      <p class="agtop">${notConnected() ? `<b class="err-t">Not connected</b>` : need ? `<b class="warn-t">${need} need${need > 1 ? "" : "s"} you</b>` : "Nothing needs you"}${live ? ` · <span class="run-t">${live} live</span>` : ""}${bad ? ` · <a class="err-t" href="#/missions?f=problems">${bad} with problems</a>` : ""} · ${cur.length} agents${keys.length ? ` · <button class="linkbtn" id="ackall">acknowledge all ${keys.length}</button>` : ""}</p></div></div>
     ${agentViews("list")}
     ${phoneBanner()}
     <div id="ovnow"></div>
-    <div id="ovmap"><div class="card pad-l section"><div class="skeleton" style="height:320px"></div></div></div>
     <div class="section-h section wrap"><h2>Missions and housekeeping</h2><a class="btn sm" href="#/new">${ic.plus}New mission</a></div>
     <div class="agf">${AGENT_FILTERS.filter(([k]) => k !== "problems" || bad || agentFilter === k).map(([k, l]) => `<button class="fchip ${agentFilter === k ? "on" : ""}" data-af="${k}">${l}<span>${cur.filter(IN_FILTER[k]).length}</span></button>`).join("")}</div>
     <div class="aglist">${list.map(agentCard).join("") || emptyState(`${ic.target}<div>${agentFilter === "live" ? "Nothing is running right now: an agent shows here while it works." : "No agents here."}</div>`, `<a class="btn sm" href="#/missions?f=all">All agents</a><a class="btn sm ghost" href="#/new">${ic.plus}New mission</a>`, "card")}</div>
@@ -2616,7 +2690,7 @@ async function vChat() {
   const mis = mslug || cur?.mission;
   const m = mis && S ? S.missions.find((x) => x.slug === mis) : null;
   const sugg = m ? [`What does this mission track right now?`, `Make it focus more on `, `Add a key question about `, `Alert me when ${m.brief?.filings?.[0] || "the company"} files with the SEC`]
-    : ["What are my missions doing?", "What's new on copper today?", "Research Gamma Metals and e-mail me an analysis", "Watch ASPI and tell me if it moves 8 % in a day"];
+    : ["What are my agents doing?", "What changed in my repositories this week?", "Research a company and e-mail me an analysis", "Watch a share and tell me if it moves 8 % in a day"];
   view.innerHTML = `<div class="chatwrap">
     <div class="cscrim" id="cscrim" hidden></div>
     <aside class="chatlist" id="clist" aria-label="Your chats">
@@ -2936,7 +3010,7 @@ function bindPhone(P) {
 // ---------- House: Home Assistant on the NAS (ops/house.py): setup, rooms, Echos, the voice bridge ----------
 function houseSteps(h) {
   const has = (d) => (h.integrations || []).some((x) => x.domain === d);
-  const ha = h.url || "http://192.168.1.10:8123";
+  const ha = h.url || DEPLOY.HA_URL;
   return [
     { done: h.reachable, title: "Home Assistant runs on the NAS", sub: h.reachable ? ha : "not reachable from the PC: is the NAS on?" },
     { done: h.onboarded, title: "Create your Home Assistant account", sub: "once, on your home Wi-Fi: name, user, password, your location",
@@ -3224,12 +3298,15 @@ function wikiIndex() {
   const row = (r) => `<a href="#/wiki?root=${encodeURIComponent(r.root)}"><div class="ic">${r.mission ? ic.target : ic.brain}</div><div class="grow" style="min-width:0"><div class="ttl wrap">${esc(r.title)}</div>
     <div class="sub wrap">${r.pages} pages · ${r.links} links${r.mission ? "" : " · your vault"}${r.archived ? " · its mission is archived" : ""}</div><div class="sub wrap wuse" data-wuse="${esc(r.root)}"></div></div>${ic.next}</a>`;
   view.innerHTML = `<div class="hero heading" style="margin-bottom:12px"><div class="row between" style="gap:10px"><h1>Wiki</h1>
-    <button class="btn sm" id="wnewb">${ic.plus}New wiki</button></div><p>${live.length} wikis · ${pages} pages: what your agents learned, each as linked pages and a graph.</p></div>
+    <button class="btn sm" id="wnewb">${ic.plus}New wiki</button></div><p>${live.length} wiki${live.length === 1 ? "" : "s"} · ${pages} page${pages === 1 ? "" : "s"}: what your agents learned, each as linked pages and a graph.</p></div>
   ${wikiNewForm()}
+  <div class="wgrid"><div>
+  <div class="card list wikis">${live.map(row).join("") || `<div class="pad small muted">No wiki yet. New wiki starts one; every agent's results build its own.</div>`}</div>
+  ${old.length ? `<details class="section"><summary class="small muted">${old.length} wiki${old.length > 1 ? "s" : ""} of archived missions (kept, not on the map)</summary><div class="card list wikis" style="margin-top:8px">${old.map(row).join("")}</div></details>` : ""}
+  </div>
   <div class="card pad-l wmap"><div class="section-h" style="margin:0"><h2>How they connect</h2><span class="tiny faint">bubble = a wiki, tap to open · line = subjects both have</span></div>
     <div id="wmapsvg" class="wmapsvg"><div class="skeleton" style="height:260px"></div></div><div id="wmapinfo" class="small"></div></div>
-  <div class="card list wikis section">${live.map(row).join("") || `<div class="pad small muted">No wiki yet. New wiki starts one; every agent's results build its own.</div>`}</div>
-  ${old.length ? `<details class="section"><summary class="small muted">${old.length} wiki${old.length > 1 ? "s" : ""} of archived missions (kept, not on the map)</summary><div class="card list wikis" style="margin-top:8px">${old.map(row).join("")}</div></details>` : ""}`;
+  </div>`;
   bindWikiAdmin("", {});
   wikiMap();
 }
@@ -3651,26 +3728,42 @@ function repoActivity(name) {
   return { review: bs.filter((b) => b.status === "review").length, busy: bs.filter((b) => ["queued", "working", "checking", "waiting", "deploying"].includes(b.status)).length };
 }
 
-function repoCard(r) {
-  const g = r.graph, a = repoActivity(r.name);
-  return `<a class="card repo fadein ${a.review ? "has-review" : ""}" href="#/repo/${encodeURIComponent(r.name)}">
-    <div class="row between" style="align-items:flex-start;gap:10px"><div class="repo-ic">${ic.code}</div>
-      <div class="row wrap" style="gap:6px;justify-content:flex-end">${a.review ? `<span class="pill failed" style="padding:2px 8px">${a.review} to review</span>` : ""}${a.busy ? `<span class="pill running" style="padding:2px 8px">${a.busy} building</span>` : ""}
-      <span class="pill ${r.buildable ? "ok" : "archived"}" style="padding:2px 8px">${r.buildable ? "builder can change it" : "studied"}</span></div></div>
-    <b class="repo-n">${esc(r.name)}</b>
-    <div class="tiny muted wrap">${r.last ? `${esc(r.last.subject)} · ${rel(r.last.ts)}` : esc(r.source || "")}</div>
-    <div class="repo-m tiny faint">
-      <span>${ic.wiki}${g ? `${nf(g.nodes)} nodes` : "no graph yet"}</span>
-      <span>${ic.layers}${onboardLabel(r)}</span>
-      ${r.files ? `<span>${ic.doc}${nf(r.files)} files</span>` : ""}
-    </div></a>`;
+// APP-47: the repositories are a directory of their own, never one more list among the work: always in view on a desktop, one tap on a phone
+const isTrial = (name) => /^trial-/.test(name);
+function repoRow(r) {
+  const a = repoActivity(r.name), o = r.onboard;
+  const line = o && ONB_LIVE.includes(o.status) ? onboardLabel(r) : o?.status === "failed" ? "onboarding stopped" : [r.last && rel(r.last.ts), r.files && `${nf(r.files)} file${r.files === 1 ? "" : "s"}`].filter(Boolean).join(" · ");
+  return `<a class="rrow ${r.buildable ? "mine" : ""}" href="#/repo/${encodeURIComponent(r.name)}" title="${esc(r.last?.subject || r.source || r.name)}">
+    <span class="rrow-n">${esc(r.name)}</span><span class="rrow-s">${esc(line)}</span>
+    ${a.review ? `<span class="rrow-c" title="${a.review} to review">${a.review}</span>` : a.busy ? `<span class="rrow-live" title="${a.busy} being worked on"></span>` : ""}</a>`;
+}
+function repoDir(repos) {
+  const real = repos.filter((r) => !isTrial(r.name)), mine = real.filter((r) => r.buildable), studied = real.filter((r) => !r.buildable), trials = repos.filter((r) => isTrial(r.name));
+  const group = (label, list) => (list.length ? `<div class="rgroup">${label}</div>${list.map(repoRow).join("")}` : "");
+  return `<aside class="repodir" aria-label="Repositories"><div class="repodir-h"><h2>Repositories</h2><span class="num">${real.length}</span></div>
+    ${mine.map(repoRow).join("")}${group("Studied", studied)}
+    ${real.length ? "" : `<div class="small muted" style="padding:8px">None yet. Add repository brings the first one in.</div>`}
+    ${trials.length ? `<details class="rtrials" data-keep="rtrials"><summary class="rgroup">Exam trials · ${trials.length}</summary>${trials.map(repoRow).join("")}</details>` : ""}</aside>`;
+}
+
+// A change is one row here, however many builds its steps are: its task page has them all
+const CHANGE_ASKS = ["needs_answer", "waiting_approval"], CHANGE_WORKS = ["intake", "planning", "running"];
+const CHANGE_LABEL = { intake: "Writing the specification", planning: "Planning", running: "Working", needs_answer: "Has a question", waiting_approval: "Waits for your Go", failed: "Stopped" };
+const STEP_BUILD = /^(builder|tester|breaker): /;
+function changeRow(t) {
+  const st = t.steps || [], i = st.findIndex((x) => !["done", "skipped"].includes(x.status)), cur = st[i];
+  const cls = t.status === "failed" ? "failed" : t.status === "running" ? "running" : "paused";
+  const line = t.status === "failed" ? (t.error || "") : cur ? `step ${i + 1} of ${st.length} · ${cur.agent}${cur.waiting_for ? ` · ${cur.waiting_for}` : ""}` : "";
+  return `<a href="#/task/${t.id}"><div class="ic ${t.status === "failed" ? "err" : t.status === "running" ? "run" : ""}">${t.status === "failed" ? ic.alert : ic.target}</div>
+    <div class="grow"><div class="ttl wrap">Change #${t.id} ${esc(t.title)}</div><div class="sub wrap"><span class="pill ${cls}" style="padding:1px 7px">${CHANGE_LABEL[t.status] || esc(t.status)}</span>${line ? ` · ${esc(line)}` : ""}</div></div>
+    <div class="tiny faint">${rel(t.updated)}</div></a>`;
 }
 
 function forgejoCard() {
   if (S.code?.forgejo_token) return "";
   return `<details class="card pad-l fjcard" ${route.q.get("forgejo") ? "open" : ""}><summary><b>Connect Forgejo once</b> <span class="small muted">· 2 minutes · lets the stack create repositories, let the builder change studied ones, and open pull requests</span></summary>
     <ol class="small" style="margin:10px 0 0;padding-left:20px;line-height:1.75">
-      <li>At home (Forgejo is on your NAS), open <a href="http://192.168.1.10:3000/user/settings/applications" target="_blank" rel="noopener"><b>Forgejo → Settings → Applications</b></a> and sign in if asked.</li>
+      <li>At home (Forgejo is on your NAS), open <a href="${DEPLOY.FORGEJO_URL}/user/settings/applications" target="_blank" rel="noopener"><b>Forgejo → Settings → Applications</b></a> and sign in if asked.</li>
       <li>Under <b>Generate new token</b>: name <code>mission-control</code>; permissions <b>repository: Read and write</b>, <b>user: Read</b>. Tap <b>Generate token</b> and copy the long code it shows (only shown once).
         <div class="tiny faint">Your existing token <i>ai-stack-status</i> can only read, and Forgejo can't add rights to a token later. This one replaces it for everything; you can delete the old one afterwards.</div></li>
       <li>Paste it here: <div class="row wrap" style="gap:8px;margin-top:6px"><input class="input" id="fjtok" type="password" autocomplete="off" spellcheck="false" placeholder="paste the token" style="flex:1;min-width:200px"><button class="btn primary" id="fjgo">${ic.check}Connect</button></div>
@@ -3682,7 +3775,7 @@ function claudeCard() {
   if (S.engines?.claude) return "";
   return `<details class="card pad-l fjcard"><summary><b>Connect Claude Code once</b> <span class="small muted">a second builder engine, on your Claude subscription</span></summary>
     <ol class="small" style="margin:10px 0 0;padding-left:20px;line-height:1.7">
-      <li>In Windows PowerShell: <code>wsl -d Ubuntu-24.04 -u owner --cd /home/owner/ai-stack make claude-connect</code></li>
+      <li>In Windows PowerShell: <code>wsl -d Ubuntu-24.04 -u ${DEPLOY.DEPLOY_USER} --cd ${DEPLOY.STACK_DIR} make claude-connect</code></li>
       <li>Open the link it shows, sign in to Claude, paste the code back.</li>
       <li>Paste the token it then prints (starts with <code>sk-ant-oat</code>) when it asks. It stays hidden and is saved encrypted.</li>
       <li>That's it: this card disappears, and <b>Claude Code</b> becomes an engine choice for builds.</li>
@@ -3693,15 +3786,21 @@ function claudeCard() {
 function vBuild() {
   const id = route.args[0];
   if (id) return vBuildOne(+id);
-  const bs = S.builds || [], repos = S.code?.repos || [], buildable = repos.filter((r) => r.buildable).map((r) => r.name);
+  const bs = S.builds || [], repos = S.code?.repos || [], buildable = repos.filter((r) => r.buildable && !isTrial(r.name)).map((r) => r.name);
   const pre = route.q.get("repo") || "ai-stack";
+  const changes = (S.tasks || []).filter((t) => t.kind === "change" && !/^trial/.test(t.source || ""));
+  const inReview = (t) => (t.steps || []).some((x) => x.harness === "change-deliver" && x.status === "waiting");      // its carrier build is the row
+  const asks = changes.filter((t) => CHANGE_ASKS.includes(t.status)), working = changes.filter((t) => CHANGE_WORKS.includes(t.status) && !inReview(t)), stoppedChanges = changes.filter((t) => t.status === "failed");
   const review = bs.filter((b) => b.status === "review");
-  const busy = bs.filter((b) => ["queued", "working", "checking", "waiting", "deploying", "failed"].includes(b.status));
-  const done = bs.filter((b) => !review.includes(b) && !busy.includes(b));
-  const props = (S.swarm?.board?.open || []).length;
+  const stepOfChange = (b) => STEP_BUILD.test(b.title || "");
+  const busy = bs.filter((b) => ["queued", "working", "checking", "waiting", "deploying", "recheck"].includes(b.status) && !(stepOfChange(b) && working.length));
+  const stopped = bs.filter((b) => b.status === "failed" && !stepOfChange(b) && !isTrial(b.repo));
+  const done = bs.filter((b) => !review.includes(b) && !busy.includes(b) && !stopped.includes(b) && !["queued", "working", "checking", "waiting", "deploying", "recheck"].includes(b.status));
+  const asking = review.length + asks.length;
+  const pane = pref("mc-code-pane", "repos");
   view.innerHTML = `
-  <div class="hero"><div class="grow"><h1>Code</h1><p>Your repositories and the builder that changes them. Nothing reaches production without your tap.</p></div></div>
-  <div class="row wrap" style="gap:8px;margin-bottom:14px"><button class="btn" id="addbtn">${ic.plus}Add repository</button><button class="btn primary" id="newbtn">${ic.rocket}New build</button></div>
+  <div class="hero codehero"><div class="grow"><h1>Code</h1></div>
+    <div class="row wrap" style="gap:8px;justify-content:flex-end"><button class="btn" id="addbtn">${ic.plus}Add repository</button><button class="btn primary" id="newbtn">${ic.rocket}New build</button></div></div>
   <div class="card repo addrepo" id="addrepo" ${route.q.get("add") ? "" : "hidden"} style="margin-bottom:14px">
       <div class="row between"><b class="repo-n" style="margin:0">Add a repository</b><button class="icon-btn" id="addclose" title="Close">${ic.x}</button></div>
       <div class="seg sm" style="margin-top:8px"><button type="button" data-ar="study" class="on">Study GitHub repo</button><button type="button" data-ar="new">New repo</button></div>
@@ -3712,17 +3811,9 @@ function vBuild() {
         ${S.code?.forgejo_token ? "" : `<div class="tiny faint" style="margin-top:6px">Needs the Forgejo connection (below, one time).</div>`}</div>
       <div class="tiny faint" style="margin-top:8px">Or in Chat: "study github.com/owner/repo", "create a repo called …"</div>
   </div>
-  ${review.length ? `<div class="section-h"><h2>Waiting for you · ${review.length}</h2>${readyAll(review) ? `<button class="btn sm primary" id="appall">${ic.check}Approve all ready (${readyAll(review)})</button>` : ""}</div>
-    <div class="tiny faint" style="margin:-4px 0 8px">Tap one to see the change. <i>Approve all</i> deploys every build whose checks and CI passed, one after another; a conflict goes back to you.</div>
-    <div class="card list waiting">${review.map(buildRow).join("")}</div>` : `<div class="card pad small muted">Nothing waits for your review.</div>`}
-  ${busy.length ? `<div class="section-h section"><h2>Being built · ${busy.length}</h2>${how("builder")}</div><div class="card list">${busy.map(buildRow).join("")}</div>` : ""}
-  ${(S.claude_tasks || []).length ? `<div class="section-h section"><h2>Claude tasks</h2><span class="tiny faint" style="text-align:right">what your agents asked Claude Code (read-only)</span></div>
-    <div class="card list">${S.claude_tasks.map(ctRow).join("")}</div>` : ""}
-  <div class="section-h section"><h2>Repositories</h2>${how("code")}</div>
-  <div class="repos">${repos.map(repoCard).join("")}</div>
-  ${forgejoCard()}${claudeCard()}
-  <details class="card pad-l newbuild section" id="nb" ${route.q.get("new") ? "open" : ""}><summary><b>${ic.rocket} New build</b> <span class="small muted">give the builder an assignment</span></summary>
-  <form id="bf" autocomplete="off" style="margin-top:12px">
+  <div class="card pad-l newbuild" id="nb" ${route.q.get("new") ? "" : "hidden"} style="margin-bottom:14px">
+    <div class="row between"><b>${ic.rocket} New build</b><button class="icon-btn" id="nbclose" title="Close">${ic.x}</button></div>
+    <form id="bf" autocomplete="off" style="margin-top:12px">
     <div class="row wrap" style="gap:10px">
       <label class="field" style="margin:0;flex:1;min-width:140px"><span>Repository</span><select class="input" name="repo">${(buildable.length ? buildable : ["ai-stack"]).map((r) => `<option ${r === pre ? "selected" : ""}>${esc(r)}</option>`).join("")}</select></label>
       <label class="field" style="margin:0;flex:3;min-width:200px"><span>Title</span><input class="input" name="title" maxlength="100" placeholder="e.g. Show the next run time in the mission cards"></label>
@@ -3730,9 +3821,28 @@ function vBuild() {
     </div>
     <label class="field"><span>What should it do?</span><textarea class="input" name="desc" rows="4" placeholder="Describe the change and how you'll know it works."></textarea></label>
     <button class="btn primary" type="submit">${ic.rocket}Assign to the builder</button>
-  </form></details>
-  <a class="banner info section" href="#/swarm?tab=improve">${ic.radar}<span class="grow">${ideasWaiting() ? `<b>${ideasWaiting()} idea${ideasWaiting() > 1 ? "s" : ""} wait for your tap</b>: the stack's own fixes and changes to its agents` : "No open ideas: the stack's own fixes and changes to its agents"}, in Agents → Ideas</span>${ic.next}</a>
-  ${done.length ? `<details class="section"><summary class="section-h"><h2>Earlier builds · ${done.length}</h2></summary><div class="card list">${done.map(buildRow).join("")}</div></details>` : ""}`;
+  </form></div>
+  <div class="seg codeseg" role="tablist"><button type="button" data-cp="repos" class="${pane === "repos" ? "on" : ""}">Repositories · ${repos.filter((r) => !isTrial(r.name)).length}</button><button type="button" data-cp="work" class="${pane === "work" ? "on" : ""}">Work${asking ? ` · ${asking}` : ""}</button></div>
+  <div class="codegrid" data-pane="${pane}">
+    ${repoDir(repos)}
+    <div class="codework">
+      <div class="section-h codeask"><h2>Waiting for you${asking ? ` · ${asking}` : ""}</h2>${readyAll(review) ? `<button class="btn sm primary" id="appall">${ic.check}Approve all ready (${readyAll(review)})</button>` : ""}</div>
+      ${asking ? `${typeof explain === "function" && review.length ? explain("approve-all-", "Tap one to see the change. <i>Approve all</i> deploys every build whose checks and CI passed, one after another; a conflict goes back to you.", "How Approve all works") : ""}
+        <div class="card list waiting">${asks.map(changeRow).join("")}${review.map(buildRow).join("")}</div>` : `<div class="card pad small muted">Nothing waits for your review.</div>`}
+      ${working.length || busy.length ? `<div class="section-h section"><h2>Working · ${working.length + busy.length}</h2>${how("builder")}</div><div class="card list">${working.map(changeRow).join("")}${busy.map(buildRow).join("")}</div>` : ""}
+      ${stoppedChanges.length || stopped.length ? `<div class="section-h section"><h2>Stopped · ${stoppedChanges.length + stopped.length}</h2></div><div class="card list">${stoppedChanges.map(changeRow).join("")}${stopped.map(buildRow).join("")}</div>` : ""}
+      ${forgejoCard()}${claudeCard()}
+      <a class="banner info section" href="#/swarm?tab=improve">${ic.radar}<span class="grow">${ideasWaiting() ? `<b>${ideasWaiting()} idea${ideasWaiting() > 1 ? "s" : ""} wait for your tap</b>` : "No open ideas"} · the stack's own fixes, in Agents → Ideas</span>${ic.next}</a>
+      ${done.length ? `<details class="section codehist" data-keep="builds"><summary class="section-h"><h2>Earlier builds · ${done.length}</h2></summary><div class="card list">${done.map(buildRow).join("")}</div></details>` : ""}
+      ${(S.claude_tasks || []).length ? `<details class="section codehist" data-keep="questions"><summary class="section-h"><h2>Questions to Claude Code · ${S.claude_tasks.length}</h2></summary>
+        <div class="card list">${S.claude_tasks.map(ctRow).join("")}</div></details>` : ""}
+    </div>
+  </div>`;
+  $$("[data-cp]").forEach((b) => (b.onclick = () => {
+    try { localStorage.setItem("mc-code-pane", b.dataset.cp); } catch (_) { /* a remembered pane is a convenience */ }
+    $$("[data-cp]").forEach((x) => x.classList.toggle("on", x === b));
+    $(".codegrid").dataset.pane = b.dataset.cp;
+  }));
   bindAddRepo();
   if ($("#appall")) $("#appall").onclick = async (e) => {
     e.target.disabled = true;
@@ -3741,7 +3851,8 @@ function vBuild() {
   };
   $("#addbtn").onclick = () => { $("#addrepo").hidden = !$("#addrepo").hidden; if (!$("#addrepo").hidden) $("#ar-url").focus(); };
   $("#addclose").onclick = () => ($("#addrepo").hidden = true);
-  $("#newbtn").onclick = () => { $("#nb").open = true; $("#nb").scrollIntoView({ behavior: "smooth", block: "start" }); $("#bf").title.focus(); };
+  $("#newbtn").onclick = () => { $("#nb").hidden = !$("#nb").hidden; if (!$("#nb").hidden) $("#bf").title.focus(); };
+  $("#nbclose").onclick = () => ($("#nb").hidden = true);
   if ($("#fjgo")) $("#fjgo").onclick = async () => {
     const t = $("#fjtok").value.trim();
     if (!t) return toast("Paste the token first", true);
@@ -3889,6 +4000,9 @@ async function vRepo() {
     </div>
   </div>
   ${bs.some((b) => b.status === "review") ? `<div class="section"><div class="section-h"><h2>Waiting for you</h2></div><div class="card list waiting">${bs.filter((b) => b.status === "review").map(buildRow).join("")}</div></div>` : ""}
+  ${r.buildable ? `<details class="card pad-l section" id="rchange"><summary><b>Request a change</b></summary>
+    <form id="rchform" class="stack" style="margin-top:10px"><textarea class="input" name="text" rows="3" required minlength="8" placeholder="What should change"></textarea>
+      <div class="row between wrap" style="gap:8px">${explain("request-a-change-", "The swarm writes a specification, then tests and code in this repository's way, checks them against the suite as it was before, and comes back with one branch, the evidence and a pull request. A medium or large change waits for your Go on the specification. Nothing lands without your tap.", "How a change request works")}<button class="btn primary sm">${ic.rocket}Send</button></div></form></details>` : ""}
   <div id="ronboard">${onboardHtml(r)}</div>
   <div id="ranalysis"></div>
   <div class="grid g2 g4 section">
@@ -3912,6 +4026,12 @@ async function vRepo() {
         <div class="small muted" style="margin-top:8px">Deletes the stack's copy of ${esc(name)}: its clone, code graph, code map and the builder's working copy. ${r.buildable ? "<b>It stays on your Forgejo</b>: delete it there if you want it gone." : "You can study it again any time."}</div>
         <button class="btn sm ghost danger" id="rremove" style="margin-top:10px">${ic.trash}Remove ${esc(name)}</button></details>` : ""}</div>
   </div>`;
+  const rch = $("#rchform");
+  if (rch) rch.onsubmit = async (e) => {
+    e.preventDefault();
+    const res = await act({ action: "change_request", repo: name, text: rch.text.value.trim() }, "The intake writes its specification");
+    if (res?.task) location.hash = `#/task/${res.task}`;
+  };
   api(`/api/repo/${encodeURIComponent(name)}/overview`).then((o) => {
     $("#rover").innerHTML = o.markdown ? md(o.markdown) : `<div class="small muted">No README and no code map yet.</div>`;
     $("#rsrc").textContent = o.source || "";
@@ -4182,7 +4302,8 @@ function vBuildOne(id) {
 // ---------- stack (system) ----------
 // ---------- tools: every tool the stack runs on, its menus one tap away (APP-30; web/static/tools.json is the one list) ----------
 let TOOLS = null, toolQuery = "";
-const toolsLoad = () => (TOOLS ? Promise.resolve(TOOLS) : fetch("/static/tools.json").then((r) => r.json()).then((j) => (TOOLS = j)).catch(() => ({ tools: [], pages: [] })));
+const toolsHere = (d) => ({ ...d, tools: (d.tools || []).filter((x) => !("host" in x) || (x.host && !/^https?:\/\/(:|\/|$)/.test(x.host))) });   // no address in this deployment: no tile
+const toolsLoad = () => (TOOLS ? Promise.resolve(TOOLS) : fetch("/static/tools.json").then((r) => r.text()).then((t) => (TOOLS = toolsHere(JSON.parse(t.replace(/\{\{(\w+)\}\}/g, (_, k) => DEPLOY[k] || ""))))).catch(() => ({ tools: [], pages: [] })));
 const toolBase = (t) => (t.host.startsWith("tailnet") ? HOSTURL + t.host.slice(7) : t.host);
 const toolUrl = (t, m) => toolBase(t) + m.path;
 const toolAtHome = (t) => !t.host.startsWith("tailnet") && !t.host.includes("tailscale.com");   // the home network only
@@ -4229,16 +4350,16 @@ function bindStackTools() {
   };
   draw();
 }
-const HOSTURL = location.hostname.endsWith(".ts.net") ? `https://${location.hostname}` : "https://pc.example.ts.net";
+const HOSTURL = location.hostname.endsWith(".ts.net") ? `https://${location.hostname}` : `https://${DEPLOY.PC_TAILNET_HOST}`;
 
-function stackTop(sy) {
-  const ci = sy.ci || [], repos = sy.repos || [], skills = sy.skills || [];
+function stackChecks(sy) {
+  const ci = sy.ci || [];
   const ciCls = (s) => (s === "success" ? "ok" : s === "failure" ? "err" : s === "running" || s === "waiting" ? "run" : "");
+  return `<div class="card pad-l section"><div class="row between"><h2>Checks (CI)</h2>${how("stack-page")}</div><div class="list" style="margin-top:6px">${ci.map((c) => `<div style="padding:8px 2px"><span class="dot ${ciCls(c.status)}"></span><div class="grow">${esc(c.repo)}</div><span class="tiny faint">${esc(c.status)} ${esc(c.sha)}</span></div>`).join("")}</div></div>`;
+}
+function stackTop(sy) {
+  const skills = sy.skills || [];
   return `
-
-  <div class="section-h section"><h2>Resources</h2>${how("stack-page")}</div>
-  <div id="rescard">${resourcesHtml(S.resources)}</div>
-
   <div class="split section">
     <div class="stack">
       <div class="card pad-l" id="addk">
@@ -4259,12 +4380,6 @@ function stackTop(sy) {
       </div>
     </div>
     <div class="stack">
-      <div class="card pad-l">
-        <div class="row between"><h2>Code</h2>${how("code")}</div>
-        <div class="list" style="margin-top:6px">${repos.map((r) => `<div style="padding:8px 2px"><div class="grow"><b>${esc(r.name)}</b></div>${r.map ? `<a class="tag" href="${HOSTURL}:8446/" target="_blank" rel="noopener">code map</a>` : `<span class="tag faint">no map</span>`}</div>`).join("")}</div>
-        <div class="row" style="margin-top:10px"><input class="input" id="u_repo" placeholder="https://github.com/owner/repo"><button class="btn" id="u_go">Analyse</button></div>
-      </div>
-      <div class="card pad-l"><div class="row between"><h2>Checks (CI)</h2>${how("stack-page")}</div><div class="list" style="margin-top:6px">${ci.map((c) => `<div style="padding:8px 2px"><span class="dot ${ciCls(c.status)}"></span><div class="grow">${esc(c.repo)}</div><span class="tiny faint">${esc(c.status)} ${esc(c.sha)}</span></div>`).join("")}</div></div>
       <div class="card pad-l"><div class="row between"><h2>Skills · ${skills.length}</h2>${how("stack-page")}</div><div class="small muted" style="margin-top:4px">What Hermes has learned; saved in Forgejo (hermes-skills).</div><div class="chips" style="margin-top:10px">${skills.map((k) => `<span class="tag">${esc(k)}</span>`).join("")}</div></div>
     </div>
   </div>`;
@@ -4320,7 +4435,6 @@ function bindStack() {
   };
   $("#m_go").onclick = msearch;
   $("#m_q").onkeydown = (e) => { if (e.key === "Enter") msearch(); };
-  $("#u_go").onclick = async () => { const v = $("#u_repo").value.trim(); if (v && (await act({ action: "understand", repo: v }, "Onboarding started: it shows in your repositories, step by step"))) $("#u_repo").value = ""; };
 }
 
 // The Stack tab is one page: how the stack works (live map, guide chapters, search) and how it is doing (status),
@@ -4411,15 +4525,6 @@ function bindNotify() {
   };
 }
 
-// U1 (review 2026-10-30): the Stack page has 17 sections; one row of chips jumps to each
-function fillJump() {
-  const nav = $("#stackjump");
-  if (!nav) return;
-  const hs = [...view.querySelectorAll(".section-h h2")];
-  nav.innerHTML = hs.map((h, i) => `<button type="button" class="chip" data-jump="${i}">${esc(h.textContent.replace(/\s*·\s*\d+$/, "").trim())}</button>`).join("");
-  $$("[data-jump]", nav).forEach((b) => (b.onclick = () => hs[+b.dataset.jump].scrollIntoView({ behavior: "smooth", block: "start" })));
-}
-
 // the subscriptions' load: tokens in the last 5 hours (ChatGPT's usage window) and 24 hours, and whether one is at its
 // limit now (a build or mission waiting on it, as the runner sees it) and until when
 const SUB_WAIT = { ChatGPT: "ChatGPT", Claude: "Claude" };
@@ -4438,45 +4543,44 @@ async function subsInto(box) {
         <div class="sub wrap">${tok(r.tokens_5h)} tokens in the last 5 h (${nf(r.calls_5h)} calls) · ${tok(r.tokens_24h)} in 24 h${r.top.length ? ` · most: ${r.top.map(([a, n]) => `${esc(a === "claude" ? "Claude Code" : agentName(a) || a)} ${tok(n)}`).join(", ")}` : ""}</div></div></div>`; }).join("")}</div></div>`;
 }
 
+// APP-47: five parts, one at a time: the page was 21 sections and 13,000 pixels long
+const STACK_TABS = [["tools", "Tools"], ["health", "Health"], ["knowledge", "Knowledge"], ["guide", "Guide"], ["settings", "Settings"]];
+let stackTab = "";
 function vSystem() {
   const sy = S.system || {};
+  const asked = route.q.get("conn") ? "tools" : scrollToLearn ? "guide" : route.q.get("tab");
+  if (STACK_TABS.some(([k]) => k === asked)) stackTab = asked;
+  const tab = stackTab || (stackTab = pref("mc-stack-tab", "tools"));
   const svc = sy.services || [];
   const down = svc.filter((s) => s.state !== "running");
   view.innerHTML = `
   <div class="hero stackhero"><div class="grow"><h1>Stack</h1><p>How your AI stack works, and how it is doing right now ·
-    ${down.length ? `<b class="err-t">${down.length} service${down.length > 1 ? "s" : ""} not running</b>` : "all services running"} · ${sy.failed?.length ? `<b class="err-t">failed: ${sy.failed.map((u) => {                // which one, one tap to it (UX review 2026-10-30)
+    ${notConnected() || !svc.length ? `<b class="err-t">not connected: its state is not known</b>` : down.length ? `<b class="err-t">${down.length} service${down.length > 1 ? "s" : ""} not running</b>` : "all services running"}${notConnected() || !svc.length ? "" : " · "}${notConnected() || !svc.length ? "" : sy.failed?.length ? `<b class="err-t">failed: ${sy.failed.map((u) => {                // which one, one tap to it (UX review 2026-10-30)
       const c = (S.crew || []).find((x) => `${x.unit}.service` === u);
       return c ? `<a class="err-t" href="#/crew/${encodeURIComponent(c.id)}">${esc(c.name)}</a>` : esc(u.replace(/\.service$/, ""));
     }).join(", ")}</b>` : "no errors"}${sy.boot ? ` · last start ${rel(new Date(sy.boot.boot * 1000).toISOString())}, online in ${dur(sy.boot.ready_s)}` : ""}</p></div>
     <a class="btn sm" href="#/files" title="What your missions made, the space it takes, the trash">${ic.doc}Files · ${fsize(S.files?.usage?.used || 0)}${(S.files?.usage?.pct || 0) >= 80 ? ` <b class="err-t">${S.files.usage.pct} %</b>` : ""}</a></div>
-  <nav class="jump" id="stackjump" aria-label="Sections of this page"></nav>
+  <nav class="seg stackseg" aria-label="Parts of this page">${STACK_TABS.map(([k, l]) => `<button type="button" data-st="${k}" class="${tab === k ? "on" : ""}">${l}${k === "knowledge" && (sy.pending_memory || []).length ? ` · ${sy.pending_memory.length}` : ""}</button>`).join("")}</nav>
+  <div data-sp="tools" ${tab === "tools" ? "" : "hidden"}>
   ${phoneBanner()}
   <div class="section-h"><h2>Tools</h2><span class="tiny faint">every menu one tap away</span></div>
   <div id="toolsbox" style="margin-bottom:14px">${stackToolsHtml()}</div>
   ${S.house ? `<a class="banner info" href="#/house" style="margin-bottom:14px">${ic.house}<span class="grow"><b>House</b> · ${S.house.connected ? `${(S.house.things || []).length} things, ${(S.house.echos || []).length} Echos` : S.house.reachable ? "setup not finished" : "Home Assistant not reachable"}</span>${ic.next}</a>` : ""}
   ${a2aCardHtml()}
   <div id="subs" style="margin-bottom:14px"></div>
-  <a class="banner info" href="#/telemetry" style="margin-bottom:14px">${ic.pulse}<span class="grow"><b>Telemetry</b> · how each agent did, day by day: runs, verdicts, tokens, time, cost if paid</span>${ic.next}</a>
   <div class="section-h"><h2>Connections</h2><span class="tiny faint">apps the agents may use, only while you allow it</span></div>
   <div id="conncard" class="stack" style="margin-bottom:14px"><div class="skeleton" style="height:90px"></div></div>
-  <div class="wsearch gsearch">${ic.search}<input class="input" id="gq" placeholder="How do I…? Search the guide: triggers, memory, deploy…" value="${esc(guideQuery)}"></div>
-  <div id="gresults"></div>
-  ${(sy.pending_memory || []).length ? `<div class="section-h section"><h2>Waiting for you</h2>${how("knowledge")}</div>
-    <div class="card list">${sy.pending_memory.map((p) => `<div style="flex-direction:column;gap:8px"><div class="row"><div class="ic warn">${ic.brain}</div><div class="grow small">${esc(p.text)}</div></div>
-      <div class="row" style="justify-content:flex-end"><button class="btn sm ghost danger" data-mem="reject" data-id="${esc(p.id)}">${ic.x}Discard</button><button class="btn sm primary" data-mem="approve" data-id="${esc(p.id)}">${ic.check}Remember</button></div></div>`).join("")}</div>` : ""}
-  ${startHereHtml()}
-  <div class="section"><div class="section-h"><h2>How it fits together</h2><span class="tiny faint">live · tap a box to learn about it</span></div>
-    <div class="card pad-l"><div class="glive" data-live="architecture"></div></div></div>
-  <div class="section" id="learn">${learnHtml()}</div>
-  ${stackTop(sy)}
-  <div class="section-h section"><h2>Health and costs</h2>${how("safety")}</div>
+  </div>
+  <div data-sp="health" ${tab === "health" ? "" : "hidden"}>
+  <div class="section-h"><h2>Health and costs</h2>${how("safety")}</div>
   <div class="grid g2 g4">
     <div class="card kpi"><div class="kpi-l">Paid today</div><div class="kpi-v">${usd(sy.spend_today)}</div><div class="kpi-s">30 days: ${usd(sy.spend_30d)}</div></div>
     <div class="card kpi"><div class="kpi-l">Credit used</div><div class="kpi-v">${usd(sy.spend_total)}</div><div class="kpi-s">of $${nf(sy.budget_total || 10)}</div><div class="meter"><i style="width:${Math.min(100, ((sy.spend_total || 0) / (sy.budget_total || 10)) * 100).toFixed(1)}%"></i></div></div>
     <div class="card kpi"><div class="kpi-l">Long-term memory</div><div class="kpi-v">${nf(sy.memory?.facts)}</div><div class="kpi-s">facts · ${nf(sy.memory?.observations)} observations</div></div>
     <div class="card kpi"><div class="kpi-l">Last backup</div><div class="kpi-v" style="font-size:20px">${sy.backup ? rel(new Date(sy.backup.ts * 1000).toISOString()) : "–"}</div><div class="kpi-s">${sy.drill ? "restore test: " + esc(sy.drill.result) : ""}</div></div>
   </div>
-  ${memoryHtml()}
+  <div class="section-h section"><h2>Resources</h2>${how("stack-page")}</div>
+  <div id="rescard">${resourcesHtml(S.resources)}</div>
   <div class="split section">
     <div>
       <div class="section-h"><h2>Agents today</h2>${how("technology")}</div>
@@ -4487,14 +4591,40 @@ function vSystem() {
     <div>
       <div class="section-h"><h2>Scheduled jobs</h2>${how("stack-page")}</div>
       <div class="card list">${(sy.timers || []).map((t) => { const failed = (sy.failed || []).some((f) => f.startsWith(t.unit + ".")); return `<div><div class="ic ${failed ? "err" : ""}">${failed ? ic.alert : ic.clock}</div><div class="grow"><div class="ttl">${esc((S.crew || []).find((c) => c.unit === t.unit)?.name || t.unit)}</div><div class="sub">last ${t.last ? rel(new Date(t.last / 1000).toISOString()) : "–"}</div></div><div class="tiny faint" style="white-space:nowrap">${t.next ? rel(new Date(t.next / 1000).toISOString()) : "–"}</div></div>`; }).join("")}</div>
-      <div class="section-h section"><h2>Notifications</h2>${how("delivery")}</div>
+    </div>
+  </div>
+  ${stackChecks(sy)}
+  <a class="banner info" href="#/telemetry" style="margin-bottom:14px">${ic.pulse}<span class="grow"><b>Telemetry</b> · how each agent did, day by day: runs, verdicts, tokens, time, cost if paid</span>${ic.next}</a>
+  </div>
+  <div data-sp="knowledge" ${tab === "knowledge" ? "" : "hidden"}>
+  ${(sy.pending_memory || []).length ? `<div class="section-h section"><h2>Waiting for you</h2>${how("knowledge")}</div>
+    <div class="card list">${sy.pending_memory.map((p) => `<div style="flex-direction:column;gap:8px"><div class="row"><div class="ic warn">${ic.brain}</div><div class="grow small">${esc(p.text)}</div></div>
+      <div class="row" style="justify-content:flex-end"><button class="btn sm ghost danger" data-mem="reject" data-id="${esc(p.id)}">${ic.x}Discard</button><button class="btn sm primary" data-mem="approve" data-id="${esc(p.id)}">${ic.check}Remember</button></div></div>`).join("")}</div>` : ""}
+  ${stackTop(sy)}
+  ${memoryHtml()}
+  </div>
+  <div data-sp="guide" ${tab === "guide" ? "" : "hidden"}>
+  <div class="wsearch gsearch">${ic.search}<input class="input" id="gq" placeholder="How do I…? Search the guide: triggers, memory, deploy…" value="${esc(guideQuery)}"></div>
+  <div id="gresults"></div>
+  ${startHereHtml()}
+  <div class="section"><div class="section-h"><h2>How it fits together</h2><span class="tiny faint">live · tap a box to learn about it</span></div>
+    <div class="card pad-l"><div class="glive" data-live="architecture"></div></div></div>
+  <div class="section" id="learn">${learnHtml()}</div>
+  </div>
+  <div data-sp="settings" ${tab === "settings" ? "" : "hidden"}>
+      <div class="section-h"><h2>Notifications</h2>${how("delivery")}</div>
       ${notifyHtml(sy)}
       <div class="section-h section"><h2>This device</h2>${how("first-ten-minutes")}</div>
       <div class="card pad" id="device"></div>
-    </div>
   </div>`;
   subsInto($("#subs"));
-  fillJump();
+  $$("[data-st]").forEach((b) => (b.onclick = () => {
+    stackTab = b.dataset.st;
+    try { localStorage.setItem("mc-stack-tab", stackTab); } catch (_) { /* a remembered tab is a convenience */ }
+    $$("[data-st]").forEach((x) => x.classList.toggle("on", x === b));
+    $$("[data-sp]").forEach((p) => (p.hidden = p.dataset.sp !== stackTab));
+    scrollTo(0, 0);
+  }));
   bindA2a();                                            // TSK-19: outside agents
   bindStackTools();
   if (!TOOLS) toolsLoad().then(() => { const b = $("#toolsbox"); if (b) { b.innerHTML = stackToolsHtml(); bindStackTools(); } });

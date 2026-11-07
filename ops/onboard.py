@@ -8,6 +8,7 @@ The button on a repo page, Add a repository, Hermes' understand_repo and `make u
   4 explain   every file and function explained (ops/ua_enrich.py), the viewer's corrections saved (ops/ua_fix.mjs)
   5 search    a readable digest in the search index, so Hermes can answer about the code (ops/ua_digest.py, qmd)
   6 analysis  a written analysis by Claude Code, read-only: what it is, how the stack could use it, risks, a verdict
+  7 wiki      the repository's wiki, seeded from all of that (ops/repowiki.py, CHG-08): what every code agent starts from
 
 Nothing about a repository's size stops it. What it cannot do now it waits for and then does by itself: a usage limit,
 the PC's memory, the gateway being away, another repository's turn. Each step's progress is saved in
@@ -37,21 +38,23 @@ from pathlib import Path
 
 import prompts as P                               # MEM-11: the agent prompts live in prompts/<owner>.md
 import textcap as TC                              # visible caps (AGENTS.md, truncation)
+import deployment as DEPLOY                        # this deployment's hosts and paths (config/deployment.env)
 
 STACK = Path(__file__).resolve().parent.parent
-CODE = Path(os.environ.get("ONBOARD_CODE", "/home/owner/code"))
+CODE = Path(os.environ.get("ONBOARD_CODE", DEPLOY.CODE_DIR))
 STATE = Path(os.environ.get("ONBOARD_STATE", "/srv/ai/state/onboard"))
 DOCS = Path(os.environ.get("ONBOARD_DOCS", "/srv/ai/code-docs"))
 LOGS = Path(os.environ.get("ONBOARD_LOGS", "/srv/ai/state"))
 GRAPHS = Path(os.environ.get("ONBOARD_GRAPHS", "/srv/ai/state/graphify"))
 MISSIONS = Path(os.environ.get("MISSIONS_HOME", "/srv/ai/missions"))
+VAULT = Path(os.environ.get("ONBOARD_VAULT", "/srv/vault"))
 LITELLM = os.environ.get("LITELLM_URL", "http://127.0.0.1:4000/v1/chat/completions")
-APP = os.environ.get("MC_URL", "https://pc.example.ts.net:8447")
+APP = DEPLOY.MC_URL
 IMAGE = "aistack/opencode:1.19.4-ua1"
 QMD = "aistack-qmd-1"
 
 STEPS = (("clone", "Copy of the code"), ("graph", "Code graph"), ("map", "Code map"), ("explain", "Every file explained"),
-         ("search", "Search index"), ("analysis", "Written analysis"))
+         ("search", "Search index"), ("analysis", "Written analysis"), ("wiki", "The repository's wiki"))
 TITLE = dict(STEPS)
 ACTIVE = ("queued", "running", "waiting")
 ATTEMPTS = 3            # limit: stops, a step that failed this often names its reason and waits for the owner's Try again (BLD-26)
@@ -100,7 +103,7 @@ def pause(seconds):
 
 
 def env():
-    return {**os.environ, "DOCKER_HOST": os.environ.get("DOCKER_HOST", "unix:///run/user/1000/docker.sock"), "GIT_TERMINAL_PROMPT": "0"}
+    return {**os.environ, "DOCKER_HOST": os.environ.get("DOCKER_HOST", DEPLOY.DOCKER_SOCKET), "GIT_TERMINAL_PROMPT": "0"}
 
 
 def sh(*cmd, timeout=600, check=True, input=None):
@@ -193,7 +196,7 @@ def package(name):
     repo = CODE / name
     return {"clone": (repo / ".git").exists(), "graph": graphed(repo), "map": valid_map(name),
             "explain": valid_map(name) and not unexplained(name)[0], "search": (DOCS / f"{name}.md").exists(),
-            "analysis": (DOCS / f"{name}.analysis.md").exists()}
+            "analysis": (DOCS / f"{name}.analysis.md").exists(), "wiki": (VAULT / "repos" / name / "wiki" / "conventions.md").exists()}
 
 
 def status(name, pkg=None):
@@ -218,7 +221,7 @@ def begin(name, url, source="app", redo=False):
     """A new or resumed record: what the disk already has stays done; on redo the analysis is made anew from the code map on."""
     pkg = package(name)
     if redo:
-        pkg.update(map=False, explain=False, search=False, analysis=False)
+        pkg.update(map=False, explain=False, search=False, analysis=False)   # the wiki keeps what it learned
     st = {"repo": name, "url": url, "source": source, "status": "queued", "step": None, "redo": bool(redo), "attempts": {}, "restarts": 0,
           "started": now(), "milestone": now(), "why": "", "task": None,
           "steps": {k: {"status": "done" if pkg.get(k) else "pending", "note": ""} for k, _ in STEPS}}
@@ -468,7 +471,18 @@ def step_analysis(st):
     return ""
 
 
-STEP_FN = {"clone": step_clone, "graph": step_graph, "map": step_map, "explain": step_explain, "search": step_search, "analysis": step_analysis}
+def step_wiki(st):
+    """CHG-08: the first version of the repository's wiki; a redo keeps what the wiki has learned."""
+    name = st["repo"]
+    if (VAULT / "repos" / name / "wiki" / "conventions.md").exists():
+        return "the wiki stays: it holds what earlier changes learned"
+    ready_for_model()
+    working(st, "wiki", "the Scribe writes its first version")
+    sh(sys.executable, str(STACK / "ops/repowiki.py"), "seed", name, timeout=1200)
+    return ""
+
+
+STEP_FN = {"clone": step_clone, "graph": step_graph, "map": step_map, "explain": step_explain, "search": step_search, "analysis": step_analysis, "wiki": step_wiki}
 
 
 # ---------- the message ----------
@@ -498,7 +512,7 @@ def finish(st):
     save(st)
     gaps = st["steps"]["explain"].get("note", "")
     print(f"onboarding {st['repo']}: the whole package is done", flush=True)
-    tell(st, f"{st['repo']} is onboarded: code graph, code map, every file explained, search index and a written analysis."
+    tell(st, f"{st['repo']} is onboarded: code graph, code map, every file explained, search index, a written analysis and its wiki."
          + (f"\nOne gap: {gaps}" if gaps else ""), "done")
 
 
@@ -671,6 +685,8 @@ def forget(name):
             print(f"{cmd[0]}: {type(e).__name__}", file=sys.stderr, flush=True)
     for p in (path(name), STATE / f".{name}.lock", DOCS / f"{name}.analysis.md", LOGS / f"ua-enrich-{name}.json", LOGS / f"understand-{name}.log"):
         p.unlink(missing_ok=True)
+    if (VAULT / "repos" / name).is_dir():                  # the vault's history keeps it (SN-09)
+        shutil.rmtree(VAULT / "repos" / name, ignore_errors=True)
 
 
 def main(argv):

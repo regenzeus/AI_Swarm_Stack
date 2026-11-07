@@ -3,6 +3,6 @@ Description=Swarm: publish the Ledger's view for the app and copy its events int
 [Service]
 Type=oneshot
 TimeoutStartSec=2min
-WorkingDirectory=/home/owner/ai-stack
-ExecCondition=/usr/bin/python3 /home/owner/ai-stack/ops/stack_gate.py
+WorkingDirectory=%h/ai-stack
+ExecCondition=/usr/bin/python3 %h/ai-stack/ops/stack_gate.py
 ExecStart=/usr/local/bin/sops exec-env secrets/agent-keys.enc.yaml "python3 ops/swarm_client.py feed"

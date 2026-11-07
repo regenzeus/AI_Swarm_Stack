@@ -27,6 +27,8 @@ the app talks to Hermes directly (server-side task + resumable SSE), and chats l
 - Paths from requests go through the existing guards (`vault_file`, `file_of`, the wiki root checks). Never join
   user input onto a path yourself.
 - Files the app writes: write a temporary file, then `rename` (atomic), as `save_chat` and `submit` do.
+- This deployment's hosts and accounts reach the app as compose `environment:` (`config/deployment.env`; `ops/deployment.py` is not in the image). The server
+  puts the front end's into the page (`DEPLOY`, `index`); `web/static/tools.json` names them as `{{NAME}}`.
 - The container's root filesystem is read-only. Changing files means rebuilding the image (`ops/deploy.py` does it
   when this directory changes).
 

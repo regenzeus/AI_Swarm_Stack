@@ -13,12 +13,14 @@ import threading
 import time
 from pathlib import Path
 
+import deployment as DEPLOY                        # this deployment's hosts and paths (config/deployment.env)
+
 VAULT = Path(os.environ.get("MEMORY_VAULT", "/srv/vault"))
 PUBLIC = Path(os.environ.get("MISSIONS_PUBLIC", "/srv/ai/missions/public"))
 RUNTIME_DB = Path(os.environ.get("RUNTIME_DB_HOST", "/srv/ai/missions/app/runtime.db"))
 MISSIONS_DB = Path(os.environ.get("MISSIONS_DB", "/srv/ai/missions/missions.sqlite"))
 CHATS = Path(os.environ.get("MISSIONS_CHATS", "/srv/ai/missions/app/chats"))
-CODE = Path(os.environ.get("CODE_DIR", "/home/owner/code"))
+CODE = Path(DEPLOY.CODE_DIR)
 EVERY = 3600                  # an inventory is a dozen docker and file calls: once an hour is enough to see a trend
 HISTORY_DAYS = 120            # snapshots kept (one a day) for growth  # cap: store
 ORPHAN_SHARE = 0.10           # qmd: embedding chunks of files that are gone, above this share the index needs a cleanup
@@ -87,7 +89,7 @@ def md_files(d):
 
 def wiki_dirs():
     out = [VAULT / "wiki"] if (VAULT / "wiki").is_dir() else []
-    return out + sorted(p for base in ("missions", "topics") for p in (VAULT / base).glob("*/wiki") if p.is_dir())
+    return out + sorted(p for base in ("missions", "topics", "repos") for p in (VAULT / base).glob("*/wiki") if p.is_dir())
 
 
 def measure(sid, now):

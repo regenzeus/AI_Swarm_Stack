@@ -19,7 +19,9 @@ and adds agents of its own:
   phone-check      weekly: battery, storage, security patch, connection, screen awake; fails only on a real fault
   inbox            daily, under the owner's Gmail read grant: newsletters worth keeping -> vault raw/_inbox (ops/inbox.py)
 
-  python3 ops/crew.py maintainability|tests|memory|doctor|phone-cleanup|phone-check|inbox|checker      (the crew-*.service units)
+  postmaster       hourly: the stack's own mail under its label, and the mail copy on the NAS (ops/postmaster.py)
+
+  python3 ops/crew.py maintainability|tests|memory|doctor|phone-cleanup|phone-check|inbox|postmaster|checker      (the crew-*.service units)
 Each agent writes /srv/ai/missions/crew/<id>.json (last run, duration, result, findings) for the app.
 """
 import datetime as dt
@@ -37,9 +39,10 @@ import textcap as TC
 import prompts as P                               # MEM-11: the agent prompts live in prompts/<owner>.md
 import notify as N                                # OBS-16: the one notification path
 import stack_gate as SG                           # PLT-28: is the stack up, and when did this boot begin
+import deployment as DEPLOY                        # this deployment's hosts and paths (config/deployment.env)
 
 M = I = None                                      # ops/missions.py and ops/improve.py (set by missions.main or run())
-STACK = Path.home() / "ai-stack"
+STACK = Path(DEPLOY.STACK_DIR)
 OUT = Path("/srv/ai/missions/crew")
 BUILDER, HERMES = "aistack-builder-1", "aistack-hermes-1"
 CI_IMAGE = "aistack/ci-runner:13.2.0"
@@ -67,6 +70,8 @@ CREW = [
      "what": "Weekly: battery, storage, security patch, connection and the screen-awake loop of the AI phone. Raises an alert only for a real fault."},
     {"id": "inbox", "name": "Inbox digest", "unit": "crew-inbox", "area": "memory", "agent": True,
      "what": "Daily, while you grant Gmail read: files the newsletters and updates worth keeping into your vault (the curator makes wiki pages). Never archives or deletes mail."},
+    {"id": "postmaster", "name": "Postmaster", "unit": "crew-postmaster", "area": "memory", "agent": True,
+     "what": "Hourly: files the stack's own mail under the AI Stack label, and watches the copy of your Gmail on the NAS. Reads no message text, removes nothing."},
     {"id": "coach", "name": "Coach", "unit": "crew-coach", "area": "ops", "agent": True,
      "what": "Monthly: reads every agent's scorecard and turns a real problem (many declined ideas, duplicates, refused writes) into an agent change with its evidence and a target score. Each change is replayed on the agent's past runs first; you tap Build it only after it passed."},
     {"id": "journeys", "name": "Journey checks", "unit": "crew-journeys", "area": "ops", "agent": True,
@@ -447,7 +452,7 @@ def mission_health(c, m):
 # human; everything else is a note on the card and in the run log. A good next run clears an issue; Acknowledge
 # hides it until it happens again (health-ack.json, logged in the activity feed).
 ALERTS = {"failing", "overdue", "stalled", "limit-long", "drift", "over-limit", "app-error", "drill-old", "memory-low",
-          "network-cut", "journey", "phone-down", "swarm-fault"}
+          "network-cut", "journey", "phone-down", "swarm-fault", "report-unknown"}
 CURATOR_ITEM = {"wiki-curator": "curator"}           # a memory store's curator -> its crew item (the vault lint runs in curate)
 ENGINES = {"main": "Hermes (chat)", "mission": "Hermes (missions)", "scout": "Research (scout)", "curator": "Wiki curator",
            "builder": "Builder", "claude-builder": "Builder", "claude-task": "Claude worker", "claude-review": "Claude worker",
@@ -540,26 +545,39 @@ def app_errors(now=None, path=None):
 JOURNEYS = OUT / "journeys.json"                  # the journey checks' last report (ops/journeys.py)
 
 
-def checker_faults(f=None):
-    """FND-112: the faults the checker's last run found in the swarm, each an alert on its card ([] when it found none;
-    its next clean run clears them)."""
-    try:
-        cur = json.loads(f.read_text()) if f else agent_file("checker")
-    except (OSError, ValueError):
-        return []
-    return [{"kind": "swarm-fault", "at": cur.get("last") or 0, "text": x} for x in cur.get("faults") or []]
+REPORT_DAYS = 2                                   # a nightly check's report older than this says nothing about today
 
 
-def journey_issues(path=None):
-    """TSK-32: the last journey check's failures as one alert on "Journey checks", naming the first ones; [] when they
-    all passed (the next good night clears it)."""
+def read_report(path, who, stamp, now=None):
+    """QA-23: a check's report as (its data, None), or (None, an issue): a report that is missing, broken or old is no pass.
+    Never run is a note (a new install has run nothing yet); unreadable or old is an alert, because a check stopped working."""
     try:
-        rep = json.loads((path or JOURNEYS).read_text())
-    except (OSError, ValueError):
-        return []
-    fails = [f"{j['name']}: {f}" for j in rep.get("journeys", []) for f in j.get("failures", [])]
+        doc = json.loads(path.read_text())
+    except FileNotFoundError:
+        return None, {"kind": "report-none", "at": 0, "text": f"{who} has not run yet, so its result is not known"}
+    except (OSError, ValueError) as e:
+        return None, {"kind": "report-unknown", "at": 0, "text": f"{who}: its last report cannot be read ({type(e).__name__}), so its result is not known"}
+    at = doc.get(stamp) if isinstance(doc, dict) else None
+    if not isinstance(at, (int, float)) or (now or time.time()) - at > REPORT_DAYS * 86400:
+        return (doc if isinstance(doc, dict) else None), {"kind": "report-unknown", "at": at or 0, "text": f"{who}: its last report is over {REPORT_DAYS} days old, so today's result is not known"}
+    return doc, None
+
+
+def checker_faults(f=None, now=None):
+    """FND-112: the faults the checker's last run found in the swarm, each an alert on its card; [] only when a recent run
+    found none (QA-23). Its next clean run clears them."""
+    cur, unknown = read_report(f or OUT / "checker.json", "The checker", "last", now)
+    faults = [{"kind": "swarm-fault", "at": (cur or {}).get("last") or 0, "text": x} for x in (cur or {}).get("faults") or []]
+    return faults + ([unknown] if unknown else [])
+
+
+def journey_issues(path=None, now=None):
+    """TSK-32: the last journey check's failures as one alert on "Journey checks", naming the first ones; [] only when a
+    recent night's all passed (QA-23)."""
+    rep, unknown = read_report(path or JOURNEYS, "The journey checks", "at", now)
+    fails = [f"{j['name']}: {f}" for j in (rep or {}).get("journeys", []) for f in j.get("failures", [])]
     if not fails:
-        return []
+        return [unknown] if unknown else []
     more = f" and {len(fails) - 3} more" if len(fails) > 3 else ""
     return [{"kind": "journey", "at": rep.get("at") or 0,
              "text": f"{len(fails)} journey check{'s' if len(fails) != 1 else ''} failed: " + "; ".join(fails[:3]) + more + " (make journeys shows them all)"}]
@@ -1068,14 +1086,16 @@ def run(name):
     import runtime as RTM
     import doctor as D
     import inbox as INB
+    import postmaster as PM
     import phone_agents as PA
     D.C, D.M = sys.modules[__name__], M
     PA.C, PA.M = INB.C, INB.M = sys.modules[__name__], M
+    PM.C, PM.M = sys.modules[__name__], M
     import checker as CK
     CK.M = M
     import coach as COACH
     fn = {"maintainability": maintainability, "tests": tests, "memory": memory, "doctor": D.doctor,
-          "phone-cleanup": PA.cleanup, "phone-check": PA.check, "inbox": INB.digest, "checker": CK.run, "coach": COACH.run, "journeys": journeys}[name]
+          "phone-cleanup": PA.cleanup, "phone-check": PA.check, "inbox": INB.digest, "postmaster": PM.run, "checker": CK.run, "coach": COACH.run, "journeys": journeys}[name]
     import registry as REG
     import swarm_client as SW
     if SW.paused(name):                                   # SWM-26: the owner paused this agent (or all) in the app

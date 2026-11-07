@@ -1,30 +1,36 @@
 @font-face { font-family: "Inter"; src: url("/static/vendor/inter.woff2") format("woff2"); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: "Archivo"; src: url("/static/vendor/archivo.woff2") format("woff2"); font-weight: 100 900; font-stretch: 62% 125%; font-display: swap; }
+@font-face { font-family: "JetBrains Mono"; src: url("/static/vendor/jetbrains-mono.woff2") format("woff2"); font-weight: 100 800; font-display: swap; }
 
 :root {
-  /* APP-34: calm, professional dark: graphite, opaque surfaces, one accent, readable text; nothing glows */
-  --bg: #111317; --bg2: #15181d;
-  --surface: #181b21; --surface-2: #1f232a; --surface-3: #282d35;
-  --border: #262a31; --border-2: #343a44;
-  --text: #e3e6ea; --muted: #9ba2ad; --faint: #6e757f;
-  --accent: #45b5a5; --accent-2: #8a96e8; --accent-ink: #071c19;
-  --ok: #57b88a; --warn: #d4a548; --err: #e0645c; --run: #5f9fe3;
-  --ok-bg: rgba(87,184,138,.12); --warn-bg: rgba(212,165,72,.12); --err-bg: rgba(224,100,92,.12); --run-bg: rgba(95,159,227,.12);
+  /* APP-34, APP-46: calm and exact, like an instrument: graphite, opaque surfaces, one accent; nothing glows */
+  --bg: #0c1115; --bg2: #0f151a;
+  --surface: #141b21; --surface-2: #1b242b; --surface-3: #25303a; --seg-on: #25303a;
+  --border: #232d35; --border-2: #32404a;
+  --text: #e7ecef; --muted: #a0acb5; --faint: #7b8790;
+  --accent: #4fc3b4; --accent-2: #8a96e8; --accent-ink: #06201c;
+  --ok: #5cc08f; --warn: #dbab4e; --err: #e8695f; --run: #66a6ea;
+  --ok-bg: rgba(92,192,143,.12); --warn-bg: rgba(219,171,78,.12); --err-bg: rgba(232,105,95,.12); --run-bg: rgba(102,166,234,.12);
+  --rail: #080d11; --rail-2: #151f26; --rail-line: #1b262e; --rail-text: #e7ecef; --rail-muted: #93a1ab; --rail-accent: #5cd0c0;
   --glow-1: transparent; --glow-2: transparent;
   --shadow: none;
-  --r: 14px; --r-s: 10px;
-  --mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+  --r: 12px; --r-s: 8px;
+  --display: "Archivo", "Inter", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
   color-scheme: dark;
 }
 @media (prefers-color-scheme: light) {
   :root {
-    --bg: #f4f5f9; --bg2: #eceef4;
-    --surface: rgba(255,255,255,.75); --surface-2: rgba(15,23,42,.045); --surface-3: rgba(15,23,42,.08);
-    --border: rgba(15,23,42,.08); --border-2: rgba(15,23,42,.16);
-    --text: #0f1626; --muted: #5a6478; --faint: #8b93a5;
-    --accent: #0d9488; --accent-2: #7c3aed; --accent-ink: #ffffff;
-    --ok: #059669; --warn: #b45309; --err: #dc2626; --run: #2563eb;
+    --bg: #edf0f3; --bg2: #e4e8ec;
+    --surface: #ffffff; --surface-2: #f3f5f7; --surface-3: #e8ecf0; --seg-on: #ffffff;
+    --border: #dce1e6; --border-2: #c6cdd4;
+    --text: #0e1b24; --muted: #4c5a66; --faint: #66737e;
+    --accent: #0b6b70; --accent-2: #5b4bb5; --accent-ink: #ffffff;
+    --ok: #0e7a56; --warn: #96590a; --err: #c22f28; --run: #1f5fbf;
+    --ok-bg: rgba(14,122,86,.1); --warn-bg: rgba(150,89,10,.1); --err-bg: rgba(194,47,40,.09); --run-bg: rgba(31,95,191,.09);
+    --rail: #0d171d; --rail-2: #1a2730; --rail-line: #1f2c35; --rail-text: #eef2f4; --rail-muted: #9aa8b2; --rail-accent: #5cd0c0;
     --glow-1: transparent; --glow-2: transparent;
-    --shadow: 0 1px 2px rgba(15,23,42,.05);
+    --shadow: 0 1px 2px rgba(14,27,36,.05);
     color-scheme: light;
   }
 }
@@ -1266,3 +1272,106 @@ body.chatmode .chathead { align-items: center; }
 .onb-mark svg { width: 18px; height: 18px; }
 .onb-steps li.failed .onb-mark { color: var(--danger, #e5484d); }
 .onb-note { display: block; margin-top: 2px; }
+
+/* CNX-08: who writes to you */
+.mailrow { display: flex; gap: 12px; align-items: flex-start; padding: 10px 2px; }
+.mailrow + .mailrow { border-top: 1px solid var(--line, rgba(255,255,255,.07)); }
+
+/* APP-46: the look. One thing is bold: the dark console rail on every theme, with the stack's state in its foot; titles
+   are set wide, figures in their own face, and everything else stays quiet, opaque and exact. */
+.card { backdrop-filter: none; -webkit-backdrop-filter: none; }
+h1, .agh1 { font-family: var(--display); font-stretch: 112%; font-weight: 640; letter-spacing: -.024em; }
+h1 { font-size: 26px; }
+h2 { font-family: var(--display); font-stretch: 104%; }
+.kpi-v, .tmnum b, .hcount { font-family: var(--display); font-stretch: 106%; font-variant-numeric: tabular-nums; }
+.kpi-v { font-weight: 620; letter-spacing: -.02em; }
+.mono { font-size: 12px; }
+.view, .pagehelp { max-width: 1280px; }
+
+.btn { border-radius: 9px; height: 38px; font-weight: 580; }
+.btn.sm { border-radius: 8px; }
+.btn:hover { background: var(--surface-2); }
+.btn.primary:hover { background: color-mix(in srgb, var(--accent) 86%, var(--text)); }
+.btn.ghost:hover { background: var(--surface-2); }
+.icon-btn { border-radius: 9px; }
+.input, textarea.input, select.input { border-radius: 9px; }
+.tag { border-radius: 6px; }
+.pill { border-radius: 6px; padding: 2px 8px; }
+.seg { border-radius: 10px; }
+.seg button, .seg a { border-radius: 7px; }
+.seg a.on, .seg button.on { background: var(--seg-on); box-shadow: var(--shadow); }
+.list a:hover { background: var(--surface-2); }
+.needs-calm.off { background: var(--surface-2); color: var(--muted); }
+
+/* a state is a lamp: a solid dot in a ring of its own colour; no blur, nothing glows */
+.dot { box-shadow: 0 0 0 2px color-mix(in srgb, var(--faint) 22%, transparent); }
+.dot.ok { box-shadow: 0 0 0 2px color-mix(in srgb, var(--ok) 24%, transparent); }
+.dot.warn { box-shadow: 0 0 0 2px color-mix(in srgb, var(--warn) 24%, transparent); }
+.dot.err { box-shadow: 0 0 0 2px color-mix(in srgb, var(--err) 24%, transparent); }
+
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.side :focus-visible, .tabbar :focus-visible { outline-color: var(--rail-accent); }
+
+/* the console: the side rail on a desk, the tab bar on a phone */
+.tabbar { background: var(--rail); border-top: 1px solid var(--rail-line); backdrop-filter: none; -webkit-backdrop-filter: none; }
+.tabbar a { color: var(--rail-muted); }
+.tabbar a.on { color: var(--rail-text); }
+.tabbar a.on svg { color: var(--rail-accent); }
+.tab-dot { box-shadow: 0 0 0 2px var(--rail); }
+@media (min-width: 960px) {
+  h1 { font-size: 30px; }
+  .side { width: 236px; padding: 20px 12px 14px; border-right: 0; background: var(--rail); color: var(--rail-text); }
+  .side .brand { padding: 2px 10px 24px; font-family: var(--display); font-stretch: 108%; font-size: 15.5px; font-weight: 620; letter-spacing: -.012em; }
+  .nav a { padding: 9px 12px; border-radius: 8px; color: var(--rail-muted); font-weight: 520; font-size: 14.5px; }
+  .nav a svg { width: 18px; height: 18px; }
+  .nav a:hover { background: var(--rail-2); color: var(--rail-text); }
+  .nav a.on { background: var(--rail-2); color: var(--rail-text); box-shadow: inset 2px 0 0 var(--rail-accent); }
+  .nav a.on svg { color: var(--rail-accent); }
+  .nav .tab-dot { box-shadow: none; }
+  .side-foot { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 2px 10px; padding: 12px 10px 2px; border-top: 1px solid var(--rail-line);
+    font-family: var(--mono); font-size: 11px; color: var(--rail-muted); }
+  .side-foot .dot { margin: 0; }
+  .side-foot b { font-weight: 560; color: var(--rail-text); }
+  .side-foot span.when { grid-column: 2; font-variant-numeric: tabular-nums; }
+}
+
+/* APP-47: every page opens on its main thing. Code: a directory of repositories, set apart from the work by its own shade and type */
+.codehero { align-items: center; margin-bottom: 14px; }
+.codeseg { display: none; margin-bottom: 14px; }
+.codegrid { display: grid; grid-template-columns: 292px minmax(0, 1fr); gap: 22px; align-items: start; }
+.repodir { position: sticky; top: 18px; max-height: calc(100dvh - 36px); overflow-y: auto; padding: 14px 8px 10px; border-radius: var(--r);
+  background: var(--surface-2); border: 1px solid var(--border-2); }
+.repodir-h { display: flex; align-items: baseline; justify-content: space-between; padding: 0 8px 4px; }
+.repodir-h .num { font-family: var(--mono); font-size: 12px; color: var(--faint); }
+.rgroup { font-family: var(--mono); font-size: 10.5px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--faint); padding: 14px 8px 5px; }
+details.rtrials > summary { cursor: pointer; }
+.rrow { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 10px; align-items: center; padding: 10px 8px; border-left: 2px solid transparent; border-top: 1px solid var(--border-2); }
+.repodir-h + .rrow, .rgroup + .rrow, summary + .rrow { border-top: 0; }   /* a line between two repositories, none under a heading */
+.rrow:hover, .rrow:focus-visible { background: var(--surface-3); border-left-color: var(--accent); }
+.rrow-n { font-family: var(--mono); font-size: 13.5px; font-weight: 500; color: var(--muted); overflow-wrap: anywhere; }
+.rrow.mine .rrow-n { color: var(--text); font-weight: 600; }
+.rrow-s { grid-column: 1; font-size: 11.5px; color: var(--faint); overflow-wrap: anywhere; min-height: 1em; }
+.rrow-c { grid-row: 1 / span 2; grid-column: 2; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; background: var(--warn); color: var(--bg);
+  font: 700 12px/20px var(--mono); text-align: center; }
+.rrow-live { grid-row: 1 / span 2; grid-column: 2; width: 8px; height: 8px; border-radius: 50%; background: var(--run); animation: pulse 1.6s infinite; }
+.codework { min-width: 0; }
+.codeask { align-items: center; min-height: 32px; }
+.codehist > summary { cursor: pointer; margin-bottom: 0; }
+.codehist[open] > summary { margin-bottom: 10px; }
+@media (max-width: 959px) {
+  .codeseg { display: flex; }
+  .codehero { flex-wrap: wrap; }
+  .codehero .grow { flex-basis: 100%; }
+  .codehero .row { justify-content: flex-start !important; }
+  .repodir-h { display: none; }                           /* the tab above already says it */
+  .repodir { padding-top: 4px; }
+  .codegrid { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .codegrid[data-pane="work"] .repodir, .codegrid[data-pane="repos"] .codework { display: none; }
+  .repodir { position: static; max-height: none; }
+  .rrow { padding: 13px 8px; }                            /* a finger, not a pointer */
+}
+@media (max-width: 480px) { .stackseg button, .agviews a { padding: 8px 6px; font-size: 12.5px; } }      /* five parts fit a phone without hiding the last */
+/* Stack: one part at a time. Wiki: the list first, its map beside it */
+.stackseg { margin-bottom: 18px; }
+.wgrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; align-items: start; }
+@media (max-width: 1099px) { .wgrid { grid-template-columns: minmax(0, 1fr); } }

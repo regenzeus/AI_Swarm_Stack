@@ -43,7 +43,7 @@ def test_the_swarm_s_views_are_under_agents_on_every_screen():
 
 def test_new_chat_starts_afresh_and_attaching_is_a_clip():
     head = re.search(r'<div class="chathead">.*?\n      </div>', JS, re.S)[0]
-    assert "data-newchat" not in head and "${ic.plus}" not in head                     # not in the header: first in the list of chats (APP-43)
+    assert "data-newchat" not in head and "${ic.plus}" not in head                     # not in the header: first in the list of chats (APP-46)
     assert 'aria-label="Attach pictures or documents">${ic.clip}<input type="file" id="cfile"' in JS
     assert '<a class="btn primary cnew" href="#/chat?new=1" data-newchat>' in JS and '!route.q.get("new")' in JS
 
@@ -96,3 +96,47 @@ def test_the_phone_chat_is_pinned_to_the_screen_and_the_title_has_its_own_width(
     head = re.search(r'<div class="chathead">.*?\n      </div>', JS, re.S)[0]
     assert head.index('id="ctitle"') < head.index('class="chatstat"') < head.index('id="chatchip"')
     assert "new ResizeObserver(() => { if (atEnd) pane.scrollTop = pane.scrollHeight; }).observe(pane);" in JS
+
+
+def test_the_look_is_opaque_and_exact_with_its_type_vendored():
+    """APP-46, from photos of a fresh install on a light screen: washed-out see-through surfaces and faint small print."""
+    light = CSS[CSS.index("@media (prefers-color-scheme: light)"):]
+    light = light[:light.index("}\n}")]
+    assert "--surface: #ffffff" in light and "rgba(255,255,255" not in light          # surfaces are solid
+    assert "--faint: #66737e" in light                                                 # small print stays readable on white
+    assert "--rail:" in CSS[:CSS.index("@media (prefers-color-scheme: light)")] and "--rail:" in light
+    assert "bg-glow" not in CSS or "transparent" in CSS
+    docker = (STATIC.parent.parent / "Dockerfile").read_text()
+    sw = (STATIC.parent / "sw.js").read_text()
+    for font in ("archivo.woff2", "jetbrains-mono.woff2"):
+        assert f"/static/vendor/{font}" in CSS and f"/app/web/static/vendor/{font}" in docker and f"/static/vendor/{font}" in sw
+    assert ":focus-visible" in CSS and "prefers-reduced-motion" in CSS
+
+
+def test_a_screen_without_a_connection_claims_nothing():
+    """QA-23 in the app: the same photos said Offline beside Ready, all services running and all quiet."""
+    assert "function footState()" in JS and "footState();" in JS
+    assert "Ready\"} · updated" not in JS and "Offline ·" not in JS
+    for where in ("function homeHeadHtml", "function needsHtml", "function vSystem"):
+        body = JS[JS.index(where):]
+        assert "notConnected()" in body[:body.index("\n}")], where
+    assert "<b class=\"err-t\">Not connected</b>" in JS
+
+
+def test_a_fresh_install_sees_no_one_else_s_topics():
+    for private in ("copper", "Gamma Metals", "Watch ASPI"):
+        assert private not in JS[JS.index("What are my agents doing?") - 40:JS.index("What are my agents doing?") + 300]
+    assert 'live.length === 1 ? "" : "s"' in JS                                         # "1 wikis"
+
+
+def test_a_page_that_loads_shows_it_is_coming_and_a_tool_without_an_address_has_no_tile():
+    body = JS[JS.index("function render("):]
+    assert "render.nav" in body[:body.index("\n}")] and 'class=\"skeleton\"' in body[:body.index("\n}")]
+    assert "toolsHere(JSON.parse(" in JS and '!("host" in x) || (x.host &&' in JS and "https?:" in JS
+
+
+def test_an_app_no_runner_ever_wrote_to_is_not_connected():
+    """Seen by running the image alone with empty data: it said Ready and all quiet while Stack said not connected."""
+    assert "!S || !S.generated ||" in JS and "the runner has written nothing here" in JS
+    assert 'notConnected() ? "not known" : "all quiet"' in JS
+

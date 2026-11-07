@@ -30,12 +30,13 @@ import runtime as RTM
 from textcap import STORE, cut, limit, tail                    # visible caps and input limits (AGENTS.md, truncation)
 import textcap as TC
 import prompts as P                               # MEM-11: the agent prompts live in prompts/<owner>.md
+import deployment as DEPLOY                        # this deployment's hosts and paths (config/deployment.env)
 
 M = None
 WB = Path("/srv/ai/workbench")
 OUT = Path("/srv/ai/missions/builds")
-CODE = Path.home() / "code"
-STACK = Path.home() / "ai-stack"
+CODE = Path(DEPLOY.CODE_DIR)
+STACK = Path(DEPLOY.STACK_DIR)
 BUILDER = "aistack-builder-1"
 # limit: stops, one build past this fails with its log and can be asked again
 TIMEOUT = 45 * 60
@@ -50,7 +51,10 @@ CHECKS = {
 # them is missing, so a repo with only tests/ ran nothing and passed (trial semver, 1 Nov 2026: "no automatic checks").
 DEFAULT_CHECK = ("PATH=/opt/tools/bin:$PATH; if [ -f Makefile ] && grep -q '^test:' Makefile; then make test; "
                  "elif [ -d tests ] || [ -n \"$(find . -maxdepth 3 -name 'test_*.py' -not -path './.git/*' | head -n 1)\" ]; then pytest -q; "
-                 "elif [ -f package.json ] && grep -q '\"test\"' package.json; then npm test --silent; "
+                 "elif [ -f package.json ] && grep -q '\"test\"' package.json; then if [ -f pnpm-lock.yaml ]; then pnpm install --frozen-lockfile && pnpm test; else npm test --silent; fi; "
+                 "elif [ -f go.mod ]; then go test ./...; "
+                 "elif [ -f Cargo.toml ]; then cargo test; "
+                 "elif [ -f pom.xml ]; then mvn -q test; "
                  "else echo 'no automatic checks in this repo'; fi && echo ALL CHECKS PASSED")
 SENSITIVE = re.compile(r"^(compose/|config/litellm/|config/gate/|ops/keys\.sh|ops/deploy\.py|ops/builds\.py|ops/missions\.py|images/\w+/entrypoint|"
                        r"images/litellm/|\.forgejo/|secrets/|Makefile)|(^|/)(AGENTS|CLAUDE|SOUL)\.md$")   # instruction files: the builder may
@@ -85,7 +89,7 @@ def table(c):
     for col, typ in (("retry_at", "text"), ("pr", "text"), ("pr_number", "integer"), ("engine", "text"), ("ai_review", "text"), ("cached", "integer"),
                      ("approve_on_ci", "integer"), ("idea", "integer"), ("task", "integer"), ("slot", "integer"), ("approved_at", "text"),
                      ("files_plan", "text"), ("requirements", "text"), ("proof", "text"), ("note", "text"), ("override", "text"),
-                     ("context", "text"), ("source", "text")):
+                     ("context", "text"), ("source", "text"), ("onto", "text")):
         if col not in cols:
             c.execute(f"alter table builds add column {col} {typ}")
 
@@ -142,9 +146,10 @@ def handle(req, c):
         t = M.now().isoformat(timespec="seconds")
         idea = int(req["idea"]) if str(req.get("idea") or "").isdigit() else None    # an idea's build is planned first (SWM-91)
         files = TC.first([str(f) for f in req.get("files") or [] if str(f).strip()], 40, "files of a build")  # cap: untrusted
-        cur = c.execute("insert into builds (repo, title, description, status, created, updated, attempts, engine, idea, files_plan, context, source) "
-                        "values (?,?,?,?,?,?,0,?,?,?,?,?)", (repo, title, desc, "planning" if idea else "queued", t, t, engine, idea,
-                                                             json.dumps(files) if files else None, ctx, src))
+        onto = str(req.get("onto") or "") or None        # CHG-01: a step of a change builds onto the change's branch, not the default branch
+        cur = c.execute("insert into builds (repo, title, description, status, created, updated, attempts, engine, idea, files_plan, context, source, onto) "
+                        "values (?,?,?,?,?,?,0,?,?,?,?,?,?)", (repo, title, desc, "planning" if idea else "queued", t, t, engine, idea,
+                                                               json.dumps(files) if files else None, ctx, src, onto))
         c.commit()
         bid = cur.lastrowid
         slug = re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")[:40]  # cap: id
@@ -169,6 +174,10 @@ def handle(req, c):
         fb = limit(str(req.get("feedback", "")).strip(), 20000, "your change request")
         if b["status"] not in ("review", "failed") or len(fb) < 3:
             raise ValueError("only a build in review (or failed) can get change requests, with what to change")
+        if str(b["source"] or "").startswith("change:"):  # CHG-11: the change's own pipeline runs again from its coder
+            import changes as CH
+            return CH.on_revise(c, b, fb)
+        lesson(b, fb, f"the owner's review of build #{b['id']}")
         put(c, b["id"], status="queued", feedback=fb, error=None)
         M.event("build", "", f"Build #{b['id']}: changes requested", title="Builder")
         return {"queued": True}
@@ -245,14 +254,28 @@ def handle(req, c):
             pass
         put(c, b["id"], status="rejected")
         idea_follows(b["id"], "rejected")
+        if str(b["source"] or "").startswith("change:"):
+            import changes as CH
+            CH.on_reject(c, b, str(req.get("reason") or ""))
+        elif str(req.get("reason") or "").strip():
+            lesson(b, str(req["reason"]).strip(), f"the owner rejected build #{b['id']}")
         close_pr(b, "Rejected in Mission Control.")
         M.event("build", "", f"Build #{b['id']} rejected; branch deleted", title="Builder")
         return {"rejected": True}
     raise ValueError("unknown build action")
 
 
+def lesson(b, text, evidence):
+    """CHG-11: what the owner said in a review stays with the repository, not only on this build."""
+    try:
+        import repowiki as RW
+        RW.lesson(b["repo"], text, evidence)
+    except Exception as e:                                # the review goes on without it
+        M.log(f"build #{b['id']}: the lesson not written: {type(e).__name__}: {e}")
+
+
 # ---------- Forgejo API (only with FORGEJO_TOKEN, a write token the owner makes once): pull requests, new repos ----------
-FORGEJO = "http://192.168.1.10:3000/api/v1"
+FORGEJO = f"{DEPLOY.FORGEJO_URL}/api/v1"
 
 
 def forgejo(method, path, body=None):
@@ -507,16 +530,21 @@ def clone(repo, slot=None):
     # leftovers survive into the next build. Container root may chmod anything under /work: normalise it first.
     subprocess.run(["docker", "exec", "-u", "0", BUILDER, "chmod", "-R", "a+rwX", f"/work/{place(repo, slot)}"], capture_output=True, timeout=300)
     git(path, "config", "core.sharedRepository", "0777")
-    excl = path / ".git" / "info" / "exclude"            # Serena's per-project cache and settings never get committed
-    if ".serena/" not in (excl.read_text() if excl.exists() else ""):
-        excl.parent.mkdir(exist_ok=True)
-        with open(excl, "a") as f:
-            f.write("\n.serena/\n")
+    excl = path / ".git" / "info" / "exclude"            # Serena's cache and a repository's own environment never get committed
+    have = excl.read_text() if excl.exists() else ""
+    for name in (".serena/", ".venv-stack/"):
+        if name not in have:
+            excl.parent.mkdir(exist_ok=True)
+            with open(excl, "a") as f:
+                f.write(f"\n{name}\n")
     if not git(path, "config", "user.email", check=False):       # merges/reverts on approval: the owner's identity, as in the live repo
         live = STACK if repo == "ai-stack" else CODE / repo
-        for k, d in (("user.name", "Owner"), ("user.email", "builder@ai-stack.local")):
+        for k, d in (("user.name", DEPLOY.GIT_NAME), ("user.email", "builder@ai-stack.local")):
             git(path, "config", k, git(live, "config", k, check=False) or d)
     return path
+
+
+CHANGE_MERGE = threading.Lock()
 
 
 def trial_merge(c, b):
@@ -537,6 +565,28 @@ def trial_merge(c, b):
     sha = git(path, "rev-parse", "HEAD")
     git(path, "push", "-q", "origin", main, timeout=120)
     git(path, "push", "-q", "origin", "--delete", b["branch"], check=False)
+    put(c, b["id"], status="merged", merged=sha)
+    return sha
+
+
+def change_merge(c, b, branch):
+    """CHG-01: a step's build merged into its change's branch, so the next step works on it; the owner reviews the whole
+    change on that branch. -> the merge commit, or None when it does not merge (left as it was)."""
+    with CHANGE_MERGE:                                    # parallel coders end at the same time; the merge queue keeps its own clone
+        done = c.execute("select status, merged from builds where id=?", (b["id"],)).fetchone()
+        if done and done["status"] == "merged" and done["merged"]:
+            return done["merged"]
+        path = clone(b["repo"], "m")
+        git(path, "merge", "--abort", check=False)
+        git(path, "reset", "-q", "--hard")
+        git(path, "fetch", "-q", "origin")
+        git(path, "checkout", "-q", "--detach", f"origin/{branch}")
+        if not merge(path, f"origin/{b['branch']}", f"Merge build #{b['id']}: {b['title']}\n\nA step of a change, merged by the Conductor.", "--no-ff"):
+            git(path, "reset", "-q", "--hard")
+            return None
+        sha = git(path, "rev-parse", "HEAD")
+        git(path, "push", "-q", "origin", f"{sha}:refs/heads/{branch}", timeout=120)
+        git(path, "push", "-q", "origin", "--delete", b["branch"], check=False)
     put(c, b["id"], status="merged", merged=sha)
     return sha
 
@@ -644,7 +694,7 @@ def run(c, b, slot=None):
     M.event("build", "", f"Build #{bid}: the builder is working on {repo}" + (f" (slot {slot})" if slot else ""), title="Builder")
     start = M.now()
     git(path, "fetch", "-q", "origin", "--prune")
-    main = default_branch(path)
+    main = (b["onto"] if "onto" in b.keys() else None) or default_branch(path)   # CHG-01: a change's step builds on the change's branch
     resume = b["status"] == "waiting" and git(path, "branch", "--show-current") == b["branch"]
     if resume:
         pass                                  # ChatGPT paused the last attempt: keep its unfinished work and continue
@@ -729,6 +779,10 @@ def run(c, b, slot=None):
             error=f"{who} usage limit reached; continues by itself at {retry:%H:%M}", calls=calls, tokens=tokens)
         M.event("build", "", f"Build #{bid} waits for {who} (usage limit); continues at {retry:%H:%M}", push=True, title="Builder")
         return
+    if n == 0 and b["onto"]:                              # CHG-04: a step of a change with nothing to commit (a breaker that found nothing, a coder
+                                                          # sent back over what needs no change): the change's judge decides, not this build
+        put(c, bid, status="merged", summary=section(out, "Summary") or tail(out.strip(), 6000, "the full log is under Full log"), files="[]", calls=calls, tokens=tokens)  # cap: store
+        return
     if n == 0:
         why = ("stopped: its tool calls arrived without arguments (a gateway problem: run make probe-tools)"
                if "[runner] stopped: 6 tool calls" in out else
@@ -741,7 +795,7 @@ def run(c, b, slot=None):
     summary = "\n\n".join(x for x in (section(out, "Summary"), "**How it was tested**\n\n" + section(out, "How it was tested")
                                       if section(out, "How it was tested") else "", "**Risks**\n\n" + section(out, "Risks")
                                       if section(out, "Risks") else "") if x) or tail(out.strip(), 6000, "the full log is under Full log")  # cap: store
-    review(c, b, path, main, summary, slot=slot, calls=calls, tokens=tokens)
+    review(c, b, path, (b["onto"] if "onto" in b.keys() else None) or main, summary, slot=slot, calls=calls, tokens=tokens)
 
 
 NOTES = ("**Conflicts with the current main.**", "**The builder left uncommitted changes")
@@ -771,6 +825,11 @@ def review(c, b, path, main, summary, slot=None, **kw):
     """Bring the branch up to date, run the checks on exactly what is committed, and put the build up for review."""
     bid, repo = b["id"], b["repo"]
     base, head, conflict, leftovers = onto_main(path, main)
+    if "onto" in b.keys() and b["onto"]:                  # CHG-05: a step of a change: the change's judge and reviewers look at the whole
+        files = [ln.split("\t") for ln in git(path, "diff", "--name-status", f"{base}..HEAD").splitlines()]
+        git(path, "push", "-q", "-f", "origin", b["branch"], timeout=120)
+        put(c, bid, status="review", base=base, head=head, summary=summary, files=json.dumps(files), checks="left to the change's judge", ci="none", feedback=None, **kw)
+        return
     out = tail(sandbox_checks(repo, slot), STORE)  # cap: store
     reqs, proof = [], None
     if (path / "ops/req.py").exists():                    # SWM-96: checks pass only when the named requirements are proven
@@ -815,7 +874,12 @@ LENSES = {        # SWM-95: two reviewers, each with its own lens and a fresh co
                 "(shell, SQL, path, prompt); authentication, permission or approval checks weakened or skipped; new network "
                 "exposure or egress; private data reaching a tool that can send it out (fetch, browser, phone, mail); unsafe "
                 "defaults. An empty findings list with verdict approve is the right answer when there is none.",
+    "conventions": "Your lens: does this change do things the way this repository does them, nothing else. The repository's wiki above and its own "
+                   "AGENTS.md, CLAUDE.md or CONTRIBUTING say how: style, naming, where tests, docs and requirements live, and what a change must keep "
+                   "current. Name a rule it breaks with where the rule stands. Taste is no finding. An empty findings list with verdict approve is "
+                   "the right answer when it fits.",
 }
+BUILD_LENSES = ("requirements", "security")           # a build's own review; a change's reviewers add conventions (CHG-07)
 WORST = {"block": 3, "changes": 2, "approve": 1}
 
 
@@ -919,14 +983,14 @@ def ai_review(c, b, path, diff, checks_ok, slot=None, context="", reqs=(), files
     agents rule (SWM-70) when the build changes what defines an agent; each verdict is evidence on the build's idea. A
     block stops the deploy until changes or the owner's override."""
     engine = reviewer_for(b["engine"])
-    put(c, b["id"], ai_review=json.dumps({"engine": engine, "pending": True, "lenses": list(LENSES)}))
+    put(c, b["id"], ai_review=json.dumps({"engine": engine, "pending": True, "lenses": list(BUILD_LENSES)}))
     ref = RTM.ref()
 
     def look(lens):
         RTM.set_ref(ref)                                  # the reviews show under the build's run (the ref is per thread)
         return one_review(engine, b, path, diff, checks_ok, lens, slot, context, reqs)
-    with ThreadPoolExecutor(len(LENSES)) as ex:
-        reviews = list(ex.map(look, LENSES))
+    with ThreadPoolExecutor(len(BUILD_LENSES)) as ex:
+        reviews = list(ex.map(look, BUILD_LENSES))
     why = agent_gate(b, files)
     if why:
         reviews.append({"lens": "agents", "engine": "rule", "verdict": "block", "summary": why, "at": M.now().isoformat(timespec="seconds"),
@@ -962,7 +1026,7 @@ def recheck(c, b, slot=None):
 def ci_status(repo, sha):
     import urllib.request
     tok = os.environ.get("FORGEJO_TOKEN") or os.environ.get("FORGEJO_STATUS_TOKEN", "")      # one token is enough
-    req = urllib.request.Request(f"http://192.168.1.10:3000/api/v1/repos/regenzeus/{repo}/actions/tasks?limit=30",
+    req = urllib.request.Request(f"{FORGEJO}/repos/{DEPLOY.FORGEJO_OWNER}/{repo}/actions/tasks?limit=30",
                                  headers={"Authorization": f"token {tok}"})
     runs = json.load(urllib.request.urlopen(req, timeout=15)).get("workflow_runs") or []
     mine = [r for r in runs if r.get("head_sha") == sha]
@@ -1178,7 +1242,12 @@ def promote(c):
 
 def take_lease(c, b):
     """SWM-92: a build works only while it holds its task's files (no files named: the whole repo). -> may it run?"""
-    r = swarm("lease", {"repo": b["repo"], "paths": files_of(b) or ["*"], "holder": f"build:{b['id']}", "task": b["task"]})
+    if b["status"] == "recheck":                          # SWM-92: re-running the checks works on no file: build #37 waited 4 h behind other builds' reviews
+        return True
+    onto = b["onto"] if "onto" in b.keys() else None      # CHG-04: a change's steps run one after another on the change's own branch;
+    if onto and not files_of(b):                          # what they conflict with shows when main is merged in, not by waiting for
+        return True                                       # every other build's review. Parallel coders hold their files in the change
+    r = swarm("lease", {"repo": f"{b['repo']}@{onto}" if onto else b["repo"], "paths": files_of(b) or ["*"], "holder": f"build:{b['id']}", "task": b["task"]})
     if r is None:                                         # the swarm is down: no lease to hold, run one at a time
         return not any(k == "run" for _, _, k in _busy.values())
     if r.get("granted"):
@@ -1211,6 +1280,10 @@ def job(b, slot, kind):
             fn(c, b) if kind in ("plan", "deploy") else fn(c, b, slot)
         except Exception as e:
             M.log(traceback.format_exc())
+            if b["status"] in ("queued", "waiting") and RTM.unreachable(str(e)):   # the network or the NAS away for a moment fails nothing: it tries again
+                retry = M.now() + M.dt.timedelta(minutes=2)
+                put(c, b["id"], status="waiting", retry_at=retry.isoformat(timespec="seconds"), error=f"The NAS could not be reached; it tries again by itself: {str(e)}")
+                return
             # an approved build that failed before its merge was pushed is still waiting for you, not "merged"
             merged = c.execute("select merged from builds where id=?", (b["id"],)).fetchone()[0]
             put(c, b["id"], status="failed" if b["status"] in ("queued", "recheck", "planning") else ("merged" if merged else "review")

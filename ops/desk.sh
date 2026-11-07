@@ -9,7 +9,8 @@
 # usual (TSK-22, ops/conductor.py). Without DESK_MODE the whole pipeline runs, as for a briefing mission.
 set -uo pipefail
 PROMPTS="$(cd "$(dirname "$0")/.." && pwd)/prompts"     # prompts/desk.md, mounted read-only (MEM-13)
-export DOCKER_HOST=${DOCKER_HOST:-unix:///run/user/1000/docker.sock}
+eval "$(python3 "$(dirname "$0")/deployment.py" shell)"   # this deployment's hosts and paths (config/deployment.env)
+export DOCKER_HOST=${DOCKER_HOST:-$DOCKER_SOCKET}
 V=/srv/vault; ONLY=${1:-}; DATE=$(date +%F)
 [ "${2:-}" = "--date" ] && DATE=$3
 MODE=${DESK_MODE:-full}

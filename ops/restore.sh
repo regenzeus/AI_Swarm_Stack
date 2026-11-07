@@ -8,7 +8,8 @@
 # FILE = name on the NAS (default: newest). Decrypting needs ~/.config/sops/age/keys.txt; on a new machine copy it
 # from the NAS first: ssh synology cat .ai-stack/age-key.txt > ~/.config/sops/age/keys.txt
 set -euo pipefail
-export DOCKER_HOST=${DOCKER_HOST:-unix:///run/user/1000/docker.sock}
+eval "$(python3 "$(dirname "$0")/deployment.py" shell)"   # this deployment's hosts and paths (config/deployment.env)
+export DOCKER_HOST=${DOCKER_HOST:-$DOCKER_SOCKET}
 MODE=${1:-drill}; DEST=/volume1/docker/ai-backup
 FILE=${2:-$(ssh synology "cd $DEST && ls -1t aistack-*.tar.gz.age | head -1")}
 VOLS="hermes-home litellm-auth openwebui qmd-data opencode-data"

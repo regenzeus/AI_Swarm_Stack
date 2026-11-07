@@ -269,3 +269,36 @@ items:
     findings: [FND-123]
     verify: {method: test, by: [tests/test_limits.py::test_the_limit_that_refused_the_owner_s_repository_would_fail_the_check_today, tests/test_limits.py::test_a_limit_needs_what_it_does_and_why, tests/test_limits.py::test_the_list_of_limits_stays_current, tests/test_limits.py::test_every_limit_in_the_repository_says_what_it_does_and_why, tests/test_limits.py::test_nothing_is_left_of_the_size_limit_on_repositories, tests/test_limits.py::test_a_short_list_slice_needs_its_reason, tests/test_limits.py::test_triggers_and_tickers_over_the_limit_are_refused_not_dropped, tests/test_limits.py::test_a_briefing_checks_every_source_it_was_given, tests/test_limits.py::test_a_fan_out_runs_every_item_or_refuses_the_plan, tests/test_limits.py::test_past_the_day_s_budget_the_owner_is_told_once, tests/test_limits.py::test_an_attachment_says_which_sheets_and_rows_it_left_out]}
     trace: [ops/limits.py, ops/truncation.py, ops/check.sh, docs/LIMITS.md]
+  - id: QA-23
+    title: Unknown is not clean
+    statement: A check whose report is missing, cannot be read or is over two days old shall show on the health board as not known, never as a pass; a
+      report that cannot be read or is old shall be an alert, and one that has never been written a note.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05]
+    sources: [docs/CHANGE-REQUESTS.md]
+    verify: {method: test, by: [tests/test_recoverable.py::test_a_check_s_report_that_is_missing_broken_or_old_is_no_pass]}
+    trace: [ops/crew.py]
+  - id: QA-24
+    title: The tests need no machine
+    statement: The unit tests shall pass in CI's container, which has no /srv, make or ssh, by keeping every state folder inside the test's own temporary
+      folder, so that a green check in the builder and CI's verdict cannot disagree over what is installed.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05]
+    sources: [.forgejo/workflows/ci.yml]
+    verify: {method: test, by: [tests/test_recoverable.py::test_a_test_touches_no_folder_of_this_machine]}
+  - id: QA-25
+    title: The CI runner keeps its process table clean
+    statement: The CI runner shall run under an init process that reaps the children its jobs leave behind, so that finished jobs cannot fill its process limit
+      and turn every later push into a failure that does not come from the code.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05]
+    sources: [compose/apps.yaml]
+    verify: {method: test, by: [tests/test_recoverable.py::test_the_ci_runner_has_an_init_that_reaps_what_its_jobs_leave_behind]}
+    trace: [tests/conftest.py, ops/postmaster.py]
+

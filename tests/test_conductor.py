@@ -11,8 +11,11 @@ import pytest
 from pathlib import Path
 
 import conductor as CD
+import desk_steps as DS
 import notify as N
 import runtime as RTM
+import shop_steps as SS
+import stepkinds
 import tasks as TK
 
 PLAN = [{"step": "Find the facts", "agent": "scout", "why": "reads the web", "after": []},
@@ -38,7 +41,7 @@ def K(tmp_path, monkeypatch):
     import threading
     ns = types.SimpleNamespace(db=conn, event=lambda *a, **k: events.append(a), log=print, paused=MM.paused, VAULT=tmp_path,
                                vault_commit=lambda paths, msg: None, X=types.SimpleNamespace(APP="https://x"), stop=threading.Event())
-    CD.M = TK.M = ns
+    CD.M = TK.M = DS.M = SS.M = ns
     monkeypatch.setattr(CD, "RESULTS", tmp_path / "tasks")
     monkeypatch.setattr(CD, "headroom", lambda s: None)
     monkeypatch.setattr(N, "send", lambda text, category, **k: sent.append(text) or {})
@@ -297,12 +300,12 @@ def test_a_briefing_runs_collect_scouts_write_and_deliver_and_each_desk_step_han
         (K.tmp / rel).parent.mkdir(parents=True)
         (K.tmp / rel).write_text('---\nheadline: "Battery Recycling Weekly"\nstats: {"chosen": 3}\n---\n\n# Battery Recycling Weekly\n\nVW [1]\n')
         return f"x {s} {d} filed: {rel} stats: {{}}"
-    monkeypatch.setattr(CD, "desk_run", desk_run)
-    monkeypatch.setattr(CD, "ADAPTERS", {**CD.ADAPTERS, "desk-collect": CD.run_desk_collect, "desk-write": CD.run_desk_write, "deliver": CD.run_deliver})
+    monkeypatch.setattr(DS, "desk_run", desk_run)
+    monkeypatch.setattr(CD, "ADAPTERS", {**CD.ADAPTERS, "desk-collect": DS.run_desk_collect, "desk-write": DS.run_desk_write, "deliver": DS.run_deliver})
     CD.M.X = types.SimpleNamespace(APP="https://x", briefing_empty=lambda text: False,
                                    deliver=lambda m, title, short, rel, kicker, text, empty=False: delivered.append((m, title, kicker)) or True)
     CD.M.period, CD.M.now = MM.period, MM.now
-    plan = CD.briefing_plan({"goal": "China car news"}, {"key_questions": ["Sales?", "Batteries?"], "window_hours": 180})
+    plan = DS.briefing_plan({"goal": "China car news"}, {"key_questions": ["Sales?", "Batteries?"], "window_hours": 180})
     K.c.execute("update tasks set kind='briefing', rhythm=?, spec=? where id=?", (json.dumps({"type": "schedule", "schedule": "weekly mon 08:00"}),
                 json.dumps({"plan": plan, "topic": slug, "deliver": ["telegram", "app", "email"]}), K.tid))
     K.c.execute("delete from task_steps"); K.c.commit()
@@ -467,9 +470,9 @@ def test_a_price_watch_runs_its_shopping_agent_s_check_and_a_reached_target_star
     monkeypatch.setattr(SH, "research", research)
     monkeypatch.setattr(SH, "proposals", lambda slug=None: [{"id": "p-1", "status": "watching", "item": "32 GB kit", "total_eur": 98.0, "shop": "Amazon"}])
     CD.M.load_missions, CD.M.RUNLOGS = (lambda: {"ram-buy": m}), K.tmp
-    monkeypatch.setattr(CD, "ADAPTERS", {**CD.ADAPTERS, "shop": CD.run_shop})
+    monkeypatch.setattr(CD, "ADAPTERS", {**CD.ADAPTERS, "shop": SS.run_shop})
     K.c.execute("update tasks set kind='shopping', rhythm=?, spec=? where id=?", (json.dumps({"type": "schedule", "schedule": "daily 07:00"}),
-                json.dumps({"plan": CD.shop_plan({}), "shop": "ram-buy"}), K.tid))
+                json.dumps({"plan": SS.shop_plan({}), "shop": "ram-buy"}), K.tid))
     K.c.execute("delete from task_steps"); K.c.execute("delete from task_occ"); K.c.commit()
     CD.start(K.c, TK.row(K.c, K.tid))
     assert [(s["agent"], s["harness"]) for s in CD.steps(K.c, K.tid)] == [("mission", "shop")]
@@ -493,9 +496,9 @@ def test_an_event_triggered_briefing_writes_the_desk_s_alert_and_delivers_it(K, 
     CD.M.X = types.SimpleNamespace(APP="https://x", alert_of=lambda topic, ev: ({"title": "Acme Mining signs", "markdown": "# Acme Mining signs", "short": "A deal"}, ""),
                                    file_alert=lambda topic, a, ev: rel,
                                    deliver=lambda m, title, short, r, kicker, text, empty=False: delivered.append((title, short, r, kicker)) or True)
-    monkeypatch.setattr(CD, "ADAPTERS", {**CD.ADAPTERS, "desk-alert": CD.run_desk_alert, "deliver": CD.run_deliver})
-    on_event(K, CD.alert_plan({}), kind="briefing")
-    K.c.execute("update tasks set spec=? where id=?", (json.dumps({"plan": CD.alert_plan({}), "topic": "acme-mining", "deliver": ["telegram", "app"]}), K.tid))
+    monkeypatch.setattr(CD, "ADAPTERS", {**CD.ADAPTERS, "desk-alert": DS.run_desk_alert, "deliver": DS.run_deliver})
+    on_event(K, DS.alert_plan({}), kind="briefing")
+    K.c.execute("update tasks set spec=? where id=?", (json.dumps({"plan": DS.alert_plan({}), "topic": "acme-mining", "deliver": ["telegram", "app"]}), K.tid))
     K.c.commit()
     CD.fire(K.c, K.tid, EV)
     for _ in range(4):
@@ -564,10 +567,10 @@ def test_a_delivered_briefing_grows_its_topic_wiki_and_a_deleted_one_stays_delet
     monkeypatch.setenv("VK_DESK", "kd")
     CD.M.load_missions, CD.M.vault_commit = (lambda: {}), (lambda paths, msg: commits.append(paths))
     t = {"id": 5, "title": "China auto"}
-    assert CD.topic_wiki(t, "china-auto", "topics/china-auto/reports/x.md", "text", {"key": "vk-desk"}) == ["entities/byd"]   # for the step's answer
+    assert DS.topic_wiki(t, "china-auto", "topics/china-auto/reports/x.md", "text", {"key": "vk-desk"}) == ["entities/byd"]   # for the step's answer
     assert calls == [("topics/china-auto/wiki", "topics/china-auto/reports/x.md", "kd")] and commits == [["topics/china-auto/wiki"]]
     CD.M.load_missions = lambda: {"c": {"slug": "c", "topic": "china-auto", "wiki_off": True}}
-    assert CD.topic_wiki(t, "china-auto", "topics/china-auto/reports/y.md", "text", {"key": "vk-desk"}) == []
+    assert DS.topic_wiki(t, "china-auto", "topics/china-auto/reports/y.md", "text", {"key": "vk-desk"}) == []
     assert len(calls) == 1
 
 
@@ -862,3 +865,113 @@ def test_a_planning_a_restart_cut_off_is_planned_again_or_failed_when_old(K):
     K.c.commit()
     assert TK.recover(K.c, now) == {201: "replanned", 202: "failed"}
     assert TK.row(K.c, 201)["status"] == "intake" and "Plan it again" in TK.row(K.c, 202)["error"]
+
+
+def domain(name, steps=None, tasks=None):
+    return types.SimpleNamespace(__name__=name, STEP_KINDS=steps or {}, TASK_KINDS=tasks or {})
+
+
+def does_it(c, t, s, prompt, card):
+    return "done"
+
+
+def test_two_modules_claiming_one_step_or_task_kind_are_refused_at_import(monkeypatch):
+    """TSK-36: a clash is said with both names, and it stops the Conductor's own import."""
+    import importlib.util
+    with pytest.raises(ValueError, match="step kind 'scan' is claimed by both a and b"):
+        stepkinds.load((domain("a", {"scan": {"run": does_it}}), domain("b", {"scan": {"run": does_it}})))
+    with pytest.raises(ValueError, match="step kind 'hermes' is claimed by both the Conductor and a"):
+        stepkinds.load((domain("a", {"hermes": {"run": does_it}}),), CD.OWN_KINDS)
+    with pytest.raises(ValueError, match="task kind 'demo' is claimed by both a and b"):
+        stepkinds.load((domain("a", tasks={"demo": {"lane": False}}), domain("b", tasks={"demo": {"routing": False}})))
+    monkeypatch.setattr(SS, "STEP_KINDS", {**SS.STEP_KINDS, "deliver": {"run": does_it}})
+    spec = importlib.util.spec_from_file_location("conductor_again", CD.__file__)
+    with pytest.raises(ValueError, match="step kind 'deliver' is claimed by both shop_steps and desk_steps"):
+        spec.loader.exec_module(importlib.util.module_from_spec(spec))
+
+
+def test_a_step_kind_without_its_function_or_with_an_unknown_field_is_refused():
+    """TSK-36: a kind nobody can run fails at import, not on the step that first needs it; a misspelt field is no silent rule."""
+    for kind in ({"gb": 0.5}, {"run": None}, {"run": "does_it"}):
+        with pytest.raises(ValueError, match="step kind 'scan' of a has no function"):
+            stepkinds.load((domain("a", {"scan": kind}),))
+    with pytest.raises(ValueError, match="does not know: wait "):
+        stepkinds.load((domain("a", {"scan": {"run": does_it, "wait": True}}),))
+    with pytest.raises(ValueError, match="does not know: route "):
+        stepkinds.load((domain("a", tasks={"demo": {"route": False}}),))
+    with pytest.raises(ValueError, match="task kind 'demo' of a: its hook 'brief' is no function"):
+        stepkinds.load((domain("a", tasks={"demo": {"brief": "prompt_for"}}),))
+    assert stepkinds.load((types.SimpleNamespace(__name__="nothing"),)).adapters == {}          # a module may add nothing yet
+
+
+def test_the_conductor_s_tables_keep_their_names_and_values_from_the_declarations():
+    """TSK-36: the values these tables held when they were written by hand; their order was never read."""
+    assert CD.NEED_GB == {"python": 0.25, "temp": 0.25, "hermes": 0.5, "claude-code": 0.75, "build": 0.25, "desk-collect": 0.4, "desk-write": 0.3,
+                          "desk-alert": 0.3, "deliver": 0.1, "shop": 0.5, "wiki": 0.25, "opencode": 1.0, "check": 0.3,
+                          "change-baseline": 0.75, "change-red": 0.5, "change-judge": 0.75, "change-review": 0.25, "change-probe": 1.0, "change-deliver": 0.1,
+                          "change-profile": 0.75, "change-split": 0.1, "change-scribe": 0.25}
+    assert set(CD.ADAPTERS) == set(CD.NEED_GB) and all(callable(f) for f in CD.ADAPTERS.values())
+    assert {a: set(k) for a, k in CD.OWN_STEPS.items()} == {
+        "desk": {"desk-collect", "desk-write", "desk-alert", "deliver"}, "mission": {"shop", "wiki"}, "judge": {"change-baseline", "change-red", "change-judge"},
+        "reviewer": {"change-review"}, "prober": {"change-probe"}, "presenter": {"change-deliver"}, "scribe": {"change-profile", "change-split", "change-scribe"}}
+    assert set(CD.WAITS) == {"claude-code", "build", "change-profile", "change-deliver"}
+    assert set(CD.KINDS.even_spent) == {"change-deliver", "change-scribe"}
+    assert set(CD.KINDS.fixed_plan) == {"desk-collect", "desk-write", "desk-alert", "deliver", "shop", "wiki"}
+    assert set(CD.KINDS.held) == {h for h in CD.ADAPTERS if h.startswith("change-")}
+
+
+def test_a_task_kind_s_hooks_are_reached_and_the_conductor_names_no_change_logic(K, monkeypatch):
+    """TSK-36: a running task of a kind with hooks gets its brief, its build's extra and what comes back from them, no lane,
+    no routing and no checkpoint; a kind without hooks gets the Conductor's own. A change is such a kind, and nothing more."""
+    import builds as B
+    import changes as CH
+    seen = {"brief": [], "assign": [], "built": [], "checkpoints": [], "routed": [], "asked": []}
+    monkeypatch.setitem(CD.KINDS.tasks, "demo", {
+        "brief": lambda t, s, ss, agents: seen["brief"].append(s["idx"]) or "the kind's own brief",
+        "assign": lambda t, s: seen["assign"].append(s["idx"]) or {"onto": "the-kind-s-branch"},
+        "built": lambda c, t, s, r: seen["built"].append(r["id"]) or "taken by the kind",
+        "checkpoints": lambda t: seen["checkpoints"].append(t["id"]) or False, "lane": False, "routing": False})
+    K.c.execute("create table builds (id integer primary key, status text, summary text, error text, files text)")
+    asked = []
+    monkeypatch.setattr(B, "handle", lambda req, c: asked.append(req) or {"id": c.execute("insert into builds (status) values ('working')").lastrowid})
+    monkeypatch.setattr(CD, "ADAPTERS", {**CD.ADAPTERS, "build": CD.run_build})
+    monkeypatch.setattr(CD, "routed", lambda c, t, s, agents: seen["routed"].append(s["idx"]) or s)
+    monkeypatch.setattr(CD, "checkpoint_ask", lambda p: seen["asked"].append(p) or {"keep": True})
+    assert CD.cards()["tester"]["lane"]                                                # a role with a lane: its brief would name it
+    K.c.execute("update tasks set kind='demo', spec=? where id=?", (json.dumps({"repo": "demo", "plan": [
+        {"step": "Write the tests", "agent": "tester", "why": "its role", "after": []},
+        {"step": "Say what they cover", "agent": "scout", "why": "a second step", "after": [1]}]}), K.tid))
+    K.c.execute("delete from task_steps"); K.c.commit()
+    CD.start(K.c, TK.row(K.c, K.tid))
+    tick(K)
+    assert asked[0]["onto"] == "the-kind-s-branch" and asked[0]["description"] == "the kind's own brief" and "Your lane" not in asked[0]["description"]
+    K.c.execute("update builds set status='review'"); K.c.commit()
+    tick(K); tick(K)
+    ss = CD.steps(K.c, K.tid)
+    assert [s["status"] for s in ss] == ["done", "done"] and ss[0]["output"] == "taken by the kind"
+    assert seen["brief"][:1] == [1] and 2 in seen["brief"] and seen["assign"] == [1] and seen["built"] == [1]
+    assert seen["checkpoints"] and not seen["asked"] and not seen["routed"]
+    assert CD.hooks({"kind": "research"}) == {} and CD.hooks({}) == {}
+    change = CD.hooks({"kind": "change"})
+    assert (change["brief"], change["assign"], change["built"]) == (CH.prompt_for, CH.assign, CH.merged_step) and not change["lane"] and not change["routing"]
+    assert not change["checkpoints"]({"spec": {"change": {"size": "S"}}}) and change["checkpoints"]({"spec": {"change": {"size": "M"}}})
+    src = Path(CD.__file__).read_text()
+    assert "CH." not in src and '"change"' not in src and '"change-' not in src
+
+
+def test_the_moved_shopping_and_desk_steps_keep_their_place_in_the_plan_and_the_wiring(monkeypatch):
+    """TSK-36: the steps that moved out still plan and run under the Conductor's tables, their plans stay fixed, and the runner
+    wires M onto each domain module. (Running them: the price watch's and the briefing's tests above.)"""
+    assert CD.ADAPTERS["shop"] is SS.run_shop and CD.ADAPTERS["desk-collect"] is DS.run_desk_collect and CD.ADAPTERS["deliver"] is DS.run_deliver
+    assert [(s["agent"], s["harness"]) for s in CD.graph(SS.shop_plan({}))] == [("mission", "shop")]
+    assert [(s["agent"], s["harness"]) for s in CD.graph(DS.alert_plan({}))] == [("desk", "desk-alert"), ("desk", "deliver")]
+    assert [s["harness"] for s in CD.graph(DS.briefing_plan({"goal": "x"}, {"key_questions": ["a", "b"]}))] == ["desk-collect", "hermes", "hermes", "desk-write", "deliver"]
+    monkeypatch.setattr(CD, "checkpoint_ask", lambda p: {"keep": True})
+    t = {"rhythm": {"type": "once"}, "door": "plan", "spec": {}}
+    plain = [{"idx": 1, "harness": "hermes", "status": "done"}, {"idx": 2, "harness": "hermes", "status": "pending"}]
+    assert CD.between_waves(t, plain)                                                  # a plan like it would be looked at
+    for own in ("shop", "desk-collect", "deliver", "wiki"):
+        assert not CD.between_waves(t, [plain[0], {**plain[1], "harness": own}]), own
+    assert all(hasattr(d, "M") for d in CD.DOMAINS)
+    main = Path(CD.__file__).with_name("missions.py").read_text().partition("def main():")[2]
+    assert "for domain in CD.DOMAINS:" in main and "domain.M = sys.modules[__name__]" in main

@@ -4,12 +4,12 @@ Exit 0 = deployed and healthy; 1 = a step or the checks failed (builds.py then r
 Prints RESTART_RUNNER when the Mission Control runner's own code changed (builds.py restarts it a little later).
 What changed -> what happens:
   images/<x>/...            build the image tag that compose/versions.env use for it
-  compose/, images          docker compose up -d (recreates only services whose config or image changed)
+  compose/, images, config/deployment.env   docker compose up -d (recreates only services whose config or image changed)
   config/litellm/           restart LiteLLM          config/hermes/configure*.sh   re-run that profile's configure script
   prompts/<main|mission|builder>.md                  re-run the configure script that writes that SOUL text (SOUL_OF)
   ops/systemd/              install units, daemon-reload, restart changed services/timers
   ops/keys.sh, agents.yaml  swarm identities (swarm_setup.py agents), key models/budgets/grants (update-keys.py), restart Hermes
-  ops/missions.py etc.      restart the runner (RESTART_RUNNER)
+  ops/missions.py etc., config/deployment.env   restart the runner (RESTART_RUNNER)
 Then: smoke test (smoke/smoke.sh) and health of Hermes, LiteLLM and Mission Control.
 One deploy at a time (PLT-10): every deploy, from the builder or a session, holds ~/.aistack-deploy.lock; a second one
 waits up to LOCK_WAIT seconds and then gives up without touching the stack (exit 1). Sessions also hold
@@ -19,7 +19,8 @@ import fcntl, json, os, re, subprocess, sys, time, urllib.request
 from pathlib import Path
 
 R = Path(__file__).resolve().parent.parent
-COMPOSE = ["docker", "compose", "--env-file", "versions.env", "-f", "compose/core.yaml", "-f", "compose/apps.yaml"]
+COMPOSE = ["docker", "compose", "--env-file", "versions.env", "--env-file", "config/deployment.env", "-f", "compose/core.yaml", "-f", "compose/apps.yaml"]
+COMPOSE_INPUTS = ("compose/", "versions.env", "config/deployment.env")      # a change in one of them: compose up
 LOCK = Path.home() / ".aistack-deploy.lock"
 LOCK_WAIT = 2400                      # 40 min: longer than a deploy with image builds; builds.py waits 60 min in total
 ok = True
@@ -83,7 +84,7 @@ def runner_changed(changed):
     """Whether the runner must restart: any ops/ Python module (it imports most of them, many only through another, like
     crew.py -> observe.py) or obs_core.py, which ops/observe.py loads from the app's folder (FND-49), or its unit."""
     return any((f.startswith("ops/") and f.count("/") == 1 and f.endswith(".py")) or f == "images/mission-control/obs_core.py"
-               or f == "ops/systemd/missions.service" for f in changed)
+               or f in ("ops/systemd/missions.service", "config/deployment.env") for f in changed)
 
 
 def image_tag(name):
@@ -143,7 +144,7 @@ def main(old, new):
                 if arg in pins:                          # base images come from versions.env (builder, litellm)
                     args += ["--build-arg", f"{arg}={pins[arg]}"]
             run(*args, f"images/{name}", timeout=3600)
-    if images or any(f.startswith(("compose/", "versions.env")) for f in changed):
+    if images or any(f.startswith(COMPOSE_INPUTS) for f in changed):
         run(*COMPOSE, "up", "-d", "--remove-orphans")
     if any(f.startswith("config/litellm/") for f in changed):
         run("docker", "restart", "aistack-litellm-1")

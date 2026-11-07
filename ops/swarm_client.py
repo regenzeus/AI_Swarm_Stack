@@ -335,7 +335,7 @@ def lessons_text(agent, send=None, answers=False):
 # ---------------------------------------------------------------- the wikis in the Ledger (MEM-03)
 def wiki_owner(root, mission=None):
     """Whose a wiki is: the vault wiki the curator's, a briefing's topic wiki the desk's, any other mission's the mission card's."""
-    return "curator" if root == "wiki" else "desk" if root.startswith("topics/") else "mission"
+    return "curator" if root == "wiki" else "desk" if root.startswith("topics/") else "scribe" if root.startswith("repos/") else "mission"
 
 
 def wiki_artifact(root, title, send=None):

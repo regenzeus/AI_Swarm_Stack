@@ -24,9 +24,10 @@ import time
 from pathlib import Path
 
 import swarm_client as SW
+import deployment as DEPLOY                        # this deployment's hosts and paths (config/deployment.env)
 
 M = None                                       # ops/missions.py, set by crew.py
-STACK = Path(os.environ.get("AISTACK", Path.home() / "ai-stack"))
+STACK = Path(os.environ.get("AISTACK", DEPLOY.STACK_DIR))
 PUBLIC = Path("/srv/ai/missions/public")
 DEPLOYS = Path("/srv/ai/state/deploys.jsonl")
 GRACE = 2 * 3600                               # the health board needs a little while to forget a fixed issue

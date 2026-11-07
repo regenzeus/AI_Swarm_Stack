@@ -2,12 +2,15 @@
 SHELL := /bin/bash
 SECRETS := secrets/secrets.enc.yaml
 KEYS    := secrets/agent-keys.enc.yaml
-COMPOSE := docker compose --env-file versions.env -f compose/core.yaml -f compose/apps.yaml $(COMPOSE_EXTRA)
+COMPOSE := docker compose --env-file versions.env --env-file config/deployment.env -f compose/core.yaml -f compose/apps.yaml $(COMPOSE_EXTRA)
+# This deployment's values for the targets below (config/deployment.env); the environment wins
+CODE_DIR ?= $(shell python3 ops/deployment.py CODE_DIR)
+DOCKER_SOCKET ?= $(shell python3 ops/deployment.py DOCKER_SOCKET)
 # UP_SERVICES: start only these (new-PC rehearsal); empty = all
 # Run a compose command with secrets in its environment: $(call dc,<args>)
 dc = sops exec-env $(SECRETS) 'sops exec-env $(KEYS) "$(COMPOSE) $(1)"'
 
-.PHONY: up down ps logs restart keys secrets-edit smoke claude-connect probe-tools req check lock pull-smoke-model chatgpt-login ingest-exports bench bench-gate retrieval curate vault-check skill-approve skills-restore-from-git backup restore-drill restore understand understand-dashboard upgrade-check digest forget hindsight-models desk email-setup wiki-rebuild ua-enrich publish-check publish tasks-gate conductor-gate journeys trial trial-check
+.PHONY: up down ps logs restart keys secrets-edit smoke claude-connect probe-tools req check lock pull-smoke-model chatgpt-login ingest-exports bench bench-gate retrieval curate vault-check skill-approve skills-restore-from-git backup restore-drill restore understand understand-dashboard upgrade-check digest forget hindsight-models desk email-setup wiki-rebuild ua-enrich mailvault-deploy mailvault-password publish-check publish tasks-gate conductor-gate journeys trial trial-check
 
 up:               ## start core services
 	$(call dc,up -d $(UP_SERVICES))
@@ -107,8 +110,14 @@ understand:       ## onboard a repo, the whole package (ops/onboard.py): make un
 	$(call SECRETS_ALL,python3 ops/onboard.py run $(REPO))
 
 ua-enrich:        ## explain the files and functions of REPO's code map where Understand Anything left placeholders (resumes)
-	$(call SECRETS_ALL,python3 ops/ua_enrich.py /home/owner/code/$(REPO) $(REPO))
-	python3 ops/ua_digest.py /home/owner/code/$(REPO)/.ua/knowledge-graph.json $(REPO) > /srv/ai/code-docs/$(REPO).md
+	$(call SECRETS_ALL,python3 ops/ua_enrich.py $(CODE_DIR)/$(REPO) $(REPO))
+	python3 ops/ua_digest.py $(CODE_DIR)/$(REPO)/.ua/knowledge-graph.json $(REPO) > /srv/ai/code-docs/$(REPO).md
+
+mailvault-deploy: ## the copy of Gmail on the NAS (nas/mailvault): starts it, or updates it; never touches the copy
+	bash ops/deploy-mailvault.sh
+
+mailvault-password: ## type the mail copy's own Gmail app password: it goes straight to the NAS
+	sops exec-env $(SECRETS) 'bash ops/mailvault-password.sh'
 
 understand-dashboard: ## code map of REPO in the browser (tailnet :8446), link also on Telegram
 	bash ops/understand-dashboard.sh $(REPO)
@@ -143,7 +152,7 @@ conductor-gate:  ## phase 2's gate: a five-step task on three harnesses, the run
 	sops exec-env $(SECRETS) 'sops exec-env $(KEYS) "python3 ops/conductor.py gate"'
 
 trial:            ## one trial run in the background: make trial NAME=semver (eval/trials; its report lands in the vault, trials/)
-	systemd-run --user --collect --unit=trial-$(NAME)-$$(date +%H%M) --working-directory=$(CURDIR) -E DOCKER_HOST=unix:///run/user/1000/docker.sock /usr/local/bin/sops exec-env $(SECRETS) 'sops exec-env $(KEYS) "python3 ops/trials.py run $(NAME)"'
+	systemd-run --user --collect --unit=trial-$(NAME)-$$(date +%H%M) --working-directory=$(CURDIR) -E DOCKER_HOST=$(DOCKER_SOCKET) /usr/local/bin/sops exec-env $(SECRETS) 'sops exec-env $(KEYS) "python3 ops/trials.py run $(NAME)"'
 
 trial-check:      ## does a trial's answer key score its own reference fully: make trial-check NAME=semver (changes nothing)
 	python3 ops/trials.py check $(NAME)

@@ -133,10 +133,60 @@ def test_a_fault_the_checker_finds_is_an_alert_not_its_failed_run(tmp_path):
     card, and its next clean run clears them."""
     f = tmp_path / "checker.json"
     f.write_text(json.dumps({"last": 5, "faults": ["system had 64 refused swarm writes in 24 h"]}))
-    assert crew.checker_faults(f) == [{"kind": "swarm-fault", "at": 5, "text": "system had 64 refused swarm writes in 24 h"}]
+    assert crew.checker_faults(f, now=10) == [{"kind": "swarm-fault", "at": 5, "text": "system had 64 refused swarm writes in 24 h"}]
     assert "swarm-fault" in crew.ALERTS
     f.write_text(json.dumps({"last": 6, "faults": []}))
-    assert crew.checker_faults(f) == [] and crew.checker_faults(tmp_path / "none.json") == []
+    assert crew.checker_faults(f, now=10) == []
     src = (crew.Path(crew.__file__).parent / "checker.py").read_text()
     run = src[src.index("def run(c):"):]
     assert "raise RuntimeError" not in run and "faults=bad" in run
+
+
+def test_a_check_s_report_that_is_missing_broken_or_old_is_no_pass(tmp_path):
+    """The review of 6 Nov: a checker that could not be read looked exactly like one that found nothing."""
+    import crew
+    day = 86400
+    none = tmp_path / "none.json"
+    for got in (crew.checker_faults(none), crew.journey_issues(none)):
+        assert [i["kind"] for i in got] == ["report-none"] and "has not run yet" in got[0]["text"]
+    assert "report-none" not in crew.ALERTS and "report-unknown" in crew.ALERTS     # a new install is told, not alarmed
+    bad = tmp_path / "bad.json"
+    bad.write_text("{not json")
+    for got in (crew.checker_faults(bad), crew.journey_issues(bad)):
+        assert [i["kind"] for i in got] == ["report-unknown"] and "cannot be read" in got[0]["text"]
+    old = tmp_path / "old.json"
+    old.write_text(json.dumps({"last": 1000, "at": 1000, "faults": ["a fault"], "journeys": []}))
+    got = crew.checker_faults(old, now=1000 + 3 * day)
+    assert [i["kind"] for i in got] == ["swarm-fault", "report-unknown"] and "over 2 days old" in got[1]["text"]
+    assert [i["kind"] for i in crew.journey_issues(old, now=1000 + 3 * day)] == ["report-unknown"]
+    assert crew.checker_faults(old, now=1000 + day)[0]["kind"] == "swarm-fault" and crew.journey_issues(old, now=1000 + day) == []
+    nostamp = tmp_path / "nostamp.json"
+    nostamp.write_text(json.dumps({"journeys": []}))
+    assert [i["kind"] for i in crew.journey_issues(nostamp)] == ["report-unknown"]    # no date: no way to call it recent
+
+
+def test_a_test_touches_no_folder_of_this_machine(tmp_path):
+    """QA-24: what made CI red: tests wrote to /srv/ai and /srv/vault, which only the builder's container could create."""
+    import crew
+    import journal
+    import notify
+    for path in (notify.STATE, notify.EVENTS, journal.VAULT, crew.OUT, crew.BACKUPS):
+        assert str(path).startswith(str(tmp_path)), path
+    import postmaster
+    import subprocess
+
+    def no_ssh(*a, **k):
+        raise FileNotFoundError("ssh")
+    real, subprocess.run = subprocess.run, no_ssh
+    try:
+        assert postmaster.fetch("status.json") is None                               # no ssh: the same as the NAS asleep
+    finally:
+        subprocess.run = real
+
+
+def test_the_ci_runner_has_an_init_that_reaps_what_its_jobs_leave_behind():
+    """QA-25: 11,904 zombie git processes filled the runner's process limit; a job hung for 30 minutes, then every push
+    "failed after 1s", which read as failing code."""
+    import yaml
+    apps = yaml.safe_load((ROOT / "compose/apps.yaml").read_text())
+    assert apps["services"]["ci-runner"]["init"] is True

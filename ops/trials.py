@@ -25,6 +25,7 @@ import time
 import tokenize
 import uuid
 import textcap as TC                              # visible caps (AGENTS.md, truncation)
+import deployment as DEPLOY                        # this deployment's hosts and paths (config/deployment.env)
 from pathlib import Path
 
 import yaml
@@ -37,7 +38,7 @@ RUNS = Path("/srv/ai/trials/runs")
 PUBLIC = Path("/srv/ai/missions/public")              # the app's scoreboard reads public/trials.json (TRL-09)
 HOME = Path("/srv/ai/missions")
 INBOX, RESULTS, DB, RT_DB, BUILD_LOGS = HOME / "inbox", HOME / "public/results", HOME / "missions.sqlite", HOME / "app/runtime.db", HOME / "builds"
-CODE, VAULT = Path.home() / "code", Path("/srv/vault")
+CODE, VAULT = Path(DEPLOY.CODE_DIR), Path("/srv/vault")
 IMAGE = "python:3.12-slim"                          # the scorer's sandbox: no network, read-only, nobody, 512 MB
 SANDBOX = ["docker", "run", "--rm", "--network", "none", "--memory", "512m", "--cpus", "1", "--read-only", "-u", "65534"]
 UNATTENDED = "Decide it yourself from the specification in the repository's spec/ folder: this is an unattended trial."
@@ -229,7 +230,7 @@ def make_repo(t, run_id):
     git(d, "init", "-q", "-b", "main")
     git(d, "add", "-A")
     git(d, "-c", "user.name=AI stack trials", "-c", "user.email=trials@stack.local", "commit", "-q", "-m", f"Trial {run_id}: the specification")
-    git(d, "remote", "add", "origin", f"forgejo:regenzeus/{repo}.git")
+    git(d, "remote", "add", "origin", f"forgejo:{DEPLOY.FORGEJO_OWNER}/{repo}.git")
     git(d, "push", "-q", "-u", "origin", "main", timeout=180)
     return repo
 

@@ -99,19 +99,20 @@ def test_tool_calls_between_agents_are_exchanges_with_the_whole_question_and_ans
     assert sent[0]["ref"] == "crew:doctor" and sent[0]["detail"] == "the whole question"
 
 
-def test_the_agents_tab_is_four_views_and_none_of_the_ten_is_lost():
-    """The owner's review of 1 Nov 2026: ten views became four. Overview (working now, the map, every mission and
-    housekeeping job), Activity (the room and the run timeline under one set of filters), Team (each agent with its own
-    page) and Ideas (ideas, the task graph, the loop's numbers); links to the old views land on the new place."""
+def test_the_agents_tab_is_five_views_and_none_of_the_ten_is_lost():
+    """The owner's review of 1 Nov 2026: ten views became four, and 7 Nov the map became its own. Overview (working now,
+    every mission and housekeeping job), Map, Activity (the room and the run timeline under one set of filters), Team (each
+    agent with its own page) and Ideas (ideas, the task graph, the loop's numbers); links to the old views land on the new place."""
     app = (ROOT / "images/mission-control/web/static/app.js").read_text()
-    assert '[["list", "Overview"], ["activity", "Activity"], ["agents", "Team"], ["improve", "Ideas"]]' in app
-    assert '<div id="ovnow"></div>' in app and '<div id="ovmap">' in app and "swOverview();" in app
+    swarm = (ROOT / "images/mission-control/web/static/swarm.js").read_text()
+    assert '[["list", "Overview"], ["map", "Map"], ["activity", "Activity"], ["agents", "Team"], ["improve", "Ideas"]]' in app
+    assert '<div id="ovnow"></div>' in app and '<div id="ovmap">' not in app and '<div id="ovmap">' in swarm and "swOverview();" in app
     for part in ("async function swTimeline(", "function swMapCard(", "async function swAgents(", "async function swAgentPanel(", "/api/swarm/timeline",
                  "/api/swarm/interactions", "/api/swarm/room?hours=", "'s answer", "Show earlier (", "Show all (", "can send data out",
                  "Merge queue", "Files held by builds", "Being built", "The improvement loop in numbers", "Ideas two or more work on", "Worked alone"):
         assert part in SWARM_JS, part
-    assert 'const SW_ALIAS = { chat: "activity", timeline: "activity", tasks: "improve", flow: "improve" };' in SWARM_JS
-    assert '["map", "graph", "now", "list"].includes(asked)) { location.replace("#/missions")' in SWARM_JS
+    assert 'const SW_ALIAS = { chat: "activity", timeline: "activity", tasks: "improve", flow: "improve", graph: "map" };' in SWARM_JS
+    assert '["now", "list"].includes(asked)) { location.replace("#/missions")' in SWARM_JS
     server = (ROOT / "images/mission-control/server.py").read_text()
     assert all(f'Route("/api/swarm/{p}"' in server for p in ("timeline", "interactions", "delegations"))
     fold = re.search(r"^function swFold\(.*?^\}", SWARM_JS, re.M | re.S)[0]

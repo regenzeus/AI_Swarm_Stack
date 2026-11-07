@@ -144,7 +144,7 @@ def test_an_agent_the_intake_names_that_does_not_exist_gets_a_temporary_agent(K)
     assert t["door"] == "plan" and CD.steps(K.c, tid)[1]["harness"] == "temp"
 
 
-def test_at_most_two_questions_and_answers_plan_it_again(K):
+def test_at_most_two_questions_and_answers_plan_it_again(K, monkeypatch):
     tid = TK.handle({"action": "task_create", "text": "Fix the thing on the phone page"}, K.c)["task"]
     TK.intake(K.c, tid, ask=lambda p: spec(kind="coding", repo=None, questions=["Which page?", "Which phone?", "Which colour?"]))
     t = TK.row(K.c, tid)
@@ -153,12 +153,13 @@ def test_at_most_two_questions_and_answers_plan_it_again(K):
         TK.handle({"action": "task_answer", "id": tid, "answers": ["the AI phone page"]}, K.c)        # both must be answered
     TK.handle({"action": "task_answer", "id": tid, "answers": ["the AI phone page", "the S22"]}, K.c)
     assert TK.row(K.c, tid)["status"] == "intake"
-    seen = []
+    seen, specified = [], []
+    import changes as CH
+    monkeypatch.setattr(CH, "specify", lambda c, t, ask=None: specified.append(t))
     TK.intake(K.c, tid, ask=lambda p: seen.append(p) or spec(kind="coding", repo="ai-stack"))
     assert "- Which page?: the AI phone page" in seen[0]
-    t = TK.row(K.c, tid)
-    assert t["status"] == "running" and t["door"] == "build" and t["ref"] == "7" and K.started[0][1]["repo"] == "ai-stack"
-    assert "The owner's answers:\n- Which page?: the AI phone page" in K.started[0][1]["description"]
+    t = TK.row(K.c, tid)                                 # CHG-01: a coding task with its repository is a change request now
+    assert t["kind"] == "change" and t["spec"]["repo"] == "ai-stack" and specified[0]["id"] == tid and not K.started
 
 
 def test_a_coding_task_without_a_repository_asks_which_one(K):

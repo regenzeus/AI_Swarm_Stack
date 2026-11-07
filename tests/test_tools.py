@@ -9,7 +9,8 @@ STATIC = ROOT / "images/mission-control/web/static"
 
 
 def test_every_tool_has_its_menus_and_every_page_exists():
-    j = json.loads((STATIC / "tools.json").read_text())
+    import deployment as DEPLOY
+    j = json.loads(DEPLOY.fill((STATIC / "tools.json").read_text()))
     ids = [t["id"] for t in j["tools"]]
     assert len(ids) == len(set(ids)) and {"homeassistant", "nas", "fritzbox", "forgejo", "hermes", "phoenix"} <= set(ids)
     for t in j["tools"]:

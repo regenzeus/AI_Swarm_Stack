@@ -12,6 +12,8 @@ ADD https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js /app/web/static/ven
 ADD https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js /app/web/static/vendor/purify.min.js
 ADD https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js /app/web/static/vendor/d3.min.js
 ADD https://cdn.jsdelivr.net/npm/@fontsource-variable/inter@5.0.20/files/inter-latin-wght-normal.woff2 /app/web/static/vendor/inter.woff2
+ADD https://cdn.jsdelivr.net/npm/@fontsource-variable/archivo@5.2.5/files/archivo-latin-wdth-normal.woff2 /app/web/static/vendor/archivo.woff2
+ADD https://cdn.jsdelivr.net/npm/@fontsource-variable/jetbrains-mono@5.2.5/files/jetbrains-mono-latin-wght-normal.woff2 /app/web/static/vendor/jetbrains-mono.woff2
 COPY server.py obs_core.py runrecord.py otlp.py textcap.py teamroom.py interactions.py /app/
 COPY web /app/web
 COPY guide /app/guide

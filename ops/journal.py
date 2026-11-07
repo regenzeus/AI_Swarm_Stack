@@ -141,7 +141,7 @@ VAULT_SCOPE = ["qmd://vault-wiki/", "qmd://vault-raw/"]     # the vault wiki and
 
 
 def _qmd(root):
-    return f"qmd://{root}/" if root.startswith(("missions/", "topics/")) else "qmd://vault-wiki/" if root == "wiki" else ""
+    return f"qmd://{root}/" if root.startswith(("missions/", "topics/", "repos/")) else "qmd://vault-wiki/" if root == "wiki" else ""
 
 
 def _titles(root):

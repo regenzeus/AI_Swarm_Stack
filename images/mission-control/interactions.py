@@ -38,7 +38,7 @@ OWNER_ACTS = {"build_approve": ("approved a build of", "builder"), "build_approv
               "task_answer": ("answered", "conductor"), "task_approve": ("approved a plan of", "conductor"), "task_cancel": ("cancelled a task of", "conductor"), "task_retry": ("retried a task of", "conductor"),
               "health_ack": ("acknowledged a finding of", "doctor"), "pause": ("paused", "mission"), "resume": ("resumed", "mission"), "shop_decide": ("decided on a purchase of", "mission"), "phone_decide": ("decided on a request of", "phone")}
 STACK_TITLES = {"Agent health", "Crew", "Trials", "Triggers", "System", "Swarm", "Autonomy"}
-SENDERS = {"Health doctor": "doctor", "Inbox digest": "inbox", "Checker": "checker", "Coach": "coach", "Librarian": "memory", "Memory Keeper": "memory",
+SENDERS = {"Health doctor": "doctor", "Inbox digest": "inbox", "Postmaster": "postmaster", "Checker": "checker", "Coach": "coach", "Librarian": "memory", "Memory Keeper": "memory",
            "Test agent": "tests", "Phone cleanup": "phone-cleanup", "Phone check": "phone-check", "Journey checks": "journeys", "Maintainability review": "maintainability"}
 
 

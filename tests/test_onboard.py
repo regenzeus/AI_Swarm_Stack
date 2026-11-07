@@ -55,6 +55,12 @@ def job(tmp_path, monkeypatch):
         O.write_doc(O.DOCS / f"{st['repo']}.analysis.md", "# analysis\n" + "x" * 300)
         return ""
 
+    def fake_wiki(st):
+        ran.append("wiki")
+        (O.VAULT / "repos" / st["repo"] / "wiki").mkdir(parents=True, exist_ok=True)
+        (O.VAULT / "repos" / st["repo"] / "wiki" / "conventions.md").write_text("x")
+        return ""
+
     def fake_search(st):
         ran.append("search")
         O.write_doc(O.DOCS / f"{st['repo']}.md", "digest")
@@ -66,6 +72,8 @@ def job(tmp_path, monkeypatch):
     monkeypatch.setitem(O.STEP_FN, "graph", lambda st: ran.append("graph") or "")
     monkeypatch.setitem(O.STEP_FN, "search", fake_search)
     monkeypatch.setitem(O.STEP_FN, "analysis", fake_analysis)
+    monkeypatch.setitem(O.STEP_FN, "wiki", fake_wiki)
+    monkeypatch.setattr(O, "VAULT", tmp_path / "vault")
     monkeypatch.setattr(O, "sh", lambda *a, **k: subprocess.CompletedProcess(a, 0, "", ""))
     return type("J", (), {"ran": ran, "told": told, "repo": staticmethod(repo)})
 
@@ -78,7 +86,7 @@ def test_a_big_repository_gets_the_whole_package_and_one_message(job):
     for i in range(300):                                     # far over the limit that used to refuse it
         (d / f"f{i}.ts").write_text("x")
     assert O.run("dsh-superagent-prototype") == 0
-    assert [x for x in job.ran if isinstance(x, str)] == ["map0", "explain", "search", "analysis"]   # its copy and graph are there
+    assert [x for x in job.ran if isinstance(x, str)] == ["map0", "explain", "search", "analysis", "wiki"]   # its copy and graph are there
     assert O.status("dsh-superagent-prototype")["status"] == "done"
     assert all(O.package("dsh-superagent-prototype").values())
     assert len(job.told) == 1 and "onboarded" in job.told[0] and "written analysis" in job.told[0]
@@ -174,7 +182,7 @@ def test_a_crash_resumes_at_the_first_unfinished_step(job, monkeypatch):
     O.kg_of("big").write_text(json.dumps(SMALL))
     O.save(st)
     assert O.run("big") == 0
-    assert [x for x in job.ran if isinstance(x, str)] == ["explain", "search", "analysis"]
+    assert [x for x in job.ran if isinstance(x, str)] == ["explain", "search", "analysis", "wiki"]
 
 
 def test_the_watchdog_restarts_a_dead_job_and_gives_up_with_a_reason(job, monkeypatch):
