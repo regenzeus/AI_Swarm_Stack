@@ -1,0 +1,219 @@
+# Generalising the stack: a core, domains and one deployment's configuration (docs/GENERALISATION.md).
+area: Generalisation
+prefix: GEN
+items:
+  - id: GEN-01
+    title: A check says pass, fail or unknown
+    statement: A check that could not run shall report unknown and show on the health board, never pass or silence.
+    type: constraint
+    priority: should
+    status: implemented
+    parents: [SN-05]
+    sources: [docs/GENERALISATION.md]
+    verify: {method: test, by: [tests/test_unknown.py::test_a_board_that_cannot_be_read_proves_nothing_and_reopens_nothing]}
+  - id: GEN-02
+    title: One queue for what waits on the owner
+    statement: Every wait the owner can act on shall reach one queue, and Home and the queue shall read the same list.
+    type: constraint
+    priority: should
+    status: implemented
+    parents: [SN-05]
+    sources: [docs/GENERALISATION.md]
+    verify: {method: test, by: [tests/test_changes.py::test_a_stopped_change_waits_on_the_board_until_it_is_answered_and_can_be_left_stopped, tests/test_decisions.py::test_what_the_owner_must_answer_reaches_the_queue_and_a_state_does_not]}
+  - id: GEN-03
+    title: A journey that decides
+    statement: A nightly journey shall take a test item through the queue, decide it and check the result, and shall fail when deciding stops working.
+    type: constraint
+    priority: should
+    status: implemented
+    parents: [SN-05]
+    sources: [docs/GENERALISATION.md]
+    verify: {method: test, by: [tests/test_journeys.py::test_the_decide_journey_takes_a_test_item_through_the_queue_and_leaves_nothing_behind, tests/test_journeys.py::test_the_decide_journey_fails_when_deciding_stops_working]}
+  - id: GEN-04
+    title: One forge module
+    statement: All calls to the forge shall go through one module behind one interface, so that a deployment can use another forge by adding an implementation;
+      a pull request may come from a fork the deployment names.
+    type: constraint
+    priority: should
+    status: partial
+    acceptance: 'Test: no file but the forge module calls a forge''s API, and the change loop opens a draft pull request on Forgejo and on a Bitbucket Data Center stand-in through the same interface.'
+    parents: [SN-05]
+    sources: [docs/GENERALISATION.md, docs/PLATFORM.md]
+    gap: 'Pull requests, comments, their closing and the builds'' CI go through ops/forge.py (Forgejo and Bitbucket Data Center), and MERGE=never keeps a change its draft pull request; the CI reads of ops/missions.py and ops/digest.py and the making of repositories (ops/repos.py, a home feature) still call Forgejo themselves, and Bitbucket is tested against a stand-in server only.'
+    verify: {method: test, by: [tests/test_forge.py::test_bitbucket_dc_opens_a_draft_comments_reads_state_and_ci_and_declines, tests/test_forge.py::test_forgejo_is_home_as_before_and_no_token_means_no_call, tests/test_forge.py::test_the_work_example_uses_bitbucket_and_never_merges_and_a_build_is_not_merged_there]}
+    trace: [ops/forge.py, ops/builds.py, deployments/example-work/deployment.env]
+  - id: GEN-05
+    title: A model policy file
+    statement: Which providers and models a deployment may use shall come from one policy file, which the card check, the checks and every Claude CLI call read;
+      the gateway's token shall reach the gateway from the secret the policy names.
+    type: constraint
+    priority: should
+    status: implemented
+    acceptance: 'Test: in a gateway_only deployment LiteLLM''s configuration holds no subscription model, every role resolves to a gateway alias, and a request for another model is refused.'
+    parents: [SN-05]
+    sources: [docs/GENERALISATION.md, docs/PLATFORM.md]
+    verify: {method: test, by: [tests/test_modelpolicy.py::test_the_gateway_token_reaches_the_gateway_container_under_one_name, tests/test_modelpolicy.py::test_home_is_subscriptions_only_and_its_claude_calls_are_as_before, tests/test_modelpolicy.py::test_a_gateway_deployment_serves_only_the_gateways_models_and_refuses_any_other, tests/test_modelpolicy.py::test_the_claude_cli_under_a_gateway_gets_the_gateway_and_never_the_oauth_token, tests/test_modelpolicy.py::test_a_policy_that_mixes_or_leaves_out_is_refused_with_what_to_change, tests/test_modelpolicy.py::test_no_claude_call_passes_the_oauth_token_itself_and_the_checks_run_the_policy]}
+    trace: [ops/modelpolicy.py, deployments/home/models.yaml, deployments/example-work/models.yaml, ops/registry.py, compose/core.yaml]
+  - id: GEN-06
+    title: Constraints split by scope
+    statement: Constraints that hold for every deployment shall be kept apart from the ones this deployment chose.
+    type: constraint
+    priority: should
+    status: planned
+    acceptance: 'Test: requirements/constraints.yaml holds only what holds everywhere, and each deployment''s values come from its constraints.yaml.'
+    parents: [SN-05]
+    sources: [docs/GENERALISATION.md, docs/PLATFORM.md]
+    verify: {method: inspection, by: [docs/GENERALISATION.md]}
+  - id: GEN-07
+    title: The owner in configuration
+    statement: The owner's name and memory bank shall come from the deployment's configuration, and every answer the owner gives shall record who gave it.
+    type: constraint
+    priority: should
+    status: planned
+    acceptance: 'Test: the owner''s name and memory bank are read from the deployment, and the code names no person.'
+    parents: [SN-05]
+    sources: [docs/GENERALISATION.md, docs/PLATFORM.md]
+    verify: {method: inspection, by: [docs/GENERALISATION.md]}
+  - id: GEN-08
+    title: A clean install from one file
+    statement: A second stack shall come up on a clean machine from the deployment's configuration file alone, proven by a rehearsal, and the guard test shall cover every value and folder.
+    type: constraint
+    priority: should
+    status: partial
+    acceptance: 'Test: a deployment with only core, builder and mission-control comes up from its folder on a clean WSL, every check green or not configured.'
+    parents: [SN-05]
+    sources: [docs/GENERALISATION.md, docs/PLATFORM.md]
+    gap: 'A deployment is one folder, chosen per machine, and compose, the scripts and the timers follow it; the clean install from it has not been rehearsed, and the constraint values, model policy and data class are not in it yet.'
+    verify: {method: test, by: [tests/test_features.py::test_a_machine_runs_home_unless_it_names_another_deployment]}
+    trace: [ops/deployment.py, deployments/AGENTS.md, ops/bootstrap-wsl-1-root.sh]
+  - id: GEN-09
+    title: Domains own their pages and routes
+    statement: A domain shall declare its pages and routes in its own module, and the Conductor shall name no domain.
+    type: constraint
+    priority: should
+    status: proposed
+    parents: [SN-05]
+    sources: [docs/GENERALISATION.md]
+    verify: {method: inspection, by: [docs/GENERALISATION.md]}
+  - id: GEN-10
+    title: One schedule table
+    statement: The app shall show in one table everything that starts by itself, whichever mechanism starts it.
+    type: constraint
+    priority: should
+    status: proposed
+    parents: [SN-05]
+    sources: [docs/GENERALISATION.md]
+    verify: {method: inspection, by: [docs/GENERALISATION.md]}
+  - id: GEN-11
+    title: Where work runs
+    statement: A step kind shall be able to name where it runs (WSL or Windows); a Windows step shall run only as a job kind
+      declared and approved on Windows, as its own standard account, with typed values and a patch whose paths are checked.
+    type: constraint
+    priority: should
+    status: partial
+    acceptance: 'Test: with the fake worker a where: windows step runs end to end; an unknown kind, a wrong value, an unapproved kind, a patch outside its paths and a stale lease are each refused or recovered with the reason; wsl.conf and listening sockets are unchanged.'
+    parents: [SN-05]
+    sources: [docs/PLATFORM.md, DEC-45]
+    gap: 'The worker, its rules, the fake worker, the stack''s side, the broker and the setup exist; the protocol cases pass on the fake worker and, through worker-selftest.ps1, on the real worker on the home PC (as the owner). The separate account, its folder rights and the network limit are proven only once the owner has run worker-setup.ps1 and the self-test as aiworker.'
+    verify: {method: test, by: [tests/test_winworker.py::test_a_declared_approved_job_runs_end_to_end_and_brings_its_evidence_back, tests/test_winworker.py::test_a_failing_build_is_a_failed_job_with_its_step, tests/test_winworker.py::test_the_stack_refuses_at_once_what_windows_would_refuse, tests/test_winworker.py::test_a_wrong_value_is_refused_by_the_worker_with_which_and_why, tests/test_winworker.py::test_a_patch_outside_its_kinds_paths_is_refused_before_it_is_applied, tests/test_winworker.py::test_an_unapproved_or_changed_kind_does_not_run_even_when_asked_directly, tests/test_winworker.py::test_a_lost_job_is_reported_and_one_whose_kind_may_retry_runs_once_more, tests/test_winworker.py::test_a_job_past_its_time_limit_is_stopped, tests/test_winworker.py::test_a_kind_definition_that_is_unclear_is_not_valid, tests/test_winworker.py::test_the_stack_side_can_start_nothing_on_windows, tests/test_winworker.py::test_a_where_windows_step_runs_end_to_end_and_a_step_kind_says_where_it_runs, tests/test_winworker.py::test_the_worker_is_a_feature_a_deployment_switches_on]}
+    trace: [ops/winworker.py, ops/winjobs.py, ops/fakeworker.py, ops/stepkinds.py, ops/windows/worker.ps1, ops/windows/worker-broker.ps1, ops/windows/worker-setup.ps1, ops/windows/worker-approve.ps1, ops/windows/worker-selftest.ps1]
+  - id: GEN-12
+    title: More than one person
+    statement: The stack shall support more than one person, each with a role and a sign-in, once a second real user exists.
+    type: constraint
+    priority: could
+    status: proposed
+    parents: [SN-05]
+    sources: [docs/GENERALISATION.md]
+    verify: {method: inspection, by: [docs/GENERALISATION.md]}
+  - id: GEN-13
+    title: Features per deployment
+    statement: A deployment shall switch each feature on or off; a feature that is off shall start no service or timer, its
+      checks shall report not configured, its pages shall be hidden and its scripts shall make no network call.
+    type: constraint
+    priority: should
+    status: partial
+    acceptance: 'Test: with a feature off its services, timers and pages are gone, its checks say not configured, and its scripts exit before any network call; home with every feature on behaves as before.'
+    parents: [SN-05]
+    sources: [docs/PLATFORM.md, DEC-45]
+    gap: 'The feature list, the compose profiles, the timers and the scripts of a feature follow it; the app''s pages and the health board''s checks do not yet (a check of a feature that is off still runs).'
+    verify: {method: test, by: [tests/test_features.py::test_a_feature_is_known_or_refused_and_core_is_always_on, tests/test_features.py::test_home_switches_every_feature_on_and_every_deployment_hands_its_features_to_compose, tests/test_features.py::test_each_service_of_a_feature_names_it_as_its_profile_and_core_has_none, tests/test_features.py::test_a_service_depends_only_on_what_its_deployments_start, tests/test_features.py::test_each_unit_names_a_known_feature_and_a_deployment_starts_only_its_timers, tests/test_features.py::test_a_script_of_a_feature_that_is_off_says_not_configured_before_any_network_call]}
+    trace: [ops/deployment.py, deployments/home/deployment.env, deployments/example-work/deployment.env, compose/apps.yaml, ops/deploy.py, ops/new-machine.sh, ops/ci-compose-check.sh]
+  - id: GEN-14
+    title: Customer data stays in, by the network
+    statement: In a deployment with an egress list, no container and no host-side process of the stack shall reach a host
+      off that list, and work of the data class customer shall send no content out (web tools, messages, backups, publish);
+      a deployment's gateway shall list only the tool servers of its features, none that sends data out for customer data,
+      and customer code shall never be copied to Forgejo.
+    type: constraint
+    priority: must
+    status: partial
+    acceptance: 'Test: in a deployment with an egress list a connection to a host off the list is refused from a container and from the host side, and a customer change sends only status out.'
+    parents: [SN-04, SN-05]
+    sources: [docs/PLATFORM.md, DEC-45]
+    gap: 'The data class, the check against outbound features, the status-only messages and the outbound rule exist; the rule is proven in a sandbox namespace, not yet applied on a work machine (ops/egress-host.sh is run as root there), and the Windows worker''s network is the company IT''s to limit.'
+    verify: {method: test, by: [tests/test_modelpolicy.py::test_a_gateway_lists_only_its_features_tool_servers_and_none_that_sends_out_customer_data, tests/test_dataguard.py::test_home_is_personal_with_no_egress_list_and_the_work_example_is_customer_with_one, tests/test_dataguard.py::test_customer_data_with_a_feature_that_sends_data_out_is_refused, tests/test_dataguard.py::test_the_outbound_rule_allows_loopback_dns_and_the_list_and_refuses_the_rest, tests/test_dataguard.py::test_the_rule_holds_in_a_sandbox_namespace, tests/test_dataguard.py::test_a_message_under_the_customer_class_carries_status_only]}
+    trace: [ops/dataguard.py, ops/egress-host.sh, ops/egress-selftest.sh, ops/notify.py, deployments/home/data.yaml, deployments/example-work/data.yaml, deployments/example-work/egress.txt]
+  - id: GEN-15
+    title: A judge a repository can extend
+    statement: A deployment may add checks to the judge for a repository, each returning pass, problems and evidence; a failing one
+      shall reopen the change and its problems shall reach the coder's next prompt.
+    type: constraint
+    priority: should
+    status: implemented
+    acceptance: 'Test: a repository profile''s failing check reopens the change and its problem text is in the coder''s next prompt.'
+    parents: [SN-05]
+    sources: [docs/PLATFORM.md, DEC-45]
+    verify: {method: test, by: [tests/test_changes.py::test_a_change_without_a_diff_reaches_a_windows_check_without_a_patch, tests/test_changes.py::test_a_deployments_failing_check_reopens_the_change_and_its_problem_reaches_the_coder, tests/test_changes.py::test_a_passing_check_is_recorded_with_the_judges_verdict, tests/test_changes.py::test_a_windows_check_gives_its_verdict_and_one_that_cannot_run_is_no_pass, tests/test_changes.py::test_a_check_that_says_too_little_is_refused]}
+    trace: [ops/changes.py, deployments/example-work/checks/example.yaml]
+  - id: GEN-16
+    title: Updates from signed-off tags
+    statement: A deployment other than home shall update only to a release tag the owner signed off, and shall run the whole
+      check before it deploys it.
+    type: constraint
+    priority: should
+    status: implemented
+    acceptance: 'Test: an update to a tag that is not signed off, or to main, is refused, and an update runs the whole check before it deploys.'
+    parents: [SN-05]
+    sources: [docs/PLATFORM.md, DEC-45]
+    verify: {method: test, by: [tests/test_update.py::test_only_a_release_tag_the_owner_signed_passes, tests/test_update.py::test_an_update_checks_before_it_deploys_and_a_failed_deploy_goes_back]}
+    trace: [ops/update.py, ops/publish.py, Makefile]
+  - id: GEN-17
+    title: A measured change
+    statement: One command shall run one change request by one coder and by the stack's loop on the same commit and record
+      tests passed, tokens, builds, minutes and memory used for each.
+    type: constraint
+    priority: should
+    status: implemented
+    acceptance: 'Test: the command records both runs of one change with tests passed, tokens, builds, minutes and memory used.'
+    parents: [SN-05]
+    sources: [docs/PLATFORM.md, DEC-45]
+    verify: {method: test, by: [tests/test_measure.py::test_the_command_runs_every_arm_on_one_case_and_reports_them_side_by_side]}
+    trace: [ops/measure.py, ops/replay.py, Makefile]
+  - id: GEN-18
+    title: Repositories built where they are
+    statement: A deployment may build the repositories in its code folder where they are; their builds shall work in a copy the
+      stack keeps outside the sandbox, never merge, reach the repository's forge only as a draft pull request through a push
+      remote the deployment names, and every repository the stack knows shall be one a task may name.
+    type: constraint
+    priority: must
+    status: implemented
+    acceptance: 'Test: with BUILD_REPOS=local a repository in the code folder is buildable, its builds clone from and push to the stack''s copy, a branch a build moved survives a refresh from the code folder, the stack never merges it, and a pull request goes through the push remote, from a fork when that is another repository.'
+    parents: [SN-05]
+    sources: [docs/PLATFORM.md, DEC-45]
+    verify: {method: test, by: [tests/test_builds.py::test_a_deployment_builds_its_local_repositories_in_the_stacks_own_copy]}
+    trace: [ops/builds.py, ops/forge.py, ops/tasks.py, ops/repos.py, deployments/example-work/deployment.env]
+  - id: GEN-19
+    title: A deployment without the home's machines
+    statement: A deployment that switches the home's features off shall need none of their values; a feature that is on shall
+      say which value it lacks before anything starts, a host ending in .invalid shall count as none, the code map shall have a
+      gate without a tailnet, and the deployment shall name the forges whose repositories are the owner's own work.
+    type: constraint
+    priority: must
+    status: implemented
+    acceptance: 'Test: compose requires only secrets and values the work example sets; the check names the empty value a switched-on feature needs; a repository on a forge the deployment names is its own work.'
+    parents: [SN-05]
+    sources: [docs/PLATFORM.md, DEC-45]
+    verify: {method: test, by: [tests/test_features.py::test_compose_demands_no_home_value_of_a_deployment_without_the_feature]}
+    trace: [ops/deployment.py, compose/core.yaml, compose/apps.yaml, Makefile, ops/onboard.py, ops/understand-dashboard.sh, config/gate/codemap-local.Caddyfile, images/mission-control/server.py]
+

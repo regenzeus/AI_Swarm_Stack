@@ -1,0 +1,12 @@
+{
+  "disableAllHooks": true,
+  "permissions": {
+    "defaultMode": "dontAsk",
+    "allow": ["Read(./**)", "Glob(./**)", "Grep(./**)"],
+    "deny": [
+      "Read(**/.env)", "Read(**/.env.*)", "Read(**/*.pem)", "Read(**/*.key)", "Read(**/*.pfx)", "Read(**/*.kdbx)",
+      "Read(**/.ssh/**)", "Read(**/.aws/**)", "Read(**/.git/config)", "Read(**/secrets/**)",
+      "Read(**/*credential*)", "Read(**/*password*)", "Read(**/*token*)", "Read(**/*secret*)"
+    ]
+  }
+}

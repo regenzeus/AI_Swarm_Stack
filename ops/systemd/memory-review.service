@@ -1,0 +1,11 @@
+# feature: memory
+[Unit]
+Description=Hermes memory auto-review (one pass)
+[Service]
+Type=oneshot
+# limit: stops (a run that hangs past 60 min is ended, so its timer fires again; the longest of 14 days was 7 s; review RUN-R27)
+TimeoutStartSec=60min
+Environment=DOCKER_HOST=unix://%t/docker.sock
+WorkingDirectory=%h/ai-stack
+ExecCondition=/usr/bin/python3 %h/ai-stack/ops/stack_gate.py
+ExecStart=/usr/local/bin/sops exec-env secrets/secrets.enc.yaml "sops exec-env secrets/agent-keys.enc.yaml \"python3 ops/memory_review.py\""

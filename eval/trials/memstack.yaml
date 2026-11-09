@@ -1,0 +1,92 @@
+# The memory stack's coverage trial (ops/memtrials.py coverage, MEM-47): a small vault and the openings built from it. Each case
+# names what its opening must give, what must at least be a pointer, and what must never reach it. No model, no network.
+private: [missions/mail-digest/wiki]
+settings:
+  item_chars: 6000
+  cut_floor: 400
+files:
+  - path: agents/mission-copper-test/MEMORY.md
+    text: |
+      # Memory: Copper test
+
+      ## Working state
+
+      Kazatomprom's 2026 guidance is the open question; check the April production report next.
+
+      ## Standing notes
+
+      - Read the company's own reports before news sites.
+
+      ## Journal
+
+      ### 2026-11-01 09:00 · run 3 · done
+      - Did: read the spot price and Kazatomprom's guidance
+      - Found: spot at 78 USD/lb, guidance cut by 10 percent
+  - path: agents/mission-other/MEMORY.md
+    text: |
+      # Memory: Another mission
+
+      ## Working state
+
+      Secret working state of another mission about copper and Kazatomprom that must not leak.
+  - path: topics/copper/wiki/index.md
+    meta: {title: "Copper: wiki", type: index}
+    text: "# Copper\n- [[entities/kazatomprom]]\n- [[concepts/spot-price]]\n- [[events/sprott-purchase]]\n"
+  - path: topics/copper/wiki/entities/kazatomprom.md
+    meta: {title: Kazatomprom, summary: The largest copper producer, last_validated: "2026-11-01", sources: [log/2026-11-01]}
+    text: |
+      ## Key facts
+      - Kazatomprom cut its 2026 production guidance by 10 percent ([[log/2026-11-01]]).
+      - Kazatomprom produces about 40 percent of the world's copper ([[log/2026-10-20]]).
+      ## Timeline
+      - 2026-11-01: guidance cut announced.
+  - path: topics/copper/wiki/concepts/spot-price.md
+    meta: {title: Copper spot price, summary: The spot price and its drivers, last_validated: "2026-11-01"}
+    text: |
+      ## Key facts
+      - The copper spot price was 78 USD per pound on 1 November 2026 ([[log/2026-11-01]]).
+      - Kazatomprom's guidance moves the copper spot price ([[log/2026-11-01]]).
+      ## Background
+      FILLER FILLER FILLER FILLER FILLER FILLER FILLER FILLER FILLER FILLER FILLER FILLER FILLER FILLER FILLER FILLER FILLER
+      FILLER FILLER FILLER FILLER FILLER FILLER FILLER FILLER FILLER FILLER FILLER FILLER FILLER FILLER FILLER FILLER FILLER
+      FILLER FILLER FILLER FILLER FILLER FILLER FILLER FILLER FILLER FILLER FILLER FILLER FILLER FILLER FILLER FILLER FILLER
+      FILLER FILLER FILLER FILLER FILLER FILLER FILLER FILLER FILLER FILLER FILLER FILLER FILLER FILLER FILLER FILLER FILLER
+  - path: topics/copper/wiki/events/sprott-purchase.md
+    meta: {title: Sprott purchase, summary: A fund bought copper, last_validated: "2026-10-01"}
+    text: |
+      ## Key facts
+      - Sprott bought 1 million pounds of copper in October 2026 ([[log/2026-10-02]]).
+  - path: missions/mail-digest/wiki/entities/kazatomprom-mail.md
+    meta: {title: Kazatomprom in the owner's mail, summary: From private mail}
+    text: "## Key facts\n- A private mail about Kazatomprom and copper that must never reach another agent.\n"
+  - path: missions/ram/wiki/entities/ram-kit.md
+    meta: {title: RAM kit, summary: A 32 GB kit}
+    text: "## Key facts\n- The 32 GB RAM kit costs 89 EUR.\n"
+cases:
+  - id: own-wiki-and-state
+    agent: mission:copper-test
+    kind: mission
+    task: Copper outlook after Kazatomprom's guidance cut
+    own: topics/copper/wiki
+    subs: [agent:mission-copper-test, world:topics/copper/wiki]
+    budget: 20000
+    given: [vault:agents/mission-copper-test/MEMORY.md, vault:topics/copper/wiki/entities/kazatomprom.md]
+    never: [vault:agents/mission-other/MEMORY.md]
+  - id: tight-budget-gives-pointers
+    agent: mission:copper-test
+    kind: mission
+    task: Kazatomprom guidance cut
+    own: topics/copper/wiki
+    subs: [agent:mission-copper-test, world:topics/copper/wiki]
+    budget: 1400
+    given: [vault:agents/mission-copper-test/MEMORY.md]
+    pointer: [vault:topics/copper/wiki/concepts/spot-price.md]
+  - id: private-and-other-journals-never
+    agent: mission:ram
+    kind: mission
+    task: Kazatomprom copper mail
+    own: missions/ram/wiki
+    subs: [agent:mission-other, world:*, world:missions/mail-digest/wiki]
+    budget: 20000
+    given: [vault:topics/copper/wiki/entities/kazatomprom.md]
+    never: [vault:agents/mission-other/MEMORY.md, vault:missions/mail-digest/wiki/entities/kazatomprom-mail.md]

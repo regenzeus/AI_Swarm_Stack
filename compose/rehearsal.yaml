@@ -1,0 +1,30 @@
+# New-PC rehearsal only (ops/windows/rehearse-new-pc.ps1, COMPOSE_EXTRA="-f compose/rehearsal.yaml").
+# The rehearsal distro shares WSL's network with the live stack, so: no published ports, no Telegram polling
+# (it would steal the live bot's messages), no internet for LiteLLM (a ChatGPT token refresh could invalidate
+# the live login), and only the core services, so both stacks fit in memory. Data checks run against these.
+services:
+  litellm:
+    ports: !reset []
+    networks: !override [backend, memnet]          # webonly and edge both reach the internet (mcnet: no app)
+  hermes:
+    ports: !reset []
+    networks: !override [backend, memnet]
+    environment:
+      TELEGRAM_BOT_TOKEN: ""
+  phoenix: { ports: !reset [], deploy: { replicas: 0 } }
+  openwebui: { ports: !reset [], deploy: { replicas: 0 } }
+  opencode-port: { ports: !reset [], deploy: { replicas: 0 } }
+  opencode: { deploy: { replicas: 0 } }
+  ollama: { deploy: { replicas: 0 } }
+  qmd: { deploy: { replicas: 0 } }
+  graphify: { deploy: { replicas: 0 } }
+  fetch: { deploy: { replicas: 0 } }
+  research: { deploy: { replicas: 0 } }
+  hindsight: { deploy: { replicas: 0 } }
+  ci-runner: { deploy: { replicas: 0 } }
+  pkgproxy: { deploy: { replicas: 0 } }
+  pkgproxy-builder: { deploy: { replicas: 0 } }
+  mission-control: { ports: !reset [], deploy: { replicas: 0 } }
+  hermes-dashboard: { deploy: { replicas: 0 } }
+  gate-hermes-dashboard: { deploy: { replicas: 0 } }
+  builder: { deploy: { replicas: 0 } }

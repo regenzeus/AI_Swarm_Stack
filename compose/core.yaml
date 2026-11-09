@@ -1,0 +1,86 @@
+# Core services for MVP 0: model gateway, its database, tracing, and the smoke-test model.
+# Started via `make up`, which decrypts secrets with sops into the environment of this command only.
+name: aistack
+
+networks:
+  backend:
+    internal: true        # postgres, ollama: no internet
+  edge: {}                # litellm egress to providers
+  obs: {}                 # Phoenix only: lets Docker publish its UI port (internal networks cannot)
+
+volumes:
+  pgdata: {}
+  phoenix: {}
+  ollama: {}
+  litellm-auth: {}        # ChatGPT OAuth tokens (device login); backed up encrypted
+
+x-logging: &logging
+  driver: json-file
+  options: { max-size: "10m", max-file: "3" }
+
+services:
+  postgres:
+    image: ${POSTGRES_IMAGE}
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: litellm
+      POSTGRES_DB: litellm
+      POSTGRES_PASSWORD: ${PG_PASSWORD:?run via make up}
+    volumes: [pgdata:/var/lib/postgresql/data]
+    networks: [backend]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U litellm -d litellm"]
+      interval: 10s
+      retries: 10
+    mem_limit: 512m
+    logging: *logging
+
+  litellm:
+    image: aistack/litellm:1.105.4-p2      # LITELLM_IMAGE + tool-call streaming patch + prompt-cache affinity (images/litellm)
+    restart: unless-stopped
+    depends_on:
+      postgres: { condition: service_healthy }
+    command: ["--config", "/app/config.yaml", "--port", "4000"]
+    environment:
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:?run via make up}
+      DATABASE_URL: postgresql://litellm:${PG_PASSWORD}@postgres:5432/litellm
+      OTEL_EXPORTER: otlp_http
+      OTEL_ENDPOINT: http://phoenix:6006/v1/traces
+      OTEL_SERVICE_NAME: litellm
+      CHATGPT_TOKEN_DIR: /root/.config/litellm/chatgpt
+      AISTACK_GATEWAY_TOKEN: ${AISTACK_GATEWAY_TOKEN:-}   # a gateway deployment's token, filled by make from models.yaml's name (GEN-05)
+    volumes:
+      - ${LITELLM_CONFIG:-../config/litellm/config.yaml}:/app/config.yaml:ro   # a gateway deployment's own (GEN-05)
+      - litellm-auth:/root/.config/litellm
+    ports: ["127.0.0.1:4000:4000"]
+    networks: [backend, edge, webonly, memnet, mcnet, phonemcp, mailmcp, swarmmcp]   # memnet: Hindsight's fact extraction; mcnet: Mission Control tools; phonemcp: AI phone tools; swarmmcp: the swarm's MCP tools (apps.yaml)
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:4000/health/liveliness',timeout=4).status==200 else 1)\""]
+      interval: 30s
+      timeout: 5s
+      start_period: 40s
+      retries: 3
+    mem_limit: 1g
+    logging: *logging
+
+  phoenix:
+    image: ${PHOENIX_IMAGE}
+    restart: unless-stopped
+    environment:
+      PHOENIX_WORKING_DIR: /data
+    volumes: [phoenix:/data]
+    ports: ["127.0.0.1:6006:6006"]
+    networks: [backend, obs]      # no longer on edge: Phoenix holds traces with prompt content
+    mem_limit: 1g
+    logging: *logging
+
+  ollama:
+    # Smoke-test rig only. Reachable solely through LiteLLM with vk-smoke.
+    image: ${OLLAMA_IMAGE}
+    restart: unless-stopped
+    environment:
+      OLLAMA_KEEP_ALIVE: 5m
+    volumes: [ollama:/root/.ollama]
+    networks: [backend]
+    mem_limit: 2g
+    logging: *logging

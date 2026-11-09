@@ -1,0 +1,10 @@
+^registry\.npmjs\.org$
+^pypi\.org$
+^files\.pythonhosted\.org$
+^api\.anthropic\.com$
+^proxy\.golang\.org$
+^sum\.golang\.org$
+^index\.crates\.io$
+^static\.crates\.io$
+^repo\.maven\.apache\.org$
+^repo1\.maven\.org$

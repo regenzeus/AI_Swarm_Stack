@@ -1,0 +1,768 @@
+# The task engine: give a task, the stack does the rest (SN-19, SN-20). The plan and its reasons: docs/SWARM-ROADMAP.md
+# (phases 0-5) and docs/SWARM-DESIGN.md (phases 6-9). Phases 1 to 4 are built; later phases are planned. planned = asked for by the owner
+# (31 Oct 2026); proposed = waits for the owner's decision (TSK-19).
+# Every planned requirement carries its acceptance criterion and its phase; a phase starts when the previous gate is met.
+area: Task engine
+prefix: TSK
+phases: {0: Headroom, 1: Task kernel, 2: 'Plan graph and durable steps', 3: Event fabric, 4: Self-staffing, 5: Reach,
+  6: Every task a plan graph, 7: 'Artifacts, map and telemetry', 8: 'Customisation and UX', 9: More reach}
+items:
+- id: TSK-01
+  group: Task kernel
+  phase: 1
+  title: One task for every kind of work
+  statement: The stack shall represent every piece of work as a task with its goal, definition of done, budget, deadline,
+    autonomy level and rhythm (once, on a schedule, on an event, or after other tasks finish), and chat, missions,
+    builds and Claude tasks shall each create one.
+  type: functional
+  priority: must
+  status: implemented
+  parents: [SN-19]
+  sources: ['owner 2026-10-31: the user should just give a task and the AI Stack figures out the rest', docs/SWARM-ROADMAP.md]
+  acceptance: 'Test: a task created from each door carries every field; the task list holds every run of the last 7 days.'
+  verify: {method: test, by: ['tests/test_tasks.py::test_every_door_s_work_becomes_a_task_with_every_field']}
+  trace: [ops/tasks.py, ops/missions.py]
+- id: TSK-02
+  group: Task kernel
+  phase: 1
+  title: Give a task in one sentence
+  statement: Mission Control shall start a task from one sentence in a single composer, and its deliberate mode shall
+    show the task's fields filled with their presets before the task starts.
+  type: interface
+  priority: must
+  status: implemented
+  parents: [SN-19, SN-06]
+  sources: ['owner 2026-10-31: give more deliberate tasks with details preset, but just giving a task is the usual way', docs/SWARM-ROADMAP.md]
+  acceptance: 'Test: a sentence becomes a task with every field set, and a preset changed in deliberate mode is kept. Checked
+    on screen at 375 px.'
+  verify: {method: test, by: ['tests/test_tasks.py::test_a_sentence_gets_a_specification_and_reaches_its_door',
+    'tests/test_tasks.py::test_the_owner_s_presets_are_kept_and_show_me_the_plan_first_waits']}
+  trace: [images/mission-control/web/static/app-tasks.js, images/mission-control/server.py, images/mission-control/guide/20-tasks.md]
+- id: TSK-03
+  group: Task kernel
+  phase: 1
+  title: The stack writes the specification
+  statement: Before a task's first step, the intake agent shall write its specification (the goal, a checkable
+    definition of done, the plan, and the agents it proposes with the reason for each), ask at most two questions and
+    only when the goal cannot be planned without them, and wait for the owner only where the task's autonomy level
+    asks for it.
+  type: functional
+  priority: must
+  status: implemented
+  parents: [SN-19, SN-02]
+  sources: [docs/SWARM-ROADMAP.md, 'Blitzy: requirements into a specification and an action plan, checked against the result']
+  acceptance: 'Replay: 20 recorded one-sentence tasks (coding, research, analysis, watching) each get a specification with
+    a checkable definition of done; no task gets more than two questions.'
+  findings: [FND-117]
+  verify: {method: test, by: ['tests/test_conductor.py::test_a_planning_a_restart_cut_off_is_planned_again_or_failed_when_old', 'tests/test_tasks.py::test_at_most_two_questions_and_answers_plan_it_again',
+    'tests/test_tasks.py::test_a_coding_task_without_a_repository_asks_which_one',
+    'tests/test_tasks.py::test_a_failed_intake_says_why_and_can_be_planned_again',
+    'tests/test_tasks.py::test_the_intake_prompt_names_every_agent_and_repository_and_the_app_cannot_be_used_from_the_ai_phone',
+    eval/tasks-v1.yaml, eval/results/20261031-140852-tasks-gate.json]}
+  trace: [ops/tasks.py, prompts/intake.md, config/agents.yaml, ops/keys.sh]
+- id: TSK-04
+  group: Task kernel
+  phase: 1
+  title: One board for every task
+  statement: The app shall list the tasks under Waiting on you, Running, Scheduled and Done, each with its plan, the live
+    tree of its agents, its use of the subscriptions and the reason each agent was chosen; a scheduled task shall show
+    when its last run ended, what it produced, and when the next run comes.
+  type: interface
+  priority: should
+  status: implemented
+  parents: [SN-19, SN-07]
+  sources: [docs/SWARM-ROADMAP.md]
+  findings: [FND-77]
+  acceptance: 'Test: a running two-agent task appears under Running with both agents in its tree; checked on screen at 375 px.'
+  verify: {method: test, by: ['tests/test_tasks.py::test_after_another_task_waits_until_that_one_is_done',
+    'tests/test_tasks.py::test_a_weekly_briefing_task_gets_its_content_not_the_plan_email_when_asked_and_shows_its_runs']}
+  trace: [images/mission-control/web/static/app-base.js]
+- id: TSK-05
+  group: Plan graph and durable steps
+  phase: 2
+  title: A plan graph for every task
+  statement: The Conductor shall turn a specification into a graph of steps with dependencies and parallel branches,
+    stored with the task in the runner's task database, and a step shall start only when every step it depends on has
+    finished; a plan with a cycle, or with a step no agent can do, shall be refused. Cancelling a task shall stop the
+    work its running steps started (their Claude tasks and test suites), and such a step shall end stopped, not failed.
+  type: functional
+  priority: must
+  status: implemented
+  parents: [SN-19, SN-17]
+  sources: [docs/SWARM-ROADMAP.md, 'Anthropic dynamic workflows (beta, 2026-10-09): the lead model writes the orchestration', DEC-35]
+  acceptance: 'Test: a plan with two parallel branches and a joining step runs the branches together and the join after
+    both; a plan with a cycle is refused.'
+  verify: {method: test, by: [tests/test_changes.py::test_a_cancelled_task_stops_its_running_suite, 'tests/test_conductor.py::test_branches_run_together_the_join_after_both_and_a_cycle_is_refused',
+    'tests/test_tasks.py::test_a_one_off_task_with_several_agents_goes_to_the_conductor_as_a_plan_graph',
+    'tests/test_conductor.py::test_the_owner_can_cancel_and_every_planned_task_goes_to_the_conductor']}
+  trace: [ops/conductor.py, ops/tasks.py, prompts/intake.md]
+- id: TSK-06
+  group: Plan graph and durable steps
+  phase: 2
+  title: Steps survive restarts
+  statement: Each step shall be recorded with its inputs, outputs and resume point before and after it runs, so that a
+    restart resumes the task at its first unfinished step and no finished step runs twice.
+  type: quality
+  priority: must
+  status: implemented
+  parents: [SN-13, SN-19]
+  sources: [SWM-19, docs/SWARM-ROADMAP.md]
+  acceptance: 'Test: the runner is killed during step 3 of a five-step task; after the restart step 3 runs again, steps 1
+    and 2 ran once, and the task finishes.'
+  verify: {method: test, by: ['tests/test_conductor.py::test_a_restart_runs_the_interrupted_step_again_and_no_finished_step_twice',
+    'tests/test_conductor.py::test_a_claude_step_waits_for_its_claude_task_also_across_a_restart', 'tests/test_conductor.py::test_a_step_that_fails_twice_fails_its_task_and_a_limit_is_waited_out',
+    'tests/test_conductor.py::test_a_step_cut_off_by_the_runner_stopping_is_interrupted_not_failed',
+    'tests/test_conductor.py::test_a_claude_task_cut_off_by_the_runner_stopping_is_queued_again',
+    eval/results/20261031-152501-conductor-gate.json]}
+  trace: [ops/conductor.py]
+- id: TSK-07
+  group: Plan graph and durable steps
+  phase: 2
+  title: Any step on any harness
+  statement: The Conductor shall run each step on the harness and model its plan names, through the one adapter contract
+    every harness implements.
+  type: functional
+  priority: must
+  status: partial
+  parents: [SN-19, SN-17]
+  sources: [SWM-02, SWM-28]
+  findings: [FND-99]
+  acceptance: 'Test: one task whose steps run on Hermes, Claude Code and OpenCode finishes, each step through its adapter.'
+  gap: Hermes, Claude Code, Python and OpenCode have adapters (OpenCode since 2026-11-01, one `opencode run` per
+    step, read only, run for real on a repository question); the phase 2 gate ran one task across Hermes, Claude Code and
+    Python, and one task across Hermes, Claude Code and OpenCode has not run yet.
+  verify: {method: test, by: ['tests/test_conductor.py::test_a_step_on_opencode_reads_only_and_records_its_tool_and_model_calls',
+    'tests/test_conductor.py::test_each_step_s_prompt_carries_the_results_it_waits_for',
+    'tests/test_conductor.py::test_a_long_requirements_list_reaches_the_builder_apart_from_its_brief',
+    'tests/test_conductor.py::test_a_claude_step_waits_for_its_claude_task_also_across_a_restart']}
+  trace: [config/opencode-step.json, ops/conductor.py, prompts/shared.md]
+- id: TSK-08
+  group: Plan graph and durable steps
+  phase: 2
+  title: Steps start only with headroom
+  statement: The Conductor shall start a step only when the PC has the memory its harness needs available (0.25 GB for a
+    model call, 0.5 GB for a Hermes turn, 0.75 GB for Claude Code, by Windows' available memory) and the subscription the
+    step uses is below its usage limit, and shall otherwise queue the step and show why it waits.
+  type: quality
+  priority: must
+  status: implemented
+  parents: [SN-13, CST-14]
+  sources: [AST-12, docs/SWARM-ROADMAP.md]
+  acceptance: 'Test: with available memory stubbed below a step''s need, the ready step stays queued with the reason shown,
+    and starts when memory returns.'
+  rationale: 'The first rule asked 1.5 GB free for every step and held the phase 2 gate at 0.7 GB while the owner played
+    a game; a step asks for what its harness starts (owner, 31 Oct 2026: "You can make due with less RAM").'
+  verify: {method: test, by: ['tests/test_conductor.py::test_a_step_starts_only_with_headroom_and_says_what_it_waits_for', tests/test_changes.py::test_changes_in_review_take_no_slot_from_the_work]}
+  trace: [ops/conductor.py, ops/windows/host-probe.ps1]
+- id: TSK-09
+  group: Plan graph and durable steps
+  phase: 2
+  title: One trace per task
+  statement: Every agent run, model call and tool call of a task shall be part of one trace for that task, in the shape
+    of the OpenTelemetry GenAI conventions (invoke_agent with chat and execute_tool spans under it), shown in Phoenix
+    and in the task's run view.
+  type: quality
+  priority: must
+  status: implemented
+  findings: [FND-101]
+  parents: [SN-07]
+  sources: ['OpenTelemetry GenAI semantic conventions (development status, 2026)', docs/SWARM-ROADMAP.md]
+  acceptance: 'Test: a task with steps on two harnesses yields one trace whose spans name every agent run, model call and
+    tool call.'
+  rationale: The task is one run in the runtime record, each step a run inside it and the agents' own runs and model
+    calls inside the steps (#/live/task:<id>, Live trace and the task's page); a Hermes run, which can't carry its parent
+    in, joins the live step of its agent; a Claude step's Claude task runs inside its step (since 2026-11-01); a minute
+    after the run ends the tree goes to Phoenix as one trace (otlp.tree_spans, TSK-26).
+  verify: {method: test, by: ['tests/test_conductor.py::test_one_trace_the_task_s_run_holds_each_step_s_run', 'tests/test_runtime.py::test_a_hermes_run_without_a_ref_joins_the_live_step_of_its_agent',
+    'tests/test_conductor.py::test_a_claude_step_waits_for_its_claude_task_also_across_a_restart',
+    'tests/test_otlp.py::test_a_task_run_is_one_trace_from_the_run_to_every_model_and_tool_call']}
+  trace: [ops/conductor.py, ops/runtime.py, images/mission-control/runrecord.py, images/mission-control/otlp.py]
+- id: TSK-10
+  group: Event fabric
+  phase: 3
+  title: One event bus
+  statement: The stack shall collect events from news searches and feeds, Forgejo and GitHub activity (read on a schedule,
+    since nothing may reach the PC from outside), incoming mail, Home Assistant state changes, the calendar, watched files,
+    prices, filings, schedules and finished tasks into one event log, each with its source, time and content, and shall
+    show for each source when it last looked, what it found, or why it is off.
+  type: functional
+  priority: must
+  status: implemented
+  parents: [SN-20, CST-04]
+  sources: ['owner 2026-10-31: trigger on different kinds of events, like a particular news event breaking', docs/SWARM-ROADMAP.md]
+  acceptance: 'Test: a sample event from each source lands in the event log with its source, time and content.'
+  verify: {method: test, by: ['tests/test_reach.py::test_a_calendar_rule_fires_once_its_time_before_the_event_and_the_address_stays_private',
+    'tests/test_events.py::test_the_web_sources_baseline_first_then_fire_their_rules', 'tests/test_events.py::test_the_local_sources_each_fire',
+    'tests/test_events.py::test_mail_and_forgejo_are_read_only_while_a_rule_asks_and_a_baseline_is_not_new']}
+  trace: [ops/ics.py, ops/events.py, images/desk/desk.py, ops/mission_extras.py, ops/tasks.py]
+- id: TSK-11
+  group: Event fabric
+  phase: 3
+  title: Rules that start tasks
+  statement: When a trigger rule's condition matches an event, the stack shall start a task from the rule's template at
+    most once per cooldown, after a model confirms the event is the one the rule describes where the rule asks for it,
+    and shall record each firing with the event that caused it.
+  type: functional
+  priority: must
+  status: implemented
+  parents: [SN-20, SN-19]
+  sources: [docs/SWARM-ROADMAP.md]
+  acceptance: 'Test: two matching events within the cooldown start one task; a rule with the model check skips an event the
+    check rejects; every firing names its event.'
+  verify: {method: test, by: ['tests/test_events.py::test_a_rule_waits_out_its_cooldown_runs_its_check_and_records_every_firing',
+    'tests/test_events.py::test_rules_are_checked_when_saved_and_schedules_come_due']}
+  trace: [ops/events.py, prompts/intake.md, images/mission-control/web/static/app.js]
+- id: TSK-12
+  group: Event fabric
+  phase: 3
+  title: Breaking news
+  statement: When at least three independent sources report the same new story on a watched subject within 30
+    minutes, the event bus shall raise one breaking-news event for that story, and later reports of the story shall
+    attach to that event.
+  type: functional
+  priority: should
+  status: implemented
+  parents: [SN-20]
+  sources: ['owner 2026-10-31: like a particular news event breaking']
+  acceptance: 'Test: three sources on one story within 30 minutes raise one event, a fourth attaches to it, and two sources
+    raise none.'
+  findings: [FND-118]
+  verify: {method: test, by: ['tests/test_conductor.py::test_an_alert_s_answer_is_in_its_message', 'tests/test_events.py::test_breaking_news_is_three_publishers_on_one_new_story_within_30_minutes']}
+  trace: [ops/events.py]
+- id: TSK-13
+  group: Self-staffing
+  phase: 4
+  title: What each agent can do, measured
+  statement: Every agent card, harness and model shall carry its skills, tools and limits and its measured success, time
+    and usage per task type, updated after each task.
+  type: functional
+  priority: must
+  status: implemented
+  parents: [SN-19, SN-08]
+  sources: [docs/SWARM-ROADMAP.md]
+  acceptance: 'Test: a finished task updates the measured success, time and usage of each agent, harness and model it used,
+    for its task type.'
+  verify: {method: test, by: ['tests/test_staffing.py::test_judged_tasks_credit_each_agent_and_measure_it']}
+  trace: [ops/staffing.py, config/agents.yaml]
+- id: TSK-14
+  group: Self-staffing
+  phase: 4
+  title: Routing by measured results
+  statement: The Conductor shall choose each step's agent, model and harness from the measured results for the step's task
+    type, and shall fall back to the next choice when a subscription reaches its usage limit.
+  type: functional
+  priority: should
+  status: partial
+  parents: [SN-19, CST-02]
+  sources: ['Vals Router Index (2026-10-20): no router beat the best single model on long agent tasks', docs/SWARM-ROADMAP.md]
+  acceptance: 'Replay: routing by measured results scores at least as well as the fixed assignment on the replay sets; with
+    one subscription stubbed at its limit, steps go to the next choice.'
+  gap: The Conductor routes a step before its first attempt to an agent sharing the planned one's role that met that kind
+    of task at least 15 points more often (from 3 judged tasks on), or away from a subscription at its limit, and writes why
+    on the step; whether routing beats the fixed assignment can only be measured once enough tasks are judged.
+  verify: {method: test, by: ['tests/test_staffing.py::test_a_step_goes_to_the_agent_that_did_that_kind_best_or_away_from_a_limit',
+    'tests/test_staffing.py::test_the_conductor_routes_a_step_before_its_first_attempt_and_says_why']}
+  trace: [ops/staffing.py, ops/conductor.py]
+- id: TSK-15
+  group: Self-staffing
+  phase: 4
+  title: Agents made for the task
+  statement: When no agent card fits a step, the Conductor shall write a temporary agent (its prompt, tools, model,
+    harness and budget) within the grants the task's autonomy level allows, run it under the existing keys, grants and
+    sandbox, and end it with its task.
+  type: functional
+  priority: must
+  status: implemented
+  parents: [SN-19, SN-05]
+  sources: ['owner 2026-10-31: even invent new agents for this task specifically', docs/SWARM-ROADMAP.md, DEC-34]
+  acceptance: 'Test: a step no card fits gets a temporary agent whose grants are inside the task''s autonomy level; a grant
+    outside it is refused; the agent is gone when its task ends. Security review before the phase ships.'
+  verify: {method: test, by: ['tests/test_staffing.py::test_a_temporary_agent_stays_within_its_grants_and_ends_with_its_task',
+    'tests/test_staffing.py::test_a_step_no_agent_fits_gets_a_temporary_agent_that_ends_with_the_task',
+    'tests/test_tasks.py::test_an_agent_the_intake_names_that_does_not_exist_gets_a_temporary_agent', docs/SECURITY.md]}
+  trace: [ops/staffing.py, ops/conductor.py, prompts/intake.md]
+- id: TSK-16
+  group: Self-staffing
+  phase: 4
+  title: Good temporary agents become permanent
+  statement: A temporary agent that served at least three tasks that met their definition of done shall become a Coach
+    proposal, replay-tested like any agent change, and every agent design shall stay in an archive with its scores.
+  type: functional
+  priority: should
+  status: implemented
+  parents: [SN-08, SN-19]
+  sources: ['Automated Design of Agentic Systems (Hu, Lu, Clune; ICLR 2025)', docs/SWARM-ROADMAP.md]
+  acceptance: 'Test: the third successful task of a temporary agent creates one Coach proposal; the archive keeps the design
+    with its scores.'
+  verify: {method: test, by: ['tests/test_staffing.py::test_a_design_is_archived_reused_by_name_and_proposed_after_three_met_tasks']}
+  trace: [ops/staffing.py]
+- id: TSK-17
+  group: Self-staffing
+  phase: 4
+  title: Each task judged against its definition of done
+  statement: The Checker shall judge each finished task against its definition of done, reading beside the answer what
+    the stack measured itself (each build's checks, the judge's check steps, the pages its agents opened), and the stack
+    shall keep a daily history of success, time, tokens, usage headroom, queue length and the owner's corrections per
+    agent, model and task type.
+  type: quality
+  priority: must
+  status: implemented
+  findings: [FND-97, FND-92, FND-102]
+  parents: [SN-07, SN-08]
+  sources: [MIS-16, docs/SWARM-ROADMAP.md]
+  acceptance: 'Test: a finished task gets a verdict against its definition of done, and the day''s history row of each agent,
+    model and task type it used changes.'
+  verify: {method: test, by: ['tests/test_staffing.py::test_the_judge_reads_what_the_stack_measured_not_only_the_summary',
+    'tests/test_staffing.py::test_each_run_of_a_recurring_task_is_judged_on_its_own_and_a_quiet_run_is_not',
+    'tests/test_staffing.py::test_a_finished_task_is_judged_point_by_point_and_a_build_by_what_happened',
+    'tests/test_staffing.py::test_judged_tasks_credit_each_agent_and_measure_it']}
+  trace: [ops/staffing.py, prompts/shared.md]
+- id: TSK-18
+  group: Reach
+  phase: 5
+  title: More harnesses at no cost
+  statement: The stack shall offer Codex CLI on the ChatGPT subscription as a harness, and shall add a further harness only
+    if running it costs nothing.
+  type: functional
+  priority: could
+  status: partial
+  parents: [SN-17, CST-02]
+  sources: [docs/SWARM-ROADMAP.md]
+  gap: OpenCode runs steps on the ChatGPT subscription through the gateway, at no cost (TSK-07). Codex CLI is not
+    a harness yet.
+  acceptance: 'Test: the adapter conformance suite (SWM-28) passes for Codex CLI.'
+  verify: {method: test, by: ['tests/test_conductor.py::test_a_step_on_opencode_reads_only_and_records_its_tool_and_model_calls']}
+  trace: [ops/conductor.py, config/opencode-step.json]
+- id: TSK-19
+  group: Reach
+  phase: 5
+  title: Agents outside the stack through A2A
+  statement: The swarm shall accept A2A tasks from agents outside the stack on the tailnet, each outside agent under its own
+    key and grants.
+  type: interface
+  priority: could
+  status: implemented
+  parents: [SN-17, CST-04]
+  sources: [docs/SWARM-ROADMAP.md, docs/SWARM-DESIGN.md, 'A2A protocol v1.0 (Linux Foundation, 2026)']
+  acceptance: 'Test: an outside agent''s A2A request with its token becomes a task that waits for the owner, and one
+    without a token or from outside the tailnet is refused.'
+  rationale: The swarm already speaks A2A on the Docker network. The owner asked for it on 31 Oct 2026; it stays off
+    until the owner switches it on, and an outside request waits for the owner's OK by default.
+  verify: {method: test, by: ['tests/test_reach.py::test_the_owner_s_calendar_and_a2a_switches_are_refused_from_the_ai_phone',
+    'tests/test_reach.py::test_outside_agents_are_off_until_switched_on_and_then_need_the_tailnet_and_their_token',
+    'tests/test_reach.py::test_an_outside_agent_s_message_is_a_task_that_waits_for_the_owner_and_it_sees_only_its_own',
+    'tests/test_reach.py::test_the_owner_adds_and_revokes_an_outside_agent_and_only_a_hash_is_kept']}
+  trace: [ops/a2a.py, images/mission-control/server.py, ops/tasks.py, images/mission-control/web/static/app-base.js, images/mission-control/web/static/app.js]
+- id: TSK-20
+  group: Task kernel
+  phase: 1
+  title: What the Conductor may do without asking
+  statement: The Conductor shall plan, staff and run tasks and create temporary agents within read-only and sandboxed grants
+    without the owner's approval, and shall ask before it messages other people, spends money, deploys code, deletes data
+    or acts on the AI phone.
+  type: constraint
+  priority: must
+  status: implemented
+  parents: [SN-02, SN-05]
+  sources: [docs/SWARM-ROADMAP.md, DEC-34]
+  verify: {method: test, by: ['tests/test_tasks.py::test_a_sentence_gets_a_specification_and_reaches_its_door',
+    'tests/test_tasks.py::test_the_owner_s_presets_are_kept_and_show_me_the_plan_first_waits']}
+- id: TSK-21
+  group: Plan graph and durable steps
+  phase: 6
+  title: Every task through the Conductor
+  statement: Every occurrence of every task, one-off, scheduled, event-triggered or after another task, shall run as
+    a plan graph under the Conductor, a single-agent task as a one-step graph, with builds, Claude tasks, mission
+    agents, the Topic Desk and delivery as step kinds that keep their own approvals.
+  type: functional
+  priority: must
+  status: partial
+  parents: [SN-19, SN-20]
+  sources: [docs/SWARM-DESIGN.md]
+  findings: [FND-84]
+  acceptance: 'Test: a scheduled briefing task, an event-triggered task and a one-step chat task each run as a plan
+    graph with their steps in the task''s trace.'
+  gap: Every task the intake plans runs under the Conductor, once, on a schedule, on an event (each firing an
+    occurrence, its event in every step's prompt) or after another task, with coding as a build step, code questions as
+    Claude steps (DEC-36), a briefing as the desk's plan or, on an event, the desk's alert (TSK-22), and a price
+    watch as checks of its shopping agent, whose purchases stay its own runs (DEC-37). Since 8 Nov 2026 the runner
+    moves every briefing and price watch still running as its mission under the Conductor by itself, so no repeating
+    task runs on two engines; a briefing's alerts are its task's too (the rhythm holds the schedule and the triggers;
+    an alert's run is the desk's short alert). Still apart are a cleanup analysis (ops/cleanup.py's, on demand) and work
+    started at a door directly (a chat, a build, a Claude question), which is followed there, not run as a graph.
+  verify: {method: test, by: [tests/test_tasks.py::test_a_briefing_s_alerts_move_with_it_and_an_alert_runs_the_desk_s_short_alert, 'tests/test_tasks.py::test_a_briefing_that_runs_as_its_mission_moves_under_the_conductor_and_its_mission_keeps_the_topic',
+    'tests/test_tasks.py::test_every_briefing_and_price_watch_still_on_its_mission_moves_under_the_conductor',
+    'tests/test_conductor.py::test_the_worker_starts_an_event_s_and_a_schedule_s_run_while_it_holds_its_lock_and_heals_a_half_start',
+    'tests/test_triggers.py::test_a_task_s_trigger_starts_the_task_s_next_run_not_a_mission_run',
+    'tests/test_tasks.py::test_a_task_on_an_event_waits_for_its_trigger_and_is_watched_with_the_missions_triggers',
+    'tests/test_conductor.py::test_an_event_triggered_briefing_writes_the_desk_s_alert_and_delivers_it',
+    'tests/test_conductor.py::test_a_price_watch_runs_its_shopping_agent_s_check_and_a_reached_target_starts_its_next_run',
+    'tests/test_conductor.py::test_an_event_starts_a_run_whose_steps_know_the_event_and_more_events_wait_their_turn',
+    'tests/test_tasks.py::test_a_weekly_briefing_task_gets_its_content_not_the_plan_email_when_asked_and_shows_its_runs',
+    'tests/test_conductor.py::test_the_owner_can_cancel_and_every_planned_task_goes_to_the_conductor',
+    'tests/test_conductor.py::test_a_build_step_waits_for_its_build_and_the_owner_s_tap_and_a_task_runs_again_on_request',
+    'tests/test_tasks.py::test_a_sentence_gets_a_specification_and_reaches_its_door']}
+  trace: [ops/missions.py, ops/mission_extras.py, ops/shopping.py, ops/conductor.py, ops/shop_steps.py, ops/desk_steps.py, ops/tasks.py]
+- id: TSK-22
+  group: Plan graph and durable steps
+  phase: 6
+  title: A recurring task runs its plan each time, fanned out
+  statement: A recurring task shall keep its plan as a template that each occurrence copies with its own window, and
+    a step that lists items shall run once per item in parallel as headroom allows, the next step getting every
+    result; a briefing's plan shall be collect, research per topic group, write, check, deliver.
+  type: functional
+  priority: must
+  status: partial
+  parents: [SN-19, SN-20]
+  sources: [docs/SWARM-DESIGN.md]
+  findings: [FND-84, FND-85]
+  acceptance: 'Test: one occurrence of a weekly briefing runs a collect step, three research steps in parallel and a
+    write, check and deliver step, and the next occurrence copies the template again.'
+  gap: A recurring task's occurrences copy its plan, each with its own steps, trace, result and verdict against the
+    definition of done (a run that found nothing new is kept and not judged); a step with items fans out; a briefing
+    runs collect, a scout per key question in parallel, write and deliver. The check step is the writer's citation
+    check inside the write step, not a step of its own.
+  verify: {method: test, by: [tests/test_conductor.py::test_the_scouts_findings_reach_the_desk_through_the_runners_own_folder, 'tests/test_conductor.py::test_a_delivered_briefing_grows_its_topic_wiki_and_a_deleted_one_stays_deleted',
+    'tests/test_staffing.py::test_each_run_of_a_recurring_task_is_judged_on_its_own_and_a_quiet_run_is_not',
+    'tests/test_desk.py::test_the_collected_events_survive_the_hand_over_and_each_finding_cites_its_links',
+    'tests/test_conductor.py::test_a_briefing_runs_collect_scouts_write_and_deliver_and_each_desk_step_hands_on_its_work',
+    'tests/test_conductor.py::test_a_scheduled_task_runs_at_once_then_each_time_from_its_template_with_its_own_trace',
+    'tests/test_conductor.py::test_a_step_with_items_fans_out_in_parallel_and_the_next_waits_for_every_copy']}
+  trace: [ops/staffing.py, images/desk/desk.py, ops/desk.sh, ops/conductor.py, ops/desk_steps.py, ops/tasks.py, images/mission-control/web/static/app-base.js]
+- id: TSK-23
+  group: Observability of the swarm
+  phase: 7
+  title: What every step used and made is recorded
+  statement: Every page, search result list, job ad, filing, price series, vault note and memory a step reads, and
+    every finding, draft, report and delivery it makes, shall be recorded as an artifact with W3C PROV's used,
+    generated and derived links, and the report's citations shall mark which sources it cited.
+  type: functional
+  priority: must
+  status: implemented
+  parents: [SN-19, SN-20]
+  sources: [docs/SWARM-DESIGN.md]
+  acceptance: 'Test: a finished occurrence''s record links each source to the step that read it, the findings to the
+    report, and marks the cited sources.'
+  verify: {method: test, by: ['tests/test_provenance.py::test_a_step_s_tool_calls_are_its_used_artifacts_and_its_finding_is_derived_from_the_pages_it_names',
+    'tests/test_provenance.py::test_the_run_s_answer_is_derived_from_the_last_findings_and_marks_what_it_cites',
+    'tests/test_provenance.py::test_the_desk_s_chosen_items_are_read_and_a_delivery_comes_from_the_report',
+    'tests/test_provenance.py::test_a_tool_call_maps_to_its_artifact_or_to_nothing']}
+  trace: [ops/provenance.py, ops/conductor.py]
+- id: TSK-24
+  group: Observability of the swarm
+  phase: 7
+  title: The swarm map
+  statement: Each task occurrence shall show its swarm as a flow of sources, agents, findings, writer and outputs,
+    and as a timeline with one lane per agent run, live while it runs; a tap on any part shall show what it came
+    from and what it fed, and sources read but not cited shall be told apart.
+  type: interface
+  priority: must
+  status: implemented
+  parents: [SN-19, SN-20]
+  sources: [docs/SWARM-DESIGN.md]
+  acceptance: 'Test: the map of a recorded occurrence has every artifact and run of its record, and its lineage of
+    the report reaches every cited source; checked on screen at 375 px.'
+  verify: {method: test, by: ['tests/test_provenance.py::test_the_run_s_answer_is_derived_from_the_last_findings_and_marks_what_it_cites',
+    'tests/test_server.py::test_a_task_run_s_map_is_served_as_the_runner_wrote_it_and_the_newest_run_without_a_number']}
+  trace: [ops/provenance.py, images/mission-control/server.py, images/mission-control/web/static/app-base.js]
+- id: TSK-25
+  group: Observability of the swarm
+  phase: 7
+  title: Telemetry history and dashboard
+  statement: The stack shall keep a daily history per agent, model, harness and kind of task of runs, successes, the
+    judge's verdicts, tokens, median and 95th-percentile time and cost for a year, and show it on one dashboard with
+    filters, each number opening its runs.
+  type: functional
+  priority: should
+  status: implemented
+  parents: [SN-19, SN-20]
+  sources: [docs/SWARM-DESIGN.md]
+  acceptance: 'Test: a day of recorded runs gives the expected rows, and the dashboard''s numbers match them.'
+  verify: {method: test, by: ['tests/test_history.py::test_a_day_of_recorded_runs_gives_one_row_per_agent_model_harness_and_kind',
+    'tests/test_server.py::test_the_telemetry_history_is_served_and_says_when_there_is_none_yet']}
+  trace: [ops/history.py, images/mission-control/runrecord.py, images/mission-control/server.py, images/mission-control/web/static/app-base.js]
+- id: TSK-26
+  group: Observability of the swarm
+  phase: 7
+  title: One trace tree per occurrence in Phoenix
+  statement: Each task occurrence shall be exported to Phoenix as one trace whose root is the occurrence, its steps
+    the children and their model and tool calls under them, in the OpenTelemetry GenAI shape.
+  type: quality
+  priority: should
+  status: implemented
+  parents: [SN-19, SN-20]
+  sources: [docs/SWARM-DESIGN.md]
+  acceptance: 'Test: the spans of a recorded occurrence share one trace id and form a tree from the occurrence to
+    every model and tool call.'
+  verify: {method: test, by: [tests/test_tasks.py::test_a_task_s_planning_run_sits_under_the_task_s_run, 'tests/test_otlp.py::test_a_task_run_is_one_trace_from_the_run_to_every_model_and_tool_call']}
+  trace: [images/mission-control/otlp.py, images/mission-control/runrecord.py]
+- id: TSK-27
+  group: Observability of the swarm
+  phase: 7
+  title: Cost of every run at list price
+  statement: Every run, step and occurrence shall show its tokens and their cost at the provider's list price from
+    the gateway's price table, marked as what it would cost if paid.
+  type: functional
+  priority: should
+  status: implemented
+  parents: [SN-19, SN-20]
+  sources: [docs/SWARM-DESIGN.md]
+  acceptance: 'Test: a run of known tokens shows the list-price cost of its model.'
+  verify: {method: test, by: ['tests/test_history.py::test_a_run_of_known_tokens_costs_its_model_s_list_price',
+    'tests/test_history.py::test_every_model_the_stack_uses_has_a_list_price']}
+  trace: [ops/prices.py, config/prices.json, ops/staffing.py, ops/provenance.py, images/mission-control/web/static/app-base.js]
+- id: TSK-28
+  group: Customisation
+  phase: 8
+  title: Agent settings in the app
+  statement: The owner shall be able to change an agent's model, harness, tools, budgets and prompts in the app;
+    each change shall be replayed on the agent's replay set and apply only when it passes, show its diff and result,
+    and be reversible.
+  type: interface
+  priority: should
+  status: partial
+  parents: [SN-19, SN-20]
+  sources: [docs/SWARM-DESIGN.md]
+  gap: Model, harness, tools and standing instructions change in the app (Swarm → Team → Settings) as a replayed agent
+    change that applies through Build it, the deploy tap and Revert. An agent's budget (ops/keys.sh) and its prompt files
+    (prompts/<owner>.md, replay-gated by ops/prompts.py) are still changed through a build, not in the app.
+  acceptance: 'Test: a model change is replayed and applied on a pass and refused on a fail; a rollback restores the
+    card.'
+  verify: {method: test, by: ['tests/test_customise.py::test_an_agent_s_model_change_is_an_agent_change_put_up_for_its_replay',
+    'tests/test_customise.py::test_the_owner_s_change_passes_its_replay_only_when_no_score_drops',
+    'tests/test_swarm_phase5.py::test_a_deployed_build_is_reverted_in_one_step_through_the_merge_queue']}
+  trace: [ops/swarm_client.py, images/swarm/ledger.py, images/mission-control/web/static/swarm.js]
+- id: TSK-29
+  group: Customisation
+  phase: 8
+  title: A tool added to an agent is a grant
+  statement: Adding a tool to an agent in the app shall change its key's grants only after the owner's approval, and
+    shall be recorded as a security change; removing one shall need only the replay.
+  type: constraint
+  priority: must
+  status: implemented
+  parents: [SN-19, SN-20]
+  sources: [docs/SWARM-DESIGN.md]
+  acceptance: 'Test: adding a tool waits for the approval and records it; removing one applies after the replay.'
+  verify: {method: test, by: ['tests/test_customise.py::test_a_tool_added_is_a_grant_the_owner_confirms_and_a_tool_removed_needs_only_the_replay']}
+  trace: [ops/swarm_client.py, images/mission-control/web/static/swarm.js]
+- id: TSK-30
+  group: Customisation
+  phase: 8
+  title: The composer picks agents on request
+  statement: The composer shall offer automatic staffing by default and, on request, chosen agents, a model and an
+    effort for one task, and the plan shall show which choices were the owner's.
+  type: interface
+  priority: should
+  status: implemented
+  parents: [SN-19, SN-20]
+  sources: [docs/SWARM-DESIGN.md]
+  acceptance: 'Test: a task given with two chosen agents runs with them, and its plan names them as the owner''s
+    choice.'
+  verify: {method: test, by: ['tests/test_customise.py::test_the_composer_s_chosen_agents_and_model_do_the_steps_as_the_owner_s_choice']}
+  trace: [ops/tasks.py, ops/conductor.py, images/mission-control/web/static/app-base.js, images/mission-control/web/static/app-tasks.js]
+- id: TSK-31
+  group: Customisation
+  phase: 8
+  title: One look and wording across the app
+  statement: Every screen shall use one English format for dates and numbers, open a card's page on a tap, offer an
+    empty state's next action, and say what happens next after every action.
+  type: quality
+  priority: should
+  status: implemented
+  findings: [FND-86]
+  parents: [SN-19, SN-20]
+  sources: [docs/SWARM-DESIGN.md]
+  acceptance: 'Test: the app''s date and number helpers are the only ones used; every route renders an empty state
+    with an action when it has no data.'
+  verify: {method: test, by: ['tests/test_ux_standards.py::test_dates_times_and_numbers_are_formatted_by_the_app_s_helpers_only',
+    'tests/test_ux_standards.py::test_the_helpers_say_dates_and_numbers_one_english_way',
+    'tests/test_ux_standards.py::test_every_action_says_what_happens_next',
+    'tests/test_ux_standards.py::test_every_empty_state_offers_its_next_action',
+    'tests/test_ux_standards.py::test_the_checks_catch_what_they_are_for',
+    'tests/test_journeys.py::test_a_route_that_scrolls_sideways_at_375_px_and_each_other_screen_fault_fail_the_check']}
+  trace: [images/mission-control/web/static/app-base.js, images/mission-control/web/static/swarm.js, images/mission-control/web/static/shop.js, images/mission-control/web/static/app.css, images/mission-control/web/AGENTS.md, ops/journeys.mjs]
+- id: TSK-32
+  group: Customisation
+  phase: 8
+  title: Journey checks
+  statement: Checks shall follow the owner's journeys end to end, giving a task and following it to its result,
+    taking a test item through the decision queue with the owner's tap and checking its result, opening every route at
+    375 px in a browser, rendering an email at phone width and dry-running every make target, on demand and nightly, and
+    a failure shall reach the health board.
+  type: quality
+  priority: must
+  status: implemented
+  findings: [FND-86]
+  parents: [SN-19, SN-20]
+  sources: [docs/SWARM-DESIGN.md]
+  acceptance: 'Test: a route that scrolls sideways at 375 px, a broken make target, a mangled email headline and a
+    decision action that stopped working each fail the check.'
+  verify: {method: test, by: ['tests/test_journeys.py::test_a_route_that_scrolls_sideways_at_375_px_and_each_other_screen_fault_fail_the_check',
+    'tests/test_journeys.py::test_a_broken_make_target_fails_the_check_and_every_real_target_dry_runs',
+    'tests/test_journeys.py::test_a_mangled_email_headline_fails_the_check_and_the_desk_s_email_passes_it',
+    'tests/test_journeys.py::test_a_task_given_in_a_sentence_is_followed_to_its_result_and_a_broken_hand_over_fails_it',
+    'tests/test_journeys.py::test_the_replay_is_the_newest_finished_planned_task',
+    'tests/test_journeys.py::test_a_failed_journey_is_an_alert_on_the_health_board_and_runs_nightly',
+    'tests/test_journeys.py::test_the_browser_half_measures_what_the_owner_sees',
+    'tests/test_journeys.py::test_the_decide_journey_takes_a_test_item_through_the_queue_and_leaves_nothing_behind',
+    'tests/test_journeys.py::test_the_decide_journey_fails_when_deciding_stops_working',
+    'tests/test_journeys.py::test_the_decide_journey_says_so_when_the_runner_does_not_answer_or_the_browser_dies',
+    'tests/test_journeys.py::test_the_decide_journey_judges_what_the_browser_saw',
+    'tests/test_decisions.py::test_the_test_item_is_marked_and_changes_nothing_but_itself']}
+  trace: [ops/journeys.py, ops/journeys.mjs, ops/decisions.py, ops/crew.py, ops/systemd/crew-journeys.service, ops/systemd/crew-journeys.timer, Makefile]
+- id: TSK-33
+  group: Event fabric
+  phase: 9
+  title: The calendar as an event source
+  statement: The event bus shall read an ICS or CalDAV calendar the owner provides, read-only, so a rule can start a
+    task before or after a calendar event.
+  type: functional
+  priority: could
+  status: implemented
+  parents: [SN-19, SN-20]
+  sources: [docs/SWARM-DESIGN.md]
+  acceptance: 'Test: a recorded calendar gives an event before a meeting, and a rule on it starts its task.'
+  verify: {method: test, by: ['tests/test_reach.py::test_a_calendar_s_events_and_repeats_are_read_with_their_zones_moves_and_exclusions',
+    'tests/test_reach.py::test_a_calendar_rule_fires_once_its_time_before_the_event_and_the_address_stays_private']}
+  trace: [ops/ics.py, ops/events.py, images/mission-control/web/static/app-tasks.js]
+- id: TSK-34
+  group: Plan graph and durable steps
+  phase: 6
+  title: Improve a wiki or one page as a task
+  statement: On every wiki and on every wiki page the owner shall be able to say what is wrong or what to find out, and
+    the stack shall make it a task whose research steps see the wiki or page as it stands and whose last step folds the
+    findings into that wiki, the named page first, correcting what the findings contradict while keeping the old
+    fact as superseded.
+  type: functional
+  priority: should
+  status: implemented
+  parents: [SN-19, SN-10]
+  sources: ['chat 2026-11-01: Ideally i would want to fire refinement tasks for each level i am looking at']
+  findings: [FND-83]
+  acceptance: 'Test: a request on a page becomes a task whose research prompts carry the page and whose wiki step writes
+    the page asked about first; a wiki or page that is not there is refused; the vault wiki keeps its own folders and index.'
+  verify: {method: test, by: ['tests/test_tasks.py::test_improving_a_wiki_or_a_page_is_a_task_that_ends_writing_into_that_wiki',
+    'tests/test_conductor.py::test_a_wiki_refinement_s_research_sees_the_page_and_its_writer_folds_the_findings_in_page_first',
+    'tests/test_librarian.py::test_a_refinement_writes_the_pages_it_is_given_in_the_wiki_s_own_folders_and_leaves_the_vault_index']}
+  trace: [ops/tasks.py, ops/conductor.py, ops/mission_extras.py, images/mission-control/web/static/app-wiki-code.js]
+- id: TSK-35
+  group: Plan graph and durable steps
+  phase: 6
+  title: A step that cannot do its work is not done
+  statement: The intake shall see, for each agent it may plan with, what the agent can reach (the AI phone, the house,
+    e-mail, web research, the vault), and a step whose agent answers that it cannot do its work (its answer begins
+    "BLOCKED:") shall fail with that reason, without a second attempt, so that its task fails and the owner's message says
+    why, instead of the task being reported done.
+  type: functional
+  priority: must
+  status: implemented
+  parents: [SN-07, SN-12]
+  sources: ['chat 2026-11-01: It doesnt actually open the task when i click that. Rly its done? I didnt see ai phone do anything.']
+  findings: [FND-97]
+  acceptance: 'Test: a step that begins BLOCKED fails at once with its reason and its task fails with the reason in the
+    message; the agents the intake sees name the AI phone only for the agent that holds it.'
+  verify: {method: test, by: ['tests/test_conductor.py::test_a_step_that_says_it_is_blocked_fails_its_task_at_once_and_says_why',
+    'tests/test_tasks.py::test_the_plan_sees_what_each_agent_can_reach']}
+  trace: [ops/conductor.py, ops/tasks.py, prompts/shared.md]
+- id: TSK-36
+  group: Plan graph and durable steps
+  phase: 6
+  title: A step kind is declared by the module that owns it
+  statement: The Conductor shall build its adapters, step owners, memory needs and waiting harnesses from the step kinds
+    declared by itself and by each module in its list of domain modules, and shall reach a task kind's own briefing, build
+    and checkpoint logic only through that kind's hooks; when two modules claim one harness or task kind, or a step kind has
+    no function, the import of the Conductor shall fail with a message that names it.
+  type: quality
+  priority: should
+  status: implemented
+  parents: [SN-19]
+  sources: ['task brief 2026-11-06: a small step-kind registry in the Conductor, behaviour unchanged, not a plugin system']
+  acceptance: 'Test: a harness two modules claim and a step kind without its function stop the import with a message naming
+    them; the tables hold the values they held before; a task kind''s hooks are reached through a running task; the
+    shopping and desk steps run from their own modules.'
+  verify: {method: test, by: ['tests/test_conductor.py::test_two_modules_claiming_one_step_or_task_kind_are_refused_at_import',
+    'tests/test_conductor.py::test_a_step_kind_without_its_function_or_with_an_unknown_field_is_refused',
+    'tests/test_conductor.py::test_the_conductor_s_tables_keep_their_names_and_values_from_the_declarations',
+    'tests/test_conductor.py::test_a_task_kind_s_hooks_are_reached_and_the_conductor_names_no_change_logic',
+    'tests/test_conductor.py::test_the_moved_shopping_and_desk_steps_keep_their_place_in_the_plan_and_the_wiring',
+    'tests/test_conductor.py::test_a_price_watch_runs_its_shopping_agent_s_check_and_a_reached_target_starts_its_next_run',
+    'tests/test_conductor.py::test_a_briefing_runs_collect_scouts_write_and_deliver_and_each_desk_step_hands_on_its_work']}
+  trace: [ops/stepkinds.py, ops/conductor.py, ops/changes.py, ops/shop_steps.py, ops/desk_steps.py, ops/missions.py, ops/tasks.py]
+- id: TSK-40
+  group: Everything is a task
+  phase: 9
+  title: A task is yours or the stack's
+  statement: Every task shall have an owner, the stack for the work it gives itself (trials, probes, gates, the crew's
+    duties, onboarding, and a question to Claude one of its crew asked) and otherwise the owner; the owner's lists shall
+    show the owner's tasks, and the stack's shall be one filter away, never hidden.
+  type: functional
+  priority: must
+  status: implemented
+  parents: [SN-02, SN-19]
+  sources: [DEC-46, 'owner 2026-11-08: What is the difference between task and mission? I feel like tasks is better term and we should streamline and unify. ... How long it runs should not define the term. ... I feel we should keep 6 tabs and integrate tasks in agents. But tasks are not an afterthought. ... I want to see how tasks and agents connect ... Can Agents run without tasks? ... I feel like these should just be a special kind of tasks.']
+  acceptance: 'Test: a task given in the app and one a rule started are the owner''s; a trial''s and the Health doctor''s
+    question are the stack''s; tasks from before owners get theirs.'
+  verify: {method: test, by: ['tests/test_tasks_tab.py::test_a_task_is_yours_or_the_stack_s_by_who_gave_it']}
+  trace: [ops/tasks.py, images/mission-control/web/static/app-tasks.js]
+- id: TSK-41
+  group: Everything is a task
+  phase: 9
+  title: Every mission is a task for good
+  statement: Every mission shall be a task however old it is, an archived one as done, so that a repeating task never
+    leaves the Tasks list after seven days; a task's own shopping agent shall stay that task.
+  type: functional
+  priority: must
+  status: implemented
+  parents: [SN-19]
+  sources: [DEC-46]
+  acceptance: 'Test: a month-old briefing is a task that repeats; an archived one is done and not on this week''s list.'
+  verify: {method: test, by: ['tests/test_tasks_tab.py::test_every_mission_is_a_task_for_good_and_an_archived_one_is_done']}
+  trace: [ops/tasks.py]
+- id: TSK-42
+  group: Everything is a task
+  phase: 9
+  title: A crew duty is the stack's repeating task
+  statement: Each crew duty shall be the stack's repeating task, its plan the duty and its When the duty's timer, once per
+    duty and following the timer when it changes.
+  type: functional
+  priority: should
+  status: implemented
+  parents: [SN-07, SN-08]
+  sources: [DEC-46, "owner 2026-11-08: I feel like these should just be a special kind of tasks."]
+  acceptance: 'Test: every duty becomes one task of the stack''s, with its timer; a changed timer follows.'
+  verify: {method: test, by: ['tests/test_tasks_tab.py::test_each_crew_duty_is_the_stack_s_repeating_task']}
+  trace: [ops/tasks.py, ops/crew.py]
+- id: TSK-43
+  group: Everything is a task
+  phase: 9
+  title: Which agents worked on which task
+  statement: The run record shall say which agents worked on which task in a period of 1, 7, 30 or 90 days, each run
+    walked to the run its work started from and that named as a task (the Conductor's and its planning, a mission's run, a
+    build, a question to Claude, a chat, a crew duty); the tools an agent used and the Conductor shall never count as
+    agents, and the runs no task holds shall be counted apart.
+  type: functional
+  priority: must
+  status: implemented
+  parents: [SN-07, SN-17]
+  sources: [DEC-46, "owner 2026-11-08: I want to see how tasks and agents connect. I want to see the mesh."]
+  acceptance: 'Test: a change request''s steps under its intake run, a mission''s and a crew duty''s runs, a build, a
+    question and a chat each name their task; the AI phone is a tool of the chat''s task; what no task holds is counted.'
+  verify: {method: test, by: [tests/test_tasks_tab.py::test_no_map_cuts_a_name, tests/test_tasks_tab.py::test_the_network_shows_every_name_whole, tests/test_tasks_tab.py::test_a_tool_session_names_its_caller, 'tests/test_tasks_tab.py::test_the_network_names_each_run_s_task_and_keeps_tools_and_the_conductor_apart']}
+  trace: [images/mission-control/runrecord.py, images/mission-control/server.py]
+- id: TSK-44
+  group: Everything is a task
+  phase: 9
+  title: New task keeps exactly what it was given
+  statement: A task given in New task shall keep the kind (a cleanup included), the When (once, a schedule, an event with
+    its triggers, after a task) and where its results go that the owner set, each exactly; whatever was not set the
+    intake shall decide from the owner's words.
+  type: functional
+  priority: must
+  status: implemented
+  parents: [SN-19, SN-20]
+  sources: [DEC-46]
+  acceptance: 'Test: a cleanup on an event with e-mail keeps all three; an event without a trigger is refused with what to
+    add; nothing set leaves it to the intake.'
+  verify: {method: test, by: ['tests/test_tasks_tab.py::test_new_task_keeps_the_kind_the_when_and_the_delivery_it_was_given']}
+  trace: [ops/tasks.py, images/mission-control/web/static/app.js]

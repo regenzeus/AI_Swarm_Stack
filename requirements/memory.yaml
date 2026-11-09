@@ -1,0 +1,706 @@
+# Memory: the stack's memory systems as one system (the owner's request of 2026-10-30, DEC-31). Kinds follow CoALA
+# (episodic: what happened, semantic: what is true, procedural: how to act), plus the team's shared work and the search
+# over them. Part 1 makes it visible (MEM-01, MEM-02, MEM-07, MEM-09, MEM-10), part 2 coherent (MEM-03 to MEM-06), part 3
+# small and curated (MEM-08, MEM-12: the Librarian); part 4 tests its prompts (MEM-11).
+area: Memory
+prefix: MEM
+items:
+  - id: MEM-01
+    title: Every memory is in one inventory
+    statement: The stack shall keep one inventory of every memory store (vault notes, vault wiki, agent wikis, journals,
+      mission notes, long-term memory, the Ledger, skills, run records and the search index), refreshed every hour without
+      delaying the runner's state, with one snapshot a day for 120 days.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-10, SN-07]
+    sources: [DEC-31]
+    verify: {method: test, by: [tests/test_memory.py::test_every_memory_store_is_declared_with_its_kind_writers_readers_limit_and_curator,
+      tests/test_memory.py::test_a_store_that_cannot_be_measured_says_why_and_the_runner_never_waits]}
+    trace: [ops/memory.py, ops/missions.py]
+  - id: MEM-02
+    title: Each memory has one kind and one home
+    statement: Each memory store shall be declared with its kind (episodic, semantic, procedural, shared work or search),
+      what it holds, who writes it, who reads it, its limit and its curator.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-10, SN-16]
+    sources: [DEC-31]
+    verify: {method: test, by: [tests/test_memory.py::test_every_memory_store_is_declared_with_its_kind_writers_readers_limit_and_curator]}
+    trace: [ops/memory.py]
+  - id: MEM-03
+    title: One writer per wiki
+    statement: Each wiki shall be a Ledger artifact owned by its one writer (the curator for the vault wiki, the desk for a
+      briefing's topic wiki, the mission card for a mission's), and another agent's contribution shall reach it as a help on
+      that artifact (SWM-109) that the writer's next compile folds in, naming the helper, and marks as folded. The
+      Librarian's tidy (MEM-08) is the one other change to a wiki, and it adds no facts (DEC-32).
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-10, SN-17]
+    sources: [DEC-31, DEC-32]
+    verify: {method: test, by: [tests/test_memory_coherent.py::test_one_writer_per_wiki_folds_in_the_help_other_agents_gave_it]}
+    trace: [ops/swarm_client.py, ops/mission_extras.py, ops/wikis.py]
+  - id: MEM-04
+    title: Each agent reads the wikis its card names
+    statement: Each agent's card shall name the wikis it reads (by default its own, the vault wiki and wikis on related
+      subjects), a run's start shall search only those and its own wiki first of all, and a wiki built from the owner's personal mail
+      (a mission that holds a Gmail grant) shall reach only its own mission. A topic's newsletters (MIS-28) are bulk mail handed
+      through its report and do not make its wiki private (FND-121).
+    type: functional
+    priority: should
+    status: deprecated
+    superseded_by: MEM-24
+    parents: [SN-10, SN-05]
+    sources: [DEC-31]
+    findings: [FND-45, FND-121]
+    verify: {method: test, by: [tests/test_memory_coherent.py::test_a_run_reads_the_wikis_its_card_names_its_own_first_and_never_a_private_one]}
+    trace: [ops/journal.py, ops/registry.py, config/agents.yaml, ops/missions.py]
+  - id: MEM-05
+    title: One opening per run
+    statement: Every run's opening shall be assembled in one place in a fixed order within one budget (card instructions,
+      the owner's messages, its own state, its knowledge, the owner's facts, the team), with the swarm's pack fetched once by
+      the runner and the agent told not to call swarm_context again, and a mission's working state shall be a section of its
+      journal that each run replaces, not a second file.
+    type: functional
+    priority: should
+    status: deprecated
+    superseded_by: MEM-26
+    parents: [SN-10, SN-13]
+    sources: [DEC-31]
+    findings: [FND-42]
+    verify: {method: test, by: [tests/test_memory_coherent.py::test_a_run_s_opening_has_one_order_one_budget_and_the_swarm_pack_once, tests/test_memory_coherent.py::test_a_mission_s_working_state_lives_in_its_journal, tests/test_memory_coherent.py::test_an_old_note_moves_into_its_journal_even_when_its_mission_never_runs_again]}
+    trace: [ops/journal.py, ops/swarm_client.py, ops/missions.py]
+  - id: MEM-06
+    title: Personal facts in long-term memory, world knowledge in the wikis
+    statement: Long-term memory (Hindsight) shall hold the owner's own facts (preferences, decisions, people), the wikis
+      shall hold sourced knowledge of the world, and an agent's journal entry shall not be copied into long-term memory.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-10, SN-04]
+    sources: [DEC-31]
+    findings: [FND-42]
+    verify: {method: test, by: [tests/test_journal.py::test_entries_stay_out_of_long_term_memory_and_the_opening_recalls_the_owner_s_facts]}
+    trace: [ops/journal.py]
+  - id: MEM-07
+    title: Memory is observable
+    statement: The Stack page shall show every memory store with its kind, what it holds, who writes and reads it, its size,
+      its growth over 7 days, how full it is against its limit, who curates it and when that last ran, and its problems.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-07, SN-13]
+    sources: [DEC-31]
+    verify: {method: test, by: [tests/test_memory.py::test_the_inventory_measures_each_store_names_its_problems_and_reads_growth_from_daily_snapshots,
+      tests/test_memory.py::test_the_app_draws_the_map_the_access_and_the_memory_section]}
+    trace: [ops/memory.py, images/mission-control/web/static/app.js]
+  - id: MEM-08
+    title: Every memory has a limit and a curator
+    statement: Every memory store shall have a limit and a curator, or a stated rule that keeps it small. The Librarian (the
+      memory curator's weekly pass) shall lint every agent wiki, merge duplicate pages keeping every link of both (a merge
+      that would lose or add one is refused), mark contradictions only with sources already on the pages, write the hub
+      pages of the subjects two or more wikis share in the vault wiki, and run qmd cleanup on the search index, changing on
+      its own only what the vault's history restores (one commit per pass, of exactly the files it wrote) and leaving forgetting to the owner (KNW-08). A
+      store over its limit for 8 days shall raise an alert on its curator's health item.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-13, SN-09]
+    sources: [DEC-31, DEC-32]
+    findings: [FND-43, FND-44]
+    verify: {method: test, by: [tests/test_memory.py::test_the_inventory_measures_each_store_names_its_problems_and_reads_growth_from_daily_snapshots,
+      tests/test_librarian.py::test_the_librarian_merges_marks_and_lints_every_agent_wiki_and_changes_only_what_the_vault_restores,
+      tests/test_librarian.py::test_a_merge_that_would_lose_a_link_is_refused_and_a_page_changed_meanwhile_is_left,
+      tests/test_librarian.py::test_what_a_pass_wrote_before_a_step_failed_is_still_in_its_commit_and_nothing_else_is,
+      tests/test_librarian.py::test_a_pair_judged_two_subjects_is_not_asked_again_until_one_of_its_pages_changes,
+      tests/test_librarian.py::test_the_search_index_cleanup_is_measured_before_and_after,
+      tests/test_librarian.py::test_a_memory_over_its_limit_for_eight_days_alerts_its_curator]}
+    trace: [ops/memory.py, ops/librarian.py, ops/crew.py, ops/vault_check.py, images/mission-control/web/static/app.js]
+  - id: MEM-09
+    title: The wikis' map
+    statement: The Wiki tab shall open with a map of every wiki of the vault and of a mission that is not archived (one bubble
+      per wiki, sized by its pages, its name below, above or beside it where it covers no other name or bubble) and a line
+      between two wikis for the subjects both have (a page with the same title or alias), each subject named in full on a
+      tap; a tap on a bubble shall open its wiki (FND-83); an archived mission's wiki shall stay readable in a fold below the list.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-10, SN-07]
+    sources: [DEC-31]
+    findings: [FND-61, FND-83]
+    verify: {method: test, by: [tests/test_memory.py::test_the_wiki_map_has_every_wiki_and_the_subjects_they_share,
+      tests/test_memory.py::test_an_archived_mission_s_wiki_is_listed_last_and_left_off_the_map,
+      tests/test_memory.py::test_the_map_s_names_cover_no_other_name_or_bubble_and_stay_in_the_box,
+      tests/test_memory.py::test_the_app_draws_the_map_the_access_and_the_memory_section,
+      tests/test_librarian.py::test_the_librarian_and_the_map_share_one_rule_for_a_subject]}
+    trace: [images/mission-control/server.py, images/mission-control/web/static/app-wiki-code.js, ops/librarian.py, images/mission-control/server.a2a.py]
+  - id: MEM-10
+    title: Who reads and writes which wiki
+    statement: The Wiki tab shall show for each wiki which agents read it and wrote it in the last 7 days, counted in runs,
+      from the run record (a run's start brief, its vault searches, its file reads and writes, and every page a result
+      compiles into a wiki).
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-07, SN-10]
+    sources: [DEC-31]
+    verify: {method: test, by: [tests/test_memory.py::test_who_read_and_wrote_which_wiki_comes_from_the_run_record,
+      tests/test_memory.py::test_the_app_draws_the_map_the_access_and_the_memory_section]}
+    trace: [images/mission-control/runrecord.py, ops/mission_extras.py, images/mission-control/web/static/app-wiki-code.js]
+  - id: MEM-11
+    title: Prompts are versioned files on the agent cards
+    statement: Every agent prompt of ops/ and the Hermes configure scripts shall live in prompts/<owner>.md, one file per
+      agent named by its card's prompts field (or by a service, or shared.md for templates more than one card uses). Each prompt
+      shall carry a version (the sha of its text) that every send records in the run's record, with the file's version in
+      mission and crew manifests and in the card hash. A prompt shall change only after a replay passed, which runs its last
+      cases with the last approved text and the new one on the agent's own model and needs valid answers as often and a
+      judge that prefers the old answer no more often. The
+      build gate (ops/check.sh) shall refuse a prompt text with neither its first-record baseline nor a passed replay.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-08, SN-16]
+    sources: [DEC-31, DEC-33]
+    verify: {method: test, by: [tests/test_prompts.py::test_no_agent_prompt_is_left_in_ops_or_a_configure_script,
+      tests/test_prompts.py::test_every_prompt_loads_from_its_file_with_its_version_and_keeps_it_through_format,
+      tests/test_prompts.py::test_a_send_records_the_ref_and_a_live_call_keeps_its_case,
+      tests/test_prompts.py::test_the_build_gate_refuses_a_changed_prompt_until_its_replay_passed,
+      tests/test_prompts.py::test_a_replay_the_judge_prefers_the_old_text_on_fails_and_the_gate_stays_shut,
+      tests/test_prompts.py::test_an_agent_s_standing_brief_is_replayed_on_the_requests_its_cases_bring, tests/test_prompts.py::test_a_filled_prompt_that_drives_tools_is_replayed_as_a_dry_run,
+      tests/test_prompts.py::test_the_deploy_hands_each_configure_script_its_soul_text_from_the_prompts_file,
+      tests/test_registry.py::test_a_card_names_its_own_prompts_file_and_every_prompts_file_has_an_owner]}
+    trace: [ops/prompts.py, prompts/AGENTS.md, ops/registry.py, ops/deploy.py, ops/check.sh, ops/missions.py, config/hermes/configure.sh]
+  - id: MEM-13
+    title: The desk's and the scout's prompts are files too
+    statement: The Topic Desk's prompts (images/desk/desk.py), the research scout's brief and the research privacy check
+      (images/research/server.py) shall live in prompts/desk.md, prompts/scout.md and prompts/guard.md under the same
+      replay gate as every other prompt. Their containers shall read prompts/ through a read-only mount, log each
+      prompt's version, and the desk shall hand its calls back as replay cases; a research call whose prompt file cannot
+      be read shall be refused.
+    type: functional
+    priority: could
+    status: implemented
+    parents: [SN-08, SN-16]
+    sources: [DEC-33]
+    findings: [FND-46]
+    verify: {method: test, by: [tests/test_prompts.py::test_no_agent_prompt_is_left_in_ops_or_a_configure_script,
+      tests/test_deploy.py::test_every_image_has_a_tag_the_deploy_rebuilds_also_one_run_from_an_ops_script,
+      tests/test_prompts.py::test_the_desk_and_the_scout_read_their_prompts_from_the_mount_and_the_desk_hands_back_its_cases]}
+    trace: [images/desk/desk.py, images/research/server.py, ops/desk.sh, ops/deploy.py, ops/mission_extras.py, compose/apps.yaml, prompts/desk.md, prompts/scout.md, prompts/guard.md]
+  - id: MEM-12
+    title: A changed fact is superseded, not overwritten
+    statement: When a compile changes a fact on an agent wiki's page, the old fact shall be kept under "Superseded" with the
+      date it stopped holding, and a line once under Superseded shall never be dropped; a page whose Contradictions section
+      remains shall stay contested; and the Librarian shall mark an agent wiki's page not confirmed for 90 days as stale
+      (a later compile that confirms it clears the mark). Long-term facts are never overwritten by an agent; the owner
+      retires them (KNW-08).
+    type: functional
+    priority: could
+    status: implemented
+    parents: [SN-10, SN-09]
+    sources: [DEC-31, DEC-32]
+    verify: {method: test, by: [tests/test_librarian.py::test_a_compile_keeps_superseded_lines_and_a_contested_page_and_skips_merged_stubs,
+      tests/test_librarian.py::test_the_librarian_merges_marks_and_lints_every_agent_wiki_and_changes_only_what_the_vault_restores]}
+    trace: [ops/mission_extras.py, ops/librarian.py]
+  - id: MEM-14
+    title: A compile sees what it rewrites
+    statement: A wiki compile shall show the model each page it may rewrite whole up to 12,000 characters (past that its
+      start, with the cut marked), and every list line of the old page that the model was not shown shall stay on the
+      page under its own section.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-10, SN-09]
+    sources: [DEC-31, docs/MEMORY.md]
+    findings: [FND-103, FND-110]
+    verify: {method: test, by: [tests/test_librarian.py::test_a_line_written_while_the_compile_waited_stays, tests/test_librarian.py::test_a_compile_sees_a_long_page_whole_and_keeps_the_lines_it_was_not_shown]}
+    trace: [ops/mission_extras.py]
+  - id: MEM-15
+    title: Hand-offs by reference past a budget
+    statement: A task step shall get each earlier result it builds on whole while they fit a budget together, and past it
+      each result's marked start, its size and where the whole result is (a file in an OpenCode step's work folder, a
+      vault file for a Hermes step; a Claude or build step takes them whole apart from its brief), and a prompt too long
+      for one command-line argument shall be refused with its size.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-10, SN-13]
+    sources: [docs/MEMORY.md]
+    findings: [FND-104]
+    rationale: FND-99 moved the results out of the builder's brief, but every step still gets them copied whole; a Hermes
+      step takes its prompt as one argument, which Linux refuses past 128 KiB. A size contract test pushes a
+      150,000-character result through every adapter.
+    verify: {method: test, by: [tests/test_conductor.py::test_a_result_too_long_for_a_prompt_goes_by_reference_through_every_adapter]}
+    trace: [ops/conductor.py]
+  - id: MEM-16
+    title: A cut a model reads shows itself
+    statement: Every cut of text going to a model (cap reason prompt) shall carry the textcap marker with how much is
+      missing, and ops/truncation.py shall refuse a prompt cap without it.
+    type: quality
+    priority: should
+    status: implemented
+    parents: [SN-10, SN-13]
+    sources: [docs/MEMORY.md, docs/TRUNCATION-AUDIT.md]
+    findings: [FND-105]
+    rationale: 92 of 96 prompt caps sliced without a mark; FND-100 and FND-103 showed that a model takes an unmarked cut
+      for the whole text. All 98 prompt caps are marked since the audit of 2 November.
+    verify: {method: test, by: [tests/test_truncation.py::test_every_cap_names_its_reason_and_an_unexplained_one_fails_the_check]}
+    trace: [ops/truncation.py, ops/textcap.py]
+  - id: MEM-17
+    title: A contradiction is worked to an end
+    statement: A contradiction the Librarian marks shall become a Ledger item owned by its wiki's writer, the writer's next
+      compile shall be told of it, a mark open for 14 days shall start a refinement task (TSK-34) that researches it, and
+      a settled claim shall move under Superseded with the item closed.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-10, SN-09]
+    sources: [DEC-31, DEC-32, docs/MEMORY.md]
+    findings: [FND-106]
+    verify: {method: test, by: [tests/test_keeper.py::test_a_contradiction_on_a_wiki_becomes_a_dispute_a_task_researches_and_its_settling_closes,
+      tests/test_keeper.py::test_a_dispute_its_research_could_not_settle_stays_marked_on_both_pages,
+      tests/test_keeper.py::test_the_compile_is_told_of_the_disputes_on_the_pages_it_rewrites]}
+    trace: [ops/keeper.py, ops/mission_extras.py, images/swarm/ledger.py]
+  - id: MEM-18
+    title: Long-term memory holds each fact once
+    statement: Long-term memory shall keep one fact for one statement of the owner (a repeat confirms it, it is not added
+      again), in English, with no facts on agents' runs, and a fact on a passing state shall carry the date it held; its
+      retain mission shall ask for this at the source and the Memory Keeper (MEM-21) shall fix what still gets in.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-10, SN-04]
+    sources: [DEC-31, docs/MEMORY.md]
+    findings: [FND-107]
+    rationale: 'Measured 2 Nov: the same voice preference up to five times, facts in Spanish and German, about 35 facts on
+      agent runs, and 55 forget suggestions waiting since 30 October (KNW-08 retires only on the owner''s tap; decision D2
+      in docs/MEMORY.md). The owner decided D2 on 2 Nov (DEC-40).'
+    verify: {method: test, by: [tests/test_keeper.py::test_the_judgement_is_checked_before_it_counts_and_the_older_fact_stays,
+      tests/test_keeper.py::test_each_change_is_logged_with_what_was_there_and_undone]}
+    trace: [ops/keeper.py, compose/apps.yaml]
+  - id: MEM-19
+    title: The inventory has every store
+    statement: The memory inventory (MEM-01) shall also declare a task's hand-offs (the steps' results), Hermes' own memory
+      (USER.md), the code graphs and the chats, each with its kind, writer, reader, limit and curator.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-10, SN-07]
+    sources: [DEC-31, docs/MEMORY.md]
+    findings: [FND-108]
+    verify: {method: test, by: [tests/test_memory.py::test_every_memory_store_is_declared_with_its_kind_writers_readers_limit_and_curator,
+      tests/test_memory.py::test_the_inventory_measures_each_store_names_its_problems_and_reads_growth_from_daily_snapshots]}
+    trace: [ops/memory.py, images/mission-control/web/static/app.js]
+  - id: MEM-20
+    title: A memory trial
+    statement: The stack shall have a trial with an answer key for the Memory Keeper's judgement (eval/trials/memory.yaml) that
+      plants faults among true facts and scores the changes it would make itself (precision, a true fact touched counts
+      against it) and the faults it finds (recall), and a contradiction of the owner's facts shall count as found only when the older of the two is dated (DEC-44);
+      its last three runs on the current prompt shall gate the Keeper's automatic changes.
+    type: process
+    priority: should
+    status: implemented
+    parents: [SN-10, SN-08]
+    sources: [docs/MEMORY.md, docs/SWARM-TRIALS.md, DEC-44]
+    verify: {method: test, by: [tests/test_keeper.py::test_the_trial_scores_the_automatic_changes_against_the_answer_key,
+      tests/test_keeper.py::test_nothing_is_changed_while_the_trial_has_not_passed_three_times_on_the_current_prompt]}
+    trace: [ops/keeper.py, eval/trials/memory.yaml]
+  - id: MEM-21
+    title: One Memory Keeper, by rules
+    statement: 'One agent, the Memory Keeper, shall look after every memory store every night (its judgement parts on
+      Wednesdays) by these rules: it deletes nothing (a fact is soft-retired, rewritten with its old text kept, or
+      moved under Superseded); it writes every change with what was there, why and how to undo it, and the owner can
+      undo each from its page; it corrects world knowledge only through a research task''s sourced findings; it makes
+      no automatic change to the owner''s facts beyond retiring duplicates, test noise and agents'' runs, translating
+      into English and dating passing states, and dates the older when two of his facts disagree (DEC-44); it makes those changes
+      only while its trial passes (MEM-20) and at most 40 a pass; and it says once a week what it changed.'
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-10, SN-09, SN-13]
+    sources: [DEC-31, DEC-40, DEC-44, docs/MEMORY.md]
+    verify: {method: test, by: [tests/test_keeper.py::test_each_change_is_logged_with_what_was_there_and_undone,
+      tests/test_keeper.py::test_nothing_is_changed_while_the_trial_has_not_passed_three_times_on_the_current_prompt,
+      tests/test_keeper.py::test_the_crew_saves_the_keeper_s_report_and_undoes_a_change_on_the_owner_s_tap]}
+    trace: [ops/keeper.py, ops/crew.py, ops/missions.py, config/agents.yaml, ops/systemd/crew-memory.timer, prompts/memory.md,
+      images/mission-control/server.py, images/mission-control/web/static/app-base.js, images/mission-control/guide/08-knowledge.md]
+  - id: MEM-22
+    title: One catalogue of memory collections
+    statement: 'The stack shall keep one catalogue of memory collections (public/memory-catalogue.json), written with the
+      hourly inventory, that lists for each collection its id, sector, parent, the question it answers, size, last change,
+      trust (exact, compiled or extracted), access class, writer and retrieval methods, and how many runs were given it in 7
+      days.'
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-10, SN-07]
+    sources: [DEC-44, docs/MEMORY-STACK.md]
+    verify: {method: test, by: [tests/test_memstack.py::test_the_catalogue_lists_every_collection_with_its_card, tests/test_memstack.py::test_a_split_wiki_s_parts_are_collections_with_their_parent]}
+    trace: [ops/memstack.py, ops/memory.py]
+  - id: MEM-23
+    title: The memory's settings in one file
+    statement: 'The budgets of each run kind, the presets by role, the ranking weights and the memory agent''s limits shall
+      live in config/memory.yaml; each run shall record the budget it used, and a trial arm shall be able to override a budget
+      for its runs.'
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-10, SN-16]
+    sources: [DEC-44, docs/MEMORY-STACK.md]
+    verify: {method: test, by: [tests/test_memstack.py::test_budgets_come_from_one_file_and_a_trial_arm_can_override_them]}
+    trace: [config/memory.yaml, ops/memstack.py]
+  - id: MEM-24
+    title: Subscriptions come from the card's roles
+    statement: 'A run shall be subscribed to the collections config/memory.yaml presets for its card''s roles, filled for its
+      repository, its own wiki and itself; every card of config/agents.yaml that runs a model shall resolve to one subscription
+      or more, so a new card is wired by its roles alone.'
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-10, SN-17]
+    sources: [DEC-44, docs/MEMORY-STACK.md]
+    verify: {method: test, by: [tests/test_memstack.py::test_every_card_resolves_to_subscriptions_by_its_roles, tests/test_memstack.py::test_a_coding_run_is_subscribed_to_its_repository]}
+    trace: [ops/memstack.py, config/memory.yaml, config/agents.yaml]
+  - id: MEM-25
+    title: Every opening ends with the offer
+    statement: 'Every opening shall end with the offer: the collections whose title or question match the task and that the run
+      is not subscribed to, at most the configured number, each with its id and the question it answers, and how to subscribe
+      to it.'
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-10, SN-17]
+    sources: [DEC-44, docs/MEMORY-STACK.md]
+    verify: {method: test, by: [tests/test_memstack.py::test_the_opening_offers_matching_collections_it_did_not_give]}
+    trace: [ops/memstack.py]
+  - id: MEM-26
+    title: The opening is chosen for the task within its budget
+    statement: 'Every run''s opening shall be assembled by ops/memstack.py from its subscriptions: the items its run kind
+      always needs first, then every other item ranked by its match to the task times its trust times its freshness times the
+      share of its collection that earlier runs of the same kind used, placed in rank order while it fits the run kind''s
+      budget; the highest-ranked item that does not fit shall be cut to what is left when 800 characters or more are left, each
+      cut naming its size and where the whole is, and every other item that does not fit shall be listed as a pointer with its
+      ref.'
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-10, SN-03]
+    sources: [DEC-44, docs/MEMORY-STACK.md]
+    verify: {method: test, by: [tests/test_memstack.py::test_a_shared_role_s_entries_about_other_tasks_are_named_not_given, tests/test_memstack.py::test_must_items_come_first_and_the_rest_fill_by_rank, tests/test_memstack.py::test_what_does_not_fit_is_a_pointer_not_a_silent_cut]}
+    trace: [ops/memstack.py, ops/journal.py]
+  - id: MEM-27
+    title: What a run was given is recorded
+    statement: 'Each opening shall record what it gave (collection, ref, characters, budget) in the run record and in the
+      memory''s given folder.'
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-07, SN-10]
+    sources: [DEC-44, docs/MEMORY-STACK.md]
+    verify: {method: test, by: [tests/test_memstack.py::test_an_opening_records_what_it_gave]}
+    trace: [ops/memstack.py]
+  - id: MEM-28
+    title: One memory tool
+    statement: 'Agents shall reach memory through one MCP server per access class (memory, memorypublic) with four tools:
+      search (one search over every collection the caller may read, grouped by collection), open (one entry whole), subscribe
+      (a collection''s part for this task) and note (a candidate for memory); the runner shall answer each call in its own
+      thread.'
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-10, SN-17]
+    sources: [DEC-44, docs/MEMORY-STACK.md]
+    verify: {method: test, by: [tests/test_memstack.py::test_a_scope_word_means_its_collections_and_a_subscription_counts_for_the_run, tests/test_memory_tool.py::test_the_memory_server_has_four_tools]}
+    trace: [images/mission-control/server.py, config/litellm/config.yaml, ops/memstack.py, ops/missions.py, ops/claude_tasks.py, config/hermes/configure-builder.sh, images/mission-control/server.mcp.py, ops/missions.requests.py]
+  - id: MEM-29
+    title: The memory tool replaces qmd, graphify and agent_note
+    statement: 'No key of ops/keys.sh shall grant qmd or graphify, Mission Control''s claude server shall have no agent_note
+      tool, and every card that runs Hermes or OpenCode with tools, and the Claude builder, shall hold memory or memorypublic.'
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-10, SN-05]
+    sources: [DEC-44, docs/MEMORY-STACK.md]
+    verify: {method: test, by: [tests/test_memory_tool.py::test_memory_replaces_qmd_graphify_and_agent_note_in_every_grant]}
+    trace: [ops/keys.sh, config/agents.yaml, images/mission-control/server.py, prompts/builder.md, prompts/mission.md, prompts/main.md]
+  - id: MEM-30
+    title: Each collection has an access class
+    statement: 'Each collection shall carry an access class: all; private (a wiki built from the owner''s mail, for its own
+      mission); own (an agent''s journal, for that agent and the memory agent); owner (long-term memory, for the assistant
+      whole and for other agents as a task-matched recall within the owner budget). Search, open and the opening shall enforce
+      it. The scout and the coders (a shell on others'' code) shall get memorypublic, which reads the World without private
+      wikis and filed sources, the Code and the How-to sectors only, and a coding opening shall hold no owner''s facts.
+      The class shall be the one the caller''s server sets, never derived again from the agent the caller names; a mission''s
+      other files (results, notes) shall take its wiki''s class, a vault file outside every sector shall be for the all class
+      only, and when the private wikis cannot be read every mission and topic wiki shall count as private.'
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-04, SN-05]
+    sources: [DEC-44, docs/MEMORY-STACK.md, docs/REVIEW-2026-11-07.md]
+    verify: {method: test, by: [tests/test_memstack.py::test_access_classes_are_enforced_in_search_open_and_the_opening, tests/test_memory_tool.py::test_memory_public_never_reads_owner_facts_private_wikis_or_journals, tests/test_memstack.py::test_a_card_that_holds_memorypublic_never_gets_the_owner_s_facts, tests/test_memstack.py::test_a_caller_s_own_word_for_who_it_is_never_opens_private_memory]}
+    trace: [ops/memstack.py, ops/keys.sh, images/mission-control/server.py, images/mission-control/server.mcp.py]
+  - id: MEM-31
+    title: A coding step's memory is built for its task
+    statement: 'A coding step''s opening shall be built from its task: the files its specification names or the code map''s
+      matches for its words, their change facts and tests, the failures and wiki lines that cite them and the repository''s
+      commands, within the code budget; the fixed wiki opening shall remain only as a trial arm (memory: wiki).'
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-14, SN-15]
+    sources: [DEC-44, docs/MEMORY-STACK.md]
+    verify: {method: test, by: [tests/test_memstack.py::test_a_coding_opening_is_built_from_its_task_not_the_whole_wiki, tests/test_memstack.py::test_a_coding_run_reads_its_repository_whatever_its_card_s_roles]}
+    trace: [ops/memstack.py, ops/changes.py, ops/builds.py, ops/claude_tasks.py, ops/repofacts.py, ops/replay.py]
+  - id: MEM-32
+    title: A coder gets a note on each file it reads
+    statement: 'A Claude Code build shall receive, the first time in a session it reads a file of its repository, a note within
+      the file-note budget with that file''s change facts, tests, and the failures and wiki lines that cite it, through a
+      PostToolUse hook that reads notes the runner prepared before the build; a trial arm shall be able to switch the notes
+      off.'
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-14, SN-15]
+    sources: [DEC-44, docs/MEMORY-STACK.md]
+    verify: {method: test, by: [tests/test_memory_hook.py::test_a_shell_command_that_reads_files_gets_their_notes, tests/test_memory_hook.py::test_the_first_read_of_a_file_returns_its_note_once, tests/test_memstack.py::test_the_build_prepares_notes_for_its_repository]}
+    trace: [config/hermes/claude-hooks/memory_hook.py, config/hermes/claude-hooks/claude-runtime-settings.json, ops/builds.py, ops/memstack.py]
+  - id: MEM-33
+    title: A step's memory comes from its own inputs
+    statement: 'Every task step''s opening, a change''s steps, its intake and a generic task''s steps alike, shall be built
+      from the step''s own inputs (the task''s goal or request, the step, its acceptance criteria and files, and the start of
+      each result it builds on) and recorded under the step''s run.'
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-10, SN-19]
+    sources: [DEC-44, docs/MEMORY-STACK.md]
+    verify: {method: test, by: [tests/test_memstack.py::test_a_step_s_opening_is_built_from_its_inputs, tests/test_memstack.py::test_a_generic_task_step_gets_its_memory_from_its_inputs]}
+    trace: [ops/changes.py, ops/memstack.py]
+  - id: MEM-34
+    title: A store that cannot be read stops nothing
+    statement: 'When a collection''s store cannot be read, the run shall go on and its opening shall name the collection and
+      the error.'
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-13, SN-10]
+    sources: [DEC-44, docs/MEMORY-STACK.md]
+    verify: {method: test, by: [tests/test_memstack.py::test_an_unreachable_store_is_named_and_the_run_goes_on]}
+    trace: [ops/memstack.py]
+  - id: MEM-35
+    title: Only what passes the rubric enters memory
+    statement: 'A note and a yielded result shall be candidates that enter memory only through reconcile: a candidate shall
+      name its evidence, shall not be the agent''s own run, and shall pass the rubric (prompts/memory.md RUBRIC: durable,
+      sourced, useful to a later run, and for a repository not a restatement of its code); its sector then decides add, confirm
+      (a repeat raises its tally and adds its date), skip or reject, and every outcome shall be written to the memory''s write
+      log with how to undo it.'
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-10, SN-09]
+    sources: [DEC-44, docs/MEMORY-STACK.md]
+    verify: {method: test, by: [tests/test_memwrite.py::test_a_confirmation_keeps_its_evidence_and_its_undo_takes_back_only_itself, tests/test_memwrite.py::test_a_candidate_without_evidence_or_about_its_own_run_is_rejected, tests/test_memwrite.py::test_a_lesson_is_added_once_and_a_repeat_confirms_it, tests/test_memwrite.py::test_every_outcome_is_logged_with_its_undo_and_undone, tests/test_memwrite.py::test_a_filed_fact_the_curator_already_took_in_is_not_called_undone]}
+    trace: [ops/memwrite.py, prompts/memory.md, ops/memstack.py]
+  - id: MEM-36
+    title: Each candidate reaches its sector
+    statement: 'A lesson shall go to its role''s playbook, a fact on the world to the filed sources for the vault wiki''s
+      curator, a failure to its repository wiki''s Fragile areas, the owner''s fact to long-term memory''s retain, and a skill
+      idea to the Distiller; a note shall never write a compiled wiki page itself.'
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-10, SN-17]
+    sources: [DEC-44, docs/MEMORY-STACK.md]
+    verify: {method: test, by: [tests/test_memwrite.py::test_a_fact_with_other_numbers_is_newer_and_a_short_lesson_is_not_a_longer_one, tests/test_memwrite.py::test_each_kind_of_candidate_reaches_its_sector]}
+    trace: [ops/memwrite.py, ops/repowiki.py]
+  - id: MEM-37
+    title: Results are onboarded into memory
+    statement: 'A Claude task''s answer on a repository shall be yielded: when the rubric keeps it, it is filed under the
+      repository''s sources and folded into its wiki by the Scribe; a mission''s result shall be filed as a dated source before
+      its wiki''s compile.'
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-10, SN-14]
+    sources: [DEC-44, docs/MEMORY-STACK.md]
+    verify: {method: test, by: [tests/test_memwrite.py::test_a_claude_task_answer_is_yielded_to_its_repository_wiki]}
+    trace: [ops/memwrite.py, ops/claude_tasks.py, ops/missions.py]
+  - id: MEM-38
+    title: Lessons with tallies
+    statement: 'Each role shall have one playbook of lessons (vault/howto/lessons/<role>.md), each lesson with its evidence and
+      a tally that starts at 1, rises by 1 when a run that was given it ends done and falls by 1 when such a run fails; a
+      lesson whose tally reaches 0 shall move under Retired.'
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-08, SN-10]
+    sources: [DEC-44, docs/MEMORY-STACK.md]
+    verify: {method: test, by: [tests/test_distiller.py::test_a_lesson_s_tally_follows_the_runs_that_were_given_it]}
+    trace: [ops/distiller.py, ops/memwrite.py, ops/memstack.py]
+  - id: MEM-39
+    title: Skills from repeated work
+    statement: 'Once a week the Distiller shall propose at most one skill from a tool sequence of three calls or more that
+      ended done in three of the assistant''s runs or more, on three titles or more, within 30 days, and that no skill covers;
+      a draft with a dangerous command shall be refused, and a draft shall be published only through the skills benchmark gate
+      (ops/curate.py), which rolls it back when the gate fails.'
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-08, SN-05]
+    sources: [DEC-44, docs/MEMORY-STACK.md]
+    verify: {method: test, by: [tests/test_distiller.py::test_a_repeated_successful_sequence_becomes_one_skill_proposal, tests/test_distiller.py::test_a_draft_with_a_dangerous_command_is_refused]}
+    trace: [ops/distiller.py, prompts/memory.md]
+  - id: MEM-40
+    title: A big wiki splits into parts
+    statement: 'When a wiki holds more pages than the split limit, the Librarian shall group its pages by their links and
+      shared sources into parts, write a hub page per part, make the wiki''s index list its parts first, and register each part
+      as a collection whose parent is the wiki; a part under the merge limit shall join the part it links to most; a
+      subscription to the wiki shall give its hub of parts and the pages of the parts that match the task; each split shall be
+      logged with its undo.'
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-10, SN-13]
+    sources: [DEC-44, docs/MEMORY-STACK.md]
+    verify: {method: test, by: [tests/test_librarian_split.py::test_a_wiki_over_the_limit_splits_into_parts_with_hubs, tests/test_librarian_split.py::test_a_subscription_to_a_split_wiki_gives_its_matching_parts, tests/test_librarian_split.py::test_a_split_is_undone]}
+    trace: [ops/librarian.py, ops/mission_extras.py, ops/memstack.py]
+  - id: MEM-41
+    title: An unread page is archived
+    statement: 'A page that no opening gave and no agent opened for the archive days, and that was not confirmed in that time,
+      shall be marked archived: search lists it, no opening gives it, and the wiki''s index keeps it under Archive; no page
+      shall be archived before the read record covers the archive days, and each archive shall be logged with its undo.'
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-10, SN-13]
+    sources: [DEC-44, docs/MEMORY-STACK.md]
+    verify: {method: test, by: [tests/test_librarian_split.py::test_an_unread_page_is_archived_and_kept_out_of_openings]}
+    trace: [ops/librarian.py, ops/memstack.py, ops/mission_extras.py]
+  - id: MEM-42
+    title: The memory agent acts without the owner
+    statement: 'The memory agent shall act without the owner''s approval (DEC-44): when two of the owner''s facts disagree, the
+      older shall be dated with the newer''s date; the facts of the move list shall leave long-term memory as filed sources
+      while the memory trials pass; a dispute its research could not settle shall stay marked on both pages; every such change
+      shall be logged with its undo, and none shall wait for the owner.'
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-02, SN-08]
+    sources: [DEC-44, docs/MEMORY-STACK.md]
+    verify: {method: test, by: [tests/test_keeper.py::test_two_owner_facts_that_disagree_the_newer_holds_and_it_can_be_undone, tests/test_keeper.py::test_the_move_list_is_applied_by_the_keeper_without_a_tap, tests/test_keeper.py::test_a_dispute_its_research_could_not_settle_stays_marked_on_both_pages]}
+    trace: [ops/keeper.py, ops/crew.py, ops/missions.py]
+  - id: MEM-43
+    title: One memory agent, three jobs
+    statement: 'The memory agent shall run the Keeper every night and the Librarian (tidy, splits, archive) and the Distiller
+      (skill proposals) every Wednesday, each bounded per pass by config/memory.yaml, and its page shall list its writes with
+      their undo.'
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-08, SN-13]
+    sources: [DEC-44, docs/MEMORY-STACK.md]
+    verify: {method: test, by: [tests/test_distiller.py::test_the_memory_agent_runs_the_librarian_and_distiller_weekly]}
+    trace: [ops/crew.py, ops/distiller.py, ops/librarian.py]
+  - id: MEM-44
+    title: Given and used are measured
+    statement: 'At a run''s end the stack shall record which given items the run used (opened, or named in its later calls,
+      answers or edits), the characters given and used, and its outcome; Stack -> Health and the Memory tab shall show, per run
+      kind over 30 days, the characters given a run, the share used and the budget.'
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-07, SN-03]
+    sources: [DEC-44, docs/MEMORY-STACK.md]
+    verify: {method: test, by: [tests/test_memstack.py::test_a_coding_step_s_use_is_read_from_the_engine_runs_inside_its_builds, tests/test_memstack.py::test_an_entry_without_a_path_counts_as_used_when_the_run_says_what_only_it_held, tests/test_memstack.py::test_used_items_are_found_in_the_run_s_later_events, tests/test_memstack.py::test_a_run_that_ends_twice_is_measured_once_per_opening, tests/test_memstack.py::test_health_shows_given_and_used_per_run_kind]}
+    trace: [ops/memstack.py, ops/runtime.py, images/mission-control/web/static/app.js]
+  - id: MEM-45
+    title: The Memory tab is the catalogue
+    statement: 'The Memory tab shall open on the catalogue grouped by sector (You, World, Code, How-to, Agents, Work), each
+      collection with the question it answers, size, trust, access, the runs it was given to in 7 days and the characters
+      given, each opening its own view; a How-to tab shall show each role''s lessons with their evidence and tally.'
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-07, SN-10]
+    sources: [DEC-44, docs/MEMORY-STACK.md]
+    verify: {method: test, by: [tests/test_memory_tool.py::test_the_memory_tab_shows_the_catalogue_by_sector]}
+    trace: [images/mission-control/web/static/app-memory.js, images/mission-control/web/static/app.css, images/mission-control/server.py, images/mission-control/server.wiki.py]
+  - id: MEM-46
+    title: Each run shows its memory
+    statement: 'A run''s page shall show what memory it was given (by collection, with characters, and what was cut or left as
+      a pointer), which items it used, what it yielded with each outcome and its undo, and for an assistant''s turn what
+      long-term memory recalled and kept.'
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-07, SN-10]
+    sources: [DEC-44, docs/MEMORY-STACK.md]
+    verify: {method: test, by: [tests/test_memory_tool.py::test_a_run_s_page_shows_its_memory]}
+    trace: [images/mission-control/web/static/app-runs.js, images/mission-control/server.py, ops/memstack.py, images/mission-control/server.wiki.py]
+  - id: MEM-47
+    title: Trials with answer keys gate the memory agent
+    statement: 'The stack shall have trials for the memory stack (ops/memtrials.py): coverage on a fixture (what must be given,
+      pointed to, or never reach an agent), mission continuity on the live missions, and recall in a trial bank of long-term
+      memory that starts empty each time, never the owner''s; the memory agent shall run coverage and continuity every night
+      and recall every Wednesday, and its structural changes (splits, archives, moves, skill proposals) shall run only while
+      each trial''s last result passed within 14 days.'
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-08, SN-16]
+    sources: [DEC-44, docs/MEMORY-STACK.md]
+    verify: {method: test, by: [tests/test_memtrials.py::test_an_opening_that_only_names_its_state_or_wiki_fails_continuity, tests/test_memtrials.py::test_the_coverage_trial_passes_on_its_fixture, tests/test_memtrials.py::test_the_continuity_trial_fails_when_the_last_result_is_missing, tests/test_memtrials.py::test_structural_changes_wait_while_a_trial_fails, tests/test_memtrials.py::test_the_recall_trial_writes_only_to_its_own_bank, tests/test_memtrials.py::test_the_memory_agent_runs_the_trials_every_night]}
+    trace: [ops/memtrials.py, eval/trials/memstack.yaml]
+  - id: MEM-48
+    title: A copy names where it came from
+    statement: 'A fact the memory agent copies into another sector shall name the id of the entry it came from: a long-term
+      fact moved to the wikis names its long-term id, a filed note names its candidate.'
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-10, SN-09]
+    sources: [DEC-44, docs/MEMORY-STACK.md]
+    verify: {method: test, by: [tests/test_memwrite.py::test_a_moved_fact_names_its_long_term_id, tests/test_memwrite.py::test_each_kind_of_candidate_reaches_its_sector]}
+    trace: [ops/missions.py, ops/memwrite.py, ops/missions.requests.py]
+  - id: MEM-49
+    title: Untrusted text is marked
+    statement: 'A candidate whose evidence is a web address or mail shall be filed marked untrusted, and an opening shall mark
+      each untrusted item.'
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-05, SN-10]
+    sources: [DEC-44, docs/MEMORY-STACK.md]
+    verify: {method: test, by: [tests/test_memwrite.py::test_each_kind_of_candidate_reaches_its_sector, tests/test_memstack.py::test_an_untrusted_item_is_marked_in_the_opening]}
+    trace: [ops/memwrite.py, ops/memstack.py]
+  - id: MEM-50
+    title: A repeated fact with a new detail is merged
+    statement: 'When a newer fact of the owner says the same as an older one and adds a detail, the Memory Keeper shall rewrite
+      the older to hold both in one sentence, keeping every number and date of both and in English, and retire the newer;
+      a merge into one fact shall happen once a pass, and each step shall be logged with its own undo.'
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-10, SN-08]
+    sources: [DEC-44, docs/MEMORY-STACK.md]
+    rationale: 'Commissioning on 7 Nov 2026: the owner''s voice-answer preference was held six times, each copy adding one detail,
+      and the Keeper''s rule "facts that add different details are not duplicates" kept them all.'
+    verify: {method: test, by: [tests/test_keeper.py::test_a_duplicate_that_adds_a_detail_is_merged_into_the_older_and_both_steps_undo]}
+    trace: [ops/keeper.py, prompts/memory.md, eval/trials/memory.yaml]
+  - id: MEM-51
+    title: A mission's working state is a section of its journal
+    statement: A mission's working state (where the work stands, what is open, the next step) shall be the Working state
+      section of its journal, replaced by each run, never a second file; an old NOTES.md shall move there at the mission's
+      next run.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-10, SN-13]
+    sources: [DEC-31, docs/MEMORY-STACK.md]
+    rationale: MEM-05 held this with the fixed opening; when it was deprecated (MEM-26) the working state, still built, was
+      left without a live requirement (review DOC-R4).
+    verify: {method: test, by: [tests/test_memory_coherent.py::test_a_mission_s_working_state_lives_in_its_journal]}
+    trace: [ops/journal.py, ops/missions.py]

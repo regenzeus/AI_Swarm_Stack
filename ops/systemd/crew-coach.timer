@@ -1,0 +1,8 @@
+[Unit]
+Description=Crew: the Coach (monthly, on the 2nd: after the month's scorecards settle)
+[Timer]
+OnCalendar=*-*-02 06:00
+Persistent=true
+RandomizedDelaySec=10min
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,12 @@
+# The checks this deployment adds to the judge for the repository "example" (GEN-15, docs/PLATFORM.md §7). The owner
+# writes them; the judge runs each after its own steps, and a failing one reopens the change with its problems.
+checks:
+  - name: build
+    where: windows                    # a job kind of the Windows worker; the judge adds commit (the base) and patch (the change)
+    job: maven.build
+    values: {repo: example, goal: verify}
+    minutes: 30
+  - name: lint
+    where: wsl                        # a command in the sandbox, like the test suite
+    command: make lint
+    minutes: 5

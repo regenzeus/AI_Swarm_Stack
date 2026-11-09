@@ -1,0 +1,6 @@
+[Unit]
+Description=Bring the stack online after a boot: wait for it, then open the gate for the jobs
+[Timer]
+OnBootSec=30s
+[Install]
+WantedBy=timers.target

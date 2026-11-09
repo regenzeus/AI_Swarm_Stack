@@ -1,0 +1,3 @@
+# An example work deployment's data class (GEN-14): customer data. Every feature that sends data out is off
+# (deployment.env), and egress.txt lists the only hosts the work may reach; ops/egress-host.sh enforces it on the host.
+class: customer

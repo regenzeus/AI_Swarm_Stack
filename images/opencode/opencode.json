@@ -1,0 +1,27 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "provider": {
+    "litellm": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "LiteLLM (ai-stack)",
+      "options": { "baseURL": "http://litellm:4000/v1", "apiKey": "{env:LITELLM_API_KEY}" },
+      "models": {
+        "gpt-sub": { "name": "ChatGPT gpt-6.1-sol (subscription)" },
+        "gpt-sub-fast": { "name": "ChatGPT gpt-6-luna (subscription)" }
+      }
+    }
+  },
+  "model": "litellm/gpt-sub",
+  "small_model": "litellm/gpt-sub-fast",
+  "mcp": {
+    "graphify": {
+      "type": "remote",
+      "url": "http://litellm:4000/mcp/",
+      "headers": { "Authorization": "Bearer {env:LITELLM_API_KEY}" },
+      "enabled": true
+    }
+  },
+  "permission": { "webfetch": "deny", "bash": "ask", "edit": "allow" },
+  "share": "disabled",
+  "autoupdate": false
+}

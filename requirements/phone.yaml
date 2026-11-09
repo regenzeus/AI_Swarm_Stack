@@ -1,0 +1,323 @@
+# The AI phone: Hermes' hands on the old test phone, with approvals, block list, Stop and the log.
+area: AI phone
+prefix: PHN
+items:
+  - id: PHN-01
+    title: What asks the owner waits for the answer
+    statement: Before anything on the AI phone that needs the owner's OK (a job, PHN-26; money, a setting, deleting), the AI phone
+      service shall wait up to 15 minutes for the answer and treat no answer as no; looking at the screen, going back and
+      going home need no approval.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05, SN-11]
+    sources: [images/phone/AGENTS.md, images/mission-control/guide/17-ai-phone.md]
+    verify: {method: test, by: [tests/test_phone.py::test_an_action_waits_for_the_owner]}
+    trace: [images/phone/phone.py]
+    findings: [FND-13]
+  - id: PHN-02
+    title: A time window the owner opens
+    statement: Where the owner opened a time window (minutes, or until he stops it), the AI phone service shall run
+      ordinary actions without asking until it ends, still logging each one; spending money, settings and deletions
+      shall ask each time, and typing or a web address only when it holds private data (DEC-38, PHN-19).
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-02, SN-11]
+    sources: [images/mission-control/guide/17-ai-phone.md]
+    verify: {method: test, by: [tests/test_phone.py::test_in_free_mode_only_an_address_or_text_with_private_data_asks, tests/test_phone.py::test_allow_for_a_few_minutes, tests/test_phone.py::test_allowance_any_length_or_until_stopped]}
+    findings: [FND-02, FND-13]
+  - id: PHN-03
+    title: Money and destructive steps always ask
+    statement: An action that would buy, pay, order or subscribe, uninstall an app, delete files or trim caches, or
+      change a phone setting shall need its own approval every time, even inside a time window, and that approval shall
+      open no window.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05]
+    sources: [images/phone/AGENTS.md]
+    verify: {method: test, by: [tests/test_phone.py::test_money_buttons_always_ask_even_in_a_time_window, tests/test_cleanup.py::test_uninstall_always_asks_even_inside_the_time_window, tests/test_cleanup.py::test_delete_always_asks_and_never_blocked_or_everything, tests/test_phone.py::test_start_in_ai_mode_asks_once_for_all_that_is_missing, tests/test_phone.py::test_only_a_plain_path_on_shared_storage_is_offered_for_deletion]}
+  - id: PHN-04
+    title: Blocked apps are never touched
+    statement: The AI phone service shall check the block list (banking, investment, payment, wallet, password,
+      authenticator, Play Store, Settings) before and after every action and before any screen read, and go to the
+      home screen when a blocked app is in front.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05]
+    sources: [images/phone/AGENTS.md]
+    verify: {method: test, by: [tests/test_phone.py::test_block_list_covers_money_passwords_and_settings, tests/test_phone.py::test_blocked_app_and_stop_refuse_everything, tests/test_phone.py::test_url_block_list_and_done_summary]}
+  - id: PHN-05
+    title: Stop ends it at once
+    statement: When the owner presses Stop, the AI phone service shall disconnect, refuse every action and approval, and
+      end any time window until he switches it on again.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-05, SN-11]
+    sources: [images/mission-control/guide/17-ai-phone.md]
+    verify: {method: test, by: [tests/test_phone.py::test_blocked_app_and_stop_refuse_everything, tests/test_phone_agents.py::test_stop_refuses_approvals, tests/test_phone.py::test_stop_ends_free_mode_and_an_approved_task_even_when_disconnected]}
+  - id: PHN-06
+    title: A secure lock is never entered
+    statement: If the AI phone has a PIN, pattern or password lock, then the AI phone service shall stop and never enter
+      it; a swipe lock may be dismissed.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05]
+    sources: [images/mission-control/guide/17-ai-phone.md]
+    verify: {method: test, by: [tests/test_phone.py::test_a_pin_locked_phone_is_never_unlocked]}
+  - id: PHN-07
+    title: The AI phone cannot approve itself
+    statement: Mission Control shall refuse approvals, time windows, grants, purchases and cleanup approvals that come
+      from the AI phone's own address; the AI phone may only press Stop.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05]
+    sources: [images/mission-control/guide/17-ai-phone.md]
+    verify: {method: test, by: [tests/test_server.py::test_the_ai_phone_is_known_by_the_address_the_proxy_wrote, tests/test_server.py::test_the_ai_phone_cannot_approve_its_own_actions, tests/test_phone_agents.py::test_approvals_are_refused_from_the_ai_phone, tests/test_server.py::test_the_ai_phone_can_ask_the_app_for_nothing_but_stop]}
+  - id: PHN-08
+    title: The phone service reaches one phone only
+    statement: The AI phone service's firewall shall allow traffic only to the AI phone's tailnet address, no internet
+      and no home network.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05, CST-12]
+    sources: [images/phone/AGENTS.md]
+    gap: The test covers the IPv6 rules failing closed (review CNX-R13); the IPv4 rules are checked by reading
+      images/phone/entrypoint.sh, and the mail connector's identical IPv6 rules (CNX-05) by the same test.
+    verify: {method: test, by: [tests/test_egress_ipv6.py::test_an_ipv6_rule_that_cannot_be_set_stops_a_container_that_has_ipv6]}
+    trace: [images/phone/entrypoint.sh, images/mail/entrypoint.sh]
+  - id: PHN-09
+    title: An offline phone is not scanned
+    statement: If the AI phone does not answer, then the AI phone service shall not scan its ports and shall retry with a
+      back-off of up to 10 minutes.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-13]
+    sources: ["incident 2026-10-29: 11,000 hanging connections exhausted rootless Docker's network"]
+    verify: {method: test, by: [tests/test_phone.py::test_an_offline_phone_is_not_port_scanned]}
+  - id: PHN-10
+    title: Reconnects after a restart
+    statement: When the AI phone service restarts, it shall reconnect to a paired phone within a minute without the
+      owner's action.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-13]
+    sources: [images/phone/phone.py]
+    verify: {method: test, by: [tests/test_phone_agents.py::test_a_paired_phone_reconnects_after_a_restart]}
+  - id: PHN-11
+    title: No approval card is left unanswerable
+    statement: If an approval card is left behind by a restart, then the AI phone service shall drop it, log why and ask
+      again where the work was mid-way (Starts in AI mode), and Mission Control shall tell the owner when an answer was
+      not taken.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-13, SN-02]
+    sources: ["owner 2026-10-29: Allow gave no feedback"]
+    verify: {method: test, by: [tests/test_phone.py::test_cards_left_by_a_restart_are_dropped_and_start_in_ai_mode_asks_again, tests/test_server.py::test_the_ai_phone_cannot_approve_its_own_actions]}
+  - id: PHN-12
+    title: The approval card answers at once
+    statement: When the owner taps Allow or Decline, the card shall change at once to what happens next and disappear
+      when the phone is done.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-02]
+    sources: ["owner 2026-10-29"]
+    verify: {method: inspection, by: [images/mission-control/web/static/app.js]}
+  - id: PHN-13
+    title: The screen sleeps
+    statement: The AI phone service shall let the screen sleep after 30 seconds when idle and not keep it on while
+      charging, and wake it before each action (while the agents work it stays on, PHN-17).
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-11]
+    sources: [DEC-08]
+    verify: {method: inspection, by: [images/phone/phone.py]}
+    findings: [FND-01]
+  - id: PHN-14
+    title: Starts in AI mode after a restart
+    statement: The AI phone shall come back to AI mode after a reboot (wireless debugging on through KeepADB, Tailscale
+      as always-on VPN, both exempt from battery saving), applied only after the owner's one Allow.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-13, SN-11]
+    sources: [DEC-13]
+    verify: {method: test, by: [tests/test_phone.py::test_start_in_ai_mode_asks_once_for_all_that_is_missing]}
+  - id: PHN-15
+    title: Deletes and uninstalls stay inside safe limits
+    statement: The AI phone service shall never uninstall blocked or system apps and shall delete only at allowed paths,
+      optionally only files older than a given age, showing files, size and dates in the approval.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05]
+    sources: [images/phone/AGENTS.md]
+    verify: {method: test, by: [tests/test_cleanup.py::test_uninstall_refuses_blocked_and_system_apps, tests/test_cleanup.py::test_old_personal_data_is_offered_for_deletion_by_age, tests/test_cleanup.py::test_delete_always_asks_and_never_blocked_or_everything]}
+  - id: PHN-16
+    title: Screenshots go to the owner
+    statement: Screenshots shall go to the owner's approval card and log; a model shall get one only when it asks with
+      phone_look(picture=true).
+    type: constraint
+    priority: should
+    status: implemented
+    parents: [SN-04]
+    sources: [images/phone/AGENTS.md]
+    verify: {method: inspection, by: [images/phone/phone.py]}
+  - id: PHN-17
+    title: The owner sees the AI phone work; idle, its screen is off
+    statement: While the agents act on the AI phone, its screen shall stay on until two minutes after the last action and
+      while an action waits for the owner's OK (up to 15 minutes); then it shall go off at once with the 30 s timeout
+      back. The Phone page shall show the screen's state and let the owner keep it on to watch (up to an hour) or turn
+      it off.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-11]
+    sources: [images/mission-control/guide/17-ai-phone.md]
+    verify: {method: test, by: [tests/test_phone.py::test_the_screen_stays_on_while_working_or_waiting_and_goes_off_when_idle, tests/test_server.py::test_the_owner_keeps_the_phone_screen_on_for_an_hour_at_most]}
+    trace: [images/phone/phone.py, images/mission-control/server.py, images/mission-control/web/static/app-devices.js, images/mission-control/server.devices.py]
+  - id: PHN-18
+    title: One OK for a whole phone task
+    statement: An agent shall ask the owner once for a phone task, naming its apps, the exact texts it will type and how
+      long (at most an hour); after one Allow, taps, swipes and keys in those apps and on the home screen, opening them
+      and typing those texts shall run without asking, counted on the task; anything else shall be refused until the agent asks for the wider job (PHN-26), money always asks;
+      the task shall end with phone_done (its summary says how many actions ran) or the owner's End task.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-02, SN-11]
+    sources: [requirements/decisions.yaml]
+    verify: {method: test, by: ['tests/test_phone.py::test_one_ok_covers_a_whole_task_and_money_still_asks']}
+    trace: [images/phone/phone.py, images/mission-control/server.py, images/mission-control/web/static/app-devices.js]
+  - id: PHN-19
+    title: Free mode asks only for private data
+    statement: Inside the owner's time window (free mode), typing and opening an app or a web address shall run without
+      asking unless the text or address holds an e-mail address, a phone number, an IBAN, a key or an IP address.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-04, SN-11]
+    sources: [requirements/decisions.yaml]
+    verify: {method: test, by: ['tests/test_phone.py::test_free_mode_types_freely_but_private_text_asks', 'tests/test_phone.py::test_in_free_mode_only_an_address_or_text_with_private_data_asks']}
+    trace: [images/phone/phone.py]
+  - id: PHN-20
+    title: A waiting request goes ahead when the permission comes
+    statement: A request waiting for the owner's OK shall run as soon as the owner opens free mode or approves a task that
+      covers it, without a second tap.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-02]
+    sources: [requirements/decisions.yaml]
+    verify: {method: test, by: ['tests/test_phone.py::test_a_waiting_request_goes_ahead_when_the_owner_opens_free_mode']}
+    trace: [images/phone/phone.py]
+  - id: PHN-21
+    title: The owner's permission outlives a restart
+    statement: The owner's free mode and an approved task shall stay in force across a restart of the AI phone service
+      (every deploy) until they run out, unless the owner pressed Stop.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-02]
+    sources: [requirements/decisions.yaml]
+    verify: {method: test, by: [tests/test_phone.py::test_free_mode_and_a_task_outlive_a_restart_but_not_stop]}
+    trace: [images/phone/phone.py]
+  - id: PHN-22
+    title: The AI phone becomes Hermes' speaker after one Allow
+    statement: On the owner's request (the House page), the AI phone service shall make Home Assistant the phone's
+      default digital assistant, grant it the microphone and exempt it from battery saving (so it hears its wake word
+      when locked), all on one card that only the owner's Allow applies
+      (never free mode or a task), report whether both are in place, and ask nothing once they are.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-11, SN-02]
+    sources: [docs/HOME-VOICE.md]
+    verify: {method: test, by: [tests/test_phone.py::test_home_assistant_becomes_the_phone_s_voice_assistant_after_one_allow]}
+    trace: [images/phone/phone.py, images/mission-control/server.py, images/mission-control/web/static/app.js]
+  - id: PHN-23
+    title: An app opens fresh when a blocked screen sits on top of it
+    statement: When opening an app brings up a blocked screen that app had opened (Android's settings), the AI phone
+      service shall open the app fresh at its start screen instead.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-11]
+    sources: [docs/HOME-VOICE.md]
+    verify: {method: test, by: [tests/test_phone.py::test_an_app_opens_fresh_when_a_blocked_screen_sits_on_top_of_it]}
+    trace: [images/phone/phone.py]
+  - id: PHN-24
+    title: An approved cleanup step says so, can be undone, and waits for the phone
+    statement: An approved cleanup step shall show as approved with an Undo until the AI phone starts it, then as running,
+      then its result. While the phone is not connected the app shall say so, and approved steps shall wait for it up to
+      4 hours instead of failing; Approve all shall also cover failed steps that were shown.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-02]
+    findings: [FND-120]
+    sources: ['chat 2026-11-04: Clicked approved all here. I feel the feedback could be better. Individuals could say approved
+        and undo or something? Also i dont see ai phone doing stuff yet.']
+    verify: {method: test, by: [tests/test_phone_agents.py::test_an_approved_step_can_be_undone_until_the_phone_starts_it_and_never_runs,
+      tests/test_phone_agents.py::test_once_the_phone_has_started_a_step_undo_says_it_is_too_late_and_the_step_shows_it,
+      tests/test_phone_agents.py::test_approve_all_takes_failed_steps_too_when_they_were_shown,
+      tests/test_phone_agents.py::test_the_app_shows_approved_with_undo_and_says_when_the_phone_is_not_connected,
+      tests/test_phone.py::test_a_step_waits_while_the_phone_is_not_connected_and_one_that_ran_out_goes_through_to_say_so,
+      tests/test_phone.py::test_a_step_undone_just_as_it_starts_does_not_run_or_block_the_next]}
+    trace: [ops/phone_agents.py, images/phone/phone.py, images/mission-control/web/static/app-tasks.js, images/mission-control/server.py]
+  - id: PHN-25
+    title: The pairing does not lapse
+    statement: Starting in AI mode shall include switching off Android's limit that drops a paired computer after 7 days, on the
+      owner's Allow; and when the phone answers but refuses the connection, the app shall name a lapsed pairing and offer to
+      pair again.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-13, SN-02]
+    findings: [FND-120]
+    sources: ['chat 2026-11-04: AI Phone will bott up after restart into AI controlable state as long as it has internet is the
+        requirement.', docs/PHONE-ANYWHERE.md]
+    verify: {method: test, by: [tests/test_phone.py::test_starting_in_ai_mode_keeps_the_pairing_from_lapsing,
+      tests/test_phone.py::test_a_refused_way_in_names_both_causes_and_the_pairing]}
+    trace: [images/phone/phone.py, images/mission-control/web/static/app.js, docs/PHONE-ANYWHERE.md]
+  - id: PHN-26
+    title: The owner approves whole jobs, not single steps
+    statement: A tap, swipe, key, typing or opening an app or address on the AI phone shall run only inside a job the owner approved or
+      in free mode. Otherwise it shall be refused without a card, telling the agent to ask once for the whole job. A step outside the
+      job shall be refused the same way. Money, phone settings, deleting and private text in free mode keep their own card, and the
+      set-up for starting in AI mode takes one Allow.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-02]
+    sources: ['chat 2026-11-04: I also do not want to allow every singel action on AI Phone. I want to allow more macro.']
+    verify: {method: test, by: [tests/test_phone.py::test_a_single_step_gets_no_card_and_tells_the_agent_to_ask_for_the_job,
+      tests/test_phone.py::test_a_job_covers_its_steps_and_a_step_outside_it_is_refused_not_carded,
+      tests/test_phone.py::test_money_and_private_text_in_free_mode_keep_their_own_card,
+      tests/test_phone.py::test_start_in_ai_mode_asks_once_for_all_that_is_missing,
+      tests/test_phone.py::test_a_setting_goes_ahead_when_the_owner_is_still_in_settings]}
+    trace: [images/phone/phone.py, prompts/main.md, ops/missions.py, images/mission-control/web/static/app.js,
+      images/mission-control/guide/17-ai-phone.md]
+  - id: PHN-27
+    title: The AI phone's page is easy to find
+    statement: The AI phone's page shall be one tap away from the top of Home, Agents and Stack and from its cleanup steps, shall be found
+      by searching for pairing or wireless debugging, and Home shall list a long disconnection under what needs the owner.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-03]
+    sources: ['chat 2026-11-04: Where are these apps Phone page? No idea how to find which is itself a big issue. Phone page needs to be
+        easier to find.']
+    verify: {method: test, by: [tests/test_phone.py::test_the_phone_page_is_one_tap_from_home_agents_stack_and_search]}
+    trace: [images/mission-control/web/static/app-base.js, images/mission-control/web/static/tools.json]

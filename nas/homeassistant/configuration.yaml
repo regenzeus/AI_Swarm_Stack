@@ -1,0 +1,13 @@
+# Home Assistant configuration, first written by `make ha-deploy` (nas/homeassistant). Once it exists on the NAS the
+# stack never overwrites it; the owner and Home Assistant's own UI own it from then on.
+default_config:
+
+recorder:
+  purge_keep_days: 10
+
+http:
+  ip_ban_enabled: true
+  login_attempts_threshold: 10
+
+logger:
+  default: warning

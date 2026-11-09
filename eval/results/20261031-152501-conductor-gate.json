@@ -1,0 +1,72 @@
+{
+ "task": 74,
+ "restarted": {
+  "at": "2026-10-31T15:21:51+01:00",
+  "while": {
+   "3": "waiting",
+   "4": "pending"
+  },
+  "done_before": {
+   "1": 1
+  }
+ },
+ "checks": {
+  "finished": true,
+  "restarted during step 3 or 4": true,
+  "no finished step ran twice": true,
+  "three harnesses": true,
+  "one trace: the task's run holds its five steps": true
+ },
+ "steps": [
+  {
+   "idx": 1,
+   "agent": "scout",
+   "harness": "hermes",
+   "status": "done",
+   "attempts": 1,
+   "started": "2026-10-31T15:21:23+01:00",
+   "ended": "2026-10-31T15:21:41+01:00",
+   "error": null
+  },
+  {
+   "idx": 2,
+   "agent": "mission",
+   "harness": "hermes",
+   "status": "done",
+   "attempts": 1,
+   "started": "2026-10-31T15:21:52+01:00",
+   "ended": "2026-10-31T15:23:24+01:00",
+   "error": null
+  },
+  {
+   "idx": 3,
+   "agent": "planner",
+   "harness": "claude-code",
+   "status": "done",
+   "attempts": 1,
+   "started": "2026-10-31T15:21:45+01:00",
+   "ended": "2026-10-31T15:22:14+01:00",
+   "error": null
+  },
+  {
+   "idx": 4,
+   "agent": "desk",
+   "harness": "python",
+   "status": "done",
+   "attempts": 1,
+   "started": "2026-10-31T15:23:28+01:00",
+   "ended": "2026-10-31T15:23:37+01:00",
+   "error": null
+  },
+  {
+   "idx": 5,
+   "agent": "mission",
+   "harness": "hermes",
+   "status": "done",
+   "attempts": 1,
+   "started": "2026-10-31T15:23:38+01:00",
+   "ended": "2026-10-31T15:24:48+01:00",
+   "error": null
+  }
+ ]
+}

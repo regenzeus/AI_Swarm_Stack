@@ -1,0 +1,45 @@
+{
+ "source": "the gateway's price table (LiteLLM model_cost)",
+ "litellm": "1.105.4",
+ "date": "2026-11-01",
+ "unit": "USD per token, list price if paid",
+ "models": {
+  "gpt-sub": {
+   "model": "gpt-6.1-sol",
+   "in": 2e-06,
+   "out": 1e-05,
+   "cached": 1e-07
+  },
+  "gpt-sub-fast": {
+   "model": "gpt-6-luna",
+   "in": 1e-07,
+   "out": 5e-07,
+   "cached": 1e-08
+  },
+  "claude-opus-5-5": {
+   "model": "claude-opus-5-5",
+   "in": 4e-06,
+   "out": 2e-05,
+   "cached": 2e-07
+  },
+  "claude-sonnet-5-5": {
+   "model": "claude-sonnet-5-5",
+   "in": 2e-06,
+   "out": 1e-05,
+   "cached": 1e-07
+  },
+  "claude-haiku-5-5": {
+   "model": "claude-haiku-5-5",
+   "in": 1e-07,
+   "out": 5e-07,
+   "cached": 1e-08
+  },
+  "claude-fable-5-1": {
+   "model": "claude-fable-5-1",
+   "in": 1e-05,
+   "out": 5e-05,
+   "cached": 2.5e-07
+  }
+ },
+ "unpriced": []
+}

@@ -1,0 +1,8 @@
+[
+ {"model": "gpt-sub", "dry_run": true, "fills": {"date": "7 Nov 2026", "title": "RAM upgrade to 32 GB", "goal": "Find the best 32 GB DDR4 kit for my ASRock Z270 board under 120 EUR and tell me where to buy it.",
+   "last": "## Result\nTwo kits fit the board's memory list: G.Skill Aegis 32 GB (89 EUR) and Corsair Vengeance LPX 32 GB (104 EUR).", "event": ""}},
+ {"model": "gpt-sub", "dry_run": true, "fills": {"date": "7 Nov 2026", "title": "Home Assistant voice speaker", "goal": "Pick a voice speaker for the living room that works with Home Assistant without the cloud.",
+   "last": "(none)", "event": ""}},
+ {"model": "gpt-sub", "dry_run": true, "fills": {"date": "7 Nov 2026", "title": "Copper supply watch", "goal": "Track whether the copper supply deficit to 2030 still holds.",
+   "last": "## Result\nKazatomprom guided 2026 production 10 percent lower; spot at 78 USD/lb.", "event": "\nThis run was triggered by an event: news: Acme Mining raises its 2026 output guidance\nStart with what this event means for the mission.\n"}}
+]

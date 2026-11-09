@@ -1,0 +1,10 @@
+[Unit]
+Description=Monthly check for newer releases of pinned components (changes nothing)
+[Service]
+Type=oneshot
+# limit: stops (a run that hangs past 210 min is ended, so its timer fires again; the longest of 14 days was 10 s; review RUN-R27)
+TimeoutStartSec=210min
+Environment=DOCKER_HOST=unix://%t/docker.sock
+WorkingDirectory=%h/ai-stack
+ExecCondition=/usr/bin/python3 %h/ai-stack/ops/stack_gate.py --wait 1800 --slot 120
+ExecStart=/usr/bin/python3 ops/upgrade_check.py --notify

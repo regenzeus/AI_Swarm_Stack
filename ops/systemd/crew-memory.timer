@@ -1,0 +1,9 @@
+# feature: memory
+[Unit]
+Description=Crew: the Memory Keeper: long-term memory, wiki disputes and re-checks, journals, the search index (every night; its judgement and the wiki tidy on Wednesdays)
+[Timer]
+OnCalendar=*-*-* 04:30
+Persistent=true
+RandomizedDelaySec=10min
+[Install]
+WantedBy=timers.target

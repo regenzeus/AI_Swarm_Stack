@@ -1,0 +1,97 @@
+# The House: Home Assistant on the NAS, lights, plugs, shutters, the Echos and the voice bridge.
+area: House
+prefix: HSE
+items:
+  - id: HSE-01
+    title: Connect by Home Assistant's own sign-in
+    statement: Connect shall send the owner to Home Assistant's own sign-in and back, accept only well-formed codes, and
+      store a long-lived token encrypted; the stack shall never see his password.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-11, CST-06]
+    sources: [images/mission-control/guide/19-house.md]
+    verify: {method: test, by: [tests/test_house.py::test_connect_rejects_odd_codes, tests/test_server.py::test_house_connect_sends_owner_to_home_assistant_and_back]}
+    trace: [ops/house.py, images/mission-control/server.py]
+  - id: HSE-02
+    title: Status of every device by room
+    statement: The House service shall read every light, plug, switch, shutter and Echo by room every 30 seconds, and say
+      plainly when it is not connected or its token is refused.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-11, SN-07]
+    sources: [images/mission-control/guide/19-house.md]
+    verify: {method: test, by: [tests/test_house.py::test_snapshot_over_websocket, tests/test_house.py::test_snapshot_bad_token, tests/test_house.py::test_not_connected]}
+  - id: HSE-03
+    title: Switching by name
+    statement: The House service shall switch, dim and move what it is asked to by name, and refuse unknown or ambiguous
+      names with the candidates.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-11]
+    sources: [images/mission-control/guide/19-house.md]
+    verify: {method: test, by: [tests/test_house.py::test_switch_light_dim_and_cover, tests/test_house.py::test_unknown_or_ambiguous_names]}
+  - id: HSE-04
+    title: Protected things only by the owner
+    statement: A plug or switch whose name says it powers the fridge, freezer, router, NAS, PC, server or similar, and
+      anything the network and NAS integrations offer (router Tools, Synology DSM) whatever its name, shall be
+      readable by agents but switchable only by the owner on the House page, also not through an Alexa command.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05]
+    sources: [images/mission-control/guide/19-house.md]
+    verify: {method: test, by: [tests/test_house.py::test_protected_things_only_by_the_owner, tests/test_house.py::test_snapshot_over_websocket, tests/test_server.py::test_house_owner_taps_ai_phone_and_hermes]}
+  - id: HSE-05
+    title: Alexa commands, without shopping
+    statement: The House service shall pass a command to an Echo as if spoken, and refuse commands that buy or order or
+      name a protected thing.
+    type: functional
+    priority: must
+    status: implemented
+    findings: [FND-87]
+    parents: [SN-11, SN-05]
+    sources: [images/mission-control/guide/19-house.md]
+    verify: {method: test, by: [tests/test_house.py::test_alexa_command_and_refusals]}
+  - id: HSE-06
+    title: Speaking on the Echos
+    statement: The House service shall speak a message on one Echo, or on all of them with the announcement chime.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-11]
+    sources: [images/mission-control/guide/19-house.md]
+    verify: {method: test, by: [tests/test_house.py::test_say_everywhere_with_chime]}
+  - id: HSE-07
+    title: Talking to Hermes through an Echo
+    statement: When an Echo hears a request starting with "Hermes" ("Alexa, Hermes …", "frag Hermes …"), the House
+      service shall pass only that request to Hermes, say on the same Echo at once that Hermes heard it, and speak its
+      plain answer there, at most 30 per hour, one at a time; nothing else said to Alexa shall be kept.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-11, SN-04]
+    sources: [DEC-18]
+    verify: {method: test, by: [tests/test_house.py::test_trigger, tests/test_house.py::test_voice_bridge_only_hermes_requests, tests/test_house.py::test_spoken_answer_is_plain, tests/test_house.py::test_a_voice_question_is_acknowledged_before_its_answer]}
+  - id: HSE-08
+    title: House settings only by the owner
+    statement: The voice bridge's settings shall be changeable only by the owner in the app, not by agents or the AI
+      phone.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05]
+    sources: [images/mission-control/guide/19-house.md]
+    verify: {method: test, by: [tests/test_house.py::test_settings_only_by_the_owner]}
+  - id: HSE-09
+    title: Home Assistant stays on the LAN
+    statement: Home Assistant shall run on the NAS pinned by digest, reachable only on the home LAN (port 8123), with no
+      router forward; the owner types every device-account password into Home Assistant himself.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05, CST-04, CST-05]
+    sources: [DEC-07, nas/homeassistant/AGENTS.md]
+    verify: {method: inspection, by: [nas/homeassistant/compose.yaml]}

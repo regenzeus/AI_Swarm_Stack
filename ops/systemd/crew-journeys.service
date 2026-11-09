@@ -1,0 +1,10 @@
+[Unit]
+Description=Crew: journey checks: a task to its result, every screen at phone width, the e-mail, every make target (nightly, no model)
+[Service]
+Type=oneshot
+TimeoutStartSec=2h
+MemoryMax=1500M
+Environment=DOCKER_HOST=unix://%t/docker.sock
+WorkingDirectory=%h/ai-stack
+ExecCondition=/usr/bin/python3 %h/ai-stack/ops/stack_gate.py --wait 1800 --slot 35
+ExecStart=/usr/local/bin/sops exec-env secrets/secrets.enc.yaml "sops exec-env secrets/agent-keys.enc.yaml \"python3 ops/crew.py journeys\""

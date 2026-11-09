@@ -1,0 +1,5 @@
+# Test dependencies (CI installs these into a throwaway venv; pins match the images)
+pytest==8.3.4
+pyyaml==6.0.3
+httpx==0.28.1
+mcp==2.3.0

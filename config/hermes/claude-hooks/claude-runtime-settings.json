@@ -1,0 +1,10 @@
+{
+  "hooks": {
+    "SessionStart": [{"hooks": [{"type": "command", "command": "python3 /config/claude-hooks/runtime_hook.py", "timeout": 5}]}],
+    "PreToolUse": [{"matcher": "*", "hooks": [{"type": "command", "command": "python3 /config/claude-hooks/runtime_hook.py", "timeout": 5}]}],
+    "PostToolUse": [{"matcher": "*", "hooks": [{"type": "command", "command": "python3 /config/claude-hooks/runtime_hook.py", "timeout": 5}]},
+                    {"matcher": "Read|Bash", "hooks": [{"type": "command", "command": "python3 /config/claude-hooks/memory_hook.py", "timeout": 5}]},
+                    {"matcher": "Edit|Write|MultiEdit", "hooks": [{"type": "command", "command": "python3 /config/claude-hooks/lint_hook.py", "timeout": 30}]}],
+    "Stop": [{"hooks": [{"type": "command", "command": "python3 /config/claude-hooks/runtime_hook.py", "timeout": 5}]}]
+  }
+}

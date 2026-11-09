@@ -1,0 +1,27 @@
+[
+ {
+  "fills": {},
+  "model": "gpt-sub",
+  "user": "Send me a briefing on copper miners every weekday morning."
+ },
+ {
+  "fills": {},
+  "model": "gpt-sub",
+  "user": "Which of my briefings and long-running jobs are active right now, and when do they run next?"
+ },
+ {
+  "fills": {},
+  "model": "gpt-sub",
+  "user": "Pause the Beta Materials briefing until next week."
+ },
+ {
+  "fills": {},
+  "model": "gpt-sub",
+  "user": "Research how much enrichment capacity Centrus will have by 2028 and e-mail me a short report with sources."
+ },
+ {
+  "fills": {},
+  "model": "gpt-sub",
+  "user": "Also tell me at once when ASPI files an 8-K or moves more than 8 percent in a day."
+ }
+]

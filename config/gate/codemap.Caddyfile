@@ -1,0 +1,22 @@
+# Tailnet gate for the code map viewer (Understand Anything), started by ops/understand-dashboard.sh in the viewer's
+# network namespace. tailscale serve (https://<pc>.ts.net:8446 -> 127.0.0.1:5173) adds Tailscale-User-Login for your own
+# devices; anything without it is refused. The viewer wants an access token in the URL: the gate adds it, so there is
+# no token to know (it is fixed, "tailnet", because the gate is the access control).
+{
+	admin off
+	auto_https off
+}
+
+:5174 {
+	# route keeps this order (Caddy would otherwise run redir before respond)
+	route {
+		@anon not header Tailscale-User-Login *
+		respond @anon "Only reachable through Tailscale: open it from Mission Control (Code -> a repository)." 403
+		@first {
+			path /
+			not query token=*
+		}
+		redir @first /?token=tailnet 302
+		reverse_proxy 127.0.0.1:5173
+	}
+}

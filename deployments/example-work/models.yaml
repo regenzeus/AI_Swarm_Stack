@@ -1,0 +1,12 @@
+# An example work deployment's model policy (GEN-05): every model through one company gateway, placeholders here.
+# The real addresses, model names and budget come from the gateway's owners (docs/WORK-APPROVALS.md, item 4).
+policy: gateway_only
+gateway:
+  openai_base: https://llm-gateway.example.com/openai/v1         # OpenAI-compatible: LiteLLM serves the aliases from it
+  anthropic_base: https://llm-gateway.example.com/anthropic      # Anthropic-compatible: the Claude CLI talks to it directly
+  token: GATEWAY_TOKEN                                           # the sops name of the gateway's token; the token is never here
+  max_budget_usd_30d: 50                                         # LiteLLM's cap across all keys: a metered gateway costs money
+aliases:
+  gpt-sub: {served_by: gateway, model: openai/example-large}
+  gpt-sub-fast: {served_by: gateway, model: openai/example-small}
+  claude-subscription: {served_by: gateway-anthropic, model: example-claude}

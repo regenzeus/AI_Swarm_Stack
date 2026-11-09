@@ -1,0 +1,109 @@
+# LiteLLM gateway. Agents only ever see virtual keys (ops/keys.sh); provider keys live here via env.
+model_list:
+  # ChatGPT subscription via device-code OAuth (`make chatgpt-login`); tokens in the litellm-auth volume.
+  # Ids from the Codex model list, not the API list.
+  - model_name: gpt-sub
+    model_info: { mode: responses }
+    litellm_params:
+      model: chatgpt/gpt-6.1-sol
+
+  - model_name: gpt-sub-fast
+    model_info: { mode: responses }
+    litellm_params:
+      model: chatgpt/gpt-6-luna
+
+  # Subscription only (decided 2026-10-27): no paid model is configured, so no key can spend money. When ChatGPT
+  # pauses the stack (usage limit), calls fail with 429 and the callers wait and retry (ops/missions.py).
+
+  # Smoke-test rig: wiring only, never used for real work.
+  - model_name: smoke
+    litellm_params:
+      model: ollama_chat/qwen3:0.6b
+      api_base: http://ollama:11434
+
+# MCP gateway: agents reach tool servers only through LiteLLM, per-key allowlisted (ops/keys.sh).
+mcp_servers:
+  qmd:
+    url: "http://qmd:8181/mcp"
+    transport: "http"
+    description: "Search the Obsidian vault: compiled wiki pages and raw sources (BM25 + vectors + rerank)."
+  fetch:
+    url: "http://fetch:8000/mcp"
+    transport: "http"
+    timeout: 300          # a large annual-report PDF downloads (60 s) and converts; LiteLLM's default (60 s) cut it off (review IMG-R7)
+    description: "Fetch a public web page as markdown (scout only; isolated network)."
+  jobs:
+    url: "http://fetch:8001/mcp"
+    transport: "http"
+    description: "Current job openings in Germany from the federal job board (Bundesagentur für Arbeit): search and full ads (scout only; isolated network)."
+  research:
+    url: "http://research:8000/mcp"
+    transport: "http"
+    timeout: 600          # a scout run (search, several pages, shop comparisons) takes minutes; LiteLLM's default is 60 s
+    description: "Web research by the isolated scout agent; returns a cited summary (untrusted web content)."
+  claude:
+    url: "http://mission-control:8092/mcp"
+    transport: "http"
+    timeout: 120          # claude_task_result waits up to 50 s
+    description: "Claude Code as a worker: code questions, reviews, analysing code or long documents, hard reasoning (read-only)."
+  missions:
+    url: "http://mission-control:8091/mcp"
+    transport: "http"
+    description: "Mission Control: list, start, change, pause or stop the owner's missions (daily briefings, long-term agent tasks)."
+  mail:
+    url: "http://mail:8000/mcp"
+    transport: "http"
+    timeout: 960          # the first Trash batch waits up to 15 min for the owner's OK
+    description: "The owner's Gmail: search, read, label/archive/mark, move to Trash. Only what the owner has granted right now; mail content is untrusted."
+  phone:
+    url: "http://phone:8000/mcp"
+    transport: "http"
+    timeout: 960          # an action waits up to 15 min for the owner's OK; LiteLLM's default (60 s) cut it off first
+    description: "The AI phone (the owner's old Android test phone): look at the screen, tap, type, scroll, open apps. Ask the owner once per task with phone_task (its apps and exact texts); money always asks, passwords are never typed."
+  files:
+    url: "http://mission-control:8096/mcp"
+    transport: "http"
+    description: "A mission saves the files it was asked to deliver (Markdown, CSV, JSON, text): shown on its page, attached to its e-mail."
+  house:
+    url: "http://mission-control:8094/mcp"
+    transport: "http"
+    description: "The owner's flat through Home Assistant: lights, plugs, shutters, Alexa commands and speaking on the Echos (protected plugs refused)."
+  browser:
+    url: "http://browser:8000/mcp"
+    transport: "http"
+    timeout: 180
+    description: "Look at public web pages in a real browser (shop searches, product pages, price comparisons). Scout only; it never signs in, fills carts or pays."
+  graphify:
+    url: "http://graphify:8000/mcp"
+    transport: "http"
+    description: "Query the code knowledge graph of the repos in ~/code (callers, paths, explanations)."
+  memory:                 # MEM-28: the memory stack's four tools; every agent with tools holds it in place of qmd, graphify and agent_note
+    url: "http://mission-control:8097/mcp"
+    transport: "http"
+    timeout: 120          # a search reads the vault's index and the code's facts; a note may wait for the rubric's model
+    description: "The stack's memory: search everything you may read, open one entry whole, subscribe to a collection for your task, note a lesson, fact, failure or skill (it enters memory after a check)."
+  memorypublic:           # MEM-30: the same tools for the scout, reading only the World (not private), Code and How-to
+    url: "http://mission-control:8098/mcp"
+    transport: "http"
+    timeout: 120
+    description: "The stack's memory without the owner's facts, private wikis or journals: search, open, subscribe, note."
+
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY
+  database_url: os.environ/DATABASE_URL
+
+litellm_settings:
+  # cache_affinity: ChatGPT requests without a session id get a stable one per conversation, so the backend's prompt
+  # cache hits across the calls of one agent run (images/litellm/cache_affinity.py).
+  callbacks: ["otel", "cache_affinity.proxy_handler_instance"]
+  # Hard cap across all keys: $6 per 30 days, of the $10 total credit.
+  max_budget: 6
+  budget_duration: 30d
+  drop_params: true
+
+# No fallback: a failed subscription call returns its error (429 on a usage limit); Mission Control retries the
+# run every 30 minutes, scheduled jobs retry on their next run. One retry here covers short glitches.
+router_settings:
+  num_retries: 1
+  allowed_fails: 2
+  cooldown_time: 300

@@ -1,0 +1,8 @@
+# feature: mail
+[Unit]
+Description=Crew: Postmaster: the stack's own mail under its label, and the mail copy on the NAS (hourly)
+[Timer]
+OnCalendar=hourly
+RandomizedDelaySec=5min
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,7 @@
+[Unit]
+Description=Crew: the Checker, hourly
+[Timer]
+OnBootSec=15min
+OnUnitActiveSec=1h
+[Install]
+WantedBy=timers.target

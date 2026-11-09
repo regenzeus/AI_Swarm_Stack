@@ -1,0 +1,82 @@
+# Research: the privacy guard, the scout, the page reader, the browser, deep research.
+area: Research
+prefix: RES
+items:
+  - id: RES-01
+    title: Questions pass the privacy guard
+    statement: Before a research question leaves the house, the research tool shall check it against patterns, the
+      private-terms list and a model check on its own key, and block it when unsure.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-04, SN-05]
+    sources: [images/research/AGENTS.md]
+    verify: {method: test, by: [tests/test_research_guard.py::test_patterns_terms_and_length_refuse_before_anything_leaves, tests/test_research_guard.py::test_a_missing_terms_list_refuses_and_says_so, tests/test_research_guard.py::test_the_guard_model_refuses_when_it_says_private_or_cannot_answer, tests/test_research_guard.py::test_a_public_question_reaches_the_scout_and_comes_back_labelled]}
+    trace: [images/research/server.py, ops/private-terms.sh]
+  - id: RES-02
+    title: The scout searches the web
+    statement: The scout shall search the web with its keyless search backend before reading pages, and never guess
+      URLs.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-01]
+    sources: [images/hermes/AGENTS.md, config/hermes/configure-scout.sh]
+    verify: {method: test, by: [tests/test_scout_search.py::test_the_scout_s_search_package_is_in_the_environment_hermes_runs_from]}
+    findings: [FND-10]
+  - id: RES-03
+    title: Pages and PDFs read in full, isolated
+    statement: The page reader shall read HTML (also when the site sends it compressed) and full PDFs in the isolated
+      reader container, identify itself with the SEC contact user agent on sec.gov, and page long output instead of
+      truncating it unbounded.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-01, SN-05]
+    sources: [images/fetch/AGENTS.md]
+    verify: {method: test, by: [tests/test_fetch_reader.py::test_a_gzip_page_rebuilt_from_decoded_bytes_reads_as_text, tests/test_fetch_reader.py::test_the_reader_rebuilds_its_response_with_plain_headers]}
+    trace: [images/fetch/fetch_pdf.py, images/fetch/entrypoint.sh]
+  - id: RES-04
+    title: Research answers are cited and labelled
+    statement: The research tool shall return the scout's cited answer labelled as untrusted web content, within
+      Hermes' 600-second MCP timeout.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-01, SN-05]
+    sources: [images/research/AGENTS.md]
+    verify: {method: inspection, by: [images/research/server.py, config/hermes/configure.sh]}
+  - id: RES-05
+    title: Deep research
+    statement: When a task runs as deep research, the runner shall write a plan, run 3 to 5 research steps and a
+      synthesis, and show each step live.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-01, SN-07]
+    sources: [images/mission-control/guide/06-deep-research.md]
+    verify: {method: inspection, by: [ops/mission_extras.py]}
+  - id: RES-06
+    title: The browser only looks
+    statement: The scout's browser shall refuse login, account, cart, checkout and payment pages before and after every
+      step, refuse buy, cart, order and sign-in buttons and typing outside search fields, and go back when a click
+      lands on checkout.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05, CST-10]
+    sources: [images/browser/AGENTS.md]
+    verify: {method: test, by: [tests/test_shopping.py::test_guard_refuses_login_cart_checkout_and_payment, tests/test_shopping.py::test_guard_goes_back_when_a_click_lands_on_checkout]}
+    trace: [images/browser/guard.py]
+  - id: RES-07
+    title: Research results stay small
+    statement: The scout's page and search results shall be capped and the mission's earlier findings passed into each
+      research question, so that a run does not re-read what it already found.
+    type: quality
+    priority: should
+    status: partial
+    parents: [SN-03]
+    sources: [docs/TOKENS.md]
+    gap: Page output is capped at 20 k characters; search results are not capped and findings are not passed in
+      (TOKENS.md "Still open").
+    verify: {method: inspection, by: [images/fetch/fetch_pdf.py, docs/TOKENS.md]}

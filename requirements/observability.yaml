@@ -1,0 +1,221 @@
+# Observability: the runtime record, timelines, problems, the health board, notifications, payoff.
+area: Observability
+prefix: OBS
+items:
+  - id: OBS-01
+    title: One record for every agent
+    statement: Every agent run (Hermes profiles, Claude Code, the AI phone, Gmail, missions, builds, Claude tasks, crew
+      jobs) shall report its events into one runtime record, open on its first event and stay closed after its end.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-07]
+    sources: [DEC-05, docs/OBSERVABILITY.md]
+    verify: {method: test, by: [tests/test_runtime.py::test_a_run_opens_on_first_event_and_stays_closed_after_its_end, tests/test_runtime.py::test_requests_that_come_together_each_read_their_own_runs, tests/test_runtime.py::test_chat_sessions_are_tied_to_their_chat, tests/test_runtime.py::test_hermes_runs_without_a_ref_are_tied_to_the_live_mission]}
+    trace: [images/mission-control/runrecord.py, ops/runtime.py, config/hermes/plugins/aistack-runtime/__init__.py, config/hermes/plugins/aistack-runtime/plugin.yaml, config/hermes/install-runtime-plugin.sh, config/hermes/claude-hooks/claude-runtime-settings.json]
+    findings: [FND-88]
+  - id: OBS-02
+    title: One honest end state
+    statement: Each run shall end in exactly one of done, failed, stopped, stalled or limit; an unknown end state shall
+      become done and a malformed event shall be skipped.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-07]
+    sources: [docs/OBSERVABILITY.md]
+    verify: {method: test, by: [tests/test_runtime.py::test_unknown_end_states_become_done_and_bad_events_are_skipped]}
+  - id: OBS-03
+    title: Silent runs are closed as stalled
+    statement: The watchdog shall close a run that is silent for 20 minutes as stalled (3 hours for a declared wait),
+      keep a parent alive while its children work, and let a late real end replace the watchdog's verdict.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-07, SN-13]
+    sources: [docs/OBSERVABILITY.md]
+    verify: {method: test, by: [tests/test_runtime.py::test_the_watchdog_closes_silent_runs_honestly, tests/test_runtime.py::test_a_declared_wait_is_not_a_stall, tests/test_runtime.py::test_children_show_under_their_parent_and_keep_it_alive]}
+  - id: OBS-04
+    title: Observers never block
+    statement: The Hermes runtime plugin, the Claude hooks and the phone and mail emitters shall never block, veto or
+      fail the action they observe, and shall spool events while Mission Control is unreachable.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-13, SN-07]
+    sources: [config/hermes/AGENTS.md]
+    verify: {method: test, by: [tests/test_runtime.py::test_a_bad_event_or_a_refused_batch_jams_nothing_and_a_spool_link_is_not_followed, tests/test_runtime.py::test_the_plugin_records_a_turn_and_spools_without_mission_control, tests/test_runtime.py::test_the_claude_hook_turns_hooks_and_transcript_into_events, tests/test_runtime.py::test_the_forwarder_sends_spools_and_keeps_what_failed, tests/test_phone_agents.py::test_the_mail_tools_survive_a_log_they_cannot_write]}
+  - id: OBS-05
+    title: What it does and what it touches
+    statement: Every run's view shall show its steps in order, and what it read, changed, was refused and saw only partly,
+      with the tool that did it, across both engines.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-07]
+    sources: [docs/OBSERVABILITY.md]
+    verify: {method: test, by: [tests/test_observe.py::test_files_read_and_changed_across_engines, tests/test_runtime.py::test_touches_refusals_connections_and_retention, tests/test_runtime.py::test_pipeline_steps_reads_writes_and_model_calls_go_to_the_current_run]}
+  - id: OBS-06
+    title: Statistics and stages
+    statement: Every run shall show per-tool calls, errors and durations, model latency (p50, p95) and cache share, and
+      its stages in one schema.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-07]
+    sources: [docs/OBSERVABILITY.md]
+    verify: {method: test, by: [tests/test_observe.py::test_stats_pair_calls_with_results, tests/test_observe.py::test_stages_use_one_schema, tests/test_telemetry.py::test_timeline_merges_sources_and_warns]}
+  - id: OBS-07
+    title: Problems by fixed rules
+    statement: Each finished run shall be checked by deterministic rules (unknown tools, empty arguments to a tool that
+      needs arguments, repeated calls, tool errors, results cut off and not read on before the answer, no clean end,
+      usage-limit stalls) without a second model; the list of tools whose arguments are all optional shall match every
+      tool in the repo, and the deploy's smoke-test refusals shall not count as problems.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-07]
+    sources: [docs/OBSERVABILITY.md]
+    findings: [FND-62]
+    verify: {method: test, by: [tests/test_observe.py::test_problems_what_it_touches_and_skills, tests/test_observe.py::test_the_deploy_smoke_test_refusals_are_expected_not_problems,
+      tests/test_health_signals.py::test_the_no_argument_list_matches_every_tool_that_takes_none,
+      tests/test_health_signals.py::test_a_call_with_no_arguments_is_a_problem_only_when_the_tool_needs_some,
+      tests/test_health_signals.py::test_a_cut_off_result_the_agent_read_on_is_no_partial_read]}
+    trace: [images/mission-control/obs_core.py, ops/telemetry.py]
+  - id: OBS-08
+    title: Drift since the last run
+    statement: A run's first event shall carry a manifest (agent, profile, model, tools), and the view shall name what
+      changed against the previous run of the same agent, without stopping the run.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-07]
+    sources: [docs/OBSERVABILITY.md]
+    verify: {method: test, by: [tests/test_runtime.py::test_drift_against_the_previous_run_of_the_same_agent, tests/test_observe.py::test_manifest_diff_names_what_changed]}
+  - id: OBS-09
+    title: The agent log
+    statement: Every agent's log shall use one set of kinds (START, READ, WRITE, TOOL, WEB, MAIL, PHONE, THINK, SAYS,
+      WAIT, PROPOSE, ERROR, END) drawn by one renderer, live and afterwards.
+    type: interface
+    priority: should
+    status: implemented
+    parents: [SN-07]
+    sources: [images/mission-control/web/AGENTS.md]
+    verify: {method: test, by: [tests/test_journal.py::test_the_log_kinds_are_the_designed_ones]}
+  - id: OBS-10
+    title: The health board
+    statement: Mission Control shall keep one health item per agent (missions, crew jobs, engines), shown on the task's row and under Tasks → Team, raising alerts for
+      failing streaks (naming the last run's reason), missed schedules, long usage-limit blocks, stalls and lost tools
+      and notes for single failures and anomalies, rolling sessions up into the agent that started them and clearing
+      each kind of issue with the agent's next finished run that does not have it.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-07, SN-18]
+    sources: [images/mission-control/guide/18-crew.md]
+    findings: [FND-62, FND-64, FND-65]
+    verify: {method: test, by: [tests/test_tasks_tab.py::test_an_engine_s_card_opens_a_page_and_seen_says_what_it_does, tests/test_observe.py::test_health_flags_streaks_overdue_slow_and_limits, tests/test_health.py::test_sessions_and_scouts_roll_up_and_a_good_run_clears, tests/test_health.py::test_engines_get_one_item_and_only_alerts_are_sent,
+      tests/test_health.py::test_a_kind_of_issue_clears_with_the_next_run_without_it_whatever_notes_it_has,
+      tests/test_health_signals.py::test_a_failing_job_s_alert_says_why]}
+  - id: OBS-11
+    title: Told once
+    statement: The stack shall send each new alert once by push and Telegram, again after a day if it is still open, and
+      never send notes. An alert that leaves the board for less than 6 hours shall count as the same alert when it comes
+      back (a deploy hides the run record for a moment), and Hermes shall send no restart notices of its own.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-18]
+    sources: [docs/OBSERVABILITY.md]
+    verify: {method: test, by: [tests/test_observe.py::test_notify_sends_each_issue_once_and_a_flicker_is_not_a_new_issue,
+      tests/test_deploy.py::test_the_runner_restarts_for_any_module_it_may_import_also_one_it_reaches_indirectly]}
+    trace: [images/mission-control/obs_core.py, config/hermes/configure.sh, ops/deploy.py]
+    findings: [FND-47, FND-49]
+  - id: OBS-12
+    title: Acknowledge hides until it happens again
+    statement: When the owner acknowledges an issue, the board shall hide it until it happens again and record the
+      acknowledgement in the activity feed.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-18]
+    sources: [images/mission-control/guide/18-crew.md]
+    verify: {method: test, by: [tests/test_health.py::test_acknowledge_hides_until_it_happens_again]}
+  - id: OBS-13
+    title: Agents can read the health board
+    statement: The open health issues, each with the run that shows it, shall be readable for agents through the API and
+      the health_issues tool.
+    type: interface
+    priority: should
+    status: implemented
+    parents: [SN-08, SN-17]
+    sources: [images/mission-control/guide/18-crew.md]
+    verify: {method: test, by: [tests/test_health.py::test_the_health_doctor_can_read_open_issues]}
+  - id: OBS-14
+    title: From a model call to its trace
+    statement: Every model call shown in a log shall open its Phoenix trace.
+    type: functional
+    priority: could
+    status: implemented
+    parents: [SN-07]
+    sources: [docs/OBSERVABILITY.md]
+    verify: {method: test, by: [tests/test_server.py::test_phoenix_picks_the_litellm_span_of_a_model_call]}
+  - id: OBS-15
+    title: Results per agent
+    statement: Each agent's page shall show, under Results, what it delivered first (each result, newest first, opening
+      it; for a mission run as a task, a link to the task's runs) and then what it took (runs, success, time, model
+      calls, tokens, cost, wiki pages; for proposing agents the proposals and their fate).
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-07]
+    sources: [DEC-05, 'chat 2026-11-01: Presenter ... show in that useless Payoff tab?', docs/SWARM-TRIALS.md]
+    verify: {method: inspection, by: [ops/crew.py, images/mission-control/web/static/app.js]}
+  - id: OBS-16
+    title: One notification policy
+    statement: Every notification the stack sends (push, Telegram) shall go through one path that applies the same
+      once-per-issue rule, the owner's preferences per kind of message and channel, and quiet hours in which only
+      approvals go out and Telegram messages wait to be sent as one when the quiet hours end; each decision, and each
+      report e-mail sent or failed, shall be logged and shown in the app.
+    type: quality
+    priority: should
+    status: implemented
+    parents: [SN-18]
+    sources: [docs/REVIEW-2026-10-27.md, docs/SWARM-ROADMAP.md]
+    verify: {method: test, by: [tests/test_notify.py::test_held_messages_stay_when_telegram_fails_at_the_end_of_quiet_hours, tests/test_notify.py::test_preferences_decide_per_category_and_approvals_always_go_out,
+      tests/test_notify.py::test_quiet_hours_hold_telegram_and_send_it_as_one_message_afterwards,
+      tests/test_notify.py::test_the_same_key_goes_out_once_a_day_and_every_decision_is_logged,
+      tests/test_notify.py::test_a_push_from_the_activity_feed_follows_the_preferences,
+      tests/test_notify.py::test_nothing_but_the_notification_path_talks_to_telegram,
+      tests/test_quiet_runs.py::test_every_email_outcome_is_recorded]}
+    trace: [ops/notify.py, ops/notify.sh, ops/missions.py, ops/mission_extras.py, ops/missions.requests.py]
+    findings: [FND-17, FND-70, FND-78]
+  - id: OBS-17
+    title: How much each subscription carries
+    statement: The Stack page shall show, for ChatGPT and Claude, the tokens and calls of the last 5 hours (ChatGPT's
+      usage window) and 24 hours, the agents that used most, and whether the subscription is at its usage limit now and
+      until when, so that the owner sees a limit coming before work waits for it.
+    type: quality
+    priority: should
+    status: implemented
+    parents: [SN-18]
+    sources: ['chat 2026-11-01: Do we have data we are missing out to report in mission control in some way that user would care about?']
+    rationale: Both subscriptions are the stack's only capacity (CST subscription only); the app said "waiting for ChatGPT"
+      only after work had stopped.
+    verify: {method: test, by: [tests/test_task_page.py::test_each_subscription_s_load_in_its_window_and_who_used_it]}
+    trace: [images/mission-control/runrecord.py, images/mission-control/server.py, images/mission-control/web/static/app.js]
+
+  - id: OBS-18
+    title: A research run shows under the run that asked for it
+    statement: A scout run that answers a research call shall be recorded under the run whose call asked that question
+      (matched by the question), not under whichever run used the scout at the same time, so that a task's agents,
+      sources, tokens and cost hold only its own work.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-07, APP-36]
+    sources: ['chat 2026-11-02: the task page showed geizhals.de as the China briefing''s top source; the owner: Yes, fix it']
+    findings: [FND-111, FND-114]
+    verify: {method: test, by: [tests/test_task_page.py::test_a_scout_run_goes_under_the_run_that_asked_its_question_not_a_task_s_live_scout_step,
+        tests/test_runtime.py::test_two_scout_steps_started_together_each_get_their_own_run_by_its_prompt_s_head,
+        tests/test_conductor.py::test_a_hermes_step_s_prompt_starts_with_its_run]}
+    trace: [images/mission-control/runrecord.py, ops/conductor.py]

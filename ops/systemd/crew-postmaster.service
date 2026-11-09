@@ -1,0 +1,10 @@
+# feature: mail
+[Unit]
+Description=Crew: Postmaster: the stack's own mail under its label, and the mail copy on the NAS (hourly)
+[Service]
+Type=oneshot
+TimeoutStartSec=20min
+Environment=DOCKER_HOST=unix://%t/docker.sock
+WorkingDirectory=%h/ai-stack
+ExecCondition=/usr/bin/python3 %h/ai-stack/ops/stack_gate.py
+ExecStart=/usr/local/bin/sops exec-env secrets/secrets.enc.yaml "sops exec-env secrets/agent-keys.enc.yaml \"python3 ops/crew.py postmaster\""

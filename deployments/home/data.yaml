@@ -1,0 +1,3 @@
+# The home deployment's data class (GEN-14): the owner's own data. No egress list: home's features send data out by design
+# (the NAS, OneDrive, Telegram, the web), each one a feature (deployments/home/deployment.env).
+class: personal

@@ -1,0 +1,11 @@
+# feature: home
+[Unit]
+Description=Mirror Hermes skills into the hermes-skills repo (one pass)
+[Service]
+Type=oneshot
+# limit: stops (a run that hangs past 60 min is ended, so its timer fires again; the longest of 14 days was 14 s; review RUN-R27)
+TimeoutStartSec=60min
+Environment=DOCKER_HOST=unix://%t/docker.sock
+WorkingDirectory=%h/ai-stack
+ExecCondition=/usr/bin/python3 %h/ai-stack/ops/stack_gate.py
+ExecStart=/usr/bin/python3 ops/skills_sync.py

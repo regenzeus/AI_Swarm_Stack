@@ -1,0 +1,15 @@
+# Skills for the code roles (CHG-18, ops/skills.py): pinned by commit, read before they came in, off unless a run asks for
+# them (a replay arm, or skills: true on a request), and kept only where the replay exam improves. A changed file does not
+# reach an agent until it is read again and its hash written here.
+source:
+  repo: https://github.com/obra/superpowers
+  commit: 22f0b463e7a5e579904dd6211a520321035526f7
+  license: MIT                       # config/skills/LICENSE
+  reviewed: 2026-11-06
+files:
+  test-driven-development: 64b03fce4aee5a97
+  systematic-debugging: 51c6435d98c83c42
+  verification-before-completion: 2befe7fc55bcadaa
+roles:
+  builder: [test-driven-development, systematic-debugging, verification-before-completion]
+  tester: [test-driven-development]

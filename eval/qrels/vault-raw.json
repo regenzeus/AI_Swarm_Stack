@@ -1,0 +1,18 @@
+{"description": "qrels v1 for vault-raw (2026-10-24)", "version": 1, "collection": "vault-raw", "queries": [
+ {"id": "r-ssd", "query": "enable SSD cache random read workloads", "type": "exact", "description": "clipping detail",
+  "expected_files": ["articles/synology-dsm-tips-clip.md"], "expected_in_top_k": 1},
+ {"id": "r-embed", "query": "text-embedding-3-small OPENAI_API_KEY", "type": "exact", "description": "colleague note",
+  "expected_files": ["articles/colleague-qmd-notes.md"], "expected_in_top_k": 1},
+ {"id": "r-port", "query": "which port does TestRepo run on", "type": "semantic", "description": "own setup note",
+  "expected_files": ["articles/my-stack-setup.md"], "expected_in_top_k": 1},
+ {"id": "r-federation", "query": "federation between forges", "type": "topical", "description": "forgejo readme",
+  "expected_files": ["articles/forgejo-readme.md"], "expected_in_top_k": 1},
+ {"id": "r-age", "query": "age and PGP keys for encrypted YAML", "type": "topical", "description": "sops readme",
+  "expected_files": ["articles/sops-readme.md"], "expected_in_top_k": 1},
+ {"id": "r-virtualkeys", "query": "virtual keys spend tracking proxy", "type": "semantic", "description": "litellm readme",
+  "expected_files": ["articles/litellm-readme.md"], "expected_in_top_k": 1},
+ {"id": "r-wiki-idea", "query": "instead of RAG the LLM incrementally builds a persistent wiki", "type": "semantic", "description": "karpathy",
+  "expected_files": ["articles/karpathy-llm-wiki.md"], "expected_in_top_k": 1},
+ {"id": "r-de-telegram", "query": "Wofür nutze ich Telegram?", "type": "cross-domain", "description": "German query, own setup",
+  "expected_files": ["articles/my-stack-setup.md"], "expected_in_top_k": 1}
+]}

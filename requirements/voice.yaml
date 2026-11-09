@@ -1,0 +1,108 @@
+# Hermes at home by voice: the speech services on the NAS, the voice gateway, the satellites (docs/HOME-VOICE.md).
+area: Voice
+prefix: VOI
+items:
+  - id: VOI-01
+    title: Speech services on the NAS, for the NAS only
+    statement: Speech to text and text to speech for Home Assistant's voice pipeline shall run on the NAS, listen on the
+      NAS itself only (127.0.0.1), store no audio, keep their logs (which carry transcripts) to 1 MB each, and be
+      deployed host-side with images pinned by digest.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-11, SN-05]
+    sources: [docs/HOME-VOICE.md]
+    verify: {method: test, by: [tests/test_voice.py::test_the_speech_services_listen_on_the_nas_only_and_keep_small_logs]}
+    trace: [nas/voice/compose.yaml, ops/deploy-voice.sh]
+  - id: VOI-02
+    title: The voice is measured, not assumed
+    statement: A repeatable measurement shall report, for the speech services on the NAS, the word error rate and the
+      time per sentence of speech to text on spoken home sentences with noise, and the time to the first audio of each
+      candidate voice; it shall store no audio.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-11]
+    sources: [docs/HOME-VOICE.md]
+    verify: {method: test, by: [tests/test_voice.py::test_the_bench_speaks_wyoming_and_scores_words]}
+    trace: [ops/voice_bench.py]
+  - id: VOI-03
+    title: A voice gateway Home Assistant can talk to
+    statement: The app shall offer Home Assistant's own Ollama integration a gateway on a port of its own (127.0.0.1:11435
+      on the PC) with only the model list and the chat, refuse every call without its key (and all calls while no key is
+      set), offer one model per room (hermes:kitchen), and stream Hermes' answer back as Ollama does.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-11, SN-05]
+    sources: [docs/HOME-VOICE.md]
+    verify: {method: test, by: ['tests/test_voice_gateway.py::test_the_gateway_needs_its_key_and_offers_one_model_per_room', 'tests/test_voice_gateway.py::test_a_spoken_turn_joins_the_voice_chat_and_streams_back_as_ollama_does']}
+    trace: [images/mission-control/server.py, compose/apps.yaml]
+  - id: VOI-04
+    title: One running Voice chat
+    statement: Every spoken turn shall join one chat called Voice, with its room, in the same Hermes session from every
+      room and the app, framed by the voice prompt (main.md VOICE); Home Assistant's own history and prompt shall not
+      be used, and "new topic" shall start a fresh Hermes session while the chat keeps what was said.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-11]
+    sources: [docs/HOME-VOICE.md]
+    verify: {method: test, by: ['tests/test_voice_gateway.py::test_a_spoken_turn_joins_the_voice_chat_and_streams_back_as_ollama_does', 'tests/test_voice_gateway.py::test_let_me_check_while_a_tool_runs_and_new_topic_starts_a_fresh_session']}
+    trace: [images/mission-control/server.py, prompts/main.md]
+  - id: VOI-05
+    title: No silence while Hermes looks something up
+    statement: When Hermes reaches for a tool before saying anything, the gateway shall say "Let me check" at once, and
+      it shall record on each spoken answer its room, the time to its first word and whether it bridged.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-11]
+    sources: [docs/HOME-VOICE.md]
+    verify: {method: test, by: ['tests/test_voice_gateway.py::test_let_me_check_while_a_tool_runs_and_new_topic_starts_a_fresh_session', 'tests/test_voice_gateway.py::test_a_spoken_turn_joins_the_voice_chat_and_streams_back_as_ollama_does']}
+    trace: [images/mission-control/server.py]
+  - id: VOI-06
+    title: Home Assistant set up by a repeatable script
+    statement: One script shall connect Home Assistant to the speech services, to the voice gateway (with its key) and to
+      one Hermes agent per room, and create the English pipelines without a server-side wake word or local intents; run
+      again, it shall keep what exists and add only what is missing.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-11]
+    sources: [docs/HOME-VOICE.md]
+    verify: {method: test, by: ['tests/test_voice_setup.py::test_the_setup_adds_what_is_missing_and_keeps_what_is_there']}
+    trace: [ops/voice_setup.py]
+  - id: VOI-07
+    title: The AI phone's satellite app only inside a task the owner approved
+    statement: The agents shall read or touch the Home Assistant app on the AI phone, whose sign-in reaches the house, the
+      Router and the NAS, only inside a phone task the owner approved that names it; free mode alone shall not open it.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05]
+    sources: [docs/HOME-VOICE.md]
+    verify: {method: test, by: ['tests/test_voice_setup.py::test_the_agents_never_open_the_home_assistant_app_on_the_ai_phone', 'tests/test_phone.py::test_the_home_assistant_app_opens_only_inside_a_task_that_names_it']}
+    trace: [images/phone/phone.py]
+  - id: VOI-08
+    title: The AI phone's voice set up step by step
+    statement: The House page shall show Home Assistant's main menus whenever it is reachable, and the steps that make
+      the AI phone a speaker for Hermes, each with a button to the exact screen, ticked by themselves where Home
+      Assistant shows them done (the voice pipeline, the "AI phone" person with a login, a signed-in Home Assistant app).
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-11, SN-02]
+    sources: [docs/HOME-VOICE.md]
+    verify: {method: test, by: ['tests/test_voice_setup.py::test_the_house_page_sets_up_the_ai_phone_step_by_step_and_ticks_what_it_sees', 'tests/test_house.py::test_snapshot_over_websocket']}
+    trace: [images/mission-control/web/static/app-devices.js, ops/house.py]
+
+  - id: VOI-09
+    title: Home voice is measured by use
+    statement: The Voice page shall show spoken questions answered a day and the share answered within 4 seconds, and the
+      speech test with the owner's recordings shall run weekly in the benchmark.
+    type: quality
+    priority: should
+    status: proposed
+    parents: [SN-01, SN-06]
+    sources: [docs/NEXT-PHASE.md]

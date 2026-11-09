@@ -1,0 +1,5 @@
+[
+ {"fills": {}, "model": "gpt-sub", "user": "How do I run the tests of TestRepo, and what must a change there keep in mind?"},
+ {"fills": {}, "model": "gpt-sub", "user": "Review the design of the onboarding job in ai-stack (ops/onboard.py): is restarting from the first unfinished step sound?"},
+ {"fills": {}, "model": "gpt-sub", "user": "Where in ai-stack is the repository card given to a coding agent?"}
+]

@@ -1,0 +1,1061 @@
+{
+ "builder/BUILD": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from ops/builds.py PROMPT",
+   "sha": "08b4efa4db66"
+  },
+  {
+   "at": "2026-11-07",
+   "cases": 3,
+   "from": "08b4efa4db66",
+   "judge": {
+    "equal": 0,
+    "new": 2,
+    "old": 1
+   },
+   "model": "gpt-sub",
+   "passed": true,
+   "sha": "0c5c6cc19cce",
+   "valid": [
+    3,
+    3
+   ]
+  }
+ ],
+ "builder/REVIEW": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from ops/builds.py REVIEW_PROMPT",
+   "sha": "1dd55a78c393"
+  }
+ ],
+ "builder/ROLE_ANALYST": [
+  {
+   "at": "2026-11-06",
+   "baseline": "new: the change-request pipeline (CHG-01 to CHG-18)",
+   "sha": "21077d7e76ed"
+  }
+ ],
+ "builder/ROLE_ARCHITECT": [
+  {
+   "at": "2026-11-06",
+   "baseline": "new: the change-request pipeline (CHG-01 to CHG-18)",
+   "sha": "b03de8a9403b"
+  }
+ ],
+ "builder/ROLE_BREAKER": [
+  {
+   "at": "2026-11-06",
+   "baseline": "new: the change-request pipeline (CHG-01 to CHG-18)",
+   "sha": "a2d7b0e93bf1"
+  }
+ ],
+ "builder/ROLE_CODER": [
+  {
+   "at": "2026-11-06",
+   "baseline": "new: the change-request pipeline (CHG-01 to CHG-18)",
+   "sha": "4d5565db32ce"
+  }
+ ],
+ "builder/ROLE_TESTER": [
+  {
+   "at": "2026-11-06",
+   "baseline": "new: the change-request pipeline (CHG-01 to CHG-18)",
+   "sha": "6359ea78bf09"
+  }
+ ],
+ "builder/SOUL": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from config/hermes/configure-builder.sh",
+   "sha": "4b36328ff5b2"
+  }
+ ],
+ "coach/DRAFT": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from ops/coach.py DRAFT",
+   "sha": "0f89cf3a91b2"
+  }
+ ],
+ "curator/GATEKEEPER": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved from ops/memory_review.py judge() (its f-string fills became {known}, {entry})",
+   "sha": "55a979d13a26"
+  }
+ ],
+ "curator/INGEST": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved from ops/vault-ingest.sh (shell fills became {time}, {rel})",
+   "sha": "12ed1d61fb6f"
+  }
+ ],
+ "curator/LINT": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved from ops/vault-lint.sh (shell fills became {time}, {check})",
+   "sha": "ac51db9bb7c4"
+  }
+ ],
+ "desk/ALERT": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved from images/desk/desk.py alert() (its f-string became fills)",
+   "sha": "2cdcb573b1f9"
+  }
+ ],
+ "desk/BRIEFING": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved from images/desk/desk.py write() (its f-string became fills)",
+   "sha": "43bf468a2201"
+  }
+ ],
+ "desk/MAIL_EVENT": [
+  {
+   "at": "2026-11-04",
+   "baseline": "new: said in front of a handed e-mail among the BRIEFING's events (MIS-28); BRIEFING's own text is unchanged",
+   "sha": "1d57fe959399"
+  }
+ ],
+ "desk/TOPIC_DRAFT": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from ops/missions.py DRAFT",
+   "sha": "8af9d9c4ab1e"
+  },
+  {
+   "at": "2026-10-31",
+   "cases": 3,
+   "from": "8af9d9c4ab1e",
+   "judge": {
+    "equal": 0,
+    "new": 3,
+    "old": 0
+   },
+   "model": "gpt-sub",
+   "passed": true,
+   "sha": "7658e903fdd4",
+   "valid": [
+    3,
+    3
+   ]
+  }
+ ],
+ "desk/TRIAGE": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved from images/desk/desk.py triage() (its f-string became fills)",
+   "sha": "50d612c61a4c"
+  }
+ ],
+ "doctor/QUESTION": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from ops/doctor.py QUESTION",
+   "sha": "e9314a21d3ac"
+  }
+ ],
+ "editor/SORT": [
+  {
+   "at": "2026-11-08",
+   "baseline": "new prompt: the Editor sorts the open ideas (DEC-47, ACR-02)",
+   "sha": "5ac6ca01f275"
+  }
+ ],
+ "eval/JUDGE": [
+  {
+   "at": "2026-10-30",
+   "baseline": "new with the prompt files (MEM-11): the replay judge",
+   "sha": "785973863f90"
+  }
+ ],
+ "eval/REPLAY": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from ops/evals.py REPLAY",
+   "sha": "2d3dcb4f0e10"
+  }
+ ],
+ "guard/PRIVATE": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved from images/research/server.py GUARD (the question became the fill {question})",
+   "sha": "c09f4e008e6d"
+  }
+ ],
+ "inbox/PICK": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from ops/inbox.py PICK",
+   "sha": "395283c4a8a4"
+  }
+ ],
+ "inbox/TOPIC_CHECK": [
+  {
+   "at": "2026-11-04",
+   "baseline": "new: judges a newsletter that names a watched topic (MIS-28); no earlier text",
+   "sha": "f32378f146ef"
+  }
+ ],
+ "intake/CHANGE_SPEC": [
+  {
+   "at": "2026-11-06",
+   "baseline": "new: the change-request pipeline (CHG-01 to CHG-18)",
+   "sha": "cd69a6091d0e"
+  }
+ ],
+ "intake/INTAKE": [
+  {
+   "at": "2026-10-31",
+   "baseline": "new prompt: the task intake (phase 1, TSK-03)",
+   "sha": "c01c19d38b94"
+  },
+  {
+   "at": "2026-10-31",
+   "cases": 6,
+   "from": "c01c19d38b94",
+   "judge": {
+    "equal": 0,
+    "new": 6,
+    "old": 0
+   },
+   "model": "gpt-sub",
+   "passed": true,
+   "sha": "b5d8471e28f9",
+   "valid": [
+    6,
+    6
+   ]
+  },
+  {
+   "at": "2026-10-31",
+   "cases": 6,
+   "from": "b5d8471e28f9",
+   "judge": {
+    "equal": 3,
+    "new": 1,
+    "old": 2
+   },
+   "model": "gpt-sub",
+   "passed": false,
+   "sha": "5d65fe846c4d",
+   "valid": [
+    6,
+    6
+   ]
+  },
+  {
+   "at": "2026-11-01",
+   "cases": 6,
+   "from": "b5d8471e28f9",
+   "judge": {
+    "equal": 2,
+    "new": 3,
+    "old": 1
+   },
+   "model": "gpt-sub",
+   "passed": true,
+   "sha": "13e314a3a2ec",
+   "valid": [
+    6,
+    6
+   ]
+  }
+ ],
+ "intake/RULE_CHECK": [
+  {
+   "at": "2026-10-31",
+   "baseline": "new prompt: a rule's model check (phase 3, TSK-11)",
+   "sha": "607cd09277da"
+  }
+ ],
+ "intake/TEMP_AGENT": [
+  {
+   "at": "2026-10-31",
+   "baseline": "new prompt: a temporary agent for a step no agent fits (phase 4, TSK-15)",
+   "sha": "ea388f68426f"
+  }
+ ],
+ "journal/ENTRY": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from ops/journal.py ENTRY_PROMPT",
+   "sha": "ed291d059983"
+  }
+ ],
+ "journal/FOLD": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from ops/journal.py FOLD_PROMPT",
+   "sha": "6f985a87313e"
+  }
+ ],
+ "main/BUY": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from ops/shopping.py BUY_PROMPT",
+   "sha": "9724e42cea68"
+  }
+ ],
+ "main/CLAUDE_RULE": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from config/hermes/configure.sh (claude rule)",
+   "sha": "0dba3bd4c5f4"
+  },
+  {
+   "at": "2026-11-08",
+   "cases": 3,
+   "from": "0dba3bd4c5f4",
+   "judge": {
+    "equal": 0,
+    "new": 3,
+    "old": 0
+   },
+   "model": "gpt-sub",
+   "passed": true,
+   "sha": "fd4430b3f9b7",
+   "valid": [
+    3,
+    3
+   ]
+  }
+ ],
+ "main/LANGUAGE_RULE": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from config/hermes/configure.sh (language rule)",
+   "sha": "e465c0ef72d1"
+  }
+ ],
+ "main/MISSIONS_RULE": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from config/hermes/configure.sh (missions rule)",
+   "sha": "8ba6c76087c5"
+  },
+  {
+   "at": "2026-11-08",
+   "cases": 5,
+   "from": "8ba6c76087c5",
+   "judge": {
+    "equal": 2,
+    "new": 3,
+    "old": 0
+   },
+   "model": "gpt-sub",
+   "passed": true,
+   "sha": "63e5b924f235",
+   "valid": [
+    5,
+    5
+   ]
+  }
+ ],
+ "main/PHONE_RULE": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from config/hermes/configure.sh (phone rule)",
+   "sha": "d48a419b35ea"
+  },
+  {
+   "at": "2026-11-04",
+   "cases": 4,
+   "from": "d48a419b35ea",
+   "judge": {
+    "equal": 1,
+    "new": 3,
+    "old": 0
+   },
+   "model": "gpt-sub",
+   "passed": true,
+   "sha": "3229e50d4218",
+   "valid": [
+    4,
+    4
+   ]
+  }
+ ],
+ "main/SHOPPING_RULE": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from config/hermes/configure.sh (shopping rule)",
+   "sha": "79e32e73f18f"
+  }
+ ],
+ "main/SPOKEN": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from ops/house.py SPOKEN",
+   "sha": "8f2b4e115533"
+  },
+  {
+   "at": "2026-11-01",
+   "cases": 4,
+   "from": "8f2b4e115533",
+   "judge": {
+    "equal": 1,
+    "new": 2,
+    "old": 1
+   },
+   "model": "gpt-sub-fast",
+   "passed": true,
+   "sha": "b6d0bf1613a4",
+   "valid": [
+    4,
+    4
+   ]
+  }
+ ],
+ "main/VOICE": [
+  {
+   "at": "2026-11-01",
+   "baseline": "new prompt: a turn spoken to Hermes through a speaker in the flat (voice V1, VOI-04); tried on its 5 cases: short answers, say-back before a mission, a question to keep talking, no purchase or mail aloud",
+   "sha": "b2ebed7acf47"
+  },
+  {
+   "at": "2026-11-01",
+   "cases": 6,
+   "from": "b2ebed7acf47",
+   "judge": {
+    "equal": 2,
+    "new": 2,
+    "old": 2
+   },
+   "model": "gpt-sub-fast",
+   "passed": false,
+   "sha": "07da9e2d69a8",
+   "valid": [
+    4,
+    3
+   ]
+  },
+  {
+   "at": "2026-11-01",
+   "cases": 6,
+   "from": "b2ebed7acf47",
+   "judge": {
+    "equal": 1,
+    "new": 5,
+    "old": 0
+   },
+   "model": "gpt-sub-fast",
+   "passed": true,
+   "sha": "07da9e2d69a8",
+   "valid": [
+    6,
+    6
+   ]
+  },
+  {
+   "at": "2026-11-08",
+   "cases": 6,
+   "from": "07da9e2d69a8",
+   "judge": {
+    "equal": 0,
+    "new": 5,
+    "old": 1
+   },
+   "model": "gpt-sub-fast",
+   "passed": false,
+   "sha": "d8ee2f53e446",
+   "valid": [
+    6,
+    5
+   ]
+  },
+  {
+   "at": "2026-11-08",
+   "cases": 6,
+   "from": "07da9e2d69a8",
+   "judge": {
+    "equal": 0,
+    "new": 4,
+    "old": 2
+   },
+   "model": "gpt-sub-fast",
+   "passed": false,
+   "sha": "d8ee2f53e446",
+   "valid": [
+    6,
+    5
+   ]
+  },
+  {
+   "at": "2026-11-08",
+   "cases": 6,
+   "from": "07da9e2d69a8",
+   "judge": {
+    "equal": 0,
+    "new": 5,
+    "old": 1
+   },
+   "model": "gpt-sub-fast",
+   "passed": true,
+   "sha": "36189c454c3a",
+   "valid": [
+    4,
+    6
+   ]
+  }
+ ],
+ "main/WEB_RULE": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from config/hermes/configure.sh (web rule)",
+   "sha": "7eb54708addb"
+  },
+  {
+   "at": "2026-11-07",
+   "cases": 4,
+   "from": "7eb54708addb",
+   "judge": {
+    "equal": 1,
+    "new": 3,
+    "old": 0
+   },
+   "model": "gpt-sub",
+   "passed": true,
+   "sha": "5b84d8b3f89f",
+   "valid": [
+    4,
+    4
+   ]
+  }
+ ],
+ "maintainability/REVIEW": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from ops/crew.py MAINT_PROMPT",
+   "sha": "f324883e303f"
+  }
+ ],
+ "memory/CROSS_CHECK": [
+  {
+   "at": "2026-11-02",
+   "baseline": "new prompt: one subject across wikis (MEM-17); tried on the 4 hub subjects of 2 Nov (dry): no contradiction claimed",
+   "sha": "8c86e610026d"
+  }
+ ],
+ "memory/DISTILL_SKILL": [
+  {
+   "at": "2026-11-07",
+   "baseline": "new prompt: a skill from a repeated tool sequence (MEM-39); no live sequence qualified on 7 Nov (the AI phone's look-tap loops are refused), tried on memory search -> research -> claude task: a three-step skill that keeps the owner's facts out of the research question; any draft still passes the danger check and the skills benchmark gate",
+   "sha": "91f187662373"
+  }
+ ],
+ "memory/KEEPER_FACTS": [
+  {
+   "at": "2026-11-02",
+   "baseline": "new prompt: the Memory Keeper\u2019s look at the owner\u2019s long-term facts (MEM-21, replaces FACTS); tried 3 times in the memory trial (eval/trials/memory.yaml, 32 planted facts): precision 1.0 each time, recall 0.87 to 1.0, no true fact touched",
+   "sha": "304b84691fa0"
+  },
+  {
+   "at": "2026-11-07",
+   "cases": 6,
+   "from": "304b84691fa0",
+   "judge": {
+    "equal": 0,
+    "new": 4,
+    "old": 2
+   },
+   "model": "gpt-sub-fast",
+   "passed": true,
+   "sha": "c478b0c7c3dc",
+   "valid": [
+    6,
+    6
+   ]
+  }
+ ],
+ "memory/RUBRIC": [
+  {
+   "at": "2026-11-07",
+   "baseline": "new prompt: the memory's write gate (MEM-35); tried on 6 real candidates of 7 Nov (a RAM lesson, a code summary, a click test failure with its fix, an undated price remark, a dated Kazatomprom guidance cut, the judge's baseline lesson): 6 of 6 as expected after two revisions (dated facts are durable; a run, build or change by its number is a source; a failure with its fix is kept)",
+   "sha": "e0b551cecf6f"
+  }
+ ],
+ "memory/WIKI_JUDGE": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from ops/librarian.py JUDGE",
+   "sha": "7963836e7f96"
+  }
+ ],
+ "mission/DEEP_PLAN": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from ops/mission_extras.py PLAN",
+   "sha": "440c6660153d"
+  }
+ ],
+ "mission/DEEP_STEP": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from ops/mission_extras.py STEP",
+   "sha": "7044ec1366a5"
+  },
+  {
+   "at": "2026-11-07",
+   "cases": 6,
+   "from": "7044ec1366a5",
+   "judge": {
+    "equal": 0,
+    "new": 3,
+    "old": 3
+   },
+   "model": "gpt-sub",
+   "passed": false,
+   "sha": "3101cbc1e916",
+   "valid": [
+    5,
+    4
+   ]
+  },
+  {
+   "at": "2026-11-07",
+   "cases": 6,
+   "from": "7044ec1366a5",
+   "judge": {
+    "equal": 2,
+    "new": 2,
+    "old": 2
+   },
+   "model": "gpt-sub",
+   "passed": false,
+   "sha": "3af7e8c0a75a",
+   "valid": [
+    6,
+    4
+   ]
+  },
+  {
+   "at": "2026-11-07",
+   "cases": 6,
+   "from": "7044ec1366a5",
+   "judge": {
+    "equal": 0,
+    "new": 4,
+    "old": 2
+   },
+   "model": "gpt-sub",
+   "passed": true,
+   "sha": "3af7e8c0a75a",
+   "valid": [
+    5,
+    6
+   ]
+  }
+ ],
+ "mission/DEEP_SYNTH": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from ops/mission_extras.py SYNTH",
+   "sha": "83c3555ee7f0"
+  }
+ ],
+ "mission/FILES": [
+  {
+   "at": "2026-11-03",
+   "baseline": "new: appended to DEEP_PLAN / DEEP_STEP / TASK only when the owner asked the mission for files (MIS-24); the existing texts are unchanged",
+   "sha": "0efa2150bfdc"
+  }
+ ],
+ "mission/FILES_PLAN": [
+  {
+   "at": "2026-11-03",
+   "baseline": "new: appended to DEEP_PLAN / DEEP_STEP / TASK only when the owner asked the mission for files (MIS-24); the existing texts are unchanged",
+   "sha": "757bcc5e3610"
+  }
+ ],
+ "mission/SHOPPING": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from ops/shopping.py PROMPT",
+   "sha": "f1d61fc1e38f"
+  }
+ ],
+ "mission/SOUL": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from config/hermes/configure-mission.sh",
+   "sha": "547dd85749d3"
+  },
+  {
+   "at": "2026-11-07",
+   "cases": 4,
+   "from": "547dd85749d3",
+   "judge": {
+    "equal": 0,
+    "new": 4,
+    "old": 0
+   },
+   "model": "gpt-sub",
+   "passed": true,
+   "sha": "205d80eec3a4",
+   "valid": [
+    4,
+    4
+   ]
+  }
+ ],
+ "mission/TASK": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from ops/missions.py TASK_PROMPT",
+   "sha": "d48015b3700d"
+  },
+  {
+   "at": "2026-11-07",
+   "cases": 3,
+   "from": "d48015b3700d",
+   "judge": {
+    "equal": 1,
+    "new": 2,
+    "old": 0
+   },
+   "model": "gpt-sub",
+   "passed": true,
+   "sha": "7f6b403966ff",
+   "valid": [
+    3,
+    3
+   ]
+  }
+ ],
+ "mission/TRACK": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from ops/shopping.py TRACK_PROMPT",
+   "sha": "2463f7d1949c"
+  }
+ ],
+ "mission/WIKI": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from ops/mission_extras.py WIKI",
+   "sha": "fd40d616cda8"
+  }
+ ],
+ "opencode/MAP_ANALYSE": [
+  {
+   "at": "2026-11-06",
+   "baseline": "moved verbatim from ops/understand.sh",
+   "sha": "133f2ce816c5"
+  }
+ ],
+ "opencode/MAP_FILES": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from ops/ua_enrich.py FILES",
+   "sha": "04c2f381a42c"
+  }
+ ],
+ "opencode/MAP_LAYERS": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from ops/ua_enrich.py LAYERS",
+   "sha": "52be74c3f78e"
+  }
+ ],
+ "planner/PLAN": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from ops/planner.py PROMPT",
+   "sha": "97175d5416b1"
+  }
+ ],
+ "prober/PROBE": [
+  {
+   "at": "2026-11-06",
+   "baseline": "new: the change-request pipeline (CHG-01 to CHG-18)",
+   "sha": "71ab45bae987"
+  }
+ ],
+ "scout/BRIEF": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from images/research/server.py BRIEF",
+   "sha": "68dbd43cfcda"
+  },
+  {
+   "at": "2026-10-31",
+   "cases": 4,
+   "from": "68dbd43cfcda",
+   "judge": {
+    "equal": 0,
+    "new": 4,
+    "old": 0
+   },
+   "model": "gpt-sub-fast",
+   "passed": false,
+   "sha": "55f922548065",
+   "valid": [
+    4,
+    2
+   ]
+  },
+  {
+   "at": "2026-10-31",
+   "cases": 4,
+   "from": "68dbd43cfcda",
+   "judge": {
+    "equal": 0,
+    "new": 3,
+    "old": 1
+   },
+   "model": "gpt-sub-fast",
+   "passed": true,
+   "sha": "55f922548065",
+   "valid": [
+    4,
+    4
+   ]
+  }
+ ],
+ "scribe/FOLD_RULE": [
+  {
+   "at": "2026-11-06",
+   "baseline": "new: the change-request pipeline (CHG-01 to CHG-18)",
+   "sha": "b50641e30374"
+  }
+ ],
+ "scribe/PROFILE": [
+  {
+   "at": "2026-11-06",
+   "baseline": "new: the change-request pipeline (CHG-01 to CHG-18)",
+   "sha": "9088d923e886"
+  },
+  {
+   "at": "2026-11-09",
+   "cases": 3,
+   "from": "9088d923e886",
+   "judge": {
+    "equal": 0,
+    "new": 1,
+    "old": 2
+   },
+   "model": "gpt-sub",
+   "passed": false,
+   "sha": "f42dd9644c77",
+   "valid": [
+    3,
+    3
+   ]
+  },
+  {
+   "at": "2026-11-09",
+   "cases": 3,
+   "from": "9088d923e886",
+   "judge": {
+    "equal": 2,
+    "new": 1,
+    "old": 0
+   },
+   "model": "gpt-sub",
+   "passed": true,
+   "sha": "ba0cdcfd7509",
+   "valid": [
+    3,
+    3
+   ]
+  }
+ ],
+ "scribe/SEED": [
+  {
+   "at": "2026-11-06",
+   "baseline": "new: the change-request pipeline (CHG-01 to CHG-18)",
+   "sha": "80af0a31a18a"
+  }
+ ],
+ "self-review/REVIEW": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from ops/improve.py PROMPT",
+   "sha": "371262b9b865"
+  }
+ ],
+ "shared/ANSWER": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from ops/crew.py ANSWER_PROMPT",
+   "sha": "04256c2bbe20"
+  }
+ ],
+ "shared/ANSWER_RULE": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from ops/swarm_client.py ANSWER_RULE",
+   "sha": "4549dee2bcfb"
+  }
+ ],
+ "shared/CHANGE_STEP": [
+  {
+   "at": "2026-11-06",
+   "baseline": "new: the change-request pipeline (CHG-01 to CHG-18)",
+   "sha": "c732529b34d4"
+  }
+ ],
+ "shared/CLAUDE_TASK": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from ops/claude_tasks.py PROMPT",
+   "sha": "7af68c51c337"
+  }
+ ],
+ "shared/ONBOARD_ANALYSIS": [
+  {
+   "at": "2026-11-06",
+   "baseline": "new: the written analysis of an onboarding, 6 Nov 2026",
+   "sha": "3f47211c2011"
+  }
+ ],
+ "shared/ONBOARD_GUIDE": [
+  {
+   "at": "2026-11-08",
+   "baseline": "new prompt: the engineer's guide to the owner's own repository (DEC-48)",
+   "sha": "d4f67cfb499b"
+  }
+ ],
+ "shared/TASK_CHECKPOINT": [
+  {
+   "at": "2026-11-01",
+   "baseline": "new: the Orchestrator looks at a running plan between waves (TRL-08)",
+   "sha": "136c5455bc2a"
+  },
+  {
+   "at": "2026-11-02",
+   "cases": 4,
+   "from": "136c5455bc2a",
+   "judge": {
+    "equal": 2,
+    "new": 2,
+    "old": 0
+   },
+   "model": "gpt-sub",
+   "passed": true,
+   "sha": "283cf1107db4",
+   "valid": [
+    4,
+    4
+   ]
+  }
+ ],
+ "shared/TASK_JUDGE": [
+  {
+   "at": "2026-10-31",
+   "baseline": "new prompt: a finished task against its definition of done (phase 4, TSK-17)",
+   "sha": "6b67f50d310f"
+  },
+  {
+   "at": "2026-11-01",
+   "cases": 3,
+   "from": "6b67f50d310f",
+   "judge": {
+    "equal": 3,
+    "new": 0,
+    "old": 0
+   },
+   "model": "gpt-sub",
+   "passed": true,
+   "sha": "7966c0c60490",
+   "valid": [
+    3,
+    3
+   ]
+  },
+  {
+   "at": "2026-11-02",
+   "cases": 3,
+   "from": "7966c0c60490",
+   "judge": {
+    "equal": 3,
+    "new": 0,
+    "old": 0
+   },
+   "model": "gpt-sub",
+   "passed": true,
+   "sha": "ace66415df3e",
+   "valid": [
+    3,
+    3
+   ]
+  }
+ ],
+ "shared/TASK_STEP": [
+  {
+   "at": "2026-10-31",
+   "baseline": "new prompt: one step of a task's plan (phase 2, TSK-07)",
+   "sha": "444c4ae0cd6d"
+  },
+  {
+   "at": "2026-11-01",
+   "cases": 3,
+   "from": "444c4ae0cd6d",
+   "judge": {
+    "equal": 2,
+    "new": 0,
+    "old": 1
+   },
+   "model": "gpt-sub",
+   "passed": false,
+   "sha": "3ae0c3a6608b",
+   "valid": [
+    3,
+    3
+   ]
+  },
+  {
+   "at": "2026-11-01",
+   "cases": 6,
+   "from": "444c4ae0cd6d",
+   "judge": {
+    "equal": 3,
+    "new": 1,
+    "old": 2
+   },
+   "model": "gpt-sub",
+   "passed": false,
+   "sha": "3ae0c3a6608b",
+   "valid": [
+    6,
+    6
+   ]
+  },
+  {
+   "at": "2026-11-01",
+   "cases": 6,
+   "from": "444c4ae0cd6d",
+   "judge": {
+    "equal": 2,
+    "new": 3,
+    "old": 1
+   },
+   "model": "gpt-sub",
+   "passed": true,
+   "sha": "6841fbcae457",
+   "valid": [
+    6,
+    6
+   ]
+  }
+ ],
+ "shared/WAKE": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from ops/swarm_client.py WAKE_PROMPT",
+   "sha": "409c2f9f141e"
+  }
+ ],
+ "wikis/SUMMARY": [
+  {
+   "at": "2026-10-30",
+   "baseline": "moved verbatim from ops/wikis.py SUMMARY",
+   "sha": "855fecff5fbf"
+  }
+ ]
+}

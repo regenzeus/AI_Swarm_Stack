@@ -1,0 +1,129 @@
+# Stakeholder needs: what the owner (the owner and only user) wants from the AI stack, in his terms.
+# Every system requirement refines at least one of these or a constraint; ops/req.py refuses a need no requirement
+# refines. Sources: the owner's instructions in the build sessions (2026-10-24 to 2026-10-29), README.md, the guide.
+area: Stakeholder needs
+prefix: SN
+items:
+  - id: SN-01
+    title: A personal AI team that works by itself
+    need: Agents read the news, research companies and topics, watch filings and prices, and deliver briefings,
+      alerts and research results on their own, so that the owner mostly just reads results.
+    priority: must
+    sources: [README.md, images/mission-control/guide/01-welcome.md]
+  - id: SN-02
+    title: Out of the loop except for real decisions
+    need: the owner is asked only for decisions that are really his (approvals of spending, deploys, deletions,
+      settings, grants), each one tap away with enough context to decide; no scripts to run, no busywork, nothing
+      shown as needing him that does not.
+    priority: must
+    sources: [DEC-09, DEC-20, "owner 2026-10-29: 'This stuff doesnt look like it needs me'", "owner: user does not want to run scripts/click"]
+  - id: SN-03
+    title: Costs nothing to run
+    need: Running the stack costs $0 beyond the subscriptions the owner already pays; nothing can spend money by
+      accident.
+    priority: must
+    sources: [DEC-01, README.md]
+  - id: SN-04
+    title: Private data stays home
+    need: Notes, reports, memory, chats, mail and files stay on the PC and the NAS; only the model calls leave, and
+      The owner knows which provider sees what.
+    priority: must
+    sources: [docs/SECURITY.md, images/mission-control/guide/14-safety.md]
+  - id: SN-05
+    title: Agents cannot do damage
+    need: No agent can spend money, delete data for good, leak private data, change the NAS, the router or phone and
+      PC security settings, or deploy code without the owner's approval; prompt injection from the web or mail cannot
+      steer an agent into any of it.
+    priority: must
+    sources: [docs/SECURITY.md, CST-05, CST-07, CST-11]
+  - id: SN-06
+    title: Usable from the phone, anywhere, one sign-in
+    need: Everything is usable and decidable from the owner's phone (installable app, push, Telegram), from anywhere on
+      his tailnet, with his Tailscale login as the only sign-in.
+    priority: must
+    sources: [README.md, docs/SECURITY.md]
+  - id: SN-07
+    title: See what every agent does
+    need: For every agent, mission, crew job, build and tool the owner can see what it did step by step, what it read
+      and changed, what it produced, what it cost and when something went wrong, without having to look for it.
+    priority: must
+    sources: [DEC-05, docs/OBSERVABILITY.md]
+  - id: SN-08
+    title: The stack maintains and improves itself
+    need: Housekeeping agents keep the stack healthy, and the stack proposes and builds its own improvements; the owner
+      approves what ships.
+    priority: must
+    sources: [README.md, images/mission-control/guide/10-builder.md, images/mission-control/guide/18-crew.md]
+  - id: SN-09
+    title: Nothing is ever lost
+    need: Data and configuration are backed up, the backups are proven to restore, and the whole stack can move to
+      a new PC.
+    priority: must
+    sources: [README.md, NEW-MACHINE.md]
+  - id: SN-10
+    title: Knowledge that grows and answers with sources
+    need: Everything the owner and his agents write becomes a searchable, linked knowledge base (vault, wikis, long-term
+      memory) that answers questions with citations.
+    priority: must
+    sources: [images/mission-control/guide/08-knowledge.md, images/mission-control/guide/09-wikis.md]
+  - id: SN-11
+    title: Hands in the real world, under control
+    need: Agents can act through the AI phone, Gmail, shopping and the House (lights, plugs, Echos), each only within
+      grants and approvals the owner controls, with Stop and a log.
+    priority: should
+    sources: [images/mission-control/guide/17-ai-phone.md, images/mission-control/guide/18-connections.md, images/mission-control/guide/18-shopping.md, images/mission-control/guide/19-house.md]
+  - id: SN-12
+    title: English everywhere
+    need: Chat, app, reports, wikis, Telegram, code, docs and commit messages are in English.
+    priority: must
+    sources: [DEC-02]
+  - id: SN-13
+    title: Runs unattended for months
+    need: The stack keeps working through usage-limit pauses, restarts, deploys, reboots and power cuts, and
+      recovers by itself; no work, approval or message is lost on a restart.
+    priority: must
+    sources: [docs/REVIEW-2026-10-27.md, "owner 2026-10-29: Allow gave no feedback after a restart"]
+  - id: SN-14
+    title: Understand and change any codebase
+    need: The stack can study any repository (code graph, code map), answer questions about it, change the owner's own
+      repositories through the builder, and check code against large specifications.
+    priority: should
+    sources: [images/mission-control/guide/11-code.md, spec/README.md]
+  - id: SN-15
+    title: A codebase AI agents can develop safely
+    need: The repository is organised for coding agents (rules per directory, checks, tests, docs that stay true),
+      so that agents can change it without breaking it.
+    priority: must
+    sources: [AGENTS.md]
+  - id: SN-16
+    title: Known, current and checkable requirements
+    need: What the stack must do is written down properly, kept current with every change, and contradictions
+      between the parts are found and shown.
+    priority: must
+    sources: [DEC-14]
+  - id: SN-17
+    title: Agents that work together over time
+    need: Agents keep working on the same topics over many runs, refine and reopen each other's work, see each
+      other's artifacts and talk to each other directly, to groups or to all, with the owner reading along.
+    priority: should
+    sources: [DEC-10, DEC-15, "design: AI Stack Agent Swarm (claude.ai artifact 18fPjMRbQnxSVikesY8w6M)"]
+  - id: SN-18
+    title: Told once, not spammed
+    need: the owner hears about what needs him or went wrong once, on his phone, and is not flooded with repeats or
+      noise.
+    priority: should
+    sources: [docs/OBSERVABILITY.md, images/mission-control/guide/18-crew.md]
+  - id: SN-19
+    title: Give a task, the stack does the rest
+    need: The owner gives any task (coding, research, analysis, watching, errands) in one sentence, or with details
+      preset when wanted; the stack works out what done means, plans it, chooses or creates the agents, models and
+      harnesses, runs it once, on a schedule, on an event or after other work, for minutes or for months, and asks
+      only the real decisions.
+    priority: must
+    sources: ["owner 2026-10-31: the user should just give a task and the AI Stack figures out the rest", docs/SWARM-ROADMAP.md]
+  - id: SN-20
+    title: Work that starts when the world changes
+    need: Tasks start by themselves when something happens, such as a news story breaking, mail arriving, code changing,
+      a price moving, a device changing state or another task finishing.
+    priority: should
+    sources: ["owner 2026-10-31: trigger on different kinds of events, like a particular news event breaking", docs/SWARM-ROADMAP.md]

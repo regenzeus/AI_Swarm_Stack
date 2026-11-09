@@ -1,0 +1,9 @@
+[Unit]
+Description=Restart the services that grow while idle (qmd, Phoenix, Open WebUI) when the stack is idle (PLT-27)
+[Service]
+Type=oneshot
+Environment=DOCKER_HOST=unix://%t/docker.sock
+WorkingDirectory=%h/ai-stack
+ExecCondition=/usr/bin/python3 %h/ai-stack/ops/stack_gate.py --wait 1800
+ExecStart=/usr/bin/python3 ops/recycle.py
+TimeoutStartSec=2h

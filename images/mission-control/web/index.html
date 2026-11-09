@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+<title>Mission Control</title>
+<meta name="description" content="Missions, agents, knowledge and costs of your AI stack">
+<meta name="theme-color" id="themecolor" content="#0c1115">
+<script>
+// the theme before the first paint, so a light page never flashes dark: this device's choice, else the system's
+(function () {
+  var mq = matchMedia("(prefers-color-scheme: light)");
+  window.applyTheme = function (pick) {
+    var t = pick === "light" || pick === "dark" ? pick : mq.matches ? "light" : "dark";
+    document.documentElement.dataset.theme = t;
+    document.getElementById("themecolor").content = t === "light" ? "#edf0f3" : "#0c1115";
+  };
+  var saved = function () { try { return localStorage.getItem("mc-theme"); } catch (e) { return null; } };
+  applyTheme(saved());
+  mq.addEventListener("change", function () { applyTheme(saved()); });
+  try { var start = localStorage.getItem("mc-start"); if (start && (!location.hash || location.hash === "#/")) location.replace(start); } catch (e) {}
+})();
+</script>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Mission">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/static/icons/icon-192.png">
+<link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png">
+<link rel="stylesheet" href="/static/app.css">
+<link rel="stylesheet" href="/static/guide.css">
+</head>
+<body>
+<div class="shell">
+  <aside class="side">
+    <a class="brand" href="#/"><img src="/static/icons/icon-192.png" alt=""><span>Mission Control</span></a>
+    <nav class="nav" id="nav-side"></nav>
+    <div class="side-foot" id="side-foot"></div>
+  </aside>
+  <main>
+    <div id="livebar" class="livebar" hidden><div id="live-chip" class="chip"></div></div>
+    <div id="view" class="view"></div>
+    <div id="pagehelp" class="pagehelp"><a href="#/guide">How this page works</a></div>
+  </main>
+</div>
+<nav class="tabbar" id="nav-bottom"></nav>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+<script>window.DEPLOY = {/*DEPLOY*/};</script>
+<script src="/static/vendor/marked.min.js"></script>
+<script src="/static/vendor/purify.min.js"></script>
+<script src="/static/vendor/d3.min.js"></script>
+<script src="/static/guide.js"></script>
+<script src="/static/shop.js"></script>
+<script src="/static/swarm.js"></script>
+<script src="/static/task.js"></script>
+<script src="/static/app-base.js"></script>
+<script src="/static/app-tasks.js"></script>
+<script src="/static/app-runs.js"></script>
+<script src="/static/app-devices.js"></script>
+<script src="/static/app-wiki-code.js"></script>
+<script src="/static/app-memory.js"></script>
+<script src="/static/app.js"></script>
+</body>
+</html>

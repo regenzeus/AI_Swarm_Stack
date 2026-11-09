@@ -1,0 +1,10 @@
+# feature: phone
+[Unit]
+Description=Crew: Phone cleanup: the AI phone's storage -> steps you approve one by one (weekly, Sunday)
+[Service]
+Type=oneshot
+TimeoutStartSec=2h
+Environment=DOCKER_HOST=unix://%t/docker.sock
+WorkingDirectory=%h/ai-stack
+ExecCondition=/usr/bin/python3 %h/ai-stack/ops/stack_gate.py --wait 1800 --slot 25
+ExecStart=/usr/local/bin/sops exec-env secrets/secrets.enc.yaml "sops exec-env secrets/agent-keys.enc.yaml \"python3 ops/crew.py phone-cleanup\""

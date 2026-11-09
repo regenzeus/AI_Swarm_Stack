@@ -1,0 +1,5 @@
+# The only hosts this deployment's work may reach (GEN-14): host or host:port, 443 by default. Placeholders: a real
+# deployment lists its gateway, its forge and its package mirrors, or only the company proxy when everything goes through it.
+llm-gateway.example.com
+bitbucket.example.com
+artifactory.example.com

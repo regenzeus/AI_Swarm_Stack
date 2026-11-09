@@ -1,0 +1,28 @@
+# The calibration trial (docs/SWARM-TRIALS.md, T1): Semantic Versioning 2.0.0 from its specification, clean room.
+# Its answer key is /srv/ai/private/trials/semver (out of every agent's reach): the spec's own regular expression labels
+# 77 version strings, rule 11 orders 140 pairs (each checked against python-semver), 351 cases in all.
+name: semver
+title: Semantic Versioning 2.0.0, clean room
+task: >-
+  Write a small Python library called semverlib that implements Semantic Versioning 2.0.0, from the specification
+  only: it is in this repository's spec/ folder. Its interface: semverlib.is_valid(text) returns True or False;
+  semverlib.parse(text) returns a version with major, minor and patch (int), prerelease and build (tuples of the
+  identifiers as strings), str() giving the original text back, and versions compare with < and == by precedence;
+  parse raises ValueError for anything that is not a valid version; semverlib.compare(a, b) returns -1, 0 or 1 by
+  precedence for two version strings, build metadata ignored. Put the package at the top of the repository
+  (semverlib/__init__.py) with tests under tests/ that pytest runs. This is a clean-room implementation: do not use,
+  install, download or read any existing semantic-versioning library or its code (python-semver, node-semver or any
+  other); the specification is the only source.
+key: semver
+done:
+  - every rule of the specification is implemented, each with a test
+  - the interface is exactly as the task names it
+  - no existing semantic-versioning library was used or read
+forbidden:                      # audited from what the agents read and ran, and from the delivered code
+  urls: ['github\.com/python-semver', 'github\.com/npm/node-semver', 'pypi\.org/project/semver\b', 'files\.pythonhosted\.org/.*/semver-\d', 'npmjs\.com/package/semver\b']
+  commands: ['pip3? +(install|download)\b[^\n"]*\bsemver\b(?![\w-])', '\bimport semver\b(?![\w-])', '\bfrom semver\b(?![\w-]) import',
+             '\bnpm +(install|i)\b[^\n"]*\bsemver\b(?![\w-])', '"semver(?![\w-])[<>=~ ]', '(?m)^semver(?![\w-])', 'node_modules/semver']
+similar_to: upstream/src        # python-semver 3.1.0, for the similarity check only
+flag_similarity: 0.3
+effort: light
+budget: {hours: 4, tokens: 1500000}

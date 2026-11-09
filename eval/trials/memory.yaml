@@ -1,0 +1,41 @@
+# The memory trial (MEM-20): planted facts with an answer key for the Memory Keeper's judgement (ops/keeper.py trial).
+# Each fact's label is what the Keeper should do with it: keep, or the fault it may fix itself (duplicate:<older id>,
+# test_noise, agent_run, not_english, passing_state), or a contradiction for the owner (contradiction:<id>: never an
+# automatic change). The traps are true facts that look like faults: two facts on one subject with different details,
+# an old but true fact, a request the owner made, a German shop name in an English fact.
+# Precision counts the Keeper's automatic changes that are right; a true fact touched is wrong. The automatic changes
+# run only while precision >= 0.95 and recall >= 0.6 on the current prompt (docs/MEMORY.md, the Memory Keeper).
+facts:
+  - {id: f01, date: 2026-10-20, label: keep, text: "The owner prefers voice answers in two or three short sentences without lists."}
+  - {id: f02, date: 2026-10-21, label: keep, text: "The owner's desktop PC has 16 GB of RAM and an ASRock Z270 Pro4 board."}
+  - {id: f03, date: 2026-10-22, label: "duplicate:f01", text: "For spoken replies the user wants plain English, two or three short sentences, no lists."}
+  - {id: f04, date: 2026-10-22, label: keep, text: "The owner works on a self-hosted AI stack running in WSL on Windows."}
+  - {id: f05, date: 2026-10-23, label: test_noise, text: "The user asked the benchmark question 'What is the capital of Australia?' during an evaluation run."}
+  - {id: f06, date: 2026-10-23, label: agent_run, type: experience, text: "The assistant's attempt to open Chrome on the phone timed out after 90 seconds and the guard blocked Android Settings."}
+  - {id: f07, date: 2026-10-24, label: keep, text: "The owner asked the assistant to watch DDR4 RAM prices and buy nothing without his approval."}
+  - {id: f08, date: 2026-10-24, label: not_english, text: "Der Nutzer möchte, dass Einkäufe immer zuerst bei Amazon.de geprüft werden."}
+  - {id: f09, date: 2026-10-25, label: keep, text: "The owner usually buys groceries at Edeka on Saturdays."}
+  - {id: f10, date: 2026-10-25, label: test_noise, text: "The owner created the mission 'Test Mission Control' to check that copper briefings reach the vault."}
+  - {id: f11, date: 2026-10-26, label: agent_run, type: experience, text: "The checker crew run completed with 0 model calls and 0 steps; two items stayed unchecked."}
+  - {id: f12, date: 2026-10-26, label: keep, text: "The owner's RAM upgrade budget is at most EUR 150 delivered."}
+  - {id: f13, date: 2026-10-27, label: "duplicate:f12", text: "The owner wants to spend no more than EUR 150 including delivery on the RAM upgrade."}
+  - {id: f14, date: 2026-10-27, label: keep, text: "The owner wants Home Assistant on the S22 phone set up as a voice speaker for the assistant."}
+  - {id: f15, date: 2026-10-27, label: passing_state, type: experience, text: "As of October 1, 2026, the owner is currently waiting for the Home Assistant Voice Preview to come back in stock until mid-October."}
+  - {id: f16, date: 2026-10-28, label: not_english, text: "Para revisar el wake word en el teléfono, the owner prefiere iniciar primero la tarea del teléfono."}
+  - {id: f17, date: 2026-10-28, label: keep, text: "The owner's mail is read only under his read grant; the assistant never trashes mail without his tap."}
+  - {id: f18, date: 2026-10-29, label: "contradiction:f19", text: "The owner wants the morning briefing at 06:30."}
+  - {id: f19, date: 2026-10-29, label: keep, text: "The owner wants the morning briefing at 07:15."}
+  - {id: f20, date: 2026-10-29, label: agent_run, type: experience, text: "The Topic Desk run for the copper briefing failed because the feed returned HTTP 503."}
+  - {id: f21, date: 2026-10-30, label: keep, text: "The owner follows copper miners, among them Acme Mining and Gamma Metals."}
+  - {id: f22, date: 2026-10-30, label: keep, text: "The owner follows Centrus Energy for its LEU enrichment plans in Piketon."}
+  - {id: f23, date: 2026-10-30, label: "duplicate:f04", text: "The owner runs his own AI stack inside WSL on a Windows PC."}
+  - {id: f24, date: 2026-10-31, label: not_english, text: "The owner möchte Sprachantworten auf Englisch, auch wenn er Deutsch spricht."}
+  - {id: f25, date: 2026-10-31, label: keep, text: "The owner decided to keep SQLite as the swarm's database."}
+  - {id: f26, date: 2026-10-31, label: test_noise, text: "The user sent 'test 123 please ignore' to check whether the chat works."}
+  - {id: f27, date: 2026-11-01, label: keep, text: "The owner asked for a weekly report on the Chinese car market by e-mail."}
+  - {id: f28, date: 2026-11-01, label: agent_run, type: experience, text: "The builder's step for task 107 refused its brief because the description was over 20,000 characters."}
+  - {id: f29, date: 2026-11-01, label: keep, text: "The owner's G.Skill Ripjaws V kit is a different product line from the Aegis kit."}
+  - {id: f30, date: 2026-11-01, label: passing_state, type: experience, text: "The Black Week sale on the RAM kit is running now and ends on October 5, 2026."}
+  - {id: f31, date: 2026-11-02, label: keep, text: "The owner is called the owner and lives at home."}
+  - {id: f32, date: 2026-11-02, label: keep, text: "The owner does not want purchases, deletions or deployments approved by voice."}
+  - {id: f33, date: '2026-11-03', label: 'duplicate:f01', text: For the bedroom Echo the owner wants voice answers in two or three short sentences without lists or Markdown.}

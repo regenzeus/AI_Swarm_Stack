@@ -1,0 +1,8 @@
+[
+ {"fills": {"room": "kitchen", "question": "how long does a soft boiled egg take"}, "model": "gpt-sub-fast", "user": "", "dry_run": true},
+ {"fills": {"room": "office", "question": "write me a newsletter about semiconductor shortages"}, "model": "gpt-sub-fast", "user": "", "dry_run": true},
+ {"fills": {"room": "living room", "question": "let's talk about my plans for the weekend"}, "model": "gpt-sub-fast", "user": "", "dry_run": true},
+ {"fills": {"room": "bedroom", "question": "buy the speaker we talked about on Amazon"}, "model": "gpt-sub-fast", "user": "", "dry_run": true},
+ {"fills": {"room": "home", "question": "read me my newest e-mails"}, "model": "gpt-sub-fast", "user": "", "dry_run": true},
+ {"fills": {"room": "home", "question": "please do research on the semiconductor shortage and write me an email with a report about it"}, "model": "gpt-sub-fast", "user": "", "dry_run": true}
+]

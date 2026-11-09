@@ -1,0 +1,145 @@
+# Shopping agents: from a wish to the door. The owner decides at one point, the proposal; the last step is a
+# deterministic check on the phone.
+area: Shopping
+prefix: SHP
+items:
+  - id: SHP-01
+    title: Only budget and deadline are asked
+    statement: When the owner wishes for something, Hermes shall create a shopping agent asking only for budget and
+      deadline, and the agent shall read the PC's own facts (board, slots, modules, graphics card, disks) instead of
+      asking.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-02, SN-11]
+    sources: [images/mission-control/guide/18-shopping.md]
+    verify: {method: test, by: [tests/test_shopping.py::test_shopping_missions_can_be_created, tests/test_shopping.py::test_the_pc_facts_reach_the_prompt]}
+    trace: [ops/shopping.py, images/mission-control/web/static/shop.js]
+  - id: SHP-02
+    title: Offers with shipping, seller and delivery
+    statement: The agent shall compare current offers from at least two German shops in euros including shipping, with seller,
+      rating and delivery date, reading prices in any page format.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-11]
+    sources: [images/mission-control/guide/18-shopping.md]
+    verify: {method: test, by: [tests/test_shopping.py::test_best_price_is_read_in_any_format, tests/test_shopping.py::test_first_run_reports_and_remembers_the_price, tests/test_shopping.py::test_a_shop_page_s_price_is_read_whole_in_german_and_english]}
+  - id: SHP-03
+    title: Buy now or wait, with a reason
+    statement: Each run shall end in a proposal card with a verdict (buy now, or wait until a price or date, with the
+      reason) that knows the sales ahead, and a wait verdict shall keep watching.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-11, SN-02]
+    sources: [images/mission-control/guide/18-shopping.md]
+    verify: {method: test, by: [tests/test_shopping.py::test_a_run_ends_in_a_proposal_card, tests/test_shopping.py::test_sales_ahead_know_black_friday, tests/test_shopping.py::test_wait_verdict_keeps_watching]}
+  - id: SHP-04
+    title: The price watch stays quiet
+    statement: The sealed price watch shall re-read open proposals' offer pages and report only when the price drops
+      below the target; it shall send no notifications itself.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-18, SN-11]
+    sources: [images/pricewatch/AGENTS.md]
+    verify: {method: test, by: [tests/test_shopping.py::test_the_same_price_under_the_target_proposes_once, tests/test_shopping.py::test_price_watch_stays_quiet_until_the_price_drops]}
+    trace: [ops/pricewatch.py]
+    findings: [FND-29]
+  - id: SHP-05
+    title: Limits
+    statement: Purchases shall stay within the owner's limits (default 150 EUR per purchase, 300 EUR per month counting
+      what was bought, shops amazon.de), set only by him in the app and validated; nothing shall be bought until his
+      postcode is set.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05, SN-03]
+    sources: [images/mission-control/guide/18-shopping.md]
+    verify: {method: test, by: [tests/test_shopping.py::test_monthly_cap_counts_what_was_bought, tests/test_shopping.py::test_limits_are_validated]}
+  - id: SHP-06
+    title: Over a limit, only a link
+    statement: If the agent's pick is over a cap or in a shop not on the list, then the card shall offer only a Buy it
+      yourself link, and an over-cap pick shall be watched and proposed again when it fits. Every shop link the agent
+      gives shall be kept and shown only as a web address (http or https).
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05]
+    sources: [docs/SHOPPING.md, docs/REVIEW-2026-11-07.md]
+    verify: {method: test, by: [tests/test_shopping.py::test_a_caller_that_gave_up_does_not_reset_the_browser, tests/test_shopping.py::test_over_a_cap_only_a_buy_yourself_link, tests/test_shopping.py::test_a_top_pick_from_another_shop_is_a_buy_yourself_link, tests/test_shopping.py::test_an_over_cap_pick_is_watched_and_proposed_again_under_the_cap, tests/test_shopping.py::test_an_offer_link_is_kept_only_as_a_web_address]}
+  - id: SHP-07
+    title: Only the owner approves a purchase
+    statement: Only the owner's tap in Mission Control on his own device shall approve a purchase; the approval shall
+      name exactly the item, variant, seller, ceiling (total x 1.03 + 1 EUR, never over the cap), address words and shop
+      app, and expire after 45 minutes. The approval shall hold for the proposal as the owner saw it; when the proposal changed after that (a re-run with
+      the same link updates it in place), the tap shall be refused with the reason.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05, CST-11]
+    sources: [docs/SHOPPING.md]
+    findings: [FND-116]
+    verify: {method: test, by: ['tests/test_recoverable.py::test_an_ai_phone_down_for_half_an_hour_is_an_alert_unless_the_owner_stopped_it', tests/test_shopping.py::test_only_the_owner_approves_and_the_phone_gets_exactly_that, tests/test_server.py::test_purchases_are_decided_only_by_the_owner,
+      tests/test_phone.py::test_the_shopping_agent_s_phone_requests_are_readable_by_the_phone, tests/test_phone.py::test_one_unreadable_request_never_stops_the_phone]}
+  - id: SHP-08
+    title: Not now and Change
+    statement: Not now shall keep watching and propose again when the price is at most 95 % of the proposal's total or
+      after two weeks, and Change shall look again with the owner's words.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-02]
+    sources: [images/mission-control/guide/18-shopping.md]
+    verify: {method: test, by: [tests/test_shopping.py::test_not_now_keeps_watching_and_change_looks_again]}
+  - id: SHP-09
+    title: The final screen is checked without a model
+    statement: Before the one buy tap, the AI phone service shall read the whole final screen and tap only if the item,
+      variant, seller and address words are present, the total is at most the ceiling and there is no sign-in, code,
+      captcha or card check; the tap shall happen once.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05, CST-11]
+    sources: [docs/SHOPPING.md]
+    verify: {method: test, by: [tests/test_phone.py::test_the_final_tap_checks_the_button_under_it_on_the_screen_read_just_now, tests/test_phone.py::test_enter_is_refused_during_a_purchase, tests/test_phone.py::test_final_check_passes_only_the_approved_order, tests/test_phone.py::test_the_approved_final_tap_happens_once, tests/test_phone.py::test_a_mismatch_stops_without_buying, tests/test_phone.py::test_an_amount_is_read_whole_or_not_at_all]}
+    trace: [images/phone/phone.py]
+  - id: SHP-10
+    title: Purchase mode is tighter
+    statement: While a purchase approval is open, the AI phone service shall refuse typing and taps on change, edit,
+      address, payment and voucher labels.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05]
+    sources: [docs/SHOPPING.md]
+    verify: {method: test, by: [tests/test_phone.py::test_during_a_purchase_no_typing_and_no_address_changes]}
+  - id: SHP-11
+    title: After the order
+    statement: After a buy, the agent shall report the order number from the confirmation screen and follow the order
+      mails (under the Gmail read grant) until delivery; a stopped purchase shall ask the owner with a screenshot.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-11, SN-07]
+    sources: [docs/SHOPPING.md]
+    verify: {method: test, by: [tests/test_shopping.py::test_buy_run_reports_the_order, tests/test_shopping.py::test_a_stopped_purchase_asks_the_owner]}
+  - id: SHP-12
+    title: A run cut off by a restart starts again once
+    statement: When the runner restarts during a shopping run, the run shall start again once.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-13]
+    sources: [ops/shopping.py]
+    verify: {method: test, by: [tests/test_shopping.py::test_a_run_cut_off_by_a_runner_restart_starts_again_once]}
+  - id: SHP-13
+    title: A wish ends delivered, and scored
+    statement: A shopping task shall track its delivery, ask the owner once that the item arrived and works, and close
+      with the price paid against the lowest valid offer seen in its window and the days from wish to delivery.
+    type: functional
+    priority: should
+    status: proposed
+    parents: [SN-11, SN-01]
+    sources: [docs/NEXT-PHASE.md]

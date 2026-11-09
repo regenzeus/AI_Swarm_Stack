@@ -1,0 +1,24 @@
+# T2 on our own implementation (docs/SWARM-TRIALS.md): the swarm maps the AI stack's own requirements to its code and
+# names the ones not met. Its answer key is /srv/ai/private/trials/stack-trace (built by its make_key.py from the
+# current main): 60 requirements, each one's trace files (the requirements engineering's own map) and the 12 whose
+# status says they are not met in full; every requirement ID is taken out of the code the agents get.
+name: stack-trace
+title: The AI stack's own requirements, traced and gaps found
+task: >-
+  This repository holds 60 of the AI stack's own requirements in spec/requirements.md, each with its ID, and the stack's
+  code in code/ (Python, JavaScript, shell, Compose). For every requirement, find the files and lines that implement
+  it, and name every requirement the code does not meet, or meets only in part, with why. Write the result to
+  trace.json at the top of the repository, as {"requirements": [{"id": "APP-01", "where": [{"file":
+  "code/images/mission-control/web/static/app.js", "line": 123}]}], "gaps": [{"id": "PLT-17", "file": "code/...",
+  "line": 1, "why": "..."}]}, with every ID of spec/requirements.md under requirements. Read only this repository.
+key: stack-trace
+code: true
+done:
+  - trace.json lists every requirement ID of spec/requirements.md, each with the files and lines that implement it
+  - every requirement the code does not meet in full is among the gaps with its reason
+  - only this repository was read
+forbidden:
+  urls: ['github\.com/regenzeus/AI_Swarm_Stack']   # its published copy; the private repository is out of an agent's reach
+  commands: ['git +clone', 'requirements/[a-z-]+\.yaml']
+effort: standard
+budget: {hours: 3, tokens: 3000000}

@@ -1,0 +1,119 @@
+# Autonomy: the stack acts unasked only where it has earned it (docs/NEXT-PHASE.md, Part 1).
+area: Autonomy
+prefix: AUT
+items:
+  - id: AUT-01
+    title: Each kind of action holds a licence
+    statement: Every kind of action that can wait for the owner shall belong to an action class with a licence at one of
+      three levels (ask, do and tell with an undo window, do quietly), decided in one place that every door calls, with
+      the class's exam, bars, highest level and the evidence for its current level on the class's page.
+    type: functional
+    priority: must
+    status: proposed
+    parents: [SN-02, SN-05]
+    sources: ['chat 2026-11-02: Earned autonomy ... Design this out.', docs/NEXT-PHASE.md]
+    rationale: The Memory Keeper showed the pattern (DEC-40); the owner's taps queue up in nine places.
+  - id: AUT-02
+    title: A licence is earned by exam, shadow and record, and lost at once
+    statement: "A class shall rise one level only when its answer-key exam passes on its last three runs, its shadow
+      decisions agreed with at least 90 % of the owner's last 20 decisions in that class and never chose to act where the
+      owner refused, its acts of 14 days had no undo or failed check, and the owner allows the step once; it shall drop
+      one level at once, saying why, on a failed exam, such a disagreement, an undo or a failed act, and go back under exam
+      when the agent, prompt or code it runs on changes."
+    type: functional
+    priority: must
+    status: partial
+    parents: [SN-02, SN-08]
+    findings: [FND-112]
+    sources: [docs/NEXT-PHASE.md]
+    verify: {method: test, by: [tests/test_decisions.py::test_the_shadow_records_once_and_then_the_owner_s_outcome]}
+    trace: [ops/decisions.py]
+    gap: "The shadow records, from 2 Nov 2026, what the stack would decide for each yes-or-no decision and the owner's
+      outcome where its source keeps it, and shows the agreement per class on #/decide. No class is promoted or
+      demoted by it yet: that needs the exams (TRL-16) and two weeks of answers."
+
+  - id: AUT-03
+    title: Some actions are never licensed
+    statement: Money above the ceiling the owner set, a new payee, writing to a person in the owner's name, deleting data
+      that cannot be restored, security settings, credentials, accounts, public exposure and anything on the AI phone
+      outside its listed routines shall stay at ask whatever a class's scores; no code path shall raise them.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05, SN-04]
+    sources: [docs/NEXT-PHASE.md]
+    verify: {method: test, by: [tests/test_decisions.py::test_the_floor_stays_at_ask_whatever_its_configured_level]}
+    trace: [config/autonomy.yaml, ops/decisions.py]
+
+  - id: AUT-04
+    title: Every unasked act is logged with its evidence and can be undone where possible
+    statement: Each act a licence allowed shall be recorded with the class, the level and the evidence that allowed it,
+      shown in the run record and the day's digest, and offer an undo for its window where the act can be undone.
+    type: functional
+    priority: must
+    status: proposed
+    parents: [SN-07, SN-09]
+    sources: [docs/NEXT-PHASE.md]
+  - id: AUT-05
+    title: One decision queue
+    statement: Everything that waits for the owner and that the owner can answer (a task's start or questions, a stopped
+      change, a deploy, a purchase, phone steps, a memory to confirm or forget, an unsettled memory dispute, an agent change,
+      a shipped idea's confirmation, a mission's access, a setup step, a skill, an idea, a licence promotion) shall be one
+      ranked list in the app, each with what, why, the stack's recommendation, what happens without an answer and when, and
+      a one-tap answer or a link to where the owner acts; routine items of a class may be answered together; Home and the
+      queue shall draw that one list, Home showing a kind of more than three items, or of two or more routine items, as one row with its count; a state the owner
+      cannot answer shall stay on the health board.
+    type: functional
+    priority: must
+    status: partial
+    parents: [SN-02, SN-06, SN-18]
+    sources: ['chat 2026-11-02: One daily decision queue on your phone, by voice too', docs/NEXT-PHASE.md]
+    verify: {method: test, by: [tests/test_decisions.py::test_every_source_s_waits_are_one_ranked_list_with_what_why_and_a_recommendation,
+        tests/test_decisions.py::test_the_server_adds_the_waits_only_it_sees_and_the_app_draws_the_list,
+        tests/test_decisions.py::test_what_the_owner_must_answer_reaches_the_queue_and_a_state_does_not,
+        tests/test_decisions.py::test_every_item_in_the_queue_has_a_working_way_to_act,
+        tests/test_decisions.py::test_a_link_to_an_agent_s_question_keeps_its_context,
+        tests/test_decisions.py::test_it_works_waits_in_the_queue_until_the_owner_said_so,
+        tests/test_decisions.py::test_the_house_step_in_the_queue_is_the_one_the_house_page_names,
+        tests/test_home_work.py::test_home_and_the_queue_draw_one_list_and_a_kind_with_many_items_is_a_count_row,
+        tests/test_home_work.py::test_what_the_owner_cannot_answer_stays_on_the_health_board_and_under_stack_upkeep,
+        tests/test_changes.py::test_a_stopped_change_waits_on_the_board_until_it_is_answered_and_can_be_left_stopped]}
+    trace: [ops/decisions.py, ops/checker.py, ops/swarm_client.py, ops/changes.py, ops/tasks.py, config/autonomy.yaml, images/mission-control/server.py, images/mission-control/web/static/app-tasks.js]
+    gap: "#/decide and Home draw one list (GEN-02, 7 Nov 2026): builds, purchases, AI phone cleanup steps and approval
+      requests, Gmail's Trash batch, a mission's access, memories to confirm and the Memory Keeper's suggestions, tasks to
+      start or answer, stopped changes, what agents ask, open ideas and disputes, agent changes, the Checker's It works and
+      House setup, ranked, with the stack's recommendation. Skills and licence promotions have no source yet; a Keeper
+      suggestion has Forget and a link, and no Keep: the Keeper proposes it again on its next pass."
+
+  - id: AUT-06
+    title: Decisions reach the owner once a day, and by voice
+    statement: The queue shall notify once a day at the owner's time (sooner only for a decision expiring within two
+      hours), and Hermes shall read it out and take yes, no or later by voice for every decision except money, which is
+      confirmed by tap where the amount is shown.
+    type: functional
+    priority: should
+    status: proposed
+    parents: [SN-18, SN-06]
+    sources: [docs/NEXT-PHASE.md]
+  - id: AUT-07
+    title: The queue is measured
+    statement: The app shall show decisions a day, the median time to answer and how many expired, with the target of at
+      most five a day answered within twelve hours.
+    type: quality
+    priority: should
+    status: implemented
+    parents: [SN-02, SN-07]
+    sources: [docs/NEXT-PHASE.md]
+    verify: {method: test, by: [tests/test_decisions.py::test_the_queue_s_numbers_a_day_the_median_and_the_expired]}
+    trace: [ops/decisions.py, images/mission-control/web/static/app-tasks.js]
+
+  - id: AUT-08
+    title: Low-risk code may deploy itself, and reverts itself
+    statement: "A build that changes under 300 lines, touches no security, compose, secrets, NAS, network or agent
+      configuration path, lowers no requirement's status and passes the checks and both reviews may deploy at the
+      coding-low-risk class's level, and shall be reverted automatically when the health check after the deploy fails."
+    type: functional
+    priority: should
+    status: proposed
+    parents: [SN-02, SN-15]
+    sources: [docs/NEXT-PHASE.md]

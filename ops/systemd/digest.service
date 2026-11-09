@@ -1,0 +1,11 @@
+# feature: telegram
+[Unit]
+Description=Morning digest on Telegram (no model calls)
+[Service]
+Type=oneshot
+# limit: stops (a run that hangs past 98 min is ended, so its timer fires again; the longest of 14 days was 469 s; review RUN-R27)
+TimeoutStartSec=98min
+Environment=DOCKER_HOST=unix://%t/docker.sock
+WorkingDirectory=%h/ai-stack
+ExecCondition=/usr/bin/python3 %h/ai-stack/ops/stack_gate.py --wait 1800 --slot 8
+ExecStart=/usr/bin/python3 ops/digest.py

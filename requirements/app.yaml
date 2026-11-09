@@ -1,0 +1,703 @@
+# Mission Control, the app: Home, Agents, Wiki, Code, Chat, Stack, the guide, PWA behaviour.
+area: App
+prefix: APP
+items:
+  - id: APP-01
+    title: Phone first
+    statement: Every screen shall work at 375 px width without horizontal scrolling and on a desktop with the side
+      navigation from 960 px, and the tab bar shall spread over however many tabs there are; no screen has an app
+      top bar, each starts with its own title (the chat with its own bar), every section including Stack is in the
+      tab bar, the live state is a dot on Stack, a bar shows at the top only while the app is offline or an update
+      waits, and a page's main action fits on its title row; a card that stands for a page opens it on a tap, and an
+      agent's text in a card is its formatted markdown.
+    type: quality
+    priority: must
+    status: implemented
+    parents: [SN-06]
+    sources: [images/mission-control/web/AGENTS.md]
+    verify: {method: test, by: [tests/test_now_card.py::test_the_running_card_opens_its_mission_and_folds_each_finding_as_markdown,
+      tests/test_now_card.py::test_a_tap_on_a_card_opens_its_page_but_not_on_its_own_links_or_folds,
+      tests/test_app_layout.py::test_an_icon_in_text_is_one_line_high_and_no_page_has_an_app_top_bar, tests/test_app_layout.py::test_the_chat_has_one_top_bar_on_a_phone_with_the_live_state_in_it, tests/test_app_layout.py::test_the_wiki_s_new_button_is_one_line_on_the_title_row,
+      tests/test_app_routes.py::test_the_tab_bar_spreads_however_many_tabs_there_are, tests/test_app_layout.py::test_the_section_headings_keep_their_gap_and_stay_on_one_line, tests/test_app_layout.py::test_the_swarm_s_views_are_under_agents_on_every_screen, tests/test_app_layout.py::test_new_chat_starts_afresh_and_attaching_is_a_clip]}
+    trace: [images/mission-control/web/static/app.css]
+    findings: [FND-40, FND-41, FND-82]
+  - id: APP-02
+    title: Every screen opens cold
+    statement: Every app route shall render when it is opened directly (a link, a notification, a reload), without
+      first visiting another screen.
+    type: quality
+    priority: must
+    status: implemented
+    parents: [SN-06]
+    sources: ["incident 2026-10-28: #/phone opened blank from a notification"]
+    verify: {method: test, by: [tests/test_app_routes.py::test_every_screen_is_drawn_when_opened_cold, tests/test_app_routes.py::test_the_connections_card_is_started_by_render, tests/test_app_routes.py::test_view_scripts_load_before_app_js_and_take_no_arguments]}
+    findings: [FND-30]
+  - id: APP-03
+    title: Installable, with push and self-update
+    statement: The app shall be installable as a PWA, deliver push notifications to devices that switched them on, and
+      reload itself when a new version is deployed.
+    type: functional
+    priority: must
+    status: implemented
+    trace: [images/mission-control/icons.py]
+    parents: [SN-06]
+    sources: [images/mission-control/web/AGENTS.md]
+    verify: {method: inspection, by: [tests/test_server.py::test_a_large_body_is_refused_before_it_is_read_and_the_page_knows_its_version, images/mission-control/web/sw.js, images/mission-control/web/manifest.webmanifest, images/mission-control/server.py]}
+  - id: APP-04
+    title: Offline is said plainly
+    statement: If the app cannot reach the stack for 8 seconds, then it shall say so (Tailscale off on this device, or
+      the PC is down) instead of loading forever, and show when it last had a connection.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-06, SN-02]
+    sources: ["owner 2026-10-29: 'Loading forever like that'"]
+    verify: {method: inspection, by: [images/mission-control/web/static/app.js]}
+  - id: APP-05
+    title: Home answers three questions
+    statement: Home shall show the ask bar at the top, then three tabs like the other pages, the last one opened kept on
+      this device - Today (what needs the owner, what is running now with what comes next), Results (a live feed grouped
+      by day) and Overview (the AI phone and the day's numbers) - and no quick link the tab bar has.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-01, SN-02]
+    sources: [images/mission-control/guide/01-welcome.md, "owner 2026-11-08: organise this page into tabs like we do for
+        many of the other pages ... We dont need chat wiki or agents links here. Those alrdy got tabs."]
+    findings: [FND-57]
+    verify: {method: test, by: [tests/test_home_work.py::test_home_is_needs_now_and_a_live_feed_with_an_ask_bar, tests/test_home_work.py::test_now_shows_work_in_progress_and_whats_next, tests/test_home_work.py::test_home_s_results_are_one_card_per_outcome_named_by_what_it_is_about]}
+    trace: [images/mission-control/web/static/app.js]
+  - id: APP-06
+    title: Needs you is only the owner's decisions
+    statement: "Needs you shall list only decisions that wait for the owner (builds to review, purchases, phone and
+      Gmail approvals, grants, memories to confirm, setup steps only he can do), each one tap away, and say so in one
+      line when there are none."
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-02]
+    sources: [DEC-09]
+    verify: {method: test, by: [tests/test_home_work.py::test_needs_you_lists_only_decisions_and_says_so_when_there_are_none]}
+    findings: [FND-08]
+  - id: APP-07
+    title: Stack upkeep is visible but separate
+    statement: Health alerts and the stack's own improvement ideas shall show under Now as Stack upkeep, not under Needs
+      you, with readable rows.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-02, SN-07]
+    sources: [DEC-09]
+    verify: {method: test, by: [tests/test_home_work.py::test_stack_upkeep_sits_under_now_not_needs_you, tests/test_home_work.py::test_list_row_chevrons_have_a_size]}
+  - id: APP-08
+    title: Live updates without losing your place
+    statement: The app shall update only the parts that changed when new state arrives, never replay entrance
+      animations, never redraw an open timeline away, and never re-render forms, chat or reading views while the owner
+      types or reads.
+    type: quality
+    priority: must
+    status: implemented
+    parents: [SN-06]
+    sources: [images/mission-control/web/AGENTS.md]
+    verify: {method: test, by: [tests/test_app_routes.py::test_live_redraws_do_not_replay_the_entrance_animation, tests/test_app_routes.py::test_an_open_timeline_is_not_redrawn_away]}
+  - id: APP-09
+    title: Answers are never cached
+    statement: Mission Control's API answers shall carry headers that forbid caching.
+    type: quality
+    priority: must
+    status: implemented
+    parents: [SN-06]
+    sources: ["incident: an old service worker served stale state"]
+    verify: {method: test, by: [tests/test_server.py::test_api_answers_are_never_cached]}
+  - id: APP-10
+    title: Every value is escaped
+    statement: The front end shall escape every value it puts into HTML and sanitise rendered markdown with DOMPurify.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05]
+    sources: [images/mission-control/web/AGENTS.md]
+    verify: {method: inspection, by: [images/mission-control/web/static/app.js]}
+  - id: APP-11
+    title: One list of the crew's duties
+    statement: The Tasks tab's Team → Crew shall list the crew's duties with the engines that have issues, sorted by
+      needs-you, running, then next run, with health as the card's colour and one reason line; a mission's or a duty's page
+      shall be its task's page.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-07]
+    sources: [images/mission-control/guide/04-missions.md]
+    verify: {method: test, by: [tests/test_crew.py::test_systemd_state_becomes_crew_cards]}
+    trace: [images/mission-control/web/static/app.js, ops/crew.py]
+  - id: APP-12
+    title: The Stack page shows the machine
+    statement: The Stack page shall show the live architecture map, every service with its state, Windows and WSL
+      memory, CPU and disk, each service's memory against its limit, scheduled jobs, backups, CI per repository,
+      skills, costs and the apps, each section linking its guide chapter.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-07]
+    sources: [images/mission-control/guide/12-stack-page.md, DEC-06]
+    verify: {method: test, by: [tests/test_guide.py::test_live_map_boxes_point_at_real_sections]}
+  - id: APP-13
+    title: The guide covers every feature
+    statement: The in-app guide shall have a chapter for every screen, mention every assistant tool and every make target
+      with help text, and every Try-it example and live block shall point at something real.
+    type: quality
+    priority: must
+    status: implemented
+    parents: [SN-02, SN-15]
+    sources: [images/mission-control/guide/AGENTS.md]
+    verify: {method: test, by: [tests/test_guide.py::test_chapters_are_well_formed, tests/test_guide.py::test_every_app_screen_has_a_chapter, tests/test_guide.py::test_every_screen_s_how_this_page_works_opens_the_chapter_about_it, tests/test_guide.py::test_every_make_target_is_explained, tests/test_guide.py::test_examples_and_live_blocks_point_at_real_things, tests/test_guide.py::test_guide_api]}
+  - id: APP-14
+    title: The guide says what is true
+    statement: Every statement in the guide shall match the current behaviour; when behaviour changes, the guide shall
+      change in the same commit.
+    type: quality
+    priority: must
+    status: implemented
+    parents: [SN-02, SN-16]
+    sources: [images/mission-control/guide/AGENTS.md]
+    verify: {method: inspection, by: [images/mission-control/guide/01-welcome.md, images/mission-control/guide/10-builder.md, images/mission-control/guide/13-technology.md, images/mission-control/guide/17-ai-phone.md]}
+    findings: [FND-01, FND-06, FND-07, FND-08, FND-09]
+  - id: APP-15
+    title: Share anything to the stack
+    statement: When the owner shares a link, text, picture or file to the installed app, Mission Control shall keep it
+      for 14 days and open it with one-tap choices (summarise, ask, explain, save to knowledge, make a mission), doing
+      nothing until he taps.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-06, SN-10]
+    sources: [images/mission-control/guide/02-first-ten-minutes.md]
+    verify: {method: test, by: [tests/test_server.py::test_phone_share_is_kept_and_opened_in_the_app]}
+  - id: APP-16
+    title: Activity links to its subject
+    statement: Every activity-feed entry concerning a build, a run or an agent shall link to that build, run or agent.
+    type: functional
+    priority: should
+    status: deprecated
+    superseded_by: APP-37
+    reason: The activity feed it described is gone (8 Nov 2026, DEC-46); Home's Results open each card's subject (APP-37)
+      and Tasks → Activity opens each entry's agent or run.
+    parents: [SN-07]
+    sources: ["owner 2026-10-28"]
+    verify: {method: test, by: [tests/test_home_work.py::test_home_s_results_are_one_card_per_outcome_named_by_what_it_is_about]}
+  - id: APP-17
+    title: The live stream carries everything the screens need
+    statement: The app's live state stream shall carry the AI phone's status alongside missions, runs, builds and the
+      system, so that Home and the Phone page update without polling.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-06]
+    sources: [images/mission-control/AGENTS.md]
+    verify: {method: test, by: [tests/test_server.py::test_the_live_stream_carries_the_ai_phone]}
+  - id: APP-18
+    title: What's new writes itself
+    statement: The What's new chapter shall list the stack's changes from its git history, newest first.
+    type: functional
+    priority: could
+    status: implemented
+    parents: [SN-16]
+    sources: [images/mission-control/guide/16-whats-new.md]
+    verify: {method: inspection, by: [images/mission-control/web/static/guide.js]}
+  - id: APP-19
+    title: Nothing the owner reads is cut
+    statement: Every text the owner reads (the app, Telegram, push, e-mail, the activity feed, health alerts, errors, logs,
+      Ledger text, reviews, build output) shall be shown whole; a shortened form is allowed only as a preview with a visible
+      marker one tap from the whole text, a list shall say how many more it holds and offer them, and a stored text that
+      hits its cap shall say how much was cut.
+    type: quality
+    priority: must
+    status: implemented
+    parents: [SN-06, SN-07]
+    sources: [DEC-27]
+    findings: [FND-38]
+    verify: {method: test, by: [tests/test_truncation.py::test_a_cut_says_what_it_cut_and_input_over_a_limit_is_refused,
+      tests/test_truncation.py::test_journal_lines_and_the_phone_s_approval_cards_are_shown_whole, tests/test_truncation.py::test_the_app_wraps_text_and_shows_the_rest_of_a_list, tests/test_app_layout.py::test_a_crew_agent_s_claude_task_is_named_after_it_and_keeps_its_whole_question]}
+    trace: [ops/textcap.py, images/mission-control/web/static/app.js, images/mission-control/web/static/app.css, ops/crew.py]
+  - id: APP-20
+    title: The owner's input is refused, never cut
+    statement: When the owner sends a text or a list over a limit, the stack shall refuse it with the limit named and
+      shall never store or act on part of it.
+    type: quality
+    priority: must
+    status: implemented
+    parents: [SN-06, SN-05]
+    sources: [DEC-27]
+    findings: [FND-38]
+    verify: {method: test, by: [tests/test_truncation.py::test_the_owner_s_long_input_is_refused_with_its_limit_not_cut,
+      tests/test_truncation.py::test_a_cut_says_what_it_cut_and_input_over_a_limit_is_refused]}
+    trace: [ops/textcap.py, ops/builds.py, ops/missions.py, ops/swarm_client.py, images/swarm/ledger.py, images/mission-control/server.py]
+  - id: APP-21
+    title: One list of ideas
+    statement: Every open idea to improve the stack or its agents (the crew's and the self-review's ideas and the Coach's
+      agent changes) shall be in one ranked list under Tasks → Ideas, each marked with its kind, with the decided ones and the
+      autonomy and pause rules below it; other screens shall only link to that list with the number waiting for the owner.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-02, SN-08]
+    sources: [DEC-29]
+    verify: {method: test, by: [tests/test_app_layout.py::test_every_idea_is_in_one_list_under_agents]}
+    trace: [images/mission-control/web/static/swarm.js, images/mission-control/web/static/app.js]
+  - id: APP-22
+    title: Every chart moves, zooms and names its dots the same way
+    statement: Every zoomable chart (the code graph, the wiki graphs, Who works with whom) shall move with two fingers or the
+      mouse and zoom with two fingers, ctrl and the wheel or its + and − buttons, fit everything in with its fit button,
+      and leave one finger and a plain wheel to the page (a chart never swallows a scroll); a live redraw shall keep its
+      dots where they were and its zoom; every dot shall have a name, shown when it covers no busier dot's name, at the same
+      size on screen at any zoom, and a tap on a dot shall say what it is.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-07]
+    sources: [images/mission-control/guide/19-swarm.md]
+    verify: {method: test, by: [tests/test_charts.py::test_every_chart_moves_and_zooms_through_one_helper_and_one_finger_scrolls_the_page, tests/test_charts.py::test_a_redraw_keeps_the_map_s_dots_and_zoom,
+      tests/test_charts.py::test_names_never_cover_each_other_and_the_busiest_keep_theirs,
+      tests/test_charts.py::test_the_map_names_every_dot_and_shows_open_ideas_when_asked]}
+    trace: [images/mission-control/web/static/app.js, images/mission-control/web/static/swarm.js, images/mission-control/web/static/app.css]
+  - id: APP-23
+    title: No call of the app waits forever
+    statement: Every call the app makes shall end within its time limit (45 s, 30 s for a request, 15 s for each check of
+      a slow request's answer); a request that gets no answer shall say so and, for a new task, tell the owner to look
+      under Tasks before trying again; a check of a slow request that stalls shall be retried, and a slow request still
+      running after 5 minutes shall say that it goes on. The New mission and mission settings forms shall send their request
+      for every mission type, and an error in the app shall be shown to the owner as well as reported.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-07, SN-13]
+    sources: [images/mission-control/web/AGENTS.md]
+    findings: [FND-51, FND-52]
+    verify: {method: test, by: [tests/test_app_timeouts.py::test_a_request_that_never_answers_ends_with_a_clear_message_instead_of_spinning,
+      tests/test_app_timeouts.py::test_a_poll_that_stalls_is_retried_and_a_finished_request_still_arrives,
+      tests/test_app_forms.py::test_start_mission_sends_the_request_for_every_type_and_a_price_watch_runs_daily,
+      tests/test_app_forms.py::test_mission_settings_save_without_a_type_field,
+      tests/test_app_forms.py::test_an_error_in_the_app_is_told_to_the_owner_not_only_reported]}
+    trace: [images/mission-control/web/static/app-base.js]
+  - id: APP-24
+    title: An error in the app is kept, raised and caught before it lands
+    statement: Every error the app reports shall be kept (the newest 500, in the missions data) and, while any came in the
+      last 24 hours, raised as one alert on the health board naming the most frequent one and its screen; every landing and
+      every image build shall lint the app's scripts for undefined names and stop on one; and ops/ui_crawl.js shall click
+      through every kind of screen at phone width, with forms filled in and every request recorded instead of sent.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-07, SN-13]
+    sources: [images/mission-control/web/AGENTS.md]
+    findings: [FND-53, FND-54]
+    verify: {method: test, by: [tests/test_app_errors.py::test_errors_the_app_hit_are_kept_and_become_one_alert_on_the_health_board,
+      tests/test_app_errors.py::test_the_server_keeps_each_error_and_the_checks_lint_the_app_s_scripts,
+      tests/test_ux_review.py::test_the_stack_page_names_each_failed_job_and_links_it_and_the_crawl_is_kept]}
+    trace: [images/mission-control/server.py, ops/crew.py, ops/app_lint.py, ops/check.sh, ops/ui_crawl.js, images/builder/Dockerfile, images/ci-runner/Dockerfile, images/mission-control/server.devices.py]
+  - id: APP-25
+    title: What the owner asked for comes before the stack's diagnostics
+    statement: A mission's page shall show its latest result before its run log unless a run is live, and fold the health
+      board's notes under one line that says they need nothing from the owner; an agent's card shall show its alert, or
+      else its result, and count its notes; Home's feed shall open on the owner's results, shopping and errors, with the
+      stack's own work one chip away; a copy button shall say Copied only when the text was copied and say why when not;
+      and the Stack page shall name and link each failed job.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-01, SN-02]
+    sources: [docs/UX-REVIEW-2026-10-30.md]
+    findings: [FND-55, FND-56, FND-57, FND-58, FND-59]
+    verify: {method: test, by: [tests/test_ux_review.py::test_a_mission_card_shows_its_result_not_a_note_for_the_health_doctor,
+      tests/test_ux_review.py::test_the_latest_result_comes_before_the_run_s_log_unless_a_run_is_live,
+      tests/test_ux_review.py::test_the_home_feed_filters_by_kind_and_each_card_names_its_kind,
+      tests/test_ux_review.py::test_a_copy_button_says_copied_only_when_it_copied,
+      tests/test_ux_review.py::test_the_stack_page_names_each_failed_job_and_links_it_and_the_crawl_is_kept]}
+    trace: [images/mission-control/web/static/app.js, images/mission-control/web/static/app.css]
+  - id: APP-26
+    title: Long pages can be crossed, and the owner sees names, not identifiers
+    statement: The Stack page shall start with a link to each of its sections; Home's feed shall open on its 12 newest
+      entries with older ones one tap away; the greeting shall use the owner's display name and never an e-mail address
+      or its local part; the scheduled jobs shall show each crew job's name; and a Code link without a repository shall
+      open the list of repositories.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-01, SN-02]
+    sources: [docs/REVIEW-2026-10-30.md]
+    findings: [FND-73]
+    verify: {method: test, by: [tests/test_ux_polish.py::test_the_greeting_uses_a_display_name_and_never_an_e_mail_address,
+      tests/test_ux_polish.py::test_the_stack_page_shows_one_part_at_a_time_and_jobs_carry_their_names,
+      tests/test_ux_polish.py::test_home_opens_short_and_the_code_tab_never_shows_an_empty_name,
+      tests/test_ux_polish.py::test_the_crew_rows_carry_their_unit_so_the_app_can_name_a_job]}
+    trace: [images/mission-control/web/static/app.js, images/mission-control/web/static/app.css, images/mission-control/server.py, ops/crew.py]
+  - id: APP-30
+    title: Every tool's menus one tap away
+    statement: The Stack page shall start with Tools, one card for every tool the stack runs on (Home Assistant, the NAS,
+      the router, Forgejo, Hermes admin, Phoenix and the rest) with where it opens (anywhere, or the home network)
+      and its main menus as links, and a Go-to search over those menus and the app's own pages; one list
+      (web/static/tools.json) feeds them, the guide and the House page; every link shall be opened each night and a
+      broken one reported.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-01, SN-02]
+    sources: [images/mission-control/guide/12-stack-page.md]
+    verify: {method: test, by: ['tests/test_tools.py::test_every_tool_has_its_menus_and_every_page_exists', 'tests/test_tools.py::test_go_to_finds_menus_and_pages_by_their_words',
+      'tests/test_tools.py::test_a_tool_link_that_does_not_open_is_a_journey_failure']}
+    trace: [images/mission-control/web/static/tools.json, images/mission-control/web/static/app.js, images/mission-control/web/static/guide.js, ops/journeys.py]
+  - id: APP-31
+    title: Explanations are there, folded
+    statement: An explanation of how to read a screen shall be folded behind one small labelled line with an i that
+      opens it, and stay open through live redraws until closed; what an action will do (a revert, a save, a
+      move to Trash, where a secret is stored) shall stay next to its button. No floating button shall cover the
+      content; New mission is a button in the header of the missions list.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-01, SN-02]
+    sources: [images/mission-control/guide/12-stack-page.md]
+    verify: {method: test, by: [tests/test_charts.py::test_explanations_fold_and_stay_open_through_redraws]}
+    trace: [images/mission-control/web/static/guide.js, images/mission-control/web/static/app.js, images/mission-control/web/static/swarm.js, images/mission-control/web/static/app.css]
+  - id: APP-32
+    title: A live update never moves the page
+    statement: A live update of the Agents overview shall redraw the page only when what it lists changed; its live
+      parts (working now, the map) shall update in place, so a page being scrolled stays where it is.
+    type: functional
+    priority: must
+    status: implemented
+    findings: [FND-96]
+    parents: [SN-01]
+    sources: [images/mission-control/guide/19-swarm.md]
+    verify: {method: test, by: [tests/test_charts.py::test_a_live_update_redraws_the_agents_page_only_when_its_list_changed]}
+    trace: [images/mission-control/web/static/app.js]
+  - id: APP-33
+    title: Back returns to where you were
+    statement: Going back or forward to a page shall return to where it was scrolled, once its slower parts have loaded,
+      unless the owner scrolled meanwhile; a newly opened page shall start at its top.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-01]
+    sources: [images/mission-control/guide/02-first-ten-minutes.md]
+    verify: {method: test, by: [tests/test_charts.py::test_back_returns_to_where_you_were_and_a_new_page_starts_at_the_top]}
+    trace: [images/mission-control/web/static/app-base.js]
+  - id: APP-34
+    title: A calm, readable dark theme
+    statement: The app shall use a graphite background with opaque surfaces and hairline borders, one accent colour, text
+      slightly softer than white, section titles in sentence case and grey counts, with no background glow, shadows or
+      gradient buttons; colour shall mark what needs attention.
+    type: constraint
+    priority: should
+    status: implemented
+    parents: [SN-01]
+    sources: [images/mission-control/guide/02-first-ten-minutes.md]
+    verify: {method: test, by: [tests/test_charts.py::test_the_theme_is_calm]}
+    trace: [images/mission-control/web/static/app.css, images/mission-control/web/index.html, images/mission-control/web/manifest.webmanifest]
+  - id: APP-35
+    title: Every task has its own page
+    statement: Each task shall have its own page (#/task/<id>), opened from every notification, list and link that names
+      the task, showing where it stands and why, its answer, its definition of done with the verdict and the judge's
+      reasons, its steps with their results, the agents that worked on it with their part (planned it, a step, called in
+      by another agent) and what each did (runs, tool and model calls, tokens, time), a timeline of when each agent worked
+      and of every action, what its agents read from and kept in memory, and every run of a recurring task; an agent's
+      page shall list the tasks it worked on and its part in each.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-01, SN-07]
+    sources: ['chat 2026-11-01: Should we not have proper pages for tasks? ... Which agents have been involved? ... Memories
+      beeing made and accessed in task. A timeline of agent actions.']
+    findings: [FND-97, FND-95, FND-98]
+    verify: {method: test, by: [tests/test_tasks_tab.py::test_who_worked_on_a_mission_s_task_names_the_agent_not_the_task, tests/test_task_page.py::test_a_task_s_agents_actions_and_memory_come_from_its_run_tree,
+      tests/test_task_page.py::test_an_agent_s_page_lists_the_tasks_it_worked_on_with_its_part,
+      tests/test_task_page.py::test_the_runner_writes_each_task_s_page_with_every_run_and_its_steps,
+      tests/test_app_routes.py::test_a_page_that_loads_draws_only_while_you_are_still_on_it,
+      tests/test_app_routes.py::test_a_live_redraw_never_scrolls_the_page]}
+    trace: [images/mission-control/web/static/task.js, images/mission-control/runrecord.py, images/mission-control/server.py,
+      ops/tasks.py, images/mission-control/web/static/app-tasks.js, images/mission-control/web/static/app.css, images/mission-control/server.a2a.py]
+  - id: APP-36
+    title: A task's page tells its whole story, the result first
+    statement: "A task's page shall open on its result and then tell how it was done, most important first, each part
+      opening a tab with the whole of it: who worked on it as a map of the agents (each agent a bubble coloured by its part
+      and sized by its own tokens, joined by its hand-offs, calls and starts, each tappable for its part, runs, tokens,
+      cost, models, tools and memory use, and the same in words); the definition of done with the verdict; what went wrong
+      (failed steps, retries, failed or silent runs, errors, points not met); its sources (read, cited, by site, by step and
+      agent); its memory use by store (wikis, notes, journals, long-term memory, the swarm's board, lessons) with what was
+      read and kept, including what the stack read or kept around the agents (a refinement's wiki, a briefing's topic wiki
+      pages, the answer); what it made (the answer, reports, wiki pages, files, findings, deliveries); its cost and time by
+      agent and model; and the plan. A recurring task shall show one run at a time (its newest, or the one picked), and a
+      task handed to Claude Code, a build, a chat or a mission shall show its agents too. The map's colours shall pass the
+      colour-blind check on both themes."
+    type: functional
+    priority: must
+    status: implemented
+    parents: [APP-35, SN-07]
+    findings: [FND-111, FND-115]
+    sources: ['chat 2026-11-02: the tasks pages do not have what i requested ... Is our current task page basically just
+      the result? ... we should also show which agents contributed in such a bubble chart. Memories accessed or created.
+      Think of all the useful task scoped data we could display.']
+    verify: {method: test, by: [tests/test_task_page.py::test_the_page_says_where_each_memory_call_went_who_started_whom_and_what_failed,
+      tests/test_task_page.py::test_a_door_task_s_page_finds_its_own_run_and_a_recurring_task_shows_one_run,
+      tests/test_task_page.py::test_the_page_shows_one_run_s_answer_its_sources_and_what_it_made,
+      tests/test_provenance.py::test_the_desk_s_chosen_items_are_read_and_a_delivery_comes_from_the_report,
+      tests/test_conductor.py::test_a_delivered_briefing_grows_its_topic_wiki_and_a_deleted_one_stays_deleted]}
+    trace: [images/mission-control/web/static/task.js, images/mission-control/runrecord.py, images/mission-control/server.py,
+      images/mission-control/web/static/app.css, ops/provenance.py, ops/conductor.py, ops/desk_steps.py, images/mission-control/guide/20-tasks.md, images/mission-control/server.a2a.py]
+  - id: APP-37
+    title: A card on Home opens its subject
+    statement: Each card of Home's feed shall open its subject (the task it names, its repeating task's page, the agent a
+      health note concerns, the Ledger item, the list of changes for a deploy), the end of every task shall be a card on it
+      (the owner's own and the owner's rules' as results, trials' and probes' as upkeep), and a task's page shall light
+      Tasks in the tab bar.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [APP-35, SN-06]
+    sources: ['chat 2026-11-02: These cards if i click them i land on random spots in Stack. We did not solve task pages.
+        ... task pages are part of home']
+    verify: {method: test, by: [tests/test_home_work.py::test_home_s_results_are_one_card_per_outcome_named_by_what_it_is_about]}
+    trace: [images/mission-control/web/static/app.js, images/mission-control/guide/01-welcome.md]
+  - id: APP-38
+    title: "Home is your desk: one result per outcome, and it never moves under your finger"
+    statement: "Home shall hold the box to give a task or ask, then, in its tabs, what needs the owner, what is at work now
+      (tasks among it, with their steps and agents), and Results: one card per outcome the owner asked for or the owner's
+      rules started (a briefing, a task's answer, an alert's answer, research, a shopping step, a failure), each with its
+      kind, its headline, who made it, its first lines and its page; a rule that fires and the task it starts are one
+      Alert card. The stack's own work (health, deploys, the Ledger, crew jobs, trials, probes) shall not be among the
+      results. While the owner is scrolled down or touching the screen, Home's updates shall wait behind a button."
+    type: functional
+    priority: must
+    status: implemented
+    parents: [APP-37, SN-06, SN-18]
+    sources: ['chat 2026-11-02: We have tasks triggers and agents here ... jumps 2 links ... Its very weak difference what
+        is what visually ... If task produces result will there be 2 entries? ... This is home tab. What should actually be
+        here? Do we need a tasks tab like agents? Can you please make it make sense?']
+    verify: {method: test, by: [tests/test_home_work.py::test_home_s_results_are_one_card_per_outcome_named_by_what_it_is_about,
+      tests/test_home_work.py::test_home_holds_its_updates_while_you_scroll_or_touch]}
+    trace: [images/mission-control/web/static/app-tasks.js, images/mission-control/web/static/app.css, images/mission-control/guide/01-welcome.md]
+  - id: APP-40
+    title: On a phone the chat fills the screen and its header is not cramped
+    statement: On a phone, the chat shall be pinned between the top of the screen and the tab bar, whatever the keyboard or the page did
+      before; the keyboard shall resize it, with the tab bar out of the way and the newest message in sight. Its header shall give the
+      title its own width with a line of status under it when there is something to say, and a first title shall end on a whole word with the cut marked.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-03]
+    sources: ['chat 2026-11-05: Headline looks badly formatted and cramped. Find good solution best practise chat window not flush at bottom?']
+    verify: {method: test, by: [tests/test_app_layout.py::test_the_phone_chat_is_pinned_to_the_screen_and_the_title_has_its_own_width,
+      tests/test_chat_made.py::test_a_chat_s_first_title_ends_on_a_whole_word_with_the_cut_marked]}
+    trace: [images/mission-control/web/static/app.css, images/mission-control/web/static/app-runs.js, images/mission-control/web/index.html,
+      images/mission-control/server.py]
+  - id: APP-39
+    title: "What you make in a chat, you reach from the chat, and it leads back"
+    statement: "Every chat answer in which Hermes made something (a mission, a build, a Claude task, a repository, a note
+      in the vault, an e-mail) shall show it under the answer as a card with its kind, its name, its state now (being
+      created, queued, running, done, waits for you, failed) and its result's headline, opening its page in one tap; a
+      change to an item (paused, triggers set, sent back) shall be one line. The chat's header shall count what it made
+      (Made here · N) and list it, the chat list shall show it as icons, and the item's page shall say From a chat with
+      a link back to the answer that made it. A one-off item shall say in its chat when it ends; a recurring one shall
+      not. What the chat made shall be read from the run record's tool results and their ids, never guessed by time."
+    type: functional
+    priority: must
+    status: implemented
+    parents: [AST-02, SN-06]
+    sources: ['chat 2026-11-02: I dispatched a mission in chat. How can i jump from chat to the mission page? ... I feel if
+        we are creating items in chat they need to be accessible from chat. Can you design this out?']
+    verify: {method: test, by: [tests/test_chat_made.py::test_the_answer_that_made_a_mission_shows_it_with_its_live_state,
+      tests/test_chat_made.py::test_older_answers_are_read_by_their_wording_and_a_pending_one_by_its_title,
+      tests/test_chat_made.py::test_a_pending_request_resolves_through_the_runner_s_answer,
+      tests/test_chat_made.py::test_the_item_leads_back_and_a_one_off_says_in_the_chat_when_it_ends,
+      tests/test_chat_made.py::test_maker_tools_end_with_the_line_the_app_reads]}
+    trace: [images/mission-control/runrecord.py, images/mission-control/server.py, images/mission-control/web/static/app-runs.js,
+      images/mission-control/web/static/app.css, docs/CHAT-MADE.md, tests/test_chat_made.py, images/mission-control/server.chat.py, images/mission-control/server.mcp.py]
+  - id: APP-41
+    group: Layout
+    title: Explanations wait until asked for
+    statement: 'An explanation on a page shall be one small info control that takes no room until tapped, and Activity''s
+      filters shall fit three lines on a phone: search and time, kinds with something in them, and names with the picked
+      ones first; a page shall not spell out in always-visible text what a control already shows.'
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-03]
+    sources: ['chat 2026-11-05: Also hide the explanation text. We need more intiotive ux. Less verbose always visible ui explanations.']
+    verify:
+      method: test
+      by: ['tests/test_interactions.py::test_the_app_draws_the_one_list', 'tests/test_charts.py::test_explanations_fold_and_stay_open_through_redraws']
+    trace: [images/mission-control/web/static/guide.js, images/mission-control/web/static/app.css, images/mission-control/web/static/swarm.js]
+  - id: APP-42
+    title: The chat reopens where you left it
+    statement: Going to another page and back to Chat shall reopen the chat you left, at the place you were reading, with what you typed
+      and attached still there; a new chat starts only when you ask for one, and a chat deleted meanwhile opens a new one without an error.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-03]
+    sources: ['chat 2026-11-06: Also i am annoyee i always go to empty chat when i go somewhere else in mission control and then back to chat.']
+    verify: {method: test, by: [tests/test_chat_screen.py::test_the_chat_tab_reopens_the_chat_you_left_with_its_draft_and_place]}
+    trace: [images/mission-control/web/static/app-runs.js]
+  - id: APP-43
+    title: New chat is in a proper list of chats
+    statement: New chat shall be the first thing in the list of chats and not in the chat's header. On a phone the list shall slide in as a
+      drawer that Back closes, with search, your chats under Pinned, Today, Yesterday, Last 7 days and Earlier, each with its title, when and
+      its last line; a swipe right shall open it and a swipe left close it, with the drawer following the finger; pin and delete shall be
+      one tap behind each chat, and delete shall ask by a second tap, not a system dialog.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-03]
+    sources: ['chat 2026-11-06: also dont like the new chat button top rights. Its tiny simple and should probably just be in chat selection and go to chat selection should be nicer.',
+      'chat 2026-11-06: I want to swip right to select chat and swipe left to close selection.']
+    verify: {method: test, by: [tests/test_chat_screen.py::test_new_chat_lives_in_a_drawer_of_chats_and_back_closes_it, tests/test_chat_screen.py::test_the_list_groups_chats_by_day_and_gives_each_a_line, tests/test_chat_screen.py::test_a_chat_s_last_line_is_plain_and_short, tests/test_chat_screen.py::test_a_swipe_opens_and_closes_the_drawer,
+      tests/test_app_layout.py::test_new_chat_starts_afresh_and_attaching_is_a_clip]}
+    trace: [images/mission-control/web/static/app.js, images/mission-control/web/static/app.css, images/mission-control/server.py]
+  - id: APP-44
+    title: A screenshot is one tap from the keyboard
+    statement: On a phone, while you type and in an empty chat, Screenshot or photo, Camera and Paste shall sit above the box, tapping them
+      shall keep the keyboard up, and a picture pasted or dropped into the chat shall be attached like one picked with the clip.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-03]
+    sources: ['chat 2026-11-06: Also want it easy to give it screenshots. In claude its always suggested above keyboard']
+    verify: {method: test, by: [tests/test_chat_screen.py::test_a_screenshot_is_one_tap_from_the_keyboard]}
+    trace: [images/mission-control/web/static/app-runs.js, images/mission-control/web/static/app.css, images/mission-control/guide/03-chat.md]
+  - id: APP-45
+    title: The chat reads like a premium chat
+    statement: The chat shall put reading first. Its header shall hold the chat's title, what it made and a menu, and say the app's state only
+      while something is off; a message's actions shall come on a tap, except under the newest answer; an answer's steps shall be one quiet
+      line that opens; an empty chat shall ask what it can do, with no paragraph of explanation; a button shall bring you back to the newest message.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-03]
+    sources: ['chat 2026-11-06: I want the chat to feel like premium ai chat.. Overall chat doesnt feel that premium.']
+    verify: {method: test, by: [tests/test_chat_screen.py::test_the_chat_puts_reading_first]}
+    trace: [images/mission-control/web/static/app-base.js, images/mission-control/web/static/app-runs.js, images/mission-control/web/static/app.css]
+  - id: APP-46
+    title: The look is exact and premium in both themes
+    statement: The app shall use opaque surfaces and readable small print in both themes, one dark console rail with the stack's state in its foot,
+      titles in a wide display face and figures in their own, with its fonts vendored and no glow; and a screen without a connection
+      shall say so instead of claiming that all is quiet.
+    type: constraint
+    priority: should
+    status: implemented
+    parents: [SN-01]
+    sources: [images/mission-control/web/AGENTS.md]
+    verify: {method: test, by: [tests/test_app_layout.py::test_the_look_is_opaque_and_exact_with_its_type_vendored, tests/test_app_layout.py::test_a_screen_without_a_connection_claims_nothing, tests/test_app_layout.py::test_a_fresh_install_sees_no_one_else_s_topics, tests/test_app_layout.py::test_a_page_that_loads_shows_it_is_coming_and_a_tool_without_an_address_has_no_tile, tests/test_app_layout.py::test_an_app_no_runner_ever_wrote_to_is_not_connected]}
+    trace: [images/mission-control/web/static/app.css, images/mission-control/web/static/app.js, images/mission-control/Dockerfile, images/mission-control/web/sw.js, images/mission-control/server.py]
+  - id: APP-47
+    title: Every page opens on its main thing
+    statement: Each page of the app shall show its main objects on the first screen and keep what is secondary one tap away, so that the Code tab shows the
+      repositories in a panel of their own beside the work, the Stack page shows one part at a time, the Agents overview shows the missions without the map above them,
+      and the Wiki tab lists the wikis before their map.
+    type: constraint
+    priority: should
+    status: implemented
+    parents: [SN-01]
+    sources: [images/mission-control/web/AGENTS.md]
+    verify: {method: test, by: [tests/test_ux_polish.py::test_the_code_tab_keeps_the_repositories_apart_from_the_work, tests/test_ux_polish.py::test_the_stack_page_shows_one_part_at_a_time_and_jobs_carry_their_names, tests/test_ux_polish.py::test_the_agents_and_wiki_pages_lead_with_their_lists]}
+  - id: APP-48
+    title: Memory explains itself and skills can be read
+    statement: Each skill the assistant can look up shall open as a page with its whole instructions, and each memory store's figures shall name where its content comes from without calling it true.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-01]
+    sources: [chat 2026-11-07, images/mission-control/web/AGENTS.md]
+    verify: {method: test, by: [tests/test_memory.py::test_memory_says_where_its_content_comes_from_and_never_calls_it_true, tests/test_memory.py::test_every_skill_opens_with_its_whole_instructions, tests/test_memory.py::test_the_skill_count_is_of_skills_and_not_of_their_folders, tests/test_memory.py::test_search_memory_shows_whole_facts_with_their_source_and_the_wiki_pages]}
+  - id: APP-49
+    title: The owner chooses how the app looks and where it opens
+    statement: Settings shall offer the theme (system, light or dark) and the page the app opens on, kept per device and applied before the first paint.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-01]
+    sources: [chat 2026-11-07]
+    verify: {method: test, by: [tests/test_ux_polish.py::test_the_theme_is_a_choice_and_is_applied_before_the_first_paint]}
+  - id: APP-50
+    title: The Memory tab shows each kind of knowledge under one search
+    statement: The Memory tab shall show the wikis, long-term memory, each repository's knowledge, the skills and the agents' journals, each readable, under one search
+      across them; each long-term fact shall show its kind and where it came from and have its own Forget, and a fact that does not concern the owner shall move to a wiki only after he saw it on a list.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-01]
+    sources: [chat 2026-11-07, docs/MEMORY-TAB.md]
+    verify: {method: test, by: [tests/test_memory.py::test_the_memory_tab_has_one_home_per_kind_and_one_search, tests/test_memory.py::test_a_moved_fact_is_filed_with_its_chat_and_retired_with_its_undo, tests/test_memory.py::test_a_repository_s_wiki_opens_and_stays_off_the_wikis_list_and_map]}
+  - id: APP-51
+    title: The repo page has one question per tab
+    statement: The repo page shall hold its content under six tabs, Overview, Map, History, Health, Analysis and Wiki, each with its own link, remembered for the session, loading its data only when opened;
+      a tab change and a live update shall keep the open tab and the place on the page. History and Health shall say each row in plain words, the most telling rows first and every row one tap away;
+      a repository without these facts shall say so and offer Re-analyse, and one whose facts failed shall say what failed.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-01]
+    sources: [chat 2026-11-07]
+    verify: {method: test, by: [tests/test_repo_tabs.py::test_the_repo_page_has_seven_tabs_one_question_each, tests/test_repo_tabs.py::test_the_overview_says_what_it_is_and_the_map_folds_its_files, tests/test_repo_tabs.py::test_six_labels_fit_a_phone_and_nothing_is_ellipsed, tests/test_repo_tabs.py::test_a_tab_change_touches_no_page_and_a_live_redraw_keeps_the_tab_and_the_place, tests/test_repo_tabs.py::test_a_tab_loads_its_data_only_when_it_opens, tests/test_repo_tabs.py::test_every_feature_of_the_old_page_is_still_reachable, tests/test_repo_tabs.py::test_history_says_what_a_row_means_in_plain_words_most_telling_first, tests/test_repo_tabs.py::test_nothing_is_cut_the_rest_of_a_list_is_one_tap_away, tests/test_repo_tabs.py::test_health_says_each_finding_and_its_reason_in_plain_words, tests/test_repo_tabs.py::test_a_repository_without_facts_says_so_and_offers_re_analyse, tests/test_repo_tabs.py::test_a_repository_whose_facts_failed_says_what_failed_where_it_failed, tests/test_repo_tabs.py::test_the_wiki_tab_lists_the_pages_and_opens_them_in_the_wiki_viewer]}
+  - id: APP-52
+    title: The Tasks tab is built around tasks
+    statement: The second tab shall be Tasks, with five views - Tasks (Active, Repeating and Done; the owner's or the
+      stack's; a search), Activity, Team (the agents on the owner's tasks, the crew, their measured results), Network and
+      Ideas - each task's row saying where it stands, its When, its last result and the agents on it, and New task one form
+      for every task; the addresses of the old Agents tab, Tasks page and mission form shall go to their place on it.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-01, SN-19]
+    sources: [DEC-46, 'owner 2026-11-08: What is the difference between task and mission? I feel like tasks is better term and we should streamline and unify. ... How long it runs should not define the term. ... I feel we should keep 6 tabs and integrate tasks in agents. But tasks are not an afterthought. ... I want to see how tasks and agents connect ... Can Agents run without tasks? ... I feel like these should just be a special kind of tasks.']
+    verify: {method: test, by: [tests/test_tasks_tab.py::test_the_tasks_tab_has_five_views_and_the_old_addresses_go_there, tests/test_tasks_tab.py::test_new_task_is_one_form_that_sends_only_what_was_set]}
+    trace: [images/mission-control/web/static/app.js, images/mission-control/web/static/swarm.js, images/mission-control/web/static/app.css]
+  - id: APP-53
+    title: The Network shows which agents work on which tasks
+    statement: The Tasks tab's Network shall draw the tasks and the agents that worked on them in a period as two columns
+      with a line for each pair (thicker for more runs, marked while it runs), focus a task or an agent on a tap, show a
+      focused task's agents in the order they worked, keep the team map as "Agents together", and count what ran on no task.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-07, SN-17]
+    sources: [DEC-46]
+    verify: {method: test, by: [tests/test_tasks_tab.py::test_the_network_draws_tasks_and_agents_from_the_run_record]}
+    trace: [images/mission-control/web/static/app.js, images/mission-control/server.py]
+  - id: APP-54
+    title: Home counts what is yours apart from the stack's ideas
+    statement: Home's count of what needs the owner shall leave out the stack's own improvement ideas, which shall wait in the
+      same list as one quiet row with their own count.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [APP-06, SN-02, SN-18]
+    sources: [DEC-46, DEC-09, AUT-05, "owner's Home on 8 Nov 2026: 25 things need you, 22 of them the stack's ideas"]
+    verify: {method: test, by: [tests/test_tasks_tab.py::test_home_counts_what_is_yours_and_the_ideas_apart]}
+    trace: [images/mission-control/web/static/app.js]
+  - id: APP-55
+    title: The Memory tab opens on a map of the whole memory system
+    statement: The Memory tab shall open on one box per sector of memory showing what it holds, how many runs drew on it in
+      the last 7 days and its biggest collections, with the keepers' reported problems above the boxes and the full list of
+      collections below them.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [APP-06, MEM-01]
+    sources: ["owner, 8 Nov 2026: Entry point should be a visualisation of the whole memory system filled", "owner, 8 Nov 2026: Yes Just entry point update"]
+    verify: {method: test, by: [tests/test_memory_tool.py::test_the_memory_tab_opens_on_a_map_of_its_sectors]}
+    trace: [images/mission-control/web/static/app-memory.js, images/mission-control/web/static/app.css]
+
+  - id: APP-56
+    title: The desk uses the width it has
+    statement: Above 1,100 px the app shall lay each page out for its width through three templates keyed on the page,
+      namely an overview page's parts side by side (Home's three parts as columns, without tabs), a list beside what it opens (the
+      chat list, the repository cards, the graph with its node panel), and a reading measure for text; the view shall be as
+      wide as the window with gutters in proportion, a window over 1,900 px shall scale the whole app up in steps (1.12,
+      1.3 above 2,400, 1.6 above 3,200), and the phone layout shall stay as it is.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [APP-06]
+    sources: ["owner, 8 Nov 2026: Browser mode always only makes use of small space", "owner, 8 Nov 2026: I want not only the mobile version of the page to look premium but also desktop version. I do not want to micromanage everything."]
+    verify: {method: test, by: [tests/test_app_layout.py::test_an_agent_s_own_sentence_shows_dates_the_app_s_way_and_quotes_as_quotes, tests/test_app_layout.py::test_the_desk_uses_the_width_it_has]}
+    trace: [images/mission-control/web/static/app.css, images/mission-control/web/static/app-base.js, images/mission-control/web/static/app-tasks.js]

@@ -1,0 +1,153 @@
+# The assistant: Hermes (profiles main, scout, curator, mission, builder), chat, Telegram, skills, Claude tasks.
+area: Assistant
+prefix: AST
+items:
+  - id: AST-01
+    title: One assistant in every channel
+    statement: Hermes' main profile shall answer the owner in Mission Control's chat, on Telegram and in Open WebUI,
+      with the same tools and memory.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-01, SN-06]
+    sources: [README.md]
+    verify: {method: inspection, by: [config/hermes/configure.sh]}
+  - id: AST-02
+    title: Chat sends only the new turn
+    statement: Mission Control shall send Hermes only the new message with a Hermes session id per chat, and start a
+      new session when a message is edited or regenerated.
+    type: quality
+    priority: must
+    status: implemented
+    parents: [SN-03]
+    sources: [docs/REVIEW-2026-10-27.md, images/mission-control/guide/03-chat.md]
+    verify: {method: test, by: [tests/test_server.py::test_chat_sends_only_the_new_turn_with_a_hermes_session, tests/test_server.py::test_edit_starts_a_new_session]}
+    trace: [images/mission-control/server.py]
+  - id: AST-03
+    title: Answers survive a disconnect
+    statement: Mission Control shall run each chat answer as a server-side task that is saved whether or not the
+      phone stays connected, and the app shall follow it over a reconnecting stream.
+    type: quality
+    priority: must
+    status: implemented
+    parents: [SN-06, SN-13]
+    sources: [docs/MISSION-CONTROL.md]
+    verify: {method: test, by: [tests/test_server.py::test_interrupted_chats_are_closed_on_start]}
+    trace: [images/mission-control/server.py]
+  - id: AST-04
+    title: Tool steps show while Hermes works
+    statement: While Hermes answers, the chat shall show each tool it uses with a plain label.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-07]
+    sources: [images/mission-control/guide/03-chat.md]
+    verify: {method: test, by: [tests/test_server.py::test_tool_progress_labels]}
+  - id: AST-05
+    title: Model, effort and attachments per message
+    statement: The chat shall let the owner pick the model and the reasoning effort per message (remembered per
+      device) and attach images, sent as images, and documents (PDF, Word, Excel, CSV, text), sent as extracted text.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-01]
+    sources: [docs/MISSION-CONTROL.md]
+    verify: {method: inspection, by: [images/mission-control/server.py, images/mission-control/web/static/app.js]}
+  - id: AST-06
+    title: The owner's chats are kept apart
+    statement: Chats started by tests, agents or the AI phone shall be kept apart from the owner's own chats in the
+      chat history.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-02]
+    sources: ["owner 2026-10-28"]
+    verify: {method: test, by: [tests/test_home_work.py::test_chats_from_tests_and_agents_are_kept_apart_from_yours]}
+  - id: AST-07
+    title: Every tool Hermes has is described
+    statement: Every Mission Control MCP tool shall be registered with a description, explained in a guide chapter and
+      given a plain-language line in the guide's tool help.
+    type: quality
+    priority: must
+    status: implemented
+    parents: [SN-15, SN-01]
+    sources: [images/mission-control/AGENTS.md]
+    verify: {method: test, by: [tests/test_server.py::test_mcp_tools_are_registered, tests/test_guide.py::test_every_assistant_tool_is_explained]}
+  - id: AST-08
+    title: Profiles carry only what they use
+    statement: The scout, mission and builder profiles shall carry only the toolsets they use (no skills, no clarify on
+      unattended profiles), to keep the fixed cost of every call low.
+    type: quality
+    priority: should
+    status: implemented
+    parents: [SN-03, SN-05]
+    sources: [docs/TOKENS.md]
+    verify: {method: test, by: [tests/test_tokens.py::test_agent_profiles_carry_only_what_they_use]}
+    trace: [config/hermes/configure-scout.sh, config/hermes/configure-mission.sh, config/hermes/configure-builder.sh]
+  - id: AST-09
+    title: Hermes delegates to Claude Code, read-only
+    statement: When Hermes hands a question to Claude Code, the runner shall run it read-only on a copy of the
+      repository's main branch (or on passed text and validated, redacted evidence), show its steps with thinking,
+      tools and tokens, and wait for the reset if the Claude limit is reached.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-14, SN-05]
+    sources: [images/mission-control/guide/10-builder.md, DEC-16]
+    verify: {method: test, by: [tests/test_claude_tasks.py::test_a_cancelled_task_cancels_the_claude_tasks_its_steps_started, tests/test_claude_tasks.py::test_a_task_s_copy_is_one_commit_with_the_release_tags_before_it, tests/test_claude_tasks.py::test_a_run_is_read_only_and_answers, tests/test_claude_tasks.py::test_steps_show_thinking_tools_and_tokens, tests/test_claude_tasks.py::test_a_usage_limit_waits_for_the_reset, tests/test_claude_tasks.py::test_evidence_is_validated_gathered_and_put_next_to_the_question]}
+    trace: [ops/claude_tasks.py]
+  - id: AST-10
+    title: Learned skills are reviewed
+    statement: Hermes' skills shall be mirrored to git every 5 minutes, and a learned skill with risky capabilities
+      shall be parked until the owner approves it.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-05, SN-09]
+    sources: [images/mission-control/guide/18-crew.md]
+    verify: {method: inspection, by: [ops/skills_sync.py, ops/systemd/skills-sync.timer]}
+  - id: AST-11
+    title: The skill curator is gated by the benchmark
+    statement: The weekly skill curation shall keep its changes only if the frozen benchmark's gate subset scores at
+      least as well afterwards, and roll back otherwise.
+    type: quality
+    priority: must
+    status: implemented
+    trace: [config/hermes/configure-curator.sh]
+    parents: [SN-08, SN-15]
+    sources: [eval/AGENTS.md]
+    verify: {method: inspection, by: [ops/curate.py, eval/fixtures]}
+  - id: AST-12
+    title: Chat during a usage limit
+    statement: If the subscription's usage limit is reached, then the chat shall say so and when it expects to answer
+      again, instead of failing with a bare error.
+    type: functional
+    priority: should
+    status: partial
+    parents: [SN-13, SN-02]
+    sources: [docs/REVIEW-2026-10-27.md, images/mission-control/guide/14-safety.md, docs/SWARM-ROADMAP.md]
+    gap: The app's chat keeps the message, says when the limit resets, answers by itself afterwards and notifies the
+      owner; on Telegram, Hermes' own gateway answers the limit with its own message, which the stack does not shape.
+    verify: {method: test, by: [tests/test_chat_limit.py::test_a_rename_while_the_answer_is_saved_keeps_the_answer, tests/test_chat_limit.py::test_a_usage_limit_keeps_the_message_and_says_when_the_limit_resets,
+      tests/test_chat_limit.py::test_after_the_reset_the_message_is_answered_by_itself_and_the_owner_is_told,
+      tests/test_chat_limit.py::test_a_limit_that_lasts_a_day_stops_and_try_now_moves_the_retry,
+      tests/test_chat_limit.py::test_a_normal_answer_about_rate_limits_is_not_a_usage_limit]}
+  - id: AST-13
+    title: Morning digest
+    statement: Every morning at 07:30 the digest shall send the night's results to Telegram.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-01]
+    sources: [images/mission-control/guide/07-delivery.md]
+    verify: {method: inspection, by: [ops/digest.py, ops/systemd/digest.timer]}
+  - id: AST-14
+    title: Hermes never approves
+    statement: Hermes' tools shall be able to read builds, request changes and re-run checks, and shall never be able
+      to approve a build, a purchase, a grant or a phone action.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05, CST-07]
+    sources: [images/mission-control/guide/10-builder.md]
+    verify: {method: test, by: [tests/test_server.py::test_hermes_can_review_and_request_changes_but_never_approve, tests/test_server.py::test_purchases_are_decided_only_by_the_owner]}

@@ -1,0 +1,18 @@
+# Loopback gate for the code map viewer at a deployment without a tailnet (CODEMAP_GATE=local in its deployment.env),
+# started by ops/understand-dashboard.sh in the viewer's network namespace. The viewer's port is published on
+# 127.0.0.1:5173 only, so only this PC reaches it: there is no login to check. The gate adds the viewer's access token.
+{
+	admin off
+	auto_https off
+}
+
+:5174 {
+	route {
+		@first {
+			path /
+			not query token=*
+		}
+		redir @first /?token=tailnet 302
+		reverse_proxy 127.0.0.1:5173
+	}
+}

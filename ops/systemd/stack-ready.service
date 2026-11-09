@@ -1,0 +1,9 @@
+[Unit]
+Description=After a boot: wait for Docker and Hermes's tools, restart Hermes once so it sees them, then let the jobs start
+After=docker.service
+[Service]
+Type=oneshot
+TimeoutStartSec=30min
+Environment=DOCKER_HOST=unix://%t/docker.sock
+WorkingDirectory=%h/ai-stack
+ExecStart=/usr/local/bin/sops exec-env secrets/secrets.enc.yaml "sops exec-env secrets/agent-keys.enc.yaml \"python3 ops/stack_ready.py\""

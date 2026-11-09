@@ -1,0 +1,59 @@
+# The memory stack's settings (docs/MEMORY-STACK.md, MEM-23). Every budget here is an experiment parameter: each run
+# records the budget it used, a trial arm may override any of them, and Stack -> Health shows the characters given and
+# the share used per run kind, which is how they are tuned. A budget cuts visibly and never stops a run.
+version: 1
+
+# characters of memory in a run's opening, by run kind  # limit: cuts, each cut shows what is missing and where it is
+budgets:
+  code: 24000          # a coding step (builder, tester, breaker, analyst, planner), a Claude build
+  review: 12000        # intake, reviewer, prober: the same task-built code memory, less of it
+  mission: 20000       # a mission's or a briefing's run
+  crew: 8000           # a crew job's model prompt
+  task: 16000          # any other agent step of a task
+
+# limit: cuts, a coder's note on its first read of a file
+file_note: 1500
+# limit: cuts, the owner's facts in an opening (other agents than the assistant only get this, matched to the task)
+owner_chars: 1500
+# limit: cuts, one item's share of an opening before it is cut (the best remaining item may take what is left)
+item_chars: 6000
+# the least that must fit for the best remaining item to be cut instead of becoming a pointer
+cut_floor: 800
+# limit: cuts, pointers listed for what did not fit
+pointers: 12
+# limit: cuts, collections offered beyond the subscriptions
+offer: 8
+
+# ranking: match x trust x freshness x use (docs/MEMORY-STACK.md, "What goes in when there is more than the budget")
+weights:
+  trust: {exact: 1.0, compiled: 0.8, extracted: 0.6}
+  fresh_days: 90       # full weight while younger
+  stale_days: 365      # half weight from then on
+  use_floor: 0.5       # a collection no run has used yet still gets half weight
+
+# subscriptions by role ({repo}, {self}, {own}, {role} are filled per run); a card gets the union of its roles'
+presets:
+  code: ["code:{repo}", "howto:lessons/code", "agent:{self}"]
+  reviewers: ["code:{repo}", "howto:lessons/reviewers", "agent:{self}"]
+  tests: ["code:{repo}", "howto:lessons/tests", "agent:{self}"]
+  research: ["agent:{self}", "work:ledger", "world:{own}", "world:*", "owner:facts", "howto:lessons/research"]
+  missions: ["agent:{self}", "work:ledger", "world:{own}", "world:*", "owner:facts", "howto:lessons/missions"]
+  briefings: ["agent:{self}", "work:ledger", "world:{own}", "world:*", "owner:facts", "howto:lessons/briefings"]
+  knowledge: ["agent:{self}", "work:ledger", "world:*", "howto:lessons/knowledge"]
+  memory: ["agent:{self}", "work:ledger", "howto:lessons/memory"]     # the memory agent works on the stores, not on a topic
+  assistant: ["howto:lessons/assistant"]      # Hermes recalls long-term memory itself, every turn
+  default: ["agent:{self}", "work:ledger", "howto:lessons/{role}"]
+
+# limits of the memory agent's structural work (MEM-40, MEM-41, MEM-38, MEM-39, MEM-42)
+limits:
+  split_pages: 60      # a wiki with more pages splits into parts
+  merge_pages: 8       # a part with fewer joins the part it links to most
+  archive_days: 90     # unread and unconfirmed this long: archived
+  splits_per_pass: 2   # limit: paces, wikis split a week; the rest the week after
+  archives_per_pass: 40  # limit: paces, pages archived a week; the rest the week after
+  moves_per_pass: 200  # limit: paces, facts moved out of long-term memory a night; the rest the night after
+  skills_per_week: 1   # limit: paces, skill proposals a week
+  skill_runs: 3        # a tool sequence must end done in this many runs
+  skill_titles: 3      # on this many different titles
+  skill_days: 30       # within this many days
+  lesson_start: 1      # a new lesson's tally; at 0 it is retired

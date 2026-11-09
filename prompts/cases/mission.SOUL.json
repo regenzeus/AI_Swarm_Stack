@@ -1,0 +1,6 @@
+[
+ {"fills": {}, "model": "gpt-sub", "user": "Mission run: find out whether the 32 GB kit I noted last week is still the cheapest that fits my board."},
+ {"fills": {}, "model": "gpt-sub", "user": "Mission run: update the copper thesis with this week's news and say what changed since the last run."},
+ {"fills": {}, "model": "gpt-sub", "user": "Mission run: check my mail for the order confirmation of the speaker and note the delivery date."},
+ {"fills": {}, "model": "gpt-sub", "user": "Mission run: you learned that shop pages from Geizhals list prices without shipping; keep that for future runs."}
+]

@@ -1,0 +1,62 @@
+# Written by ops/modelpolicy.py litellm from config/litellm/config.yaml and this deployment's models.yaml: do not edit.
+# Gateway only: the aliases are the gateway's models, and LiteLLM refuses any other model.
+model_list:
+- model_name: gpt-sub
+  litellm_params:
+    model: openai/example-large
+    api_base: https://llm-gateway.example.com/openai/v1
+    api_key: os.environ/AISTACK_GATEWAY_TOKEN
+- model_name: gpt-sub-fast
+  litellm_params:
+    model: openai/example-small
+    api_base: https://llm-gateway.example.com/openai/v1
+    api_key: os.environ/AISTACK_GATEWAY_TOKEN
+- model_name: smoke
+  litellm_params:
+    model: ollama_chat/qwen3:0.6b
+    api_base: http://ollama:11434
+mcp_servers:
+  qmd:
+    url: http://qmd:8181/mcp
+    transport: http
+    description: 'Search the Obsidian vault: compiled wiki pages and raw sources (BM25 + vectors + rerank).'
+  claude:
+    url: http://mission-control:8092/mcp
+    transport: http
+    timeout: 120
+    description: 'Claude Code as a worker: code questions, reviews, analysing code or long documents, hard reasoning (read-only).'
+  missions:
+    url: http://mission-control:8091/mcp
+    transport: http
+    description: 'Mission Control: list, start, change, pause or stop the owner''s missions (daily briefings, long-term agent tasks).'
+  files:
+    url: http://mission-control:8096/mcp
+    transport: http
+    description: 'A mission saves the files it was asked to deliver (Markdown, CSV, JSON, text): shown on its page, attached to its e-mail.'
+  graphify:
+    url: http://graphify:8000/mcp
+    transport: http
+    description: Query the code knowledge graph of the repos in ~/code (callers, paths, explanations).
+  memory:
+    url: http://mission-control:8097/mcp
+    transport: http
+    timeout: 120
+    description: 'The stack''s memory: search everything you may read, open one entry whole, subscribe to a collection for your task, note a lesson, fact, failure or skill (it enters memory after a check).'
+  memorypublic:
+    url: http://mission-control:8098/mcp
+    transport: http
+    timeout: 120
+    description: 'The stack''s memory without the owner''s facts, private wikis or journals: search, open, subscribe, note.'
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY
+  database_url: os.environ/DATABASE_URL
+litellm_settings:
+  callbacks:
+  - otel
+  max_budget: 50
+  budget_duration: 30d
+  drop_params: true
+router_settings:
+  num_retries: 1
+  allowed_fails: 2
+  cooldown_time: 300

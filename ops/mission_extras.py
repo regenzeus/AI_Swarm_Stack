@@ -1,0 +1,524 @@
+"""Mission Control extras, used by ops/missions.py (which sets M to itself):
+  event triggers   new SEC filings, big price moves, news on a query -> an event run of the mission
+  deep research    plan -> one agent run per step (vault + web research) -> synthesis, steps shown live
+  mission wikis    after every result: the model updates the mission's LLM wiki (entities, concepts, projects, events)
+  delivery         Telegram with buttons into the app, designed e-mail (needs GMAIL_* + MAIL_TO in the secrets)
+All web access happens in the desk container (SSRF-guarded "webonly" network); this module only talks to LiteLLM,
+Telegram's API and Gmail's SMTP.
+"""
+import datetime as dt, hashlib, html, json, os, re, smtplib, subprocess, time, urllib.parse, urllib.request
+from email.mime.application import MIMEApplication
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from textcap import cut, tail                    # visible caps and input limits (AGENTS.md, truncation)
+import textcap as TC
+import prompts as P                               # MEM-11: the agent prompts live in prompts/<owner>.md
+import notify as N                                # OBS-16: the one notification path
+import deployment as DEPLOY                        # this deployment's hosts and paths (deployments/<name>/deployment.env)
+
+M = None                      # the missions module
+APP = DEPLOY.MC_URL
+FORMS = ["8-K", "6-K", "10-Q", "10-K", "20-F", "40-F", "S-1", "S-3", "F-10", "424B5", "SC 13D", "SC 13G", "4", "DEF 14A", "425"]
+DEFAULT_FORMS = ["8-K", "6-K", "10-Q", "10-K", "20-F", "40-F", "S-3", "424B5", "SC 13D", "425"]
+WATCH_EVERY = 600             # seconds between event checks
+
+
+# ---------- delivery ----------
+def telegram(text, buttons=(), category="result"):
+    """HTML message with URL buttons into Mission Control (callback buttons would need Hermes' bot loop), through the
+    one notification path: the owner's preferences and quiet hours decide (OBS-16). True when it went out now."""
+    return N.send(text, category, by="mission", buttons=buttons, is_html=True).get("telegram") == "sent"
+
+
+def links(slug, path=None):
+    row = []
+    if path:
+        row.append(("📄 Open report", f"{APP}/#/read?path={urllib.parse.quote(path)}&m={slug}"))
+    row.append(("🎯 Mission", f"{APP}/#/mission/{slug}"))
+    return [row, [("💬 Ask about it", f"{APP}/#/chat?mission={slug}"), ("▶ Run again", f"{APP}/#/mission/{slug}?do=run")]]
+
+
+def email_ready():
+    return all(os.environ.get(k) for k in ("GMAIL_ADDRESS", "GMAIL_APP_PASSWORD", "MAIL_TO"))
+
+
+def sent(subject, decision, why=""):
+    """FND-78: every e-mail outcome is recorded (the notification log and the run's timeline), so a delivery is
+    checked, not assumed."""
+    N.record("email", "result", subject, why or f"to {os.environ.get('MAIL_TO', '?')}", decision, by="mission")
+    M.RTM.stage(f"E-mail {'sent' if decision == 'sent' else 'not sent'}: {subject}", why, kind="stage" if decision == "sent" else "error")
+    return decision == "sent"
+
+
+def message(d, subject, files=()):
+    """The e-mail: the designed report (text and HTML) and, MIS-25, each file as a real attachment with its name."""
+    body = MIMEMultipart("alternative")
+    body.attach(MIMEText(d["text"], "plain", "utf-8"))
+    body.attach(MIMEText(d["html"], "html", "utf-8"))
+    if files:
+        msg = MIMEMultipart("mixed")
+        msg.attach(body)
+        for name, data, mime in files:
+            main, sub = mime.split("/", 1)
+            part = MIMEText(data.decode("utf-8", "replace"), sub, "utf-8") if main == "text" else MIMEApplication(data, sub)
+            part.add_header("Content-Disposition", "attachment", filename=name)
+            msg.attach(part)
+    else:
+        msg = body
+    msg["Subject"], msg["From"], msg["To"] = subject, f"AI Stack <{os.environ['GMAIL_ADDRESS']}>", os.environ["MAIL_TO"]
+    return msg
+
+
+def email(subject, markdown_text, kicker, url, files=()):
+    if not email_ready():
+        return sent(subject, "failed", "e-mail is not set up (GMAIL_ADDRESS, GMAIL_APP_PASSWORD, MAIL_TO)")
+    p = subprocess.run(["docker", "run", "--rm", "-i", "--network", "none", "aistack/desk:1", "--email"],
+                       input=json.dumps({"markdown": markdown_text, "kicker": kicker, "url": url}), capture_output=True,
+                       text=True, timeout=120)
+    if p.returncode:
+        M.log("email render failed:", tail(p.stderr, 4000))  # cap: store
+        return sent(subject, "failed", "the e-mail could not be rendered")
+    msg = message(json.loads(p.stdout), subject, files)
+    try:
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=60) as s:
+            s.login(os.environ["GMAIL_ADDRESS"], os.environ["GMAIL_APP_PASSWORD"])
+            s.send_message(msg)
+        return sent(subject, "sent")
+    except Exception as e:
+        M.log(f"email failed: {type(e).__name__}: {str(e)}")
+        M.event("error", "", f"E-mail could not be sent ({type(e).__name__})", push=True)
+        return sent(subject, "failed", f"{type(e).__name__}: {str(e)}")
+
+
+def briefing_empty(text):
+    """A briefing the desk chose no news for (its front matter's stats say chosen: 0): prices alone are no delivery."""
+    st = re.search(r"^stats: (\{.*\})$", text, re.M)
+    try:
+        return bool(st) and json.loads(st.group(1)).get("chosen", 1) == 0
+    except ValueError:
+        return False
+
+
+def quiet_file():
+    return M.HOME / "quiet-runs.json"           # per mission, the dates of runs that found nothing new (FND-60)
+
+
+def deliver(m, title, short, path, kicker, markdown_text=None, empty=False):
+    """Telegram and e-mail for a finished run. An empty run (a briefing with no news chosen) stays in the app: its date
+    is kept and named in the kicker of the next full delivery instead (MIS-15, FND-60)."""
+    d = m.get("deliver") or []
+    f = quiet_file()
+    try:
+        quiet = json.loads(f.read_text())
+    except (OSError, ValueError):
+        quiet = {}
+    days = [x for x in quiet.pop(m["slug"], []) if empty or x != f"{M.now():%d %b}"]   # a full run today covers today's empty one
+    if empty:
+        if "telegram" in d or "email" in d:
+            M.log(f"{m['slug']}: nothing new, kept in the app (not sent by Telegram or e-mail)")
+        quiet[m["slug"]] = days + [f"{M.now():%d %b}"]
+        f.write_text(json.dumps(quiet))
+        return False
+    if days:
+        kicker += f" · nothing new on {', '.join(days)}"
+    f.write_text(json.dumps(quiet))
+    chk = files_of(m)                                  # MIS-25: what this run saved goes along; what is missing is said
+    note = (f"Files: {', '.join(chk['saved'])}" if chk["saved"] else "") + \
+           (f"{' · ' if chk['saved'] else ''}Not delivered: {', '.join(chk['missing'])}" if chk["missing"] else "")
+    if "telegram" in d:
+        ok = telegram(f"<b>{html.escape(title)}</b>\n<i>{html.escape(kicker)}</i>\n\n{html.escape(short)}"
+                      + (f"\n\n{html.escape(note)}" if note else ""), links(m["slug"], path))
+        if chk["attach"]:                              # the files follow the message only when it went out now
+            done = [n for n, data, mime in chk["attach"] if ok and N.telegram_document(n, data, m["title"], mime)]
+            M.FL.record_delivery(m["slug"], done, "telegram", True)
+            M.FL.record_delivery(m["slug"], [n for n, _, _ in chk["attach"] if n not in done], "telegram", False,
+                                 "the result's message was held (quiet hours) or off" if not ok else "Telegram refused it")
+    if "email" in d and markdown_text:
+        text = markdown_text + (f"\n\n---\n\n**Attached:** {', '.join(n for n, _, _ in chk['attach'])}" if chk["attach"] else "") \
+            + (f"\n\n**Not delivered:** {', '.join(chk['missing'])} (asked for, not saved by the run)" if chk["missing"] else "")
+        ok = email(f"{m['title']}: {title}", text, kicker, f"{APP}/#/read?path={urllib.parse.quote(path)}&m={m['slug']}",
+                   **({"files": chk["attach"]} if chk["attach"] else {}))
+        M.FL.record_delivery(m["slug"], [n for n, _, _ in chk["attach"]], "email", ok)
+    return True
+
+
+def files_of(m):
+    """The files this run saved and those asked for but missing ({saved, missing, attach}); none for a task's delivery
+    or when the store cannot be read (the result still goes out, said in the log)."""
+    try:
+        return M.FL.check_run(m) if M.FL.SLUG.fullmatch(m.get("slug") or "") and (M.FL.ROOT / m["slug"]).exists() or m.get("files_asked") \
+            else {"saved": [], "missing": [], "attach": []}
+    except Exception as e:
+        M.log(f"files of {m.get('slug')}: {type(e).__name__}: {e}")
+        return {"saved": [], "missing": [], "attach": []}
+
+
+# ---------- triggers ----------
+def clean_triggers(raw):
+    """Validate triggers from the app or chat; raises ValueError with a readable reason."""
+    out = []
+    for t in TC.limit_items(raw, 10, "triggers on one mission"):
+        k = t.get("type")
+        if k == "sec_filing":
+            tick = TC.limit_items([x.strip().upper() for x in t.get("tickers", []) if re.fullmatch(r"[A-Za-z.\-]{1,10}", str(x).strip())], 10, "tickers on one trigger")
+            forms = [f for f in t.get("forms") or DEFAULT_FORMS if f in FORMS]
+            if not tick:
+                raise ValueError("SEC filing trigger needs at least one US ticker")
+            out.append({"type": k, "tickers": tick, "forms": forms})
+        elif k == "price_move":
+            sym = str(t.get("symbol", "")).strip()
+            pct = float(t.get("pct", 5))
+            if not re.fullmatch(r"[A-Za-z0-9.\-=^]{1,15}", sym) or not 1 <= pct <= 50:
+                raise ValueError("price trigger needs a Yahoo symbol and a move of 1-50 %")
+            out.append({"type": k, "symbol": sym.upper(), "pct": pct})
+        elif k == "news":
+            q = str(t.get("query", "")).strip()[:120]  # cap: api (a search query; a marker would be searched for)
+            if len(q) < 3:
+                raise ValueError("news trigger needs a search query")
+            out.append({"type": k, "query": q})
+        else:
+            raise ValueError(f"unknown trigger type '{k}'")
+    return out
+
+
+def trigger_text(t):
+    if t["type"] == "sec_filing":
+        return f"New SEC filing by {', '.join(t['tickers'])}"
+    if t["type"] == "price_move":
+        return f"{t['symbol']} moves ±{t['pct']:g} % in a day"
+    return f"News about “{t['query']}”"
+
+
+_last_watch = {"t": 0}
+
+
+def check_events(missions, c):
+    """Every WATCH_EVERY seconds: fetch filings/prices/news for all active triggers, fire new events as runs.
+    The first look at a trigger only records what exists (no flood of old items)."""
+    if time.time() - _last_watch["t"] < WATCH_EVERY:
+        return
+    _last_watch["t"] = time.time()
+    act = [(m, t) for m in missions.values() if m.get("status") == "active" for t in m.get("triggers") or []]
+    try:                                         # TSK-21: a task that runs on an event watches like a mission
+        import tasks as TK
+        act += [(w, t) for w in TK.watchers(c) for t in w["triggers"]]
+    except Exception as e:                       # the missions' triggers are watched all the same; logged
+        M.log(f"watch: the tasks' triggers not read: {type(e).__name__}: {e}")
+    if not act:
+        return
+    spec = {"sec": sorted({x for _, t in act if t["type"] == "sec_filing" for x in t["tickers"]}),
+            "prices": sorted({t["symbol"] for _, t in act if t["type"] == "price_move"}),
+            "news": sorted({t["query"] for _, t in act if t["type"] == "news"})}
+    p = subprocess.run(["docker", "run", "--rm", "-i", "--network", "aistack_webonly", "-e", "SEC_CONTACT", "aistack/desk:1", "--watch"],
+                       input=json.dumps(spec), capture_output=True, text=True, timeout=600)
+    if p.returncode:
+        M.log("watch failed:", tail(p.stderr, 4000))  # cap: store
+        return
+    seen_now = json.loads(p.stdout)
+    today = dt.date.today().isoformat()
+    for m, t in act:
+        tid = hashlib.sha1(json.dumps(t, sort_keys=True).encode()).hexdigest()[:10]
+        first = not c.execute("select 1 from seen_events where key=?", (f"{m['slug']}|init|{tid}",)).fetchone()
+        fire = []
+        if t["type"] == "sec_filing":
+            for tick in t["tickers"]:
+                for f in seen_now["sec"].get(tick, []):
+                    k = f"{m['slug']}|sec|{f['id']}"
+                    if f["form"] in t["forms"] and not seen(c, k):
+                        mark(c, k)
+                        fire.append(f)
+            ev = fire and {"kind": "sec_filing", "summary": "; ".join(TC.cut(f["title"], 120) for f in fire[:3]), "items": fire[:4]}  # cap: preview
+        elif t["type"] == "price_move":
+            q = seen_now["prices"].get(t["symbol"])
+            ev = None
+            if q and q.get("prev") and abs(q["pct"]) >= t["pct"] and q["date"] >= (dt.date.today() - dt.timedelta(days=3)).isoformat():
+                k = f"{m['slug']}|price|{t['symbol']}|{q['date']}|{'up' if q['pct'] > 0 else 'down'}"
+                if not seen(c, k):
+                    mark(c, k)
+                    ev = {"kind": "price_move", "items": [],
+                          "summary": f"{t['symbol']} {'up' if q['pct'] > 0 else 'down'} {abs(q['pct']):.1f} % to {q['last']:.2f} {q['currency']} "
+                                     f"(previous close {q['prev']:.2f}, {q['date']})"}
+        else:
+            for n in seen_now["news"].get(t["query"], []):
+                k = f"{m['slug']}|news|{n['id']}"
+                if not seen(c, k):
+                    mark(c, k)
+                    fire.append(n)
+            ev = fire and {"kind": "news", "summary": f"{len(fire)} new article(s) about “{t['query']}”: " + "; ".join(TC.cut(n["title"], 100) for n in fire[:3]),  # cap: preview
+                           "items": fire[:4]}
+        if first:
+            mark(c, f"{m['slug']}|init|{tid}")
+            continue                         # baseline only
+        if ev and ev.get("summary"):
+            ev["trigger"] = trigger_text(t)
+            if m.get("task"):                    # a task's trigger starts its next occurrence under the Conductor
+                import conductor as CD
+                CD.fire(c, m["task"], ev)
+                M.event("triggered", "", f"Task #{m['task']}: {ev['trigger']}: {ev['summary']}", push=True, title=m["title"])
+            else:
+                M.enqueue(c, m["slug"], "event", event=ev)
+                M.event("triggered", m["slug"], f"{ev['trigger']}: {ev['summary']}", push=True, title=m["title"])
+            try:                                      # TSK-10: the event bus logs it too (its rules may start tasks)
+                import events as EV
+                EV.mission_event(c, m["slug"], ev)
+            except Exception as e:                    # the mission's own run is queued already; the log line is lost, and said
+                M.log(f"event bus: mission event of {m['slug']} not logged: {type(e).__name__}: {e}")
+    c.commit()
+
+
+def seen(c, k):
+    return c.execute("select 1 from seen_events where key=?", (k,)).fetchone() is not None
+
+
+def mark(c, k):
+    c.execute("insert or ignore into seen_events values (?, ?)", (k, M.now().isoformat(timespec="seconds")))
+
+
+def run_alert(m, ev, logf):
+    """Event on a briefing mission: a short alert written by the desk from the event's sources."""
+    topic = m.get("topic", m["slug"])
+    a, err = alert_of(topic, ev)
+    open(logf, "w").write(err)
+    if not a:
+        return "failed", (err.strip().splitlines() or ["alert failed"])[-1], ""
+    rel = file_alert(topic, a, ev)
+    deliver(m, a.get("title") or ev["summary"][:80], a.get("short", ""), rel, f"Alert · {ev.get('trigger', '')}", a["markdown"])  # cap: id
+    return "ok", a.get("short") or a.get("title", "Alert"), rel
+
+
+def alert_of(topic, ev):
+    """The desk writes a short alert from the event's sources -> ({"title", "markdown", "short"} or None, its log). A
+    briefing mission's event run and a briefing task's event occurrence (ops/conductor.py) both write it this way."""
+    p = subprocess.run(["docker", "run", "--rm", "-i", "--network", "aistack_webonly", "-e", "VK_DESK", "-e", "SEC_CONTACT",
+                        "-v", f"/srv/vault/topics/{topic}:/topic:ro", "-v", f"{M.OPS.parent / 'prompts'}:/prompts:ro", "aistack/desk:1", "--alert"],
+                       input=json.dumps({"event": ev}), capture_output=True, text=True, timeout=900)
+    if p.returncode or not p.stdout.strip():
+        return None, p.stderr
+    a = json.loads(p.stdout)
+    if a.get("prompt"):                          # MEM-11: the alert's prompt version in the run record, its call a replay case
+        M.RTM.stage("Prompt", a["prompt"])
+    if a.get("case"):
+        P.add_case(**a["case"])
+    a.pop("prompt", None), a.pop("case", None)
+    return a, p.stderr
+
+
+def file_alert(topic, a, ev):
+    """The alert in the vault under topics/<topic>/alerts/ -> its path."""
+    t = M.now()
+    rel = f"topics/{topic}/alerts/{t:%Y}/{t:%m}/{t:%Y-%m-%d-%H%M}-{ev['kind']}.md"
+    M.write_front(M.VAULT / rel, {"topic": topic, "date": t.isoformat(timespec="minutes"), "type": "alert",
+                                  "trigger": ev.get("trigger", ev["kind"])}, a["markdown"])
+    M.vault_commit([f"topics/{topic}/alerts"], f"desk: {topic} alert {t:%F %H:%M}")
+    M.reindex()
+    return rel
+
+
+# ---------- deep research ----------
+PLAN = P.text("mission", "DEEP_PLAN")
+
+STEP = P.text("mission", "DEEP_STEP")
+
+SYNTH = P.text("mission", "DEEP_SYNTH")
+
+
+def run_deep(m, logf, rid, c, ev=None):
+    goal, notes = m.get("goal", ""), M.read_notes(m)
+    evtext = f"Triggered by an event: {ev['trigger']}: {ev['summary']}" if ev else ""
+    plan = M.ask_json(PLAN.format(title=m["title"], goal=goal, notes=TC.cut(notes, 3000), event=evtext) + M.FL.brief(m, plan=True), os.environ["VK_MISSION"])  # cap: prompt
+    steps = [{"title": TC.cut(s.get("title", ""), 60), "question": TC.cut(s.get("question", ""), 500), "status": "pending"}  # cap: untrusted
+             for s in TC.first(plan.get("steps", []), 5, "research steps") if s.get("question")]  # cap: untrusted (its prompt asks for 3 to 5)
+    if not steps:
+        return "failed", "planning failed", ""
+    save = lambda: (c.execute("update runs set steps=? where id=?", (json.dumps(steps), rid)), c.commit())
+    save()
+    found = []
+    with open(logf, "w") as f:
+        for s in steps:
+            s["status"] = "running"
+            save()
+            f.write(f"## {s['title']}\n{s['question']}\n")
+            f.flush()
+            out = M.hermes_z(STEP.format(date=f"{M.now():%d %b %Y}", title=m["title"], goal=goal, step_title=s["title"],
+                                         question=s["question"], earlier=TC.tail("\n\n".join(found), 6000) or "(none yet)") + M.FL.brief(m), timeout=900)  # cap: prompt
+            f.write(out + "\n\n")
+            f.flush()
+            s["status"] = "done" if out.strip() else "failed"
+            s["finding"] = cut(out.strip(), 4000)  # cap: store
+            found.append(f"### {s['title']}\n{TC.cut(out.strip(), 2500)}")  # cap: prompt
+            save()
+    if not any(s["status"] == "done" for s in steps):
+        return "failed", "no step produced a finding", ""
+    final = M.ask_text(SYNTH.format(date=f"{M.now():%d %b %Y}", title=m["title"], goal=goal, notes=TC.cut(notes, 3000), event=evtext,  # cap: prompt
+                                    findings="\n\n".join(found)), os.environ["VK_MISSION"])
+    return M.file_task_result(m, final, kind="deep research")
+
+
+# ---------- mission wikis ----------
+WIKI = P.text("mission", "WIKI")
+
+
+KIND = {"entities": "entity", "concepts": "concept", "projects": "project", "events": "event"}
+
+
+def wiki_root(m):
+    return f"topics/{m.get('topic', m['slug'])}/wiki" if m["type"] == "briefing" else f"missions/{m['slug']}/wiki"
+
+
+def wiki_pages(root):
+    out = []
+    for p in sorted((M.VAULT / root).rglob("*.md")):
+        if p.name == "index.md" or p.relative_to(M.VAULT / root).parts[0] == "parts":   # MEM-40: part hubs are the Librarian's, never compiled
+            continue
+        meta, body = M.split_front(p.read_text(errors="replace"))
+        if meta.get("merged_into"):              # the Librarian merged it into another page: a stub, not a page
+            continue
+        out.append({"path": str(p.relative_to(M.VAULT / root))[:-3], "title": meta.get("title") or p.stem,
+                    "summary": meta.get("summary", ""), "aliases": meta.get("aliases") or [], "type": meta.get("type", ""),
+                    "body": body, "meta": meta})
+    return out
+
+
+def compile_wiki(m, source_rel, text, key):
+    if m.get("wiki_off"):                        # the owner deleted this mission's wiki (ops/wikis.py)
+        return 0
+    return len(compile_into(wiki_root(m), m["title"], source_rel, text, key))
+
+
+def mentioned(pages, text):
+    """The pages a text names (by title or alias)."""
+    low = text.lower()
+    return [p for p in pages if any(n and n.lower() in low for n in [p["title"], *p["aliases"]])]
+
+
+PAGE_SEEN = 12000      # a page the compile rewrites is shown whole up to this; past it, marked (FND-103)
+TEXT_SEEN = 14000      # the result's text the compile reads; the whole result stays in its file
+
+
+def compile_into(root, title, source_rel, text, key, touched=None):
+    """A result folded into the wiki at root: the pages it names (or `touched`, a list of page paths) are rewritten,
+    new pages made, superseded facts kept. -> the paths written. A refinement task's wiki step (ops/conductor.py
+    run_wiki) calls it once per group of pages; a mission's result once."""
+    pages = wiki_pages(root)
+    touched = [p for p in pages if p["path"] in touched] if touched is not None else mentioned(pages, text)[:6]   # cap: prompt
+    index = "\n".join(f"- [[{p['path']}]] {p['title']}: {p['summary']}" for p in pages) or "(empty: this is the first result)"
+    src = source_rel[:-3] if source_rel.endswith(".md") else source_rel
+    try:                                         # MEM-03: the one writer folds in what other agents gave the wiki
+        import swarm_client as SW
+        helps = SW.wiki_helps(root, title)
+    except Exception:
+        SW, helps = None, []
+    contrib = "\n".join(f"- from {h['helper']}: {h['text']} (why its owner would not see it, it says: {h['unseen']})" for h in helps)
+    open_disputes = [f"- open dispute on {p['path']} (the Memory Keeper): {ln.strip()} — settle it only if the new result does, moving the claim that no longer holds under Superseded"
+                     for p in touched for ln in p["body"].splitlines() if "[!contradiction]" in ln]   # MEM-17: the writer is told
+    contrib = "\n".join([x for x in (contrib, *open_disputes) if x]) or "(none)"
+    shown = "\n\n".join(f"=== {p['path']}\n" + cut(p["body"], PAGE_SEEN, "the compile keeps the lines it did not see") for p in touched)  # cap: prompt
+    r = M.ask_json(WIKI.format(title=title, source=src, index=cut(index, 6000, "the other pages are in the wiki's folder"), contributions=contrib,  # cap: prompt
+                               pages=shown or "(none)",
+                               text=cut(re.sub(r"^---\n.*?\n---\n", "", text, flags=re.S), TEXT_SEEN, "the whole result is in its source file")),  # cap: prompt
+                   key, timeout=400)
+    today = dt.date.today().isoformat()
+    by_path = {p["path"]: p for p in pages}
+    folders = "|".join(sorted({"entities", "concepts", "projects", "events"} | {p["path"].split("/")[0] for p in pages if "/" in p["path"]}))
+    written = []
+    for pg in TC.first(r.get("pages", []), 8, "wiki pages from one result"):  # cap: untrusted (a model's answer; the rest stays in the result itself)
+        path = str(pg.get("path", "")).strip().lower().removesuffix(".md")
+        if not (re.fullmatch(rf"({folders})/[a-z0-9][a-z0-9-]{{0,60}}", path) or path in by_path) or not pg.get("body"):
+            continue                             # a folder the wiki has (the vault wiki's howto, answers ...) or a page it has
+        old = by_path.get(path, {}).get("meta", {})
+        before = by_path.get(path, {}).get("body", "")
+        body = keep_unseen(before, keep_superseded(before, str(pg["body"])), PAGE_SEEN)   # MEM-12: a superseded fact stays
+        body = keep_written_meanwhile(M.VAULT / root / f"{path}.md", before, body)
+        meta = {"title": TC.cut(str(pg.get("title") or path.split("/")[-1]), 100), "type": KIND.get(path.split("/")[0]) or old.get("type") or "page",  # cap: untrusted
+                "summary": str(pg.get("summary", "")), "aliases": [TC.cut(str(a), 60) for a in pg.get("aliases") or []][:8],  # cap: top (untrusted)
+                "sources": sorted(set((old.get("sources") or []) + [src])), "created": old.get("created", today),   # every source stays (it was the newest 30)
+                "last_validated": today, "trust": "contested" if "[!contradiction]" in body else "news",
+                **{k: old[k] for k in ("repo", "commit", "files", "by") if k in old}}       # CHG-09: a repository page keeps what it cites
+        M.write_front(M.VAULT / root / f"{path}.md", meta, body)
+        M.RTM.touched(f"{root}/{path}.md", changed=True, note="wiki page compiled from the result")   # MEM-10: the access map sees it
+        written.append(path)
+    if helps and SW:
+        try:
+            SW.wiki_folded(root, helps, src)
+        except Exception:
+            pass
+    if root != "wiki":                           # the vault wiki's index is its curator's
+        write_index(root, title)
+    return written
+
+
+def write_index(root, title):
+    """A wiki's index.md: its pages by folder (the compile writes it, and the Librarian after a merge)."""
+    allp = wiki_pages(root)
+    pages = [p for p in allp if not p["meta"].get("archived")]
+    archived = [p for p in allp if p["meta"].get("archived")]
+    parts = []
+    for f in sorted((M.VAULT / root / "parts").glob("*.md")) if (M.VAULT / root / "parts").is_dir() else []:
+        meta, _ = M.split_front(f.read_text(errors="replace"))
+        parts.append({"path": f"parts/{f.stem}", "title": meta.get("title") or f.stem, "summary": meta.get("summary", "")})
+    groups = {}
+    for p in pages:
+        groups.setdefault(p["path"].split("/")[0], []).append(p)
+    idx = [f"# {title}: wiki", "", f"_{len(pages)} pages, compiled from the mission's results. Updated {dt.date.today().isoformat()}._", ""]
+    if parts:                                    # MEM-40: a split wiki's index is a hub of its parts first
+        idx += ["## Parts", ""] + [f"- [[{p['path']}|{p['title']}]] — {p['summary']}" for p in parts] + [""]
+    for g in ("entities", "projects", "concepts", "events"):
+        if groups.get(g):
+            idx += [f"## {g.title()}", ""] + [f"- [[{p['path']}|{p['title']}]] — {p['summary']}" for p in groups[g]] + [""]
+    other = [p for g, ps in groups.items() if g not in ("entities", "projects", "concepts", "events") for p in ps]
+    if other:                                    # CHG-08: a repository's wiki has plain pages, not folders
+        idx += ["## Pages", ""] + [f"- [[{p['path']}|{p['title']}]] — {p['summary']}" for p in other] + [""]
+    if archived:                                 # MEM-41: unread and unconfirmed for long: searchable, never in an opening
+        idx += ["## Archive", ""] + [f"- [[{p['path']}|{p['title']}]] — archived {p['meta']['archived']}" for p in archived] + [""]
+    M.write_front(M.VAULT / root / "index.md", {"title": f"{title}: wiki", "type": "index"}, "\n".join(idx))
+
+
+def section(body, name):
+    """The non-empty lines of one '## name' section of a page body."""
+    m = re.search(rf"^## {re.escape(name)}\s*\n(.*?)(?=^## |\Z)", body, re.M | re.S)
+    return [ln for ln in m.group(1).splitlines() if ln.strip()] if m else []
+
+
+def keep_written_meanwhile(f, before, body):
+    """The model took minutes: a line another writer added to the page meanwhile (an agent's note, the owner's review, a
+    failure note) was never in front of it, so it stays, under its own section (review MEM-R12)."""
+    try:
+        now = M.split_front(f.read_text(errors="replace"))[1] if f.is_file() else ""
+    except OSError:
+        return body
+    if not now or now == before:
+        return body
+    seen = set(before.splitlines())
+    only_new = "\n".join(ln if ln.startswith("## ") or ln not in seen else "" for ln in now.splitlines())
+    return keep_unseen(only_new, body, 0)
+
+
+def keep_unseen(old, new, seen):
+    """FND-103: a page's list lines past what the compile was shown (its first `seen` characters) were never in front of
+    the model, so its rewrite cannot have meant to drop them: each that the new body lacks comes back under its own
+    section, at that section's end (they are its oldest: a Timeline is newest first)."""
+    lost, head = {}, ""
+    for m in re.finditer(r"^(## .+|- .+)$", old, re.M):
+        ln = m.group(1)
+        if ln.startswith("## "):
+            head = ln.strip()
+        elif m.start() >= seen and ln not in new:
+            lost.setdefault(head, []).append(ln)
+    for head, lines in lost.items():
+        at = re.search(rf"^{re.escape(head)}\s*\n(.*?)(?=^## |\Z)", new, re.M | re.S) if head else None
+        if at:
+            end = at.start(1) + len(at.group(1).rstrip())
+            new = new[:end] + "\n" + "\n".join(lines) + new[end:]
+        else:
+            new = new.rstrip() + ("\n\n" + head if head else "\n") + "\n" + "\n".join(lines) + "\n"
+    return new
+
+
+def keep_superseded(old, new):
+    """MEM-12: what a page once moved under Superseded is never lost: lines the new body dropped come back."""
+    lost = [ln for ln in dict.fromkeys(section(old, "Superseded")) if ln not in new]
+    if not lost:
+        return new
+    if re.search(r"^## Superseded\s*$", new, re.M):
+        return re.sub(r"^(## Superseded\s*\n)", lambda x: x.group(1) + "\n".join(lost) + "\n", new, count=1, flags=re.M)
+    return new.rstrip() + "\n\n## Superseded\n" + "\n".join(lost) + "\n"

@@ -1,0 +1,42 @@
+# AI change requests: the stack's ideas, sorted and combined into a few polished, build-ready change requests (DEC-47;
+# the design of 8 Nov 2026, design/ai-change-requests.html in that session). Built in steps: 1 ideas tied to where they
+# came from, 2 the Editor sorting them, 3 the Editor writing requests on each repository's Changes tab, 4 Build it.
+area: AI change requests
+prefix: ACR
+items:
+  - id: ACR-01
+    title: Every idea says where it came from
+    statement: Each idea shall name the run and the agent that first gave evidence for it, how many runs saw it, and the
+      task that run belongs to (an idea written outside a recorded run, its writer's duty); the idea's page shall name that run and task,
+      its card shall name its task, a task's page shall link to the ideas from its runs, and the Network
+      shall mark a task that produced ideas.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-18]
+    sources: [DEC-47, "owner, 8 Nov 2026: in the idea still be able to reconstruct how they got generated"]
+    verify: {method: test, by: [tests/test_swarm_ledger.py::test_an_idea_names_the_run_and_the_agent_that_first_saw_it,
+      tests/test_tasks_tab.py::test_each_idea_is_tied_to_the_task_whose_run_first_saw_it,
+      tests/test_tasks_tab.py::test_an_idea_shows_where_it_came_from_and_a_task_its_ideas]}
+    trace: [images/swarm/ledger.py, images/swarm/swarm.py, images/mission-control/runrecord.py, images/mission-control/server.py,
+      images/mission-control/web/static/app-base.js, images/mission-control/web/static/swarm.js, images/mission-control/web/static/task.js,
+      images/mission-control/web/static/app-tasks.js, images/mission-control/web/static/app-wiki-code.js]
+  - id: ACR-02
+    title: The Editor sorts every open idea, and changes nothing yet
+    statement: A crew duty, the Editor, shall once a day give every open idea one verdict with its reason (into a named
+      change request, held, covered by named planned work, or dropped), checked by a program (an open idea, one of the
+      four verdicts, a reason, a request's title for "into"); the ideas it could not sort shall be listed; its sorting
+      shall show on each idea and on the Ideas view, and no idea shall change state because of it.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [ACR-01]
+    sources: [DEC-47, "owner, 8 Nov 2026: We need an agent that will filter out the good ideas. At the moment it is too spammy."]
+    verify: {method: test, by: [tests/test_editor.py::test_the_editor_keeps_only_verdicts_it_can_check_and_groups_requests,
+      tests/test_editor.py::test_the_editor_s_context_holds_the_ideas_the_owner_s_reasons_and_planned_work,
+      tests/test_editor.py::test_a_pass_saves_its_sorting_and_changes_nothing,
+      tests/test_editor.py::test_the_editor_is_a_crew_duty_with_its_card_units_and_prompt,
+      tests/test_editor.py::test_each_idea_and_the_ideas_view_show_the_editor_s_sorting]}
+    trace: [ops/editor.py, prompts/editor.md, ops/systemd/crew-editor.service, ops/systemd/crew-editor.timer, config/agents.yaml, ops/crew.py,
+      images/mission-control/server.py, images/mission-control/server.a2a.py]
+

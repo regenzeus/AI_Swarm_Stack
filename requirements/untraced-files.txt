@@ -1,0 +1,18 @@
+# Source files that no requirement names, each with its reason (path  # reason). ops/req.py check fails on a source
+# file that is neither traced nor listed here, and on a listed file that is traced now or gone: this list only shrinks.
+# Trace a file by naming it in a requirement's trace, sources or verify.
+ops/ask.sh  # a terminal shortcut to ask Hermes one question (make ask); no behaviour of the stack
+ops/ci_yaml_check.py  # a helper of ops/check.sh that parses the workflow files
+ops/claude-connect.sh  # one-time Claude Code login for the builder (make claude-connect)
+ops/email-setup.sh  # one-time Gmail app password for report e-mails (make email-setup)
+ops/enable-chatgpt.py  # one-time ChatGPT login for the gateway (make chatgpt-login)
+ops/graph_repos.py  # lists the repositories for the code graph, a helper of graphify-sync.sh
+ops/hindsight-models.sh  # downloads Hindsight's local models once (make hindsight-models)
+ops/skills-restore.sh  # restores the skills from git by hand (make skills-restore-from-git)
+ops/swarm-probes/dupes.py  # swarm phase 0 probe, kept as evidence for SWM-86 (docs/SWARM-PHASE0.md)
+ops/swarm-probes/embed_in_hindsight.py  # swarm phase 0 probe, kept as evidence for SWM-86
+ops/swarm-probes/identity_probe.py  # swarm phase 0 probe, kept as evidence for SWM-86
+ops/swarm-probes/mcp_probe.py  # swarm phase 0 probe, kept as evidence for SWM-86
+ops/token_probe.py  # a one-off measurement of prompt caching (docs/TOKENS.md), run as the Token probe crew item
+images/portfwd/Dockerfile  # a two-line socat port forward for OpenCode (compose/apps.yaml)
+images/tools/Dockerfile  # the pinned command-line tools image the builder and CI copy from

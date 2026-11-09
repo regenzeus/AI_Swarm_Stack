@@ -1,0 +1,9 @@
+# feature: phone
+[Unit]
+Description=Crew: Phone cleanup: the AI phone's storage -> steps you approve one by one (weekly, Sunday)
+[Timer]
+OnCalendar=Sun *-*-* 10:00
+Persistent=true
+RandomizedDelaySec=10min
+[Install]
+WantedBy=timers.target

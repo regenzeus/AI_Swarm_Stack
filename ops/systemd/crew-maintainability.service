@@ -1,0 +1,9 @@
+[Unit]
+Description=Crew: maintainability review (Claude Code, read-only) -> proposals
+[Service]
+Type=oneshot
+TimeoutStartSec=4h
+Environment=DOCKER_HOST=unix://%t/docker.sock
+WorkingDirectory=%h/ai-stack
+ExecCondition=/usr/bin/python3 %h/ai-stack/ops/stack_gate.py --wait 1800 --slot 90
+ExecStart=/usr/local/bin/sops exec-env secrets/secrets.enc.yaml "sops exec-env secrets/agent-keys.enc.yaml \"python3 ops/crew.py maintainability\""

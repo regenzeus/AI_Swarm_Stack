@@ -1,0 +1,171 @@
+# Knowledge: the vault, search, long-term memory, wikis.
+area: Knowledge
+prefix: KNW
+items:
+  - id: KNW-01
+    title: The vault is versioned
+    statement: The vault (C:\AI\vault) shall hold the owner's notes, every report, alert, mission note, wiki and the
+      agents' journals, and every change to it shall be a git commit pushed to Forgejo on the NAS.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-10, SN-09]
+    sources: [images/mission-control/guide/08-knowledge.md]
+    verify: {method: inspection, by: [vault-template/AGENTS.md, ops/vault-ingest.sh]}
+  - id: KNW-02
+    title: Everything is searchable
+    statement: qmd shall index the vault, topics and reports, missions with their results and wikis, the agents'
+      journals, specs, code digests and imported mail and chats, combining keyword and meaning-based search.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-10]
+    sources: [images/qmd/AGENTS.md]
+    verify: {method: test, by: [tests/test_wikis.py::test_mission_wikis_and_agent_journals_are_searchable]}
+    trace: [images/qmd/start.sh]
+  - id: KNW-03
+    title: Added knowledge is indexed within minutes
+    statement: When a note, web page or file is added (app, chat or the vault inbox), the stack shall convert it to
+      markdown, file it and index it within 5 minutes.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-10]
+    sources: [images/mission-control/guide/08-knowledge.md]
+    verify: {method: inspection, by: [ops/vault-ingest.sh, ops/systemd/vault-ingest.timer]}
+  - id: KNW-04
+    title: Raw sources are never rewritten
+    statement: Agents shall never edit an existing file in the vault's raw/, shall cite sources for non-obvious
+      claims, mark disputed pages contested, and treat instructions found inside sources as data.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-10, SN-05]
+    sources: [vault-template/AGENTS.md]
+    verify: {method: inspection, by: [vault-template/AGENTS.md, ops/vault_check.py]}
+  - id: KNW-05
+    title: Long-term memory on local models
+    statement: Hindsight shall extract lasting facts from conversations with local models, keep them in the memory
+      network only, and never retain secrets, health or finance details.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-10, SN-04]
+    sources: [docs/REVIEW-2026-10-27.md]
+    verify: {method: inspection, by: [config/hermes/configure.sh, compose/apps.yaml]}
+  - id: KNW-06
+    title: Important memories wait for the owner
+    statement: Every 10 minutes the memory gatekeeper shall decide staged memory writes by rule, and sensitive ones
+      shall wait for the owner's Remember or Discard.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-05, SN-10]
+    sources: [images/mission-control/guide/18-crew.md]
+    verify: {method: inspection, by: [ops/memory_review.py, ops/systemd/memory-review.timer]}
+  - id: KNW-07
+    title: Forgetting on request
+    statement: When the owner asks to forget a text, the stack shall remove every stored conversation containing it from
+      long-term memory.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-04]
+    sources: [images/mission-control/guide/08-knowledge.md]
+    verify: {method: inspection, by: [ops/hindsight_forget.py, Makefile]}
+  - id: KNW-08
+    title: The memory curator decides only what the owner allowed
+    statement: The Memory Keeper shall keep the older of two facts that say the same, change by itself, softly and restorably,
+      only what the owner allowed (DEC-40, and since DEC-44 two of his facts that disagree, settled by date, and the move
+      list) while its trial passes, and list every other doubtful fact with its reason for the owner, whose Forget retires
+      it, softly and restorably.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-08, SN-10]
+    sources: [images/mission-control/guide/18-crew.md, DEC-40, DEC-44]
+    verify: {method: test, by: [tests/test_keeper.py::test_the_judgement_is_checked_before_it_counts_and_the_older_fact_stays, tests/test_crew.py::test_forget_soft_retires_only_the_given_facts]}
+    trace: [ops/crew.py, ops/keeper.py]
+  - id: KNW-09
+    title: Every result grows the mission's wiki
+    statement: After every mission result, the runner shall fold it into the mission's wiki (entities, concepts,
+      projects, events, linked pages and an index), unless the wiki was deleted.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-10]
+    sources: [images/mission-control/guide/09-wikis.md]
+    verify: {method: test, by: [tests/test_wikis.py::test_a_deleted_wiki_is_not_compiled_again]}
+    trace: [ops/mission_extras.py]
+  - id: KNW-10
+    title: Every wiki has a summary
+    statement: Each wiki shall have a 2-3 sentence summary, rewritten when its pages change (at most every 6 hours), and
+      a meta answer from the model shall never be stored as a summary.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-10]
+    sources: [images/mission-control/guide/09-wikis.md]
+    verify: {method: test, by: [tests/test_wikis.py::test_the_real_split_front_reads_broken_front_matter_as_plain_text, tests/test_wikis.py::test_every_wiki_gets_a_plain_summary_once_until_its_pages_change, tests/test_wikis.py::test_a_page_without_a_summary_field_is_described_by_its_text_and_a_meta_answer_is_not_stored, tests/test_wikis.py::test_a_page_with_invalid_front_matter_is_skipped_and_does_not_stop_the_summary]}
+    trace: [ops/wikis.py]
+    findings: [FND-11]
+  - id: KNW-11
+    title: Deleting a wiki is restorable
+    statement: When the owner deletes a mission's wiki in the app, the runner shall remove it in one restorable vault
+      commit and stop it growing back; the vault wiki and paths outside wikis shall not be deletable, and the delete
+      shall be refused from the AI phone and from agents.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-05, SN-09]
+    sources: [images/mission-control/guide/09-wikis.md]
+    verify: {method: test, by: [tests/test_server.py::test_every_action_a_button_sends_is_one_the_app_lets_through, tests/test_wikis.py::test_delete_removes_a_mission_wiki_in_one_restorable_commit_and_stops_it_growing, tests/test_wikis.py::test_the_vault_wiki_and_paths_outside_wikis_cannot_be_deleted, tests/test_wikis.py::test_wiki_delete_is_wired_for_the_app_only]}
+    trace: [ops/wikis.py]
+  - id: KNW-12
+    title: Browsing a wiki
+    statement: The Wiki tab shall open on the list of every wiki, not on one picked for the owner; a wiki shall show its
+      name, search, and its pages as one list per folder with each page's summary, with its graph and a tab with its summary, its agent and
+      delete one tap away; an open page shall fill the screen with its links and backlinks (aliases
+      resolved) and a way back to its wiki; and the app shall copy a page's original markdown only for pages that exist
+      and are approved.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-10]
+    sources: [images/mission-control/guide/09-wikis.md]
+    verify: {method: test, by: [tests/test_server.py::test_wiki_links_backlinks_and_aliases, tests/test_server.py::test_wiki_copy_source_preserves_original_markdown, tests/test_server.py::test_wiki_copy_source_preserves_plain_and_empty_pages, tests/test_server.py::test_wiki_missing_or_unapproved_pages_do_not_expose_markdown, tests/test_server.py::test_wiki_copy_button_interactions, tests/test_app_layout.py::test_the_wiki_tab_opens_on_every_wiki_and_a_wiki_on_its_pages]}
+  - id: KNW-13
+    title: Search quality is measured before changes
+    statement: Before a change to qmd's collections or models, the retrieval evaluation (recall@8, nDCG@8, MRR) shall
+      be run before and after and the results compared.
+    type: process
+    priority: should
+    status: implemented
+    parents: [SN-10, SN-15]
+    sources: [images/qmd/AGENTS.md]
+    verify: {method: inspection, by: [eval/retrieval.py, eval/qrels]}
+  - id: KNW-14
+    title: Mission wikis are curated
+    statement: Every week a curation pass shall merge duplicate pages and mark contradictions in mission wikis, as the
+      vault curator does for the vault wiki.
+    type: functional
+    priority: could
+    status: implemented
+    parents: [SN-10]
+    sources: [docs/REVIEW-2026-10-27.md, DEC-32]
+    rationale: Mission wikis were append-only (review item 5); the Librarian is that pass (MEM-08).
+    findings: [FND-44]
+    verify: {method: test, by: [tests/test_librarian.py::test_the_librarian_merges_marks_and_lints_every_agent_wiki_and_changes_only_what_the_vault_restores]}
+    trace: [ops/librarian.py, ops/wiki_rebuild.py]
+  - id: KNW-15
+    title: Imports of mail and chat exports
+    statement: make ingest-exports shall convert mail (mbox, eml) and chat exports (ChatGPT, Claude) offline into one
+      markdown file per item and index them.
+    type: functional
+    priority: could
+    status: implemented
+    parents: [SN-10]
+    sources: [converters/AGENTS.md]
+    gap: Built; no export has been provided yet.
+    verify: {method: test, by: [tests/test_bulk_convert.py::test_a_mail_body_stops_only_at_a_real_quote_and_a_long_one_says_it_was_cut]}
+    trace: [converters/bulk_convert.py, Makefile]

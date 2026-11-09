@@ -1,0 +1,9 @@
+# feature: home
+[Unit]
+Description=Nightly encrypted backup to the NAS
+[Timer]
+OnCalendar=*-*-* 03:30
+Persistent=true
+RandomizedDelaySec=5min
+[Install]
+WantedBy=timers.target

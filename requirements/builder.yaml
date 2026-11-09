@@ -1,0 +1,469 @@
+# The builder and the Code tab: assignments, engines, checks, review, approve, deploy, repositories, code maps.
+area: Builder
+prefix: BLD
+items:
+  - id: BLD-01
+    title: Assignments get their own branch
+    statement: When a build is assigned, the runner shall validate it and work on a branch named builder/<id>-<slug> in
+      the repository's workbench clone.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-08, SN-14]
+    sources: [docs/MISSION-CONTROL.md]
+    verify: {method: test, by: [tests/test_builds.py::test_assign_validates_and_names_the_branch]}
+    trace: [ops/builds.py]
+  - id: BLD-02
+    title: Approve needs review, checks and CI
+    statement: The runner shall deploy an approved build only when it is in review, its sandbox checks passed and its
+      CI is green; approving while CI still runs shall deploy it the moment CI passes, and not if CI fails.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05, CST-07]
+    sources: [DEC-03]
+    verify: {method: test, by: [tests/test_builds.py::test_the_checks_pass_only_on_exit_0_and_their_last_line, tests/test_builds.py::test_the_checks_keep_their_exit_code_past_the_tail, tests/test_builds.py::test_approve_requires_review_checks_and_green_ci, tests/test_builds.py::test_approve_while_ci_runs_deploys_when_it_passes, tests/test_builds.py::test_approve_all_takes_only_what_is_ready]}
+    findings: [FND-07]
+  - id: BLD-03
+    title: Approve merges, deploys or rolls back
+    statement: When the owner approves a build, the runner shall merge it with --no-ff into the default branch, push,
+      deploy, and roll back on a failed deploy.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-08, SN-13]
+    sources: [docs/MISSION-CONTROL.md]
+    verify: {method: test, by: [tests/test_builds.py::test_approved_build_merges_deploys_or_rolls_back]}
+  - id: BLD-04
+    title: Change requests carry feedback
+    statement: The runner shall send a build back only with written feedback, and the builder shall continue on the
+      same branch.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-08]
+    sources: [images/mission-control/guide/10-builder.md]
+    verify: {method: test, by: [tests/test_builds.py::test_revise_needs_feedback]}
+  - id: BLD-05
+    title: Builds check against today's main
+    statement: Before the checks, the runner shall merge today's main into the build branch and set aside uncommitted
+      leftovers, so that the review shows only the build's own change.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-08]
+    sources: ["incident 2026-10-28: an old branch showed 45 files"]
+    verify: {method: test, by: [tests/test_builds.py::test_an_old_build_branch_gets_todays_main, tests/test_builds.py::test_uncommitted_builder_leftovers_are_set_aside]}
+  - id: BLD-06
+    title: A looping builder is stopped
+    statement: If the builder makes 6 tool calls in a row with empty arguments, then the runner shall stop the build and
+      say why.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-13, SN-03]
+    sources: ["incident 2026-10-28: empty tool arguments loop"]
+    verify: {method: test, by: [tests/test_builds.py::test_empty_tool_call_streak]}
+  - id: BLD-07
+    title: Sensitive files are flagged
+    statement: The review shall flag changes to sensitive files (security settings, deploy and build code, AGENTS.md,
+      CLAUDE.md, SOUL text).
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-05]
+    sources: [ops/AGENTS.md]
+    verify: {method: test, by: [tests/test_builds.py::test_review_flags_sensitive_files]}
+  - id: BLD-08
+    title: Two engines
+    statement: Each build shall run on one of two engines, Hermes on the ChatGPT subscription or Claude Code on the
+      Claude subscription, Claude Code by default when it is connected; an unknown engine shall be refused, and a build
+      may move to the other engine except while that would lose unfinished work.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-08, CST-02]
+    sources: [DEC-16]
+    verify: {method: test, by: [tests/test_builds.py::test_engine_is_validated, tests/test_builds.py::test_switch_engine_allowed_and_refused, tests/test_builds.py::test_claude_stream_becomes_steps_and_result]}
+    findings: [FND-06]
+  - id: BLD-09
+    title: A usage limit pauses a build
+    statement: When an engine reaches its usage limit, the build shall wait until the reported reset and resume with its
+      unfinished work.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-13]
+    sources: [images/mission-control/guide/10-builder.md]
+    verify: {method: test, by: [tests/test_builds.py::test_claude_usage_limit_gives_the_reset_time]}
+  - id: BLD-10
+    title: The other engine reviews
+    statement: Before a build reaches the owner, the other engine shall review its assignment, diff and checks and give
+      a verdict (fine to deploy, improve first, do not deploy) with findings; if that reviewer is at its limit, the
+      builder's own engine shall review, marked less independent.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-05, SN-08]
+    sources: [DEC-04]
+    verify: {method: test, by: [tests/test_builds.py::test_the_other_engine_reviews, tests/test_builds.py::test_review_verdicts_are_normalised, tests/test_builds.py::test_a_rate_limited_reviewer_hands_over_to_the_other_engine]}
+  - id: BLD-11
+    title: Code tools for both engines
+    statement: Both engines shall get Serena's language-server tools and the code graph, read-only.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-14]
+    sources: [images/builder/AGENTS.md]
+    verify: {method: test, by: [tests/test_builds.py::test_both_engines_get_serena, tests/test_builds.py::test_both_engines_get_the_memory_tool_without_the_owner_s_facts]}
+  - id: BLD-12
+    title: Builds survive a runner restart
+    statement: When the runner restarts during a build, the build shall resume; an interrupted deploy shall be marked
+      failed, not repeated.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-13]
+    sources: [docs/DOGFOOD.md]
+    verify: {method: test, by: [tests/test_builds.py::test_builds_cut_off_by_a_runner_restart_are_resumed]}
+  - id: BLD-13
+    title: The Forgejo token goes only to the runner
+    statement: When the owner pastes a Forgejo token, the runner shall check it against Forgejo and store it
+      encrypted, and the token shall never reach Hermes or any model.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05, CST-06]
+    sources: [images/mission-control/guide/11-code.md]
+    verify: {method: test, by: [tests/test_builds.py::test_forgejo_connect_checks_then_stores_encrypted, tests/test_server.py::test_forgejo_token_goes_to_the_runner_only]}
+  - id: BLD-14
+    title: Honest token counts
+    statement: Builds on both engines shall count all input tokens including cached ones, and show the cached share.
+    type: quality
+    priority: should
+    status: implemented
+    parents: [SN-07]
+    sources: [docs/TOKENS.md]
+    verify: {method: test, by: [tests/test_tokens.py::test_claude_builds_count_cache_reads_like_chatgpt_builds]}
+  - id: BLD-15
+    title: Repositories and their graphs
+    statement: The Code tab shall list every repository with its graph, code map and digest, reduce the graph to the 200
+      most-connected nodes for drawing, prefer the code map's digest for the overview, and show a node's source (inside
+      the repository only) with what it calls and what uses it.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-14]
+    sources: [images/mission-control/guide/11-code.md]
+    verify: {method: test, by: [tests/test_repos.py::test_repo_info_from_graph_and_code_map, tests/test_repos.py::test_graph_is_reduced_for_drawing, tests/test_repos.py::test_overview_prefers_the_code_map_digest, tests/test_repos.py::test_node_details_have_source_links_and_code_map, tests/test_app_routes.py::test_the_interactive_code_map_is_inside_the_repo_page,
+      tests/test_repos.py::test_a_code_graph_the_update_cannot_read_is_built_anew_and_a_failure_is_logged_once_per_commit]}
+    trace: [ops/repos.py, ops/graphify-sync.sh]
+    findings: [FND-50]
+  - id: BLD-23
+    title: Every repository's code map, shown clean
+    statement: The repo page shall show the interactive code map of every repository that has one, switching the
+      viewer to it when it shows another, without the viewer's minimap; and a code map shall raise none of the viewer's
+      warnings of the stack's own making (the code graph's cache counted as changed files, the viewer's corrections to
+      the graph).
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-14]
+    sources: [images/mission-control/guide/11-code.md]
+    findings: [FND-48]
+    verify: {method: test, by: [tests/test_repos.py::test_every_repo_with_a_code_map_shows_it_clean_and_without_the_minimap]}
+    trace: [images/mission-control/web/static/app.js, ops/graphify-sync.sh, ops/onboard.py, ops/ua_fix.mjs, images/opencode/Dockerfile]
+  - id: BLD-16
+    title: Removing a repository
+    statement: Removing a repository shall delete only the stack's copy (clone, graph, code map, workbench), never the
+      Forgejo repository, and ai-stack itself shall not be removable.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05]
+    sources: [images/mission-control/guide/11-code.md]
+    verify: {method: test, by: [tests/test_repos.py::test_remove_takes_the_repo_out_but_never_ai_stack]}
+  - id: BLD-17
+    title: Code maps explain every file
+    statement: Where Understand Anything left placeholder explanations, the enrichment shall explain each file, function
+      and layer from the code itself, in symbol excerpts for big files, and resume where it stopped after a usage limit.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-14]
+    sources: [images/mission-control/guide/11-code.md]
+    verify: {method: test, by: [tests/test_ua_enrich.py::test_calls_run_side_by_side_when_the_deployment_says_so_and_json_mode_is_its_choice, tests/test_ua_enrich.py::test_two_json_objects_in_one_answer_are_both_read_and_an_empty_file_needs_no_model, tests/test_ua_enrich.py::test_a_resumed_pass_keeps_counting_its_cost, tests/test_ua_enrich.py::test_fallback_graph_gets_real_explanations_and_useful_layers, tests/test_ua_enrich.py::test_a_usage_limit_stops_and_a_second_run_resumes, tests/test_ua_enrich.py::test_other_fallback_wordings_count_as_placeholders_and_real_text_does_not, tests/test_ua_enrich.py::test_a_big_file_is_explained_in_parts_that_each_show_their_symbols, tests/test_ua_enrich.py::test_layer_answers_keyed_by_name_are_used, tests/test_ua_enrich.py::test_big_files_are_cut_to_symbol_excerpts, tests/test_ua_enrich.py::test_understand_runs_the_enrichment_and_ignores_graphify_output]}
+    trace: [ops/ua_enrich.py]
+  - id: BLD-18
+    title: Studied code is never run
+    statement: Analysing a third-party repository shall only read it, in a sandbox without internet access or keys. Running
+      its tests shall take the owner's tap Let the builder change it, and then happens in the sealed sandbox only (CHG-12).
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05, SN-14]
+    sources: [images/mission-control/guide/11-code.md]
+    verify: {method: inspection, by: [ops/onboard.py, ops/claude_tasks.py]}
+  - id: BLD-19
+    title: Graphs stay current
+    statement: When a repository's HEAD changes, its code graph shall be rebuilt within 2 minutes, without model calls.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-14]
+    sources: [images/graphify/AGENTS.md]
+    verify: {method: inspection, by: [ops/graphify-sync.sh, ops/systemd/graphify-sync.timer]}
+  - id: BLD-20
+    title: Supervised sessions land like builds
+    statement: When an owner-supervised coding session (Claude Code outside the builder) lands a change on main, ops/land.sh
+      shall run the checks on the exact commit first and stop on any failure, take the land and deploy locks, restart
+      the runner when the deploy asks for it, and record the deploy with its source and the owner's approval.
+    type: process
+    priority: should
+    status: implemented
+    parents: [CST-07, SN-07]
+    sources: [docs/DOGFOOD.md]
+    rationale: Most changes so far were landed by such sessions (flock ~/.aistack-land.lock, ops/deploy.py) without the
+      builder's review, CI first or a record in Mission Control (FND-04).
+    findings: [FND-04]
+    verify: {method: test, by: [tests/test_land_compose.py::test_a_landing_validates_its_compose_files_on_the_host_before_main_moves, tests/test_deploy_main.py::test_a_whole_deploy_says_ok_and_runs_the_smoke_test, tests/test_deploy_main.py::test_a_failed_smoke_test_health_check_or_build_is_a_failed_deploy, tests/test_deploy.py::test_an_image_is_built_after_the_image_it_is_built_from, tests/test_deploy.py::test_a_deploy_is_recorded_with_its_source, tests/test_deploy.py::test_the_landing_script_checks_before_it_merges]}
+    trace: [ops/land.sh, ops/deploy.py]
+  - id: BLD-21
+    title: A clash only in generated files is not a conflict
+    statement: When a merge into or from a build branch clashes only in files drawn from other files
+      (requirements/REQUIREMENTS.md), the runner shall draw them again from the merged sources and complete the merge;
+      any other clash shall still stop it.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-08]
+    sources: ["incident 2026-10-29: build #9 and four session commits both changed requirements; only REQUIREMENTS.md clashed"]
+    rationale: Builds and sessions run side by side, and most of them update requirements, so the rendered file clashes nearly
+      every time two land on the same day.
+    verify: {method: test, by: [tests/test_builds.py::test_a_clash_only_in_the_generated_requirements_is_drawn_again]}
+    trace: [ops/builds.py]
+  - id: BLD-22
+    title: Builds run side by side in their own clones
+    statement: The runner shall run up to BUILD_SLOTS builds at once (2 on the 16 GB PC), each in its own clone of the repo
+      (/srv/ai/workbench/<repo>.<slot>) and only while it holds the lease on its files, with at most one ChatGPT build at a
+      time, and a build cut off by a usage limit shall resume in the clone it started in.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-08]
+    sources: [DEC-25]
+    rationale: A ChatGPT build's tokens are counted by its key's time window, so two at once would count each other's calls.
+    verify: {method: test, by: [tests/test_swarm_phase4.py::test_builds_run_together_only_when_their_files_do_not_overlap]}
+    trace: [ops/builds.py]
+  - id: BLD-24
+    title: A repository without a check script runs its tests
+    statement: The builder's checks on a repository without its own check script shall run its tests as pytest finds them
+      (a tests folder, or test_*.py files up to three folders deep), else its Makefile's test target or its npm test, and
+      say plainly when it has none.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-08]
+    sources: ['trial semver, 1 Nov 2026: build #13 checks said "no automatic checks in this repo" though it had 114 tests']
+    findings: [FND-94]
+    verify: {method: test, by: [tests/test_builds.py::test_a_repo_without_a_check_script_runs_its_tests]}
+    trace: [ops/builds.py]
+  - id: BLD-25
+    title: The builder is measured on the owner's own projects
+    statement: The builder's page shall show the changes merged a week into the owner's own repositories and how many
+      were reverted, and one real change a week on such a repository shall be part of the probes.
+    type: quality
+    priority: should
+    status: proposed
+    parents: [SN-14, SN-01]
+    sources: ['chat 2026-11-02: The builder on your own projects', docs/NEXT-PHASE.md]
+  - id: BLD-26
+    title: Onboarding always ends in the whole package
+    statement: Onboarding a repository, from its page, from Add a repository, through Hermes or with make understand, shall
+      run one job that ends in the whole package whatever the repository's size (a copy of the code with its whole history, its code graph, its
+      facts, its code map, every file explained, its digest in the search index, a written analysis on its page, its wiki). It shall wait by
+      itself for usage limits, the PC's memory and the gateway without using up a try, and go on at its first unfinished
+      step after a crash, a deploy or a restart of the PC. The repo page and repos_overview shall show the step it is at.
+      A step that failed three times shall stop the job with the reason on the page, in repos_overview and in a message,
+      and Try again shall go on from that step. The owner shall get one message when the job ends, either way.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-14]
+    sources: [images/mission-control/guide/11-code.md]
+    findings: [FND-122]
+    verify: {method: test, by: [tests/test_onboard.py::test_the_search_step_does_not_wait_for_embeddings, tests/test_onboard.py::test_a_big_repository_gets_the_whole_package_and_one_message, tests/test_onboard.py::test_no_size_limit_is_left_anywhere_in_the_job, tests/test_onboard.py::test_a_step_that_keeps_failing_stops_with_its_reason_and_says_so, tests/test_onboard.py::test_try_again_goes_on_from_the_step_that_failed, tests/test_onboard.py::test_a_usage_limit_waits_uses_no_try_and_goes_on_by_itself, tests/test_onboard.py::test_too_little_memory_waits_and_a_stopped_enrichment_is_no_failure, tests/test_onboard.py::test_a_crash_resumes_at_the_first_unfinished_step, tests/test_onboard.py::test_the_watchdog_restarts_a_dead_job_and_gives_up_with_a_reason, tests/test_onboard.py::test_a_tap_while_it_runs_starts_nothing_more, tests/test_onboard.py::test_a_complete_package_is_made_anew_on_request_and_a_failed_redo_keeps_the_old_map, tests/test_onboard.py::test_a_different_repository_of_the_same_name_is_refused_with_the_reason, tests/test_onboard.py::test_what_can_be_onboarded, tests/test_onboard.py::test_a_half_done_clone_never_looks_like_a_repository, tests/test_onboard.py::test_files_that_stay_unexplained_are_said_not_hidden, tests/test_onboard.py::test_the_analysis_is_asked_once_survives_a_restart_and_is_saved, tests/test_onboard.py::test_the_study_mode_can_not_run_anything, tests/test_onboard.py::test_the_app_shows_the_steps_and_promises_nothing_false, tests/test_onboard.py::test_hermes_reads_why_it_stopped_in_repos_overview, tests/test_onboard.py::test_removing_a_repository_takes_its_job_and_records, tests/test_onboard.py::test_a_long_wait_tells_the_owner_why, tests/test_onboard.py::test_a_repository_without_code_still_gets_the_whole_package, tests/test_onboard.py::test_a_new_address_is_copied_by_the_job_the_runner_starts_by_name]}
+    trace: [ops/onboard.py, ops/repos.py, ops/missions.py, ops/ua_digest.py, ops/claude_tasks.py, images/mission-control/server.py, images/mission-control/web/static/app-memory.js, prompts/shared.md, prompts/opencode.md, ops/missions.requests.py]
+  - id: BLD-27
+    title: A repository's facts, measured and sealed
+    statement: Onboarding shall, after the code graph and without a model, write the facts of a repository to
+      /srv/ai/code-docs/<name>.facts.json from its whole git history (hotspots, coupling, ownership, code age from CodeLore; health
+      sections from repowise), and new clones shall hold the whole history and a shallow one shall fetch it, with hooks off. Each tool shall run
+      pinned and sealed (no network, no secrets, no capabilities, a read-only root) on a throwaway copy that shares no file with the
+      real clone. If one tool fails the other's results shall stay and the failure shall reach the file's errors and the
+      onboarding's status. Coupling on lockfiles, changelogs, generated files and files no longer present shall be left out and counted. The facts shall be rebuilt when a
+      repository's HEAD moved, feed the wiki's first version, and be served by /api/repo/<name>/facts.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-05, SN-14]
+    sources: [docs/REPO-KNOWLEDGE.md, images/mission-control/guide/11-code.md, images/repointel/AGENTS.md]
+    verify: {method: test, by: [tests/test_repofacts.py::test_the_facts_have_one_shape_from_both_tools, tests/test_repofacts.py::test_a_repository_s_requirements_are_read_as_data_never_imported, tests/test_repofacts.py::test_a_tool_that_fails_leaves_the_other_s_results_and_says_what_is_unknown, tests/test_repofacts.py::test_neither_tool_can_touch_the_real_clone, tests/test_repofacts.py::test_what_a_tool_left_that_the_host_cannot_remove_goes_through_the_image, tests/test_repofacts.py::test_coupling_that_says_nothing_is_left_out, tests/test_repofacts.py::test_a_shallow_clone_gets_its_whole_history_and_a_fetch_that_fails_is_said, tests/test_repofacts.py::test_facts_follow_head_as_the_graph_does_and_a_failure_waits_for_the_next_commit, tests/test_repofacts.py::test_facts_with_an_unknown_part_are_tried_again_a_day_later, tests/test_repofacts.py::test_a_killed_tool_gets_more_room_once_and_a_hang_is_stopped_and_said, tests/test_repofacts.py::test_rows_past_the_top_are_said, tests/test_repofacts.py::test_the_image_is_pinned_checked_and_built_the_way_the_others_are, tests/test_repofacts.py::test_the_timer_keeps_them_current_the_way_the_graph_is_kept, tests/test_repofacts.py::test_the_wiki_s_first_version_gets_the_facts_as_evidence, tests/test_onboard.py::test_a_new_clone_has_its_whole_history_with_its_hooks_off, tests/test_onboard.py::test_the_facts_step_comes_after_the_graph_is_resumable_and_says_what_is_unknown, tests/test_onboard.py::test_the_facts_wait_for_memory_and_only_no_result_at_all_is_a_failed_try, tests/test_onboard.py::test_removing_a_repository_takes_its_facts, tests/test_repos.py::test_the_facts_route_has_one_shape_with_or_without_facts, tests/test_repowiki.py::test_the_first_version_is_seeded_from_the_measured_facts_too]}
+    trace: [ops/repofacts.py, ops/onboard.py, ops/repowiki.py, ops/crew.py, ops/upgrade_check.py, ops/systemd/repofacts-sync.service, ops/systemd/repofacts-sync.timer, images/repointel/Dockerfile, images/mission-control/server.py]
+  - id: BLD-28
+    title: Only the head the owner reviewed deploys
+    statement: When a build goes back to work (changes requested, checks re-run, engine switched, sent back by the merge
+      queue), the build runner shall withdraw an approval given while CI ran; and the build runner shall merge a build only
+      when its branch on Forgejo is at exactly the commit that was put up for review, else it shall put the build back to
+      review with the reason and push a message.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05]
+    sources: [AGENTS.md, docs/REVIEW-2026-11-07.md]
+    rationale: Found on 7 Nov 2026 (review RUN-R2, SEC-R1) - an approval given while CI ran stayed on the build through a
+      revision, so the CI poll would deploy a head nobody had seen; and the merge took whatever the branch held.
+    verify: {method: test, by: [tests/test_builds.py::test_an_approval_given_while_ci_runs_ends_when_the_build_works_again, tests/test_builds.py::test_only_the_reviewed_head_is_merged, tests/test_builds.py::test_every_build_action_the_app_sends_reaches_the_builds_handler]}
+    trace: [ops/builds.py, ops/missions.py]
+  - id: BLD-29
+    title: The code map runs as fixed steps, never as an agent's choice
+    statement: The code map step shall run the plugin's deterministic scripts (scan, batches, structure) and a program
+      that makes the nodes and edges, in a container without network and without a model, and shall fail its try when the
+      map has no nodes or, for a repository with code, no edges; the explain step shall recognise every placeholder form
+      the map or a plugin fallback writes.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [BLD-26]
+    sources: [DEC-48]
+    verify: {method: test, by: [tests/test_onboard.py::test_a_hollow_map_is_a_failed_try_and_the_map_runs_without_a_model,
+      tests/test_onboard.py::test_every_placeholder_form_is_known]}
+    trace: [ops/ua_map_in.py, ops/onboard.py, ops/ua_enrich.py]
+  - id: BLD-30
+    title: Every onboarding step has a quality gate and a record
+    statement: Each onboarding step shall record when it last ran, how long it took, which model it used with its calls and
+      tokens where a model ran, and its result in numbers with a verdict; a step whose result is hollow shall be weak,
+      shown as weak on the repository's page and in repos_overview, and shall never count as done; the page shall show
+      the checklist of all steps always, and each step shall be runnable again on its own.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [BLD-26]
+    sources: [DEC-48, "owner, 8 Nov 2026: I want to see what are the steps, when they last ran, and some metric on their success/quality and which model they used. And how much token they used."]
+    verify: {method: test, by: [tests/test_onboard.py::test_a_claim_by_a_short_name_resolves_only_when_one_file_has_it_and_the_line_exists, tests/test_onboard.py::test_every_step_has_its_record_and_a_weak_step_is_never_done,
+      tests/test_onboard.py::test_a_step_runs_again_on_its_own_from_the_checklist, tests/test_onboard.py::test_the_app_shows_the_steps_and_promises_nothing_false]}
+    trace: [ops/onboard.py, images/mission-control/web/static/app-memory.js]
+  - id: BLD-31
+    title: A repository's kind decides its analysis
+    statement: A repository shall be the owner's own work or something to evaluate, asked at Add a repository and otherwise
+      taken from its origin; the owner's own work shall get an engineer's guide (entry points and flows with file:line, module
+      map, key types, how to extend it, build and test, fragile areas, glossary) written from the repository's own structure,
+      and something to evaluate the review; an analysis under 2,000 characters, with fewer than four sections, or whose
+      file:line claims mostly do not resolve shall be weak.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [BLD-26]
+    sources: [DEC-48]
+    verify: {method: test, by: [tests/test_onboard.py::test_the_guides_context_keeps_the_layers_when_the_package_list_is_cut, tests/test_onboard.py::test_the_owner_s_own_repository_gets_the_engineer_s_guide_from_its_structure]}
+    trace: [ops/onboard.py, prompts/shared.md, images/mission-control/web/static/app-wiki-code.js, ops/missions.requests.py]
+  - id: BLD-32
+    title: The graph view shows the repository's own code, the source pane says what it shows
+    statement: The repository's graph view shall rank nodes defined in the repository's own non-test files by the links
+      that hold code together (calls, inherits, implements, contains, imports), every big group showing its best-connected
+      few; the source pane shall say which lines of how many it shows and offer the whole file; the code map viewer link
+      shall work off the tailnet.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [BLD-26]
+    sources: [DEC-48]
+    verify: {method: test, by: [tests/test_repos.py::test_an_explaining_docstring_is_shown_whole, tests/test_repos.py::test_the_graph_view_ranks_the_repository_s_own_code_and_the_source_pane_is_whole]}
+    trace: [images/mission-control/server.py, images/mission-control/web/static/app-memory.js]
+  - id: BLD-33
+    title: Every onboarding step says its commit and how far behind it is, and the package can be brought up to date
+    statement: Each onboarding step shall show when it ran, how long it took, which model it used, its calls and tokens,
+      and the commit it was made at with how many commits the repository has moved on since; a run from before these
+      records shall be read from what it left (the map's commit and date, the explanations' count, the analysis' task).
+      Update shall redo the steps that follow the code (copy, graph, facts, code map, explanations, search) from the
+      latest commit, the code map explaining only the files that changed; Run again on a step shall really do that step
+      and the ones after it, never skip it because an earlier result exists. The repository's kind shall not be a tag.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [BLD-30]
+    sources: [DEC-48]
+    verify: {method: test, by: [tests/test_onboard.py::test_update_redoes_the_steps_that_follow_the_code_and_run_again_really_runs, tests/test_onboard.py::test_every_step_says_its_commit_and_how_far_behind_the_code_is, tests/test_onboard.py::test_the_app_shows_the_steps_and_promises_nothing_false]}
+    trace: [ops/onboard.py, ops/ua_map_in.py, ops/missions.requests.py, images/mission-control/web/static/app-memory.js]
+  - id: BLD-34
+    title: Every coding run gets the repository card first, and the owner keeps a hand on it
+    statement: Onboarding's last step shall make the repository card without a model from what the steps before learned
+      (the commands a change learned or the repository's files show, the wiki's current conventions and fragile areas,
+      the guide's parts and where to start, the code map's layers), each line with its source and the files it cites, at
+      most 6,000 characters; every coding and review run shall get it first as a must-have of its opening, the brief's
+      commands not twice; an exam's older code shall get no line that cites only files it lacks; the owner shall pin, strike and add
+      lines on the repo page's Card tab, kept when the card is made again; Update shall make it again.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [BLD-26]
+    sources: [DEC-49]
+    verify: {method: test, by: [tests/test_repocard.py::test_the_card_form_stacks_and_health_shows_each_part_as_a_bar, tests/test_repocard.py::test_a_learned_command_makes_the_card_again, tests/test_onboard.py::test_a_job_with_only_the_card_left_does_not_wait_for_another_repository, tests/test_repocard.py::test_the_card_is_made_from_what_onboarding_learned_without_a_model, tests/test_repocard.py::test_the_owner_pins_strikes_and_adds_and_a_remake_keeps_it, tests/test_repocard.py::test_an_exam_s_older_code_gets_no_line_about_files_it_lacks, tests/test_repocard.py::test_the_card_is_onboarding_s_last_step_and_update_makes_it_again, tests/test_repocard.py::test_a_coding_run_gets_the_card_first_and_the_brief_without_its_commands_twice, tests/test_repocard.py::test_the_app_shows_the_card_with_the_owner_s_hand_on_it_and_what_else_agents_reach]}
+    trace: [ops/repocard.py, ops/onboard.py, ops/memstack.py, ops/missions.requests.py, images/mission-control/server.py, images/mission-control/web/static/app-memory.js]
+  - id: BLD-35
+    title: Everything else onboarding makes stays and is reachable, never pushed
+    statement: A build's sandbox shall hold everything onboarding made for its repository as files to grep (the card, the
+      written guide, the wiki's pages, one line per file from the code map, the facts), named once on the card; the file
+      note at a file's first read shall carry the code map's line on it; a search that printed more than 50 lines shall
+      hear how its hits fall over the top folders with what the code map says each is, once per command; the repo page
+      shall show the note an agent gets for a file and mark the wiki's pages whose cited code changed. Onboarding shall
+      write into the repository's wiki, without a model, a page per part of the code (what it is, how it stands, every
+      file with its explanation) and a page per section of the written guide, each citing its files and commit, marked as
+      its own and made again every time; the Scribe's pages stay as they are, and neither the brief nor a file note
+      repeats these pages.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [BLD-34]
+    sources: [DEC-49]
+    verify: {method: test, by: [tests/test_repowiki.py::test_onboarding_fills_the_wiki_with_a_page_per_part_and_per_guide_section, tests/test_repowiki.py::test_a_binary_file_in_the_repository_does_not_stop_the_reading, tests/test_repocard.py::test_everything_else_is_exported_to_grep_never_pushed, tests/test_repocard.py::test_a_wide_search_hears_which_folders_its_hits_fall_in_once, tests/test_repocard.py::test_the_app_shows_the_card_with_the_owner_s_hand_on_it_and_what_else_agents_reach]}
+    trace: [ops/repocard.py, ops/builds.py, ops/memstack.py, config/hermes/claude-hooks/memory_hook.py, images/mission-control/server.py, images/mission-control/server.a2a.py, images/mission-control/web/static/app-wiki-code.js]
+  - id: BLD-36
+    title: Conventions are kept by programs while the agent works
+    statement: After each edit a coding agent makes in the builder, the repository's own linter (the profile's, else its
+      configuration's, else for Python the errors that are always errors) shall run on the changed file and what it finds
+      shall come back at once; a missing linter or a clean file says nothing and nothing blocks; the conventions review
+      lens shall read the card and the wiki.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [BLD-34]
+    sources: [DEC-49]
+    verify: {method: test, by: [tests/test_repocard.py::test_an_edit_gets_the_repository_s_linter_and_a_missing_linter_says_nothing, tests/test_repocard.py::test_the_linter_comes_from_the_repository_or_the_errors_that_are_always_errors]}
+    trace: [config/hermes/claude-hooks/lint_hook.py, config/hermes/claude-hooks/claude-runtime-settings.json, ops/repocard.py, ops/builds.py, ops/builds.review.py]
+  - id: BLD-37
+    title: The brief names the tests to run first and the closest example
+    statement: A coding step's brief shall name the tests of its files and of the code that uses them as the tests to run
+      first, and for a file the task makes new the existing file of the same kind closest to it (sharing most of its
+      name, then the most recently changed) to write it like.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [BLD-27]
+    sources: [DEC-49]
+    verify: {method: test, by: [tests/test_repocard.py::test_the_brief_names_tests_to_run_first_and_the_closest_example]}
+    trace: [ops/repofacts.py]
+  - id: BLD-38
+    title: The exam measures the knowledge against no memory, on cases the knowledge cannot know
+    statement: The replay exam shall have a knowledge arm (the card, the brief, the file notes, the knowledge folder, the
+      lint hook) to run against the arm without memory, and pick cases only after a given commit, so the knowledge an arm
+      reads was made before every case; a layer that does not raise the tests passed, or cut tokens or time without
+      lowering them, shall be switched off for that size of repository.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [BLD-34]
+    sources: [DEC-49]
+    verify: {method: test, by: [tests/test_replay.py::test_an_exam_tree_is_one_commit_with_the_release_tag_before_it, tests/test_replay.py::test_a_project_that_reads_its_version_from_git_installs_from_a_plain_tree, tests/test_repocard.py::test_the_exam_has_a_knowledge_arm_and_cases_after_the_knowledge_s_commit]}
+    trace: [ops/replay.py, ops/changes.py]
+

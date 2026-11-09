@@ -1,0 +1,96 @@
+# The model gateway (LiteLLM): models, keys, tool grants, cost records.
+area: Gateway
+prefix: GW
+items:
+  - id: GW-01
+    title: Every model call through the gateway
+    statement: Every agent shall reach models only through the gateway (http://litellm:4000), never a provider
+      directly; the only exception is Claude Code, which uses the owner's Claude subscription.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [CST-02, SN-07]
+    sources: [config/hermes/AGENTS.md, config/litellm/AGENTS.md]
+    verify: {method: test, by: [tests/test_keys_policy.py::test_models_are_served_by_the_gateway]}
+    trace: [config/litellm/config.yaml, config/hermes/configure.sh, images/litellm/patch_cache_key.py]
+  - id: GW-02
+    title: No fallback model
+    statement: The gateway shall configure no fallback to another model; when the subscription pauses, callers wait
+      and retry.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [CST-02, SN-03]
+    sources: [DEC-01]
+    verify: {method: test, by: [tests/test_keys_policy.py::test_every_key_holds_only_subscription_models, tests/test_keys_policy.py::test_budget_mode_is_retired]}
+  - id: GW-03
+    title: Streamed tool calls keep their arguments
+    statement: When ChatGPT streams a tool call whose arguments arrive only in the closing event, the gateway shall pass
+      them on as one argument delta, and the image build shall fail if the patch no longer applies exactly.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-13]
+    sources: [images/litellm/AGENTS.md]
+    verify: {method: test, by: [tests/test_litellm_patch.py::test_arguments_only_in_done_become_one_delta, tests/test_litellm_patch.py::test_calls_that_streamed_deltas_are_left_alone, tests/test_litellm_patch.py::test_patch_is_idempotent_and_refuses_changed_code, tests/test_litellm_patch.py::test_dockerfile_base_matches_the_pin]}
+    trace: [images/litellm/patch_stream_args.py]
+  - id: GW-04
+    title: One prompt cache per conversation
+    statement: When a request carries no session id, the gateway shall give it a stable one derived from the key, the
+      system prompt and the first user message, so that the calls of one run share the provider's prompt cache.
+    type: quality
+    priority: must
+    status: implemented
+    parents: [SN-03, SN-13]
+    sources: [docs/TOKENS.md]
+    verify: {method: test, by: [tests/test_tokens.py::test_one_conversation_keeps_one_session_id, tests/test_tokens.py::test_gateway_loads_it_and_the_cache_key_stays_off_by_default]}
+    trace: [images/litellm/cache_affinity.py]
+  - id: GW-05
+    title: Tool servers by grant
+    statement: The gateway shall expose an MCP server to a key only when ops/keys.sh grants it, and MCP servers shall be
+      reachable only on internal networks.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05]
+    sources: [config/litellm/AGENTS.md]
+    verify: {method: inspection, by: [ops/keys.sh, config/litellm/config.yaml]}
+  - id: GW-06
+    title: Tool timeouts cover the waits behind them
+    statement: Each MCP server's gateway timeout shall exceed the longest wait behind it (the AI phone's 15-minute
+      approval, research within 600 s), and Hermes' MCP timeout shall exceed the gateway's.
+    type: quality
+    priority: must
+    status: implemented
+    parents: [SN-13]
+    sources: [images/phone/AGENTS.md, images/research/AGENTS.md]
+    verify: {method: inspection, by: [config/litellm/config.yaml, config/hermes/configure.sh]}
+  - id: GW-07
+    title: Every call is recorded
+    statement: The gateway shall record every model call and every MCP tool call (key, model, tokens incl. cached,
+      duration, status, error) and send traces to Phoenix.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-07]
+    sources: [docs/OBSERVABILITY.md]
+    verify: {method: inspection, by: [config/litellm/config.yaml]}
+  - id: GW-08
+    title: The tool-call probe after gateway changes
+    statement: When the gateway's image or configuration changes, the deploy shall run the streamed tool-call probe.
+    type: process
+    priority: should
+    status: implemented
+    parents: [SN-13]
+    sources: [images/litellm/AGENTS.md]
+    verify: {method: inspection, by: [ops/probe_tool_calls.py, ops/deploy.py]}
+  - id: GW-09
+    title: A critical-call model with a fallback and a budget meter
+    statement: The gateway shall serve claude-critical (Claude Opus 5.5) with the ChatGPT subscription as its fallback on an
+      error, a refusal or a spent budget; the Stack page shall show the month's spend on it against the credits; a test
+      shall fail when code other than the named critical calls asks for it.
+    type: functional
+    priority: should
+    status: proposed
+    parents: [SN-03, SN-08]
+    sources: [docs/NEXT-PHASE.md]

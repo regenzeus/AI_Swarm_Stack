@@ -1,0 +1,104 @@
+# Connections: the owner's apps for agents, Gmail first. Scopes granted for a time, Trash only, a log.
+area: Connections
+prefix: CNX
+items:
+  - id: CNX-01
+    title: Nothing without a grant
+    statement: Every mail tool shall refuse when the owner has not granted its scope, and tell the agent to ask him.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05, SN-11]
+    sources: [images/mail/AGENTS.md]
+    verify: {method: test, by: [tests/test_mail.py::test_nothing_without_a_grant]}
+    trace: [images/mail/mail.py]
+  - id: CNX-02
+    title: Grants by scope and time
+    statement: The owner shall grant read, organize and trash separately for 1 hour, 8 hours or until revoked, revoke
+      takes effect at once, and grants shall be refused from the AI phone.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-11, SN-02]
+    sources: [images/mission-control/guide/18-connections.md]
+    verify: {method: test, by: [tests/test_server.py::test_connection_grants_and_the_ai_phone]}
+  - id: CNX-03
+    title: Trash only, first batch asks, undo
+    statement: The mail connector shall move mail only to Trash, never expunge, never archive or trash protected mail
+      (bank, payment, security, password reset, verification codes), wait for the owner's OK on the first Trash batch
+      of each grant, and keep an undo record per batch.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05, SN-09]
+    sources: [images/mail/AGENTS.md]
+    verify: {method: test, by: [tests/test_mail.py::test_trash_asks_first_keeps_bank_mail_and_can_be_undone]}
+  - id: CNX-04
+    title: No sending
+    statement: The mail connector shall have no tool that sends, forwards, or changes filters or settings.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05]
+    sources: [images/mail/AGENTS.md]
+    verify: {method: test, by: [tests/test_mail.py::test_mail_tools_cannot_send]}
+  - id: CNX-05
+    title: The connector is sealed
+    statement: The mail connector's firewall shall allow only IMAPS to Gmail, and the app password shall never be logged
+      or returned.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05, CST-06]
+    sources: [images/mail/AGENTS.md]
+    verify: {method: inspection, by: [images/mail/entrypoint.sh, images/mail/mail.py]}
+  - id: CNX-06
+    title: A first-Trash approval survives a restart
+    statement: If the mail connector restarts while a first-Trash approval waits, then the card shall not be left
+      unanswerable; it shall be dropped and asked again, or kept answerable.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-13]
+    sources: ["same pattern as the AI phone's orphaned cards, fixed 2026-10-29"]
+    verify: {method: test, by: [tests/test_mail.py::test_a_card_left_by_a_restart_is_dropped_with_its_late_answer_and_a_waited_card_stays]}
+    trace: [images/mail/mail.py]
+    findings: [FND-14]
+  - id: CNX-07
+    title: A copy of the owner's mail on the NAS
+    statement: A job on the NAS shall copy every Gmail message to a file with its checksum and index it, one way, opening All Mail
+      read-only, every 15 minutes, within 2,000 MB of downloads a day. A mail that leaves Gmail shall stay on the NAS, marked as gone.
+      The job shall write no message text anywhere else, call no model, and use an app password of its own that the owner types.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-05]
+    sources: [nas/mailvault/AGENTS.md]
+    verify: {method: test, by: [tests/test_mailvault.py::test_every_mail_is_copied_exactly_and_can_be_checked, tests/test_mailvault.py::test_the_second_pass_fetches_only_what_is_new, tests/test_mailvault.py::test_a_mail_that_leaves_gmail_stays_on_the_nas_marked_as_gone, tests/test_mailvault.py::test_a_broken_answer_marks_nothing_as_gone, tests/test_mailvault.py::test_the_daily_allowance_is_kept_and_the_rest_follows_tomorrow, tests/test_mailvault.py::test_the_allowance_stays_under_google_s_limit, tests/test_mailvault.py::test_a_bad_copy_is_never_kept, tests/test_mailvault.py::test_the_census_says_who_writes_and_whom_you_answer_from_headers_alone, tests/test_mailvault.py::test_a_refused_password_is_said_not_asked_again_at_once, tests/test_mailvault.py::test_without_a_password_it_waits_and_says_so, tests/test_mailvault.py::test_it_protects_the_same_mail_as_the_connector_and_runs_sealed]}
+    trace: [nas/mailvault/vault.py, nas/mailvault/compose.yaml, ops/deploy-mailvault.sh, ops/mailvault-password.sh]
+  - id: CNX-08
+    title: The Postmaster files only the stack's own mail, and shows who writes
+    statement: The Postmaster shall each hour file the stack's own mail, known by its exact sender, under the label AI Stack and out of the
+      inbox, leave older mail where it is until the owner says so, read no message text, and remove nothing. The Your mail page shall show the
+      copy's progress and one line per sender from the headers alone. A copy that stopped or stayed silent over a day shall be said once a
+      day, and the end of the first copy once.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-05]
+    sources: [images/mission-control/guide/18-connections.md]
+    verify: {method: test, by: [tests/test_postmaster.py::test_the_mail_tool_unfolds_a_long_header, tests/test_postmaster.py::test_a_row_continued_over_two_lines_is_read_whole, tests/test_postmaster.py::test_more_mail_than_the_tool_lists_is_read_day_by_day, tests/test_postmaster.py::test_only_the_stack_s_exact_sender_counts_as_its_mail, tests/test_postmaster.py::test_the_listing_is_read_with_a_protected_mark_too, tests/test_postmaster.py::test_new_stack_mail_is_filed_and_older_mail_waits_for_the_owner, tests/test_postmaster.py::test_the_past_is_only_listed_until_the_owner_says_so, tests/test_postmaster.py::test_without_a_grant_nothing_moves_and_it_says_so, tests/test_postmaster.py::test_the_copy_s_files_come_over_whole_and_a_bad_one_changes_nothing, tests/test_postmaster.py::test_the_owner_hears_of_a_stopped_copy_and_of_the_end_of_the_first_one, tests/test_postmaster.py::test_the_connector_files_the_stack_s_own_mail_though_its_subject_looks_protected, tests/test_postmaster.py::test_the_app_shows_the_copy_and_the_report]}
+    trace: [ops/postmaster.py, ops/crew.py, images/mail/mail.py, images/mission-control/server.py, images/mission-control/web/static/app-base.js, config/agents.yaml, ops/keys.sh]
+  - id: CNX-09
+    title: A search or label is one plain line
+    statement: The mail connector shall refuse a search or a label that holds a line break or another control character,
+      with the reason, and send nothing to Gmail; it shall ask Gmail for UTF-8 so a search or label with umlauts works.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05]
+    sources: [images/mail/AGENTS.md, docs/REVIEW-2026-11-07.md]
+    rationale: imaplib sends a line break inside an argument as it is, so model text steered by a mail could add IMAP
+      commands of its own past the Trash grant and the protected-mail filter (review CNX-R1); umlauts raised an error (CNX-R2).
+    verify: {method: test, by: [tests/test_mail.py::test_a_search_or_label_with_a_line_break_is_refused_and_nothing_is_sent]}
+    trace: [images/mail/mail.py]

@@ -1,0 +1,6 @@
+[
+ {"fills": {}, "model": "gpt-sub", "user": "On the AI phone, open Chrome and look up the weather in Berlin, then tell me what it says."},
+ {"fills": {}, "model": "gpt-sub", "user": "Open the Home Assistant app on the AI phone and check that wake word detection is on."},
+ {"fills": {}, "model": "gpt-sub", "user": "On the AI phone, search Amazon for a DDR4 32 GB kit and put the cheapest one from a known brand in the cart."},
+ {"fills": {}, "model": "gpt-sub", "user": "What's on the AI phone's screen right now?"}
+]

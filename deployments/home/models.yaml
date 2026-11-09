@@ -1,0 +1,7 @@
+# The home deployment's model policy (GEN-05, CST-02): subscriptions only, so no key can spend money. ops/modelpolicy.py
+# reads it; config/agents.yaml's cards and ops/keys.sh's keys name these aliases.
+policy: subscription_only
+aliases:
+  gpt-sub: {served_by: chatgpt-subscription}           # LiteLLM, config/litellm/config.yaml (the device login)
+  gpt-sub-fast: {served_by: chatgpt-subscription}
+  claude-subscription: {served_by: claude-oauth}       # the Claude CLI roles, with CLAUDE_CODE_OAUTH_TOKEN

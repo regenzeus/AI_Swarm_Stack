@@ -1,0 +1,14 @@
+[
+ {"model": "gpt-sub", "dry_run": true, "fills": {"id": "901", "repo": "click", "place": "click.1", "branch": "build/901-help-names", "title": "Unique help option names",
+   "description": "Two commands can register the same help option name; make the second registration raise a clear error instead of silently replacing the first.",
+   "feedback": "", "scope": "", "context": "\n## Memory for this run\n### code:click (exact record)\n#### Files: the best matches for the request's words\n- src/click/core.py: changed in 412 of 3330 commits, hotspot 1 of 79; changes with tests/test_options.py (61 %); tests: tests/test_options.py, tests/test_commands.py\n#### Commands that work\nAll tests: pytest -q\n",
+   "reqline": "", "checks": "pytest -q"}},
+ {"model": "gpt-sub", "dry_run": true, "fills": {"id": "902", "repo": "ai-stack", "place": "ai-stack.2", "branch": "build/902-queued-label", "title": "Show Queued for Home tasks",
+   "description": "On Home, a task whose only build is queued shall show the label Queued instead of Running.",
+   "feedback": "", "scope": "", "context": "\n## Memory for this run\n### code:ai-stack (exact record)\n#### Files: the files the specification names\n- images/mission-control/web/static/app.js: changed in 290 of 507 commits; tests: tests/test_app_layout.py\n#### What failed here before, on these files\n- build #54 rejected, a label in the wrong state: the waiting state was read from the task, not its build\n",
+   "reqline": "\n   Name the requirements this change implements on a line of the commit message body.", "checks": "bash ops/check.sh"}},
+ {"model": "gpt-sub", "dry_run": true, "fills": {"id": "903", "repo": "TestRepo", "place": "TestRepo", "branch": "build/903-readme", "title": "Document the deploy target",
+   "description": "Add a section to README.md that says how make deploy-testrepo works and what it needs.",
+   "feedback": "\nChanges requested by the owner after his review of your last version: say which host it deploys to.\n", "scope": "", "context": "",
+   "reqline": "", "checks": "make test"}}
+]

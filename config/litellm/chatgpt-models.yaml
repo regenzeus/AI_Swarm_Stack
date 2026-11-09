@@ -1,0 +1,13 @@
+# Added to config.yaml by `make chatgpt-login` once auth.json exists.
+  # ChatGPT subscription via device-code OAuth (`make chatgpt-login`); tokens in the litellm-auth volume.
+  # Ids from the Codex model list, not the API list.
+  - model_name: gpt-sub
+    model_info: { mode: responses }
+    litellm_params:
+      model: chatgpt/gpt-6.1-sol
+
+  - model_name: gpt-sub-fast
+    model_info: { mode: responses }
+    litellm_params:
+      model: chatgpt/gpt-6-luna
+

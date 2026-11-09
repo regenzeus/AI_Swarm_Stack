@@ -1,0 +1,306 @@
+# Owner decisions, dated. Requirements cite them as sources so the "why" survives. A decision that changes an
+# earlier one names it in `supersedes`; the earlier one stays here with its date (nothing is rewritten).
+area: Decisions
+prefix: DEC
+items:
+- {id: DEC-01, date: 2026-10-27, title: Subscription only, decision: 'No paid model in the gateway, no fallback to one;
+    all agent keys get subscription models only. Runs that hit the usage limit wait and retry.', supersedes: the earlier
+    $5 Anthropic + $5 OpenRouter development budget with per-key daily caps}
+- {id: DEC-02, date: 2026-10-27, title: Everything in English, decision: 'Chat, app, reports, wikis and Telegram in English,
+    reversing the earlier choice of German briefings.'}
+- {id: DEC-03, date: 2026-10-27, title: Builder in a sandbox with tap-to-deploy, decision: 'The builder codes in a sandbox,
+    cannot push or deploy, and every change ships only after the owner''s tap, with smoke test and automatic rollback (not
+    full PC rights).'}
+- {id: DEC-04, date: 2026-10-28, title: Build order for hands in the world, decision: 'AI review and Semgrep, then Serena,
+    then the share target and the old phone as a sealed AI phone, then browser hands and shopping missions that never buy
+    on their own, then (later) sessions on the main phone.'}
+- {id: DEC-05, date: 2026-10-28, title: Observability first, decision: 'Every agent feature ships with its timeline, files
+    read and changed, payoff, statistics and issue signals, clickable in Mission Control; a feature without it is unfinished.'}
+- {id: DEC-06, date: 2026-10-28, title: The guide is part of the Stack page, decision: 'The in-app guide lives on the Stack
+    page, not as its own tab.'}
+- {id: DEC-07, date: 2026-10-29, title: Home Assistant on the NAS, decision: Home Assistant runs as a new container on the
+    NAS (LAN only); nothing changes about existing NAS data or shares. One Home Assistant Voice speaker may be proposed
+    for the owner to buy.}
+- {id: DEC-08, date: 2026-10-29, title: The AI phone screen sleeps, decision: The AI phone's screen is no longer kept on
+    (it drained the battery faster than it charged); it sleeps after 30 s and every action wakes it first., supersedes: '2026-10-28:
+    the screen stays awake while connected (30 s wake loop, Stay awake)'}
+- {id: DEC-09, date: 2026-10-29, title: Needs you is only the owner's decisions, decision: Health alerts and the stack's
+    own improvement ideas leave "Needs you" and show as "Stack upkeep".}
+- {id: DEC-10, date: 2026-10-29, title: 'No caps, a lifecycle instead', decision: Capping how many ideas an agent may keep
+    open is not the right approach; agents should reopen and refine ideas over many runs within a generic artifact lifecycle.}
+- {id: DEC-11, date: 2026-10-25, title: Off-site key copy in OneDrive, decision: 'The age key is copied to OneDrive (own
+    folder), not to a USB stick; Windows 11 upgrade declined.'}
+- {id: DEC-12, date: 2026-10-27, title: No ChatGPT-web bridge, decision: 'No browser automation of the ChatGPT web app as
+    an API (terms of service, bot-detection evasion); not to be proposed again.'}
+- {id: DEC-13, date: 2026-10-29, title: KeepADB on the AI phone, decision: 'KeepADB 1.8.38 (F-Droid, checksum verified)
+    may be installed so the AI phone starts in AI mode after a restart; each phone setting it needs runs only on the owner''s
+    Allow.'}
+- {id: DEC-14, date: 2026-10-29, title: Requirements engineering for the repo, decision: 'The stack''s requirements are
+    engineered retroactively, prepared for the agent swarm, kept current with every change, and contradictions between the
+    parts are looked for and reported.'}
+- {id: DEC-15, date: 2026-10-29, title: Agent swarm design, decision: 'Agents on different harnesses and models get a shared
+    artifact ledger with a generic lifecycle, a communication board (direct, multicast to all, rooms) and a chatroom, reusing
+    existing technology.'}
+- {id: DEC-16, date: 2026-10-28, title: Claude Code as second engine, decision: 'Claude Code on the owner''s Claude subscription
+    becomes the builder''s second engine, the default for code work when connected, and the reviewer of ChatGPT builds;
+    code it reads is sent to Anthropic.'}
+- {id: DEC-17, date: 2026-10-28, title: The old phone is the AI phone, decision: The old Samsung AI phone (ai-phone) is the
+    AI phone; the main phone (main phone) is not driven until a separate design for sessions on it.}
+- {id: DEC-18, date: 2026-10-29, title: Voice through Alexa and a Voice speaker, decision: 'Talking to Hermes through the
+    Echos ("Alexa, Hermes …") is wanted; a Home Assistant Voice speaker may follow.', supersedes: '2026-10-28: the owner
+    does not want voice'}
+- {id: DEC-19, date: 2026-10-27, title: Approve everything that ships, decision: The stack's own improvement proposals and
+    builds ship only after the owner's approval. (Asked on 2026-10-29 whether small upkeep fixes may ship by themselves;
+    no answer yet.)}
+- {id: DEC-20, date: 2026-10-24, title: The owner does not run scripts, decision: 'Setup and recovery prefer routes that
+    need no scripts or clicks from the owner; what only he can do (passwords, sign-ins, purchases, approvals) is asked for
+    in one step with exact instructions.'}
+- {id: DEC-21, date: 2026-10-29, title: Swarm requirements before swarm code, decision: 'Before the agent swarm is built,
+    its requirements are engineered to best practice and the current state of the art (A2A, MCP, the OWASP agentic top 10,
+    multi-agent failure research), each with an acceptance criterion and a rollout phase.'}
+- {id: DEC-22, date: 2026-10-29, title: Switch over to the Ledger now, decision: 'No shadow week; the swarm''s Ledger becomes
+    the only store of the stack''s ideas at once, the caps go, and the timelines, Claude Code traces and the session landing
+    path are built in the same go ("Why wait for 5th? Implement all now and without gaps").', supersedes: the shadow week
+    of SWM-87}
+- {id: DEC-23, date: 2026-10-29, title: The AI phone asks before typing or opening anything, decision: 'Typing text, opening
+    a web address and opening an app on the AI phone always ask the owner, even inside a time window, so private data cannot
+    leave through the phone unseen (answering FND-02 with the recommended option, "do all of this").'}
+- {id: DEC-24, date: 2026-10-29, title: 'The swarm grows into parallel work, wider review and a live board', decision: 'After
+    the phase 3 review (review 2026-10-29: full-scale swarm gaps (compared with Blitzy-style parallel code agents)), the
+    owner asked for a full-scale, production-grade swarm. Phase 4 adds parallel work (a task graph, file leases, a merge
+    queue, code-graph context) and independent reviewers; the Swarm page adds who is working right now and requests to the
+    owner; phase 5 adds flow metrics. Governance stays: only the owner''s taps decide, and every deploy needs the owner''s
+    approval.'}
+- {id: DEC-25, date: 2026-10-30, title: How phase 4 makes parallel work safe, decision: 'The owner asked to do phase 4 and
+    close all gaps. The task graph lives in the Ledger (kind task, depends_on links), not in Hermes Kanban (SWM-21 deprecated):
+    the Ledger already holds every artifact with its history and the owner''s decisions, and the builders are not Hermes
+    profiles. Two build slots on the 16 GB PC, one ChatGPT build at a time. Approved builds land through one merge queue,
+    checked again on the combined code when main moved. The owner''s assistant (main) reads and writes the Board but takes
+    requests only from the owner (wake never), so no agent can steer the agent that holds the phone, mail and house tools.
+    A reviewer''s block stops the deploy; the owner may override it with a written reason (only his taps decide, DEC-24),
+    and the override is evidence on the idea.'}
+- {id: DEC-26, date: '2026-10-30', title: How phase 5 lets the agents improve without rewriting themselves, decision: 'The
+    owner asked to start phase 5. Agents are tuned only through agent changes: standing instructions on their card (or a
+    model, tools or harness change), written by the Coach or the owner, never by the agent itself. A change is replayed
+    on the agent''s own past runs, with and without it, on the agent''s own model, and is scored by code, not by a model
+    judge: TF-IDF similarity to what the owner accepted, declined or merged (the Ledger''s calibrated 0.20), and valid operations.
+    It ships only when no score drops and its target rises; the owner still taps Build it and approves the build. After
+    it ships it is watched for 14 days on real runs and one tap reverts it. Runs from before runs were recorded count as
+    history examples (the evidence the agent cited, the artifact it wrote, its fate). Failures are classified into MAST
+    by rules on the reason their label carries; what no rule matches stays unclassified. Requirements are mirrored into
+    the Ledger (kind requirement), so ideas name the ones they serve. Phoenix keeps the replay sets and experiments as datasets
+    for inspection; the Ledger keeps the record. Experiments use their own service key (vk-eval) so they never spend an
+    agent''s key.'}
+- id: DEC-27
+  date: '2026-10-30'
+  title: No truncation by default
+  decision: 'The owner, with a screenshot of cut log lines on the Swarm sync page: "I hate truncation. Do not truncate
+    user facing input. Whenever you truncate anything I need a clear justification." Text the owner reads is shown
+    whole; his own input is refused with the limit named, never cut; any remaining cap names its reason in the code
+    (ops/truncation.py enforces it) and shows the cut when it hits. AI-written code tends to truncate by habit; the
+    rules in AGENTS.md (Truncation) and the check exist so it cannot do so silently.'
+- id: DEC-28
+  date: '2026-10-30'
+  title: Show the swarm as it works
+  decision: 'The owner found the Swarm page nearly unchanged after phases 4 and 5 and asked for timelines of when agents ran,
+    interaction maps, the agents'' conversations and a map of the agents; then "Actually I want all 4." The Board and the
+    Ledger hold little (6 messages), while the runtime record holds every run and which run started which (a mission asked
+    the scout 96 times in three days). So the four views are drawn from the runtime record first: Timeline, Map, the tool
+    calls between agents in the Chatroom (marked as tool calls, not Board messages), and the team map in Agents.'
+- id: DEC-29
+  date: '2026-10-30'
+  title: One list of ideas
+  decision: 'The review of 2026-10-30 found the stack''s improvement ideas in three places: Code (The stack suggests: the
+    crew''s and the self-review''s ideas), Agents (Improve: the Coach''s agent changes) and Home (Stack upkeep, a count).
+    The owner said "Yes, merge them". Both kinds are Ledger artifacts decided with the same Build it and Dismiss, so they
+    are one ranked list under Agents → Ideas, each card marked with its kind; Code and Home only link to it. The
+    numbers of the improvement loop (replay sets, failure classes, requirements in the Ledger) moved to Flow.'
+- id: DEC-30
+  date: '2026-10-30'
+  title: The Chatroom is the team room, drawn from the agents' work
+  decision: 'The owner did not like the Chatroom (a list of rooms, most "no messages yet") and asked for a common place to
+    read how the agents coordinate, with filters by agent and topic, without forcing agents to contribute, each agent
+    responsible for its own lane first and stepping into another''s only with something its owner would not see. Research
+    (MetaGPT, Magentic-One, Anthropic''s research system, Claude Code agent teams, the MAST failure study, stigmergy) and the
+    stack''s own numbers (6 Board messages ever, one cross-lane step, about 100 tool-call asks a day) say coordination works
+    best through the shared work, with rare targeted messages. Part 1 (built): the Chatroom draws one timeline from the work
+    with filters, and marks work on another agent''s artifact as help. Part 2 (built, "Yes, build part 2"): a team roster
+    and the lane rule at the start of every run, and tools to look into another agent''s work (SWM-108). Part 3 (built, "Yes, build part 3": SWM-109) (lane discipline: a step into another lane names why its owner
+    would not see it, a daily budget, and the owner agent''s verdict feeding the scorecards) wait for the owner.'
+- id: DEC-31
+  date: '2026-10-30'
+  title: The stack's memories as one system
+  decision: 'The owner asked for an overview of every memory system, a coherent design, the wikis'' bubble map on the Wiki tab
+    and where it is seen which agent uses which wiki, and asked whether one wiki should hold all the others. The review found
+    ten stores (vault notes, vault wiki, agent wikis, journals, mission notes, Hindsight, the Ledger, skills, run records,
+    the search index) with overlaps and no curator for three. Following CoALA (episodic, semantic, procedural), the LLM-wiki
+    pattern (raw sources, one curator, ingest, query, lint) and scoped stores: no wiki that merges all the others (it would mix
+    topics and owners), the vault wiki as the top layer with hub pages for shared subjects, one writer per wiki, reading
+    scoped by the card, Hindsight for personal facts only, and every store with a limit, a curator and a view. Part 1 (built,
+    "Yes, build part 1"): the inventory, the Memory section on Stack, the wikis'' map and who reads and writes which wiki.
+    Part 2 (built, "Yes, build part 2"): one opening per run with the swarm''s pack inside, the working state in the journal,
+    reading scoped by the card, one writer per wiki folding in helps, no journal copies in Hindsight (MEM-03 to MEM-06).
+    Part 3 (built, "Yes, build part 3"): the Librarian (MEM-08, MEM-12, DEC-32). Part 4 (built, "Yes, build part 4"):
+    prompts as files, tested (MEM-11, DEC-33).'
+- id: DEC-32
+  date: '2026-10-30'
+  title: The Librarian tidies every wiki and adds nothing
+  decision: 'The owner said "Yes, build part 3". The memory curator, which already tidies the journals and long-term memory,
+    becomes the Librarian, with no new agent or key: once a week it lints every agent wiki, marks pages not confirmed for 90
+    days as stale (agent wikis hold news; the vault wiki keeps its own 180-day rule), and asks one model call per wiki which
+    candidate pairs are one subject and which claims contradict. It is the one change to a wiki besides its writer''s
+    (MEM-03), and it only rearranges: a merge keeps every link of both pages and leaves a stub that points on, a
+    contradiction is a callout with both sources already on the page, and nothing is deleted except its own hub pages whose
+    subject is no longer shared. Hubs are the top layer the owner asked about: one vault-wiki page per subject two or more
+    wikis share, linking each wiki''s page, instead of one wiki holding all the others. It also runs qmd cleanup. Each pass is
+    one vault commit; a store over its limit for 8 days alerts its curator.'
+- id: DEC-33
+  date: '2026-10-30'
+  title: Prompts are files, versioned by their text and changed only after a replay
+  decision: 'The owner said "Yes, build part 4". The 42 agent prompts of ops/ and the Hermes configure scripts moved verbatim
+    into prompts/<owner>.md, one file per card (or service, or shared.md), each a marked section; the code loads them by
+    name and shell scripts render them. A prompt''s version is the sha of its text, so it can never be forgotten or bumped
+    wrongly; each send records it, and the card hash follows the file. A change is accepted by a replay instead of a
+    reviewer''s taste: the prompt''s last live cases (or committed cases), the approved and the new text on the agent''s own
+    model, a pairwise judge in random order, passing when the new text is valid as often and the judge prefers the old
+    answer no more often. The verbatim move is each prompt''s baseline, accepted only as its first record. The swarm''s
+    agent changes (SWM-18) keep their own scored replay of proposals. The desk''s, the scout''s and the privacy check''s
+    prompts followed ("Yes, do MEM-13"): their containers read prompts/ through a read-only mount (MEM-13).'
+- id: DEC-34
+  date: '2026-10-31'
+  title: What the stack may do without asking
+  decision: 'The owner accepted the roadmap''s proposed default ("Accept the default"). Without asking, the stack plans,
+    staffs and runs tasks and may create temporary agents within read-only and sandboxed grants; it asks before it
+    messages other people, spends money, deploys code, deletes data or acts on the AI phone. A task given in a sentence
+    starts as soon as it is planned unless the owner chose "Show me the plan first"; every door keeps its own approvals
+    (the deploy tap, purchases, the AI phone, Gmail''s Trash).'
+- id: DEC-35
+  date: '2026-10-31'
+  title: The plan graph lives with the tasks, not in the Ledger
+  decision: 'Building phase 2 ("Start phase 2"), the Conductor''s plan graph and step journal went into the runner''s task
+    database (task_steps beside tasks, in the nightly backup) instead of the swarm''s Ledger, as the roadmap first said.
+    The Ledger''s task model belongs to the idea-to-build flow (one plan per idea, builders claim its tasks) in a service
+    capped at 256 MB, while a step has to be recorded in the same transaction that starts it, so a restart can never run
+    a finished step again. The trace is the runtime record''s (one run per task, a run per step inside it). A one-off
+    research, analysis or errand task whose plan uses two or more agents goes to the Conductor; every other task keeps
+    its door.'
+- id: DEC-36
+  date: '2026-10-31'
+  title: Every planned task goes to the Conductor
+  decision: 'The owner asked for every task through the Conductor, recurring ones included ("Implement all properly",
+    docs/SWARM-DESIGN.md). Since phase 6a every task the intake plans runs as a plan graph, one step or many, once or on
+    a schedule, with a coding task''s builder step as a build assignment and a code question as a Claude step; it
+    replaces DEC-35''s last sentence (only multi-agent one-off work went to the Conductor). Briefings, price watches and
+    event-triggered tasks keep their mission until phase 6b, because the Topic Desk and the price watch are not yet steps.'
+- id: DEC-37
+  date: '2026-11-01'
+  title: A price watch is its shopping agent's check; purchases stay the agent's runs
+  decision: 'The owner asked for price watches and event-triggered tasks under the Conductor ("Please do these two
+    properly"). A price watch task holds its shopping agent (ops/shopping.py: limits, proposals, approvals, the order''s
+    tracking), made once with no schedule of its own; each occurrence of the task is one check of that agent (offers, a
+    proposal or watching), and a waiting proposal that reaches its price or date starts the task''s next occurrence. The
+    purchase after the owner''s tap and the order tracking stay the agent''s own runs: they are the narrow deterministic
+    path of docs/SHOPPING.md, with its own approval, and a plan step must not be able to start them. An event-triggered
+    task runs each firing as an occurrence (its event in every step''s prompt; events that come meanwhile wait, at most
+    five); a briefing on an event is the desk''s alert, then its delivery. Completes DEC-36''s last sentence.'
+- {id: DEC-38, date: 2026-11-01, title: One OK per phone task; free mode asks only for private data, decision: 'The owner found
+    an approval for every tap too much ("I want to give it permission to use the phone"). An agent asks once for a whole
+    task (its apps, the exact texts it types, up to an hour); the owner''s time window becomes a free mode where typing and
+    opening apps and addresses run without asking unless the text holds an e-mail address, phone number, IBAN or key; a
+    request already waiting goes ahead when the permission comes. Money, passwords, blocked apps and Stop are unchanged.',
+  supersedes: DEC-23}
+- {id: DEC-39, date: 2026-11-02, title: SQLite for the swarm, decision: 'The owner confirmed SQLite for the swarm''s Ledger ("keep
+    SQLite for the swarm database ... Yes do all"): one writer (the Swarm service), WAL, a nightly snapshot the restore drill
+    checks, 7 MB. Postgres would add a second failure point and buy nothing on one machine. Closes design decision 2 (SWM-73).'}
+- {id: DEC-45, date: 2026-11-08, title: The stack is a platform; home is one deployment, decision: 'The owner asked on 8 Nov 2026
+    to build what the analysis of a work proposal recommended, so that the stack is the base for work too: "The ai swarm
+    stack shall be a platform to run ai systems like the one we run in my home. My home stuff is an example deployment."
+    and "The windows worker stuff has to be designed well." So: deployments/<name>/ holds what a deployment chose
+    (features, model policy, data class, egress list, constraint values); home switches every feature on and behaves as
+    before. Windows runs only job kinds the owner declared and approved there, as a separate standard account (aiworker),
+    carried by a broker under the owner''s account because no other account can read WSL; WSL stays cut off (DEC-43
+    holds). Customer work is kept in by the network (an egress list), not only by rules in code. A work deployment takes
+    only release tags the owner signed off. Design: docs/PLATFORM.md; approvals at work: docs/WORK-APPROVALS.md.'}
+- {id: DEC-44, date: 2026-11-07, title: The memory stack, and its memory agent acts without the owner, decision: 'The owner
+    asked for the memory stack to be designed properly with requirements engineering (one memory for every agent, bloat fought,
+    navigable by AI, sectors with their own access, skills from repeated work, maintenance by an agent, coding memory first),
+    agreed the design of docs/MEMORY-STACK.md and answered its decisions on 7 Nov 2026: D1 "completely autonomous": the memory
+    agent acts without his approval (two of his facts that disagree are settled by date, the newer holds; the move list leaves
+    long-term memory; a dispute research could not settle stays marked), every change logged with its undo, while the memory
+    trials pass; D2 "generous budgets. 6k is far too small. We need to experiment to find the right balance": what each run is
+    given is sized by kind and tuned by the share it uses; D3 and D4 (proactive offers within bounds, one memory tool) as
+    designed; and "big bang, then commissioning": built as one change (MEM-22 to MEM-50) and commissioned on the live stack
+    (docs/MEMORY-COMMISSIONING.md). It widens DEC-40, under which contradictions of his own facts stayed his to decide.',
+  supersedes: DEC-40}
+- {id: DEC-43, date: 2026-11-06, title: The stack asks Windows; Windows fetches, decision: 'The owner wanted the stack to talk to Claude Code outside WSL. WSL stays cut off (interop and automount off, no port): a small script on Windows fetches requests from a folder and treats them as data, the way the host probe fetches a disk scan. Status needs no approval; a question goes to Claude with reading tools only, in folders listed on Windows where WSL cannot write; only a turn of the owner''s own chat can ask. Changes on Windows would need the owner''s tap on the whole job and are not built. Build 27, a second Claude inside WSL, was rejected: it could not reach the Windows sessions.'}
+- {id: DEC-42, date: 2026-11-04, title: The AI phone stays on Wi-Fi, decision: 'Asked whether the AI phone will ever run without Wi-Fi, on a SIM only,
+    the owner answered "No, always Wi-Fi". Any Wi-Fi counts, the main phone hotspot included, so ADB over Wi-Fi and Tailscale stay the only way in and
+    the agent app of docs/PHONE-ANYWHERE.md Stage 2 is not built.'}
+- {id: DEC-41, date: 2026-11-04, title: The AI phone has no single-step approvals, decision: 'The owner again found approving single
+    actions too much ("I do not want to allow every singel action on AI Phone. I want to allow more macro."). DEC-38 had added one OK per
+    task but left a card per action as the fallback when an agent did not ask for a task. That fallback is gone: taps, swipes, keys,
+    typing and opening apps or addresses run only inside an approved job or free mode, and otherwise are refused with the instruction
+    to ask for the job. Money, settings, deleting, private text in free mode, passwords, blocked apps and Stop are unchanged.'}
+- {id: DEC-40, date: 2026-11-02, title: The Memory Keeper fixes the memory by rules, decision: 'The owner asked for one dedicated
+    agent that runs periodically and fixes the memory systems, contradictions and false information included, designed
+    carefully to best practice, and answered D2 ("Yes do all"): the memory agent may retire duplicates, test noise and facts
+    on agents'' runs, translate facts into English and date passing states itself, softly and restorably, with each change
+    listed and undoable, while its answer-key trial passes; contradictions of his own facts stay his to decide; world
+    knowledge is corrected only through research with sources (docs/MEMORY.md, the Memory Keeper; MEM-21).', supersedes: DEC-32}
+- {id: DEC-46, date: 2026-11-08, title: Everything is a task; the Tasks tab is built around them, decision: 'The owner asked
+    on 8 Nov 2026 to unify tasks and missions ("How long it runs should not define the term"), to keep six tabs with the
+    tasks inside the agents tab yet built around tasks, to see how tasks and agents connect, and to make the crew''s duties
+    tasks too. So: a task is what needs to be done and an agent is who does it; they meet in the steps (one agent per
+    step, many agents per task, many tasks per agent). A task''s When (once, repeats, on an event, after another task) is a
+    setting. A task is the owner''s or the stack''s (trials, probes, gates, the crew''s duties and questions, onboarding);
+    the owner''s lists show the owner''s, the stack''s are a filter away. Every mission is a task for good; every crew duty
+    is the stack''s repeating task; a chat is a task that lives on Chat; tools are what an agent uses, never agents. The
+    second tab is Tasks with five views: Tasks, Activity, Team, Network, Ideas. A mission''s or a duty''s page is its
+    task''s page. Home counts what is the owner''s apart from the stack''s ideas (one list, AUT-05, DEC-09 in spirit).
+    Internal names (missions/ in the vault, ops/missions.py, the database) stay. Design: design files of 8 Nov.', sources: ['owner 2026-11-08: What is the difference between task and mission? I feel like tasks is better term and we should streamline and unify. ... How long it runs should not define the term. ... I feel we should keep 6 tabs and integrate tasks in agents. But tasks are not an afterthought. ... I want to see how tasks and agents connect ... Can Agents run without tasks? ... I feel like these should just be a special kind of tasks.']}
+- {id: DEC-47, date: 2026-11-08, title: Ideas become AI change requests, decision: 'The owner said on 8 Nov 2026 that the ideas
+    are too spammy and asked for one agent that reads all of them, fits them into the larger picture and combines them
+    into fewer, coherent, polished change requests that are implementation ready; those are what the owner sees, on a
+    page of each repository, each naming the ideas it grew from, and each idea the task and run that produced it. Ideas
+    stay visible on their tasks and agents, but not prominently. So: ideas are internal raw material; an Editor (a stack
+    agent, a crew duty) sorts each idea (in a request, held, covered, dropped, with a reason) and writes the requests;
+    programs check what can be checked before a request is shown; a request built is committed with its change. Built in
+    steps: 1 ideas tied to where they came from (ACR-01), 2 the Editor sorting only, 3 the Editor writing, 4 Build it into
+    the change pipeline. After the design the owner said "Do all"; the name (the Editor) and the ceiling (5 proposed
+    requests per repository) are the design''s defaults until the owner says otherwise.', sources: ['owner 2026-11-08: We
+    need an agent that will filter out the good ideas. At the moment it is too spammy. ... We have one Agent that runs over
+    all ideas analyses them sees if they fit into the larger picture, and combining them into larger Change Requests. ...
+    They should be implementation ready concept design update or whatever. Very polished.', 'owner 2026-11-08: Do all.']}
+- {id: DEC-48, date: 2026-11-08, title: Onboarding runs as fixed steps with quality gates; a model summarises, it does not decide, decision: 'Onboarding
+    a 1,325-file Java repository on the work deployment on GPT-5 mini said 8/8 done while its code map had 1,325 placeholder nodes
+    and no edges, and the stack''s own log at home said the same of every run ("a structural fallback, not a full semantic
+    analysis"): the Understand Anything skill needs Claude Code''s subagent channel, which OpenCode lacks, so an agent was
+    asked to run a pipeline it could not run and took shortcuts, and every step was checked for existence, never for
+    quality. So: the code map runs as fixed steps in the container (the plugin''s own scan, batching and tree-sitter
+    structure, then nodes and edges from a program; no model, no agent), summaries come from a model one batch per call,
+    and every step has a quality gate and a record (when it last ran, how long, which model, calls, tokens, its numbers).
+    A hollow result is weak, shown as weak, never done. A repository has a kind: the owner''s own work gets an engineer''s
+    guide (entry points, module map, data model, how to extend it, build and test, fragile areas, glossary) written from
+    its structure; something to evaluate gets the review. The graph view ranks the repository''s own code by the links
+    that hold it together, the source pane says which lines it shows and offers the whole file, and the viewer link works
+    off the tailnet. Fixes belong in the stack (the platform), never as local patches on a deployment.', sources: ['owner
+    2026-11-08: The onboarding of new codebase is terrible. ... I want a progress menu bar or checklist ... what are the
+    steps, when they last ran, and some metric on their success/quality and which model they used. And how much token they
+    used. ... Should we try to make it possible even with smaller model? ... Do it all.']}
+- {id: DEC-49, date: 2026-11-08, title: Coding agents get a small card and the brief pushed; everything else onboarding makes stays and is reachable, decision: 'What
+    the owner asked: how coding agents should work with what onboarding generates, in very large codebases too, keeping
+    the codebase''s conventions, and whether it helps at all. The studies say generated overview files pushed into the
+    context do not make agents more correct (ETH Zurich, February 2026: about 3 % worse; a two-agent ablation: no effect
+    on correctness, faster when told about slow tests), selected experience and graph tools for finding code help, and
+    conventions hold when a program checks them; the stack''s own exam saw coders use only Bash and never call the memory
+    tool. So: a repository card of at most about 1,500 tokens (commands, rules that are not obvious, fragile areas, one
+    line per part, where to start), made without a model from what onboarding learned, is given first to every coding
+    run, with the owner''s pins and strikes; the task brief adds the tests to run first and the closest example for a new
+    file; the file note at first read carries the code map''s line, and a wide search hears which folders its hits fall
+    in; after each edit the repository''s linter runs on the file; the conventions review reads the card. Nothing made is
+    thrown away: the guide, the wiki, the code map and the facts stay for people and are exported for the coder to grep,
+    never pushed. Update makes the card again and checks the wiki against the changed code. Each layer must prove itself
+    in the replay exam''s knowledge arm on a large repository, against an arm without memory, on cases after the commit
+    the knowledge was made at.', sources: ['owner 2026-11-08: Okay design it according to your research. But we do not
+    throw out the stuff we made. If nothing else its useful for humans. We keep it. We even give agent access to it but we
+    dont dump it into its context. Only best practise as your research suggests. Implement it.', docs/CODER-KNOWLEDGE.md]}

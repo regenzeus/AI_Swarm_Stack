@@ -1,0 +1,10 @@
+# feature: home
+[Unit]
+Description=Weekly restore drill of the newest backup (changes nothing)
+[Service]
+Type=oneshot
+TimeoutStartSec=3h
+Environment=DOCKER_HOST=unix://%t/docker.sock
+WorkingDirectory=%h/ai-stack
+ExecCondition=/usr/bin/python3 %h/ai-stack/ops/stack_gate.py --wait 1800 --slot 75
+ExecStart=/bin/bash -c "ops/restore.sh drill || { /usr/local/bin/sops exec-env secrets/secrets.enc.yaml 'ops/notify.sh \"Weekly restore drill failed, see: journalctl --user -u restore-drill\"'; exit 1; }"

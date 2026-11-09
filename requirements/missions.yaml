@@ -1,0 +1,367 @@
+# Missions: standing jobs (briefings, long-term tasks, one-offs), schedules, triggers, the run queue, delivery,
+# cost per run, and each agent's own memory (journal).
+area: Missions
+prefix: MIS
+items:
+  - id: MIS-01
+    title: A mission is a file in the vault
+    statement: Each mission shall be vault/missions/<slug>/MISSION.md with its type (briefing or task), status
+      (active, paused, archived), schedule, triggers, depth, one-off flag and delivery channels, versioned with the
+      vault.
+    type: interface
+    priority: must
+    status: implemented
+    parents: [SN-01, SN-10]
+    sources: [docs/MISSION-CONTROL.md]
+    verify: {method: test, by: [tests/test_runner.py::test_a_burst_of_locks_writes_who_held_what_once, tests/test_runner.py::test_a_write_that_fails_on_a_lock_gives_up_its_transaction, tests/test_runner.py::test_create_task_writes_mission_and_queues_first_run]}
+    trace: [ops/missions.py]
+  - id: MIS-02
+    title: Schedules
+    statement: The runner shall accept the schedules daily HH:MM, weekdays HH:MM, weekly <days> HH:MM, every Nh (1 to 24)
+      and manual, refuse any other text, and compute each mission's next run from it.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-01]
+    sources: [images/mission-control/guide/04-missions.md]
+    verify: {method: test, by: [tests/test_runner.py::test_a_slot_keeps_its_own_days_offset_across_a_clock_change, tests/test_runner.py::test_one_bad_mission_file_stops_no_other, tests/test_runner.py::test_valid_schedule, tests/test_runner.py::test_due_times_and_next, tests/test_runner.py::test_schedule_text]}
+  - id: MIS-03
+    title: A missed run catches up once
+    statement: When the PC was off at a scheduled time, the runner shall run the mission once when it is back (within
+      20 hours), never for a time before the mission was created, and not after a resume.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-13]
+    sources: [images/mission-control/guide/04-missions.md]
+    verify: {method: test, by: [tests/test_runner.py::test_check_schedules_catches_up_once_and_not_before_created, tests/test_runner.py::test_update_validates_and_resume_skips_catch_up]}
+  - id: MIS-04
+    title: One run at a time
+    statement: The runner shall run missions one at a time from a queue, drop a duplicate queued run of the same mission
+      but always queue event-triggered runs, and let a run that parks on a wait free the slot until it times out.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-13, SN-03]
+    sources: [docs/MISSION-CONTROL.md]
+    verify: {method: test, by: [tests/test_runner.py::test_one_runner_at_a_time, tests/test_runner.py::test_enqueue_dedup_but_events_always_queue, tests/test_queue.py::test_a_parked_run_frees_the_slot, tests/test_queue.py::test_park_times_out]}
+    findings: [FND-29]
+  - id: MIS-05
+    title: Usage-limit pause
+    statement: When a run fails because the subscription's usage limit is reached, the runner shall mark it waiting
+      and retry it every 30 minutes, up to 16 times (8 hours), and never mark it failed for that reason. A usage limit is the
+      gateway's or the engine's error (a 429, usage_limit_reached, the deployments in cooldown), never words in what a run
+      wrote; a task's intake, a change's specification and a Conductor step wait for it the same way.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-13, CST-02]
+    sources: [DEC-01, ops/AGENTS.md]
+    verify: {method: test, by: [tests/test_runner.py::test_a_run_a_restart_cut_off_says_why_and_waits_for_the_stack, tests/test_runner.py::test_paused]}
+    trace: [ops/missions.py]
+  - id: MIS-06
+    title: Creating a mission
+    statement: When a mission is created by chat or form, the runner shall validate it, write its MISSION.md, give it a
+      unique ASCII slug and queue its first run.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-01]
+    sources: [images/mission-control/guide/04-missions.md]
+    verify: {method: test, by: [tests/test_runner.py::test_create_task_writes_mission_and_queues_first_run, tests/test_runner.py::test_slugify_is_unique_and_ascii]}
+  - id: MIS-07
+    title: No duplicate missions from retries
+    statement: If a mission with a similar title (word overlap at least 0.4) was created in the last 30 minutes, then
+      the runner shall refuse the new one as a duplicate.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-02]
+    sources: ["incident 2026-10-27: Hermes retried a slow create and made a duplicate mission"]
+    verify: {method: test, by: [tests/test_runner.py::test_create_refuses_a_duplicate_within_30_minutes]}
+  - id: MIS-08
+    title: Changing, pausing and archiving
+    statement: The runner shall let the owner or Hermes run, pause, resume, archive and update a mission (goal,
+      questions, sources, schedule, delivery, depth), validating every field and recording the change in the
+      mission's activity.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-01]
+    sources: [images/mission-control/guide/04-missions.md]
+    verify: {method: test, by: [tests/test_runner.py::test_update_validates_and_resume_skips_catch_up]}
+  - id: MIS-09
+    title: Event triggers fire once
+    statement: The runner shall check each mission's triggers (SEC filing, price move, news) every 10 minutes, take
+      the first check as a baseline, and run the mission once for each new event.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-01]
+    sources: [images/mission-control/guide/05-triggers.md]
+    verify: {method: test, by: [tests/test_triggers.py::test_clean_triggers, tests/test_triggers.py::test_clean_triggers_rejects, tests/test_triggers.py::test_check_events_baseline_then_fire]}
+    trace: [ops/mission_extras.py]
+  - id: MIS-10
+    title: Triggers proven end to end
+    statement: Each trigger kind shall have fired at least once end to end, or been replayed from a recorded event, with
+      its alert delivered.
+    type: quality
+    priority: should
+    status: implemented
+    parents: [SN-01, SN-13]
+    sources: [docs/REVIEW-2026-10-27.md]
+    note: A replayed SEC filing went through a mission's full path (2026-10-27); on 2026-11-01 a replayed news article
+      and a replayed 7 % price move went through the real watcher, each starting its task's run under the live
+      Conductor, which finished, was judged met and was delivered (eval/results/20261101-020317-trigger-proof.json; python3 ops/conductor.py triggers).
+    verify: {method: demonstration, by: [ops/conductor.py, eval/results/20261101-020317-trigger-proof.json]}
+  - id: MIS-11
+    title: Briefings by the Topic Desk
+    statement: A briefing run shall have the Topic Desk collect the brief's news, filings and prices over the window its
+      schedule gives (36 hours for a daily briefing, the time between runs plus 12 hours for a weekly one), search
+      Google News in each query's own language, write a structured report with sources, file it under
+      topics/<slug>/reports/YYYY/MM/, skip filing boilerplate, and commit it to the vault.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-01, SN-10]
+    sources: [images/desk/AGENTS.md]
+    findings: [FND-77, FND-80]
+    verify: {method: test, by: [tests/test_desk.py::test_the_news_window_is_the_brief_s_whole_window, tests/test_runner.py::test_a_briefing_that_hangs_is_stopped_at_its_deadline, tests/test_desk.py::test_release_text_skips_filing_boilerplate, tests/test_runner.py::test_section_parsing,
+      tests/test_runner.py::test_a_briefing_reads_the_news_of_its_schedule_s_window,
+      tests/test_desk.py::test_google_news_searches_in_the_query_s_language_over_the_brief_s_window,
+      tests/test_desk.py::test_a_weekly_brief_keeps_a_week_of_news_and_a_daily_one_36_hours,
+      tests/test_desk.py::test_the_price_note_names_proxies_only_when_a_row_is_one]}
+    trace: [images/desk/desk.py, ops/desk.sh, ops/missions.py]
+  - id: MIS-12
+    title: German report clean-up
+    statement: Where a brief's language is German, the desk shall normalise dates, number formats and units to German
+      conventions.
+    type: functional
+    priority: could
+    status: deprecated
+    reason: DEC-02 made every report English; the last German topic was archived and the clean-up removed on
+      2026-10-30 (FND-21).
+    parents: [SN-12]
+    sources: [DEC-02]
+    verify: {method: inspection, by: [images/desk/desk.py]}
+    findings: [FND-21]
+  - id: MIS-13
+    title: Long-term tasks keep notes
+    statement: A task run shall run as Hermes' mission profile on its own key, write its log under
+      missions/<slug>/log/ and keep its working state between runs in its journal (MEM-51).
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-01]
+    sources: [docs/MISSION-CONTROL.md]
+    verify: {method: inspection, by: [ops/missions.py, config/hermes/configure-mission.sh]}
+  - id: MIS-14
+    title: One-off missions
+    statement: When a mission is created as one-off, the runner shall run it once, deliver its result, and archive it.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-01]
+    sources: [docs/MISSION-CONTROL.md]
+    verify: {method: inspection, by: [ops/missions.py]}
+  - id: MIS-15
+    title: Delivery channels
+    statement: The runner shall deliver a mission's results on each of its channels (app push, Telegram with buttons
+      into the app, designed HTML e-mail) after every finished run, except that a briefing the desk chose no news for
+      shall stay in the app, and the next full delivery by Telegram and e-mail shall name the earlier days that found
+      nothing; every e-mail sent or failed shall be recorded in the notification log and the run's timeline.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-01, SN-06]
+    sources: [images/mission-control/guide/07-delivery.md]
+    findings: [FND-60, FND-77, FND-78, FND-79]
+    verify: {method: test, by: [tests/test_desk.py::test_the_email_puts_the_headline_in_its_header_and_fits_a_phone,
+      tests/test_quiet_runs.py::test_a_briefing_with_no_news_chosen_is_empty_and_prices_alone_do_not_count,
+      tests/test_quiet_runs.py::test_an_empty_run_is_not_sent_and_the_next_full_one_names_its_day,
+      tests/test_quiet_runs.py::test_every_email_outcome_is_recorded,
+      tests/test_quiet_runs.py::test_the_briefing_run_asks_whether_the_report_is_empty]}
+    trace: [ops/mission_extras.py, ops/missions.py]
+  - id: MIS-16
+    title: Cost per run
+    statement: The runner shall attribute calls, tokens and spend to each run from the gateway's records of the run's
+      key within the run's time window (UTC).
+    type: functional
+    priority: must
+    status: partial
+    parents: [SN-07, SN-03]
+    sources: [docs/MISSION-CONTROL.md]
+    gap: The attribution assumes one run per key at a time; background jobs have keys of their own since FND-03, but two
+      mission runs at once still share vk-mission (SEC-07).
+    verify: {method: test, by: [tests/test_runner.py::test_spend_window_query_window_is_utc]}
+    findings: [FND-03, FND-25]
+  - id: MIS-17
+    title: Cleanup analysis never deletes
+    statement: A cleanup analysis mission (AI phone or PC) shall report what takes the space, rank unused apps and old
+      data, label PC clutter safe, caution or never, list blocked apps only, show every step in the run's log, and
+      delete nothing.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-11, SN-05]
+    sources: [images/mission-control/guide/04-missions.md]
+    verify: {method: test, by: [tests/test_cleanup.py::test_phone_report_ranks_unused_apps_and_skips_blocked, tests/test_cleanup.py::test_pc_report_labels_and_summary, tests/test_cleanup.py::test_target_is_guessed_from_the_words, tests/test_cleanup.py::test_run_steps_reach_the_timeline]}
+    trace: [ops/cleanup.py, ops/windows/disk-scan.ps1]
+  - id: MIS-18
+    title: Each agent reads its memory at the start
+    statement: When a run starts, the runner shall put the agent's opening (MEM-26) in front of the run's first prompt,
+      once, within the budget of its kind of run (config/memory.yaml).
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-17, SN-10]
+    sources: [images/mission-control/guide/04-missions.md]
+    verify: {method: test, by: [tests/test_journal.py::test_agent_ids_are_the_runtime_agents_and_nothing_else, tests/test_journal.py::test_a_runs_first_prompt_gets_its_memory_once, tests/test_journal.py::test_the_memory_is_capped, tests/test_journal.py::test_a_plain_model_prompt_gets_no_tool_hint, tests/test_journal.py::test_entries_stay_out_of_long_term_memory_and_the_opening_recalls_the_owner_s_facts]}
+    trace: [ops/journal.py]
+  - id: MIS-19
+    title: Each agent writes its memory at the end
+    statement: When a run ends, the runner shall condense its log into one journal entry (what it did, found, what
+      failed and why, open questions), with gpt-sub-fast or deterministically when the model is out, and keep it in
+      the journal only (MEM-06).
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-17, SN-10]
+    sources: [images/mission-control/guide/04-missions.md]
+    verify: {method: test, by: [tests/test_journal.py::test_a_write_during_a_fold_is_kept_and_a_long_note_is_refused_not_cut, tests/test_journal.py::test_the_file_round_trips_and_stays_readable, tests/test_journal.py::test_a_run_writes_one_entry_deterministically_when_the_model_is_out, tests/test_journal.py::test_failures_say_what_and_why, tests/test_journal.py::test_the_model_condenses_when_it_can, tests/test_journal.py::test_the_runner_and_the_app_are_wired, tests/test_journal.py::test_the_runner_can_read_one_run_view]}
+    trace: [ops/journal.py]
+  - id: MIS-20
+    title: The owner can edit an agent's memory
+    statement: The owner shall be able to add, edit and forget journal lines on the agent's Memory tab, every change
+      being a commit of only that agent's files, and the weekly curator shall fold entries older than the last 8 into
+      standing notes and move them to ARCHIVE.md.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-17, SN-02]
+    sources: [images/mission-control/guide/18-crew.md]
+    verify: {method: test, by: [tests/test_journal.py::test_notes_edits_and_forgetting_are_commits, tests/test_journal.py::test_the_curator_folds_old_entries_and_archives_them]}
+  - id: MIS-21
+    title: Job openings from the federal job board
+    statement: A job hunt shall search the Bundesagentur für Arbeit's job board for current openings by job title or
+      skill, place and radius, and read an opening's full ad by its reference number; the research scout shall have
+      these as tools on its isolated web container, and a job-hunt briefing shall carry such searches as a source and
+      report each opening once.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-01, SN-10]
+    sources: ['Bundesagentur für Arbeit Jobsuche API (rest.arbeitsagentur.de/jobboerse/jobsuche-service)']
+    findings: [FND-80]
+    verify: {method: test, by: [tests/test_jobs.py::test_the_scout_finds_openings_near_a_place_with_their_employer_place_and_link,
+      tests/test_jobs.py::test_a_full_ad_is_read_by_its_reference_and_labelled_untrusted,
+      tests/test_jobs.py::test_the_scout_alone_gets_the_jobs_tools_on_the_isolated_fetch_container,
+      tests/test_jobs.py::test_a_job_hunt_brief_collects_each_opening_once_as_its_own_event]}
+    trace: [images/fetch/jobs.py, images/fetch/entrypoint.sh, images/desk/desk.py, ops/missions.py, prompts/desk.md, config/litellm/config.yaml, ops/keys.sh]
+  - id: MIS-22
+    title: A briefing is rated by what the owner did with it
+    statement: "Each briefing shall offer Acted on it, Useful and Noise in the mail, the app and Telegram; its page shall
+      show the share acted on or useful; an item kind rated noise three times is dropped and a briefing rated noise three
+      weeks running asks whether to stop."
+    type: functional
+    priority: should
+    status: proposed
+    parents: [SN-01, SN-18]
+    sources: ['chat 2026-11-02: Briefings that change a decision', docs/NEXT-PHASE.md]
+  - id: MIS-23
+    title: "Results shows what you asked for, first"
+    statement: "A mission's Results shall begin with the files the owner asked it to make. Each file shall show its name,
+      words, checkboxes and size, whether it is final or a draft, how it was delivered, and Open, Download and Copy. A
+      file that was asked for and not saved shall be shown as asked for, not delivered, with the reason and a way to run
+      again. Drafts its runs left in the Ledger shall follow, then the run reports. The mission header, Home's result
+      card and the chat card shall show the files too. Files shall live outside the vault's git, so that deleting one
+      frees its space."
+    type: functional
+    priority: must
+    status: implemented
+    parents: [MIS-15, SN-01, SN-06]
+    sources: ['chat 2026-11-03: Why does it not show the actual result of the mission in results? Results should always
+        also show the results right? ... the mission files should be shown in the results section too or a dedicated files
+        section']
+    verify: {method: test, by: [tests/test_files.py::test_the_app_serves_a_file_for_reading_and_as_a_download_and_nothing_outside,
+      tests/test_files.py::test_results_lists_the_ledger_drafts_a_mission_s_runs_wrote]}
+    trace: [ops/files.py, images/mission-control/server.py, images/mission-control/runrecord.py, images/mission-control/web/static/app-base.js, images/mission-control/web/static/app-tasks.js, images/mission-control/web/static/app-runs.js,
+      images/mission-control/web/static/app.css, images/mission-control/guide/04-missions.md, docs/DELIVERABLES.md, tests/test_files.py, images/mission-control/server.chat.py]
+  - id: MIS-24
+    title: "The mission saves the files it was asked for"
+    statement: "The files the owner asks for shall be recorded with the mission when it is made, and can be changed in its
+      Settings or by Hermes. The mission's agent shall be told them and shall save each one with file_save, either as
+      text or from a Ledger report unchanged. The tool is on its own server, given only to the mission agent. Saving a
+      file again shall keep the earlier version."
+    type: functional
+    priority: must
+    status: implemented
+    parents: [MIS-23]
+    sources: [docs/DELIVERABLES.md]
+    verify: {method: test, by: [tests/test_files.py::test_a_saved_file_keeps_its_earlier_versions_and_says_what_it_holds,
+      tests/test_files.py::test_a_ledger_report_is_saved_unchanged, tests/test_files.py::test_the_agent_is_told_what_to_save]}
+    trace: [ops/files.py, ops/missions.py, ops/mission_extras.py, prompts/mission.md, prompts/replays.json, config/agents.yaml,
+      config/litellm/config.yaml, ops/keys.sh]
+  - id: MIS-25
+    title: "Files arrive as real attachments; a missing one makes the run partial"
+    statement: "A run's delivery shall attach the files it saved: to the e-mail as attachments under their own names, and
+      on Telegram as documents after the result's message. Each file shall record its own delivery. A run that ends
+      without a file that was asked for shall be marked partial, and its notification and e-mail shall name the missing
+      file."
+    type: functional
+    priority: must
+    status: implemented
+    parents: [MIS-15, MIS-23]
+    sources: [docs/DELIVERABLES.md]
+    verify: {method: test, by: [tests/test_files.py::test_the_e_mail_carries_each_file_as_a_real_attachment,
+      tests/test_files.py::test_delivery_attaches_says_what_is_missing_and_records_it_per_file,
+      tests/test_files.py::test_the_run_s_end_names_what_is_missing_and_attaches_what_it_saved,
+      tests/test_files.py::test_the_run_is_partial_when_an_asked_file_is_missing]}
+    trace: [ops/mission_extras.py, ops/notify.py, ops/missions.py, ops/files.py]
+  - id: MIS-26
+    title: "Mission files are cleaned up by rules the owner sees"
+    statement: "Deleting a file shall move it, with its versions, to a trash it can be restored from for 30 days. Every
+      day a cleanup shall:
+      - keep only the newest 5 versions of each file;
+      - move to the trash the unpinned files of missions archived and untouched for 180 days;
+      - empty what has been in the trash for 30 days.
+      A Files page shall show every mission's files, the space they take against a limit, the trash and these rules,
+      and offer Clean up now, which first shows what it would do. Past 80 % of the limit the owner shall get a notice."
+    type: functional
+    priority: must
+    status: implemented
+    parents: [MIS-23, PLT-21]
+    sources: [docs/DELIVERABLES.md]
+    verify: {method: test, by: [tests/test_files.py::test_delete_goes_to_the_trash_and_restores,
+      tests/test_files.py::test_the_cleanup_follows_its_rules_and_a_dry_run_changes_nothing]}
+    trace: [ops/files.py, images/mission-control/web/static/app-tasks.js]
+  - id: MIS-27
+    title: "Hermes promises only what the stack can deliver"
+    statement: "When the owner asks for a file the stack cannot make (Word, PDF, images, archives), Hermes shall say so in
+      the chat and offer Markdown before any mission is made. mission_create shall refuse such a file. The tools'
+      descriptions shall say what can be made and how it is delivered."
+    type: functional
+    priority: must
+    status: implemented
+    parents: [MIS-24, AST-02]
+    sources: ['chat 2026-11-03: Check this mission i asked it to send me a md attachment ... Why does it not follow my instructions?']
+    verify: {method: test, by: [tests/test_files.py::test_hermes_says_at_once_what_the_stack_cannot_deliver,
+      tests/test_files.py::test_what_the_stack_cannot_make_is_refused_with_the_reason,
+      tests/test_files.py::test_the_app_and_the_runner_agree_on_what_a_file_can_be]}
+    trace: [images/mission-control/server.py, images/mission-control/web/static/guide.js, images/mission-control/server.mcp.py]
+  - id: MIS-28
+    title: "A newsletter on a watched topic reaches that topic"
+    statement: "While the owner grants Gmail read, a newsletter that names an active briefing's topic (the watchlist and
+      searches of its TOPIC.md) and passes one check against its key questions shall go to that topic's folder and be read by
+      its next report as untrusted data, with the mail named as a source line; through the report it reaches the topic's wiki.
+      A mail without a List-Unsubscribe header, a protected mail and the stack's own briefings shall never go there, no link in a
+      mail shall be opened, and a mail's text shall never decide what the desk fetches. The topic's page shall list each mail with
+      what came of it: waiting for the next report, cited in a report, or read and not used."
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-10, SN-05]
+    sources: ['chat 2026-11-04: does everything in my copper newsletter reach the wiki and make the AI smarter?', FND-121]
+    findings: [FND-121]
+    verify: {method: test, by: [tests/test_topic_mail.py::test_a_newsletter_on_a_watched_topic_goes_to_that_topic_as_untrusted_data, tests/test_topic_mail.py::test_only_a_list_s_mail_goes_to_a_topic_never_a_person_s_or_the_stack_s_own_or_a_protected_one, tests/test_topic_mail.py::test_a_mail_the_check_leaves_out_stays_out_and_says_why, tests/test_topic_mail.py::test_a_usage_limit_leaves_the_mails_for_the_next_run, tests/test_topic_mail.py::test_the_listing_reaches_back_to_the_last_finished_run_and_says_when_it_held_more, tests/test_topic_mail.py::test_a_topic_s_names_come_from_its_brief_and_short_capitals_match_exactly, tests/test_topic_mail.py::test_a_long_mail_is_narrowed_around_the_names_and_every_gap_is_marked, tests/test_topic_mail.py::test_the_next_report_reads_a_handed_mail_as_data_and_names_it_as_a_source, tests/test_topic_mail.py::test_a_filed_report_settles_its_mails_so_they_are_read_once, tests/test_topic_mail.py::test_the_topic_s_page_lists_each_mail_and_what_came_of_it, tests/test_topic_mail.py::test_the_e_mail_of_a_report_drops_the_link_only_the_app_can_open]}
+    trace: [ops/inbox.py, images/desk/desk.py, ops/desk.sh, ops/missions.py, ops/provenance.py, prompts/inbox.md, prompts/desk.md, images/mission-control/web/static/app-tasks.js]

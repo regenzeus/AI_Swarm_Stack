@@ -1,0 +1,242 @@
+# Change requests: the stack as the developer of the onboarded repositories (docs/CHANGE-REQUESTS.md).
+area: Change requests
+prefix: CHG
+items:
+  - id: CHG-01
+    title: A change request through one front door
+    statement: When the owner gives a change request for an onboarded repository (in the chat, on the repository's page, or as a
+      task of kind coding with its repository), the stack shall create one task of kind change with that repository and run
+      it through the Conductor, and every such task shall end in a branch, a pull request on Forgejo, a request page with
+      its evidence and one message, or in a stop with its reason on the page.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-14, SN-19]
+    sources: [docs/CHANGE-REQUESTS.md]
+    verify: {method: test, by: [tests/test_changes.py::test_a_repository_the_builder_may_not_change_is_refused_with_what_to_do, tests/test_changes.py::test_the_change_gets_one_branch_from_the_default_branch_and_its_plan_starts, tests/test_changes.py::test_a_step_s_build_lands_on_the_change_s_branch_not_on_main, tests/test_changes.py::test_a_waiting_step_is_never_entered_twice_while_a_slow_look_runs, tests/test_changes.py::test_a_step_s_build_merged_twice_is_merged_once, tests/test_changes.py::test_the_app_and_the_chat_reach_it, tests/test_changes.py::test_a_coding_task_with_a_repository_becomes_a_change_request_and_a_trial_s_does_not, tests/test_chat_made.py::test_a_change_request_from_the_chat_says_where_it_went]}
+    trace: [ops/changes.py, ops/tasks.py, ops/builds.py, ops/conductor.py, ops/missions.py, images/mission-control/server.py, images/mission-control/web/static/task.js, images/mission-control/web/static/app.js]
+  - id: CHG-02
+    title: The change specification
+    statement: Before any step changes code, the intake shall write a change specification with a title, a goal, numbered
+      acceptance criteria in EARS form that a test can be written for, the scope (files and modules in, and what is out),
+      a size class (S, M or L), the risks, at most three open questions and a budget, and it shall ask the owner a question
+      only when the answer blocks the plan, writing its assumption into the specification otherwise.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-14, SN-02]
+    sources: [docs/CHANGE-REQUESTS.md]
+    verify: {method: test, by: [tests/test_changes.py::test_the_intake_writes_criteria_a_test_can_check_and_refuses_vague_ones, tests/test_changes.py::test_a_question_that_blocks_the_plan_comes_back_and_its_answer_reaches_the_next_pass, tests/test_changes.py::test_a_failed_specification_says_why_on_the_task]}
+    trace: [ops/changes.py, prompts/intake.md]
+  - id: CHG-03
+    title: The owner's Go on medium and large changes
+    statement: A request of size class M or L shall wait for the owner's Go on its specification, which he may edit first,
+      and a request of size class S shall start at once under autonomy auto with its specification shown on its page.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-02, SN-14]
+    sources: [docs/CHANGE-REQUESTS.md]
+    verify: {method: test, by: [tests/test_changes.py::test_a_small_change_starts_at_once_and_a_medium_one_waits_for_the_go_with_his_edits]}
+    trace: [ops/changes.py, images/mission-control/web/static/task.js]
+  - id: CHG-04
+    title: A plan by size class
+    statement: The Orchestrator shall start from a plan template by size class (S coder, judge, reviewers, presenter, scribe;
+      M adds the tester before the coder, red before green, fix rounds, the breaker and the prober; L adds the analyst, the
+      architect's task split with file leases and up to three coders in parallel), and may change it at a checkpoint within the task's budget.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-14, SN-19]
+    sources: [docs/CHANGE-REQUESTS.md]
+    verify: {method: test, by: [tests/test_changes.py::test_the_plan_by_size_class_runs_the_right_agents_in_the_right_order, tests/test_changes.py::test_the_size_follows_the_code_it_will_touch_not_its_tests_and_requirements, tests/test_changes.py::test_a_step_is_briefed_with_the_spec_its_role_and_the_wiki_as_data_within_the_build_s_limit, tests/test_changes.py::test_a_fix_round_reruns_one_judge_keeps_the_breaker_s_tests_and_waits_for_the_fix, tests/test_changes.py::test_a_step_with_nothing_to_commit_goes_to_the_judge_not_to_failure, tests/test_changes.py::test_a_sentence_about_a_criterion_names_no_test, tests/test_changes.py::test_the_nas_away_for_a_moment_fails_nothing, tests/test_changes.py::test_a_change_s_budget_counts_tokens_not_the_hours_it_waited, tests/test_changes.py::test_a_tester_or_breaker_may_change_only_tests, tests/test_changes.py::test_a_stopped_change_goes_on_from_there_with_its_budget_doubled, tests/test_changes.py::test_the_report_and_the_wiki_come_even_at_a_spent_budget]}
+    trace: [ops/changes.py, ops/conductor.py, prompts/builder.md, prompts/shared.md]
+  - id: CHG-05
+    title: The judge is a program with a baseline
+    statement: The judge shall run the repository's suite and checks on main before the change (the baseline) and on the
+      branch after it, report the difference, rerun once a test that failed once and record a test that then passes as
+      flaky on the repository wiki, and never read the coder's own account of its tests.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-14, SN-05]
+    sources: [docs/CHANGE-REQUESTS.md]
+    verify: {method: test, by: [tests/test_changes.py::test_failures_that_were_there_before_are_no_fault_of_the_change_and_new_ones_go_back_to_the_coder, tests/test_changes.py::test_a_test_that_fails_once_and_passes_again_is_a_flake_and_goes_into_the_wiki_not_back_to_the_coder, tests/test_changes.py::test_after_its_fix_rounds_the_failure_goes_to_the_owner_not_on_forever, tests/test_changes.py::test_main_moved_on_while_the_change_ran_the_judge_merges_it_and_the_diff_stays_the_change_s_own, tests/test_changes.py::test_a_conflict_with_main_goes_back_to_the_coder, tests/test_changes.py::test_a_test_run_is_read_by_name_in_the_languages_the_stack_builds, tests/test_changes.py::test_one_test_runs_by_its_id_and_a_hostile_id_never_reaches_a_shell]}
+    trace: [ops/changes.py]
+  - id: CHG-06
+    title: Red before green
+    statement: Each acceptance test the tester writes shall be run by the judge on main before the change, and a test that
+      passes there shall not count as an acceptance test of its criterion; the request page shall show each criterion with
+      its test's result before and after the change.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-14]
+    sources: [docs/CHANGE-REQUESTS.md]
+    verify: {method: test, by: [tests/test_changes.py::test_an_acceptance_test_that_passes_before_the_change_goes_back_to_the_tester, tests/test_changes.py::test_the_coder_may_not_change_the_acceptance_tests, tests/test_changes.py::test_the_coder_may_keep_requirements_current_after_the_tester_touched_them, tests/test_changes.py::test_the_step_lines_are_read_from_summaries]}
+    trace: [ops/changes.py, images/mission-control/web/static/task.js]
+  - id: CHG-07
+    title: The conventions lens
+    statement: A third reviewer on the other engine shall judge the change against the repository wiki's Conventions page
+      and the repository's own rules (AGENTS.md, CLAUDE.md, CONTRIBUTING) and say whether docs and requirements were kept
+      current where the repository keeps them, and its block shall stop the merge unless the owner overrides it with a reason.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-14, SN-15]
+    sources: [docs/CHANGE-REQUESTS.md]
+    verify: {method: test, by: [tests/test_changes.py::test_three_lenses_look_on_the_other_engine_and_their_findings_go_back_once]}
+    trace: [ops/changes.py, ops/builds.py, ops/builds.review.py]
+  - id: CHG-08
+    title: One wiki per repository, one writer
+    statement: Each onboarded repository shall have a wiki (vault/repos/<name>/wiki) with the pages Overview, Architecture,
+      Conventions, How to build and test, Fragile areas, Decisions, Lessons, Glossary and Open questions, owned by the Scribe
+      as its one writer, seeded by the onboarding job from the code map, the digest and the analysis, indexed by the search,
+      and read in the brief of every code role and of no scout, the role that reads the web.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-14, SN-10, SN-17]
+    sources: [docs/CHANGE-REQUESTS.md, docs/MEMORY.md]
+    verify: {method: test, by: [tests/test_repowiki.py::test_the_first_version_keeps_only_facts_with_evidence_and_names_its_commit, tests/test_repowiki.py::test_every_memory_door_knows_the_repository_wikis, tests/test_repowiki.py::test_the_builder_s_clone_is_where_the_current_code_is, tests/test_repowiki.py::test_the_profile_is_kept_in_the_vault_and_ai_stack_knows_its_own, tests/test_repowiki.py::test_a_fold_goes_through_the_wiki_s_own_compile_on_the_repository_s_pages_and_stamps_them, tests/test_onboard.py::test_a_big_repository_gets_the_whole_package_and_one_message]}
+    trace: [ops/repowiki.py, ops/onboard.py, ops/wikis.py, ops/memory.py, ops/journal.py, ops/swarm_client.py, ops/mission_extras.py, images/qmd/start.sh, prompts/scribe.md, config/agents.yaml]
+  - id: CHG-09
+    title: Every fact on a repository wiki cites its evidence and its commit
+    statement: A fact on a repository wiki shall name its evidence (a commit, a build, a request, a review comment or a run)
+      and the commit it held at, a fact without evidence shall not be written, the Librarian's lint shall mark a page to
+      re-verify when a file it cites changed since that commit, and a superseded fact shall stay under Superseded (MEM-12).
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-10, SN-14]
+    sources: [docs/CHANGE-REQUESTS.md]
+    verify: {method: test, by: [tests/test_repowiki.py::test_a_page_whose_files_changed_is_marked_to_re_verify_and_says_so_in_the_brief, tests/test_repowiki.py::test_the_lint_finds_lines_without_evidence]}
+    trace: [ops/repowiki.py]
+  - id: CHG-10
+    title: The code roles remember
+    statement: Every code role (coder, tester, breaker, reviewer, prober, presenter, scribe) shall open a run like every
+      other agent (MEM-05), with its journal, then the repository wiki (Conventions, How to build and test, Fragile areas
+      and Lessons first), then the context pack, and shall record a journal entry at its end.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-17, SN-14]
+    sources: [docs/CHANGE-REQUESTS.md]
+    verify: {method: test, by: [tests/test_repowiki.py::test_the_brief_says_the_code_wins_and_keeps_to_its_budget, tests/test_changes.py::test_a_trial_arm_without_the_wiki_neither_reads_nor_writes_it]}
+    trace: [ops/changes.py, ops/repowiki.py]
+  - id: CHG-11
+    title: The owner's review becomes a lesson
+    statement: When the owner requests changes on or rejects a change, the Scribe shall write his text as a lesson candidate
+      on the repository wiki with the request as its evidence, the owner may mark a lesson as a rule, which moves it to
+      Conventions as his decision, and a lesson that concerns a role rather than a repository shall go through the Coach as an
+      agent change that is replayed before it applies.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-17, SN-08]
+    sources: [docs/CHANGE-REQUESTS.md]
+    verify: {method: test, by: [tests/test_repowiki.py::test_the_owner_s_review_stays_as_a_lesson_and_his_rule_as_a_convention, tests/test_changes.py::test_request_changes_reruns_the_coder_and_every_step_after_it_and_becomes_a_lesson, tests/test_changes.py::test_a_rejection_is_a_lesson_and_the_change_ends_with_it, tests/test_changes.py::test_a_rule_of_the_owner_s_goes_to_the_wiki_or_says_there_is_none, tests/test_changes.py::test_the_scribe_folds_the_retro_and_its_failure_never_fails_the_change]}
+    trace: [ops/changes.py, ops/repowiki.py, ops/builds.py]
+  - id: CHG-12
+    title: Running a repository's tests is the owner's consent
+    statement: Onboarding a repository shall run nothing of it (BLD-18), and the owner's tap "Let the builder change it"
+      shall be the consent to run that repository's build and tests in the sealed sandbox of its toolchain, without
+      secrets, with the package proxy as its only network and under memory and time limits.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05, SN-14]
+    sources: [docs/CHANGE-REQUESTS.md]
+    verify: {method: inspection, by: [ops/changes.py, ops/onboard.py, ops/claude_tasks.py]}
+  - id: CHG-13
+    title: The sandbox carries each toolchain
+    statement: The builder's sealed sandbox shall carry the toolchains python, node, go, rust and java, because the coder needs them
+      in its own container, each repository's profile shall name its toolchain, and a request on a repository whose dependencies the
+      proxy cannot serve shall be refused with the reason until the owner allows the dependency.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-14, SN-05]
+    sources: [docs/CHANGE-REQUESTS.md]
+    verify: {method: test, by: [tests/test_changes.py::test_a_suite_runs_no_more_workers_than_the_sandbox_holds, tests/test_changes.py::test_the_judge_gives_a_large_suite_the_time_its_profile_says, tests/test_changes.py::test_the_sandbox_carries_each_toolchain_and_reaches_only_package_registries]}
+    trace: [images/builder/Dockerfile, images/pkgproxy/allow-builder.txt, ops/builds.py, ops/changes.py]
+  - id: CHG-14
+    title: The prober tries the change for real
+    statement: Where a repository can be run in its sandbox, the prober shall start it on the branch, exercise the changed
+      behaviour through its interface or its pages (Playwright for web pages) and keep a log and a screenshot as evidence
+      on the request page, and a change the prober could not exercise shall say so there.
+    type: functional
+    priority: should
+    status: partial
+    gap: Built and tested with a stub of Claude; not yet seen on a real change in the sandbox with Playwright, which needs the image of CHG-13.
+    parents: [SN-14]
+    sources: [docs/CHANGE-REQUESTS.md]
+    verify: {method: test, by: [tests/test_changes.py::test_the_prober_s_verdict_and_evidence_are_kept_and_could_not_try_is_said]}
+    trace: [ops/changes.py, prompts/prober.md, images/mission-control/server.py, images/mission-control/web/static/task.js]
+  - id: CHG-15
+    title: Protected paths when the stack changes itself
+    statement: A change request on ai-stack shall not change ops/check.sh, the tests of the change pipeline, eval/, the
+      private answer keys, secrets or the deploy, unless the owner's specification names the path, and a diff that touches
+      one shall fail the judge with the path named.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05, SN-08]
+    sources: [docs/CHANGE-REQUESTS.md]
+    verify: {method: test, by: [tests/test_changes.py::test_ai_stack_s_own_gates_are_protected_unless_the_owner_names_the_path]}
+    trace: [ops/changes.py]
+  - id: CHG-16
+    title: The report says what was done, with evidence
+    statement: The Presenter shall write the request's report with each acceptance criterion and its state (met with its
+      test, or not met with why), what the change did not do, the judge's figures, the reviewers' verdicts, the prober's
+      evidence and the cost, and the pull request's description and the message to the owner shall be made from it.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-07, SN-14]
+    sources: [docs/CHANGE-REQUESTS.md]
+    verify: {method: test, by: [tests/test_changes.py::test_the_report_gives_every_criterion_its_evidence_and_the_carrier_waits_for_the_owner, tests/test_changes.py::test_a_change_whose_checks_failed_cannot_be_approved, tests/test_changes.py::test_nothing_ends_without_the_owner_and_his_merge_ends_the_step]}
+    trace: [ops/changes.py, ops/builds.py, images/mission-control/web/static/task.js]
+  - id: CHG-17
+    title: The replay exam
+    statement: The stack shall have trials of type replay, each made from a real commit of an onboarded repository and its
+      parent (the task written from the commit's text, the agents starting from a snapshot of the parent with no history, the
+      tests that fail at the parent and pass at the commit as the hidden suite, those that pass at both for regressions), up to
+      ten per repository with their keys outside every agent's reach, with the arms one-coder, swarm, swarm with the wiki,
+      swarm with the wiki and skills, and swarm with the brief, scored on the hidden suite, regressions, tokens and minutes, on the trials' scoreboard.
+    type: functional
+    priority: must
+    status: partial
+    gap: Run on one repository so far; the conventions verdict is on the run's report, not a scoreboard column, and the task text is the commit's own message, not rewritten by the Analyst.
+    parents: [SN-08, SN-14]
+    sources: [docs/CHANGE-REQUESTS.md, docs/SWARM-TRIALS.md]
+    verify: {method: test, by: [tests/test_changes.py::test_an_exam_s_run_neither_reads_nor_writes_the_role_s_journal, tests/test_replay.py::test_a_case_is_a_real_change_with_tests_and_its_key_stays_in_no_container, tests/test_replay.py::test_what_counts_is_what_failed_before_and_passes_after_by_running_it, tests/test_replay.py::test_the_score_is_the_hidden_suite_and_regressions_and_a_run_that_breaks_things_loses_points, tests/test_replay.py::test_outcomes_are_read_by_name_from_pytest_and_go, tests/test_replay.py::test_the_agents_copy_has_no_history_and_no_trace_of_the_answer, tests/test_replay.py::test_each_arm_goes_through_its_own_door, tests/test_replay.py::test_the_delivered_branch_is_found_whichever_way_the_arm_delivered, tests/test_replay.py::test_a_trial_ends_at_its_report_and_never_waits_for_the_owner_or_writes_the_wiki]}
+    trace: [ops/replay.py, ops/trials.py, ops/changes.py]
+  - id: CHG-18
+    title: A skill stays only where the exam improves
+    statement: A skill adopted for a code role shall be pinned by version, reviewed before it is installed, and kept only
+      where the replay exam's score on that role's cases improved against the version without it.
+    type: constraint
+    priority: should
+    status: implemented
+    parents: [SN-08, SN-14]
+    sources: [docs/CHANGE-REQUESTS.md]
+    verify: {method: test, by: [tests/test_replay.py::test_a_skill_reaches_only_its_role_and_says_it_is_a_method_not_an_order, tests/test_replay.py::test_a_skill_that_changed_since_its_review_does_not_reach_an_agent, tests/test_replay.py::test_the_pinned_skills_are_as_reviewed_and_stay_off_unless_a_run_asks]}
+    trace: [ops/skills.py, config/skills.yaml, ops/changes.py]
+  - id: CHG-19
+    title: The brief for a coding step
+    statement: A coding step of an arm that asks for it shall get a brief of at most 4,000 characters plus its cut mark, marked as data and saying the code wins,
+      that names the files of the specification or, when it names none, the files the request's words match in the code map's digest, and
+      for those files how often they change, what changes with them, what uses them when a code graph exists and the tests
+      that cover them when known; the profile's commands; the wiki's lines citing those files; past failures; and what it could
+      not find out. The exam arm swarm+brief shall have the fixed wiki opening off and the brief on, with history facts computed at the
+      case's parent commit and with files outside the trial's own tree left out, and its report shall state what still comes from newer code. Every
+      other arm and every ordinary change shall stay on the wiki opening until the exam shows the brief is better.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-08, SN-14]
+    sources: [docs/REPO-KNOWLEDGE.md]
+    rationale: Of 77 coding builds on 7 November 2026 none called the code graph, though every one could. A tool an agent could call is not knowledge it has.
+    verify: {method: test, by: [tests/test_repofacts.py::test_the_brief_tells_a_step_what_its_files_need, tests/test_repofacts.py::test_the_brief_finds_the_files_by_the_request_s_words_when_none_are_named, tests/test_repofacts.py::test_the_brief_keeps_to_its_budget_and_shows_the_cut, tests/test_repofacts.py::test_the_brief_says_what_it_does_not_know, tests/test_repofacts.py::test_a_trial_s_brief_is_the_wiki_of_repository_s_within_the_trial_s_own_tree, tests/test_repofacts.py::test_the_facts_at_a_commit_reach_nothing_later_and_stay_out_of_the_repo_page, tests/test_changes.py::test_the_brief_replaces_the_wiki_opening_only_where_the_arm_says_so, tests/test_replay.py::test_the_brief_arm_has_the_wiki_opening_off_the_brief_on_and_the_facts_of_the_parent]}
+    trace: [ops/repofacts.py, ops/changes.py, ops/replay.py, ops/codegraph.py]

@@ -1,0 +1,9 @@
+[Unit]
+Description=Swarm: the experiment of agent change #%i (replays of the agent's past runs, baseline and candidate; ops/evals.py)
+[Service]
+Type=oneshot
+TimeoutStartSec=2h
+Environment=DOCKER_HOST=unix://%t/docker.sock
+Environment=PYTHONUNBUFFERED=1
+WorkingDirectory=%h/ai-stack
+ExecStart=/usr/local/bin/sops exec-env secrets/secrets.enc.yaml "sops exec-env secrets/agent-keys.enc.yaml \"python3 ops/evals.py run %i\""

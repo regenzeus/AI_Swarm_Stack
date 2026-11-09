@@ -1,0 +1,10 @@
+# feature: mail
+[Unit]
+Description=Crew: Inbox digest: newsletters worth keeping -> vault raw/_inbox, under the Gmail read grant (daily)
+[Service]
+Type=oneshot
+TimeoutStartSec=2h
+Environment=DOCKER_HOST=unix://%t/docker.sock
+WorkingDirectory=%h/ai-stack
+ExecCondition=/usr/bin/python3 %h/ai-stack/ops/stack_gate.py --wait 1800 --slot 12
+ExecStart=/usr/local/bin/sops exec-env secrets/secrets.enc.yaml "sops exec-env secrets/agent-keys.enc.yaml \"python3 ops/crew.py inbox\""
