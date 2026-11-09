@@ -190,6 +190,10 @@ def pinned_by(changed, old, new):
 
 def main(old, new):
     global ok
+    try:                                                  # SEC-22: the stack's repository keeps its never-in-git hooks, every deploy
+        subprocess.run([sys.executable, str(R / "ops/termguard.py"), "install", str(R)], cwd=R, capture_output=True, timeout=30, check=True)
+    except (OSError, subprocess.SubprocessError) as e:
+        print(f"the never-in-git hooks were not installed: {e}", flush=True)
     changed = subprocess.run(["git", "diff", "--name-only", old, new], cwd=R, capture_output=True, text=True).stdout.split()
     print(f"{len(changed)} files changed {old[:8]}..{new[:8]}", flush=True)
     images = sorted({f.split("/")[1] for f in changed if f.startswith("images/") and f.count("/") >= 2} | pinned_by(changed, old, new))

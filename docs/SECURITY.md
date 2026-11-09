@@ -119,6 +119,12 @@ people, spends money, deploys code, deletes data or acts on the AI phone. These 
 
 ## Hard rules
 
+- **What a deployment forbids never reaches git (SEC-22).** `/srv/ai/private/never-in-git.txt` (in no repository) lists
+  what must never be committed or pushed. The stack's repository runs `ops/git-hooks` (installed by every deploy), which
+  refuse a commit whose changed lines, file names or message match the list and a push of any commit that does; the
+  runner's own pushes from the builder's clones, which run no hook, check the same list (`ops/builds.py`). A match is
+  named by its line in the list, never printed. The public snapshot has its own scan on top (`docs/PUBLISHING.md`).
+
 Never delete NAS data or Docker volumes without explicit approval; never alter RAID/SHR, storage pools or
 unrelated shares; never expose services publicly or touch router port forwarding without approval; never weaken
 NAS security; never print, commit or store credentials unencrypted; never bypass authentication or MFA; never

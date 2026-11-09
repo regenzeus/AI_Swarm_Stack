@@ -36,6 +36,7 @@ docs it points to. `README.md` is the product overview; `docs/` holds architectu
 | `images/mail/` | The Gmail connector: search, read, organize, Trash for the agents, only while the owner grants it | [images/mail/AGENTS.md](images/mail/AGENTS.md) |
 | other images | the patched model gateway, Hermes, vault search, code graph, a repository's facts, OpenCode, package proxy, port forwarder, one-shot tools, CI runner | [litellm (patched)](images/litellm/AGENTS.md), [hermes](images/hermes/AGENTS.md), [qmd](images/qmd/AGENTS.md), [graphify](images/graphify/AGENTS.md), [repointel](images/repointel/AGENTS.md), [opencode](images/opencode/AGENTS.md), [pkgproxy](images/pkgproxy/AGENTS.md), [portfwd](images/portfwd/AGENTS.md), [tools](images/tools/AGENTS.md), [ci-runner](images/ci-runner/AGENTS.md) |
 | `ops/` | Host-side operations: Mission Control runner, deploy, backups, keys, jobs | [ops/AGENTS.md](ops/AGENTS.md) |
+| `ops/git-hooks/` | the never-in-git guard's hooks (SEC-22) | [ops/git-hooks/AGENTS.md](ops/git-hooks/AGENTS.md) |
 | `ops/systemd/` | systemd user units and timers | [ops/systemd/AGENTS.md](ops/systemd/AGENTS.md) |
 | `ops/windows/` | PowerShell for the Windows host | [ops/windows/AGENTS.md](ops/windows/AGENTS.md) |
 | `ops/swarm-probes/` | The agent swarm's phase 0 proofs, re-runnable after upgrades | [ops/swarm-probes/AGENTS.md](ops/swarm-probes/AGENTS.md) |

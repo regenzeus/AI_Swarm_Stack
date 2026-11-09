@@ -100,6 +100,11 @@ def sealed(path):
 
 def git(path, *args, timeout=300, check=True):
     sealed(path)
+    if args and args[0] == "push":                      # SEC-22: this git runs no hook (SEC-21), so the never-in-git guard is here
+        import termguard as TG
+        why = TG.refused(path, TG.push_revs(list(args[1:])))
+        if why:
+            raise RuntimeError(f"git push {why}")
     p = subprocess.run(["git", *SAFE_GIT, "-C", str(path), *args], capture_output=True, text=True, timeout=timeout)
     if check and p.returncode:
         raise RuntimeError(f"git {' '.join(args[:3])}: {tail((p.stderr or p.stdout).strip(), 4000)}")  # cap: store

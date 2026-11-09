@@ -1,0 +1,3 @@
+#!/bin/sh
+# The never-in-git guard (SEC-22, ops/termguard.py): installed by ops/termguard.py install, which deploy runs.
+exec python3 "$(dirname "$0")/../termguard.py" pushed

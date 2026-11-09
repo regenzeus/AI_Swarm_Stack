@@ -251,3 +251,19 @@ items:
       the Docker socket (review SEC-R1).
     verify: {method: test, by: [tests/test_builds.py::test_a_clone_the_sandbox_rigged_is_refused_and_its_hooks_never_run]}
     trace: [ops/builds.py]
+  - id: SEC-22
+    title: What a deployment forbids never reaches git
+    statement: A commit or a push of the stack's repositories that holds what the deployment's private never-in-git list
+      forbids (in a changed line, a file name or a message) shall be refused, also on the runner's own pushes from the
+      builder's clones, without printing the match; the list shall be in no repository, and every deploy shall install the
+      repository's hooks again.
+    type: constraint
+    priority: must
+    status: implemented
+    acceptance: 'Test: a commit with a forbidden term in a staged line or its message is refused, a push of a commit that skipped the commit hooks is refused, the runner''s push guard refuses it too, a removed line and a term inside a longer word pass, and without a list everything passes.'
+    parents: [SN-04, SN-05]
+    sources: [docs/SECURITY.md]
+    rationale: 'The owner, 9 Nov 2026: "From now into the future never can something Example specific reach git." The stack is a platform; one deployment''s employer, products and projects stay out of every repository.'
+    verify: {method: test, by: [tests/test_termguard.py::test_a_commit_holding_a_forbidden_term_is_refused_and_a_clean_one_passes, tests/test_termguard.py::test_a_push_of_a_commit_that_skipped_the_hooks_is_refused, tests/test_termguard.py::test_the_runners_own_push_is_guarded_and_a_removed_line_is_no_leak, tests/test_termguard.py::test_without_a_list_everything_passes]}
+    trace: [ops/termguard.py, ops/git-hooks/pre-commit, ops/git-hooks/commit-msg, ops/git-hooks/pre-push, ops/builds.py, ops/deploy.py]
+
