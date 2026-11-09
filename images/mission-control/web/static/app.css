@@ -1606,4 +1606,17 @@ q.quote { quotes: "“" "”"; }
   body.chatmode .chatpane { align-self: stretch; height: 100%; max-height: 100%; min-height: 0; overflow: hidden; }
   body.chatmode .chatpane .msgs { flex: 1 1 0; min-height: 0; overflow-y: auto; }
 }
+/* APP-59: and flush with the app (the owner, 9 Nov 2026: "make Chats flush with AI Stack"). On a desk the chats sit
+   against the rail as a column of the app, not a card floating on the page: no gap, no frame, the window's full
+   height; the conversation takes the rest, and what you read and the box you write in keep a reading width. */
+@media (min-width: 960px) {
+  body.chatmode .view { max-width: none; margin: 0; padding: 0; }
+  body.chatmode .chatwrap { gap: 0; grid-template-columns: 284px minmax(0, 1fr); }
+  body.chatmode .chatlist, body.chatmode .chatlist.open { border: 0; border-right: 1px solid var(--border); border-radius: 0; background: var(--bg2); padding: 18px 12px 12px; }
+  body.chatmode .chatpane { padding: 0 clamp(20px, 3vw, 48px) 16px; background: var(--surface); }
+  body.chatmode .chathead { margin: 0 calc(-1 * clamp(20px, 3vw, 48px)); padding: 14px clamp(20px, 3vw, 48px); border-bottom: 1px solid var(--border); }
+  body.chatmode .chatpane .msgs { padding-top: 22px; }
+  body.chatmode .chatpane .msgs > *, body.chatmode .chatpane .tobwrap, body.chatmode .chatpane .cquick, body.chatmode .chatpane .composer2 {
+    width: 100%; max-width: 820px; margin-left: auto; margin-right: auto; box-sizing: border-box; }
+}
 

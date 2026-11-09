@@ -132,7 +132,7 @@ def test_the_tasks_tab_has_five_views_and_the_old_addresses_go_there():
     nav = re.search(r"^const NAV = .*?;$", JS, re.M | re.S)[0]
     assert '["tasks", "#/tasks", "Tasks", ic.tasks]' in nav and '"#/missions"' not in nav and len(re.findall(r'\["\w+", "#/', nav)) == 6
     assert re.search(r'const TVIEWS = \[\["tasks", "Tasks"\], \["activity", "Activity"\], \["team", "Team"\], \["network", "Network"\], \["ideas", "Ideas"\]\];', JS)
-    assert 'const TLISTS = [["active", "Active"], ["repeating", "Repeating"], ["done", "Done"]];' in JS and '[["you", "Yours"], ["stack", "The stack\'s"], ["all", "All"]]' in JS and 'tasksOwner = "all"' in JS
+    assert 'const TLISTS = [["active", "Active"], ["repeating", "Repeating"], ["done", "Done"]];' in JS and '[["you", "User"], ["stack", "Stack"], ["all", "All"]]' in JS and 'tasksOwner = "all"' in JS
     assert "missions: vMissionsGo" in JS and "new: vNewGo" in JS and "function vMissions()" not in JS and "function vNew()" not in JS
     go = JS.split("function vMissionsGo() {", 1)[1].split("\n}", 1)[0]
     assert '"#/tasks?v=team&p=crew"' in go and '"#/tasks?v=activity"' in go

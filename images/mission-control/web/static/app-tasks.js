@@ -88,7 +88,7 @@ function tasksBodyHtml() {
   return `${tasksOwner !== "stack" ? phoneBanner() : ""}
     ${tnewOpen ? newTaskHtml() : ""}
     <div class="tfil"><div class="chips">${TLISTS.map(([k, l]) => `<button type="button" class="fchip ${tasksList === k ? "on" : ""}" data-tl="${k}">${l}<span>${n(k)}</span></button>`).join("")}</div>
-      <div class="seg tow">${[["you", "Yours"], ["stack", "The stack's"], ["all", "All"]].map(([k, l]) => `<button type="button" class="${tasksOwner === k ? "on" : ""}" data-to="${k}">${l}</button>`).join("")}</div></div>
+      <div class="seg tow">${[["you", "User"], ["stack", "Stack"], ["all", "All"]].map(([k, l]) => `<button type="button" class="${tasksOwner === k ? "on" : ""}" data-to="${k}">${l}</button>`).join("")}</div></div>
     <div class="wsearch tq">${ic.search}<input class="input" id="tq" placeholder="Find a task" value="${esc(tasksQuery)}" autocomplete="off"></div>
     <div id="tlistbox">${tasksListHtml()}</div>
     ${rules ? `<details class="section card pad" data-keep="trules"><summary class="row between" style="gap:8px"><b>Rules · ${(S.bus?.rules || []).length}</b><span class="tiny faint">a new task each time something happens</span></summary>
@@ -261,7 +261,7 @@ function netDraw() {
   const box = $("#netbox");
   if (!box) return;
   const head = `<div class="netctl"><div class="seg">${[["tasks", "Tasks and agents"], ["team", "Agents together"]].map(([k, l]) => `<button type="button" data-nm="${k}" class="${netMode === k ? "on" : ""}">${l}</button>`).join("")}</div>
-    ${netMode === "tasks" ? `<div class="netctl2"><div class="seg">${[["you", "Yours"], ["stack", "The stack's"], ["all", "All"]].map(([k, l]) => `<button type="button" data-no="${k}" class="${netOwner === k ? "on" : ""}">${l}</button>`).join("")}</div>
+    ${netMode === "tasks" ? `<div class="netctl2"><div class="seg">${[["you", "User"], ["stack", "Stack"], ["all", "All"]].map(([k, l]) => `<button type="button" data-no="${k}" class="${netOwner === k ? "on" : ""}">${l}</button>`).join("")}</div>
       <select class="input" id="netdays" aria-label="Period">${[[1, "Today"], [7, "7 days"], [30, "30 days"], [90, "90 days"]].map(([d, l]) => `<option value="${d}" ${netDays === d ? "selected" : ""}>${l}</option>`).join("")}</select></div>` : ""}</div>`;
   if (netMode === "team") {
     box.innerHTML = head + `<div id="netteam"></div>`;

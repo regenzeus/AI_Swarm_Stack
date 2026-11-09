@@ -2194,7 +2194,7 @@ A repository's Health tab shall open with its figures at a glance (health weight
 
 **Chat holds the window on a desktop** · must · functional · **implemented**
 
-On a desktop the chat shall fill the window without the page scrolling, its list and its conversation each scrolling in their own column and the box to write in at the bottom; no height taken from the window shall overshoot it when the app is scaled up for a wide screen.
+On a desktop the chat shall fill the window without the page scrolling, its list and its conversation each scrolling in their own column and the box to write in at the bottom; no height taken from the window shall overshoot it when the app is scaled up for a wide screen. The list of chats shall sit flush against the app's rail as a column of the app, with no gap, frame or card around it, and the conversation shall take the rest of the window at a reading width.
 
 - Parents: [SN-14](#sn-14)
 - Sources: `docs/UX-REVIEW-2026-10-30.md`
