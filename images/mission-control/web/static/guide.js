@@ -60,10 +60,10 @@ const svcState = (name) => {
 // [name, short, service (or "@runner" / null), chapter, section, longer explanation, app port or in-app route]
 const ARCH = [
   ["You", [
-    ["Phone & PC", "Mission Control app, push", null, "first-ten-minutes", "5. Put it on your phone", "This app, installed on your phone and PC. Everything here is reachable only from your own devices over Tailscale."],
+    ["Phone & PC", `${(window.DEPLOY && DEPLOY.APP_NAME) || "AI Stack"} app, push`, null, "first-ten-minutes", "5. Put it on your phone", "This app, installed on your phone and PC. Everything here is reachable only from your own devices over Tailscale."],
     ["Telegram", "chat, briefings, digest", null, "delivery", "Telegram", "Hermes on Telegram: chat with it there, get briefings with buttons into this app, and the morning digest."]]],
   ["Front doors", [
-    ["Mission Control", "this app + its tools", "mission-control", "welcome", "The app at a glance", "This app and its API, plus the tools Hermes uses to manage missions, builds and repositories. It never runs jobs itself: the runner does.", "#/"],
+    [(window.DEPLOY && DEPLOY.APP_NAME) || "AI Stack", "this app + its tools", "mission-control", "welcome", "The app at a glance", "This app and its API, plus the tools Hermes uses to manage missions, builds and repositories. It never runs jobs itself: the runner does.", "#/"],
     ["Open WebUI", "classic chat", "openwebui", "technology", "Tools you can open", "A classic chat interface to Hermes. You are signed in through your Tailscale login.", "443"],
     ["Hermes admin", "skills, sessions, logs", "hermes-dashboard", "technology", "Tools you can open", "Hermes' own dashboard: its skills, sessions, logs and settings. No password: your Tailscale login lets you in.", "8448"],
     ["OpenCode", "code editor", "opencode", "code", "The other code tools", "A coding app in the browser for hands-on changes to your repositories.", "8445"],

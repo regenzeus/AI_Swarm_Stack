@@ -27,7 +27,7 @@ subscription; the builder's second engine, Claude Code, runs on your Claude subs
 **Knowledge.** *qmd* searches the vault (keyword and meaning-based search). *Hindsight* is the long-term memory,
 running local models. *Graphify* holds code graphs.
 
-**Mission Control.** This app, and the runner on the PC behind it, which schedules missions, watches triggers,
+**{{APP_NAME}}.** This app, and the runner on the PC behind it, which schedules missions, watches triggers,
 runs builds and measures resources. The app never runs anything itself. It drops requests into an inbox that the
 runner checks and carries out.
 
@@ -42,7 +42,7 @@ Agents reach tools through the gateway, and each agent only gets the ones it nee
 | **qmd** | search over the vault, reports, wikis, code summaries, mail and chat exports |
 | **research** | web research through the privacy guard and the scout |
 | **fetch** | the isolated page reader (HTML and PDF) |
-| **missions** | Mission Control's tools (listed in the Chat chapter) |
+| **missions** | {{APP_NAME}}'s tools (listed in the Chat chapter) |
 | **graphify** | the code graph |
 | **claude** | Claude Code, read-only, for questions about code and documents (Claude tasks) |
 | **mail** | your Gmail, only under the grants you give (Connections) |

@@ -101,6 +101,19 @@ docs it points to. `README.md` is the product overview; `docs/` holds architectu
 - **Least privilege.** Each agent has its own LiteLLM key with its own models, budget and tools (`ops/keys.sh`);
   each container gets only the networks it needs.
 
+## Layout: right in every shape of window (APP-60)
+
+The owner, 9 Nov 2026: "looking good on Mobile and on desktop on any ratio ... Durable."
+- A height taken from the window divides by the app's zoom: `calc(100dvh / var(--z, 1))`. From 1,900 px the shell is
+  zoomed (`--z`), and a bare `100dvh` inside it overshoots the window (the chat's box to write in fell below the fold).
+- A page that is an app (Chat) holds the window: the page never scrolls, its columns scroll inside themselves, and the
+  box to write in stays in view. A page that is a document scrolls as one.
+- Columns fill their width (`align-items: stretch`, cards `width: 100%`); grids use `minmax(0, 1fr)` and
+  `repeat(auto-fit, minmax(…, 1fr))`, never a fixed width that pushes a phone sideways.
+- `make journeys` opens the main screens in ten windows (phone portrait and landscape, tablet both ways, laptop, 1440 and
+  1080p desktops, ultrawide, a portrait monitor, 4K) and every screen at a desktop: sideways scrolling, text a box cuts
+  off, the chat's box out of the window, a chat page that scrolls or no navigation fails it, nightly too.
+
 ## Truncation (the owner's rule, DEC-27)
 
 Do not cut text by default. Coding agents cut text by reflex (`[:200]`, `.slice(0, 500)`, `| tail -20`, `limit 20`),
@@ -114,7 +127,12 @@ reason. **Never cut silently, and never cut without a reason.**
   alerts, error messages, logs shown in the app, Ledger text (bodies, evidence, reasons, messages), reviews and build
   output.
   - Text wraps: `.wrap`, `overflow-wrap: anywhere`. There is no `text-overflow: ellipsis` and no `line-clamp`.
-  - Long text scrolls, or folds behind a visible "Show all".
+  - **A name is never cut** (a task's, a question's, an idea's title): it is a whole sentence or line, and it wraps
+    (APP-57; the owner, 9 Nov 2026: "Again we have truncation. Not good.").
+  - **A list shows every row from the start**: no "Show all" in front of rows the page already has, no fold by default
+    (the owner: "Need All here and all should start as default"). `tests/test_no_hidden_text.py` fails on a new one.
+  - Only a single very long text (a whole result, a long message) may start folded behind a visible "Show all" with a
+    `cap:` tag that says why.
 - **Never cut what the owner types, or a command.** Over a real limit, refuse it and name the limit: `textcap.limit()`
   or `limit_items()`, for example "the description is 21,034 characters; the limit is 20,000". Never store or act on
   part of it. The same holds for a command another agent sends (an Alexa command, a text to say aloud).

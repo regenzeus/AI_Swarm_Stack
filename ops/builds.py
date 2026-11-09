@@ -344,7 +344,7 @@ def handle(req, c):
             CH.on_reject(c, b, str(req.get("reason") or ""))
         elif str(req.get("reason") or "").strip():
             lesson(b, str(req["reason"]).strip(), f"the owner rejected build #{b['id']}")
-        close_pr(b, "Rejected in Mission Control.")
+        close_pr(b, f"Rejected in {DEPLOY.app_name()}.")
         M.event("build", "", f"Build #{b['id']} rejected; branch deleted", title="Builder")
         return {"rejected": True}
     raise ValueError("unknown build action")
@@ -406,7 +406,7 @@ def open_pr(c, bid):
             git(clone(b["repo"]), "push", "-q", "-f", push, f"{b['branch']}:refs/heads/{head}", timeout=300)
             from_repo = FG.FORGE.repo_of(push) if FG.FORGE.repo_of(push) != FG.FORGE.repo_of(where) else None   # GEN-04: a fork's pull request
         pr = FG.FORGE.open_pr(where, head, default_branch(WB / b["repo"]), f"Build #{bid}: {b['title']}",
-                              f"{b['summary'] or ''}\n\n---\nReview and approve in Mission Control: {M.X.APP}/#/build/{bid}",
+                              f"{b['summary'] or ''}\n\n---\nReview and approve in {DEPLOY.app_name()}: {M.X.APP}/#/build/{bid}",
                               draft=not FG.may_merge() or is_local(b["repo"]), from_repo=from_repo)
         if pr:
             put(c, bid, pr=pr.get("url"), pr_number=pr.get("number"))
@@ -1098,7 +1098,7 @@ def revert(c, b):
     git(path, "checkout", "-q", main)
     git(path, "reset", "-q", "--hard", f"origin/{main}")
     git(path, "revert", "-m", "1", "--no-edit", b["merged"])
-    git(path, "commit", "-q", "--amend", "-m", f"Revert build #{bid}: {b['title']}\n\nThe owner's one-step revert in Mission Control.\n\n"
+    git(path, "commit", "-q", "--amend", "-m", f"Revert build #{bid}: {b['title']}\n\nThe owner's one-step revert in {DEPLOY.app_name()}.\n\n"
         "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>")
     git(path, "push", "-q", "origin", main, timeout=120)
     log = [f"reverted {b['merged'][:8]} on {main} as {git(path, 'rev-parse', 'HEAD')[:8]}"]
@@ -1138,7 +1138,7 @@ def deploy(c, b):
             f"{b['head'][:8]}. Something wrote to it after the review; tap Re-run checks to review what it holds now.")
         M.event("build", "", f"Build #{bid} not merged: its branch changed after the review", push=True, title="Builder")
         return
-    if not merge(path, f"origin/{b['branch']}", f"Merge build #{bid}: {b['title']}\n\nApproved in Mission Control.\n\n"
+    if not merge(path, f"origin/{b['branch']}", f"Merge build #{bid}: {b['title']}\n\nApproved in {DEPLOY.app_name()}.\n\n"
                  "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>", "--no-ff"):
         # something approved since touches the same lines: nothing is merged, the build goes back to you
         git(path, "reset", "-q", "--hard", f"origin/{main}")
@@ -1162,7 +1162,7 @@ def deploy(c, b):
     git(path, "push", "-q", "origin", main, timeout=120)
     git(path, "push", "-q", "origin", "--delete", b["branch"], check=False)
     put(c, bid, merged=merged)
-    close_pr(b, f"Merged in Mission Control as {merged[:8]}.")
+    close_pr(b, f"Merged in {DEPLOY.app_name()} as {merged[:8]}.")
     log = [f"merged {b['branch']} into {main} as {merged[:8]}"]
     if repo == "ai-stack":
         if git(STACK, "status", "--porcelain", "--untracked-files=no"):

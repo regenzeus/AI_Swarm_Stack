@@ -28,7 +28,7 @@ function toolHits(q) {
   const words = q.toLowerCase().split(/\s+/).filter(Boolean);
   if (!words.length || !TOOLS) return [];
   const hit = (s) => words.every((w) => s.toLowerCase().includes(w));
-  const pages = TOOLS.pages.filter(([n, , w]) => hit(`${n} ${w}`)).map(([n, href]) => ({ name: `Mission Control → ${n}`, href, ext: false }));
+  const pages = TOOLS.pages.filter(([n, , w]) => hit(`${n} ${w}`)).map(([n, href]) => ({ name: `${APPNAME()} → ${n}`, href, ext: false }));
   const menus = TOOLS.tools.flatMap((t) => t.menus.filter((m) => hit(`${t.name} ${m.name} ${m.words || ""} ${t.what}`)).map((m) => ({ name: `${t.name} → ${m.name}`, href: toolUrl(t, m), ext: true })));
   return [...pages, ...menus];
 }

@@ -637,7 +637,7 @@ items:
     status: implemented
     parents: [SN-01]
     sources: [chat 2026-11-07]
-    verify: {method: test, by: [tests/test_repo_tabs.py::test_the_repo_page_has_seven_tabs_one_question_each, tests/test_repo_tabs.py::test_the_overview_says_what_it_is_and_the_map_folds_its_files, tests/test_repo_tabs.py::test_six_labels_fit_a_phone_and_nothing_is_ellipsed, tests/test_repo_tabs.py::test_a_tab_change_touches_no_page_and_a_live_redraw_keeps_the_tab_and_the_place, tests/test_repo_tabs.py::test_a_tab_loads_its_data_only_when_it_opens, tests/test_repo_tabs.py::test_every_feature_of_the_old_page_is_still_reachable, tests/test_repo_tabs.py::test_history_says_what_a_row_means_in_plain_words_most_telling_first, tests/test_repo_tabs.py::test_nothing_is_cut_the_rest_of_a_list_is_one_tap_away, tests/test_repo_tabs.py::test_health_says_each_finding_and_its_reason_in_plain_words, tests/test_repo_tabs.py::test_a_repository_without_facts_says_so_and_offers_re_analyse, tests/test_repo_tabs.py::test_a_repository_whose_facts_failed_says_what_failed_where_it_failed, tests/test_repo_tabs.py::test_the_wiki_tab_lists_the_pages_and_opens_them_in_the_wiki_viewer]}
+    verify: {method: test, by: [tests/test_repo_tabs.py::test_the_repo_page_has_seven_tabs_one_question_each, tests/test_repo_tabs.py::test_the_overview_says_what_it_is_and_the_map_folds_its_files, tests/test_repo_tabs.py::test_six_labels_fit_a_phone_and_nothing_is_ellipsed, tests/test_repo_tabs.py::test_a_tab_change_touches_no_page_and_a_live_redraw_keeps_the_tab_and_the_place, tests/test_repo_tabs.py::test_a_tab_loads_its_data_only_when_it_opens, tests/test_repo_tabs.py::test_every_feature_of_the_old_page_is_still_reachable, tests/test_repo_tabs.py::test_history_says_what_a_row_means_in_plain_words_most_telling_first, tests/test_repo_tabs.py::test_nothing_is_cut_every_row_shows_from_the_start, tests/test_repo_tabs.py::test_health_says_each_finding_and_its_reason_in_plain_words, tests/test_repo_tabs.py::test_a_repository_without_facts_says_so_and_offers_re_analyse, tests/test_repo_tabs.py::test_a_repository_whose_facts_failed_says_what_failed_where_it_failed, tests/test_repo_tabs.py::test_the_wiki_tab_lists_the_pages_and_opens_them_in_the_wiki_viewer]}
   - id: APP-52
     title: The Tasks tab is built around tasks
     statement: The second tab shall be Tasks, with five views - Tasks (Active, Repeating and Done; the owner's or the
@@ -649,7 +649,7 @@ items:
     status: implemented
     parents: [SN-01, SN-19]
     sources: [DEC-46, 'owner 2026-11-08: What is the difference between task and mission? I feel like tasks is better term and we should streamline and unify. ... How long it runs should not define the term. ... I feel we should keep 6 tabs and integrate tasks in agents. But tasks are not an afterthought. ... I want to see how tasks and agents connect ... Can Agents run without tasks? ... I feel like these should just be a special kind of tasks.']
-    verify: {method: test, by: [tests/test_tasks_tab.py::test_the_tasks_tab_has_five_views_and_the_old_addresses_go_there, tests/test_tasks_tab.py::test_new_task_is_one_form_that_sends_only_what_was_set]}
+    verify: {method: test, by: [tests/test_tasks_tab.py::test_the_head_counts_the_tasks_the_list_shows, tests/test_tasks_tab.py::test_the_tasks_tab_has_five_views_and_the_old_addresses_go_there, tests/test_tasks_tab.py::test_new_task_is_one_form_that_sends_only_what_was_set]}
     trace: [images/mission-control/web/static/app.js, images/mission-control/web/static/swarm.js, images/mission-control/web/static/app.css]
   - id: APP-53
     title: The Network shows which agents work on which tasks
@@ -701,3 +701,65 @@ items:
     sources: ["owner, 8 Nov 2026: Browser mode always only makes use of small space", "owner, 8 Nov 2026: I want not only the mobile version of the page to look premium but also desktop version. I do not want to micromanage everything."]
     verify: {method: test, by: [tests/test_app_layout.py::test_an_agent_s_own_sentence_shows_dates_the_app_s_way_and_quotes_as_quotes, tests/test_app_layout.py::test_the_desk_uses_the_width_it_has]}
     trace: [images/mission-control/web/static/app.css, images/mission-control/web/static/app-base.js, images/mission-control/web/static/app-tasks.js]
+  - id: APP-57
+    title: Names whole, lists whole
+    statement: A name the app shows (a task's, a question's, an idea's) shall be whole, never cut; a list shall show every row
+      from the start, with nothing behind a "Show all"; the Tasks list shall offer yours, the stack's and all, all first.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-14]
+    sources: [AGENTS.md]
+    rationale: 'The owner, 9 Nov 2026: "Again we have truncation. Not good. Make a new truncation audit. Truncation keeps creeping in. Need All here and all should start as default."'
+    verify: {method: test, by: [tests/test_no_hidden_text.py::test_a_name_is_never_made_by_cutting, tests/test_no_hidden_text.py::test_a_show_all_names_its_reason, tests/test_no_hidden_text.py::test_no_row_is_hidden_by_its_place_in_the_list, tests/test_tasks.py::test_a_task_s_name_is_its_first_sentence_whole_and_never_cut, tests/test_repo_tabs.py::test_nothing_is_cut_every_row_shows_from_the_start]}
+    trace: [ops/tasks.py, images/mission-control/web/static/app-tasks.js, images/mission-control/web/static/app-memory.js, images/mission-control/web/static/app-wiki-code.js]
+  - id: APP-58
+    title: Health at a glance and every part
+    statement: A repository's Health tab shall open with its figures at a glance (health weighted by files, test reach, parts,
+      unused code, parts one person holds) and then every part with each measure it has, as bars with their words; a part
+      without a score keeps its row.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-14]
+    sources: [docs/CODER-KNOWLEDGE.md]
+    verify: {method: test, by: [tests/test_repo_tabs.py::test_health_opens_with_a_glance_and_every_part_even_one_without_a_score]}
+    trace: [images/mission-control/web/static/app-memory.js, images/mission-control/web/static/app.css]
+  - id: APP-59
+    title: Chat holds the window on a desktop
+    statement: On a desktop the chat shall fill the window without the page scrolling, its list and its conversation each
+      scrolling in their own column and the box to write in at the bottom; no height taken from the window shall overshoot
+      it when the app is scaled up for a wide screen.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-14]
+    sources: [docs/UX-REVIEW-2026-10-30.md]
+    verify: {method: test, by: [tests/test_app_layout.py::test_chat_on_a_desktop_holds_the_window_and_no_height_overshoots_the_zoom]}
+    trace: [images/mission-control/web/static/app.css]
+  - id: APP-60
+    title: Right in every shape of window
+    statement: Every screen of the app shall look right on a phone and on a desktop in any shape of window, portrait or
+      landscape, from a phone to a 4K screen; the nightly journey shall open the main screens in each shape and every screen at
+      a desktop, and name each fault with its window.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-14]
+    sources: [AGENTS.md]
+    rationale: 'The owner, 9 Nov 2026: "The requirement is the webside has to be looking good on Mobile and on desktop on any ratio. Take that as requirement. Design it. Implement it. Durable."'
+    verify: {method: test, by: [tests/test_journeys.py::test_the_app_is_checked_in_every_shape_of_window]}
+    trace: [ops/journeys.py, ops/journeys.mjs, images/mission-control/web/static/app.css]
+  - id: APP-61
+    title: The app's name is the deployment's
+    statement: The app's name shall come from the deployment (APP_NAME, "AI Stack" when unset); its page, its installed name,
+      its guide and the stack's messages shall say it, and nothing the owner sees shall say another.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-05, SN-14]
+    sources: [docs/PLATFORM.md]
+    rationale: 'The owner, 9 Nov 2026: "rename the Webside from Mission Control to AI Stack ... have it be Configuration how the Webside is named so its easy to change in the instanciation."'
+    verify: {method: test, by: [tests/test_app_name.py::test_the_name_comes_from_the_deployment_and_defaults_to_ai_stack, tests/test_app_name.py::test_nothing_the_owner_sees_says_the_old_name]}
+    trace: [ops/deployment.py, images/mission-control/server.py, images/mission-control/web/index.html, images/mission-control/web/manifest.webmanifest, deployments/home/deployment.env]
+

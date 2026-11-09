@@ -171,10 +171,10 @@ def connect(req):
     ws = WS(t["access_token"])
     try:
         user = ws.call(type="auth/current_user")
-        token = ws.call(type="auth/long_lived_access_token", client_name="AI stack (Mission Control)", lifespan=3650)
+        token = ws.call(type="auth/long_lived_access_token", client_name=f"AI stack ({DEPLOY.app_name()})", lifespan=3650)
     finally:
         ws.close()
-    M.store_secret("HA_TOKEN", token, f"secrets: Home Assistant token for {user.get('name', 'the owner')} (encrypted, set from Mission Control)")
+    M.store_secret("HA_TOKEN", token, f"secrets: Home Assistant token for {user.get('name', 'the owner')} (encrypted, set from {DEPLOY.app_name()})")
     log_action("connect", f"connected as {user.get('name')}", by="owner")
     M.event("house", "", f"Home Assistant connected as {user.get('name')}", push=True, title="House")
     subprocess.Popen(["systemd-run", "--user", "--on-active=3", "--quiet", "systemctl", "--user", "restart", "missions.service"])

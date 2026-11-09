@@ -6,7 +6,7 @@
 // actions, hand-offs and memory use (runrecord.task_activity); the run's swarm map adds its sources and what it made
 // (server.task_prov). A recurring task shows one run at a time: its newest, or the one you pick.
 // Loaded before app.js: it uses app.js's helpers only when a page is drawn.
-let taskData = {}, ttab = "overview", taskTimer = null, taskAgent = "", taskOcc = {}, taskSrc = "all", taskUnfold = false;
+let taskData = {}, ttab = "overview", taskTimer = null, taskAgent = "", taskOcc = {}, taskSrc = "all", taskUnfold = true;   // APP-57: the whole text from the start; it may be folded
 const TTABS = [["overview", "Overview"], ["agents", "Agents"], ["timeline", "Timeline"], ["sources", "Sources"], ["memory", "Memory"], ["runs", "Runs"]];
 const TPILL = { done: "ok", failed: "failed", cancelled: "archived", running: "running", scheduled: "active", needs_answer: "paused",
   waiting_approval: "paused", waiting_owner: "paused", intake: "running", planning: "running", after: "queued" };
@@ -239,12 +239,31 @@ function changeHtml(t) {
         <div class="row" style="justify-content:flex-end;margin-top:8px"><button class="btn primary sm">${ic.check}Go</button></div></form>`
       : `<ul class="tjudge" style="margin-top:8px">${ch.criteria.map((x) => changeCrit(x, st)).join("")}</ul>`}
     ${words("scope", "In scope")}${words("out_of_scope", "Out of scope")}${words("files", "Files it expects to touch")}${words("risks", "Risks")}${words("assumptions", "Assumptions")}
+    ${changeWay(t, ch)}
     ${ch.judge ? `<div class="small" style="margin-top:8px"><b>The suite</b> <span class="${j.ok ? "" : "err-t"}">${j.ok ? "passes against the baseline" : "does not pass"}</span>${(j.known || []).length ? ` <span class="tiny faint">· ${nf(j.known.length)} failed already before it</span>` : ""}${(j.flaky || []).length ? ` <span class="tiny faint">· ${nf(j.flaky.length)} flaky</span>` : ""}</div>` : ""}
     ${rv.verdict ? `<div class="small"><b>Reviewers</b> ${esc(rv.verdict)}${(rv.findings || []).length ? ` · ${nf(rv.findings.length)} findings` : ""}</div>` : ""}
     ${pr ? `<div class="small"><b>Tried for real</b> ${pr.ok ? "it works" : pr.ran ? '<span class="err-t">it did not work</span>' : "it could not be tried"}<div class="tiny faint wrap">${esc(pr.notes || "")}</div>
         ${(pr.evidence || []).map((n) => (/\.(png|jpg)$/.test(n) ? `<a href="/api/change/${t.id}/${encodeURIComponent(n)}" target="_blank" rel="noopener"><img src="/api/change/${t.id}/${encodeURIComponent(n)}" alt="${esc(n)}" style="max-width:100%;margin-top:6px;border-radius:8px"></a>` : `<a class="tiny" href="/api/change/${t.id}/${encodeURIComponent(n)}" target="_blank" rel="noopener">${esc(n)}</a> `)).join("")}</div>` : ""}
     ${t.status === "failed" && t.door === "plan" ? `<div class="row" style="justify-content:flex-end;margin-top:8px"><button class="btn sm" id="chres">${ic.repeat}Go on, with its budget doubled</button></div>` : ""}
   </div>`;
+}
+// CHG-20: one line from the question to the pull request: the request, the diff and its base, the suite, every check's
+// verdict with each problem as its job reported it (a work site's regression names each extract), and the pull request
+function changeWay(t, ch) {
+  const d = ch.delivered, j = ch.judge || {}, checks = j.checks || [];
+  if (!d && !checks.length) return "";
+  const short = (x) => esc(String(x || "").slice(0, 10));
+  const probs = (list) => (!list.length ? "" : list.length <= 6 ? `<ul class="tiny" style="margin:2px 0 0">${list.map((x) => `<li class="wrap">${esc(x)}</li>`).join("")}</ul>`
+    : `<details class="tiny"><summary>${nf(list.length)} problems</summary><ul style="margin:2px 0 0">${list.map((x) => `<li class="wrap">${esc(x)}</li>`).join("")}</ul></details>`);
+  const verdict = (v) => (v.pass ? "passes" : (v.problems || []).some((p) => /could not run/.test(p)) ? "could not run" : "fails");
+  const rows = [
+    ["Asked", `<span class="wrap">${esc(t.text || t.title || "")}</span>`],
+    d ? ["The diff", `${nf(d.files)} file${d.files === 1 ? "" : "s"}, ${short(d.base)}..${short(d.head)}${ch.carrier ? ` · <a href="#/build/${ch.carrier}">the diff</a>` : ""}`] : null,
+    ch.judge ? ["The suite", j.ok ? "passes against the baseline" : '<span class="err-t">does not pass</span>'] : null,
+    ...checks.map((v) => [`Check: ${esc(v.name)}`, `<span class="${v.pass ? "" : "err-t"}">${verdict(v)}</span> <span class="tiny faint">${esc(v.where || "")}</span>${probs(v.problems || [])}${(v.evidence || []).length ? `<div class="tiny faint wrap">evidence: ${v.evidence.map(esc).join(", ")}</div>` : ""}`]),
+    d ? ["Pull request", d.pr ? `<a href="${esc(d.pr)}" target="_blank" rel="noopener">${esc(d.pr)}</a>` : d.push === false ? "none: this deployment names no push remote, so the change is reviewed here" : "after your approval, or when the forge answers"] : null,
+  ].filter(Boolean);
+  return `<div class="cway" style="margin-top:10px">${rows.map(([k, v]) => `<div class="cway-r"><div class="cway-k tiny faint">${k}</div><div class="small">${v}</div></div>`).join("")}</div>`;
 }
 function changeBind(t) {
   const f = $("#chgo");

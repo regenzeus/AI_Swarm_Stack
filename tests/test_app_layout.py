@@ -159,7 +159,7 @@ def test_the_desk_uses_the_width_it_has():
     assert ".rgwrap { grid-template-columns: minmax(0, 1.6fr) minmax(320px, 1fr);" in desk and ".chatwrap { grid-template-columns: 320px minmax(0, 1fr); }" in desk
     assert ".repos { grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); }" in desk
     assert 'body[data-page="read"] .view, body[data-page="guide"] .view' in desk and "max-width: 980px" in desk
-    assert "@media (min-width: 1900px) { .shell { zoom: 1.12; } }" in css and "@media (min-width: 3200px) { .shell { zoom: 1.6; } }" in css   # a 4K screen scales the app, not a corner of it
+    assert "@media (min-width: 1900px) { .shell { zoom: 1.12; --z: 1.12; } }" in css and "@media (min-width: 3200px) { .shell { zoom: 1.6; --z: 1.6; } }" in css   # a 4K screen scales the app, not a corner of it
     assert "max-width: 1440px" not in css and "max-width: 1680px" not in css
     assert ".chatpane .msgs { padding-left: max(0px, calc((100% - 960px) / 2));" in desk and ".chatpane .composer2 { margin-left:" in desk   # a chat keeps a reading measure
 
@@ -176,4 +176,18 @@ def test_an_agent_s_own_sentence_shows_dates_the_app_s_way_and_quotes_as_quotes(
         assert spot in app, spot
     assert 'const d = $("#doc"); if (d) d.textContent = "Not readable.";' in app
     assert 'id="tocc" style="width:auto;max-width:100%;min-width:0;flex:1 1 auto"' in app
+
+
+def test_chat_on_a_desktop_holds_the_window_and_no_height_overshoots_the_zoom():
+    """APP-59. The owner, 9 Nov 2026: "Chat still looks ugly in desktop. You open it and then scroll down to see chat
+    window." From 1,900 px the app is zoomed, and every height taken from the window came out 12 % too tall: the input
+    box fell below the fold and every page scrolled. Each such height divides by the zoom; on a desktop the chat's list
+    and conversation scroll in their own columns; Home's left column fills its width."""
+    css = (Path(__file__).resolve().parents[1] / "images/mission-control/web/static/app.css").read_text()
+    for z in ("1.12", "1.3", "1.6"):
+        assert f"zoom: {z}; --z: {z};" in css
+    inside = [ln for ln in css.splitlines() if re.search(r"100d?vh", ln) and not ln.lstrip().startswith(("-webkit-font-smoothing", "/*"))]
+    assert inside and all("var(--z, 1)" in ln for ln in inside), [ln for ln in inside if "var(--z, 1)" not in ln]
+    assert "body.chatmode .view { height: calc(100dvh / var(--z, 1));" in css and "body.chatmode .chatpane .msgs { flex: 1 1 0; min-height: 0; overflow-y: auto; }" in css
+    assert 'body[data-page="home"] .home-today { grid-area: today; display: flex; align-items: stretch; }' in css
 

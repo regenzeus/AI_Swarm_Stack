@@ -70,6 +70,9 @@ def table(c):
         c.execute("alter table claude_tasks add column evidence text")
     if "waits" not in cols:
         c.execute("alter table claude_tasks add column waits integer")
+    if "ref" not in cols:                                 # TSK-48: a commit to copy instead of main, and history to bring
+        c.execute("alter table claude_tasks add column ref text")
+        c.execute("alter table claude_tasks add column history integer")
 
 
 def put(c, tid, **kw):
@@ -94,11 +97,20 @@ def handle(req, c):
         bad = [x for x in ev.split(",") if x.strip() and not D.EVIDENCE_REF.match(x.strip())]
         if bad:
             raise ValueError(f"evidence: {bad[0].strip()!r} is not mission:<slug>, run:<ref>, crew:<agent id> or minutes:<N>")
+    ref, history = str(req.get("ref") or "").strip(), req.get("history")
+    if ref and (not repo or not REF.fullmatch(ref)):
+        raise ValueError("ref names a commit, tag or branch of the task's repository (letters, digits and . _ / -)")
+    try:
+        history = int(history or 0)
+    except (TypeError, ValueError):
+        raise ValueError("history is a number of commits")
+    if history < 0 or history > HISTORY_MAX or (history and not repo):   # limit: refuses, HISTORY_MAX commits of history at most
+        raise ValueError(f"history is 0 to {HISTORY_MAX} commits of the task's repository")
     if not B.claude_ready():
         raise ValueError("Claude Code is not connected (Code tab → Connect Claude Code)")
-    cur = c.execute("insert into claude_tasks (question, repo, mode, context, status, created, source, evidence) values (?,?,?,?,?,?,?,?)",
+    cur = c.execute("insert into claude_tasks (question, repo, mode, context, status, created, source, evidence, ref, history) values (?,?,?,?,?,?,?,?,?,?)",
                     (q, repo, mode, limit(str(req.get("context") or ""), 200000, "the context"), "queued", M.now().isoformat(timespec="seconds"),
-                     str(req.get("source") or ""), ev or None))
+                     str(req.get("source") or ""), ev or None, ref or None, history or None))
     c.commit()
     tid = cur.lastrowid
     write(c, tid, [])
@@ -122,6 +134,8 @@ def gather(spec):
     return D.evidence_for(spec)
 
 
+REF = re.compile(r"[0-9A-Za-z][\w./-]{0,99}")
+HISTORY_MAX = 500        # limit: refuses, commits of history a task's copy may bring (a review of recent work, not the whole past)
 TAG_FAMILIES = 5         # limit: drops, tag families past these get no tag on a task's copy (a project uses one or two)
 
 
@@ -144,8 +158,19 @@ def one_commit(dest, src, ref):
         print(f"claude task copy of {src.name}: no commit of its own ({type(e).__name__}: {e})", flush=True)
 
 
-def snapshot(tid, repo, context, evidence=""):
-    """A throwaway copy for this task (the repo's main branch, or the passed text); returns its path inside the sandbox."""
+def with_history(dest, src, sha, n):
+    """The copy as the last n commits up to sha (a shallow fetch: git log and git show work, nothing older is there, and it
+    has no remote). TSK-48: a work site, 9 Nov 2026, could not ask "review the last pull requests" of a one-commit copy."""
+    up = "git -c uploadpack.allowAnySHA1InWant=true upload-pack"
+    for args in (["init", "-q", "-b", "main"], ["fetch", "-q", f"--depth={int(n)}", f"--upload-pack={up}", f"file://{src}", sha],
+                 ["checkout", "-q", "-B", "main", "FETCH_HEAD"]):
+        subprocess.run(["git", "-C", str(dest), *args], check=True, capture_output=True, timeout=1800)
+    subprocess.run(["chmod", "-R", "a+rwX", str(dest / ".git")], capture_output=True, timeout=120)
+
+
+def snapshot(tid, repo, context, evidence="", ref=None, history=0):
+    """A throwaway copy for this task (the repo's main branch or the commit asked for, with the history asked for, or the
+    passed text); returns its path inside the sandbox."""
     base = TMP / str(tid)
     shutil.rmtree(base, ignore_errors=True)
     base.mkdir(parents=True)
@@ -155,8 +180,21 @@ def snapshot(tid, repo, context, evidence=""):
         if src == B.WB / repo:
             subprocess.run(["git", "-C", str(src), "fetch", "-q", "origin"], capture_output=True, timeout=120)
             ref = f"origin/{B.default_branch(src)}"
+        if want := (ref_asked := (ref or "").strip()):    # TSK-48: a commit, tag or branch instead of main
+            got = subprocess.run(["git", "-C", str(src), "rev-parse", "--verify", "-q", f"{want}^{{commit}}"], capture_output=True, text=True, timeout=60)
+            if got.returncode:
+                raise RuntimeError(f"{repo} has no commit {ref_asked!r}")
+            ref = got.stdout.strip()
         dest = base / repo
         dest.mkdir()
+        if history:
+            sha = subprocess.run(["git", "-C", str(src), "rev-parse", "--verify", f"{ref}^{{commit}}"], capture_output=True, text=True, timeout=60).stdout.strip()
+            with_history(dest, src, sha, history)
+            if context:
+                (dest / ".claude-task-context.md").write_text(context)
+            if evidence:
+                (dest / ".claude-task-evidence.md").write_text(evidence)
+            return f"/work/.claude-tasks/{tid}/{repo}"
         arch = subprocess.run(["git", "-C", str(src), "archive", ref], capture_output=True, timeout=300)
         if arch.returncode:
             raise RuntimeError(f"could not copy {repo}: {tail(arch.stderr.decode(errors='replace'), 4000)}")  # cap: store
@@ -225,9 +263,11 @@ def run(c, t):
     lines = []
     try:
         ev = gather(t["evidence"]) if t.get("evidence") else ""
-        cwd = snapshot(tid, t["repo"], t["context"], ev)
+        cwd = snapshot(tid, t["repo"], t["context"], ev, t.get("ref"), t.get("history") or 0)
         if t["repo"]:
-            where = (f"The repository {t['repo']} is in the current directory (a copy of its main branch)."
+            what = f"a copy at {t['ref']}" if t.get("ref") else "a copy of its main branch"
+            what += f", with its last {t['history']} commits: git log and git show work" if t.get("history") else ""
+            where = (f"The repository {t['repo']} is in the current directory ({what})."
                      + (" The owner's notes for this question are in .claude-task-context.md." if t["context"] else "")
                      + (" The evidence asked for (run records, logs, failed gateway calls; secrets redacted) is in"
                         " .claude-task-evidence.md: base the answer on it and quote the lines that show the cause." if ev else ""))
@@ -300,6 +340,43 @@ def run(c, t):
         shutil.rmtree(TMP / str(tid), ignore_errors=True)
 
 
+def cancel(c, tid, why="cancelled by the owner"):
+    """claude_cancel (TSK-46): a queued or waiting Claude task never starts; a running one stops at its next live update
+    (a work site, 9 Nov 2026: a question sent by mistake could not be withdrawn). -> {"id", "cancelled": bool}."""
+    table(c)
+    n = c.execute("update claude_tasks set status='cancelled', error=? where id=? and status in ('queued', 'waiting', 'running')",
+                  (why, int(tid))).rowcount
+    c.commit()
+    if n:
+        M.event("claude", "", f"Claude task #{tid} cancelled", title="Claude Code")
+    return {"id": int(tid), "cancelled": bool(n)}
+
+
+PARALLEL = 1            # limit: paces, Claude tasks side by side unless the deployment says CLAUDE_PARALLEL (home: one subscription)
+PARALLEL_MAX = 4        # limit: paces, at most this many whatever the deployment says
+
+
+def parallel(values=None):
+    """How many Claude tasks run side by side: the deployment's CLAUDE_PARALLEL (a work site, 9 Nov 2026: nine questions
+    took hours in a row on a gateway that could take several)."""
+    import deployment as DEPLOY
+    try:
+        return max(1, min(PARALLEL_MAX, int((values if values is not None else DEPLOY.VALUES).get("CLAUDE_PARALLEL"))))
+    except (TypeError, ValueError):
+        return PARALLEL
+
+
+def claim(c):
+    """The next Claude task to run, claimed so that no other worker takes it, or None."""
+    now = M.now().isoformat(timespec="seconds")[:19]
+    for t in c.execute("select * from claude_tasks where status='queued' or (status='waiting' and julianday(retry_at) <= julianday(?)) "
+                       "order by id limit 8", (now,)).fetchall():  # cap: top (the next few: one of them is claimed, the rest wait their turn)
+        if c.execute("update claude_tasks set status='running' where id=? and status=?", (t["id"], t["status"])).rowcount:
+            c.commit()
+            return t
+    return None
+
+
 def cancel_for(c, task):
     """The Claude tasks a task's steps started stop with it (overnight 8 Nov 2026: an exam change was cancelled, its scribe's
     Claude task was asked again after a restart and ran on for half an hour). A running one stops at its next live update.
@@ -332,14 +409,21 @@ def yield_answer(repo, question, answer, tid):
 
 
 def worker():
+    """The Claude task workers: CLAUDE_PARALLEL of them (TSK-46), each claiming its task."""
     c = M.db()
     table(c)
     c.execute("update claude_tasks set status='queued' where status='running'")   # cut off by a restart: try again
     c.commit()
+    for _ in range(parallel() - 1):
+        threading.Thread(target=work, daemon=True).start()
+    work(c)
+
+
+def work(c=None):
+    c = c or M.db()
     while not M.stop.is_set():
         try:
-            t = c.execute("select * from claude_tasks where status='queued' or (status='waiting' and julianday(retry_at) <= julianday(?)) order by id limit 1",
-                          (M.now().isoformat(timespec="seconds")[:19],)).fetchone()
+            t = claim(c)
             if t:
                 rid = f"claude-task:{t['id']}"
                 RTM.start(rid, "claude-task", f"Claude task #{t['id']}: {t['question'][:150]}", data={"manifest": {"agent": "claude-task", "mode": t["mode"], "repo": t["repo"]}},  # cap: id

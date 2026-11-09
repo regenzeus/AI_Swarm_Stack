@@ -109,7 +109,7 @@ async function wikiMap() {
   info(`<span class="muted">${map.shared.length ? `${map.shared.length} subject${map.shared.length > 1 ? "s are" : " is"} in two or more wikis. Tap a bubble to open its wiki, a line for the subjects both have.` : "No subject is in two wikis yet. Tap a bubble to open its wiki."}</span>`);
 }
 // a summary's first sentence, marked when more follows (the whole summary heads the wiki's page)  cap: preview
-const firstSentence = (s) => { const m = /^(.+?[.!?])(\s|$)/s.exec(String(s || "").trim()); return m && m[1].length < String(s).trim().length ? m[1] + " …" : String(s || "").trim(); };
+// firstSentence: app-base.js (every page's scripts load it)
 
 let wikiBack = "";                                       // where the wiki was opened from (an agent page and its tab)
 async function vWiki() {

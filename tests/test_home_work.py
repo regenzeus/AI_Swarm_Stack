@@ -12,7 +12,7 @@ MC = ROOT / "images/mission-control"
 APP_JS = webjs.app_js()
 GUIDE = (MC / "guide/01-welcome.md").read_text()
 FUNCS = ("needsRows", "needsRow", "needsHtml", "nowHtml", "upkeepHtml", "healthAlerts", "feedItems", "feedHtml", "workBuildRow", "statusPill", "runningCard", "stepsHtml", "dayOf")
-CONSTS = ("RKIND", "NOT_YOURS", "esc", "BSTATUS", "bcls", "VERDICT", "STATUS", "typeIcon", "toIso", "clockOf", "HOME_ICON", "homeMany", "CREW_IC", "TRIG", "firstLine", "ctAsker", "ctTitle", "ideasWaiting",
+CONSTS = ("RKIND", "NOT_YOURS", "esc", "BSTATUS", "bcls", "VERDICT", "STATUS", "typeIcon", "toIso", "clockOf", "HOME_ICON", "homeMany", "CREW_IC", "TRIG", "firstLine", "firstSentence", "ctAsker", "ctTitle", "ideasWaiting",
           "IDEA_CLS", "yoursN", "ideasN")
 FORMAT = re.search(r"// ---------- formatting \(TSK-31\).*?// ---------- end of formatting ----------", APP_JS, re.S)[0]   # the app's own helpers
 

@@ -180,6 +180,8 @@ def test_a_fresh_publish_replaces_the_public_history(tmp_path, monkeypatch):
     assert count() == "1"
     shown = subprocess.run(["git", "--git-dir", str(bare), "show", "main:a.txt"], capture_output=True, text=True).stdout
     assert shown == "clean"
+    msg = subprocess.run(["git", "--git-dir", str(bare), "log", "-1", "--format=%B", "main"], capture_output=True, text=True).stdout
+    assert "shares no history with the earlier ones" in msg and "rebase --onto origin/main" in msg    # a site knows to move, not pull
 
 
 def test_every_landing_runs_the_privacy_scan_and_a_leak_stops_it(monkeypatch, tmp_path):

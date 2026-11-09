@@ -12,7 +12,7 @@ and can change them any time ("send my copper briefing by e-mail too").
 
 | Channel | What you get |
 |---|---|
-| **App** (push) | a notification on your phone or PC. Tap it to open the result in Mission Control |
+| **App** (push) | a notification on your phone or PC. Tap it to open the result in {{APP_NAME}} |
 | **Telegram** | a summary message with buttons that open the report, the mission and the wiki in the app |
 | **E-mail** | a designed HTML report in your inbox, with sources, readable on any device |
 
@@ -63,4 +63,4 @@ note: Hermes writes the summary and calls send_email. It arrives as a designed r
 ## Telegram
 
 Hermes is also on Telegram. You can chat with it there like in the app, and briefings arrive with buttons that
-open the full report in Mission Control. A **morning digest** of the night's results is sent there every morning.
+open the full report in {{APP_NAME}}. A **morning digest** of the night's results is sent there every morning.

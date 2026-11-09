@@ -216,4 +216,16 @@ items:
     sources: [docs/PLATFORM.md, DEC-45]
     verify: {method: test, by: [tests/test_features.py::test_compose_demands_no_home_value_of_a_deployment_without_the_feature]}
     trace: [ops/deployment.py, compose/core.yaml, compose/apps.yaml, Makefile, ops/onboard.py, ops/understand-dashboard.sh, config/gate/codemap-local.Caddyfile, images/mission-control/server.py]
+  - id: GEN-20
+    title: The home stack's backups stay home
+    statement: On a deployment without the home feature, the backup and its drill shall step aside and a restore or a new
+      machine's rebuild from the home stack's backup shall be refused before anything is read or replaced.
+    type: constraint
+    priority: must
+    status: implemented
+    acceptance: 'Test: on the work example a restore and new-machine.sh exit refused, and the drill says not configured.'
+    parents: [SN-05]
+    sources: [docs/PLATFORM.md, DEC-45]
+    verify: {method: test, by: [tests/test_features.py::test_a_deployment_without_home_never_restores_or_rebuilds_the_home_stack]}
+    trace: [ops/restore.sh, ops/new-machine.sh, ops/backup.sh]
 

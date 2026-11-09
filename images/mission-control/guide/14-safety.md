@@ -12,7 +12,7 @@ not just by asking the AI to behave.
 
 ## Private by default
 
-- **One sign-in.** Your Tailscale login is the only login: Mission Control, Hermes admin, the code map and Open WebUI
+- **One sign-in.** Your Tailscale login is the only login: {{APP_NAME}}, Hermes admin, the code map and Open WebUI
   let your devices straight in, with no passwords or tokens. Forgejo on the NAS keeps its own account.
 - **Only your devices.** Every app is reachable only through Tailscale, your private network. Nothing is
   exposed to the internet, and no router ports are open.

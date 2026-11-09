@@ -11,7 +11,7 @@ const TEAM_PARTS = [["tasks", "On your tasks"], ["crew", "Crew"], ["measured", "
 const TNEW_KINDS = [["", "The stack decides", "radar"], ["briefing", "Briefing", "news"], ["research", "Research", "doc"], ["shopping", "Shopping", "coin"], ["cleanup", "Cleanup", "trash"]];
 const TNEW_WHEN = [["schedule", "Repeats"], ["event", "On event"], ["after", "After a task"], ["once", "Once"]];
 const OLD_NEW_KIND = { briefing: "briefing", task: "research", shopping: "shopping", cleanup: "cleanup" };   // #/new?type= from before
-let tasksView = null, tasksList = "active", tasksOwner = "you", tasksQuery = "", teamPart = "tasks", netMode = "tasks", netOwner = "you", netDays = 7, netPick = null;
+let tasksView = null, tasksList = "active", tasksOwner = "all", tasksQuery = "", teamPart = "tasks", netMode = "tasks", netOwner = "all", netDays = 7, netPick = null;
 let netData = null, netAt = 0, netMap = new Map(), netTimer = null, tnewOpen = false, tasksSig = "";
 const NEEDS_T = ["needs_answer", "waiting_approval", "waiting_owner"], BUSY_T = ["intake", "planning", "planned", "running"];
 const tRepeats = (t) => ["schedule", "event"].includes(t.rhythm?.type);
@@ -26,7 +26,7 @@ const tLive = (t, A) => !!A?.live || !!netMap.get(t.id)?.live || (BUSY_T.include
 const tRepeating = (t, A) => tRepeats(t) && !["cancelled", "done"].includes(t.status) && !A?.archived;
 const T_IN = { active: (t, A) => !tOver(t) && (!tRepeating(t, A) || tNeeds(t, A) || tLive(t, A)), repeating: tRepeating, done: (t, A) => tOver(t) && !tRepeating(t, A) };
 const tHref = (t) => (t.door === "mission" && t.ref ? `#/mission/${encodeURIComponent(t.ref)}` : t.door === "crew" && t.ref ? `#/crew/${encodeURIComponent(t.ref)}` : `#/task/${t.id}`);
-const tMine = (t) => t.door !== "chat" && (tasksOwner === "stack") === (t.owner === "stack");   // a chat is a task too: it lives on Chat
+const tMine = (t) => t.door !== "chat" && (tasksOwner === "all" || (tasksOwner === "stack") === (t.owner === "stack"));   // a chat is a task too: it lives on Chat; All (the default) is yours and the stack's
 const tNext = (t, A) => t.next_run ? Date.parse(t.next_run) : A?.next ? A.next * 1000 : 9e15;
 const tRank = (t, A) => (tNeeds(t, A) ? 0 : tLive(t, A) ? 1 : BUSY_T.includes(t.status) || t.status === "after" ? 2 : 3);
 const KIND_IC = { briefing: "news", research: "doc", analysis: "doc", shopping: "coin", cleanup: "trash", change: "code", coding: "code", code_question: "code", watching: "radar", errand: "target" };
@@ -65,7 +65,7 @@ function tRow(t) {
     ${line ? `<div class="small agres ${t.status === "failed" ? "err-t" : ""}">${prose(firstLine(line))}</div>` : ""}</div></a>`;
 }
 function tasksHeadHtml() {
-  const mine = (S.tasks || []).filter((t) => t.owner !== "stack" && t.door !== "chat").map((t) => [t, taskAgentOf(t)]);
+  const mine = (S.tasks || []).filter(tMine).map((t) => [t, taskAgentOf(t)]);   // the same tasks the list shows, yours or the stack's (a work site, 9 Nov 2026: "0 repeating" over a list with one)
   const need = mine.filter(([t, A]) => tNeeds(t, A)).length, run = mine.filter(([t, A]) => tLive(t, A)).length, rep = mine.filter(([t, A]) => tRepeating(t, A)).length;
   return `<p class="agtop" id="thead">${notConnected() ? `<b class="err-t">Not connected</b>` : need ? `<b class="warn-t">${need} need${need > 1 ? "" : "s"} you</b>` : "Nothing needs you"}${run ? ` · <span class="run-t">${run} running</span>` : ""} · ${rep} repeating${netData?.agents?.length ? ` · ${netData.agents.length} agents this week` : ""}</p>`;
 }
@@ -76,7 +76,7 @@ function tasksListHtml() {
   const list = by[tasksList].filter(([t]) => !q || `${t.title} ${t.goal || ""}`.toLowerCase().includes(q))
     .sort(([a, A], [b, B]) => tasksList === "done" ? Date.parse(b.updated || 0) - Date.parse(a.updated || 0)
       : tRank(a, A) - tRank(b, B) || tNext(a, A) - tNext(b, B) || Date.parse(b.updated || 0) - Date.parse(a.updated || 0)).map(([t]) => t);
-  const empty = q ? "No task matches." : tasksList === "active" ? (tasksOwner === "you" ? "Nothing is going on right now. Say what to do in New task, on Home or in Chat." : "The stack's duties are all waiting for their time.")
+  const empty = q ? "No task matches." : tasksList === "active" ? (tasksOwner !== "stack" ? "Nothing is going on right now. Say what to do in New task, on Home or in Chat." : "The stack's duties are all waiting for their time.")
     : tasksList === "repeating" ? "No task repeats yet: give one a When (daily, weekly, on news)." : "Nothing finished in the last 7 days.";
   return `<div class="aglist" id="tlist">${list.map(tRow).join("") || `<div class="card pad small muted">${empty}</div>`}</div>
     ${tasksList === "done" && list.length ? `<div class="tiny faint" style="margin-top:6px">Done in the last 7 days; every task keeps its page.</div>` : ""}`;
@@ -84,11 +84,11 @@ function tasksListHtml() {
 function tasksBodyHtml() {
   const all = (S.tasks || []).filter(tMine).map((t) => [t, taskAgentOf(t)]);
   const n = (k) => all.filter(([t, A]) => T_IN[k](t, A)).length;
-  const rules = tasksList === "repeating" && tasksOwner === "you";
-  return `${tasksOwner === "you" ? phoneBanner() : ""}
+  const rules = tasksList === "repeating" && tasksOwner !== "stack";
+  return `${tasksOwner !== "stack" ? phoneBanner() : ""}
     ${tnewOpen ? newTaskHtml() : ""}
     <div class="tfil"><div class="chips">${TLISTS.map(([k, l]) => `<button type="button" class="fchip ${tasksList === k ? "on" : ""}" data-tl="${k}">${l}<span>${n(k)}</span></button>`).join("")}</div>
-      <div class="seg tow">${[["you", "Yours"], ["stack", "The stack's"]].map(([k, l]) => `<button type="button" class="${tasksOwner === k ? "on" : ""}" data-to="${k}">${l}</button>`).join("")}</div></div>
+      <div class="seg tow">${[["you", "Yours"], ["stack", "The stack's"], ["all", "All"]].map(([k, l]) => `<button type="button" class="${tasksOwner === k ? "on" : ""}" data-to="${k}">${l}</button>`).join("")}</div></div>
     <div class="wsearch tq">${ic.search}<input class="input" id="tq" placeholder="Find a task" value="${esc(tasksQuery)}" autocomplete="off"></div>
     <div id="tlistbox">${tasksListHtml()}</div>
     ${rules ? `<details class="section card pad" data-keep="trules"><summary class="row between" style="gap:8px"><b>Rules · ${(S.bus?.rules || []).length}</b><span class="tiny faint">a new task each time something happens</span></summary>
@@ -247,8 +247,8 @@ function teamDraw(b, live = false) {
 // Network (TSK-43): your tasks on the left, the agents that worked on them on the right, a line for every pair with
 // runs in the period: thicker for more runs, blue while it runs. Tap a task or an agent to see its part. "Agents
 // together" is the team map: who works with whom (DEC-28).
-const NET_TASKS = 14;                         // the busiest tasks drawn first; "Show all" draws every one
-let netAll = false;
+const NET_TASKS = 14;                         // the busiest tasks first; every one is drawn (the owner, 9 Nov 2026: all, by default)
+let netAll = true;
 async function netLoad(force = false) {
   if (!force && netData && netData.days === netDays && Date.now() - netAt < 30000) return netData;
   try { netData = await api(`/api/tasks/network?days=${netDays}`); } catch (_) { netData = netData || { tasks: [], agents: [], outside: {}, days: netDays }; }
@@ -305,13 +305,12 @@ function netDraw() {
       <circle r="10" class="${a.live ? "live" : ""}"/><text y="4" text-anchor="middle" class="netini">${esc((taskWho(a.agent)[0] || "?").toUpperCase())}</text><text class="tml">${tspans(aL[i], 16, 4 - (aL[i].length - 1) * 7.5, 15)}</text></g>`; }).join("");
   const out = Object.entries(netData?.outside || {}), outN = out.reduce((x, [, n]) => x + n, 0);
   box.innerHTML = head + (shown.length ? `<div class="card pad netcard"><svg class="netsvg tmapsvg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="Which agents worked on which tasks">${lines}${tnodes}${anodes}</svg>
-      ${rows.length > shown.length ? `<button class="btn sm ghost" id="netall" style="margin-top:6px">Show all ${rows.length} tasks</button>` : ""}</div><div id="netinfo" style="margin-top:10px"></div>`
+</div><div id="netinfo" style="margin-top:10px"></div>`
       : `<div class="card pad small muted">No agent worked on ${netOwner === "stack" ? "the stack's" : netOwner === "all" ? "any" : "your"} tasks in this period.</div>`)
     + (outN ? `<details class="card pad section"><summary class="small muted">Not on any task · ${nf(outN)} runs</summary><div class="tiny faint" style="margin-top:6px">${out.map(([a, n]) => `${esc(taskWho(a))} ${nf(n)}`).join(" · ")}</div></details>` : "");
   netBind(box);
   $$("[data-nt]", box).forEach((g) => (g.onclick = g.onkeydown = (e) => { if (e.type === "keydown" && e.key !== "Enter") return; const id = +g.dataset.nt; netPick = pickT === id ? null : { t: id }; netDraw(); }));
   $$("[data-na]", box).forEach((g) => (g.onclick = g.onkeydown = (e) => { if (e.type === "keydown" && e.key !== "Enter") return; const a = g.dataset.na; netPick = pickA === a ? null : { a }; netDraw(); }));
-  if ($("#netall")) $("#netall").onclick = () => { netAll = true; netDraw(); };
   netInfo(byId);
 }
 function netBind(box) {
@@ -438,7 +437,8 @@ let homeFilter = "all", homeShow = 12;                  // the feed opens on 12 
 const firstLine = (s) => { const l = String(s || "").split("\n"); return l[0] + (l.slice(1).join("").trim() ? " …" : ""); };
 // who asked Claude: a crew agent's task is named after it (its question is a long standing prompt, shown when opened)
 const ctAsker = (t) => { const c = /^crew:(.+)/.exec(t.source || ""); return c ? (S?.crew || []).find((x) => x.id === c[1])?.name || c[1] : t.source === "chat" ? "your chat" : "Hermes"; };
-const ctTitle = (t) => /^crew:/.test(t.source || "") ? `Asked by the ${ctAsker(t)}` : firstLine(t.question);
+// APP-57: whole
+const ctTitle = (t) => /^crew:/.test(t.source || "") ? `Asked by the ${ctAsker(t)}` : firstSentence(t.question);
 const homeEx = new Map();                                // result file -> its first lines (fetched once per file)
 const homeLast = {};
 const toIso = (x) => (x == null ? "" : typeof x === "number" ? new Date(x > 1e12 ? x : x * 1000).toISOString() : String(x));

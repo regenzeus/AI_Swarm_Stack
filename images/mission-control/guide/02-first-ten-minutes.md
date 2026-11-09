@@ -54,7 +54,7 @@ note: Hermes creates a one-off mission. You'll see it under Missions while it ru
 
 ## 5. Put it on your phone
 
-Mission Control installs like an app and sends push notifications for finished runs, events and errors.
+{{APP_NAME}} installs like an app and sends push notifications for finished runs, events and errors.
 
 ```try
 label: Set up this device
@@ -64,7 +64,7 @@ note: Scroll to "This device". On iPhone, first use Share → Add to Home Screen
 
 ### Share anything to your stack
 
-Once the app is installed on Android, **Mission Control appears in every app's Share menu**. Share a link, a
+Once the app is installed on Android, **{{APP_NAME}} appears in every app's Share menu**. Share a link, a
 product page, a screenshot, a PDF or some text, and the app opens on it with one-tap choices: summarise it, ask what
 to do with it, explain it simply, ask Hermes anything about it, save it to your knowledge, or turn it into a task.
 Nothing happens until you tap; shared items are kept for two weeks. Long-press the app icon for shortcuts to Chat,

@@ -36,6 +36,17 @@ with no metadata. Any binary elsewhere stops the publish. The scan can't read pi
 - Check the screen's text with this scan before taking the picture, and look at the picture before committing it.
 - Say on the page which pictures show demo data.
 
+## When the public history starts fresh
+
+`python3 ops/publish.py push --fresh` replaces the public history with one snapshot, only on the owner's word. Its commit
+message says so: the snapshot shares no history with the ones before, so `git pull` in a copy that tracked them refuses.
+Such a copy moves its branch instead: keep a backup branch, `git fetch origin`, then
+`git rebase --onto origin/main <the snapshot it was on>`, or reset to `origin/main` and put its own commits back on top.
+
+| Date | Snapshot | Why |
+|---|---|---|
+| 9 Nov 2026 | 81df652 | the owner asked that names of a work deployment never appear in any history; both histories were rewritten (SEC-22) |
+
 ## The private files
 
 The identifiers are in no repository. They live in `/srv/ai/private/` (mode 700, inside the nightly backup):

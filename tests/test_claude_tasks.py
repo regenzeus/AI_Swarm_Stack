@@ -177,3 +177,46 @@ def test_a_cancelled_task_cancels_the_claude_tasks_its_steps_started(tmp_path):
     src = Path(CT.__file__).read_text()
     assert "if M.stop.is_set() or cancelled:" in src                             # a running one stops at its next live update
 
+
+def test_a_claude_task_can_be_cancelled_and_several_run_side_by_side_without_taking_the_same(monkeypatch):
+    """TSK-46. A work site, 9 Nov 2026: nine questions took hours in a row, and one sent by mistake could not be
+    withdrawn. claude_cancel stops a queued one before it starts (a running one stops at its next live update), and
+    CLAUDE_PARALLEL workers each claim a different task."""
+    import sqlite3
+    import claude_tasks as CTM
+    import types
+    c = sqlite3.connect(":memory:", check_same_thread=False)
+    c.row_factory = sqlite3.Row
+    monkeypatch.setattr(CTM, "M", types.SimpleNamespace(now=lambda: __import__("datetime").datetime(2026, 11, 9, 10, 0), event=lambda *a, **k: None))
+    CTM.table(c)
+    for q in ("first question here", "second question here", "third question here"):
+        c.execute("insert into claude_tasks (question, repo, mode, status, created) values (?,?,?,?,?)", (q, "", "ask", "queued", "2026-11-09T09:00:00"))
+    c.commit()
+    assert CTM.cancel(c, 2) == {"id": 2, "cancelled": True} and CTM.cancel(c, 2)["cancelled"] is False
+    a, b = CTM.claim(c), CTM.claim(c)
+    assert {a["id"], b["id"]} == {1, 3} and CTM.claim(c) is None                 # each once; the cancelled one never
+    assert c.execute("select status from claude_tasks where id=2").fetchone()[0] == "cancelled"
+    assert CTM.parallel({}) == 1 and CTM.parallel({"CLAUDE_PARALLEL": "3"}) == 3 and CTM.parallel({"CLAUDE_PARALLEL": "40"}) == 4
+
+
+def test_a_claude_task_may_copy_an_older_commit_and_bring_recent_history(tmp_path):
+    """TSK-48. A work site, 9 Nov 2026: a hidden-key replay of an old ticket needs the code before its fix, and "review the
+    last pull requests" found one commit. A task may name a commit (ref) and ask for its last N commits (history)."""
+    import claude_tasks as CTM
+    src = tmp_path / "src"
+    src.mkdir()
+    g = ["git", "-C", str(src), "-c", "user.name=a", "-c", "user.email=a@example.com"]
+    subprocess.run(["git", "init", "-q", "-b", "main", str(src)], check=True)
+    for i in range(5):
+        (src / "a.txt").write_text(f"version {i}\n")
+        subprocess.run([*g, "add", "-A"], check=True)
+        subprocess.run([*g, "commit", "-q", "-m", f"change {i}"], check=True)
+    old = subprocess.run(["git", "-C", str(src), "rev-parse", "HEAD~2"], capture_output=True, text=True).stdout.strip()
+    dest = tmp_path / "copy"
+    dest.mkdir()
+    CTM.with_history(dest, src, old, 2)
+    log = subprocess.run(["git", "-C", str(dest), "log", "--format=%s"], capture_output=True, text=True).stdout.split("\n")
+    assert [x for x in log if x] == ["change 2", "change 1"] and (dest / "a.txt").read_text() == "version 2\n"
+    assert subprocess.run(["git", "-C", str(dest), "remote"], capture_output=True, text=True).stdout.strip() == ""   # no way back to the source
+    assert CTM.REF.fullmatch("v1.2/rc-1") and not CTM.REF.fullmatch("--upload-pack=x") and CTM.HISTORY_MAX == 500
+

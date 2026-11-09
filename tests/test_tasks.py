@@ -192,8 +192,8 @@ def test_the_owner_s_presets_are_kept_and_show_me_the_plan_first_waits(K):
     assert (t["status"], t["door"], t["rhythm"]["schedule"]) == ("running", "plan", "daily 07:00") and K.started[0][1]["schedule"] == "manual"
     TK.sync(K.c, {"ram-old": {"slug": "ram-old", "title": "RAM", "type": "shopping", "status": "active", "schedule": "daily 07:00", "created": TK.now()}})
     door = next(x["id"] for x in TK.state(K.c)["tasks"] if x["door"] == "mission")
-    with pytest.raises(ValueError, match="stop it on that page"):              # work started at a mission is stopped there
-        TK.handle({"action": "task_cancel", "id": door}, K.c)
+    TK.handle({"action": "task_cancel", "id": door}, K.c)                           # TSK-47: work started at a mission is paused there
+    assert TK.row(K.c, door)["status"] == "cancelled"
     other = TK.handle({"action": "task_create", "text": "Plan a trip I may not take", "autonomy": "ask"}, K.c)["task"]
     TK.handle({"action": "task_cancel", "id": other}, K.c)                         # not started yet: cancelled
     assert TK.row(K.c, other)["status"] == "cancelled"
@@ -397,9 +397,54 @@ def test_the_plan_sees_what_each_agent_can_reach():
 
 
 
-def test_a_long_task_s_name_is_cut_at_a_word_and_marked():
-    """Task 93's name was its words cut at 80 characters mid-word ("... estimates as s"), without a mark."""
-    long = "A breaking story: Earnings call transcript: Acme Mining misses Q3 2026 estimates as shares fall, and more"
-    t = TK.title_of(long)
-    assert t.endswith(" …") and len(t) <= TK.TITLE and long.startswith(t[:-2]) and not t[:-2].endswith("as s")
-    assert TK.title_of("  Short   one ") == "Short one" and TK.title_of("") == ""
+def test_a_task_s_name_is_its_first_sentence_whole_and_never_cut():
+    """APP-57. Task 93's name was cut mid-word at 80 characters; then cut at a word with " …" ("(origin …", "Look at …"):
+    the owner, 9 Nov 2026, "Again we have truncation. Not good." A name is its first sentence or line, whole."""
+    long = "A breaking story: Earnings call transcript: the producer misses Q3 2026 estimates as shares fall, and more from the call"
+    assert TK.title_of(long) == long and "…" not in TK.title_of(long)
+    assert TK.title_of("Look at /a/very/long/path/that/has/no/spaces/at/all/in/it.py and say why. Then fix it.") == \
+        "Look at /a/very/long/path/that/has/no/spaces/at/all/in/it.py and say why."
+    assert TK.title_of("First line\nsecond line") == "First line" and TK.title_of("  Short   one ") == "Short one" and TK.title_of("") == ""
+    assert not hasattr(TK, "TITLE")
+
+
+def test_a_code_questions_steps_go_to_agents_that_read_the_repository(K):
+    """TSK-45. A work site, 9 Nov 2026: a task classified as a code question was planned as steps and its first went to
+    the assistant, which has no repository; it failed "blocked". Such a step goes to the analyst, and the plan says why."""
+    import conductor as CD
+    assert {"analyst", "builder", "opencode"} <= TK.code_readers() and not {"main", "scout", "curator", "desk"} & TK.code_readers()
+    tid = TK.handle({"action": "task_create", "text": "Every Monday, review last week's changes to the code map viewer"}, K.c)["task"]
+    plan = [{"step": "read the changes", "agent": "main", "why": "reads", "after": []},
+            {"step": "say what matters", "agent": "analyst", "why": "explains code", "after": [1]}]
+    TK.intake(K.c, tid, ask=lambda p: spec(kind="code_question", plan=plan))
+    t = TK.row(K.c, tid)
+    assert [p["agent"] for p in t["spec"]["plan"]] == ["analyst", "analyst"]
+    assert "a code question: main cannot read the repository, so the analyst takes it" in t["spec"]["plan"][0]["why"]
+    assert all(s["harness"] == "claude-code" for s in CD.steps(K.c, tid)) or t["door"] != "plan"
+
+
+def test_cancelling_a_task_stops_its_work_at_its_door(K, monkeypatch):
+    """TSK-47. A work site, 9 Nov 2026: a task that had started at its door could not be cancelled from the task, and a
+    Claude task nowhere. Cancelling now stops a Claude task, rejects a build that is not at work, pauses a mission; a
+    build at work still says to stop it on its page."""
+    import claude_tasks as CT
+    seen = []
+    monkeypatch.setattr(CT, "cancel", lambda c, tid, why="": seen.append(("claude", tid, why)) or {"cancelled": True})
+    tid = TK.handle({"action": "task_create", "text": "What does the code map viewer's gate check?"}, K.c)["task"]
+    TK.put(K.c, tid, status="running", door="claude", ref="17")
+    assert TK.handle({"action": "task_cancel", "id": tid}, K.c) == {"task": tid}
+    assert TK.row(K.c, tid)["status"] == "cancelled" and seen == [("claude", 17, f"its task #{tid} was cancelled")]
+    missions = {"m1": {"slug": "m1", "title": "Battery prices", "status": "active"}}
+    saved = []
+    monkeypatch.setattr(TK.M, "load_missions", lambda: missions, raising=False)
+    monkeypatch.setattr(TK.M, "save_mission", lambda m: saved.append(dict(m)), raising=False)
+    tid2 = TK.handle({"action": "task_create", "text": "Watch battery prices for a while"}, K.c)["task"]
+    TK.put(K.c, tid2, status="running", door="mission", ref="m1")
+    TK.handle({"action": "task_cancel", "id": tid2}, K.c)
+    assert saved and saved[-1]["status"] == "paused" and TK.row(K.c, tid2)["status"] == "cancelled"
+    tid3 = TK.handle({"action": "task_create", "text": "Something only its chat can stop"}, K.c)["task"]
+    TK.put(K.c, tid3, status="running", door="chat", ref="c9")
+    import pytest
+    with pytest.raises(ValueError, match="cannot be stopped from here"):
+        TK.handle({"action": "task_cancel", "id": tid3}, K.c)
+

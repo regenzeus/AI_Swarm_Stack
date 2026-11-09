@@ -12,8 +12,12 @@ ALPINE_IMAGE=${ALPINE_IMAGE:-$(grep -m1 "^ALPINE_IMAGE=" "$(dirname "$0")/../ver
 eval "$(python3 "$(dirname "$0")/deployment.py" shell)"   # this deployment's hosts and paths (deployments/<name>/deployment.env)
 export DOCKER_HOST=${DOCKER_HOST:-$DOCKER_SOCKET}
 MODE=${1:-drill}; DEST=/volume1/docker/ai-backup
-# the drill and a restore without a file read the NAS: the home feature (a file of its own restores anywhere)
-if [ "$MODE" = drill ] || [ -z "${2:-}" ]; then python3 "$(dirname "$0")/deployment.py" need home || exit 0; fi
+# the home stack's backups: on a deployment without the home feature the drill steps aside and a restore is refused, before
+# anything is read or replaced (GEN-20; a work site, 9 Nov 2026, kept a local commit of its own to stop them)
+if ! python3 "$(dirname "$0")/deployment.py" need home >/dev/null; then
+  [ "$MODE" = drill ] && { echo "not configured: the restore drill needs the home feature"; exit 0; }
+  echo "refused: ops/restore.sh puts the home stack's backup back, and this deployment has no home feature" >&2; exit 1
+fi
 FILE=${2:-$(ssh synology "cd $DEST && ls -1t aistack-*.tar.gz.age | head -1")}
 VOLS="hermes-home litellm-auth openwebui qmd-data opencode-data"
 W=$(mktemp -d); trap 'docker rm -f "drill-pg-$$" "drill-hs-$$" >/dev/null 2>&1; rm -rf "$W"' EXIT   # an abort leaves no drill container (OPS-R13)

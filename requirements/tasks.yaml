@@ -766,3 +766,60 @@ items:
     add; nothing set leaves it to the intake.'
   verify: {method: test, by: ['tests/test_tasks_tab.py::test_new_task_keeps_the_kind_the_when_and_the_delivery_it_was_given']}
   trace: [ops/tasks.py, images/mission-control/web/static/app.js]
+- id: TSK-45
+  group: Plan graph and durable steps
+  phase: 2
+  title: A code question's steps read the repository
+  statement: Every step the intake plans for a code question shall go to an agent that reads the task's repository; a step
+    it gave another agent shall go to the analyst, and the plan shall say why. The owner's own choice of agents stays.
+  type: functional
+  priority: must
+  status: implemented
+  parents: [SN-19]
+  sources: [docs/SWARM-ROADMAP.md]
+  acceptance: 'Test: a code question planned with a step on the assistant gets that step on the analyst, with the reason in the plan.'
+  verify: {method: test, by: ['tests/test_tasks.py::test_a_code_questions_steps_go_to_agents_that_read_the_repository']}
+  trace: [ops/tasks.py]
+- id: TSK-46
+  group: Everything is a task
+  phase: 9
+  title: A Claude task can be withdrawn, and up to four run side by side
+  statement: The owner shall be able to cancel a Claude task (a queued one never starts, a running one stops at its next
+    step), and a deployment may let up to four run side by side, each task run once.
+  type: functional
+  priority: should
+  status: implemented
+  parents: [SN-19]
+  sources: [docs/PLATFORM.md]
+  acceptance: 'Test: a cancelled queued task is never claimed, and two workers claim different tasks.'
+  verify: {method: test, by: ['tests/test_claude_tasks.py::test_a_claude_task_can_be_cancelled_and_several_run_side_by_side_without_taking_the_same']}
+  trace: [ops/claude_tasks.py, ops/missions.requests.py, images/mission-control/web/static/app-memory.js]
+- id: TSK-47
+  group: Everything is a task
+  phase: 9
+  title: Cancelling a task stops its work at its door
+  statement: Cancelling a task that has started at its door shall stop the work there where that door can be stopped (a
+    Claude task cancelled, a build not at work rejected, a mission paused) and otherwise say where to stop it.
+  type: functional
+  priority: should
+  status: implemented
+  parents: [SN-19]
+  sources: [docs/SWARM-ROADMAP.md]
+  acceptance: 'Test: cancelling a task at the Claude door cancels its Claude task, at the mission door pauses the mission, and a chat task says where to stop it.'
+  verify: {method: test, by: ['tests/test_tasks.py::test_cancelling_a_task_stops_its_work_at_its_door']}
+  trace: [ops/tasks.py]
+- id: TSK-48
+  group: Everything is a task
+  phase: 9
+  title: A code question about an older commit, with recent history
+  statement: A code question may name a commit, tag or branch to read instead of main, and ask for up to 500 of its latest
+    commits of history in the copy; the copy shall still have no way back to its source.
+  type: functional
+  priority: should
+  status: implemented
+  parents: [SN-19]
+  sources: [docs/PLATFORM.md]
+  acceptance: 'Test: a copy at an older commit with two commits of history shows exactly those two commits and no remote.'
+  verify: {method: test, by: ['tests/test_claude_tasks.py::test_a_claude_task_may_copy_an_older_commit_and_bring_recent_history']}
+  trace: [ops/claude_tasks.py, ops/tasks.py]
+

@@ -31,6 +31,10 @@ function keeperHtml(k) {
     ${ch.length ? `<ul class="crewf">${ch.map(row).join("")}</ul>${moreOf(k.changes_total, ch.length)}` : `<div class="tiny muted" style="margin-top:6px">No change yet.</div>`}
     <div class="tiny faint">Nothing is deleted: a retired fact stays in the archive, a rewritten one keeps its old text here.</div></div>`;
 }
+// APP-57: a name, whole: the first sentence of its first line (every page's scripts load this file)
+const firstSentence = (s) => { const t = String(s || "").trim().split("\n").find((x) => x.trim()) || ""; const m = /^(.+?[.!?])(\s|$)/.exec(t.trim()); return (m ? m[1] : t).trim(); };
+// APP-61: the app's name, the deployment's
+const APPNAME = () => (typeof DEPLOY === "object" && DEPLOY.APP_NAME) || "AI Stack";
 function moreOf(total, shown) { return total > shown ? `<div class="tiny muted">… and ${nf(total - shown)} more</div>` : ""; }
 function clipped(s, n) { s = String(s ?? ""); return s.length <= n ? s : `${s.slice(0, n)} [… ${nf(s.length - n)} more characters cut]`; }   /* cap: preview: the helper */
 function reportError(msg, where) {
@@ -182,7 +186,7 @@ async function api(path, opts = {}) {
     if (!r.ok && r.status !== 404) throw new Error(`HTTP ${r.status}`);
     return await (r.headers.get("content-type")?.includes("json") ? r.json() : r.text());
   } catch (e) {
-    throw e.name === "AbortError" ? new Error(`Mission Control did not answer within ${Math.round(timeout / 1000)} s`) : e;
+    throw e.name === "AbortError" ? new Error(`${APPNAME()} did not answer within ${Math.round(timeout / 1000)} s`) : e;
   } finally { clearTimeout(t); }
 }
 
@@ -198,7 +202,7 @@ async function act(req, okMsg) {
   for (let i = 0, misses = 0; r.pending && i < 150; i++) {   // slow requests (a new briefing): keep asking, up to 5 minutes
     await new Promise((res) => setTimeout(res, 2000));
     try { const x = await api(`/api/result/${r.id}`, { timeout: 15000 }); if (!x.pending) r = x; misses = 0; }
-    catch (e) { if (++misses >= 10) { toast(`Lost contact with Mission Control: ${e.message}. The request may still finish; check again in a minute.`, true); return null; } }
+    catch (e) { if (++misses >= 10) { toast(`Lost contact with ${APPNAME()}: ${e.message}. The request may still finish; check again in a minute.`, true); return null; } }
   }
   if (r.pending) { toast("Still working on it: it shows up when it is done (you get a message).", true); return null; }
   if (r.ok === false) { toast(r.error || "Error", true); return null; }
@@ -228,7 +232,8 @@ function bars(runs) {
 
 // ---------- navigation ----------
 // one navigation on every screen (no top bar): the agents' views live under Tasks (DEC-46), the live state is a dot on Stack
-const MEM_ROUTES = ["memory", "howto", "longterm", "codemem", "skills", "journals", "memsearch", "sources"];   // the Memory tab's parts (APP-50); the wikis keep their route
+// the Memory tab's parts (APP-50); the wikis keep their route
+const MEM_ROUTES = ["memory", "howto", "longterm", "codemem", "skills", "journals", "memsearch", "sources"];
 const NAV = [["home", "#/", "Home", ic.home], ["tasks", "#/tasks", "Tasks", ic.tasks], ["wiki", "#/memory", "Memory", ic.wiki], ["build", "#/build", "Code", ic.code],
   ["chat", "#/chat", "Chat", ic.chat], ["system", "#/system", "Stack", ic.layers]];
 function navHtml(bottom) {

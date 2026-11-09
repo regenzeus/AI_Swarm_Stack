@@ -14,11 +14,37 @@ const cfg = JSON.parse(readFileSync(process.argv[2], "utf8"));
 const base = new URL(cfg.base);
 const TYPES = { ".js": "text/javascript", ".css": "text/css", ".html": "text/html", ".png": "image/png", ".svg": "image/svg+xml", ".json": "application/json", ".webmanifest": "application/manifest+json" };
 const PHONE = { viewport: { width: 375, height: 812 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true };
+// APP-60: the windows the app must look right in, any shape (the owner, 9 Nov 2026: "on Mobile and on desktop on any ratio")
+const SHAPES = {
+  phone: PHONE, "phone-landscape": { viewport: { width: 812, height: 375 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
+  tablet: { viewport: { width: 768, height: 1024 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
+  "tablet-landscape": { viewport: { width: 1024, height: 768 } }, laptop: { viewport: { width: 1366, height: 768 } },
+  desktop: { viewport: { width: 1440, height: 900 } }, "desktop-1080p": { viewport: { width: 1920, height: 1080 } },
+  ultrawide: { viewport: { width: 2560, height: 1080 } }, "portrait-monitor": { viewport: { width: 1080, height: 1920 } },
+  "4k": { viewport: { width: 3840, height: 2160 } },
+};
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // what the page shows, measured where the owner sees it
-function measure(W) {                                     // W: the phone's width (a phone browser zooms out a wider page)
-  const out = { overflow: 0, wide: [], main: "", skeleton: false, cards: [], empties: [], formats: [] };
+function measure(W) {                                     // W: the window's width (a phone browser zooms out a wider page)
+  const out = { overflow: 0, wide: [], main: "", skeleton: false, cards: [], empties: [], formats: [], clipped: [] };
+  const H = window.innerHeight;
+  // APP-60: text a box cuts off (hidden overflow, no scrolling, more inside than it shows), the chat's box to write in
+  // outside the window, a chat page that scrolls, and no way to the other pages
+  const nm = (e) => `${e.tagName.toLowerCase()}${e.id ? "#" + e.id : ""}${e.className && typeof e.className === "string" ? "." + e.className.trim().split(/\s+/).slice(0, 2).join(".") : ""}`;
+  for (const e of document.querySelectorAll("#view *, .side *")) {
+    const s = getComputedStyle(e), ov = s.overflowX + " " + s.overflowY;
+    if (!/hidden|clip/.test(ov) || /auto|scroll/.test(ov) || e.closest("svg, .skeleton, [hidden], details:not([open]) > :not(summary)")) continue;
+    if (e.querySelector(":scope > svg, :scope > canvas")) continue;       // a chart's viewport: it pans and zooms, it does not cut
+    if (e.scrollWidth <= e.clientWidth + 2 && e.scrollHeight <= e.clientHeight + 2) continue;
+    if (!(e.innerText || "").trim() || e.getBoundingClientRect().width === 0) continue;
+    out.clipped.push(`${nm(e)} “${(e.innerText || "").trim().replace(/\s+/g, " ").slice(0, 40)}”`);
+    if (out.clipped.length >= 4) break;
+  }
+  const box = location.hash.startsWith("#/chat") && document.querySelector(".composer2");
+  out.writebox = !box || box.getBoundingClientRect().bottom <= H + 1;
+  out.pagescroll = location.hash.startsWith("#/chat") ? Math.max(0, document.documentElement.scrollHeight - H) : 0;
+  out.nav = [...document.querySelectorAll(".tabbar, .side")].some((e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 && getComputedStyle(e).display !== "none"; });
   out.overflow = Math.max(document.documentElement.scrollWidth, document.body.scrollWidth) - W;
   if (out.overflow > 1) {                                  // the deepest elements that stick out, to say where
     const els = [...document.querySelectorAll("#view *, body > *")].filter((e) => { const r = e.getBoundingClientRect(); return r.width && r.right > W + 1 && getComputedStyle(e).position !== "fixed"; });
@@ -66,8 +92,9 @@ function fromWeb(route, u) {
   return f.startsWith(cfg.web) && existsSync(f) ? route.fulfill({ status: 200, contentType: TYPES[extname(f)] || "application/octet-stream", body: readFileSync(f) }) : null;
 }
 
-async function sweep(browser, emptied) {
-  const ctx = await browser.newContext({ ...PHONE, extraHTTPHeaders: { "Tailscale-User-Login": "journeys@stack.local", "Tailscale-User-Name": "Journey check" } });
+async function sweep(browser, emptied, shape = "phone", routes = cfg.routes, max = cfg.max || 90) {
+  const SH = SHAPES[shape] || PHONE;
+  const ctx = await browser.newContext({ ...SH, extraHTTPHeaders: { "Tailscale-User-Login": "journeys@stack.local", "Tailscale-User-Name": "Journey check" } });
   const writes = [], errs = [];
   await ctx.route("**/*", async (route) => {
     const req = route.request(), u = new URL(req.url());
@@ -97,8 +124,8 @@ async function sweep(browser, emptied) {
   await sleep(2500);
   const started = await page.evaluate(() => typeof render === "function" && typeof route === "object");
   if (!started) errs.push({ route: "#/", msg: "the app's scripts did not start (a syntax error or a script that did not load)" });
-  const seen = new Set(), per = {}, queue = [...cfg.routes], results = [];
-  while (queue.length && results.length < (cfg.max || 90)) {
+  const seen = new Set(), per = {}, queue = [...routes], results = [];
+  while (queue.length && results.length < max) {
     const h = queue.shift();
     if (seen.has(h)) continue;
     seen.add(h);
@@ -109,9 +136,9 @@ async function sweep(browser, emptied) {
     await page.evaluate((x) => { location.hash = x; }, h);
     await sleep(1600);
     for (let i = 0; i < 6 && (await page.evaluate(() => !!document.querySelector("#view .skeleton") && !(document.querySelector("#view").innerText || "").trim())); i++) await sleep(1000);
-    const m = await page.evaluate(measure, PHONE.viewport.width);
-    if (!emptied) for (const x of await page.$$eval('#view a[href^="#/"]', (as) => as.map((a) => a.getAttribute("href")))) if (!seen.has(x)) queue.push(x);
-    results.push({ route: h, kind: k, ...m, errors: errs.slice(e0).map((e) => e.msg) });
+    const m = await page.evaluate(measure, SH.viewport.width);
+    if (!emptied && shape === "phone") for (const x of await page.$$eval('#view a[href^="#/"]', (as) => as.map((a) => a.getAttribute("href")))) if (!seen.has(x)) queue.push(x);
+    results.push({ route: h, kind: k, shape, size: `${SH.viewport.width}×${SH.viewport.height}`, ...m, errors: errs.slice(e0).map((e) => e.msg) });
   }
   await ctx.close();
   return { results, writes, errors: errs };
@@ -211,9 +238,19 @@ const report = {};
 try {
   if (cfg.wide) report.wide = await wide(browser);
   if (cfg.decide) report.decide = await decide(browser);
-  if (cfg.routes?.length) {
+  if (cfg.routes?.length && !cfg.onlyShapes) {
     report.live = await sweep(browser, false);
     report.empty = await sweep(browser, true);
+  }
+  if (cfg.shapes?.length) {                                // APP-60: the main screens at every shape, every screen at a desktop
+    report.shapes = { results: [], errors: [] };
+    const routes = report.live ? [...new Set(report.live.results.map((r) => r.route))] : cfg.routes || [];
+    for (const shape of cfg.shapes) {
+      const many = shape === "desktop";
+      const r = await sweep(browser, false, shape, many ? routes : cfg.shapeRoutes || routes.slice(0, 8), many ? (cfg.max || 90) : 12);
+      report.shapes.results.push(...r.results);
+      report.shapes.errors.push(...r.errors.filter((e) => !e.route));
+    }
   }
   if (cfg.email) report.email = await email(browser);
 } finally {

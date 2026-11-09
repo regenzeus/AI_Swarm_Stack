@@ -265,8 +265,15 @@ function ctRow(t) {
     <div class="row between" style="gap:8px"><b class="small wrap">#${t.id} ${esc(ctTitle(t))}</b><span class="tiny faint" style="white-space:nowrap">${rel(t.ended || t.started || t.created)}</span></div>
     <div class="row wrap tiny muted" style="gap:6px;margin-top:3px"><span class="pill ${cls}" style="padding:1px 7px">${label}</span>${esc(t.mode)}${t.repo ? " · " + esc(t.repo) : ""}${t.turns ? ` · ${t.turns} steps` : ""}${t.tokens ? ` · ${tok(t.tokens)} tokens${t.cached ? ` (${Math.round(100 * t.cached / t.tokens)} % cached)` : ""}` : ""}</div></summary>
     ${ctTitle(t) !== t.question ? `<details style="margin-top:10px"><summary class="small muted">The whole question${/^crew:/.test(t.source || "") ? ` the ${esc(ctAsker(t))} asked` : ""}</summary><div class="small wrap" style="white-space:pre-wrap;margin-top:6px">${esc(t.question)}</div></details>` : ""}
+    ${["queued", "waiting", "running"].includes(t.status) ? `<div class="row" style="justify-content:flex-end;margin-top:8px"><button type="button" class="btn sm ghost" data-ctcancel="${t.id}">${ic.x || ""}Cancel</button></div>` : ""}
     <div class="ctbody" id="ct-${t.id}" style="margin-top:10px"><div class="skeleton" style="height:40px"></div></div></details>`;
 }
+document.addEventListener("click", async (e) => {                     // TSK-46: withdraw a Claude task (the list is redrawn live)
+  const b = e.target.closest("[data-ctcancel]");
+  if (!b || !confirm(`Cancel Claude task #${b.dataset.ctcancel}? A running one stops at its next step.`)) return;
+  b.disabled = true;
+  await act({ action: "claude_cancel", id: +b.dataset.ctcancel }, (r) => (r?.cancelled ? `Claude task #${b.dataset.ctcancel} cancelled` : "It had already ended"));
+});
 // an answer in JSON (the Health doctor's diagnoses) is shown as findings, any other as Markdown; nothing is left out
 function ctAnswer(a) {
   let j;
@@ -399,8 +406,7 @@ const rfAge = (days) => (days == null ? "" : days < 1 ? "today" : days < 2 ? "ye
 const rfPath = (name, p) => `<a class="rfpath wrap" href="#/chat?prompt=${encodeURIComponent(`In the repository ${name}, about ${p}: `)}">${esc(p)}</a>`;
 const rfRow = (body, why, tag = "") => `<div><div class="grow" style="min-width:0">${body}${why ? `<div class="sub wrap">${why}</div>` : ""}</div>${tag ? `<span class="tag">${esc(tag)}</span>` : ""}</div>`;
 // the most telling rows first; the rest are in the page, one tap away (.rflist: nothing is cut)
-const RF_FIRST = 8;
-const rfList = (rows, none) => (rows.length ? `<div class="card list rflist">${rows.join("")}</div>${rows.length > RF_FIRST ? `<button type="button" class="btn sm rfmore" data-rfall>Show all ${nf(rows.length)}</button>` : ""}` : `<div class="card pad small muted">${none}</div>`);
+const rfList = (rows, none) => (rows.length ? `<div class="card list rflist">${rows.join("")}</div>` : `<div class="card pad small muted">${none}</div>`);   // every row, from the start (the owner, 9 Nov 2026)
 const rfSection = (key, title, how, body) => `<div class="section rfsec"><div class="section-h"><h2>${title}</h2></div>${explain(key, how, "What this means")}${body}</div>`;
 const hasFacts = (d) => !!d && typeof d === "object" && !d.error && ["at", "commit", "hotspots", "health", "errors"].some((k) => d[k] !== undefined);
 const rfErrors = (d, part) => (d?.errors || []).map((e) => (typeof e === "string" ? e : [e.tool || e.step || e.name, e.error || e.message || e.reason].filter(Boolean).join(": ") || JSON.stringify(e)))
@@ -473,17 +479,34 @@ function repoHealthHtml(name, r, d) {
 }
 // the owner, 9 Nov 2026: "In health could we visualize more?" Each part's health as a bar on its 1 to 10 scale, weakest first,
 // its tests' reach beside it; the colour says the band and the words say it too (never colour alone)
-function healthBars(byId) {
-  const checks = (id, n) => (byId[id]?.checks || []).find((c) => c.name === n)?.data?.components || {};
-  const comps = checks("components", "components"), reach = checks("test-reach", "test-reach:components");
-  const rows = Object.entries(comps).filter(([, v]) => v.health?.average != null).map(([n, v]) => ({ n, h: v.health.average, files: v.file_count || 0, r: reach[n]?.share }))
-    .sort((a, b) => a.h - b.h);
-  if (!rows.length) return "";
-  const band = (h) => (h < 4 ? ["err", "weak"] : h < 7 ? ["warn", "fair"] : ["ok", "good"]);
-  return `<div class="section"><div class="section-h"><h2>Each part's health</h2><span class="tiny faint">1 to 10, weakest first</span></div>
-    <div class="card pad hbars">${rows.map((x) => { const [c, w] = band(x.h); return `<div class="hbar" title="${esc(x.n)}: health ${nf(x.h, 1)} of 10 (${w}), ${rfN(x.files, "file")}${x.r != null ? `, tests reach ${nf(x.r * 100)} %` : ""}">
-      <div class="hbar-l small wrap">${esc(x.n)}</div><div class="hbar-t"><i class="hbar-f ${c}" style="width:${Math.max(4, x.h * 10)}%"></i></div>
-      <div class="hbar-v tiny"><b>${nf(x.h, 1)}</b> ${w}<span class="faint"> · ${rfN(x.files, "file")}${x.r != null ? ` · tests ${nf(x.r * 100)} %` : ""}</span></div></div>`; }).join("")}</div></div>`;
+function healthBars(byId) {   // APP-58: at a glance, then every part with every measure it has; a part without a score keeps its row
+  const check = (id, n) => (byId[id]?.checks || []).find((c) => c.name === n);
+  const per = (id, n) => check(id, n)?.data?.components || {};
+  const comps = per("components", "components"), reach = per("test-reach", "test-reach:components"), bus = per("bus-factor", "bus-factor");
+  const names = [...new Set([...Object.keys(comps), ...Object.keys(reach), ...Object.keys(bus)])];
+  if (!names.length) return "";
+  const rows = names.map((n) => ({ n, h: comps[n]?.health?.average ?? null, files: comps[n]?.file_count ?? reach[n]?.production_files ?? null,
+    r: reach[n]?.share ?? null, who: bus[n]?.value ?? null }))
+    .sort((a, b) => (a.h ?? 11) - (b.h ?? 11) || (a.r ?? 2) - (b.r ?? 2) || a.n.localeCompare(b.n));
+  const band = (h) => (h == null ? ["none", "not scored"] : h < 4 ? ["err", "weak"] : h < 7 ? ["warn", "fair"] : ["ok", "good"]);
+  const scored = rows.filter((x) => x.h != null), weight = scored.reduce((t, x) => t + (x.files || 1), 0);
+  const overall = scored.length ? scored.reduce((t, x) => t + x.h * (x.files || 1), 0) / weight : null;
+  const tr = check("test-reach", "test-reach")?.data, dead = check("dead-code", "dead-code")?.data?.by_kind;
+  const deadN = dead ? Object.values(dead).reduce((t, n) => t + (+n || 0), 0) : null, alone = rows.filter((x) => x.who === 1).length;
+  const tile = (v, label, cls = "") => `<div class="htile ${cls}"><div class="htile-v">${v}</div><div class="htile-l tiny faint">${label}</div></div>`;
+  const tiles = [overall != null ? tile(`${nf(overall, 1)}<span class="tiny faint"> / 10</span>`, `health, weighted by files · ${band(overall)[1]}`, band(overall)[0]) : "",
+    tr?.share != null ? tile(`${nf(tr.share * 100)} %`, `of ${rfN(tr.production_files || 0, "file")} reached by a test`) : "",
+    tile(nf(rows.length), rows.length === 1 ? "part" : "parts"),
+    deadN != null ? tile(nf(deadN), "pieces of code nothing uses") : "",
+    Object.keys(bus).length ? tile(nf(alone), `part${alone === 1 ? "" : "s"} one person holds`, alone ? "warn" : "") : ""].join("");
+  const bar = (pct, cls) => `<div class="hbar-t"><i class="hbar-f ${cls}" style="width:${Math.max(3, Math.min(100, pct))}%"></i></div>`;
+  return `<div class="section"><div class="section-h"><h2>At a glance</h2></div><div class="htiles">${tiles}</div></div>
+    <div class="section"><div class="section-h"><h2>Each part</h2><span class="tiny faint">weakest first · ${nf(rows.length)}</span></div>
+    <div class="card pad hparts">${rows.map((x) => { const [c, w] = band(x.h); return `<div class="hpart">
+      <div class="hpart-n small wrap"><b>${esc(x.n)}</b>${x.files != null ? `<span class="tiny faint"> · ${rfN(x.files, "file")}</span>` : ""}${x.who != null ? `<span class="tiny ${x.who === 1 ? "warn-t" : "faint"}"> · ${x.who === 1 ? "one person holds it" : `${nf(x.who)} people hold it`}</span>` : ""}</div>
+      <div class="hpart-m"><span class="tiny faint">health</span>${x.h != null ? bar(x.h * 10, c) : `<div class="hbar-t"></div>`}<span class="tiny"><b>${x.h != null ? nf(x.h, 1) : "–"}</b> ${w}</span></div>
+      <div class="hpart-m"><span class="tiny faint">tests reach</span>${x.r != null ? bar(x.r * 100, x.r < 0.5 ? "warn" : "ok") : `<div class="hbar-t"></div>`}<span class="tiny"><b>${x.r != null ? `${nf(x.r * 100)} %` : "–"}</b>${x.r == null ? " not measured" : ""}</span></div>
+    </div>`; }).join("")}</div></div>`;
 }
 
 function repoWikiHtml(name, r, g) {
@@ -587,7 +610,6 @@ const rpFacts = (name) => rp.facts || (rp.facts = api(`/api/repo/${repoEnc(name)
 function repoFill(el, name, html) {
   el.innerHTML = html;
   if (el.isConnected) bindOnboard(name);                       // you may have moved on to another repository meanwhile
-  $$("[data-rfall]", el).forEach((b) => (b.onclick = () => { b.previousElementSibling.classList.add("all"); b.hidden = true; }));
 }
 function repoFailed(name, r, el, e, again, shared) {
   repoFill(el, name, emptyState(`This did not load: ${esc(e.message)}`, `<button type="button" class="btn" data-rretry>Try again</button>`, "card"));
@@ -761,7 +783,7 @@ async function showNode(repo, id) {
     const groups = {};
     list.forEach((p) => (groups[p.relation || "linked"] = groups[p.relation || "linked"] || []).push(p));
     return Object.entries(groups).map(([rel, ps]) => `<div class="tiny faint" style="margin-top:8px">${esc(dir === "out" ? relOut[rel] || rel : relIn[rel] || rel)} · ${ps.length}</div>
-      <div class="chips rn-peers" style="margin-top:4px">${ps.map((p, i) => `<button class="tag peer${p.text ? " rn-doc" : ""}" data-node="${esc(p.id)}" title="${esc(p.file)}${p.inferred ? " (inferred)" : ""}"${i >= 14 ? " hidden" : ""}>${esc(p.text || p.label)}</button>`).join("")}${ps.length > 14 ? `<button class="linkbtn tiny" data-rnmore>show all ${nf(ps.length)}</button>` : ""}</div>`).join("");
+      <div class="chips rn-peers" style="margin-top:4px">${ps.map((p, i) => `<button class="tag peer${p.text ? " rn-doc" : ""}" data-node="${esc(p.id)}" title="${esc(p.file)}${p.inferred ? " (inferred)" : ""}">${esc(p.text || p.label)}</button>`).join("")}</div>`).join("");
   };
   const ua = n.about || n.about_file;
   el.innerHTML = `
@@ -776,7 +798,6 @@ async function showNode(repo, id) {
     ${peers(n.outgoing, "out")}${peers(n.incoming, "in")}
     ${n.code ? `<details class="rn-code" open><summary class="tiny faint" id="rnsrc">Source · ${nf(n.code.total)} lines, its own ${nf(n.line || n.code.start)} to ${nf(n.code.end)} marked</summary><pre class="code" id="rncode">${esc(n.code.text)}</pre></details>` : ""}`;
   $$(".peer", el).forEach((b) => (b.onclick = () => showNode(repo, b.dataset.node)));
-  $$("[data-rnmore]", el).forEach((b) => (b.onclick = () => { b.parentElement.querySelectorAll(".peer[hidden]").forEach((x) => (x.hidden = false)); b.remove(); }));
   if (n.code && n.file) {                                    // the source shown is the whole file (the owner, 9 Nov): its lines marked, in view
     api(`/api/repo/${encodeURIComponent(repo)}/file?path=${encodeURIComponent(n.file)}`).then((f) => {
       const pre = $("#rncode", el);

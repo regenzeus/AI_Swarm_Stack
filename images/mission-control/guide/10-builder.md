@@ -8,7 +8,7 @@ summary: Describe a change, a sandboxed coding agent writes it, you review it, a
 views: [build]
 ---
 The **builder** is a coding agent that works on the stack itself (and your other repositories). You describe what
-you want, it writes the code in a sandbox, and you decide whether it goes live. That's how Mission Control can
+you want, it writes the code in a sandbox, and you decide whether it goes live. That's how {{APP_NAME}} can
 grow new features from a chat message.
 
 ## The flow

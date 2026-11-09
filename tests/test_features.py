@@ -102,7 +102,7 @@ def test_a_script_of_a_feature_that_is_off_says_not_configured_before_any_networ
     for script, feature, first_net in (("ops/backup.sh", "home", "ssh "), ("ops/deploy-ha.sh", "home", "ssh"),
                                        ("ops/desk.sh", "web", "docker run"), ("ops/restore.sh", "home", "ssh synology")):
         code = [ln for ln in (ROOT / script).read_text().splitlines() if not ln.lstrip().startswith("#")]
-        guard = next(i for i, ln in enumerate(code) if f"deployment.py\" need {feature} || exit 0" in ln)
+        guard = next(i for i, ln in enumerate(code) if f"deployment.py\" need {feature}" in ln)   # "|| exit 0", or a refusal (GEN-20)
         assert guard < next(i for i, ln in enumerate(code) if first_net in ln), script
 
 
@@ -123,4 +123,19 @@ def test_compose_demands_no_home_value_of_a_deployment_without_the_feature():
                  "PC_TAILNET_HOST": "pc.ts.net"}
     assert D.missing(home_like) == ["HA_URL is empty, and home needs it", "PHONE_HOST is empty, and phone needs it"]
     assert "python3 ops/deployment.py check" in (root / "Makefile").read_text()
+
+
+def test_a_deployment_without_home_never_restores_or_rebuilds_the_home_stack():
+    """GEN-20. A work site, 9 Nov 2026, kept a local commit so that the home stack's backup, restore and new-machine
+    scripts could not run there. Backup and the drill already stood aside; a restore and new-machine.sh now refuse too,
+    before they read or replace anything."""
+    root = Path(DEPLOY.__file__).resolve().parents[1]
+    env = {**__import__("os").environ, "AISTACK_DEPLOYMENT": "example-work"}
+    r = subprocess.run(["bash", str(root / "ops/restore.sh"), "apply", "x.tar.gz.age"], capture_output=True, text=True, env=env, timeout=60)
+    assert r.returncode == 1 and "refused" in r.stderr and "no home feature" in r.stderr
+    r = subprocess.run(["bash", str(root / "ops/restore.sh"), "drill"], capture_output=True, text=True, env=env, timeout=60)
+    assert r.returncode == 0 and "not configured" in r.stdout
+    r = subprocess.run(["bash", str(root / "ops/new-machine.sh")], capture_output=True, text=True, env=env, timeout=60)
+    assert r.returncode == 1 and "refused" in r.stderr
+    assert "need home || exit 0" in (root / "ops/backup.sh").read_text()
 

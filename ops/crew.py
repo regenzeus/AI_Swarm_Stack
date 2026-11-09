@@ -577,7 +577,7 @@ def app_errors(now=None, path=None):
         issues = [{"kind": "app-error", "text": text, "at": max(r["ts"] for r in rows)}] + issues
     if not issues:
         return []
-    return [{"name": "Mission Control (the app)", "kind": "engine", "id": "app", "status": "issues", "last": last, "runs_7d": None,
+    return [{"name": f"{DEPLOY.app_name()} (the app)", "kind": "engine", "id": "app", "status": "issues", "last": last, "runs_7d": None,
              "success_7d": None, "issues": issues, "payoff": ""}]
 
 

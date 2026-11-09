@@ -45,7 +45,7 @@ def test_the_map_names_every_dot_and_shows_open_ideas_when_asked():
     assert "#/swarm/artifact/${d.aid}" in g                                             # a tap opens the idea
     js = "\n".join([re.search(r"^const swIdeaLabel = .*$", SWARM, re.M)[0],
         "process.stdout.write(JSON.stringify([swIdeaLabel({id: 4, title: 'Refresh the desk feeds every hour'}), swIdeaLabel({id: 9, title: 'PC disk cleanup'})]));"])
-    assert json.loads(subprocess.run(["node", "-e", js], capture_output=True, text=True, check=True).stdout) == ["#4 Refresh the desk feeds …", "#9 PC disk cleanup"]
+    assert json.loads(subprocess.run(["node", "-e", js], capture_output=True, text=True, check=True).stdout) == ["#4 Refresh the desk feeds every hour", "#9 PC disk cleanup"]   # APP-57: the whole title
     assert "groupName(c)" in APP and "`around ${top.title}`" in APP                        # the code graph's groups by name, not number
 
 

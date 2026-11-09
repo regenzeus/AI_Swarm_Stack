@@ -12,6 +12,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 import prompts as P  # noqa: E402
 import textcap as TC                              # visible caps (AGENTS.md, truncation)
+import deployment as DEPLOY                        # the app's name (APP-61)
 
 C = "aistack-hermes-1"
 STATE = Path("/srv/ai/state"); LOG = STATE / "approvals.jsonl"; SEEN = STATE / "memory-notified.json"
@@ -73,9 +74,9 @@ def main():
         rule = "too-long" if len(entry) > 300 else ("contradiction" if verdict.get("contradicts") else "sensitive")
         if pid not in seen:
             record(item_id=pid, rule=rule, decision="staged", actor="auto")
-            short = TC.fit(re.sub(r"\d{3,}", "###", entry), 900, "Mission Control, System")  # cap: api (a Telegram message, marked; review MEM-R18)
+            short = TC.fit(re.sub(r"\d{3,}", "###", entry), 900, f"{DEPLOY.app_name()}, System")  # cap: api (a Telegram message, marked; review MEM-R18)
             notify(f"Memory needs your OK ({rule}: {verdict.get('reason', '')}):\n\"{short}\"\n"
-                   f"Approve: /memory approve {pid}   Reject: /memory reject {pid}\nOr tap it in Mission Control, System.")
+                   f"Approve: /memory approve {pid}   Reject: /memory reject {pid}\nOr tap it in {DEPLOY.app_name()}, System.")
             seen.add(pid)
     SEEN.write_text(json.dumps(sorted(seen)))
 

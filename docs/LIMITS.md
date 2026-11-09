@@ -22,7 +22,7 @@ left out, and the reason says where that is shown.
 | `ops/onboard.py` | `NEED_GB` | the PC's available memory before the code map's container starts (= conductor NEED_GB opencode) |
 | `ops/repofacts.py` | `NEED_GB` | the PC's available memory before a facts run starts (measured: 736 MiB at peak on click; its container is capped at 2 GB) |
 
-## paces (17)
+## paces (19)
 
 | Where | Limit | Why |
 |---|---|---|
@@ -32,6 +32,8 @@ left out, and the reason says where that is shown.
 | `nas/mailvault/vault.py` | `PASS_S` | one pass copies bodies this long, then new mail gets its turn |
 | `ops/changes.py` | `SANDBOX_WORKERS` | parallel test workers in the builder sandbox (2 GB, 3 CPUs in compose): more were killed for memory |
 | `ops/checker.py` | `n >= REFUSED_WAKES` | only raises a health alert (SWM-80) |
+| `ops/claude_tasks.py` | `PARALLEL` | Claude tasks side by side unless the deployment says CLAUDE_PARALLEL (home: one subscription) |
+| `ops/claude_tasks.py` | `PARALLEL_MAX` | at most this many whatever the deployment says |
 | `ops/doctor.py` | `MAX_ISSUES` | issues one doctor pass looks at; the rest the next |
 | `ops/editor.py` | `MAX_IDEAS` | open ideas one pass sorts (the oldest first); the rest the next pass, and the result says how many waited |
 | `ops/keeper.py` | `AUTO_MAX` | automatic memory changes a pass; the rest are listed and follow |
@@ -44,7 +46,7 @@ left out, and the reason says where that is shown.
 | `ops/ua_enrich.py` | `WORKERS_MAX` | at most this many whatever the deployment says |
 | `ops/wikis.py` | `len(done) >= PER_PASS` | wiki summaries a pass; the rest the next pass |
 
-## refuses (49)
+## refuses (51)
 
 | Where | Limit | Why |
 |---|---|---|
@@ -79,6 +81,8 @@ left out, and the reason says where that is shown.
 | `images/swarm/ledger.py` | `self.db.execute("select count(*) from messages where sender=? and ts>?", (me, now - 3600)).fetchone()[0] >= PER_HOUR` | as PER_HOUR above (per sender; the room's check follows) |
 | `images/swarm/ledger.py` | `self.db.execute("select count(*) from messages where context=? and ts>?", (ctx, now - 86400)).fetchone()[0] >= PER_THREAD_DAY` | as PER_THREAD_DAY above |
 | `images/swarm/ledger.py` | `h > EXPIRY_MAX_H` | as EXPIRY_MAX_H above |
+| `ops/claude_tasks.py` | `history < 0 or history > HISTORY_MAX` | HISTORY_MAX commits of history at most |
+| `ops/claude_tasks.py` | `HISTORY_MAX` | commits of history a task's copy may bring (a review of recent work, not the whole past) |
 | `ops/conductor.py` | `EACH` | a plan fanning out over more names the limit on the task: SLOTS already paces the copies |
 | `ops/email-setup.sh` | `[ ${#pw} -ge 16 ]` | a Gmail app password has 16 letters |
 | `ops/events.py` | `not re.match(r"^https://[^\s/]+/\S+$", url) or len(url) > 2000` | what is no calendar address |
@@ -98,7 +102,7 @@ left out, and the reason says where that is shown.
 | `ops/winjobs.py` | `MINUTES_MAX` | a job kind's time limit: a day at most; its own minutes stop it sooner |
 | `ops/winworker.py` | `FILES_KB` | a request's files (a patch) stay small: a patch past this is no change a person reviews |
 
-## stops (35)
+## stops (36)
 
 | Where | Limit | Why |
 |---|---|---|
@@ -122,6 +126,7 @@ left out, and the reason says where that is shown.
 | `ops/crew.py` | `--max-turns` | a crew agent's Board answer past 20 turns is reported as stopped |
 | `ops/evals.py` | `--max-turns` | a replay is one answer, no tools |
 | `ops/journeys.py` | `DECIDE_TIMEOUT` | the decide journey gives the runner and the app this many seconds at each step; past it the journey fails and says which step |
+| `ops/journeys.py` | `BROWSER_TIMEOUT` | the browser's whole run: every screen twice at 375 px, then at nine more shapes (APP-60) |
 | `ops/missions.py` | `TASK_TIMEOUT` | one mission run past this counts as failed |
 | `ops/onboard.py` | `ATTEMPTS` | a step that failed this often names its reason and waits for the owner's Try again (BLD-26) |
 | `ops/onboard.py` | `RESTARTS` | a job that died this often without finishing a step says so instead of looping (BLD-26) |

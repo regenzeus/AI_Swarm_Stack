@@ -52,6 +52,7 @@ STATE = Path("/srv/ai/missions/public/state.json")
 DECIDE_TIMEOUT = 120
 VAULT = Path("/srv/vault")
 BROWSER, DESK = "aistack/browser:1", "aistack/desk:1"
+BROWSER_TIMEOUT = 3000   # limit: stops, the browser's whole run: every screen twice at 375 px, then at nine more shapes (APP-60)
 APP, NET = "http://mission-control:8090", "aistack_mcui"   # the app as Tailscale serve reaches it; the browser allows no other host
 PHONE = 375
 # the routes a sweep starts from; it follows every link it finds (two screens of each kind)
@@ -363,9 +364,33 @@ def render_email(markdown_text, kicker, run=subprocess.run):
 
 
 # ---------- routes: every screen at 375 px, in a browser ----------
+SHAPES = ["phone-landscape", "tablet", "tablet-landscape", "laptop", "desktop", "desktop-1080p", "ultrawide", "portrait-monitor", "4k"]
+MAIN = ["#/", "#/tasks", "#/chat", "#/code", "#/memory", "#/stack", "#/guide"]   # the screens checked at every shape (APP-60)
+
+
+def judge_shapes(report):
+    """APP-60: the app at every shape of window: a fault names its screen and the window it shows in."""
+    out = []
+    for r in (report.get("shapes") or {}).get("results") or []:
+        at = f"{r['route']} in a {r.get('shape')} window ({r.get('size')})"
+        if (r.get("overflow") or 0) > 1:
+            out.append(f"{at} scrolls sideways by {r['overflow']} px ({'; '.join(r.get('wide') or [])})")
+        out += [f"{at} cuts text off: {x}" for x in r.get("clipped") or []]
+        if r.get("writebox") is False:
+            out.append(f"{at}: the box to write in is outside the window")
+        if (r.get("pagescroll") or 0) > 1:
+            out.append(f"{at}: the chat page scrolls by {r['pagescroll']} px instead of holding the window")
+        if r.get("nav") is False:
+            out.append(f"{at}: neither the tab bar nor the sidebar shows")
+        out += [f"{at}: a script error: {m}" for m in dict.fromkeys(r.get("errors") or [])]
+        if not r.get("main") and not r.get("graphic"):
+            out.append(f"{at} shows nothing")
+    return out
+
+
 def judge_routes(report):
     """The browser's report -> each fault, said where the owner meets it."""
-    out = []
+    out = judge_shapes(report)
     for mode, label in (("live", ""), ("empty", " (with no data)")):
         part = report.get(mode) or {}
         for e in part.get("errors") or []:
@@ -373,6 +398,9 @@ def judge_routes(report):
                 out.append(f"the app reported an error{label}: {e['msg']}")
         for r in part.get("results") or []:
             at = f"{r['route']}{label}"
+            out += [f"{at} cuts text off at {PHONE} px: {x}" for x in r.get("clipped") or []]
+            if r.get("writebox") is False:
+                out.append(f"{at}: the box to write in is outside the window at {PHONE} px")
             if (r.get("overflow") or 0) > 1:
                 out.append(f"{at} scrolls sideways at {PHONE} px by {r['overflow']} px ({'; '.join(r.get('wide') or [])}"
                            + (f"; from {(r.get('chain') or [''])[-1]}" if r.get("chain") else "") + ")")
@@ -401,7 +429,7 @@ def browser(cfg, web=None, extra=(), run=subprocess.run):
         cmd = ["docker", "run", "--rm", "--network", NET, "-m", "1g", "--user", "10008", "-e", "HOME=/tmp",
                "-v", f"{ROOT / 'ops/journeys.mjs'}:/j/journeys.mjs:ro", "-v", f"{d}:/jd:ro",
                *(["-v", f"{web}:/web:ro"] if web else []), "--entrypoint", "node", BROWSER, "/j/journeys.mjs", "/jd/config.json"]
-        p = run(cmd, capture_output=True, text=True, timeout=1500)
+        p = run(cmd, capture_output=True, text=True, timeout=BROWSER_TIMEOUT)
     if p.returncode:
         raise RuntimeError(f"the browser did not run: {tail(p.stderr)}")  # cap: preview (its error's end)
     return json.loads(p.stdout)
@@ -420,9 +448,22 @@ def seeds(db=LIVE_DB):
     return out
 
 
+def repo_screens(db=LIVE_DB):
+    """A repository's overview and Health, for the shapes (the first repository the app lists)."""
+    try:
+        import json as _j
+        import urllib.request as _u
+        req = _u.Request("http://127.0.0.1:8090/api/state", headers={"Tailscale-User-Login": "journeys@stack.local"})   # from the host
+        repos = (_j.load(_u.urlopen(req, timeout=30)).get("code") or {}).get("repos") or []
+        name = next((r["name"] for r in repos if not str(r.get("name", "")).startswith("trial-")), None)
+        return [f"#/repo/{name}", f"#/repo/{name}?tab=health"] if name else []
+    except (OSError, ValueError):
+        return []
+
+
 def check_routes(run=subprocess.run):
-    rep = browser({"routes": seeds(), "max": 90}, web=ROOT / "images/mission-control/web", run=run)
-    return {"checked": len((rep.get("live") or {}).get("results") or []) + len((rep.get("empty") or {}).get("results") or []),
+    rep = browser({"routes": seeds(), "max": 90, "shapes": SHAPES, "shapeRoutes": MAIN + repo_screens()}, web=ROOT / "images/mission-control/web", run=run)
+    return {"checked": sum(len((rep.get(k) or {}).get("results") or []) for k in ("live", "empty", "shapes")),
             "failures": judge_routes(rep), "writes_not_sent": sorted(set((rep.get("live") or {}).get("writes") or []))}
 
 

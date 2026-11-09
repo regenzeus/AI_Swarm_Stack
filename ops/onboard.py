@@ -851,6 +851,59 @@ def modules_text(name):
     return TC.cut("\n".join(lines), MODULES_CHARS, f"the smaller packages; every one is in graphify-out/graph.json ({len(packs)} packages)")  # cap: prompt
 
 
+def guide_titles():
+    """The section titles the guide's and the analysis's prompts ask for, read from the prompts themselves (one source)."""
+    out = []
+    for name in ("ONBOARD_GUIDE", "ONBOARD_ANALYSIS"):
+        out += re.findall(r"^## (.+?)\s*$", str(P.text("shared", name)), re.M)
+    return list(dict.fromkeys(out))
+
+
+def _key(s):
+    return re.sub(r"[^a-z0-9]+", " ", s.lower()).strip()
+
+
+HEADING_DRESS = re.compile(r"^(?:\*\*|__)?\s*(?:(?:\d+|[A-Za-z])\s*[.)]|(?:\d+|[A-Z])\s+[—–-])?\s*(.*?)\s*(?:\*\*|__)?\s*:?\s*(?:\*\*|__)?\s*$")
+
+
+def headings_fixed(text, titles=None):
+    """BLD-39: a line that is one of the asked section titles, written as plain text ("Module map", "**3. Module map:**"),
+    becomes its "## Title" heading; everything else stays as it is. -> (text, how many lines were made headings). A work
+    site, 9 Nov 2026: 7 of 10 good guides had no "##" line, so the check failed them and the card and wiki read nothing."""
+    canon = {_key(t): t for t in (titles if titles is not None else guide_titles())}
+    out, fixed = [], 0
+    for line in str(text).split("\n"):
+        m = HEADING_DRESS.match(line.strip()) if line.strip() and not line.lstrip().startswith("#") else None
+        title = canon.get(_key(m.group(1))) if m else None
+        if title:
+            out.append(f"## {title}")
+            fixed += 1
+        else:
+            out.append(line)
+    return "\n".join(out), fixed
+
+
+def fix_headings(names=None):
+    """The written guides and analyses on disk, their plain-text section titles made headings, once, without a model;
+    each one repaired gets its card and its guide's wiki pages made again. -> {name: lines fixed}."""
+    done = {}
+    for f in sorted(DOCS.glob("*.analysis.md")):
+        name = f.name[:-len(".analysis.md")]
+        if names and name not in names:
+            continue
+        text, n = headings_fixed(f.read_text(errors="replace"))
+        if n:
+            write_doc(f, text)
+            done[name] = n
+            try:
+                import repocard as RC
+                RC.make(name)
+                sh(sys.executable, str(STACK / "ops/repowiki.py"), "feed", name, timeout=1200, check=False)
+            except Exception as e:                         # the guide is fixed; the card is made again by onboarding's next pass
+                print(f"{name}: the card was not made again: {type(e).__name__}: {e}", flush=True)
+    return done
+
+
 def step_analysis(st):
     name = st["repo"]
     if not st.get("task"):
@@ -876,7 +929,12 @@ def step_analysis(st):
         save(st)
         raise RuntimeError(f"Claude task #{tid} ended without an analysis: {TC.tail(str(t.get('error') or 'no answer'), 800)}")  # cap: store
     sha = sh("git", "-C", str(CODE / name), "rev-parse", "--short", "HEAD", check=False).stdout.strip()
-    write_doc(DOCS / f"{name}.analysis.md", f"# {name}: analysis\n\nCommit {sha}, {now()[:10]}, by [Claude task #{st['task']}](#/live/claude-task:{st['task']}).\n\n{t['answer']}\n")
+    answer, fixed = headings_fixed(t["answer"])          # BLD-39: the asked titles as headings, whatever the model wrote
+    if fixed:                                             # a warning in the job's log: the model drifting from the prompt shows
+        print(f"onboard {name}: prompt adherence: the guide's model wrote {fixed} section titles without their ## heading; "
+              "made headings", flush=True)
+        st["note_headings"] = fixed
+    write_doc(DOCS / f"{name}.analysis.md", f"# {name}: analysis\n\nCommit {sha}, {now()[:10]}, by [Claude task #{st['task']}](#/live/claude-task:{st['task']}).\n\n{answer}\n")
     qmd_index()
     if not qmd_has(f"{name}.analysis.md"):
         raise RuntimeError(f"the search index does not list {name}.analysis.md after the update")
@@ -1165,6 +1223,10 @@ def main(argv):
     if len(argv) == 3 and argv[1] == "start":
         r = start(argv[2], "make")
         print(f"{r['repo']}: " + ("already running" if r["already"] else "started"))
+        return 0
+    if len(argv) >= 2 and argv[1] == "fix-headings":    # BLD-39: repair the guides on disk once, without a model
+        for name, n in fix_headings(argv[2:] or None).items():
+            print(f"{name}: {n} section titles made headings")
         return 0
     if len(argv) == 2 and argv[1] == "all":
         for d in sorted(CODE.iterdir()):

@@ -11,7 +11,7 @@ The AI Stack is a personal AI team that lives on one Windows PC at home. It read
 researches companies, watches the SEC and the markets, keeps a growing knowledge base, remembers what you told it,
 and can even improve its own software, which you approve with a tap.
 
-You use all of it from **Mission Control**, the app you are reading this in. It works on your phone and your PC.
+You use all of it from **{{APP_NAME}}**, the app you are reading this in. It works on your phone and your PC.
 
 ```live
 architecture

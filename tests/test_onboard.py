@@ -405,7 +405,7 @@ def test_the_app_shows_the_steps_and_promises_nothing_false():
     assert "const viewerUrl = () =>" in app and app.count("${HOSTURL}:8446/") == 1 and "http://${location.hostname}:5173/" in app   # BLD-32: the viewer off the tailnet
     assert 'data-ark="own" class="on"' in app and 'repo: v, kind }' in app                                                     # BLD-31: the repository's kind
     assert "/file?path=${encodeURIComponent(n.file)}" in app and "lines, its own ${nf(n.line || n.code.start)} to ${nf(n.code.end)} marked" in app   # the whole file, always (owner 9 Nov)
-    assert '<mark class="rn-hl" id="rnhl">' in app and "data-rnmore" in app and "whole file</button>" not in app
+    assert '<mark class="rn-hl" id="rnhl">' in app and "data-rnmore" not in app and "whole file</button>" not in app   # every neighbour shown
     assert 'llm ? s.model : ""' in app                                                   # a deterministic step names no model
     css = (ROOT / "images/mission-control/web/static/app.css").read_text()
     assert ".rn-code pre.code { white-space: pre-wrap; overflow-wrap: anywhere;" in css
@@ -647,4 +647,35 @@ def test_the_guides_context_keeps_the_layers_when_the_package_list_is_cut(tmp_pa
     text = O.modules_text("demo")
     assert text.startswith("# What the code map says about each layer\n- core: The expression trees everything builds on.")
     assert "more characters cut: the smaller packages; every one is in graphify-out/graph.json (40 packages)]" in text
+
+
+def test_plain_text_section_titles_become_headings_and_a_good_guide_is_unchanged(tmp_path, monkeypatch):
+    """BLD-39. A work site, 9 Nov 2026: 7 of 10 good guides (110 of 111 claims resolving) wrote their section titles as
+    plain text, so the check counted 0 sections and failed them, and the card and the wiki read nothing. The asked titles
+    (read from the prompts) become "## Title" whatever the dress; a guide with headings stays byte for byte."""
+    import onboard as O
+    plain = "\n".join(["Intro words about the repository and its purpose, a full paragraph of them.", "",
+                        "Entry points and main flows", "- `src/main.py:12` starts it.", "",
+                        "**Module map:**", "- `src/a.py:3` holds the parser.", "",
+                        "3. Key types and data model", "- `src/model.py:7` the record.", "",
+                        "A — How to extend it", "- add a parser beside `src/a.py:3`.", "",
+                        "Build/test and conventions", "- pytest.", "",
+                        "Fragile areas:", "- the parser.", "", "Glossary", "- term: meaning.",
+                        "The module map shows the parser first."])     # a sentence that merely names a title stays
+    text, n = O.headings_fixed(plain)
+    heads = [ln for ln in text.splitlines() if ln.startswith("## ")]
+    assert n == 7 and heads == ["## Entry points and main flows", "## Module map", "## Key types and data model", "## How to extend it",
+                                "## Build, test and conventions", "## Fragile areas", "## Glossary"]
+    assert "The module map shows the parser first." in text
+    good = "# x: analysis\n\n## Module map\n- a\n\n## Glossary\n- b\n"
+    assert O.headings_fixed(good) == (good, 0)
+    monkeypatch.setattr(O, "DOCS", tmp_path)
+    (tmp_path / "demo.analysis.md").write_text(plain)
+    (tmp_path / "ok.analysis.md").write_text(good)
+    made = []
+    monkeypatch.setattr(O, "sh", lambda *a, **k: made.append(a))
+    import repocard as RC
+    monkeypatch.setattr(RC, "make", lambda name: made.append(name))
+    assert O.fix_headings() == {"demo": 7} and (tmp_path / "ok.analysis.md").read_text() == good
+    assert "demo" in made and (tmp_path / "demo.analysis.md").read_text().count("\n## ") == 7
 

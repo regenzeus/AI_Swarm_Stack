@@ -370,7 +370,8 @@ function swVerb(e) {                                     // what the connection 
   return [{ talk: "wrote on the Board to", you: e.to === "main" ? "talked to" : "asked or decided for", tell: "told", use: "used", hand: "handed over to", help: "helped" }[e.kind] || e.kind, "→"];
 }
 const swShort = (id) => ({ stack: "The stack", you: "You", claude: "Claude tasks", evals: "experiments", gmail: "Gmail", phone: "AI phone", windows: "Windows PC", reviewers: "reviewers" }[id] || id);   // a dot's name
-const swIdeaLabel = (x) => { const w = String(x.title || "").split(/\s+/).filter(Boolean); return `#${x.id} ${w.slice(0, 4).join(" ")}${w.length > 4 ? " …" : ""}`; };   // cap: preview: the dot's name; its card and the list name it whole
+// APP-57: the idea's whole title, wrapped
+const swIdeaLabel = (x) => `#${x.id} ${String(x.title || "").split(/\s+/).filter(Boolean).join(" ")}`;
 async function swMapData() {
   await swWhoCards();
   const [it, g] = await Promise.all([api(`/api/swarm/interactions?hours=${swMapHours}${swMapTests ? "&tests=1" : ""}`),
@@ -688,7 +689,7 @@ async function swAgentPanel(box, id, crew = false, tile = true) {    // crew: on
 // another's lane), Talk (the Board), Work (the shared artifacts), You (your decisions and messages) and Status (runs no one
 // asked for, the stack's bookkeeping; off at first). Filters: type, agent (two picked: only what passes between them),
 // topic, time and text. A link from Needs you (ctx=) opens on that conversation.
-function swFold(text, n = 1200) {                     // a long text folds behind a visible "Show all" (AGENTS.md, Truncation)
+function swFold(text, n = 1200) {                     // cap: preview: one long text folds behind a visible "Show all" (AGENTS.md, Truncation)
   const s = String(text || "");
   if (s.length <= n + 600) return esc(s);                // folding away a few lines is not worth a tap
   return `${esc(s.slice(0, n))}<span hidden>${esc(s.slice(n))}</span> <button type="button" class="tag swmore">Show all (${nf(s.length - n)} more characters)</button>`;   // cap: preview: one tap shows the rest
@@ -702,7 +703,7 @@ const swRoomF = { types: new Set(), agents: new Set(), topic: "", hours: 24, q: 
 let swRoom = { t: 0, h: 0, d: null }, swRoomShow = 120;
 async function swRoomLoad(force) {
   if (force || !swRoom.d || swRoom.h !== swRoomF.hours || swRoom.tests !== swRoomF.tests || Date.now() - swRoom.t > 15000)
-    swRoom = { t: Date.now(), h: swRoomF.hours, tests: swRoomF.tests, d: await api(`/api/swarm/room?hours=${swRoomF.hours}${swRoomF.tests ? "&tests=1" : ""}`).catch(() => swRoom.d || { lines: [], error: "Mission Control did not answer" }) };
+    swRoom = { t: Date.now(), h: swRoomF.hours, tests: swRoomF.tests, d: await api(`/api/swarm/room?hours=${swRoomF.hours}${swRoomF.tests ? "&tests=1" : ""}`).catch(() => swRoom.d || { lines: [], error: "${APPNAME()} did not answer" }) };
   return swRoom.d;
 }
 const swInvolved = (l) => [l.actor, ...(l.to || [])].filter(Boolean);

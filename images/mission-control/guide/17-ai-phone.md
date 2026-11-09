@@ -36,7 +36,7 @@ note: Your phone buzzes once for the whole job. Tap Allow this job and it works 
   fields are never typed into: you type those yourself.
 - **Some apps are never touched**: banking, investment, payment, wallet, password and authenticator apps, the
   Play Store and Settings. If one comes up anyway, the phone goes straight to the home screen.
-- **It can't approve itself.** Mission Control refuses approvals and time windows that come from the AI phone, even if
+- **It can't approve itself.** {{APP_NAME}} refuses approvals and time windows that come from the AI phone, even if
   it opens this app in its own browser. It may only press Stop.
 - **Stop** on the Phone page switches it off at once and disconnects. *Switch on* brings it back.
 - **Everything is logged** on the Phone page: what it did, why, and what you decided.
@@ -59,9 +59,9 @@ chat: On the AI phone, open Amazon, search for 32 GB DDR4-3200 RAM (2x16 GB), an
 note: Read-only shopping; allow a few minutes on the Phone page first so it doesn't ask at every step.
 ```
 
-## Mission Control on the AI phone
+## {{APP_NAME}} on the AI phone
 
-You can install Mission Control on the AI phone too (Chrome → ⋮ → *Add to home screen*), for example to watch it work.
+You can install {{APP_NAME}} on the AI phone too (Chrome → ⋮ → *Add to home screen*), for example to watch it work.
 It shows everything, but approvals and time windows from that phone are refused: only your main phone can say yes.
 
 ## Where to find it

@@ -132,7 +132,7 @@ def test_the_tasks_tab_has_five_views_and_the_old_addresses_go_there():
     nav = re.search(r"^const NAV = .*?;$", JS, re.M | re.S)[0]
     assert '["tasks", "#/tasks", "Tasks", ic.tasks]' in nav and '"#/missions"' not in nav and len(re.findall(r'\["\w+", "#/', nav)) == 6
     assert re.search(r'const TVIEWS = \[\["tasks", "Tasks"\], \["activity", "Activity"\], \["team", "Team"\], \["network", "Network"\], \["ideas", "Ideas"\]\];', JS)
-    assert 'const TLISTS = [["active", "Active"], ["repeating", "Repeating"], ["done", "Done"]];' in JS and '[["you", "Yours"], ["stack", "The stack\'s"]]' in JS
+    assert 'const TLISTS = [["active", "Active"], ["repeating", "Repeating"], ["done", "Done"]];' in JS and '[["you", "Yours"], ["stack", "The stack\'s"], ["all", "All"]]' in JS and 'tasksOwner = "all"' in JS
     assert "missions: vMissionsGo" in JS and "new: vNewGo" in JS and "function vMissions()" not in JS and "function vNew()" not in JS
     go = JS.split("function vMissionsGo() {", 1)[1].split("\n}", 1)[0]
     assert '"#/tasks?v=team&p=crew"' in go and '"#/tasks?v=activity"' in go
@@ -140,7 +140,7 @@ def test_the_tasks_tab_has_five_views_and_the_old_addresses_go_there():
     assert 'swOn("activity")' in SWARM and 'route.name === "swarm" && swTab' not in SWARM            # the agents' views live in the Tasks tab now
     row = JS.split("function tRow(t) {", 1)[1].split("\n}", 1)[0]
     assert all(x in row for x in ("stateChip(t, A)", "whenChip(t)", "avatars(t)", "tHref(t)"))     # where it stands, its When, its agents
-    assert 'const tMine = (t) => t.door !== "chat" && (tasksOwner === "stack") === (t.owner === "stack");' in JS
+    assert 'const tMine = (t) => t.door !== "chat" && (tasksOwner === "all" || (tasksOwner === "stack") === (t.owner === "stack"));' in JS
     assert "[\"agents\", \"Agents\"]" in JS and "taskAgentsInto(box, task.id)" in JS                # a mission's page is its task's page
     assert '"Your task" : "The stack\'s task"' in JS and '#/tasks?v=team&p=crew" : "#/tasks"' in JS
 
@@ -296,3 +296,12 @@ def test_the_stack_s_own_browsers_are_not_counted_as_visits(tmp_path, monkeypatc
     assert c.post("/api/view", content=json.dumps({"name": "tasks"}), headers={"Tailscale-User-Login": "journeys@stack.local"}).json()["counted"] is False
     assert c.post("/api/view", content=json.dumps({"name": "tasks"}), headers={"Tailscale-User-Login": "owner@example.com"}).json() == {"ok": True}
     assert server.screen_views(path=tmp_path / "views.json") == {"tasks": 1}
+
+
+def test_the_head_counts_the_tasks_the_list_shows():
+    """A work site, 9 Nov 2026: the stack's weekly task stood under Repeating while the head said "0 repeating": the head
+    counted only the owner's tasks whichever owner the list showed."""
+    js = (Path(__file__).resolve().parents[1] / "images/mission-control/web/static/app-tasks.js").read_text()
+    head = js.split("function tasksHeadHtml() {", 1)[1].split("\n}", 1)[0]
+    assert "(S.tasks || []).filter(tMine)" in head and 't.owner !== "stack"' not in head
+

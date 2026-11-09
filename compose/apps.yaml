@@ -345,6 +345,7 @@ services:
       # this deployment's addresses (deployments/home/deployment.env): the app's links, and which device is the AI phone
       PHONE_HOST: ${PHONE_HOST:-}
       PC_TAILNET_HOST: ${PC_TAILNET_HOST:-}
+      APP_NAME: ${APP_NAME:-AI Stack}                 # the app's name (APP-61)
       NAS_HOST: ${NAS_HOST:-}
       HA_URL: ${HA_URL:-}
       ROUTER_URL: ${ROUTER_URL:-}

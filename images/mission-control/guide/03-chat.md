@@ -13,7 +13,7 @@ vault, runs research on the web, starts and changes missions, e-mails you, files
 
 ## What Hermes can do here
 
-These are the tools Hermes has in Mission Control right now. The list is live: when a new tool is added, it
+These are the tools Hermes has in {{APP_NAME}} right now. The list is live: when a new tool is added, it
 shows up here.
 
 ```live
@@ -50,7 +50,7 @@ things, *high* or *extra high* for hard analysis. Higher effort is slower but co
 
 Tap the **clip** to attach images or documents (PDF, Word, Excel, CSV, text, code). Images go to the model as images. For a
 screenshot on a phone, **Screenshot or photo** sits above the keyboard; **Paste** adds a copied picture, and on a computer you
-can paste or drop one in. You can also share a screenshot to Mission Control from the phone's own share menu.
+can paste or drop one in. You can also share a screenshot to {{APP_NAME}} from the phone's own share menu.
 
 In a chat, Hermes can also ask **Claude Code on your Windows PC** about your files there. It can only read, only in the folders
 listed in `C:\\AI\\ops\\desk-folders.txt`, and never key or password files. It cannot run or change anything. Its tools are

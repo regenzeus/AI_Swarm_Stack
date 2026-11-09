@@ -50,7 +50,7 @@ changed), why this one and why now. Three buttons:
 - **Change**: say what should be different ("white", "cheaper", "by Friday"); it looks again.
 
 If the verdict is "wait", the card says what it waits for, and the agent keeps watching and proposes again when the
-target price or the date is reached. Approving works only in Mission Control on your own device: it is refused from
+target price or the date is reached. Approving works only in {{APP_NAME}} on your own device: it is refused from
 the AI phone, and no agent or chat tool can approve, change your limits or buy.
 
 ## 4. Buying, after your tap

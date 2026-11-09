@@ -17,7 +17,7 @@ def test_errors_the_app_hit_are_kept_and_become_one_alert_on_the_health_board(tm
                                                                                     {"ts": now - 2 * 86400, "msg": "old", "url": "#/"}]
     f.write_text("\n".join(json.dumps(r) for r in rows) + "\n")
     items = crew.app_errors(now, f)
-    assert len(items) == 1 and items[0]["name"] == "Mission Control (the app)" and items[0]["kind"] == "engine"
+    assert len(items) == 1 and items[0]["name"] == "AI Stack (the app)" and items[0]["kind"] == "engine"
     i = items[0]["issues"][0]
     assert i["kind"] == "app-error" and "app-error" in crew.ALERTS                       # an alert: it reaches the owner once
     assert i["text"] == "4 errors in the app in 24 h; most often “watch is not defined” (3×, on #/new) and 1 other kind"

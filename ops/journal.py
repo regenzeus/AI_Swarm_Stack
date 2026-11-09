@@ -37,6 +37,7 @@ import time
 import urllib.request
 from pathlib import Path
 import prompts as P                               # MEM-11: the agent prompts live in prompts/<owner>.md
+import deployment as DEPLOY                        # the app's name (APP-61)
 
 M = None                                         # ops/missions.py (set by missions.main)
 VAULT = Path(os.environ.get("JOURNAL_VAULT", "/srv/vault"))
@@ -101,7 +102,7 @@ def parse(text):
 def render(doc, a):
     out = [f"# Memory: {doc.get('title') or a}", "",
            "_This agent's own memory (ops/journal.py): read at the start of every run, an entry added at its end. "
-           "Edit it in Mission Control (Agents → this agent → Memory) or here; keep lines short._", ""]
+           f"Edit it in {DEPLOY.app_name()} (Agents → this agent → Memory) or here; keep lines short._", ""]
     if doc.get("state"):
         out += ["## Working state", "", "_Replaced by every run: where the work stands, what is open, the next step._", "", *doc["state"], ""]
     out += ["## Standing notes", ""]

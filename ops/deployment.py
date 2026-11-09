@@ -56,6 +56,8 @@ def load(path=None, env=os.environ):
     for line in Path(path or FILE).read_text(encoding="utf-8").splitlines():
         name, sep, value = line.partition("=")
         if sep and not line.startswith("#"):
+            if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":   # a quoted value, as the shell and compose read it
+                value = value[1:-1]
             values[name] = env[name] if name in env else re.sub(r"\$\{(\w+)\}", lambda m: values[m.group(1)], value)
     return values
 
@@ -109,6 +111,11 @@ def missing(values=None):
         need += [("FORGE=bitbucket-dc", "FORGE_URL")]
     empty = lambda x: not str(x or "").strip() or str(x).strip().endswith(".invalid")
     return [f"{n} is empty, and {f} needs it" for f, n in need if empty(v.get(n))]
+
+
+def app_name(values=None):
+    """The app's name as the owner sees it (APP-61: "AI Stack" unless the deployment names it otherwise)."""
+    return str((VALUES if values is None else values).get("APP_NAME") or "").strip() or "AI Stack"
 
 
 def fill(text, values=None):

@@ -30,7 +30,7 @@ note: The mission page then shows "Needs access" with grant buttons. Grant read 
 
 - **Nothing is deleted for good.** Mail goes to Trash only; Gmail empties it after 30 days. Every batch can be undone
   (the agent has an undo tool, and the batch number is in the log).
-- **The first Trash batch waits for your OK**: Mission Control and Telegram show how many mails, from whom, a sample
+- **The first Trash batch waits for your OK**: {{APP_NAME}} and Telegram show how many mails, from whom, a sample
   of subjects, and the reason. Later batches under the same grant go without asking.
 - **Bank, payment, security alerts, password resets and verification codes** are never archived or trashed.
 - **No sending, forwarding, filters or settings**: the connection simply has no such tools. (E-mailing you results

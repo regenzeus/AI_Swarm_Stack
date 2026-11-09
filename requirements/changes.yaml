@@ -240,3 +240,15 @@ items:
     rationale: Of 77 coding builds on 7 November 2026 none called the code graph, though every one could. A tool an agent could call is not knowledge it has.
     verify: {method: test, by: [tests/test_repofacts.py::test_the_brief_tells_a_step_what_its_files_need, tests/test_repofacts.py::test_the_brief_finds_the_files_by_the_request_s_words_when_none_are_named, tests/test_repofacts.py::test_the_brief_keeps_to_its_budget_and_shows_the_cut, tests/test_repofacts.py::test_the_brief_says_what_it_does_not_know, tests/test_repofacts.py::test_a_trial_s_brief_is_the_wiki_of_repository_s_within_the_trial_s_own_tree, tests/test_repofacts.py::test_the_facts_at_a_commit_reach_nothing_later_and_stay_out_of_the_repo_page, tests/test_changes.py::test_the_brief_replaces_the_wiki_opening_only_where_the_arm_says_so, tests/test_replay.py::test_the_brief_arm_has_the_wiki_opening_off_the_brief_on_and_the_facts_of_the_parent]}
     trace: [ops/repofacts.py, ops/changes.py, ops/replay.py, ops/codegraph.py]
+  - id: CHG-20
+    title: One record from the question to the pull request
+    statement: A change's task page shall show its way in one place, the request, the diff with its base and head, the suite,
+      each check's verdict with every problem as its job reported it, and the pull request or why there is none.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-07, SN-14]
+    sources: [docs/CHANGE-REQUESTS.md, docs/PLATFORM.md]
+    verify: {method: test, by: [tests/test_changes.py::test_the_task_page_shows_the_way_from_the_question_to_the_pull_request, tests/test_changes.py::test_the_report_gives_every_criterion_its_evidence_and_the_carrier_waits_for_the_owner]}
+    trace: [ops/changes.py, images/mission-control/web/static/task.js]
+

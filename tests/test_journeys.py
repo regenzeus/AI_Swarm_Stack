@@ -262,3 +262,23 @@ def test_a_tool_check_needs_two_timeouts_to_call_a_tool_broken(monkeypatch):
     tries = iter(["TimeoutError: slow", 200])
     assert JY.check_tools(opener=lambda url: next(tries))["failures"] == []
     assert JY.check_tools(opener=lambda url: "TimeoutError: slow")["failures"]
+
+
+def test_the_app_is_checked_in_every_shape_of_window():
+    """APP-60. The owner, 9 Nov 2026: "The requirement is the webside has to be looking good on Mobile and on desktop on
+    any ratio ... Durable." The routes journey opens the main screens in ten windows, from a phone to a 4K screen, and
+    every screen at a desktop, and names each fault with its window: sideways scrolling, text a box cuts off, the chat's
+    box to write in outside the window, a chat page that scrolls, no way to the other pages."""
+    mjs = (Path(JY.__file__).parent / "journeys.mjs").read_text()
+    for shape in ("phone", "phone-landscape", "tablet", "tablet-landscape", "laptop", "desktop", "desktop-1080p", "ultrawide", "portrait-monitor", "4k"):
+        assert f'"{shape}"' in mjs or f"{shape}:" in mjs, shape
+    assert set(JY.SHAPES) >= {"desktop-1080p", "ultrawide", "portrait-monitor", "4k"} and "#/chat" in JY.MAIN
+    rep = {"shapes": {"results": [
+        {"route": "#/chat", "shape": "desktop-1080p", "size": "1920×1080", "overflow": 0, "clipped": [], "writebox": False, "pagescroll": 128, "nav": True, "main": "x"},
+        {"route": "#/", "shape": "phone-landscape", "size": "812×375", "overflow": 14, "wide": ["div.card (14 px)"], "clipped": ["span.chip “Running a long”"], "writebox": True, "nav": False, "main": "x"}]}}
+    out = JY.judge_shapes(rep)
+    assert "#/chat in a desktop-1080p window (1920×1080): the box to write in is outside the window" in out
+    assert "#/chat in a desktop-1080p window (1920×1080): the chat page scrolls by 128 px instead of holding the window" in out
+    assert any("scrolls sideways by 14 px" in x for x in out) and any("cuts text off: span.chip" in x for x in out)
+    assert any("neither the tab bar nor the sidebar shows" in x for x in out)
+

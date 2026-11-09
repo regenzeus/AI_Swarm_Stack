@@ -5,6 +5,8 @@
 # C:\AI\_staging), or from the NAS if there is none. Needs the age key (stage 1 copies age-key.txt).
 # REHEARSAL=1: everything isolated from the live stack (see compose/rehearsal.yaml), no timers.
 set -euo pipefail
+# GEN-20: it rebuilds the home stack from the home stack's backup; a deployment without the home feature never runs it
+python3 "$(dirname "$0")/deployment.py" need home >/dev/null || { echo "refused: ops/new-machine.sh rebuilds the home stack from its backup, and this deployment has no home feature" >&2; exit 1; }
 export XDG_RUNTIME_DIR=/run/user/$(id -u)
 cd ~/ai-stack
 [ -f ~/.config/sops/age/keys.txt ] || { echo "age key missing: put age-key.txt next to the staged ai-stack" >&2; exit 2; }

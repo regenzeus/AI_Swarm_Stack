@@ -57,6 +57,10 @@ def table(c):
                                                                                     # (a duplicate title joins the existing one)
     if "owner" not in {r[1] for r in c.execute("pragma table_info(tasks)")}:       # TSK-40: yours or the stack's
         c.execute("alter table tasks add column owner text")
+    for r in c.execute("select id, text, title from tasks where title like '% …' or title like '%…'").fetchall():   # APP-57: a title cut
+        whole = title_of(r[1])                                                        # before 9 Nov 2026 is made whole again
+        if whole and whole != r[2]:
+            c.execute("update tasks set title=? where id=?", (whole, r[0]))
 
 
 def owner_of(c, source, door=None, ref=None):
@@ -75,14 +79,12 @@ def now():
     return dt.datetime.now().astimezone().isoformat(timespec="seconds")
 
 
-TITLE = 80                                         # cap: preview (a task's name in lists and messages; its words are whole on its page)
-
-
 def title_of(text):
-    """A task's name from its words: whole up to TITLE characters, else cut at a word with a visible "…" (task 93 showed
-    "... estimates as s", cut mid-word without a mark)."""
-    s = re.sub(r"\s+", " ", str(text or "")).strip()
-    return s if len(s) <= TITLE else s[:TITLE - 2].rsplit(" ", 1)[0].rstrip(" ,.;:") + " …"
+    """A task's name: the first sentence of its words (or its first line), whole, never cut (APP-57; the owner, 9 Nov 2026,
+    of titles ending "(origin …" and "Look at …": "Again we have truncation. Not good."). A long one wraps."""
+    first = next((ln.strip() for ln in str(text or "").splitlines() if ln.strip()), "")
+    m = re.match(r"^(.+?[.!?])(?=\s|$)", first)
+    return re.sub(r"\s+", " ", m.group(1) if m else first).strip()
 
 
 def put(c, tid, **kw):
@@ -262,6 +264,10 @@ def preset_of(req):
     p = {}
     if req.get("kind") in KINDS:
         p["kind"] = req["kind"]
+    if str(req.get("ref") or "").strip():               # TSK-48: a code question about a commit, tag or branch, not main
+        p["ref"] = str(req["ref"]).strip()
+    if req.get("history"):                              # TSK-48: the copy brings this many commits of history
+        p["history"] = req["history"]
     if req.get("effort") in EFFORTS:
         p["effort"] = req["effort"]
     import conductor as CD
@@ -388,6 +394,16 @@ TOOL_WORDS = {"phone": "the AI phone (open and install apps, tap, type, read the
               "graphify": "the code graph", "missions": "the stack's missions and builds"}
 
 
+CODE_AGENT = "analyst"                             # who takes a code question's step that another agent cannot do (TSK-45)
+
+
+def code_readers():
+    """The agents that read a task's repository in a step: a Claude Code or OpenCode harness with a code role (a work site,
+    9 Nov 2026: a code question was planned with a step on the assistant, which has no repository, and failed "blocked")."""
+    reg = yaml.safe_load((ROOT / "config/agents.yaml").read_text())
+    return {a["id"] for a in reg["agents"] if a.get("harness") in ("claude-code", "opencode") and "code" in (a.get("roles") or [])}
+
+
 def cards():
     """Each agent with what it does and what it can reach, so the plan gives a step to an agent that can do it (task
     #104 went to an agent without the phone, 1 Nov 2026)."""
@@ -433,6 +449,12 @@ def validate(spec, preset, repos, agents):
         else:
             was, st["agent"] = st["agent"], chosen[i % len(chosen)]
             st["why"] = f"{st['why']} (your choice: {st['agent']} instead of {was})".strip()
+    if s["kind"] == "code_question" and not chosen:     # TSK-45: every step of a code question on an agent that reads the repository
+        readers = code_readers()
+        for st in plan:
+            if st["agent"] not in readers:
+                was, st["agent"] = st["agent"], CODE_AGENT
+                st["why"] = f"{st['why']} (a code question: {was} cannot read the repository, so the {CODE_AGENT} takes it)".strip()
     if preset.get("model"):
         for st in plan:
             st["model"] = preset["model"]
@@ -450,7 +472,8 @@ def validate(spec, preset, repos, agents):
     return {"title": title if len(title) >= 3 else "Task " + title, "goal": str(s.get("goal") or title).strip(), "kind": s["kind"],
             "done": done, "plan": plan, "questions": qs, "rhythm": r, "repo": repo,
             "effort": s.get("effort") if s.get("effort") in EFFORTS else "standard",
-            "deadline": s.get("deadline") if re.fullmatch(r"\d{4}-\d{2}-\d{2}", str(s.get("deadline") or "")) else None}
+            "deadline": s.get("deadline") if re.fullmatch(r"\d{4}-\d{2}-\d{2}", str(s.get("deadline") or "")) else None,
+            **{k: preset[k] for k in ("ref", "history") if preset.get(k)}}             # TSK-48: kept as the owner set them
 
 
 resting, waits = {}, {}                          # task id -> when its intake may try again / how often it waited (RUN-R9)
@@ -636,7 +659,8 @@ def dispatch(c, t):
             ref = res.get("build") or res.get("id")
         elif door == "claude":
             import claude_tasks as CT
-            res = CT.handle({"action": "claude_task", "question": brief, "repo": s.get("repo") or "", "mode": "ask"}, c)
+            res = CT.handle({"action": "claude_task", "question": brief, "repo": s.get("repo") or "", "mode": "ask",
+                             "ref": s.get("ref"), "history": s.get("history")}, c)   # TSK-48: a commit and history the owner set
             ref = res.get("task") or res.get("id")
         else:
             r = t["rhythm"]
@@ -659,6 +683,33 @@ def dispatch(c, t):
 
 
 ACTIONS = {"task_create", "task_answer", "task_approve", "task_cancel", "task_retry", "task_run", "task_conduct"}
+
+
+def stop_at_door(c, t):
+    """TSK-47: cancelling a task that has started at its door stops the work there (a work site, 9 Nov 2026: such a task
+    could not be cancelled at all, only on another page, and a Claude task nowhere). -> whether it was stopped."""
+    door, ref = t["door"], str(t["ref"] or "")
+    if door == "claude" and ref.isdigit():
+        import claude_tasks as CT
+        CT.cancel(c, int(ref), f"its task #{t['id']} was cancelled")
+        return True
+    if door == "build" and ref.isdigit():
+        import builds as B
+        b = c.execute("select status from builds where id=?", (int(ref),)).fetchone()
+        if not b or b["status"] in ("rejected", "merged", "deployed", "rolled_back"):
+            return True                                 # nothing left running there
+        if b["status"] in ("queued", "review", "failed"):
+            B.handle({"action": "build_reject", "id": int(ref), "reason": f"its task #{t['id']} was cancelled"}, c)
+            return True
+        return False                                    # a build at work or deploying: on its page
+    if door == "mission" and ref:
+        m = M.load_missions().get(ref)
+        if m and m.get("status") == "active":           # paused, not archived: its files and wiki stay, Resume on its page
+            m["status"] = "paused"
+            M.save_mission(m)
+            M.event("task", ref, f"{m.get('title') or ref} paused: its task #{t['id']} was cancelled", title="Tasks")
+        return True
+    return False
 
 
 def conduct(c, t):
@@ -764,8 +815,8 @@ def handle(req, c):
             import conductor as CD
             CD.cancel(c, t)
             return {"task": t["id"]}
-        if t["ref"]:                                   # the board would stop following work that goes on: stop it at its door
-            raise ValueError(f"it has started as {t['door']} {t['ref']}: stop it on that page")
+        if t["ref"] and not stop_at_door(c, t):        # the board must not stop following work that goes on
+            raise ValueError(f"it has started as {t['door']} {t['ref']}, which cannot be stopped from here: stop it on that page")
         put(c, t["id"], status="cancelled")
         return {"task": t["id"]}
     if a == "task_retry":

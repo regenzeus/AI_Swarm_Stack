@@ -130,3 +130,32 @@ cut. The audit counted them before changing anything:
 | api | 21 | 15 marked with `fit()`; 6 are URLs, labels and queries a marker would break |
 | rotate | 14 | rolling windows of ids, prices and snapshots |
 
+## 9 November 2026: names and lists in the app
+
+The owner, with screenshots of task cards and the Network: "Again we have truncation. Not good. Make a new truncation
+audit. Truncation keeps creeping in. Need All here and all should start as default."
+
+What the audit found, and what happened to it:
+
+| Where | What hid text | Now |
+|---|---|---|
+| `ops/tasks.py` `title_of` | every task's title cut at 80 characters with " …"; a long word made "Look at …" | the first sentence or line, whole; titles saved cut are made whole again |
+| Claude task titles (`ctTitle`, `firstSentence`) | the first line or sentence with " …" | the first sentence, whole |
+| idea labels (`swIdeaLabel`) | four words | the whole title |
+| Health (`rfList`) | eight rows, then "Show all N" | every row |
+| Health's chart | drawn only from parts with a health score: none for code without one | at a glance, then every part with each measure (APP-58) |
+| Network | the 14 busiest tasks, then "Show all N tasks" | every task; Yours, the stack's or All, All first |
+| Tasks list | yours or the stack's | All first, then yours or the stack's |
+| a node's neighbours | 14, then "show all" | every one |
+| a run's problems | 30, then "… and N more" | every one |
+| a mission's latest result | folded to 340 px behind "Show all" | whole, "Show less" folds it |
+
+Left as they are, each with its reason: a single very long text folds behind "Show all" (the swarm room past 1,800
+characters; `cap: preview`); a step box in the timeline shows three lines and "… tap for all" (its panel has it whole);
+Home's preview of a result opens the whole result; the search hit's snippet; and five lists the runner sends as a sample
+with their total ("… and N more": what entered memory, the keeper's changes, a topic's mails, a purchase's older
+proposals, a mail cleanup's sample). Their whole lists live on their own pages.
+
+`tests/test_no_hidden_text.py` keeps it so: a name made by cutting, a fold of rows by index, or a "Show all" without a
+`cap:` reason fails the check.
+

@@ -466,4 +466,16 @@ items:
     sources: [DEC-49]
     verify: {method: test, by: [tests/test_replay.py::test_an_exam_tree_is_one_commit_with_the_release_tag_before_it, tests/test_replay.py::test_a_project_that_reads_its_version_from_git_installs_from_a_plain_tree, tests/test_repocard.py::test_the_exam_has_a_knowledge_arm_and_cases_after_the_knowledge_s_commit]}
     trace: [ops/replay.py, ops/changes.py]
+  - id: BLD-39
+    title: The guide's sections count whatever the model's dress
+    statement: A section title the guide's or the analysis's prompt asks for, written by the model as a plain line (bold,
+      numbered, with a colon), shall become its heading before the guide is checked, carded or fed to the wiki; a guide
+      that has its headings shall stay as it is, and the guides on disk shall be repairable once without a model.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-05]
+    sources: [docs/CODER-KNOWLEDGE.md]
+    verify: {method: test, by: [tests/test_onboard.py::test_plain_text_section_titles_become_headings_and_a_good_guide_is_unchanged]}
+    trace: [ops/onboard.py, prompts/shared.md]
 

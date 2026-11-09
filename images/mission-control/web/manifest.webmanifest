@@ -1,6 +1,6 @@
 {
-  "name": "Mission Control",
-  "short_name": "Mission",
+  "name": "AI Stack",
+  "short_name": "AI Stack",
   "description": "Missions, agents, knowledge and costs of your AI stack",
   "lang": "en",
   "start_url": "/",

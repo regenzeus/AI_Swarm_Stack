@@ -540,6 +540,8 @@ def test_the_report_gives_every_criterion_its_evidence_and_the_carrier_waits_for
     assert "**C1 met**" in b["summary"] and "before the change it fails, after it passes" in b["summary"] and "**C2 no test run**" in b["summary"]
     assert "1,234 tokens" in b["summary"] and json.loads(b["files"]) == [["M", "src/app.py"]]
     assert any("ready for your review" in x for x in K.sent)
+    d = TK.row(K.c, t)["spec"]["change"]["delivered"]                 # CHG-20: the way from the question to the pull request
+    assert d["head"] == b["head"] and d["base"] == b["base"] and d["files"] == 1 and "pr" in d and "push" in d
     CD_row = K.c.execute("select task from step_refs where kind='build' and ref=?", (str(bid),)).fetchone()
     assert CD_row["task"] == t                                       # the board shows it as this task's step
 
@@ -917,4 +919,14 @@ def test_a_change_without_a_diff_reaches_a_windows_check_without_a_patch(tmp_pat
     check = [{"name": "regression", "where": "windows", "job": "vendor.regression", "values": {"tool": "4.2"}, "minutes": 60, "command": None}]
     v = CH.run_checks("demo", tmp_path, "b" * 40, check, ww=WW)[0]
     assert v["pass"] is True and seen == [({"tool": "4.2", "commit": "b" * 40}, {})]
+
+
+def test_the_task_page_shows_the_way_from_the_question_to_the_pull_request():
+    """CHG-20. A work site, 9 Nov 2026: the task should show question, diff with its base, build and regression verdicts
+    (each problem as the job reported it) and the draft pull request in one record; the verdict is the job's to give."""
+    js = (Path(CH.__file__).parents[1] / "images/mission-control/web/static/task.js").read_text()
+    way = js.split("function changeWay(t, ch) {", 1)[1].split("\nfunction ", 1)[0]
+    assert '["Asked"' in way and '["The diff"' in way and '["The suite"' in way and "Check: ${esc(v.name)}" in way and '["Pull request"' in way
+    assert "could not run" in way and "<details" in way and ".slice(0, 6)" not in way          # every problem, folded past six, none cut
+    assert "${changeWay(t, ch)}" in js
 

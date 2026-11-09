@@ -81,7 +81,7 @@ def test_the_repo_page_has_seven_tabs_one_question_each():
 
 def test_six_labels_fit_a_phone_and_nothing_is_ellipsed():
     assert re.search(r"@media \(max-width: 480px\) \{[^}]*\}? *\.repotabs a \{ padding: 8px 3px; font-size: 12\.5px; \}", CSS)
-    assert ".rflist:not(.all) > :nth-child(n+9) { display: none; }" in CSS
+    assert ".rflist:not(.all)" not in CSS                                            # every row shows from the start (APP-57)
     assert not re.search(r"text-overflow:\s*ellipsis|line-clamp", CSS)
 
 
@@ -132,12 +132,12 @@ def test_history_says_what_a_row_means_in_plain_words_most_telling_first():
         assert metric not in html.lower(), metric
 
 
-def test_nothing_is_cut_the_rest_of_a_list_is_one_tap_away():
+def test_nothing_is_cut_every_row_shows_from_the_start():
+    """The owner, 9 Nov 2026: "Need All here and all should start as default." Every row, no "Show all"."""
     html = draw("repoHistoryHtml", "click", {}, FACTS)
     for h in HOTSPOTS:
         assert h["path"] in html, h["path"]
-    assert "Show all 12" in html and "data-rfall" in html
-    assert ".previousElementSibling.classList.add(\"all\")" in body_of("function repoFill(")
+    assert "Show all" not in html and "data-rfall" not in html
 
 
 def test_health_says_each_finding_and_its_reason_in_plain_words():
@@ -192,3 +192,20 @@ def test_the_overview_says_what_it_is_and_the_map_folds_its_files():
     app = webjs.app_js()
     assert "repoIntro(o.markdown" in app and "md(o.markdown)" not in app
     assert app.count('<details class="cm-more">') == 2
+
+
+def test_health_opens_with_a_glance_and_every_part_even_one_without_a_score():
+    """APP-58. The owner, 9 Nov 2026: "did I not request well designed health visualisations from you for code?" A
+    repository whose parts carried no health score (a work site's Java code) got no chart at all. Health opens with
+    figures at a glance, then every part with each measure it has; a part without a score keeps its row."""
+    import copy
+    html = draw("repoHealthHtml", "click", {}, FACTS)
+    assert "At a glance" in html and "5.6" not in html and "3.8" in html and "61 %" in html and "Each part" in html
+    assert "2 people hold it" in html and "pieces of code nothing uses" in html
+    unscored = copy.deepcopy(FACTS)
+    comps = unscored["health"]["sections"][0]["checks"][1]["data"]["components"]
+    comps["click"].pop("health")
+    comps["other"] = {"file_count": 4}
+    html = draw("repoHealthHtml", "click", {}, unscored)
+    assert html.count('class="hpart"') == 2 and "not scored" in html and "<b>other</b>" in html
+

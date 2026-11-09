@@ -13,7 +13,8 @@ def run(js):
 
 
 def fns():
-    return "\n".join(re.search(rf"^async function {n}\(.*?^\}}$", APP, re.M | re.S)[0] for n in ("api", "act"))
+    name = re.search(r"^const APPNAME = .*;$", APP, re.M)[0]                       # the app's name (APP-61)
+    return name + "\n" + "\n".join(re.search(rf"^async function {n}\(.*?^\}}$", APP, re.M | re.S)[0] for n in ("api", "act"))
 
 
 def test_a_request_that_never_answers_ends_with_a_clear_message_instead_of_spinning():
@@ -28,7 +29,7 @@ globalThis.fetch = (path, o) => new Promise((_, rej) => o.signal.addEventListene
 })();"""
     src = js.replace('timeout: 30000', 'timeout: 60')                                     # the test waits 60 ms, not 30 s
     err, r, toasts = run(src)
-    assert err == "Mission Control did not answer within 0 s" or err.startswith("Mission Control did not answer within")
+    assert err == "AI Stack did not answer within 0 s" or err.startswith("AI Stack did not answer within")
     assert r is None and toasts[0][1] is True
     assert "did not answer" in toasts[0][0] and "Look under Missions before trying again" in toasts[0][0]
 

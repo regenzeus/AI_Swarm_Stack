@@ -208,7 +208,7 @@ function problemsHtml(ps) {
   const groups = {};
   ps.forEach((p) => (groups[p.kind] = groups[p.kind] || []).push(p));
   return `<div class="obsprob"><b class="small">Problems · ${ps.length}</b>${Object.entries(groups).map(([k, xs]) => `<details><summary class="small err-t">${esc(PROB_LABEL[k] || k)} ×${xs.length}</summary>
-    ${xs.slice(0, 30).map((p) => `<div class="tiny">+${Math.round(p.t || 0)}s · ${esc(p.text)}</div>`).join("")}${xs.length > 30 ? `<div class="tiny muted">… and ${xs.length - 30} more</div>` : ""}</details>`).join("")}</div>`;   /* cap: list */
+    ${xs.map((p) => `<div class="tiny">+${Math.round(p.t || 0)}s · ${esc(p.text)}</div>`).join("")}</details>`).join("")}</div>`;   /* cap: list */
 }
 function touchesHtml(d, files) {
   if (!d) return `<div class="small muted">Recorded for runs from 28 October on.</div>`;
@@ -348,17 +348,17 @@ const openResults = new Set();                          // results you opened st
 async function loadInto(el, path, preview) {
   try {
     const t = await api(`/api/file?path=${encodeURIComponent(path)}`);
-    const open = !preview || openResults.has(path);
+    const open = !preview || !openResults.has(`closed:${path}`);           // the whole result from the start (the owner, 9 Nov 2026)
     el.innerHTML = `<div class="row between"><h2>Latest result</h2><a class="tiny muted" href="#/read?path=${encodeURIComponent(path)}&m=${encodeURIComponent(route.args[0] || "")}">${ic.doc}Full page</a></div>
       <div class="md result ${open ? "" : "clamped"}" style="margin-top:8px">${md(t)}</div>
-      ${preview ? `<button class="btn sm ghost rmore" type="button">${open ? "Show less" : "Show all"}</button>` : ""}`;
+      ${preview ? `<button class="btn sm ghost rmore" type="button">${open ? "Show less" : "Show all"}</button>` : ""}`;   /* cap: preview: one long result, whole from the start; its reader may fold it */
     if (!preview) return;
     const body = el.querySelector(".result"), more = el.querySelector(".rmore");
     if (body.scrollHeight <= body.clientHeight + 4 && !open) { body.classList.remove("clamped"); more.remove(); return; }   // short: nothing to open
     const toggle = () => {
       const now = body.classList.toggle("clamped");
-      now ? openResults.delete(path) : openResults.add(path);
-      more.textContent = now ? "Show all" : "Show less";
+      now ? openResults.add(`closed:${path}`) : openResults.delete(`closed:${path}`);
+      more.textContent = now ? "Show all" : "Show less";   /* cap: preview: one long result, whole from the start; its reader may fold it */
       if (now) el.scrollIntoView({ block: "nearest" });
     };
     more.onclick = toggle;

@@ -244,6 +244,11 @@ def record(**row):
         f.write(json.dumps({"ts": int(time.time()), **row}) + "\n")
 
 
+FRESH_NOTE = ("A fresh history: this snapshot shares no history with the earlier ones, so a pull refuses. A copy that tracked "
+              "them moves its branch instead: git fetch origin, then git rebase --onto origin/main <the snapshot it was on> "
+              "(or keep a backup branch, reset to origin/main and put its own commits back on top). docs/PUBLISHING.md says more.")
+
+
 def push(dest, head, fresh=False):
     """Commit the snapshot on top of the public repository's history and push it. -> the public commit or None.
     fresh: the snapshot becomes the whole public history, replacing what was there (only on the owner's word)."""
@@ -274,7 +279,10 @@ def push(dest, head, fresh=False):
     sha = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "--short", head], check=True, capture_output=True, text=True).stdout.strip()
     env = {"GIT_AUTHOR_NAME": AUTHOR[0], "GIT_AUTHOR_EMAIL": AUTHOR[1], "GIT_COMMITTER_NAME": AUTHOR[0],
            "GIT_COMMITTER_EMAIL": AUTHOR[1]}
-    git("commit", "-q", "-m", f"Snapshot of {time.strftime('%Y-%m-%d')} (private {sha})", env={**os.environ, **env})
+    msg = [f"Snapshot of {time.strftime('%Y-%m-%d')} (private {sha})"]
+    if fresh:                                             # a site that tracked the old history must move its branch, not pull
+        msg.append(FRESH_NOTE)
+    git("commit", "-q", *[x for m in msg for x in ("-m", m)], env={**os.environ, **env})
     git("push", "-q", *(["--force"] if fresh else []), "origin", "main")
     return git("rev-parse", "--short", "HEAD").stdout.strip()
 

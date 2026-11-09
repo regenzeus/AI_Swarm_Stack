@@ -8,16 +8,16 @@ Method, statuses and rules: [README.md](README.md). Names of the parts: [glossar
 | Area | Requirements | Implemented | Partial | Violated | Planned | Proposed | Deprecated |
 |---|---|---|---|---|---|---|---|
 | [AI change requests](#acr-ai-change-requests) (ACR) | 2 | 2 | 0 | 0 | 0 | 0 | 0 |
-| [App](#app-app) (APP) | 53 | 52 | 0 | 0 | 0 | 0 | 1 |
+| [App](#app-app) (APP) | 58 | 57 | 0 | 0 | 0 | 0 | 1 |
 | [Assistant](#ast-assistant) (AST) | 14 | 13 | 1 | 0 | 0 | 0 | 0 |
 | [Autonomy](#aut-autonomy) (AUT) | 8 | 2 | 2 | 0 | 0 | 4 | 0 |
-| [Builder](#bld-builder) (BLD) | 38 | 37 | 0 | 0 | 0 | 1 | 0 |
-| [Change requests](#chg-change-requests) (CHG) | 19 | 17 | 2 | 0 | 0 | 0 | 0 |
+| [Builder](#bld-builder) (BLD) | 39 | 38 | 0 | 0 | 0 | 1 | 0 |
+| [Change requests](#chg-change-requests) (CHG) | 20 | 18 | 2 | 0 | 0 | 0 | 0 |
 | [Connections](#cnx-connections) (CNX) | 9 | 9 | 0 | 0 | 0 | 0 | 0 |
 | [Constraints](#cst-constraints) (CST) | 15 | 11 | 2 | 1 | 0 | 1 | 0 |
 | [Crew](#crw-crew) (CRW) | 13 | 12 | 0 | 0 | 0 | 0 | 1 |
 | [Gateway](#gw-gateway) (GW) | 9 | 8 | 0 | 0 | 0 | 1 | 0 |
-| [Generalisation](#gen-generalisation) (GEN) | 19 | 9 | 5 | 0 | 2 | 3 | 0 |
+| [Generalisation](#gen-generalisation) (GEN) | 20 | 10 | 5 | 0 | 2 | 3 | 0 |
 | [House](#hse-house) (HSE) | 9 | 9 | 0 | 0 | 0 | 0 | 0 |
 | [Knowledge](#knw-knowledge) (KNW) | 15 | 15 | 0 | 0 | 0 | 0 | 0 |
 | [Memory](#mem-memory) (MEM) | 51 | 49 | 0 | 0 | 0 | 0 | 2 |
@@ -30,12 +30,12 @@ Method, statuses and rules: [README.md](README.md). Names of the parts: [glossar
 | [Security](#sec-security) (SEC) | 22 | 20 | 2 | 0 | 0 | 0 | 0 |
 | [Shopping](#shp-shopping) (SHP) | 13 | 12 | 0 | 0 | 0 | 1 | 0 |
 | [Agent swarm](#swm-agent-swarm) (SWM) | 115 | 103 | 8 | 0 | 2 | 0 | 2 |
-| [Task engine](#tsk-task-engine) (TSK) | 41 | 35 | 6 | 0 | 0 | 0 | 0 |
+| [Task engine](#tsk-task-engine) (TSK) | 45 | 39 | 6 | 0 | 0 | 0 | 0 |
 | [Trials](#trl-trials) (TRL) | 17 | 13 | 2 | 0 | 0 | 2 | 0 |
 | [Voice](#voi-voice) (VOI) | 9 | 8 | 0 | 0 | 0 | 1 | 0 |
-| **All** | **631** | **567** | **35** | **1** | **4** | **17** | **7** |
+| **All** | **643** | **579** | **35** | **1** | **4** | **17** | **7** |
 
-Unit tests claimed by a requirement: 1295 of 1295.
+Unit tests claimed by a requirement: 1311 of 1311.
 
 ## Findings
 
@@ -1535,21 +1535,21 @@ The trial's build #11 appeared on the Tasks board as task #89 (source door) besi
 | <a id="sn-02"></a>**SN-02** Out of the loop except for real decisions: the owner is asked only for decisions that are really his (approvals of spending, deploys, deletions, settings, grants), each one tap away with enough context to decide; no scripts to run, no busywork, nothing shown as needing him that does not. | must | [APP-04](#app-04), [APP-05](#app-05), [APP-06](#app-06), [APP-07](#app-07), [APP-13](#app-13), [APP-14](#app-14), [APP-21](#app-21), [APP-25](#app-25), [APP-26](#app-26), [APP-30](#app-30), [APP-31](#app-31), [APP-54](#app-54), [AST-06](#ast-06), [AST-12](#ast-12), [AUT-01](#aut-01), [AUT-02](#aut-02), [AUT-05](#aut-05), [AUT-07](#aut-07), [AUT-08](#aut-08), [CHG-02](#chg-02), [CHG-03](#chg-03), [CNX-02](#cnx-02), [CRW-02](#crw-02), [CRW-05](#crw-05), [CRW-06](#crw-06), [CST-03](#cst-03), [MEM-42](#mem-42), [MIS-07](#mis-07), [MIS-20](#mis-20), [PHN-02](#phn-02), [PHN-11](#phn-11), [PHN-12](#phn-12), [PHN-18](#phn-18), [PHN-20](#phn-20), [PHN-21](#phn-21), [PHN-22](#phn-22), [PHN-24](#phn-24), [PHN-25](#phn-25), [PHN-26](#phn-26), [SHP-01](#shp-01), [SHP-03](#shp-03), [SHP-08](#shp-08), [SWM-05](#swm-05), [SWM-06](#swm-06), [SWM-08](#swm-08), [SWM-33](#swm-33), [SWM-38](#swm-38), [SWM-39](#swm-39), [SWM-40](#swm-40), [SWM-42](#swm-42), [SWM-43](#swm-43), [SWM-44](#swm-44), [SWM-54](#swm-54), [SWM-55](#swm-55), [SWM-61](#swm-61), [SWM-87](#swm-87), [TRL-15](#trl-15), [TSK-03](#tsk-03), [TSK-20](#tsk-20), [TSK-40](#tsk-40), [VOI-08](#voi-08) |
 | <a id="sn-03"></a>**SN-03** Costs nothing to run: Running the stack costs $0 beyond the subscriptions the owner already pays; nothing can spend money by accident. | must | [APP-40](#app-40), [APP-41](#app-41), [APP-42](#app-42), [APP-43](#app-43), [APP-44](#app-44), [APP-45](#app-45), [AST-02](#ast-02), [AST-08](#ast-08), [BLD-06](#bld-06), [CST-02](#cst-02), [CST-15](#cst-15), [GW-02](#gw-02), [GW-04](#gw-04), [GW-09](#gw-09), [MEM-26](#mem-26), [MEM-44](#mem-44), [MIS-04](#mis-04), [MIS-16](#mis-16), [PHN-27](#phn-27), [PLT-11](#plt-11), [PLT-26](#plt-26), [PLT-27](#plt-27), [RES-07](#res-07), [SHP-05](#shp-05), [SWM-13](#swm-13), [SWM-14](#swm-14), [SWM-29](#swm-29), [SWM-40](#swm-40), [SWM-53](#swm-53), [SWM-60](#swm-60), [SWM-62](#swm-62), [SWM-81](#swm-81) |
 | <a id="sn-04"></a>**SN-04** Private data stays home: Notes, reports, memory, chats, mail and files stay on the PC and the NAS; only the model calls leave, and The owner knows which provider sees what. | must | [AUT-03](#aut-03), [CST-04](#cst-04), [CST-06](#cst-06), [GEN-14](#gen-14), [HSE-07](#hse-07), [KNW-05](#knw-05), [KNW-07](#knw-07), [MEM-06](#mem-06), [MEM-18](#mem-18), [MEM-30](#mem-30), [PHN-16](#phn-16), [PHN-19](#phn-19), [RES-01](#res-01), [SEC-03](#sec-03), [SEC-04](#sec-04), [SEC-06](#sec-06), [SEC-17](#sec-17), [SEC-18](#sec-18), [SEC-19](#sec-19), [SEC-22](#sec-22), [SWM-67](#swm-67) |
-| <a id="sn-05"></a>**SN-05** Agents cannot do damage: No agent can spend money, delete data for good, leak private data, change the NAS, the router or phone and PC security settings, or deploy code without the owner's approval; prompt injection from the web or mail cannot steer an agent into any of it. | must | [APP-10](#app-10), [APP-20](#app-20), [AST-08](#ast-08), [AST-09](#ast-09), [AST-10](#ast-10), [AST-14](#ast-14), [AUT-01](#aut-01), [AUT-03](#aut-03), [BLD-02](#bld-02), [BLD-07](#bld-07), [BLD-10](#bld-10), [BLD-13](#bld-13), [BLD-16](#bld-16), [BLD-18](#bld-18), [BLD-27](#bld-27), [BLD-28](#bld-28), [CHG-05](#chg-05), [CHG-12](#chg-12), [CHG-13](#chg-13), [CHG-15](#chg-15), [CNX-01](#cnx-01), [CNX-03](#cnx-03), [CNX-04](#cnx-04), [CNX-05](#cnx-05), [CNX-07](#cnx-07), [CNX-08](#cnx-08), [CNX-09](#cnx-09), [CRW-04](#crw-04), [CRW-10](#crw-10), [CRW-11](#crw-11), [CRW-13](#crw-13), [CST-04](#cst-04), [CST-05](#cst-05), [CST-06](#cst-06), [CST-07](#cst-07), [CST-10](#cst-10), [CST-11](#cst-11), [CST-12](#cst-12), [GEN-01](#gen-01), [GEN-02](#gen-02), [GEN-03](#gen-03), [GEN-04](#gen-04), [GEN-05](#gen-05), [GEN-06](#gen-06), [GEN-07](#gen-07), [GEN-08](#gen-08), [GEN-09](#gen-09), [GEN-10](#gen-10), [GEN-11](#gen-11), [GEN-12](#gen-12), [GEN-13](#gen-13), [GEN-14](#gen-14), [GEN-15](#gen-15), [GEN-16](#gen-16), [GEN-17](#gen-17), [GEN-18](#gen-18), [GEN-19](#gen-19), [GW-05](#gw-05), [HSE-04](#hse-04), [HSE-05](#hse-05), [HSE-08](#hse-08), [HSE-09](#hse-09), [KNW-04](#knw-04), [KNW-06](#knw-06), [KNW-11](#knw-11), [MEM-04](#mem-04), [MEM-29](#mem-29), [MEM-30](#mem-30), [MEM-39](#mem-39), [MEM-49](#mem-49), [MIS-17](#mis-17), [MIS-28](#mis-28), [PHN-01](#phn-01), [PHN-03](#phn-03), [PHN-04](#phn-04), [PHN-05](#phn-05), [PHN-06](#phn-06), [PHN-07](#phn-07), [PHN-08](#phn-08), [PHN-15](#phn-15), [PLT-02](#plt-02), [PLT-03](#plt-03), [PLT-09](#plt-09), [QA-23](#qa-23), [QA-24](#qa-24), [QA-25](#qa-25), [QA-26](#qa-26), [RES-01](#res-01), [RES-03](#res-03), [RES-04](#res-04), [RES-06](#res-06), [SEC-01](#sec-01), [SEC-02](#sec-02), [SEC-03](#sec-03), [SEC-04](#sec-04), [SEC-05](#sec-05), [SEC-06](#sec-06), [SEC-07](#sec-07), [SEC-08](#sec-08), [SEC-09](#sec-09), [SEC-10](#sec-10), [SEC-11](#sec-11), [SEC-12](#sec-12), [SEC-13](#sec-13), [SEC-14](#sec-14), [SEC-15](#sec-15), [SEC-16](#sec-16), [SEC-20](#sec-20), [SEC-21](#sec-21), [SEC-22](#sec-22), [SHP-05](#shp-05), [SHP-06](#shp-06), [SHP-07](#shp-07), [SHP-09](#shp-09), [SHP-10](#shp-10), [SWM-06](#swm-06), [SWM-109](#swm-109), [SWM-11](#swm-11), [SWM-15](#swm-15), [SWM-23](#swm-23), [SWM-24](#swm-24), [SWM-26](#swm-26), [SWM-42](#swm-42), [SWM-43](#swm-43), [SWM-46](#swm-46), [SWM-51](#swm-51), [SWM-58](#swm-58), [SWM-66](#swm-66), [SWM-67](#swm-67), [SWM-68](#swm-68), [SWM-69](#swm-69), [SWM-70](#swm-70), [SWM-77](#swm-77), [SWM-89](#swm-89), [TRL-05](#trl-05), [TSK-15](#tsk-15), [TSK-20](#tsk-20), [VOI-01](#voi-01), [VOI-03](#voi-03), [VOI-07](#voi-07) |
+| <a id="sn-05"></a>**SN-05** Agents cannot do damage: No agent can spend money, delete data for good, leak private data, change the NAS, the router or phone and PC security settings, or deploy code without the owner's approval; prompt injection from the web or mail cannot steer an agent into any of it. | must | [APP-10](#app-10), [APP-20](#app-20), [APP-61](#app-61), [AST-08](#ast-08), [AST-09](#ast-09), [AST-10](#ast-10), [AST-14](#ast-14), [AUT-01](#aut-01), [AUT-03](#aut-03), [BLD-02](#bld-02), [BLD-07](#bld-07), [BLD-10](#bld-10), [BLD-13](#bld-13), [BLD-16](#bld-16), [BLD-18](#bld-18), [BLD-27](#bld-27), [BLD-28](#bld-28), [BLD-39](#bld-39), [CHG-05](#chg-05), [CHG-12](#chg-12), [CHG-13](#chg-13), [CHG-15](#chg-15), [CNX-01](#cnx-01), [CNX-03](#cnx-03), [CNX-04](#cnx-04), [CNX-05](#cnx-05), [CNX-07](#cnx-07), [CNX-08](#cnx-08), [CNX-09](#cnx-09), [CRW-04](#crw-04), [CRW-10](#crw-10), [CRW-11](#crw-11), [CRW-13](#crw-13), [CST-04](#cst-04), [CST-05](#cst-05), [CST-06](#cst-06), [CST-07](#cst-07), [CST-10](#cst-10), [CST-11](#cst-11), [CST-12](#cst-12), [GEN-01](#gen-01), [GEN-02](#gen-02), [GEN-03](#gen-03), [GEN-04](#gen-04), [GEN-05](#gen-05), [GEN-06](#gen-06), [GEN-07](#gen-07), [GEN-08](#gen-08), [GEN-09](#gen-09), [GEN-10](#gen-10), [GEN-11](#gen-11), [GEN-12](#gen-12), [GEN-13](#gen-13), [GEN-14](#gen-14), [GEN-15](#gen-15), [GEN-16](#gen-16), [GEN-17](#gen-17), [GEN-18](#gen-18), [GEN-19](#gen-19), [GEN-20](#gen-20), [GW-05](#gw-05), [HSE-04](#hse-04), [HSE-05](#hse-05), [HSE-08](#hse-08), [HSE-09](#hse-09), [KNW-04](#knw-04), [KNW-06](#knw-06), [KNW-11](#knw-11), [MEM-04](#mem-04), [MEM-29](#mem-29), [MEM-30](#mem-30), [MEM-39](#mem-39), [MEM-49](#mem-49), [MIS-17](#mis-17), [MIS-28](#mis-28), [PHN-01](#phn-01), [PHN-03](#phn-03), [PHN-04](#phn-04), [PHN-05](#phn-05), [PHN-06](#phn-06), [PHN-07](#phn-07), [PHN-08](#phn-08), [PHN-15](#phn-15), [PLT-02](#plt-02), [PLT-03](#plt-03), [PLT-09](#plt-09), [QA-23](#qa-23), [QA-24](#qa-24), [QA-25](#qa-25), [QA-26](#qa-26), [RES-01](#res-01), [RES-03](#res-03), [RES-04](#res-04), [RES-06](#res-06), [SEC-01](#sec-01), [SEC-02](#sec-02), [SEC-03](#sec-03), [SEC-04](#sec-04), [SEC-05](#sec-05), [SEC-06](#sec-06), [SEC-07](#sec-07), [SEC-08](#sec-08), [SEC-09](#sec-09), [SEC-10](#sec-10), [SEC-11](#sec-11), [SEC-12](#sec-12), [SEC-13](#sec-13), [SEC-14](#sec-14), [SEC-15](#sec-15), [SEC-16](#sec-16), [SEC-20](#sec-20), [SEC-21](#sec-21), [SEC-22](#sec-22), [SHP-05](#shp-05), [SHP-06](#shp-06), [SHP-07](#shp-07), [SHP-09](#shp-09), [SHP-10](#shp-10), [SWM-06](#swm-06), [SWM-109](#swm-109), [SWM-11](#swm-11), [SWM-15](#swm-15), [SWM-23](#swm-23), [SWM-24](#swm-24), [SWM-26](#swm-26), [SWM-42](#swm-42), [SWM-43](#swm-43), [SWM-46](#swm-46), [SWM-51](#swm-51), [SWM-58](#swm-58), [SWM-66](#swm-66), [SWM-67](#swm-67), [SWM-68](#swm-68), [SWM-69](#swm-69), [SWM-70](#swm-70), [SWM-77](#swm-77), [SWM-89](#swm-89), [TRL-05](#trl-05), [TSK-15](#tsk-15), [TSK-20](#tsk-20), [VOI-01](#voi-01), [VOI-03](#voi-03), [VOI-07](#voi-07) |
 | <a id="sn-06"></a>**SN-06** Usable from the phone, anywhere, one sign-in: Everything is usable and decidable from the owner's phone (installable app, push, Telegram), from anywhere on his tailnet, with his Tailscale login as the only sign-in. | must | [APP-01](#app-01), [APP-02](#app-02), [APP-03](#app-03), [APP-04](#app-04), [APP-08](#app-08), [APP-09](#app-09), [APP-15](#app-15), [APP-17](#app-17), [APP-19](#app-19), [APP-20](#app-20), [APP-37](#app-37), [APP-38](#app-38), [APP-39](#app-39), [AST-01](#ast-01), [AST-03](#ast-03), [AUT-05](#aut-05), [AUT-06](#aut-06), [MIS-15](#mis-15), [MIS-23](#mis-23), [QA-16](#qa-16), [QA-21](#qa-21), [QA-22](#qa-22), [SEC-01](#sec-01), [SEC-02](#sec-02), [SEC-20](#sec-20), [SWM-11](#swm-11), [SWM-57](#swm-57), [SWM-93](#swm-93), [SWM-95](#swm-95), [TSK-02](#tsk-02), [VOI-09](#voi-09) |
-| <a id="sn-07"></a>**SN-07** See what every agent does: For every agent, mission, crew job, build and tool the owner can see what it did step by step, what it read and changed, what it produced, what it cost and when something went wrong, without having to look for it. | must | [APP-07](#app-07), [APP-11](#app-11), [APP-12](#app-12), [APP-16](#app-16), [APP-19](#app-19), [APP-22](#app-22), [APP-23](#app-23), [APP-24](#app-24), [APP-35](#app-35), [APP-36](#app-36), [APP-53](#app-53), [AST-04](#ast-04), [AUT-04](#aut-04), [AUT-07](#aut-07), [BLD-14](#bld-14), [BLD-20](#bld-20), [CHG-16](#chg-16), [CRW-01](#crw-01), [CRW-02](#crw-02), [CRW-09](#crw-09), [CRW-12](#crw-12), [GW-01](#gw-01), [GW-07](#gw-07), [HSE-02](#hse-02), [MEM-01](#mem-01), [MEM-07](#mem-07), [MEM-09](#mem-09), [MEM-10](#mem-10), [MEM-19](#mem-19), [MEM-22](#mem-22), [MEM-27](#mem-27), [MEM-44](#mem-44), [MEM-45](#mem-45), [MEM-46](#mem-46), [MIS-16](#mis-16), [OBS-01](#obs-01), [OBS-02](#obs-02), [OBS-03](#obs-03), [OBS-04](#obs-04), [OBS-05](#obs-05), [OBS-06](#obs-06), [OBS-07](#obs-07), [OBS-08](#obs-08), [OBS-09](#obs-09), [OBS-10](#obs-10), [OBS-14](#obs-14), [OBS-15](#obs-15), [OBS-18](#obs-18), [PLT-24](#plt-24), [PLT-30](#plt-30), [QA-17](#qa-17), [RES-05](#res-05), [SEC-07](#sec-07), [SHP-11](#shp-11), [SWM-103](#swm-103), [SWM-104](#swm-104), [SWM-105](#swm-105), [SWM-106](#swm-106), [SWM-107](#swm-107), [SWM-110](#swm-110), [SWM-111](#swm-111), [SWM-112](#swm-112), [SWM-113](#swm-113), [SWM-114](#swm-114), [SWM-115](#swm-115), [SWM-17](#swm-17), [SWM-23](#swm-23), [SWM-25](#swm-25), [SWM-30](#swm-30), [SWM-57](#swm-57), [SWM-58](#swm-58), [SWM-64](#swm-64), [SWM-78](#swm-78), [SWM-79](#swm-79), [SWM-80](#swm-80), [SWM-81](#swm-81), [SWM-82](#swm-82), [SWM-84](#swm-84), [SWM-90](#swm-90), [SWM-96](#swm-96), [SWM-99](#swm-99), [TSK-04](#tsk-04), [TSK-09](#tsk-09), [TSK-17](#tsk-17), [TSK-35](#tsk-35), [TSK-42](#tsk-42), [TSK-43](#tsk-43) |
+| <a id="sn-07"></a>**SN-07** See what every agent does: For every agent, mission, crew job, build and tool the owner can see what it did step by step, what it read and changed, what it produced, what it cost and when something went wrong, without having to look for it. | must | [APP-07](#app-07), [APP-11](#app-11), [APP-12](#app-12), [APP-16](#app-16), [APP-19](#app-19), [APP-22](#app-22), [APP-23](#app-23), [APP-24](#app-24), [APP-35](#app-35), [APP-36](#app-36), [APP-53](#app-53), [AST-04](#ast-04), [AUT-04](#aut-04), [AUT-07](#aut-07), [BLD-14](#bld-14), [BLD-20](#bld-20), [CHG-16](#chg-16), [CHG-20](#chg-20), [CRW-01](#crw-01), [CRW-02](#crw-02), [CRW-09](#crw-09), [CRW-12](#crw-12), [GW-01](#gw-01), [GW-07](#gw-07), [HSE-02](#hse-02), [MEM-01](#mem-01), [MEM-07](#mem-07), [MEM-09](#mem-09), [MEM-10](#mem-10), [MEM-19](#mem-19), [MEM-22](#mem-22), [MEM-27](#mem-27), [MEM-44](#mem-44), [MEM-45](#mem-45), [MEM-46](#mem-46), [MIS-16](#mis-16), [OBS-01](#obs-01), [OBS-02](#obs-02), [OBS-03](#obs-03), [OBS-04](#obs-04), [OBS-05](#obs-05), [OBS-06](#obs-06), [OBS-07](#obs-07), [OBS-08](#obs-08), [OBS-09](#obs-09), [OBS-10](#obs-10), [OBS-14](#obs-14), [OBS-15](#obs-15), [OBS-18](#obs-18), [PLT-24](#plt-24), [PLT-30](#plt-30), [QA-17](#qa-17), [RES-05](#res-05), [SEC-07](#sec-07), [SHP-11](#shp-11), [SWM-103](#swm-103), [SWM-104](#swm-104), [SWM-105](#swm-105), [SWM-106](#swm-106), [SWM-107](#swm-107), [SWM-110](#swm-110), [SWM-111](#swm-111), [SWM-112](#swm-112), [SWM-113](#swm-113), [SWM-114](#swm-114), [SWM-115](#swm-115), [SWM-17](#swm-17), [SWM-23](#swm-23), [SWM-25](#swm-25), [SWM-30](#swm-30), [SWM-57](#swm-57), [SWM-58](#swm-58), [SWM-64](#swm-64), [SWM-78](#swm-78), [SWM-79](#swm-79), [SWM-80](#swm-80), [SWM-81](#swm-81), [SWM-82](#swm-82), [SWM-84](#swm-84), [SWM-90](#swm-90), [SWM-96](#swm-96), [SWM-99](#swm-99), [TSK-04](#tsk-04), [TSK-09](#tsk-09), [TSK-17](#tsk-17), [TSK-35](#tsk-35), [TSK-42](#tsk-42), [TSK-43](#tsk-43) |
 | <a id="sn-08"></a>**SN-08** The stack maintains and improves itself: Housekeeping agents keep the stack healthy, and the stack proposes and builds its own improvements; the owner approves what ships. | must | [APP-21](#app-21), [AST-11](#ast-11), [AUT-02](#aut-02), [BLD-01](#bld-01), [BLD-03](#bld-03), [BLD-04](#bld-04), [BLD-05](#bld-05), [BLD-08](#bld-08), [BLD-10](#bld-10), [BLD-21](#bld-21), [BLD-22](#bld-22), [BLD-24](#bld-24), [CHG-11](#chg-11), [CHG-15](#chg-15), [CHG-17](#chg-17), [CHG-18](#chg-18), [CHG-19](#chg-19), [CRW-01](#crw-01), [CRW-03](#crw-03), [CRW-04](#crw-04), [CRW-07](#crw-07), [CRW-08](#crw-08), [CRW-09](#crw-09), [CRW-10](#crw-10), [CST-07](#cst-07), [GW-09](#gw-09), [KNW-08](#knw-08), [MEM-11](#mem-11), [MEM-13](#mem-13), [MEM-20](#mem-20), [MEM-38](#mem-38), [MEM-39](#mem-39), [MEM-42](#mem-42), [MEM-43](#mem-43), [MEM-47](#mem-47), [MEM-50](#mem-50), [OBS-13](#obs-13), [PLT-08](#plt-08), [PLT-19](#plt-19), [QA-07](#qa-07), [SEC-08](#sec-08), [SWM-07](#swm-07), [SWM-102](#swm-102), [SWM-18](#swm-18), [SWM-38](#swm-38), [SWM-44](#swm-44), [SWM-45](#swm-45), [SWM-46](#swm-46), [SWM-47](#swm-47), [SWM-61](#swm-61), [SWM-70](#swm-70), [SWM-82](#swm-82), [SWM-83](#swm-83), [SWM-84](#swm-84), [SWM-91](#swm-91), [SWM-92](#swm-92), [SWM-93](#swm-93), [SWM-94](#swm-94), [SWM-95](#swm-95), [SWM-96](#swm-96), [TRL-14](#trl-14), [TRL-15](#trl-15), [TRL-16](#trl-16), [TRL-17](#trl-17), [TSK-13](#tsk-13), [TSK-16](#tsk-16), [TSK-17](#tsk-17), [TSK-42](#tsk-42) |
 | <a id="sn-09"></a>**SN-09** Nothing is ever lost: Data and configuration are backed up, the backups are proven to restore, and the whole stack can move to a new PC. | must | [AST-10](#ast-10), [AUT-04](#aut-04), [CNX-03](#cnx-03), [CST-05](#cst-05), [KNW-01](#knw-01), [KNW-11](#knw-11), [MEM-08](#mem-08), [MEM-12](#mem-12), [MEM-14](#mem-14), [MEM-17](#mem-17), [MEM-21](#mem-21), [MEM-35](#mem-35), [MEM-48](#mem-48), [PLT-12](#plt-12), [PLT-13](#plt-13), [PLT-14](#plt-14), [PLT-15](#plt-15), [PLT-16](#plt-16), [PLT-17](#plt-17), [PLT-33](#plt-33), [PLT-34](#plt-34), [SWM-30](#swm-30), [SWM-35](#swm-35), [SWM-36](#swm-36), [SWM-73](#swm-73), [SWM-76](#swm-76) |
 | <a id="sn-10"></a>**SN-10** Knowledge that grows and answers with sources: Everything the owner and his agents write becomes a searchable, linked knowledge base (vault, wikis, long-term memory) that answers questions with citations. | must | [APP-15](#app-15), [CHG-08](#chg-08), [CHG-09](#chg-09), [CRW-13](#crw-13), [KNW-01](#knw-01), [KNW-02](#knw-02), [KNW-03](#knw-03), [KNW-04](#knw-04), [KNW-05](#knw-05), [KNW-06](#knw-06), [KNW-08](#knw-08), [KNW-09](#knw-09), [KNW-10](#knw-10), [KNW-12](#knw-12), [KNW-13](#knw-13), [KNW-14](#knw-14), [KNW-15](#knw-15), [MEM-01](#mem-01), [MEM-02](#mem-02), [MEM-03](#mem-03), [MEM-04](#mem-04), [MEM-05](#mem-05), [MEM-06](#mem-06), [MEM-09](#mem-09), [MEM-10](#mem-10), [MEM-12](#mem-12), [MEM-14](#mem-14), [MEM-15](#mem-15), [MEM-16](#mem-16), [MEM-17](#mem-17), [MEM-18](#mem-18), [MEM-19](#mem-19), [MEM-20](#mem-20), [MEM-21](#mem-21), [MEM-22](#mem-22), [MEM-23](#mem-23), [MEM-24](#mem-24), [MEM-25](#mem-25), [MEM-26](#mem-26), [MEM-27](#mem-27), [MEM-28](#mem-28), [MEM-29](#mem-29), [MEM-33](#mem-33), [MEM-34](#mem-34), [MEM-35](#mem-35), [MEM-36](#mem-36), [MEM-37](#mem-37), [MEM-38](#mem-38), [MEM-40](#mem-40), [MEM-41](#mem-41), [MEM-45](#mem-45), [MEM-46](#mem-46), [MEM-48](#mem-48), [MEM-49](#mem-49), [MEM-50](#mem-50), [MEM-51](#mem-51), [MIS-01](#mis-01), [MIS-11](#mis-11), [MIS-18](#mis-18), [MIS-19](#mis-19), [MIS-21](#mis-21), [MIS-28](#mis-28), [SWM-66](#swm-66), [TSK-34](#tsk-34) |
 | <a id="sn-11"></a>**SN-11** Hands in the real world, under control: Agents can act through the AI phone, Gmail, shopping and the House (lights, plugs, Echos), each only within grants and approvals the owner controls, with Stop and a log. | should | [CNX-01](#cnx-01), [CNX-02](#cnx-02), [CRW-11](#crw-11), [CST-12](#cst-12), [HSE-01](#hse-01), [HSE-02](#hse-02), [HSE-03](#hse-03), [HSE-05](#hse-05), [HSE-06](#hse-06), [HSE-07](#hse-07), [MIS-17](#mis-17), [PHN-01](#phn-01), [PHN-02](#phn-02), [PHN-05](#phn-05), [PHN-13](#phn-13), [PHN-14](#phn-14), [PHN-17](#phn-17), [PHN-18](#phn-18), [PHN-19](#phn-19), [PHN-22](#phn-22), [PHN-23](#phn-23), [PLT-22](#plt-22), [SHP-01](#shp-01), [SHP-02](#shp-02), [SHP-03](#shp-03), [SHP-04](#shp-04), [SHP-11](#shp-11), [SHP-13](#shp-13), [SWM-26](#swm-26), [TRL-16](#trl-16), [VOI-01](#voi-01), [VOI-02](#voi-02), [VOI-03](#voi-03), [VOI-04](#voi-04), [VOI-05](#voi-05), [VOI-06](#voi-06), [VOI-08](#voi-08) |
 | <a id="sn-12"></a>**SN-12** English everywhere: Chat, app, reports, wikis, Telegram, code, docs and commit messages are in English. | must | [CST-09](#cst-09), [MIS-12](#mis-12), [TSK-35](#tsk-35) |
 | <a id="sn-13"></a>**SN-13** Runs unattended for months: The stack keeps working through usage-limit pauses, restarts, deploys, reboots and power cuts, and recovers by itself; no work, approval or message is lost on a restart. | must | [APP-23](#app-23), [APP-24](#app-24), [AST-03](#ast-03), [AST-12](#ast-12), [BLD-03](#bld-03), [BLD-06](#bld-06), [BLD-09](#bld-09), [BLD-12](#bld-12), [CNX-06](#cnx-06), [CST-03](#cst-03), [CST-08](#cst-08), [CST-14](#cst-14), [GW-03](#gw-03), [GW-04](#gw-04), [GW-06](#gw-06), [GW-08](#gw-08), [MEM-05](#mem-05), [MEM-07](#mem-07), [MEM-08](#mem-08), [MEM-15](#mem-15), [MEM-16](#mem-16), [MEM-21](#mem-21), [MEM-34](#mem-34), [MEM-40](#mem-40), [MEM-41](#mem-41), [MEM-43](#mem-43), [MEM-51](#mem-51), [MIS-03](#mis-03), [MIS-04](#mis-04), [MIS-05](#mis-05), [MIS-10](#mis-10), [OBS-03](#obs-03), [OBS-04](#obs-04), [PHN-09](#phn-09), [PHN-10](#phn-10), [PHN-11](#phn-11), [PHN-14](#phn-14), [PHN-25](#phn-25), [PLT-04](#plt-04), [PLT-05](#plt-05), [PLT-06](#plt-06), [PLT-07](#plt-07), [PLT-08](#plt-08), [PLT-09](#plt-09), [PLT-10](#plt-10), [PLT-11](#plt-11), [PLT-13](#plt-13), [PLT-18](#plt-18), [PLT-21](#plt-21), [PLT-23](#plt-23), [PLT-27](#plt-27), [PLT-28](#plt-28), [PLT-29](#plt-29), [PLT-30](#plt-30), [PLT-31](#plt-31), [PLT-32](#plt-32), [QA-17](#qa-17), [SHP-12](#shp-12), [SWM-12](#swm-12), [SWM-19](#swm-19), [SWM-31](#swm-31), [SWM-47](#swm-47), [SWM-52](#swm-52), [SWM-53](#swm-53), [SWM-63](#swm-63), [SWM-71](#swm-71), [SWM-72](#swm-72), [SWM-73](#swm-73), [SWM-76](#swm-76), [SWM-85](#swm-85), [SWM-87](#swm-87), [TSK-06](#tsk-06), [TSK-08](#tsk-08) |
-| <a id="sn-14"></a>**SN-14** Understand and change any codebase: The stack can study any repository (code graph, code map), answer questions about it, change the owner's own repositories through the builder, and check code against large specifications. | should | [AST-09](#ast-09), [BLD-01](#bld-01), [BLD-11](#bld-11), [BLD-15](#bld-15), [BLD-17](#bld-17), [BLD-18](#bld-18), [BLD-19](#bld-19), [BLD-23](#bld-23), [BLD-25](#bld-25), [BLD-26](#bld-26), [BLD-27](#bld-27), [CHG-01](#chg-01), [CHG-02](#chg-02), [CHG-03](#chg-03), [CHG-04](#chg-04), [CHG-05](#chg-05), [CHG-06](#chg-06), [CHG-07](#chg-07), [CHG-08](#chg-08), [CHG-09](#chg-09), [CHG-10](#chg-10), [CHG-12](#chg-12), [CHG-13](#chg-13), [CHG-14](#chg-14), [CHG-16](#chg-16), [CHG-17](#chg-17), [CHG-18](#chg-18), [CHG-19](#chg-19), [MEM-31](#mem-31), [MEM-32](#mem-32), [MEM-37](#mem-37), [QA-14](#qa-14) |
+| <a id="sn-14"></a>**SN-14** Understand and change any codebase: The stack can study any repository (code graph, code map), answer questions about it, change the owner's own repositories through the builder, and check code against large specifications. | should | [APP-57](#app-57), [APP-58](#app-58), [APP-59](#app-59), [APP-60](#app-60), [APP-61](#app-61), [AST-09](#ast-09), [BLD-01](#bld-01), [BLD-11](#bld-11), [BLD-15](#bld-15), [BLD-17](#bld-17), [BLD-18](#bld-18), [BLD-19](#bld-19), [BLD-23](#bld-23), [BLD-25](#bld-25), [BLD-26](#bld-26), [BLD-27](#bld-27), [CHG-01](#chg-01), [CHG-02](#chg-02), [CHG-03](#chg-03), [CHG-04](#chg-04), [CHG-05](#chg-05), [CHG-06](#chg-06), [CHG-07](#chg-07), [CHG-08](#chg-08), [CHG-09](#chg-09), [CHG-10](#chg-10), [CHG-12](#chg-12), [CHG-13](#chg-13), [CHG-14](#chg-14), [CHG-16](#chg-16), [CHG-17](#chg-17), [CHG-18](#chg-18), [CHG-19](#chg-19), [CHG-20](#chg-20), [MEM-31](#mem-31), [MEM-32](#mem-32), [MEM-37](#mem-37), [QA-14](#qa-14) |
 | <a id="sn-15"></a>**SN-15** A codebase AI agents can develop safely: The repository is organised for coding agents (rules per directory, checks, tests, docs that stay true), so that agents can change it without breaking it. | must | [APP-13](#app-13), [AST-07](#ast-07), [AST-11](#ast-11), [AUT-08](#aut-08), [CHG-07](#chg-07), [CRW-07](#crw-07), [CRW-08](#crw-08), [CST-08](#cst-08), [CST-13](#cst-13), [KNW-13](#knw-13), [MEM-31](#mem-31), [MEM-32](#mem-32), [PLT-24](#plt-24), [PLT-25](#plt-25), [PLT-26](#plt-26), [PLT-33](#plt-33), [QA-01](#qa-01), [QA-02](#qa-02), [QA-03](#qa-03), [QA-04](#qa-04), [QA-05](#qa-05), [QA-06](#qa-06), [QA-07](#qa-07), [QA-13](#qa-13), [QA-16](#qa-16), [QA-18](#qa-18), [QA-19](#qa-19), [QA-20](#qa-20), [QA-21](#qa-21), [QA-22](#qa-22), [SEC-15](#sec-15), [SWM-01](#swm-01), [SWM-16](#swm-16), [SWM-22](#swm-22), [SWM-28](#swm-28), [SWM-37](#swm-37), [SWM-41](#swm-41), [SWM-85](#swm-85), [SWM-88](#swm-88) |
 | <a id="sn-16"></a>**SN-16** Known, current and checkable requirements: What the stack must do is written down properly, kept current with every change, and contradictions between the parts are found and shown. | must | [APP-14](#app-14), [APP-18](#app-18), [MEM-02](#mem-02), [MEM-11](#mem-11), [MEM-13](#mem-13), [MEM-23](#mem-23), [MEM-47](#mem-47), [QA-06](#qa-06), [QA-08](#qa-08), [QA-09](#qa-09), [QA-10](#qa-10), [QA-11](#qa-11), [QA-12](#qa-12), [QA-13](#qa-13), [QA-14](#qa-14), [QA-15](#qa-15), [SWM-03](#swm-03), [SWM-20](#swm-20), [SWM-35](#swm-35), [SWM-55](#swm-55), [SWM-88](#swm-88), [TRL-02](#trl-02), [TRL-14](#trl-14), [TRL-17](#trl-17) |
 | <a id="sn-17"></a>**SN-17** Agents that work together over time: Agents keep working on the same topics over many runs, refine and reopen each other's work, see each other's artifacts and talk to each other directly, to groups or to all, with the owner reading along. | should | [APP-53](#app-53), [CHG-08](#chg-08), [CHG-10](#chg-10), [CHG-11](#chg-11), [CRW-05](#crw-05), [MEM-03](#mem-03), [MEM-24](#mem-24), [MEM-25](#mem-25), [MEM-28](#mem-28), [MEM-36](#mem-36), [MIS-18](#mis-18), [MIS-19](#mis-19), [MIS-20](#mis-20), [OBS-13](#obs-13), [SWM-01](#swm-01), [SWM-02](#swm-02), [SWM-03](#swm-03), [SWM-04](#swm-04), [SWM-05](#swm-05), [SWM-07](#swm-07), [SWM-08](#swm-08), [SWM-09](#swm-09), [SWM-10](#swm-10), [SWM-100](#swm-100), [SWM-101](#swm-101), [SWM-102](#swm-102), [SWM-103](#swm-103), [SWM-104](#swm-104), [SWM-105](#swm-105), [SWM-106](#swm-106), [SWM-107](#swm-107), [SWM-108](#swm-108), [SWM-109](#swm-109), [SWM-11](#swm-11), [SWM-110](#swm-110), [SWM-111](#swm-111), [SWM-112](#swm-112), [SWM-113](#swm-113), [SWM-114](#swm-114), [SWM-115](#swm-115), [SWM-12](#swm-12), [SWM-13](#swm-13), [SWM-16](#swm-16), [SWM-17](#swm-17), [SWM-18](#swm-18), [SWM-20](#swm-20), [SWM-21](#swm-21), [SWM-22](#swm-22), [SWM-27](#swm-27), [SWM-28](#swm-28), [SWM-32](#swm-32), [SWM-33](#swm-33), [SWM-34](#swm-34), [SWM-37](#swm-37), [SWM-41](#swm-41), [SWM-48](#swm-48), [SWM-49](#swm-49), [SWM-50](#swm-50), [SWM-51](#swm-51), [SWM-52](#swm-52), [SWM-54](#swm-54), [SWM-56](#swm-56), [SWM-60](#swm-60), [SWM-62](#swm-62), [SWM-63](#swm-63), [SWM-64](#swm-64), [SWM-65](#swm-65), [SWM-75](#swm-75), [SWM-86](#swm-86), [SWM-90](#swm-90), [SWM-97](#swm-97), [SWM-98](#swm-98), [SWM-99](#swm-99), [TRL-01](#trl-01), [TRL-07](#trl-07), [TSK-05](#tsk-05), [TSK-07](#tsk-07), [TSK-18](#tsk-18), [TSK-19](#tsk-19), [TSK-43](#tsk-43) |
 | <a id="sn-18"></a>**SN-18** Told once, not spammed: the owner hears about what needs him or went wrong once, on his phone, and is not flooded with repeats or noise. | should | [ACR-01](#acr-01), [APP-38](#app-38), [APP-54](#app-54), [AUT-05](#aut-05), [AUT-06](#aut-06), [CRW-12](#crw-12), [MIS-22](#mis-22), [OBS-10](#obs-10), [OBS-11](#obs-11), [OBS-12](#obs-12), [OBS-16](#obs-16), [OBS-17](#obs-17), [SHP-04](#shp-04), [SWM-100](#swm-100), [SWM-14](#swm-14), [SWM-39](#swm-39), [SWM-50](#swm-50), [SWM-56](#swm-56), [SWM-59](#swm-59), [SWM-71](#swm-71), [SWM-80](#swm-80) |
-| <a id="sn-19"></a>**SN-19** Give a task, the stack does the rest: The owner gives any task (coding, research, analysis, watching, errands) in one sentence, or with details preset when wanted; the stack works out what done means, plans it, chooses or creates the agents, models and harnesses, runs it once, on a schedule, on an event or after other work, for minutes or for months, and asks only the real decisions. | must | [APP-52](#app-52), [CHG-01](#chg-01), [CHG-04](#chg-04), [MEM-33](#mem-33), [TRL-01](#trl-01), [TRL-02](#trl-02), [TRL-03](#trl-03), [TRL-04](#trl-04), [TRL-05](#trl-05), [TRL-06](#trl-06), [TRL-07](#trl-07), [TRL-08](#trl-08), [TRL-09](#trl-09), [TRL-10](#trl-10), [TRL-11](#trl-11), [TRL-12](#trl-12), [TRL-13](#trl-13), [TSK-01](#tsk-01), [TSK-02](#tsk-02), [TSK-03](#tsk-03), [TSK-04](#tsk-04), [TSK-05](#tsk-05), [TSK-06](#tsk-06), [TSK-07](#tsk-07), [TSK-11](#tsk-11), [TSK-13](#tsk-13), [TSK-14](#tsk-14), [TSK-15](#tsk-15), [TSK-16](#tsk-16), [TSK-21](#tsk-21), [TSK-22](#tsk-22), [TSK-23](#tsk-23), [TSK-24](#tsk-24), [TSK-25](#tsk-25), [TSK-26](#tsk-26), [TSK-27](#tsk-27), [TSK-28](#tsk-28), [TSK-29](#tsk-29), [TSK-30](#tsk-30), [TSK-31](#tsk-31), [TSK-32](#tsk-32), [TSK-33](#tsk-33), [TSK-34](#tsk-34), [TSK-36](#tsk-36), [TSK-40](#tsk-40), [TSK-41](#tsk-41), [TSK-44](#tsk-44) |
+| <a id="sn-19"></a>**SN-19** Give a task, the stack does the rest: The owner gives any task (coding, research, analysis, watching, errands) in one sentence, or with details preset when wanted; the stack works out what done means, plans it, chooses or creates the agents, models and harnesses, runs it once, on a schedule, on an event or after other work, for minutes or for months, and asks only the real decisions. | must | [APP-52](#app-52), [CHG-01](#chg-01), [CHG-04](#chg-04), [MEM-33](#mem-33), [TRL-01](#trl-01), [TRL-02](#trl-02), [TRL-03](#trl-03), [TRL-04](#trl-04), [TRL-05](#trl-05), [TRL-06](#trl-06), [TRL-07](#trl-07), [TRL-08](#trl-08), [TRL-09](#trl-09), [TRL-10](#trl-10), [TRL-11](#trl-11), [TRL-12](#trl-12), [TRL-13](#trl-13), [TSK-01](#tsk-01), [TSK-02](#tsk-02), [TSK-03](#tsk-03), [TSK-04](#tsk-04), [TSK-05](#tsk-05), [TSK-06](#tsk-06), [TSK-07](#tsk-07), [TSK-11](#tsk-11), [TSK-13](#tsk-13), [TSK-14](#tsk-14), [TSK-15](#tsk-15), [TSK-16](#tsk-16), [TSK-21](#tsk-21), [TSK-22](#tsk-22), [TSK-23](#tsk-23), [TSK-24](#tsk-24), [TSK-25](#tsk-25), [TSK-26](#tsk-26), [TSK-27](#tsk-27), [TSK-28](#tsk-28), [TSK-29](#tsk-29), [TSK-30](#tsk-30), [TSK-31](#tsk-31), [TSK-32](#tsk-32), [TSK-33](#tsk-33), [TSK-34](#tsk-34), [TSK-36](#tsk-36), [TSK-40](#tsk-40), [TSK-41](#tsk-41), [TSK-44](#tsk-44), [TSK-45](#tsk-45), [TSK-46](#tsk-46), [TSK-47](#tsk-47), [TSK-48](#tsk-48) |
 | <a id="sn-20"></a>**SN-20** Work that starts when the world changes: Tasks start by themselves when something happens, such as a news story breaking, mail arriving, code changing, a price moving, a device changing state or another task finishing. | should | [TSK-10](#tsk-10), [TSK-11](#tsk-11), [TSK-12](#tsk-12), [TSK-21](#tsk-21), [TSK-22](#tsk-22), [TSK-23](#tsk-23), [TSK-24](#tsk-24), [TSK-25](#tsk-25), [TSK-26](#tsk-26), [TSK-27](#tsk-27), [TSK-28](#tsk-28), [TSK-29](#tsk-29), [TSK-30](#tsk-30), [TSK-31](#tsk-31), [TSK-32](#tsk-32), [TSK-33](#tsk-33), [TSK-44](#tsk-44) |
 
 ## ACR AI change requests
@@ -2110,7 +2110,7 @@ The repo page shall hold its content under six tabs, Overview, Map, History, Hea
 
 - Parents: [SN-01](#sn-01)
 - Sources: `chat 2026-11-07`
-- Verified by: test: `tests/test_repo_tabs.py::test_the_repo_page_has_seven_tabs_one_question_each`, `tests/test_repo_tabs.py::test_the_overview_says_what_it_is_and_the_map_folds_its_files`, `tests/test_repo_tabs.py::test_six_labels_fit_a_phone_and_nothing_is_ellipsed`, `tests/test_repo_tabs.py::test_a_tab_change_touches_no_page_and_a_live_redraw_keeps_the_tab_and_the_place`, `tests/test_repo_tabs.py::test_a_tab_loads_its_data_only_when_it_opens`, `tests/test_repo_tabs.py::test_every_feature_of_the_old_page_is_still_reachable`, `tests/test_repo_tabs.py::test_history_says_what_a_row_means_in_plain_words_most_telling_first`, `tests/test_repo_tabs.py::test_nothing_is_cut_the_rest_of_a_list_is_one_tap_away`, `tests/test_repo_tabs.py::test_health_says_each_finding_and_its_reason_in_plain_words`, `tests/test_repo_tabs.py::test_a_repository_without_facts_says_so_and_offers_re_analyse`, `tests/test_repo_tabs.py::test_a_repository_whose_facts_failed_says_what_failed_where_it_failed`, `tests/test_repo_tabs.py::test_the_wiki_tab_lists_the_pages_and_opens_them_in_the_wiki_viewer`
+- Verified by: test: `tests/test_repo_tabs.py::test_the_repo_page_has_seven_tabs_one_question_each`, `tests/test_repo_tabs.py::test_the_overview_says_what_it_is_and_the_map_folds_its_files`, `tests/test_repo_tabs.py::test_six_labels_fit_a_phone_and_nothing_is_ellipsed`, `tests/test_repo_tabs.py::test_a_tab_change_touches_no_page_and_a_live_redraw_keeps_the_tab_and_the_place`, `tests/test_repo_tabs.py::test_a_tab_loads_its_data_only_when_it_opens`, `tests/test_repo_tabs.py::test_every_feature_of_the_old_page_is_still_reachable`, `tests/test_repo_tabs.py::test_history_says_what_a_row_means_in_plain_words_most_telling_first`, `tests/test_repo_tabs.py::test_nothing_is_cut_every_row_shows_from_the_start`, `tests/test_repo_tabs.py::test_health_says_each_finding_and_its_reason_in_plain_words`, `tests/test_repo_tabs.py::test_a_repository_without_facts_says_so_and_offers_re_analyse`, `tests/test_repo_tabs.py::test_a_repository_whose_facts_failed_says_what_failed_where_it_failed`, `tests/test_repo_tabs.py::test_the_wiki_tab_lists_the_pages_and_opens_them_in_the_wiki_viewer`
 
 #### APP-52
 
@@ -2120,7 +2120,7 @@ The second tab shall be Tasks, with five views - Tasks (Active, Repeating and Do
 
 - Parents: [SN-01](#sn-01), [SN-19](#sn-19)
 - Sources: [DEC-46](#dec-46), `owner 2026-11-08: What is the difference between task and mission? I feel like tasks is better term and we should streamline and unify. ... How long it runs should not define the term. ... I feel we should keep 6 tabs and integrate tasks in agents. But tasks are not an afterthought. ... I want to see how tasks and agents connect ... Can Agents run without tasks? ... I feel like these should just be a special kind of tasks.`
-- Verified by: test: `tests/test_tasks_tab.py::test_the_tasks_tab_has_five_views_and_the_old_addresses_go_there`, `tests/test_tasks_tab.py::test_new_task_is_one_form_that_sends_only_what_was_set`
+- Verified by: test: `tests/test_tasks_tab.py::test_the_head_counts_the_tasks_the_list_shows`, `tests/test_tasks_tab.py::test_the_tasks_tab_has_five_views_and_the_old_addresses_go_there`, `tests/test_tasks_tab.py::test_new_task_is_one_form_that_sends_only_what_was_set`
 - Trace: `images/mission-control/web/static/app.js`, `images/mission-control/web/static/swarm.js`, `images/mission-control/web/static/app.css`
 
 #### APP-53
@@ -2166,6 +2166,64 @@ Above 1,100 px the app shall lay each page out for its width through three templ
 - Sources: `owner, 8 Nov 2026: Browser mode always only makes use of small space`, `owner, 8 Nov 2026: I want not only the mobile version of the page to look premium but also desktop version. I do not want to micromanage everything.`
 - Verified by: test: `tests/test_app_layout.py::test_an_agent_s_own_sentence_shows_dates_the_app_s_way_and_quotes_as_quotes`, `tests/test_app_layout.py::test_the_desk_uses_the_width_it_has`
 - Trace: `images/mission-control/web/static/app.css`, `images/mission-control/web/static/app-base.js`, `images/mission-control/web/static/app-tasks.js`
+
+#### APP-57
+
+**Names whole, lists whole** · must · functional · **implemented**
+
+A name the app shows (a task's, a question's, an idea's) shall be whole, never cut; a list shall show every row from the start, with nothing behind a "Show all"; the Tasks list shall offer yours, the stack's and all, all first.
+
+- Parents: [SN-14](#sn-14)
+- Sources: `AGENTS.md`
+- Verified by: test: `tests/test_no_hidden_text.py::test_a_name_is_never_made_by_cutting`, `tests/test_no_hidden_text.py::test_a_show_all_names_its_reason`, `tests/test_no_hidden_text.py::test_no_row_is_hidden_by_its_place_in_the_list`, `tests/test_tasks.py::test_a_task_s_name_is_its_first_sentence_whole_and_never_cut`, `tests/test_repo_tabs.py::test_nothing_is_cut_every_row_shows_from_the_start`
+- Trace: `ops/tasks.py`, `images/mission-control/web/static/app-tasks.js`, `images/mission-control/web/static/app-memory.js`, `images/mission-control/web/static/app-wiki-code.js`
+- Rationale: The owner, 9 Nov 2026: "Again we have truncation. Not good. Make a new truncation audit. Truncation keeps creeping in. Need All here and all should start as default."
+
+#### APP-58
+
+**Health at a glance and every part** · should · functional · **implemented**
+
+A repository's Health tab shall open with its figures at a glance (health weighted by files, test reach, parts, unused code, parts one person holds) and then every part with each measure it has, as bars with their words; a part without a score keeps its row.
+
+- Parents: [SN-14](#sn-14)
+- Sources: `docs/CODER-KNOWLEDGE.md`
+- Verified by: test: `tests/test_repo_tabs.py::test_health_opens_with_a_glance_and_every_part_even_one_without_a_score`
+- Trace: `images/mission-control/web/static/app-memory.js`, `images/mission-control/web/static/app.css`
+
+#### APP-59
+
+**Chat holds the window on a desktop** · must · functional · **implemented**
+
+On a desktop the chat shall fill the window without the page scrolling, its list and its conversation each scrolling in their own column and the box to write in at the bottom; no height taken from the window shall overshoot it when the app is scaled up for a wide screen.
+
+- Parents: [SN-14](#sn-14)
+- Sources: `docs/UX-REVIEW-2026-10-30.md`
+- Verified by: test: `tests/test_app_layout.py::test_chat_on_a_desktop_holds_the_window_and_no_height_overshoots_the_zoom`
+- Trace: `images/mission-control/web/static/app.css`
+
+#### APP-60
+
+**Right in every shape of window** · must · functional · **implemented**
+
+Every screen of the app shall look right on a phone and on a desktop in any shape of window, portrait or landscape, from a phone to a 4K screen; the nightly journey shall open the main screens in each shape and every screen at a desktop, and name each fault with its window.
+
+- Parents: [SN-14](#sn-14)
+- Sources: `AGENTS.md`
+- Verified by: test: `tests/test_journeys.py::test_the_app_is_checked_in_every_shape_of_window`
+- Trace: `ops/journeys.py`, `ops/journeys.mjs`, `images/mission-control/web/static/app.css`
+- Rationale: The owner, 9 Nov 2026: "The requirement is the webside has to be looking good on Mobile and on desktop on any ratio. Take that as requirement. Design it. Implement it. Durable."
+
+#### APP-61
+
+**The app's name is the deployment's** · should · functional · **implemented**
+
+The app's name shall come from the deployment (APP_NAME, "AI Stack" when unset); its page, its installed name, its guide and the stack's messages shall say it, and nothing the owner sees shall say another.
+
+- Parents: [SN-05](#sn-05), [SN-14](#sn-14)
+- Sources: `docs/PLATFORM.md`
+- Verified by: test: `tests/test_app_name.py::test_the_name_comes_from_the_deployment_and_defaults_to_ai_stack`, `tests/test_app_name.py::test_nothing_the_owner_sees_says_the_old_name`
+- Trace: `ops/deployment.py`, `images/mission-control/server.py`, `images/mission-control/web/index.html`, `images/mission-control/web/manifest.webmanifest`, `deployments/home/deployment.env`
+- Rationale: The owner, 9 Nov 2026: "rename the Webside from Mission Control to AI Stack ... have it be Configuration how the Webside is named so its easy to change in the instanciation."
 
 ## AST Assistant
 
@@ -2824,6 +2882,17 @@ The replay exam shall have a knowledge arm (the card, the brief, the file notes,
 - Verified by: test: `tests/test_replay.py::test_an_exam_tree_is_one_commit_with_the_release_tag_before_it`, `tests/test_replay.py::test_a_project_that_reads_its_version_from_git_installs_from_a_plain_tree`, `tests/test_repocard.py::test_the_exam_has_a_knowledge_arm_and_cases_after_the_knowledge_s_commit`
 - Trace: `ops/replay.py`, `ops/changes.py`
 
+### BLD-39
+
+**The guide's sections count whatever the model's dress** · must · functional · **implemented**
+
+A section title the guide's or the analysis's prompt asks for, written by the model as a plain line (bold, numbered, with a colon), shall become its heading before the guide is checked, carded or fed to the wiki; a guide that has its headings shall stay as it is, and the guides on disk shall be repairable once without a model.
+
+- Parents: [SN-05](#sn-05)
+- Sources: `docs/CODER-KNOWLEDGE.md`
+- Verified by: test: `tests/test_onboard.py::test_plain_text_section_titles_become_headings_and_a_good_guide_is_unchanged`
+- Trace: `ops/onboard.py`, `prompts/shared.md`
+
 ## CHG Change requests
 
 ### CHG-01
@@ -3036,6 +3105,17 @@ A coding step of an arm that asks for it shall get a brief of at most 4,000 char
 - Verified by: test: `tests/test_repofacts.py::test_the_brief_tells_a_step_what_its_files_need`, `tests/test_repofacts.py::test_the_brief_finds_the_files_by_the_request_s_words_when_none_are_named`, `tests/test_repofacts.py::test_the_brief_keeps_to_its_budget_and_shows_the_cut`, `tests/test_repofacts.py::test_the_brief_says_what_it_does_not_know`, `tests/test_repofacts.py::test_a_trial_s_brief_is_the_wiki_of_repository_s_within_the_trial_s_own_tree`, `tests/test_repofacts.py::test_the_facts_at_a_commit_reach_nothing_later_and_stay_out_of_the_repo_page`, `tests/test_changes.py::test_the_brief_replaces_the_wiki_opening_only_where_the_arm_says_so`, `tests/test_replay.py::test_the_brief_arm_has_the_wiki_opening_off_the_brief_on_and_the_facts_of_the_parent`
 - Trace: `ops/repofacts.py`, `ops/changes.py`, `ops/replay.py`, `ops/codegraph.py`
 - Rationale: Of 77 coding builds on 7 November 2026 none called the code graph, though every one could. A tool an agent could call is not knowledge it has.
+
+### CHG-20
+
+**One record from the question to the pull request** · should · functional · **implemented**
+
+A change's task page shall show its way in one place, the request, the diff with its base and head, the suite, each check's verdict with every problem as its job reported it, and the pull request or why there is none.
+
+- Parents: [SN-07](#sn-07), [SN-14](#sn-14)
+- Sources: `docs/CHANGE-REQUESTS.md`, `docs/PLATFORM.md`
+- Verified by: test: `tests/test_changes.py::test_the_task_page_shows_the_way_from_the_question_to_the_pull_request`, `tests/test_changes.py::test_the_report_gives_every_criterion_its_evidence_and_the_carrier_waits_for_the_owner`
+- Trace: `ops/changes.py`, `images/mission-control/web/static/task.js`
 
 ## CNX Connections
 
@@ -3776,6 +3856,18 @@ A deployment that switches the home's features off shall need none of their valu
 - Verified by: test: `tests/test_features.py::test_compose_demands_no_home_value_of_a_deployment_without_the_feature`
 - Acceptance: Test: compose requires only secrets and values the work example sets; the check names the empty value a switched-on feature needs; a repository on a forge the deployment names is its own work.
 - Trace: `ops/deployment.py`, `compose/core.yaml`, `compose/apps.yaml`, `Makefile`, `ops/onboard.py`, `ops/understand-dashboard.sh`, `config/gate/codemap-local.Caddyfile`, `images/mission-control/server.py`
+
+### GEN-20
+
+**The home stack's backups stay home** · must · constraint · **implemented**
+
+On a deployment without the home feature, the backup and its drill shall step aside and a restore or a new machine's rebuild from the home stack's backup shall be refused before anything is read or replaced.
+
+- Parents: [SN-05](#sn-05)
+- Sources: `docs/PLATFORM.md`, [DEC-45](#dec-45)
+- Verified by: test: `tests/test_features.py::test_a_deployment_without_home_never_restores_or_rebuilds_the_home_stack`
+- Acceptance: Test: on the work example a restore and new-machine.sh exit refused, and the drill says not configured.
+- Trace: `ops/restore.sh`, `ops/new-machine.sh`, `ops/backup.sh`
 
 ## HSE House
 
@@ -5993,7 +6085,7 @@ Every model call shall read its answer's stop reason, and an answer that stopped
 
 - Parents: [SN-15](#sn-15), [SN-06](#sn-06)
 - Sources: [DEC-27](#dec-27), `docs/TRUNCATION-AUDIT.md`
-- Verified by: test: `tests/test_tasks.py::test_a_long_task_s_name_is_cut_at_a_word_and_marked`, `tests/test_truncation.py::test_a_cut_within_an_outside_limit_lists_and_model_answers_show_what_they_left`, `tests/test_truncation.py::test_every_cap_names_its_reason_and_an_unexplained_one_fails_the_check`
+- Verified by: test: `tests/test_tasks.py::test_a_task_s_name_is_its_first_sentence_whole_and_never_cut`, `tests/test_truncation.py::test_a_cut_within_an_outside_limit_lists_and_model_answers_show_what_they_left`, `tests/test_truncation.py::test_every_cap_names_its_reason_and_an_unexplained_one_fails_the_check`
 - Trace: `ops/textcap.py`, `ops/missions.py`, `ops/builds.py`, `ops/claude_tasks.py`, `ops/truncation.py`, `images/mission-control/server.py`
 - Findings: [FND-109](#fnd-109)
 
@@ -8170,14 +8262,14 @@ Every tool server of the gateway shall say what a call to it means for the map, 
 |---|---|---|
 | 0 | Headroom | - |
 | 1 | Task kernel | [TSK-01](#tsk-01), [TSK-02](#tsk-02), [TSK-03](#tsk-03), [TSK-04](#tsk-04), [TSK-20](#tsk-20) |
-| 2 | Plan graph and durable steps | [TSK-05](#tsk-05), [TSK-06](#tsk-06), [TSK-07](#tsk-07), [TSK-08](#tsk-08), [TSK-09](#tsk-09) |
+| 2 | Plan graph and durable steps | [TSK-05](#tsk-05), [TSK-06](#tsk-06), [TSK-07](#tsk-07), [TSK-08](#tsk-08), [TSK-09](#tsk-09), [TSK-45](#tsk-45) |
 | 3 | Event fabric | [TSK-10](#tsk-10), [TSK-11](#tsk-11), [TSK-12](#tsk-12) |
 | 4 | Self-staffing | [TSK-13](#tsk-13), [TSK-14](#tsk-14), [TSK-15](#tsk-15), [TSK-16](#tsk-16), [TSK-17](#tsk-17) |
 | 5 | Reach | [TSK-18](#tsk-18), [TSK-19](#tsk-19) |
 | 6 | Every task a plan graph | [TSK-21](#tsk-21), [TSK-22](#tsk-22), [TSK-34](#tsk-34), [TSK-35](#tsk-35), [TSK-36](#tsk-36) |
 | 7 | Artifacts, map and telemetry | [TSK-23](#tsk-23), [TSK-24](#tsk-24), [TSK-25](#tsk-25), [TSK-26](#tsk-26), [TSK-27](#tsk-27) |
 | 8 | Customisation and UX | [TSK-28](#tsk-28), [TSK-29](#tsk-29), [TSK-30](#tsk-30), [TSK-31](#tsk-31), [TSK-32](#tsk-32) |
-| 9 | More reach | [TSK-33](#tsk-33), [TSK-40](#tsk-40), [TSK-41](#tsk-41), [TSK-42](#tsk-42), [TSK-43](#tsk-43), [TSK-44](#tsk-44) |
+| 9 | More reach | [TSK-33](#tsk-33), [TSK-40](#tsk-40), [TSK-41](#tsk-41), [TSK-42](#tsk-42), [TSK-43](#tsk-43), [TSK-44](#tsk-44), [TSK-46](#tsk-46), [TSK-47](#tsk-47), [TSK-48](#tsk-48) |
 
 ### Task kernel
 
@@ -8755,6 +8847,62 @@ A task given in New task shall keep the kind (a cleanup included), the When (onc
 - Acceptance: Test: a cleanup on an event with e-mail keeps all three; an event without a trigger is refused with what to add; nothing set leaves it to the intake.
 - Trace: `ops/tasks.py`, `images/mission-control/web/static/app.js`
 
+### Plan graph and durable steps
+
+#### TSK-45
+
+**A code question's steps read the repository** · must · functional · **implemented**
+
+Every step the intake plans for a code question shall go to an agent that reads the task's repository; a step it gave another agent shall go to the analyst, and the plan shall say why. The owner's own choice of agents stays.
+
+- Parents: [SN-19](#sn-19)
+- Sources: `docs/SWARM-ROADMAP.md`
+- Verified by: test: `tests/test_tasks.py::test_a_code_questions_steps_go_to_agents_that_read_the_repository`
+- Phase: 2 Plan graph and durable steps
+- Acceptance: Test: a code question planned with a step on the assistant gets that step on the analyst, with the reason in the plan.
+- Trace: `ops/tasks.py`
+
+### Everything is a task
+
+#### TSK-46
+
+**A Claude task can be withdrawn, and up to four run side by side** · should · functional · **implemented**
+
+The owner shall be able to cancel a Claude task (a queued one never starts, a running one stops at its next step), and a deployment may let up to four run side by side, each task run once.
+
+- Parents: [SN-19](#sn-19)
+- Sources: `docs/PLATFORM.md`
+- Verified by: test: `tests/test_claude_tasks.py::test_a_claude_task_can_be_cancelled_and_several_run_side_by_side_without_taking_the_same`
+- Phase: 9 More reach
+- Acceptance: Test: a cancelled queued task is never claimed, and two workers claim different tasks.
+- Trace: `ops/claude_tasks.py`, `ops/missions.requests.py`, `images/mission-control/web/static/app-memory.js`
+
+#### TSK-47
+
+**Cancelling a task stops its work at its door** · should · functional · **implemented**
+
+Cancelling a task that has started at its door shall stop the work there where that door can be stopped (a Claude task cancelled, a build not at work rejected, a mission paused) and otherwise say where to stop it.
+
+- Parents: [SN-19](#sn-19)
+- Sources: `docs/SWARM-ROADMAP.md`
+- Verified by: test: `tests/test_tasks.py::test_cancelling_a_task_stops_its_work_at_its_door`
+- Phase: 9 More reach
+- Acceptance: Test: cancelling a task at the Claude door cancels its Claude task, at the mission door pauses the mission, and a chat task says where to stop it.
+- Trace: `ops/tasks.py`
+
+#### TSK-48
+
+**A code question about an older commit, with recent history** · should · functional · **implemented**
+
+A code question may name a commit, tag or branch to read instead of main, and ask for up to 500 of its latest commits of history in the copy; the copy shall still have no way back to its source.
+
+- Parents: [SN-19](#sn-19)
+- Sources: `docs/PLATFORM.md`
+- Verified by: test: `tests/test_claude_tasks.py::test_a_claude_task_may_copy_an_older_commit_and_bring_recent_history`
+- Phase: 9 More reach
+- Acceptance: Test: a copy at an older commit with two commits of history shows exactly those two commits and no remote.
+- Trace: `ops/claude_tasks.py`, `ops/tasks.py`
+
 ## TRL Trials
 
 ### TRL-01
@@ -9127,6 +9275,7 @@ The Voice page shall show spoken questions answered a day and the share answered
 | `tests/test_app_layout.py::test_an_agent_s_own_sentence_shows_dates_the_app_s_way_and_quotes_as_quotes` | [APP-56](#app-56) |
 | `tests/test_app_layout.py::test_an_app_no_runner_ever_wrote_to_is_not_connected` | [APP-46](#app-46) |
 | `tests/test_app_layout.py::test_an_icon_in_text_is_one_line_high_and_no_page_has_an_app_top_bar` | [APP-01](#app-01) |
+| `tests/test_app_layout.py::test_chat_on_a_desktop_holds_the_window_and_no_height_overshoots_the_zoom` | [APP-59](#app-59) |
 | `tests/test_app_layout.py::test_every_idea_is_in_one_list_under_agents` | [APP-21](#app-21) |
 | `tests/test_app_layout.py::test_new_chat_starts_afresh_and_attaching_is_a_clip` | [APP-01](#app-01), [APP-43](#app-43) |
 | `tests/test_app_layout.py::test_the_chat_has_one_top_bar_on_a_phone_with_the_live_state_in_it` | [APP-01](#app-01) |
@@ -9137,6 +9286,8 @@ The Voice page shall show spoken questions answered a day and the share answered
 | `tests/test_app_layout.py::test_the_swarm_s_views_are_under_agents_on_every_screen` | [APP-01](#app-01) |
 | `tests/test_app_layout.py::test_the_wiki_s_new_button_is_one_line_on_the_title_row` | [APP-01](#app-01) |
 | `tests/test_app_layout.py::test_the_wiki_tab_opens_on_every_wiki_and_a_wiki_on_its_pages` | [KNW-12](#knw-12) |
+| `tests/test_app_name.py::test_nothing_the_owner_sees_says_the_old_name` | [APP-61](#app-61) |
+| `tests/test_app_name.py::test_the_name_comes_from_the_deployment_and_defaults_to_ai_stack` | [APP-61](#app-61) |
 | `tests/test_app_routes.py::test_a_live_redraw_never_scrolls_the_page` | [APP-35](#app-35) |
 | `tests/test_app_routes.py::test_a_page_that_loads_draws_only_while_you_are_still_on_it` | [APP-35](#app-35) |
 | `tests/test_app_routes.py::test_an_open_timeline_is_not_redrawn_away` | [APP-08](#app-08) |
@@ -9259,11 +9410,12 @@ The Voice page shall show spoken questions answered a day and the share answered
 | `tests/test_changes.py::test_the_plan_by_size_class_runs_the_right_agents_in_the_right_order` | [CHG-04](#chg-04) |
 | `tests/test_changes.py::test_the_prober_s_verdict_and_evidence_are_kept_and_could_not_try_is_said` | [CHG-14](#chg-14) |
 | `tests/test_changes.py::test_the_report_and_the_wiki_come_even_at_a_spent_budget` | [CHG-04](#chg-04) |
-| `tests/test_changes.py::test_the_report_gives_every_criterion_its_evidence_and_the_carrier_waits_for_the_owner` | [CHG-16](#chg-16) |
+| `tests/test_changes.py::test_the_report_gives_every_criterion_its_evidence_and_the_carrier_waits_for_the_owner` | [CHG-16](#chg-16), [CHG-20](#chg-20) |
 | `tests/test_changes.py::test_the_sandbox_carries_each_toolchain_and_reaches_only_package_registries` | [CHG-13](#chg-13) |
 | `tests/test_changes.py::test_the_scribe_folds_the_retro_and_its_failure_never_fails_the_change` | [CHG-11](#chg-11) |
 | `tests/test_changes.py::test_the_size_follows_the_code_it_will_touch_not_its_tests_and_requirements` | [CHG-04](#chg-04) |
 | `tests/test_changes.py::test_the_step_lines_are_read_from_summaries` | [CHG-06](#chg-06) |
+| `tests/test_changes.py::test_the_task_page_shows_the_way_from_the_question_to_the_pull_request` | [CHG-20](#chg-20) |
 | `tests/test_changes.py::test_three_lenses_look_on_the_other_engine_and_their_findings_go_back_once` | [CHG-07](#chg-07) |
 | `tests/test_charts.py::test_a_live_update_redraws_the_agents_page_only_when_its_list_changed` | [APP-32](#app-32) |
 | `tests/test_charts.py::test_a_redraw_keeps_the_map_s_dots_and_zoom` | [APP-22](#app-22) |
@@ -9304,6 +9456,8 @@ The Voice page shall show spoken questions answered a day and the share answered
 | `tests/test_checker.py::test_the_facts_read_as_empty_where_the_stack_is_not` | [SWM-44](#swm-44) |
 | `tests/test_checker.py::test_the_owner_confirms_or_reopens_a_shipped_idea` | [SWM-44](#swm-44) |
 | `tests/test_claude_tasks.py::test_a_cancelled_task_cancels_the_claude_tasks_its_steps_started` | [AST-09](#ast-09) |
+| `tests/test_claude_tasks.py::test_a_claude_task_can_be_cancelled_and_several_run_side_by_side_without_taking_the_same` | [TSK-46](#tsk-46) |
+| `tests/test_claude_tasks.py::test_a_claude_task_may_copy_an_older_commit_and_bring_recent_history` | [TSK-48](#tsk-48) |
 | `tests/test_claude_tasks.py::test_a_run_is_read_only_and_answers` | [AST-09](#ast-09) |
 | `tests/test_claude_tasks.py::test_a_task_s_copy_is_one_commit_with_the_release_tags_before_it` | [AST-09](#ast-09) |
 | `tests/test_claude_tasks.py::test_a_usage_limit_waits_for_the_reset` | [AST-09](#ast-09) |
@@ -9449,6 +9603,7 @@ The Voice page shall show spoken questions answered a day and the share answered
 | `tests/test_events.py::test_rules_are_checked_when_saved_and_schedules_come_due` | [TSK-11](#tsk-11) |
 | `tests/test_events.py::test_the_local_sources_each_fire` | [TSK-10](#tsk-10) |
 | `tests/test_events.py::test_the_web_sources_baseline_first_then_fire_their_rules` | [TSK-10](#tsk-10) |
+| `tests/test_features.py::test_a_deployment_without_home_never_restores_or_rebuilds_the_home_stack` | [GEN-20](#gen-20) |
 | `tests/test_features.py::test_a_feature_is_known_or_refused_and_core_is_always_on` | [GEN-13](#gen-13) |
 | `tests/test_features.py::test_a_machine_runs_home_unless_it_names_another_deployment` | [GEN-08](#gen-08) |
 | `tests/test_features.py::test_a_script_of_a_feature_that_is_off_says_not_configured_before_any_network_call` | [GEN-13](#gen-13) |
@@ -9566,6 +9721,7 @@ The Voice page shall show spoken questions answered a day and the share answered
 | `tests/test_journeys.py::test_a_route_that_scrolls_sideways_at_375_px_and_each_other_screen_fault_fail_the_check` | [TSK-31](#tsk-31), [TSK-32](#tsk-32) |
 | `tests/test_journeys.py::test_a_task_given_in_a_sentence_is_followed_to_its_result_and_a_broken_hand_over_fails_it` | [TSK-32](#tsk-32) |
 | `tests/test_journeys.py::test_a_tool_check_needs_two_timeouts_to_call_a_tool_broken` | [PLT-28](#plt-28) |
+| `tests/test_journeys.py::test_the_app_is_checked_in_every_shape_of_window` | [APP-60](#app-60) |
 | `tests/test_journeys.py::test_the_browser_half_measures_what_the_owner_sees` | [TSK-32](#tsk-32) |
 | `tests/test_journeys.py::test_the_decide_journey_fails_when_deciding_stops_working` | [GEN-03](#gen-03), [TSK-32](#tsk-32) |
 | `tests/test_journeys.py::test_the_decide_journey_judges_what_the_browser_saw` | [TSK-32](#tsk-32) |
@@ -9724,6 +9880,9 @@ The Voice page shall show spoken questions answered a day and the share answered
 | `tests/test_new_machine_docs.py::test_documented_builder_default_matches_configuration` | [PLT-17](#plt-17) |
 | `tests/test_new_machine_docs.py::test_rehearsal_checklist_keeps_manual_steps_isolated` | [PLT-17](#plt-17) |
 | `tests/test_new_machine_docs.py::test_required_setup_topics` | [PLT-17](#plt-17) |
+| `tests/test_no_hidden_text.py::test_a_name_is_never_made_by_cutting` | [APP-57](#app-57) |
+| `tests/test_no_hidden_text.py::test_a_show_all_names_its_reason` | [APP-57](#app-57) |
+| `tests/test_no_hidden_text.py::test_no_row_is_hidden_by_its_place_in_the_list` | [APP-57](#app-57) |
 | `tests/test_notify.py::test_a_push_from_the_activity_feed_follows_the_preferences` | [OBS-16](#obs-16) |
 | `tests/test_notify.py::test_held_messages_stay_when_telegram_fails_at_the_end_of_quiet_hours` | [OBS-16](#obs-16) |
 | `tests/test_notify.py::test_nothing_but_the_notification_path_talks_to_telegram` | [OBS-16](#obs-16) |
@@ -9762,6 +9921,7 @@ The Voice page shall show spoken questions answered a day and the share answered
 | `tests/test_onboard.py::test_files_that_stay_unexplained_are_said_not_hidden` | [BLD-26](#bld-26) |
 | `tests/test_onboard.py::test_hermes_reads_why_it_stopped_in_repos_overview` | [BLD-26](#bld-26) |
 | `tests/test_onboard.py::test_no_size_limit_is_left_anywhere_in_the_job` | [BLD-26](#bld-26) |
+| `tests/test_onboard.py::test_plain_text_section_titles_become_headings_and_a_good_guide_is_unchanged` | [BLD-39](#bld-39) |
 | `tests/test_onboard.py::test_removing_a_repository_takes_its_facts` | [BLD-27](#bld-27) |
 | `tests/test_onboard.py::test_removing_a_repository_takes_its_job_and_records` | [BLD-26](#bld-26) |
 | `tests/test_onboard.py::test_the_analysis_is_asked_once_survives_a_restart_and_is_saved` | [BLD-26](#bld-26) |
@@ -9934,9 +10094,10 @@ The Voice page shall show spoken questions answered a day and the share answered
 | `tests/test_repo_tabs.py::test_a_tab_change_touches_no_page_and_a_live_redraw_keeps_the_tab_and_the_place` | [APP-51](#app-51) |
 | `tests/test_repo_tabs.py::test_a_tab_loads_its_data_only_when_it_opens` | [APP-51](#app-51) |
 | `tests/test_repo_tabs.py::test_every_feature_of_the_old_page_is_still_reachable` | [APP-51](#app-51) |
+| `tests/test_repo_tabs.py::test_health_opens_with_a_glance_and_every_part_even_one_without_a_score` | [APP-58](#app-58) |
 | `tests/test_repo_tabs.py::test_health_says_each_finding_and_its_reason_in_plain_words` | [APP-51](#app-51) |
 | `tests/test_repo_tabs.py::test_history_says_what_a_row_means_in_plain_words_most_telling_first` | [APP-51](#app-51) |
-| `tests/test_repo_tabs.py::test_nothing_is_cut_the_rest_of_a_list_is_one_tap_away` | [APP-51](#app-51) |
+| `tests/test_repo_tabs.py::test_nothing_is_cut_every_row_shows_from_the_start` | [APP-51](#app-51), [APP-57](#app-57) |
 | `tests/test_repo_tabs.py::test_six_labels_fit_a_phone_and_nothing_is_ellipsed` | [APP-51](#app-51) |
 | `tests/test_repo_tabs.py::test_the_overview_says_what_it_is_and_the_map_folds_its_files` | [APP-51](#app-51) |
 | `tests/test_repo_tabs.py::test_the_repo_page_has_seven_tabs_one_question_each` | [APP-51](#app-51) |
@@ -10233,17 +10394,19 @@ The Voice page shall show spoken questions answered a day and the share answered
 | `tests/test_task_page.py::test_the_runner_writes_each_task_s_page_with_every_run_and_its_steps` | [APP-35](#app-35) |
 | `tests/test_tasks.py::test_a_briefing_s_alerts_move_with_it_and_an_alert_runs_the_desk_s_short_alert` | [TSK-21](#tsk-21) |
 | `tests/test_tasks.py::test_a_briefing_that_runs_as_its_mission_moves_under_the_conductor_and_its_mission_keeps_the_topic` | [TSK-21](#tsk-21) |
+| `tests/test_tasks.py::test_a_code_questions_steps_go_to_agents_that_read_the_repository` | [TSK-45](#tsk-45) |
 | `tests/test_tasks.py::test_a_coding_task_without_a_repository_asks_which_one` | [TSK-03](#tsk-03) |
 | `tests/test_tasks.py::test_a_failed_intake_says_why_and_can_be_planned_again` | [TSK-03](#tsk-03) |
-| `tests/test_tasks.py::test_a_long_task_s_name_is_cut_at_a_word_and_marked` | [QA-21](#qa-21) |
 | `tests/test_tasks.py::test_a_one_off_task_with_several_agents_goes_to_the_conductor_as_a_plan_graph` | [TSK-05](#tsk-05) |
 | `tests/test_tasks.py::test_a_sentence_gets_a_specification_and_reaches_its_door` | [TSK-02](#tsk-02), [TSK-20](#tsk-20), [TSK-21](#tsk-21) |
 | `tests/test_tasks.py::test_a_task_on_an_event_waits_for_its_trigger_and_is_watched_with_the_missions_triggers` | [TSK-21](#tsk-21) |
+| `tests/test_tasks.py::test_a_task_s_name_is_its_first_sentence_whole_and_never_cut` | [APP-57](#app-57), [QA-21](#qa-21) |
 | `tests/test_tasks.py::test_a_task_s_planning_run_sits_under_the_task_s_run` | [TSK-26](#tsk-26) |
 | `tests/test_tasks.py::test_a_weekly_briefing_task_gets_its_content_not_the_plan_email_when_asked_and_shows_its_runs` | [TSK-04](#tsk-04), [TSK-21](#tsk-21) |
 | `tests/test_tasks.py::test_after_another_task_waits_until_that_one_is_done` | [TSK-04](#tsk-04) |
 | `tests/test_tasks.py::test_an_agent_the_intake_names_that_does_not_exist_gets_a_temporary_agent` | [TSK-15](#tsk-15) |
 | `tests/test_tasks.py::test_at_most_two_questions_and_answers_plan_it_again` | [TSK-03](#tsk-03) |
+| `tests/test_tasks.py::test_cancelling_a_task_stops_its_work_at_its_door` | [TSK-47](#tsk-47) |
 | `tests/test_tasks.py::test_every_briefing_and_price_watch_still_on_its_mission_moves_under_the_conductor` | [TSK-21](#tsk-21) |
 | `tests/test_tasks.py::test_every_door_s_work_becomes_a_task_with_every_field` | [TSK-01](#tsk-01) |
 | `tests/test_tasks.py::test_improving_a_wiki_or_a_page_is_a_task_that_ends_writing_into_that_wiki` | [TSK-34](#tsk-34) |
@@ -10262,6 +10425,7 @@ The Voice page shall show spoken questions answered a day and the share answered
 | `tests/test_tasks_tab.py::test_new_task_is_one_form_that_sends_only_what_was_set` | [APP-52](#app-52) |
 | `tests/test_tasks_tab.py::test_new_task_keeps_the_kind_the_when_and_the_delivery_it_was_given` | [TSK-44](#tsk-44) |
 | `tests/test_tasks_tab.py::test_no_map_cuts_a_name` | [TSK-43](#tsk-43) |
+| `tests/test_tasks_tab.py::test_the_head_counts_the_tasks_the_list_shows` | [APP-52](#app-52) |
 | `tests/test_tasks_tab.py::test_the_network_draws_tasks_and_agents_from_the_run_record` | [APP-53](#app-53) |
 | `tests/test_tasks_tab.py::test_the_network_names_each_run_s_task_and_keeps_tools_and_the_conductor_apart` | [TSK-43](#tsk-43) |
 | `tests/test_tasks_tab.py::test_the_network_shows_every_name_whole` | [TSK-43](#tsk-43) |

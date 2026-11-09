@@ -986,17 +986,21 @@ def run_deliver(c, t, s, prompt, card):
         CD.step_ref(c, "build", bid, t["id"])
         B.save_files(bid)
         B.open_pr(c, bid)
-        ch.update(carrier=bid, report=text)
+        got = c.execute("select pr from builds where id=?", (bid,)).fetchone()
+        ch.update(carrier=bid, report=text, delivered={"base": base, "head": head, "files": len(files), "pr": got["pr"] if got else None,
+                                                       "push": bool(B.DEPLOY.VALUES.get("FORGE_PUSH")) or not B.is_local(repo)})   # CHG-20
         save_ch(c, t, row, ch)
         CD.put(c, s["id"], resume={"carrier": bid})
         ok = sum((ch.get("acceptance") or {}).get(x["id"], {}).get("after") == "passes" for x in ch.get("criteria") or [])
         N.send(f"Change #{t['id']} is ready for your review: {row['title']}\n{ok} of {len(ch.get('criteria') or [])} criteria met · checks {'passed' if j.get('ok') else 'FAILED'} · "
                f"reviewers: {rv.get('verdict') if rv else 'none'}", "build", by="presenter", title="Code", push_on=True, event_kind="build",
                buttons=[[("🔍 Review it", f"{M.X.APP}/#/task/{t['id']}")]])
-    r = c.execute("select status, merged, error from builds where id=?", (bid,)).fetchone()
+    r = c.execute("select status, merged, error, pr from builds where id=?", (bid,)).fetchone()
     if r and r["status"] in ("merged", "deployed", "rejected", "rolled_back"):
         row, ch = fresh_ch(c, t)
         ch["outcome"] = r["status"]
+        if r["pr"] and ch.get("delivered"):              # a pull request opened after the delivery shows on the change too
+            ch["delivered"]["pr"] = r["pr"]
         save_ch(c, t, row, ch)
         return f"{ch.get('report') or ''}\n\n## Your review\n\n{r['status']}" + (f" as {r['merged'][:12]}" if r["merged"] else "")
     if r and r["status"] == "cancelled":                  # a request for changes went on without this one

@@ -8,7 +8,7 @@ This container never starts anything itself: it reads the runner's state (/missi
 requests into /missions/inbox; ops/missions.py on the host validates and executes them. Chats are kept in
 /missions/app/chats (one JSON file each), so every device sees the same history. The wiki views read the vault.
 """
-import asyncio, base64, datetime as dt, hashlib, hmac, json, os, re, shutil, threading, time, urllib.parse, urllib.request, uuid
+import asyncio, base64, datetime as dt, hashlib, hmac, html, json, os, re, shutil, threading, time, urllib.parse, urllib.request, uuid
 from pathlib import Path
 
 import httpx
@@ -38,7 +38,7 @@ HERMES = "http://hermes:8642/v1/chat/completions"
 PHOENIX = os.environ.get("PHOENIX_URL", "http://phoenix:6006")
 PHOENIX_PORT = 8443                                       # tailscale serve: https://<pc>.ts.net:8443 (tailnet only)
 HERMES_KEY = os.environ.get("API_SERVER_KEY", "")
-ACTIONS = {"claude_task", "windows_ask", "forgejo_connect", "create", "run", "pause", "resume", "archive", "update", "memory", "email", "vault_add", "understand", "card_edit",
+ACTIONS = {"claude_task", "claude_cancel", "windows_ask", "forgejo_connect", "create", "run", "pause", "resume", "archive", "update", "memory", "email", "vault_add", "understand", "card_edit",
            "forget", "memory_search", "memory_browse", "memory_move", "build_assign", "build_revise", "build_approve", "build_approve_all", "build_reject", "build_revert",
            "improve_scan", "proposal_accept", "proposal_dismiss", "build_recheck", "build_switch_engine", "codemap", "repo_create", "repo_buildable", "repo_remove", "crew_run", "crew_memory_forget", "crew_memory_undo", "crew_schedule",
            "journal_note", "journal_edit", "health_ack", "swarm_pause", "swarm_confirm", "swarm_reopen", "swarm_autonomy", "swarm_post", "swarm_help_verdict", "swarm_agent_change", "phone_cleanup_do", "phone_cleanup_do_all", "phone_cleanup_undo", "phone_cleanup_dismiss",
@@ -624,13 +624,19 @@ def read_crew_file(aid):
 
 # This deployment's addresses for the front end: compose hands them over (deployments/<name>/deployment.env), the page carries them.
 DEPLOY = {k: ("" if os.environ.get(k, "").endswith(".invalid") else os.environ.get(k, ""))   # *.invalid: a placeholder, no host
-          for k in ("PC_TAILNET_HOST", "NAS_HOST", "HA_URL", "ROUTER_URL", "FORGEJO_URL", "FORGEJO_OWNER", "DEPLOY_USER", "STACK_DIR")}
+          for k in ("PC_TAILNET_HOST", "NAS_HOST", "HA_URL", "ROUTER_URL", "FORGEJO_URL", "FORGEJO_OWNER", "DEPLOY_USER", "STACK_DIR", "APP_NAME")}
+DEPLOY["APP_NAME"] = DEPLOY.get("APP_NAME", "").strip() or "AI Stack"   # APP-61: the app's name, the deployment's to choose
+
+
+def app_name():
+    """APP-61: the deployment's name for the app."""
+    return str(DEPLOY.get("APP_NAME") or "").strip() or "AI Stack"
 
 
 async def index(request):
     """The app's page (index.html) with this deployment's addresses in it, always revalidated."""
     # the page carries the version it was served with, so an app opened from the offline cache knows it is old (review APP-R15)
-    page = (WEB / "index.html").read_text().replace("{/*DEPLOY*/};", json.dumps(DEPLOY).replace("<", "\\u003c") + "; "
+    page = (WEB / "index.html").read_text().replace("{{APP_NAME}}", html.escape(app_name())).replace("{/*DEPLOY*/};", json.dumps(DEPLOY).replace("<", "\\u003c") + "; "
                                                     f"window.APP_VERSION = {json.dumps(APP_VERSION)};", 1)
     return HTMLResponse(page, headers={"Cache-Control": "no-cache"})
 
@@ -642,7 +648,9 @@ async def sw(request):
 
 async def manifest(request):
     """The PWA manifest that makes the app installable."""
-    return FileResponse(WEB / "manifest.webmanifest", media_type="application/manifest+json")
+    m = json.loads((WEB / "manifest.webmanifest").read_text())   # APP-61: installed under the deployment's name
+    m["name"] = m["short_name"] = app_name()
+    return JSONResponse(m, media_type="application/manifest+json")
 
 
 # ---------- code: graphs and overviews of the repos for the Code tab (read-only mounts /code, /code-docs) ----------
@@ -907,6 +915,7 @@ def guide_chapters():
             m = re.match(r"^---\n(.*?)\n---\n", text, re.S)
             meta = yaml.safe_load(m[1]) if m else {}
             body = text[m.end():] if m else text
+            body = body.replace("{{APP_NAME}}", app_name())          # APP-61: the guide says the app's name
             out.append({"id": f.stem.split("-", 1)[1], "title": meta.get("title", f.stem), "kicker": meta.get("kicker", ""),
                         "part": meta.get("part", ""), "icon": meta.get("icon", "doc"), "summary": meta.get("summary", ""),
                         "minutes": meta.get("minutes", 3), "views": meta.get("views", []), "body": body,
