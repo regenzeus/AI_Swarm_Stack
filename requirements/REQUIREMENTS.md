@@ -17,7 +17,7 @@ Method, statuses and rules: [README.md](README.md). Names of the parts: [glossar
 | [Constraints](#cst-constraints) (CST) | 15 | 11 | 2 | 1 | 0 | 1 | 0 |
 | [Crew](#crw-crew) (CRW) | 13 | 12 | 0 | 0 | 0 | 0 | 1 |
 | [Gateway](#gw-gateway) (GW) | 9 | 8 | 0 | 0 | 0 | 1 | 0 |
-| [Generalisation](#gen-generalisation) (GEN) | 39 | 10 | 5 | 0 | 21 | 3 | 0 |
+| [Generalisation](#gen-generalisation) (GEN) | 39 | 26 | 8 | 0 | 2 | 3 | 0 |
 | [House](#hse-house) (HSE) | 9 | 9 | 0 | 0 | 0 | 0 | 0 |
 | [Knowledge](#knw-knowledge) (KNW) | 15 | 15 | 0 | 0 | 0 | 0 | 0 |
 | [Memory](#mem-memory) (MEM) | 51 | 49 | 0 | 0 | 0 | 0 | 2 |
@@ -33,9 +33,9 @@ Method, statuses and rules: [README.md](README.md). Names of the parts: [glossar
 | [Task engine](#tsk-task-engine) (TSK) | 45 | 39 | 6 | 0 | 0 | 0 | 0 |
 | [Trials](#trl-trials) (TRL) | 17 | 13 | 2 | 0 | 0 | 2 | 0 |
 | [Voice](#voi-voice) (VOI) | 9 | 8 | 0 | 0 | 0 | 1 | 0 |
-| **All** | **663** | **580** | **35** | **1** | **23** | **17** | **7** |
+| **All** | **663** | **596** | **38** | **1** | **4** | **17** | **7** |
 
-Unit tests claimed by a requirement: 1315 of 1315.
+Unit tests claimed by a requirement: 1420 of 1420.
 
 ## Findings
 
@@ -3871,212 +3871,234 @@ On a deployment without the home feature, the backup and its drill shall step as
 
 ### GEN-21
 
-**Packs from outside the repository** · should · functional · **planned**
+**Packs from outside the repository** · should · functional · **implemented**
 
 A deployment shall load domain packs from folders or repositories outside the stack's repository, pinned by commit: Claude Code plugin folders (agents, skills, MCP servers) plus a stack.yaml, job kinds, templates and exams, namespaced by the pack's name, each commit approved in the queue before it runs.
 
 - Parents: [SN-05](#sn-05)
 - Sources: `docs/AI-STACK.md`
-- Verified by: inspection: `docs/AI-STACK.md`
+- Verified by: test: `tests/test_engine_packs.py::test_an_unapproved_pack_does_not_run_and_waits_in_the_queue_with_its_manifest_prompts_commands_and_diff`, `tests/test_engine_packs.py::test_an_approved_pack_adds_its_agents_skill_template_and_job_kind_from_a_read_only_checkout`, `tests/test_engine_packs.py::test_a_pack_that_clashes_or_names_no_commit_of_its_source_is_refused_with_the_reason`, `tests/test_engine_packs.py::test_two_packs_of_one_name_and_a_manifest_naming_another_pack_are_refused`, `tests/test_engine_packs.py::test_home_without_packs_is_unchanged`, `tests/test_engine_packs.py::test_packs_are_the_apps_and_the_queues`, `tests/test_engine_activities.py::test_a_templates_agent_and_decision_blocks_run_through_the_conductors_steps_and_its_task_finishes`, `tests/test_engine_activities.py::test_each_item_of_a_template_blocks_fan_out_gets_a_row_of_its_own`, `tests/test_engine_activities.py::test_a_deciders_answer_is_read_for_one_of_its_branches`
 - Acceptance: Test: a toy pack copied outside the repository adds agents, a skill, a template and a job kind; a name clash and an unapproved commit are refused with the reason; home without it is unchanged.
+- Trace: `ops/engine/packs.py`, `images/mission-control/web/static/app-packs.js`, `tests/fixtures/packs/toy/stack.yaml`, `ops/engine/activities.py`
 
 ### GEN-22
 
-**Commands run at places through the worker protocol** · should · functional · **planned**
+**Commands run at places through the worker protocol** · should · functional · **partial**
 
 A pack's command shall be a job kind of the worker protocol, run at wsl, windows or wsl-host (the same worker, as the Linux user the deployment names as owner of its tools and repositories) behind a Temporal task queue per place, with Windows staying pull-only; per-change values arrive as typed parameters, and the coder can run a check during its loop.
 
 - Parents: [SN-05](#sn-05)
 - Sources: `docs/AI-STACK.md`
-- Verified by: inspection: `docs/AI-STACK.md`
+- Verified by: test: `tests/test_engine_activities.py::test_a_home_plan_runs_on_the_engine_through_the_conductors_own_steps_and_finish`, `tests/test_engine_activities.py::test_a_step_that_fails_twice_fails_the_run_and_the_task_with_its_reason`, `tests/test_engine_activities.py::test_a_gate_is_asked_once_per_run_and_node_even_when_asked_again`, `tests/test_engine_places.py::test_a_command_runs_at_the_wsl_host_place_only_once_approved_there_by_its_hash_and_a_value_outside_its_type_is_refused`, `tests/test_engine_places.py::test_the_engine_queues_are_its_own_the_pools_at_their_size_and_each_place`, `tests/test_engine_places.py::test_commands_are_the_queues_and_the_engines`
 - Acceptance: Test: a toy job kind on the wsl-host worker runs with a change's diff, a value outside its type is refused, and the verdict reaches the coder's next prompt in the same build.
+- Trace: `ops/engine/activities.py`, `ops/engine/places.py`, `ops/wslhost-setup.sh`
+- Gap: The places, their task queues, the typed values and the approval of each job kind by its hash at each place are built and tested; the coder starting a check job from inside its build and reading the verdict in the same build is not built yet (docs/AI-STACK.md §17).
 
 ### GEN-23
 
-**Templates are graphs run by one runner** · should · functional · **planned**
+**Templates are graphs run by one runner** · should · functional · **implemented**
 
-A pack's template shall be a graph of blocks (agent, command, change, gate, wait, tracker, branch, fan-out, loop back) stored as YAML in the pack's repository, run by one generic graph-runner workflow on Temporal that keeps every gate, wait and check.
+A pack's template shall be a graph of blocks (one start, agent, command, change, gate, wait, tracker, branch, notify, fan-out, loop back, failure path, one or more ends) stored as YAML in the pack's repository, run by one generic graph-runner workflow on Temporal that keeps every gate, wait and check.
 
 - Parents: [SN-05](#sn-05)
 - Sources: `docs/AI-STACK.md`
-- Verified by: inspection: `docs/AI-STACK.md`
+- Verified by: test: `tests/test_engine_graph.py::test_a_template_in_canonical_form_round_trips_byte_for_byte`, `tests/test_engine_graph.py::test_a_template_that_is_not_canonical_is_refused_with_its_canonical_form`, `tests/test_engine_graph.py::test_a_template_is_refused_for_what_it_gets_wrong`, `tests/test_engine_graph.py::test_a_plan_converts_one_to_one_with_its_fan_out_and_its_loop`, `tests/test_engine_graph.py::test_a_plan_is_refused_with_the_conductors_own_words`, `tests/test_engine_graph.py::test_the_conductor_uses_the_same_checks_until_it_is_retired`, `tests/test_engine_graph.py::test_the_graph_is_one_of_the_engines_known_shapes_and_needs_no_temporal`, `tests/test_engine_graph.py::test_durations_read_seconds_minutes_hours_and_days`, `tests/test_engine_runner.py::test_a_check_that_still_fails_after_its_rounds_fails_the_run_with_the_reason`, `tests/test_engine_runner.py::test_a_gate_answered_no_fails_the_run_and_says_who`, `tests/test_engine_graph.py::test_a_branch_keeps_its_names_on_its_edges_and_a_brief_in_canonical_form`, `tests/test_engine_graph.py::test_a_branch_needs_named_edges_and_only_a_branch_names_them`, `tests/test_engine_runner.py::test_a_branch_takes_the_way_its_agent_names_skips_the_others_and_the_join_after_still_runs`, `tests/test_engine_runner.py::test_a_branch_answer_that_names_no_branch_fails_the_run_with_the_branches_it_has`, `tests/test_engine_graph.py::test_a_template_runs_from_one_start_to_its_ends_with_a_failure_path_and_a_notify`, `tests/test_engine_graph.py::test_a_template_without_one_start_or_with_a_dead_end_is_refused_saying_what_to_draw`, `tests/test_engine_runner.py::test_a_failed_block_with_a_failure_path_goes_down_it_and_the_run_ends_as_stopped_not_failed`, `tests/test_engine_runner.py::test_a_block_that_succeeds_closes_its_failure_path_and_the_run_ends_done`
 - Acceptance: Test: a toy template with a gate, a 3-round loop, a 5-way fan-out and a wait survives a restart of the worker and of the server in each state, and no step removes its gate.
+- Trace: `ops/engine/graph.py`, `ops/engine/shapes.py`, `ops/conductor.py`, `ops/engine/runner.py`
 
 ### GEN-24
 
-**Waiting for someone outside** · should · functional · **planned**
+**Waiting for someone outside** · should · functional · **implemented**
 
 A run shall wait on a key (a tracker item or a pull request) for weeks without holding a process or slot, resume only on a signal for that key, fire its reminders by durable timers and on timeout reach the queue of a named role.
 
 - Parents: [SN-05](#sn-05)
 - Sources: `docs/AI-STACK.md`
-- Verified by: inspection: `docs/AI-STACK.md`
+- Verified by: test: `tests/test_engine_runner.py::test_a_template_runs_to_the_end_through_its_wait_its_gate_its_fan_out_and_its_loop`, `tests/test_engine_runner.py::test_reminders_come_on_time_and_a_timeout_asks_the_role_named_for_it`
 - Acceptance: Test: a toy run waits on T-1; an unrelated event does not wake it, a matching reply does, the reminder fires on Temporal's test clock and the timeout reaches the queue.
+- Trace: `ops/engine/runner.py`
 
 ### GEN-25
 
-**Trackers, read by polling and written through gates** · should · functional · **planned**
+**Trackers, read by polling and written through gates** · should · functional · **implemented**
 
 The stack shall poll trackers (Jira Data Center through atlassian-python-api, Forgejo issues) with a cursor and signal or start the run named after each item, and write comments, one summary comment, attachments and transitions only as action classes, idempotently, with shadow mode per kind of write, each leaving it when the owner taps, after a stated number of approved shadow items.
 
 - Parents: [SN-05](#sn-05)
 - Sources: `docs/AI-STACK.md`
-- Verified by: inspection: `docs/AI-STACK.md`
+- Verified by: test: `tests/test_engine_trackers.py::test_a_new_item_starts_its_run_once_across_a_restart_and_an_ended_run_is_not_started_again`, `tests/test_engine_trackers.py::test_a_comment_from_someone_else_signals_the_run_once`, `tests/test_engine_trackers.py::test_shadow_writes_nothing_outward_until_the_owner_lets_a_kind_go_live_after_its_measure`, `tests/test_engine_trackers.py::test_the_one_summary_comment_is_edited_across_three_updates`, `tests/test_engine_trackers.py::test_a_write_to_an_unknown_tracker_or_of_an_unknown_kind_is_refused_with_the_reason`, `tests/test_engine_trackers.py::test_jira_reads_by_jql_with_its_cursor_and_edits_its_one_summary`, `tests/test_engine_trackers.py::test_trackers_are_the_apps_the_queues_and_the_runtimes`
 - Acceptance: Test: on a stand-in a new item starts its run once across a restart, the summary comment is edited across three updates, and shadow mode writes nothing outward.
+- Trace: `ops/engine/trackers.py`, `images/mission-control/web/static/app-trackers.js`
 
 ### GEN-26
 
-**A branch from a named tag** · should · functional · **planned**
+**A branch from a named tag** · should · functional · **implemented**
 
 A change shall start from the base ref its template names, push its branch through FORGE_PUSH, open a draft pull request into the template's target branch, and take pull-request comments as signals.
 
 - Parents: [SN-05](#sn-05)
 - Sources: `docs/AI-STACK.md`
-- Verified by: inspection: `docs/AI-STACK.md`
+- Verified by: test: `tests/test_engine_trackers.py::test_a_change_starts_at_a_tag_opens_a_draft_into_a_release_branch_and_a_reviewers_comment_resumes_the_run`
 - Acceptance: Test: on the Bitbucket stand-in a change starts at a tag, opens a draft into a release branch, and a reviewer's comment resumes the run.
+- Trace: `ops/engine/forgework.py`, `ops/forge.py`
 
 ### GEN-27
 
-**Gates name roles** · should · functional · **planned**
+**Gates name roles** · should · functional · **implemented**
 
 A gate shall name a role that the deployment maps to people, and each decision shall record who gave it.
 
 - Parents: [SN-05](#sn-05)
 - Sources: `docs/AI-STACK.md`
-- Verified by: inspection: `docs/AI-STACK.md`
+- Verified by: test: `tests/test_engine_runner.py::test_two_gates_wait_for_their_own_roles_and_an_answer_from_outside_a_role_is_refused_and_recorded`, `tests/test_engine_roles.py::test_every_role_is_the_owners_at_home_and_a_deployment_maps_roles_to_its_people`, `tests/test_engine_roles.py::test_the_repositorys_roles_file_names_no_person`
 - Acceptance: Test: a toy template with two gates for two roles waits for each, and an answer from outside the role is refused and recorded.
+- Trace: `ops/engine/roles.py`, `config/roles.yaml`
 
 ### GEN-28
 
-**Named pools of capacity** · should · functional · **planned**
+**Named pools of capacity** · should · functional · **implemented**
 
 A deployment shall name pools with sizes; each pool is a task queue whose worker runs at most its size of activities at once, and lost work is given back by its heartbeat.
 
 - Parents: [SN-05](#sn-05)
 - Sources: `docs/AI-STACK.md`
-- Verified by: inspection: `docs/AI-STACK.md`
+- Verified by: test: `tests/test_engine_places.py::test_a_ten_item_fan_out_on_a_pool_of_two_never_runs_three_at_once_two_runs_share_it_and_a_failed_attempt_is_retried`
 - Acceptance: Test: a 10-item fan-out on a pool of 2 never runs 3 at once, a killed activity is retried, two runs share the pool.
+- Trace: `ops/engine/places.py`
 
 ### GEN-29
 
-**Artifacts by hash** · should · functional · **planned**
+**Artifacts by hash** · should · functional · **implemented**
 
 Files a step makes shall be kept by their SHA-256 with the task, step, run and commit that made them, their data class and the deployment's retention, and may be attached to a tracker item or a pull request.
 
 - Parents: [SN-05](#sn-05)
 - Sources: `docs/AI-STACK.md`
-- Verified by: inspection: `docs/AI-STACK.md`
+- Verified by: test: `tests/test_engine_places.py::test_a_steps_file_is_kept_by_its_hash_with_its_maker_attached_to_a_stand_in_item_and_removed_past_its_retention`
 - Acceptance: Test: a toy step's zip is attached to a stand-in item and its record names the commit and run that made it.
+- Trace: `ops/engine/artifacts.py`
 
 ### GEN-30
 
-**Tools per agent from the pack** · should · functional · **planned**
+**Tools per agent from the pack** · should · functional · **partial**
 
 A pack shall grant each agent its MCP servers and commands; a step gets exactly those, a server the data class or egress does not allow is dropped, and agentgateway checks each tool call once grants grow beyond that.
 
 - Parents: [SN-05](#sn-05)
 - Sources: `docs/AI-STACK.md`
-- Verified by: inspection: `docs/AI-STACK.md`
+- Verified by: test: `tests/test_engine_packs.py::test_a_pack_agent_gets_exactly_its_grants_and_a_server_off_the_egress_list_is_refused`
 - Acceptance: Test: a toy agent calls a stand-in MCP read tool, a second agent without the grant cannot, a server off the egress list is refused.
+- Trace: `ops/engine/packs.py`, `tests/fixtures/packs/toy/.mcp.json`
+- Gap: Each pack agent's step gets exactly its granted MCP servers and tools, and a server off the egress list is dropped; agentgateway, which checks each tool call once grants grow beyond that, is not set up yet (docs/AI-STACK.md §17).
 
 ### GEN-31
 
-**One record per journey, and pack exams** · should · functional · **planned**
+**One record per journey, and pack exams** · should · functional · **implemented**
 
 A finished run shall export as one bundle a person can follow without the app, and a pack's exam cases, each with its outcome, shall run through the replay exam.
 
 - Parents: [SN-05](#sn-05)
 - Sources: `docs/AI-STACK.md`
-- Verified by: inspection: `docs/AI-STACK.md`
+- Verified by: test: `tests/test_engine_record.py::test_a_toy_run_exports_one_bundle_with_its_chain_from_item_to_decisions_and_the_files_it_made`, `tests/test_engine_record.py::test_a_toy_exam_set_runs_through_its_template_and_scores_naming_the_case_it_got_wrong`
 - Acceptance: Test: a toy run exports a bundle with its chain from item to decisions, and a toy exam set runs and scores.
+- Trace: `ops/engine/record.py`, `tests/fixtures/packs/toy/exams/bugs.yaml`
 
 ### GEN-32
 
-**Packs pinned and updated** · should · functional · **planned**
+**Packs pinned and updated** · should · functional · **implemented**
 
 An update shall verify the stack's signed tag and that every pinned pack commit is approved; a new pack commit waits in the queue while the old one runs.
 
 - Parents: [SN-05](#sn-05)
 - Sources: `docs/AI-STACK.md`
-- Verified by: inspection: `docs/AI-STACK.md`
+- Verified by: test: `tests/test_engine_packs.py::test_a_new_commit_leaves_the_old_one_running_and_puts_one_decision_in_the_queue_and_a_refusal_keeps_it_out`
 - Acceptance: Test: a new commit in packs.txt leaves the old one running and puts one decision in the queue.
+- Trace: `ops/engine/packs.py`
 
 ### GEN-33
 
-**Temporal is the engine** · should · functional · **planned**
+**Temporal is the engine** · should · functional · **implemented**
 
 Long-running work shall run on a self-hosted Temporal server (MIT) that is part of the core on every deployment, home too, as one container with its own database in the stack's Postgres and SQL visibility, one Temporal namespace per deployment, its web UI behind the app's gate, and one Python worker whose activities are the stack's existing steps.
 
 - Parents: [SN-05](#sn-05)
 - Sources: `docs/AI-STACK.md`
-- Verified by: inspection: `docs/AI-STACK.md`
+- Verified by: test: `tests/test_engine_service.py::test_the_engine_is_part_of_the_core_and_starts_only_after_its_databases_and_schema`, `tests/test_engine_service.py::test_the_engine_images_are_pinned_by_digest_in_versions_env`, `tests/test_engine_service.py::test_the_engine_is_reached_only_from_this_machine`, `tests/test_engine_service.py::test_the_engine_uses_its_own_role_and_the_secret_of_that_role`, `tests/test_engine_service.py::test_the_schema_is_set_up_then_moved_to_the_pinned_version_every_start`, `tests/test_engine_service.py::test_the_server_reads_a_dynamic_config_that_names_the_history_limits`, `tests/test_engine_service.py::test_the_runner_environment_is_pinned_checksummed_and_follows_its_lock`, `tests/test_engine_lib.py::test_a_namespace_is_the_deployment_folder_name_and_is_made_once`, `tests/test_engine_lib.py::test_the_runners_threads_reach_the_engine_through_its_own_loop`
 - Acceptance: Test: on home and on the work example the server starts with the core; the namespaces of two deployments never list the runs of the other; a toy run starts, waits, survives a server restart and shows in the web UI and in the Tasks tab.
+- Trace: `compose/core.yaml`, `versions.env`, `config/temporal/db.sh`, `config/temporal/schema.sh`, `config/temporal/dynamicconfig.yaml`, `ops/runner_env.sh`, `ops/runner-requirements.txt`, `ops/runner-requirements.lock`, `tests/requirements.txt`, `ops/engine/__init__.py`, `ops/engine/client.py`, `ops/engine/worker.py`, `images/builder/temporal-test-bin.py`, `images/builder/Dockerfile`
 
 ### GEN-34
 
-**A canvas to build and watch templates** · should · functional · **planned**
+**A canvas to build and watch templates** · should · functional · **implemented**
 
 The app shall have one screen with Workflow Builder's editor (Apache 2.0) to draw a template from blocks, draft one from a description, save it as YAML on a branch of the pack's repository for approval, the YAML staying the source of truth with a lossless round trip and block positions in a separate file, and show a running task's blocks live.
 
 - Parents: [SN-05](#sn-05)
 - Sources: `docs/AI-STACK.md`
-- Verified by: inspection: `docs/AI-STACK.md`
+- Verified by: test: `tests/test_engine_view.py::test_the_projector_shows_a_running_run_with_its_blocks_edges_status_and_timing`, `tests/test_engine_view.py::test_the_apps_state_and_its_stream_carry_the_engine`, `tests/test_engine_view.py::test_the_engine_screen_and_its_canvas_are_part_of_the_app_and_redraw_live`, `tests/test_engine_view.py::test_the_demo_templates_are_in_their_canonical_form`, `tests/test_engine_templates.py::test_a_saved_template_is_its_canonical_yaml_with_its_fork_join_and_loop`, `tests/test_engine_templates.py::test_a_template_with_a_fault_is_not_saved_and_the_graph_model_says_why`, `tests/test_engine_templates.py::test_the_list_shows_the_repositorys_templates_and_the_drafts_with_their_problems`, `tests/test_engine_templates.py::test_a_test_run_starts_only_from_what_was_saved_and_only_where_the_engine_runs`, `tests/test_engine_templates.py::test_a_block_may_name_only_agents_that_can_do_a_step`, `tests/test_engine_templates.py::test_the_builder_is_part_of_the_app_reachable_from_tasks_and_drawn_on_the_first_state`, `tests/test_engine_templates.py::test_the_editor_s_block_positions_are_kept_beside_the_template_and_listed_with_it`, `tests/test_engine_templates.py::test_the_editor_is_workflow_builder_pinned_and_locked_and_offers_every_block_of_the_graph_model`, `tests/test_engine_templates.py::test_a_description_becomes_a_checked_draft_named_as_the_owner_said`, `tests/test_engine_templates.py::test_a_refused_draft_is_asked_for_again_with_the_refusal_and_a_second_refusal_is_said`, `tests/test_engine_templates.py::test_a_description_needs_words_and_a_name_and_a_model_that_answers`, `tests/test_engine_templates.py::test_describe_is_on_the_templates_screen_and_an_action_of_the_app_and_the_runner`, `tests/test_engine_templates.py::test_the_editor_undoes_the_wide_screen_zoom_at_every_width_so_its_arrows_meet_their_blocks`
 - Acceptance: Journey: a template is drawn, saved, approved and run, and the canvas shows each block's state change while it runs.
+- Trace: `ops/engine/projector.py`, `ops/engine/preview.py`, `images/mission-control/web/static/app-engine.js`, `images/mission-control/server.py`, `config/templates/demo/ticket.yaml`, `config/templates/demo/briefing.yaml`, `config/templates/demo/triage.yaml`, `ops/engine/templates.py`, `images/mission-control/web/static/app-templates.js`, `images/mission-control/flow/src/main.jsx`, `images/mission-control/flow/src/blocks.js`, `images/mission-control/flow/package.json`, `images/mission-control/flow/package-lock.json`, `images/mission-control/flow/vite.config.mjs`, `images/mission-control/Dockerfile`
 
 ### GEN-35
 
-**One engine after the move** · should · functional · **planned**
+**One engine after the move** · should · functional · **partial**
 
 Home's fixed plans and the planner's free plans shall move to Temporal in one cutover (the owner chose a big bang on 9 November 2026), with the Conductor kept switched off as the rollback; once every kind of home plan has run on Temporal for 14 days with nothing falling back to the Conductor, the next landing removes the Conductor; until then every run is also a row of the Tasks tab, so the app shows one list.
 
 - Parents: [SN-05](#sn-05)
 - Sources: `docs/AI-STACK.md`, `docs/AI-STACK-PLAN.md`
-- Verified by: inspection: `docs/AI-STACK.md`
+- Verified by: test: `tests/test_engine_bridge.py::test_the_deployment_chooses_the_engine_and_the_conductor_stays_the_default`, `tests/test_engine_bridge.py::test_a_started_plan_runs_on_the_engine_once_and_ends_as_the_conductor_ends_it`, `tests/test_engine_bridge.py::test_a_queued_event_starts_the_next_run_on_the_engine`, `tests/test_engine_bridge.py::test_a_cancel_stops_the_engines_run`, `tests/test_engine_bridge.py::test_a_step_waiting_for_its_work_elsewhere_holds_no_slot_and_finishes_when_the_work_is_done`, `tests/test_engine_bridge.py::test_the_orchestrator_looks_again_between_waves_and_the_run_follows_its_added_step`, `tests/test_engine_cutover.py::test_the_switch_is_an_override_the_bridge_reads_before_the_deployment_and_each_switch_is_logged`, `tests/test_engine_cutover.py::test_the_smoke_checks_pass_on_a_real_temporal`, `tests/test_engine_cutover.py::test_the_smoke_checks_say_no_when_temporal_does_not_answer`, `tests/test_engine_cutover.py::test_a_rollback_cancels_the_open_runs_forgets_them_and_switches_to_the_conductor`, `tests/test_engine_cutover.py::test_the_clean_days_are_counted_per_kind_of_plan`
 - Acceptance: Test: after each stage home's whole check is green, the Tasks tab lists runs of both engines, and the health board counts the days without fallback per kind of plan.
+- Trace: `ops/engine/bridge.py`, `ops/engine/activities.py`, `ops/conductor.py`, `ops/missions.py`, `deployments/home/deployment.env`, `ops/engine/cutover.py`, `ops/systemd/missions.service`
+- Gap: The cutover tool, its smoke checks, the switch, the rollback and the count of clean days per kind of plan are built; the Conductor is removed only after 14 clean days per kind of plan (docs/AI-STACK-PLAN.md §6 step 9).
 
 ### GEN-36
 
-**Customer data never enters the engine's history** · should · functional · **planned**
+**Customer data never enters the engine's history** · should · functional · **implemented**
 
 Workflows, activities and signals shall pass only references (artifact hash, path, ticket key, commit, verdict counts); on a customer-class deployment the data converter shall refuse any other payload or one above its tagged size, a payload codec shall encrypt every payload with the deployment's key, the Temporal database shall be left out of every backup that leaves the machine, and the web UI shall decode payloads only through a codec server behind the app's gate.
 
 - Parents: [SN-05](#sn-05)
 - Sources: `docs/AI-STACK.md`
-- Verified by: inspection: `docs/AI-STACK.md`
+- Verified by: test: `tests/test_engine_service.py::test_a_customer_class_backup_leaves_the_engine_databases_out`, `tests/test_engine_service.py::test_the_data_guard_tells_scripts_whether_the_deployment_holds_customer_data`, `tests/test_engine_lib.py::test_every_payload_is_encrypted_with_the_deployments_key_and_only_that_key_reads_it`, `tests/test_engine_lib.py::test_the_codec_key_comes_from_the_secret_and_a_wrong_one_is_refused_without_showing_it`, `tests/test_engine_lib.py::test_a_customer_class_converter_refuses_content_and_passes_references`, `tests/test_engine_lib.py::test_inside_a_real_run_a_customer_class_deployment_fails_the_step_that_returns_content`, `tests/test_engine_lib.py::test_home_is_not_strict_but_its_history_is_ciphertext_too`, `tests/test_engine_view.py::test_the_runs_screen_shows_temporals_ui_behind_the_apps_gate_and_its_codec_decrypts_what_the_engine_encrypted`
 - Acceptance: Test: on the work example an activity returning file content fails in the converter, a stored payload is ciphertext, and the backup's plan names no Temporal database.
+- Trace: `ops/backup.sh`, `ops/dataguard.py`, `ops/engine/converter.py`, `images/mission-control/server.engine.py`
 
 ### GEN-37
 
-**A run pins its template; the runner changes by versioning** · should · functional · **planned**
+**A run pins its template; the runner changes by versioning** · should · functional · **implemented**
 
 A run shall load its template's graph from the pack commit approved when it starts, through an activity, and read only that recorded copy; the graph runner's own changes shall use Temporal's versioning, and recorded histories of toy runs shall replay against every runner change before it lands.
 
 - Parents: [SN-05](#sn-05)
 - Sources: `docs/AI-STACK.md`
-- Verified by: inspection: `docs/AI-STACK.md`
+- Verified by: test: `tests/test_engine_runner.py::test_a_long_wait_continues_the_run_as_new_and_signals_still_find_it_and_it_replays`, `tests/test_engine_runner.py::test_the_run_is_rebuilt_from_its_history_at_every_step_as_after_a_restart_and_a_cancel_ends_it`
 - Acceptance: Test: a template edited while a toy run waits leaves the run on its pinned graph; the replay test fails a non-deterministic runner change and passes a patched one.
+- Trace: `ops/engine/runner.py`
 
 ### GEN-38
 
-**A run's history stays small** · should · functional · **planned**
+**A run's history stays small** · should · functional · **implemented**
 
 Fan-out items and each change shall run as child workflows, very large lists in batches within the pending-children limit, and the runner shall continue as new when Temporal suggests it, carrying its pinned graph, current blocks, loop counters, wait keys and due timers under the same workflow id; the health board shows each run's history size.
 
 - Parents: [SN-05](#sn-05)
 - Sources: `docs/AI-STACK.md`
-- Verified by: inspection: `docs/AI-STACK.md`
+- Verified by: test: `tests/test_engine_runner.py::test_a_fan_out_of_300_items_stays_small_in_the_parents_history`
 - Acceptance: Test: a toy run with a 300-item fan-out, 6 change rounds and 20 reminders stays under a tenth of the history limit, continues as new at least once, and a signal after that still resumes it.
+- Trace: `ops/engine/runner.py`
 
 ### GEN-39
 
-**Temporal upgrades by the update path** · should · functional · **planned**
+**Temporal upgrades by the update path** · should · functional · **implemented**
 
 An update that moves Temporal shall snapshot its database on the machine (never off it on a customer-class deployment), upgrade the schema with temporal-sql-tool and step the server through each minor version in turn, check that the server answers and the replay test passes, and go back to the snapshot when a step fails; the owner never upgrades Temporal by hand.
 
 - Parents: [SN-05](#sn-05)
 - Sources: `docs/AI-STACK.md`
-- Verified by: inspection: `docs/AI-STACK.md`
+- Verified by: test: `tests/test_temporal_upgrade.py::test_an_update_across_two_minor_versions_runs_each_schema_server_and_check_in_order`, `tests/test_temporal_upgrade.py::test_a_failing_step_restores_the_snapshot_and_starts_the_old_server_again`, `tests/test_temporal_upgrade.py::test_a_step_back_a_major_version_and_a_skipped_minor_are_refused`, `tests/test_temporal_upgrade.py::test_the_pinned_version_is_in_the_step_table_with_the_same_images`, `tests/test_temporal_upgrade.py::test_the_update_moves_temporal_first_and_stays_put_when_that_fails`
 - Acceptance: Test: an update across two minor versions on a test database runs both schema steps and both servers in order, and a failing step restores the snapshot.
+- Trace: `ops/temporal_upgrade.py`, `config/temporal/steps.yaml`, `ops/update.py`
 
 ## HSE House
 
@@ -9820,6 +9842,106 @@ The Voice page shall show spoken questions answered a day and the share answered
 | `tests/test_editor.py::test_the_editor_keeps_only_verdicts_it_can_check_and_groups_requests` | [ACR-02](#acr-02) |
 | `tests/test_editor.py::test_the_editor_s_context_holds_the_ideas_the_owner_s_reasons_and_planned_work` | [ACR-02](#acr-02) |
 | `tests/test_egress_ipv6.py::test_an_ipv6_rule_that_cannot_be_set_stops_a_container_that_has_ipv6` | [PHN-08](#phn-08) |
+| `tests/test_engine_activities.py::test_a_deciders_answer_is_read_for_one_of_its_branches` | [GEN-21](#gen-21) |
+| `tests/test_engine_activities.py::test_a_gate_is_asked_once_per_run_and_node_even_when_asked_again` | [GEN-22](#gen-22) |
+| `tests/test_engine_activities.py::test_a_home_plan_runs_on_the_engine_through_the_conductors_own_steps_and_finish` | [GEN-22](#gen-22) |
+| `tests/test_engine_activities.py::test_a_step_that_fails_twice_fails_the_run_and_the_task_with_its_reason` | [GEN-22](#gen-22) |
+| `tests/test_engine_activities.py::test_a_templates_agent_and_decision_blocks_run_through_the_conductors_steps_and_its_task_finishes` | [GEN-21](#gen-21) |
+| `tests/test_engine_activities.py::test_each_item_of_a_template_blocks_fan_out_gets_a_row_of_its_own` | [GEN-21](#gen-21) |
+| `tests/test_engine_bridge.py::test_a_cancel_stops_the_engines_run` | [GEN-35](#gen-35) |
+| `tests/test_engine_bridge.py::test_a_queued_event_starts_the_next_run_on_the_engine` | [GEN-35](#gen-35) |
+| `tests/test_engine_bridge.py::test_a_started_plan_runs_on_the_engine_once_and_ends_as_the_conductor_ends_it` | [GEN-35](#gen-35) |
+| `tests/test_engine_bridge.py::test_a_step_waiting_for_its_work_elsewhere_holds_no_slot_and_finishes_when_the_work_is_done` | [GEN-35](#gen-35) |
+| `tests/test_engine_bridge.py::test_the_deployment_chooses_the_engine_and_the_conductor_stays_the_default` | [GEN-35](#gen-35) |
+| `tests/test_engine_bridge.py::test_the_orchestrator_looks_again_between_waves_and_the_run_follows_its_added_step` | [GEN-35](#gen-35) |
+| `tests/test_engine_cutover.py::test_a_rollback_cancels_the_open_runs_forgets_them_and_switches_to_the_conductor` | [GEN-35](#gen-35) |
+| `tests/test_engine_cutover.py::test_the_clean_days_are_counted_per_kind_of_plan` | [GEN-35](#gen-35) |
+| `tests/test_engine_cutover.py::test_the_smoke_checks_pass_on_a_real_temporal` | [GEN-35](#gen-35) |
+| `tests/test_engine_cutover.py::test_the_smoke_checks_say_no_when_temporal_does_not_answer` | [GEN-35](#gen-35) |
+| `tests/test_engine_cutover.py::test_the_switch_is_an_override_the_bridge_reads_before_the_deployment_and_each_switch_is_logged` | [GEN-35](#gen-35) |
+| `tests/test_engine_graph.py::test_a_branch_keeps_its_names_on_its_edges_and_a_brief_in_canonical_form` | [GEN-23](#gen-23) |
+| `tests/test_engine_graph.py::test_a_branch_needs_named_edges_and_only_a_branch_names_them` | [GEN-23](#gen-23) |
+| `tests/test_engine_graph.py::test_a_plan_converts_one_to_one_with_its_fan_out_and_its_loop` | [GEN-23](#gen-23) |
+| `tests/test_engine_graph.py::test_a_plan_is_refused_with_the_conductors_own_words` | [GEN-23](#gen-23) |
+| `tests/test_engine_graph.py::test_a_template_in_canonical_form_round_trips_byte_for_byte` | [GEN-23](#gen-23) |
+| `tests/test_engine_graph.py::test_a_template_is_refused_for_what_it_gets_wrong` | [GEN-23](#gen-23) |
+| `tests/test_engine_graph.py::test_a_template_runs_from_one_start_to_its_ends_with_a_failure_path_and_a_notify` | [GEN-23](#gen-23) |
+| `tests/test_engine_graph.py::test_a_template_that_is_not_canonical_is_refused_with_its_canonical_form` | [GEN-23](#gen-23) |
+| `tests/test_engine_graph.py::test_a_template_without_one_start_or_with_a_dead_end_is_refused_saying_what_to_draw` | [GEN-23](#gen-23) |
+| `tests/test_engine_graph.py::test_durations_read_seconds_minutes_hours_and_days` | [GEN-23](#gen-23) |
+| `tests/test_engine_graph.py::test_the_conductor_uses_the_same_checks_until_it_is_retired` | [GEN-23](#gen-23) |
+| `tests/test_engine_graph.py::test_the_graph_is_one_of_the_engines_known_shapes_and_needs_no_temporal` | [GEN-23](#gen-23) |
+| `tests/test_engine_lib.py::test_a_customer_class_converter_refuses_content_and_passes_references` | [GEN-36](#gen-36) |
+| `tests/test_engine_lib.py::test_a_namespace_is_the_deployment_folder_name_and_is_made_once` | [GEN-33](#gen-33) |
+| `tests/test_engine_lib.py::test_every_payload_is_encrypted_with_the_deployments_key_and_only_that_key_reads_it` | [GEN-36](#gen-36) |
+| `tests/test_engine_lib.py::test_home_is_not_strict_but_its_history_is_ciphertext_too` | [GEN-36](#gen-36) |
+| `tests/test_engine_lib.py::test_inside_a_real_run_a_customer_class_deployment_fails_the_step_that_returns_content` | [GEN-36](#gen-36) |
+| `tests/test_engine_lib.py::test_the_codec_key_comes_from_the_secret_and_a_wrong_one_is_refused_without_showing_it` | [GEN-36](#gen-36) |
+| `tests/test_engine_lib.py::test_the_runners_threads_reach_the_engine_through_its_own_loop` | [GEN-33](#gen-33) |
+| `tests/test_engine_packs.py::test_a_new_commit_leaves_the_old_one_running_and_puts_one_decision_in_the_queue_and_a_refusal_keeps_it_out` | [GEN-32](#gen-32) |
+| `tests/test_engine_packs.py::test_a_pack_agent_gets_exactly_its_grants_and_a_server_off_the_egress_list_is_refused` | [GEN-30](#gen-30) |
+| `tests/test_engine_packs.py::test_a_pack_that_clashes_or_names_no_commit_of_its_source_is_refused_with_the_reason` | [GEN-21](#gen-21) |
+| `tests/test_engine_packs.py::test_an_approved_pack_adds_its_agents_skill_template_and_job_kind_from_a_read_only_checkout` | [GEN-21](#gen-21) |
+| `tests/test_engine_packs.py::test_an_unapproved_pack_does_not_run_and_waits_in_the_queue_with_its_manifest_prompts_commands_and_diff` | [GEN-21](#gen-21) |
+| `tests/test_engine_packs.py::test_home_without_packs_is_unchanged` | [GEN-21](#gen-21) |
+| `tests/test_engine_packs.py::test_packs_are_the_apps_and_the_queues` | [GEN-21](#gen-21) |
+| `tests/test_engine_packs.py::test_two_packs_of_one_name_and_a_manifest_naming_another_pack_are_refused` | [GEN-21](#gen-21) |
+| `tests/test_engine_places.py::test_a_command_runs_at_the_wsl_host_place_only_once_approved_there_by_its_hash_and_a_value_outside_its_type_is_refused` | [GEN-22](#gen-22) |
+| `tests/test_engine_places.py::test_a_steps_file_is_kept_by_its_hash_with_its_maker_attached_to_a_stand_in_item_and_removed_past_its_retention` | [GEN-29](#gen-29) |
+| `tests/test_engine_places.py::test_a_ten_item_fan_out_on_a_pool_of_two_never_runs_three_at_once_two_runs_share_it_and_a_failed_attempt_is_retried` | [GEN-28](#gen-28) |
+| `tests/test_engine_places.py::test_commands_are_the_queues_and_the_engines` | [GEN-22](#gen-22) |
+| `tests/test_engine_places.py::test_the_engine_queues_are_its_own_the_pools_at_their_size_and_each_place` | [GEN-22](#gen-22) |
+| `tests/test_engine_record.py::test_a_toy_exam_set_runs_through_its_template_and_scores_naming_the_case_it_got_wrong` | [GEN-31](#gen-31) |
+| `tests/test_engine_record.py::test_a_toy_run_exports_one_bundle_with_its_chain_from_item_to_decisions_and_the_files_it_made` | [GEN-31](#gen-31) |
+| `tests/test_engine_roles.py::test_every_role_is_the_owners_at_home_and_a_deployment_maps_roles_to_its_people` | [GEN-27](#gen-27) |
+| `tests/test_engine_roles.py::test_the_repositorys_roles_file_names_no_person` | [GEN-27](#gen-27) |
+| `tests/test_engine_runner.py::test_a_block_that_succeeds_closes_its_failure_path_and_the_run_ends_done` | [GEN-23](#gen-23) |
+| `tests/test_engine_runner.py::test_a_branch_answer_that_names_no_branch_fails_the_run_with_the_branches_it_has` | [GEN-23](#gen-23) |
+| `tests/test_engine_runner.py::test_a_branch_takes_the_way_its_agent_names_skips_the_others_and_the_join_after_still_runs` | [GEN-23](#gen-23) |
+| `tests/test_engine_runner.py::test_a_check_that_still_fails_after_its_rounds_fails_the_run_with_the_reason` | [GEN-23](#gen-23) |
+| `tests/test_engine_runner.py::test_a_failed_block_with_a_failure_path_goes_down_it_and_the_run_ends_as_stopped_not_failed` | [GEN-23](#gen-23) |
+| `tests/test_engine_runner.py::test_a_fan_out_of_300_items_stays_small_in_the_parents_history` | [GEN-38](#gen-38) |
+| `tests/test_engine_runner.py::test_a_gate_answered_no_fails_the_run_and_says_who` | [GEN-23](#gen-23) |
+| `tests/test_engine_runner.py::test_a_long_wait_continues_the_run_as_new_and_signals_still_find_it_and_it_replays` | [GEN-37](#gen-37) |
+| `tests/test_engine_runner.py::test_a_template_runs_to_the_end_through_its_wait_its_gate_its_fan_out_and_its_loop` | [GEN-24](#gen-24) |
+| `tests/test_engine_runner.py::test_reminders_come_on_time_and_a_timeout_asks_the_role_named_for_it` | [GEN-24](#gen-24) |
+| `tests/test_engine_runner.py::test_the_run_is_rebuilt_from_its_history_at_every_step_as_after_a_restart_and_a_cancel_ends_it` | [GEN-37](#gen-37) |
+| `tests/test_engine_runner.py::test_two_gates_wait_for_their_own_roles_and_an_answer_from_outside_a_role_is_refused_and_recorded` | [GEN-27](#gen-27) |
+| `tests/test_engine_service.py::test_a_customer_class_backup_leaves_the_engine_databases_out` | [GEN-36](#gen-36) |
+| `tests/test_engine_service.py::test_the_data_guard_tells_scripts_whether_the_deployment_holds_customer_data` | [GEN-36](#gen-36) |
+| `tests/test_engine_service.py::test_the_engine_images_are_pinned_by_digest_in_versions_env` | [GEN-33](#gen-33) |
+| `tests/test_engine_service.py::test_the_engine_is_part_of_the_core_and_starts_only_after_its_databases_and_schema` | [GEN-33](#gen-33) |
+| `tests/test_engine_service.py::test_the_engine_is_reached_only_from_this_machine` | [GEN-33](#gen-33) |
+| `tests/test_engine_service.py::test_the_engine_uses_its_own_role_and_the_secret_of_that_role` | [GEN-33](#gen-33) |
+| `tests/test_engine_service.py::test_the_runner_environment_is_pinned_checksummed_and_follows_its_lock` | [GEN-33](#gen-33) |
+| `tests/test_engine_service.py::test_the_schema_is_set_up_then_moved_to_the_pinned_version_every_start` | [GEN-33](#gen-33) |
+| `tests/test_engine_service.py::test_the_server_reads_a_dynamic_config_that_names_the_history_limits` | [GEN-33](#gen-33) |
+| `tests/test_engine_templates.py::test_a_block_may_name_only_agents_that_can_do_a_step` | [GEN-34](#gen-34) |
+| `tests/test_engine_templates.py::test_a_description_becomes_a_checked_draft_named_as_the_owner_said` | [GEN-34](#gen-34) |
+| `tests/test_engine_templates.py::test_a_description_needs_words_and_a_name_and_a_model_that_answers` | [GEN-34](#gen-34) |
+| `tests/test_engine_templates.py::test_a_refused_draft_is_asked_for_again_with_the_refusal_and_a_second_refusal_is_said` | [GEN-34](#gen-34) |
+| `tests/test_engine_templates.py::test_a_saved_template_is_its_canonical_yaml_with_its_fork_join_and_loop` | [GEN-34](#gen-34) |
+| `tests/test_engine_templates.py::test_a_template_with_a_fault_is_not_saved_and_the_graph_model_says_why` | [GEN-34](#gen-34) |
+| `tests/test_engine_templates.py::test_a_test_run_starts_only_from_what_was_saved_and_only_where_the_engine_runs` | [GEN-34](#gen-34) |
+| `tests/test_engine_templates.py::test_describe_is_on_the_templates_screen_and_an_action_of_the_app_and_the_runner` | [GEN-34](#gen-34) |
+| `tests/test_engine_templates.py::test_the_builder_is_part_of_the_app_reachable_from_tasks_and_drawn_on_the_first_state` | [GEN-34](#gen-34) |
+| `tests/test_engine_templates.py::test_the_editor_is_workflow_builder_pinned_and_locked_and_offers_every_block_of_the_graph_model` | [GEN-34](#gen-34) |
+| `tests/test_engine_templates.py::test_the_editor_s_block_positions_are_kept_beside_the_template_and_listed_with_it` | [GEN-34](#gen-34) |
+| `tests/test_engine_templates.py::test_the_editor_undoes_the_wide_screen_zoom_at_every_width_so_its_arrows_meet_their_blocks` | [GEN-34](#gen-34) |
+| `tests/test_engine_templates.py::test_the_list_shows_the_repositorys_templates_and_the_drafts_with_their_problems` | [GEN-34](#gen-34) |
+| `tests/test_engine_trackers.py::test_a_change_starts_at_a_tag_opens_a_draft_into_a_release_branch_and_a_reviewers_comment_resumes_the_run` | [GEN-26](#gen-26) |
+| `tests/test_engine_trackers.py::test_a_comment_from_someone_else_signals_the_run_once` | [GEN-25](#gen-25) |
+| `tests/test_engine_trackers.py::test_a_new_item_starts_its_run_once_across_a_restart_and_an_ended_run_is_not_started_again` | [GEN-25](#gen-25) |
+| `tests/test_engine_trackers.py::test_a_write_to_an_unknown_tracker_or_of_an_unknown_kind_is_refused_with_the_reason` | [GEN-25](#gen-25) |
+| `tests/test_engine_trackers.py::test_jira_reads_by_jql_with_its_cursor_and_edits_its_one_summary` | [GEN-25](#gen-25) |
+| `tests/test_engine_trackers.py::test_shadow_writes_nothing_outward_until_the_owner_lets_a_kind_go_live_after_its_measure` | [GEN-25](#gen-25) |
+| `tests/test_engine_trackers.py::test_the_one_summary_comment_is_edited_across_three_updates` | [GEN-25](#gen-25) |
+| `tests/test_engine_trackers.py::test_trackers_are_the_apps_the_queues_and_the_runtimes` | [GEN-25](#gen-25) |
+| `tests/test_engine_view.py::test_the_apps_state_and_its_stream_carry_the_engine` | [GEN-34](#gen-34) |
+| `tests/test_engine_view.py::test_the_demo_templates_are_in_their_canonical_form` | [GEN-34](#gen-34) |
+| `tests/test_engine_view.py::test_the_engine_screen_and_its_canvas_are_part_of_the_app_and_redraw_live` | [GEN-34](#gen-34) |
+| `tests/test_engine_view.py::test_the_projector_shows_a_running_run_with_its_blocks_edges_status_and_timing` | [GEN-34](#gen-34) |
+| `tests/test_engine_view.py::test_the_runs_screen_shows_temporals_ui_behind_the_apps_gate_and_its_codec_decrypts_what_the_engine_encrypted` | [GEN-36](#gen-36) |
 | `tests/test_events.py::test_a_rule_waits_out_its_cooldown_runs_its_check_and_records_every_firing` | [TSK-11](#tsk-11) |
 | `tests/test_events.py::test_breaking_news_is_three_publishers_on_one_new_story_within_30_minutes` | [TSK-12](#tsk-12) |
 | `tests/test_events.py::test_mail_and_forgejo_are_read_only_while_a_rule_asks_and_a_baseline_is_not_new` | [TSK-10](#tsk-10) |
@@ -10663,6 +10785,11 @@ The Voice page shall show spoken questions answered a day and the share answered
 | `tests/test_team_roster.py::test_team_who_shows_an_agent_s_card_and_open_work_but_not_what_the_asker_may_not_see` | [SWM-108](#swm-108) |
 | `tests/test_team_roster.py::test_team_work_shows_runs_settled_work_and_help_given_to_others` | [SWM-108](#swm-108) |
 | `tests/test_telemetry.py::test_timeline_merges_sources_and_warns` | [OBS-06](#obs-06) |
+| `tests/test_temporal_upgrade.py::test_a_failing_step_restores_the_snapshot_and_starts_the_old_server_again` | [GEN-39](#gen-39) |
+| `tests/test_temporal_upgrade.py::test_a_step_back_a_major_version_and_a_skipped_minor_are_refused` | [GEN-39](#gen-39) |
+| `tests/test_temporal_upgrade.py::test_an_update_across_two_minor_versions_runs_each_schema_server_and_check_in_order` | [GEN-39](#gen-39) |
+| `tests/test_temporal_upgrade.py::test_the_pinned_version_is_in_the_step_table_with_the_same_images` | [GEN-39](#gen-39) |
+| `tests/test_temporal_upgrade.py::test_the_update_moves_temporal_first_and_stays_put_when_that_fails` | [GEN-39](#gen-39) |
 | `tests/test_termguard.py::test_a_commit_holding_a_forbidden_term_is_refused_and_a_clean_one_passes` | [SEC-22](#sec-22) |
 | `tests/test_termguard.py::test_a_push_of_a_commit_that_skipped_the_hooks_is_refused` | [SEC-22](#sec-22) |
 | `tests/test_termguard.py::test_the_runners_own_push_is_guarded_and_a_removed_line_is_no_leak` | [SEC-22](#sec-22) |

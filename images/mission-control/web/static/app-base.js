@@ -327,7 +327,7 @@ function countView() {
 }
 
 // views that re-render on every state update (forms, chat and wiki do not, so nothing is lost while you work)
-const LIVE = new Set(["home", "decide"]);
+const LIVE = new Set(["home", "decide", "engine"]);
 const typing = () => document.activeElement && ["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement.tagName);
 function render(force = false) {
   chrome();
@@ -340,7 +340,7 @@ function render(force = false) {
   if (force) { document.body.classList.add("anim"); clearTimeout(render.anim); render.anim = setTimeout(() => document.body.classList.remove("anim"), 600); }
   const open = force ? [] : [...view.querySelectorAll("details[open][id], details[open][data-keep]")].map((d) => d.id || d.dataset.keep);
   document.body.dataset.page = route.name;          // APP-56: the stylesheet lays each page out for the width it has
-  const fn = { mail: vMail, decide: vDecide, tasks: vTasks, task: vTask, trials: vTrials, home: vHome, missions: vMissionsGo, mission: vMission, new: vNewGo, chat: vChat, system: vSystem, read: vRead, file: vFile, files: vFiles, wiki: vWiki, build: vBuild, repo: vRepo, guide: vGuide, share: vShare, phone: vPhone, house: vHouse, crew: vCrew, live: vLive, swarm: vSwarm, skills: vSkills, memory: vMemory, howto: vHowto, longterm: vLongTerm, codemem: vCodeMem, journals: vJournals, memsearch: vMemSearch, sources: vSources, taskmap: vTaskMap, telemetry: vTelemetry }[route.name] || vHome;
+  const fn = { mail: vMail, decide: vDecide, tasks: vTasks, task: vTask, trials: vTrials, home: vHome, missions: vMissionsGo, mission: vMission, new: vNewGo, chat: vChat, system: vSystem, read: vRead, file: vFile, files: vFiles, wiki: vWiki, build: vBuild, repo: vRepo, guide: vGuide, share: vShare, phone: vPhone, house: vHouse, crew: vCrew, live: vLive, swarm: vSwarm, skills: vSkills, memory: vMemory, howto: vHowto, longterm: vLongTerm, codemem: vCodeMem, journals: vJournals, memsearch: vMemSearch, sources: vSources, taskmap: vTaskMap, telemetry: vTelemetry, engine: vEngine, templates: vTemplates, packs: vPacks, trackers: vTrackers, runs: vRuns }[route.name] || vHome;
   if (force) {                                      // a page that loads for a moment: not the page you left under the new tab's name
     const was = view.firstChild, n = (render.nav = (render.nav || 0) + 1);
     setTimeout(() => { if (render.nav === n && view.firstChild === was) view.innerHTML = `<div class="stack"><div class="skeleton" style="height:96px"></div><div class="skeleton" style="height:280px"></div></div>`; }, 180);

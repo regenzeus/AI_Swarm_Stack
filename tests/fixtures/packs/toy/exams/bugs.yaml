@@ -1,0 +1,7 @@
+# Each case with its known outcome (docs/AI-STACK.md §11): run through toy/triage, its answer read at route.branch
+template: toy/triage
+outcome: route.branch
+cases:
+  - {ticket: "The export stops at 2 GB", outcome: bug}
+  - {ticket: "How do I export only one folder?", outcome: question}
+  - {ticket: "Login fails after the update", outcome: bug}

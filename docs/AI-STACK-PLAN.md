@@ -209,3 +209,54 @@ start in shadow mode for every kind of write.
 | The Temporal databases and role, and the codec key's secret name | at WP0 |
 | The replay exam held for the build | at WP0, by its hold file |
 | The WSL-host worker's user and unit on a work machine | the owner's step, at WP11, only where a deployment needs it |
+
+## 10. Commissioned means: in the app, and proven there
+
+The owner, 9 November 2026: "I want all of this fully commissioned and embedded into ux." Nothing counts as done until
+the owner sees it and uses it in the app, on the phone and on the desk, in every window shape. Each screen below has an
+owning work package, and the cutover (§6, step 7) proves all of them in the nightly screen check (APP-60) before the
+switch is kept.
+
+| Where in the app | What the owner sees and does | WP |
+|---|---|---|
+| **Health board, Engine** | The engine running, its version and namespace. The workers polling each task queue, and each pool's leases. The longest waits with their age, and the largest history against its limit. The 14 days per kind of plan, counting | 1, 6, 7, 11 |
+| **Runs** (a new screen) | Temporal's web UI inside the app, behind the app's gate, decoding through the codec server: every run, its history, its timers and signals. Every task and every block links to its run here | 1, 2, 6 |
+| **Tasks tab and task page** | The same lists and pages as today, now fed by the engine. On the task page, a **Canvas** view of the run: each block lights up as waiting, running, done or failed, with its latest output, its cost, its artifacts and the link to its run | 6, 13 |
+| **Templates** (a new screen) | Every template, home's and each pack's. Open one on the canvas, drag blocks, connect them, set their values, or describe one in chat and let the planner draft it. Save writes the pack's branch and puts the diff in the queue for approval. Start a run of it | 13 |
+| **The queue (Needs you)** | A pack's new commit, with its prompts, commands and diff. A gate, naming the role it waits for. A tracker write in shadow mode, with how many approved items are still needed before that kind of write may go live | 8, 9, 10 |
+| **Settings, Packs and trackers** | Each pack with its pinned commit and approval. Each tracker, its poll and the state of each kind of write, shadow or live, switched by the owner's tap | 8, 9 |
+| **Guide** | The canvas, the runs and the engine explained behind the info control, never as text on the screen | 17 |
+
+**How it is proven:**
+- the nightly journeys get one journey per screen above, which acts on it, not just opens it;
+- the screen check covers every window shape;
+- the owner gets screenshots of each screen, on demo data, before the switch is kept.
+
+## 11. The road to full commissioning
+
+Set on 9 November 2026, when the owner asked for the whole system running, with the blocks and their timing in the
+app, and every planned feature commissioned.
+
+**Where it stands (10 November 2026):**
+- M0 to M3 are done: every work package of §4 is built on the integration branch with its tests, and shown in the
+  preview (WP13 with Workflow Builder's SDK, Describe, Start and End, failure paths and decisions; docs/AI-STACK.md §17
+  says what was built and where it differs).
+- M4: the builder image carries Temporal's SDK and test servers; the engine's two secrets exist; the runner starts from
+  its own environment; the cutover tool (ops/engine/cutover.py) does the smoke checks, the switch and the rollback. The
+  integration branch lands dark first (Temporal in the core, the engine off), then the switch.
+- M5: the Engine screen counts the clean days per kind of plan.
+
+**The big bang stays one cutover.** Until then a **preview** shows everything as it is built, so the owner sees the
+blocks and their timing long before the switch.
+
+| Milestone | What is done | The owner sees, and the gate |
+|---|---|---|
+| **M0 Clean memory** | Once r49 has landed and published, one WSL restart (`wsl --shutdown`; the stack is back in 2 to 3 minutes). The memory cap drops from 10 to 8 GB if the owner agrees (the stack uses 3 to 3.5 GB, builds 2 GB more). Here, because nothing is in flight, and every build and landing ahead runs faster on clean memory | Windows' free memory grows after each cache drop; no channel failure for a day |
+| **M1 The engine runs plans** | WP3 the graph model; WP4 the graph runner (gates, waits with keys and timers, loops, fan-out as children, continue-as-new, the replay test); WP5 the activities (every harness adapter and step kind) | The Conductor's plan tests pass as runner tests; the toy template survives restarts of the worker and the server |
+| **M2 The preview** | A dark copy of the app from the integration branch, on its own port with its own engine namespace `preview`, demo data and real toy runs. In it: the Engine card, the Runs screen, the Tasks tab fed by the engine, and the task page's **Canvas**, with blocks lighting up live and each block's start, wait and duration. WP6 plus the view half of WP13 | The owner opens it on phone and desk and watches a run go block by block. It is updated with every work package after this |
+| **M3 Every feature in the preview** | WP13 editing (draw, describe in chat, save, approve, run); WP8 packs; WP9 trackers on stand-ins with shadow mode; WP10 roles; WP11 places and pools; WP12 artifacts; WP14 the record and pack exams; WP15 upgrades; WP16 tool grants | Each feature arrives in the preview with the journey that acts on it |
+| **M4 The cutover** | WP7 tooling. The builder image carries the engine's SDK and test server, so the landing checks run the engine's tests. The two secrets are made (TEMPORAL_DB_PASSWORD, TEMPORAL_CODEC_KEY), and the runner moves to its own environment. Then the runbook of §6 | All journeys in every window shape, screenshots of every screen, and the switch kept |
+| **M5 Commissioned** | 14 days with no fallback for any kind of plan, then the Conductor is removed. The work deployment takes the release by its signed tag, its trackers in shadow mode | The health board's count reaches 14 for every kind of plan |
+
+**The preview is not the live stack.** It runs only toy and demo runs, its activities touch nothing outside, and it
+stops at the cutover.

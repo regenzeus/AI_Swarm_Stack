@@ -23,5 +23,13 @@ classes:
   ideas:           {title: Ideas,              level: 0, highest: 1, exam: null,            what: "turn an agent's idea into a task"}
   agent-request:   {title: An agent asks,      level: 0, highest: 0, exam: null,            what: "what an agent asks of the owner", words: true}
   owner-confirm:   {title: "Does it work?",    level: 0, highest: 0, exam: null,            what: "say whether a shipped idea works, when the owner's word is its check"}
+  tracker-comment: {title: Tracker comments,   level: 0, highest: 1, exam: null,            what: "a comment on a tracker item, in shadow until its measure is met"}
+  tracker-summary: {title: Tracker summaries,  level: 0, highest: 1, exam: null,            what: "the stack's one summary comment on an item, edited as the run goes"}
+  tracker-attach:  {title: Tracker attachments, level: 0, highest: 0, exam: null, floor: people, what: "attach a file to a tracker item: people read it"}
+  tracker-link:    {title: Tracker links,      level: 0, highest: 1, exam: null,            what: "link a tracker item to another or to a change"}
+  tracker-transition: {title: Tracker transitions, level: 0, highest: 0, exam: null, floor: people, what: "move a tracker item to another status: people act on it"}
+  tracker-label:   {title: Tracker labels,     level: 0, highest: 1, exam: null,            what: "label a tracker item"}
+  command:         {title: A command,          level: 0, highest: 0, exam: null, floor: security, what: "let a job kind run at a place, by the hash of its file"}
+  pack-commit:     {title: A pack commit,      level: 0, highest: 0, exam: null, floor: security, what: "run a pack's new commit: its agents, prompts, commands and templates"}
   setup:           {title: Setup,              level: 0, highest: 0, exam: null,            what: "a setup step only the owner can do"}
   journey-test:    {title: Journey test,       level: 0, highest: 0, exam: null,            what: "the nightly journey's own test item: it decides nothing"}

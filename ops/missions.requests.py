@@ -418,7 +418,7 @@ def respond(rid, req):
     c = db()
     try:
         a = req.get("action")
-        res = (CHG.handle(req, c) if a in CHG.ACTIONS else CT.handle(req, c) if a == "claude_task" else CT.cancel(c, req.get("id")) if a == "claude_cancel" else handle_forgejo_connect(req) if a == "forgejo_connect" else handle_memory(req) if a == "memory" else handle_stack(req) if a in STACK_ACTIONS
+        res = (__import__("engine.bridge", fromlist=["decide"]).decide(req) if a == "engine_decide" else __import__("engine.templates", fromlist=["handle"]).handle(req) if a in ("template_save", "template_test", "template_describe") else __import__("engine.packs", fromlist=["handle"]).handle(req) if a in ("pack_approve", "pack_refuse") else __import__("engine.trackers", fromlist=["handle"]).handle(req) if a in ("tracker_shadow_approve", "tracker_shadow_reject", "tracker_live") else __import__("engine.places", fromlist=["handle"]).handle(req) if a == "command_approve" else CHG.handle(req, c) if a in CHG.ACTIONS else CT.handle(req, c) if a == "claude_task" else CT.cancel(c, req.get("id")) if a == "claude_cancel" else handle_forgejo_connect(req) if a == "forgejo_connect" else handle_memory(req) if a == "memory" else handle_stack(req) if a in STACK_ACTIONS
                else B.handle(req, c) if a in BUILD_ACTIONS else I.handle(req, c) if a in IMPROVE_ACTIONS
                else R.handle(req, c) if a in REPO_ACTIONS else CR.handle(req, c) if a in CREW_ACTIONS else J.handle(req) if a in J.ACTIONS
                else WD.handle(req) if a in WD.ACTIONS else SH.handle(req, c) if a in SH.ACTIONS else W.handle(req) if a in W.ACTIONS else H.handle(req) if a in H.ACTIONS

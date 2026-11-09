@@ -115,3 +115,55 @@ def no_steps_in_flight():
     tasks.resting.clear()
     tasks.waits.clear()
     yield
+
+
+# The Conductor's fixture: a task with test_conductor.PLAN started, fake adapters, a fake runner. Shared by the
+# Conductor's tests and the engine's activity tests, which prove the same plans run the same way on Temporal (WP5).
+@pytest.fixture
+def K(tmp_path, monkeypatch):
+    import json
+    import sqlite3
+    import types
+    import conductor as CD
+    import desk_steps as DS
+    import notify as N
+    import runtime as RTM
+    import shop_steps as SS
+    import tasks as TK
+    from test_conductor import PLAN
+    db = tmp_path / "m.sqlite"
+
+    def conn():
+        c = sqlite3.connect(db, timeout=30)   # the worker waits for the test connection's write, as M.db() does
+        c.row_factory = sqlite3.Row
+        return c
+    c = conn()
+    TK.table(c)
+    CD.table(c)
+    c.execute("create table claude_tasks (id integer primary key, status text, answer text, error text)")
+    events, runs, sent, ran = [], [], [], []
+    import missions as MM
+    import threading
+    ns = types.SimpleNamespace(db=conn, event=lambda *a, **k: events.append(a), log=print, paused=MM.paused, VAULT=tmp_path,
+                               vault_commit=lambda paths, msg: None, X=types.SimpleNamespace(APP="https://x"), stop=threading.Event())
+    CD.M = TK.M = DS.M = SS.M = ns
+    monkeypatch.setattr(CD, "RESULTS", tmp_path / "tasks")
+    monkeypatch.setattr(CD, "headroom", lambda s: None)
+    monkeypatch.setattr(N, "send", lambda text, category, **k: sent.append(text) or {})
+    monkeypatch.setattr(RTM, "start", lambda run, agent, title, data=None, ref=None, detail="": runs.append(("start", run, ref)))
+    monkeypatch.setattr(RTM, "end", lambda run, agent, state, detail="", seconds=None: runs.append(("end", run, state)))
+    monkeypatch.setattr(RTM, "set_ref", lambda *a, **k: None)
+
+    def adapter(c, t, s, prompt, card):
+        ran.append(s["idx"])
+        return f"result of step {s['idx']}"
+    monkeypatch.setattr(CD, "ADAPTERS", {"hermes": adapter, "python": adapter, "claude-code": adapter})
+    t0 = TK.now()
+    cur = c.execute("insert into tasks (text, title, goal, kind, door, done, effort, autonomy, rhythm, spec, questions, answers, status, source, created, updated) "
+                    "values ('x','RAM check','Find the facts','research','plan','[\"three facts\"]','standard','auto','{\"type\":\"once\"}',?, '[]','[]','running','app',?,?)",
+                    (json.dumps({"plan": PLAN}), t0, t0))
+    c.commit()
+    tid = cur.lastrowid
+    TK.put(c, tid, ref=CD.start(c, TK.row(c, tid)))
+    return types.SimpleNamespace(c=c, tid=tid, events=events, runs=runs, sent=sent, ran=ran, conn=conn, tmp=tmp_path)
+

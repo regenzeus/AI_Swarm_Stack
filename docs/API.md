@@ -18,6 +18,9 @@ Every `/api/` and `/share` route needs the `Tailscale-User-Login` header that `t
 | `/api/version` | GET | The deployed app version; the app reloads itself when it changes (APP-03). |
 | `/api/request` | POST | Drops an owner's action into the runner's inbox (the only way the app acts, SEC-12); the runner validates and answers under /api/result. |
 | `/api/result/{rid}` | GET | The runner's answer to one request, or {pending: true} while it works. |
+| `/api/codec/decode` | POST | Temporal UI's codec protocol: {"payloads": [{"metadata": {k: base64}, "data": base64}]} -> the same, decrypted. |
+| `/runs` | GET | /runs/...: Temporal's UI, passed through as it is (its pages, its API, its assets). |
+| `/runs/{path:path}` | GET, POST, PUT, PATCH, DELETE | /runs/...: Temporal's UI, passed through as it is (its pages, its API, its assets). |
 | `/api/file` | GET | A vault file as text, for the reading view; only paths inside the vault. |
 | `/api/runlog/{rid}` | GET | The last 300 lines of a mission run's log (an earlier-lines marker says how many more there are). |
 | `/api/run/{rid}/timeline` | GET | A run's timeline (ops/telemetry.py writes it: model calls, tool calls, results, thinking, tokens). |

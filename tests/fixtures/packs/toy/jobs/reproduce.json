@@ -1,0 +1,8 @@
+{
+  "kind": "toy.reproduce",
+  "about": "Run the toy reproduction on one named input",
+  "params": {"input": {"type": "enum", "values": ["small", "large"]}},
+  "steps": [["python3", "-c", "print('reproduced on {input}')"]],
+  "collect": [],
+  "minutes": 5
+}

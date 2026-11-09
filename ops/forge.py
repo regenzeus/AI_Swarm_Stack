@@ -4,6 +4,7 @@ live, with Forgejo (home) and Bitbucket Data Center (a work deployment) behind i
     import forge as F
     pr = F.FORGE.open_pr(origin, head, base, title, body)     -> {"url", "number"}, or None without a token
     F.FORGE.comment(origin, number, text); F.FORGE.close(origin, number); F.FORGE.state(origin, number)
+    F.FORGE.comments(origin, number)                          -> [{"id", "author", "body"}]: a pull request's comments (GEN-26)
     F.FORGE.ci(origin, sha)                                   -> success | failure | pending | none
     F.may_merge()                                             -> whether this deployment ever merges into a main branch
 
@@ -60,6 +61,11 @@ class Forgejo:
     def close(self, origin, number):
         name = self.repo_of(origin)
         return name and self.call("PATCH", f"/repos/{name}/pulls/{number}", {"state": "closed"})
+
+    def comments(self, origin, number):
+        name = self.repo_of(origin)
+        got = (name and self.call("GET", f"/repos/{name}/issues/{number}/comments")) or []
+        return [{"id": c["id"], "author": (c.get("user") or {}).get("login", ""), "body": c.get("body", "")} for c in got]
 
     def state(self, origin, number):
         name = self.repo_of(origin)
@@ -123,6 +129,12 @@ class BitbucketDC:
     def comment(self, origin, number, text):
         b = self.base(origin)
         return b and self.call("POST", f"{b}/pull-requests/{number}/comments", {"text": text})
+
+    def comments(self, origin, number):
+        b = self.base(origin)
+        got = (b and self.call("GET", f"{b}/pull-requests/{number}/activities?limit=100")) or {}
+        return [{"id": v["comment"]["id"], "author": (v["comment"].get("author") or {}).get("name", ""), "body": v["comment"].get("text", "")}
+                for v in got.get("values") or [] if v.get("action") == "COMMENTED" and v.get("comment")]
 
     def close(self, origin, number):
         b = self.base(origin)

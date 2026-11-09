@@ -353,6 +353,7 @@ services:
       FORGEJO_OWNER: ${FORGEJO_OWNER:-}
       DEPLOY_USER: ${DEPLOY_USER:?run via make}
       STACK_DIR: ${STACK_DIR:?run via make}
+      TEMPORAL_CODEC_KEY: ${TEMPORAL_CODEC_KEY:-}     # the Runs screen's codec: Temporal's UI shows payloads decrypted (GEN-36)
     volumes:
       - /srv/ai/missions:/missions        # inbox (write), public state + run logs (read), app/ (push keys, devices)
       - /srv/vault:/vault:ro              # reports and mission results, read-only
@@ -365,7 +366,7 @@ services:
     # NAS (VOI-03), which Windows passes on from the NAS's address only (the LAN's 11434; Windows' own 11434 is the
     # owner's Ollama app)
     ports: ["127.0.0.1:8090:8090", "127.0.0.1:8093:8093", "127.0.0.1:11435:8095"]
-    networks: [mcnet, mcui, obs, swarmmcp]   # obs: Phoenix ("Open in Phoenix"); swarmmcp: the swarm's read-only door (Swarm page)
+    networks: [mcnet, mcui, obs, swarmmcp, engine]   # obs: Phoenix; swarmmcp: the swarm's read-only door (Swarm page); engine: Temporal's UI (Runs)
     read_only: true
     tmpfs: [/tmp]
     mem_limit: 256m

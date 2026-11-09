@@ -170,7 +170,7 @@ function vTasks() {
   if (route.q.get("new") === "1") { tnewOpen = true; tasksView = "tasks"; tasksList = "active"; tasksOwner = "you"; }
   if (route.q.get("p")) teamPart = TEAM_PARTS.some(([k]) => k === route.q.get("p")) ? route.q.get("p") : teamPart;
   if (route.q.get("m")) netMode = route.q.get("m") === "team" ? "team" : "tasks";
-  view.innerHTML = `<div class="hero"><div class="grow" style="min-width:0"><h1>Tasks</h1>${tasksHeadHtml()}</div><button class="btn primary" id="tnewb">${ic.plus}New task</button></div>
+  view.innerHTML = `<div class="hero"><div class="grow" style="min-width:0"><h1>Tasks</h1>${tasksHeadHtml()}</div>${S?.engine ? `<a class="btn" href="#/templates">Templates</a>` : ""}<button class="btn primary" id="tnewb">${ic.plus}New task</button></div>
     <nav class="seg tviews" aria-label="Parts of Tasks">${TVIEWS.map(([k, l]) => `<button type="button" data-tv="${k}" class="${tasksView === k ? "on" : ""}">${l}</button>`).join("")}</nav>
     <div id="tvbody"></div>`;
   $("#tnewb").onclick = () => {

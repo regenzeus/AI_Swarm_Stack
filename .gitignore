@@ -7,3 +7,7 @@ secrets/*.yaml
 __pycache__/
 # Each run's results; the ones already tracked stay
 eval/results/*.json
+# The template editor's build and packages (the image builds them from images/mission-control/flow)
+images/mission-control/flow/node_modules/
+images/mission-control/flow/dist/
+images/mission-control/web/static/vendor/flow/

@@ -1,12 +1,13 @@
 # The AI Stack: packs, a durable engine and a canvas for agents
 
 Written 9 November 2026. **Status: signed off by the owner on 9 November 2026 with the amendments in §16 and the
-review's five additions (GEN-36 to GEN-39, and Temporal as core); decision DEC-50. Nothing of it is built yet.** It carries on from
+review's five additions (GEN-36 to GEN-39, and Temporal as core); decision DEC-50. Built on 9 and 10 November 2026;
+what was built, and where it differs from this design, is in §17.** It carries on from
 [PLATFORM.md](PLATFORM.md) (DEC-45: the stack is a platform, home is one deployment) and makes real the item that
 [GENERALISATION.md](GENERALISATION.md) parked: "plugin manifests, Bitbucket, Jira … only for a real domain that needs
 them". A work deployment now needs them. It sent a change request for a ticket-to-patch loop that runs for weeks per
 ticket, with the person who asked in the loop. This document is the stack's answer, said for any domain. Requirements
-GEN-21 to GEN-39, *planned*.
+GEN-21 to GEN-39.
 
 **The owner's direction (9 Nov):**
 - reuse professional tools rather than build from scratch;
@@ -319,3 +320,41 @@ things: references only in the history (GEN-36), pinned templates and the replay
 | 3 | Shadow mode first | Yes, per kind of write, not per tracker; each leaves shadow on the owner's tap, after a stated number of approved shadow items (§8) |
 | 4 | Packs approved per commit, job kinds on their worker | Yes. A pack update asks for a worker approval again only when a job's file, and so its hash, changes |
 | 5 | The canvas as one pinned React page | Yes, with the YAML as the source of truth: a lossless round trip, positions in a separate file, and templates that run without the editor (§5) |
+
+## 17. As built (9 and 10 November 2026)
+
+Everything above is built, tested on Temporal itself (its test servers, in the landing's checks) and shown in the app.
+Where the build differs from the design, the build is what holds, and the reason is here.
+
+**What was added on the owner's word while it was built:**
+- **The editor is Workflow Builder's SDK, not our own** (the owner: "I want mature tech"). The palette, the canvas and a
+  form per block from its JSON Schema are the SDK's; our part is the list of blocks and the lossless conversion to the
+  YAML (images/mission-control/flow). The YAML stays the truth; positions live in `<name>.layout.json`.
+- **Describe**: a sentence becomes a drafted template (the intake's model, the prompt intake/TEMPLATE), checked by the
+  graph model, asked once more with the refusal, and opened in the editor as a draft.
+- **Start, End, failure paths and Notify** (the owner: "Shouldn't we always have a starting point? And an end point?").
+  A template has one Start (what starts a run) and one or more Ends (what it delivers, done or stopped); every block is
+  reached from the Start and leads to an End; an arrow named `failed` is taken only when its block fails.
+- **Decisions** (a branch block): its agent's answer names the branch the run takes; the others are skipped.
+
+**Where the build differs from the design:**
+- **Scheduled tasks are not Temporal Schedules.** A task's rhythm stays in the tasks table and the bridge's pass starts
+  each occurrence when it is due, as the Conductor's tick did. Nothing has to move at the cutover, and the Tasks tab's
+  schedule stays where the owner edits it.
+- **A template's agent steps run through the Conductor's own step runner.** A template's run gets a task of its own
+  (kind and door `template`) with a step row per agent, decision and change block; each runs through `run_step` and its
+  adapters, budget and trace, as a plan's step does. A pack agent's step carries its prompt as standing instructions;
+  the `--plugin-dir` and grant arguments (`ops/engine/packs.py plugin_args`) are ready for the Claude Code step that
+  takes them.
+- **The cutover is a switch, not a migration.** The tasks table stays the truth of every plan; with the engine on, the
+  bridge starts one run per running occurrence, and each step reads its row before it acts. The switch is an override
+  file (`ops/engine/cutover.py switch`), so a rollback needs no landing.
+- **The preview** used a Temporal of its own until the cutover; since, it is a namespace (`preview`) of the live one.
+
+**Not built yet, and why:**
+- **The coder's check during its build loop** (GEN-22's last clause): the place, the job kinds and their approval are
+  built; letting the coder start a check job from inside a build and read its verdict in the same build is the next
+  step of the builder, not of the engine.
+- **agentgateway** (GEN-30's last clause): grants are exact per agent (`--strict-mcp-config`, `--allowedTools`); a
+  gateway that checks each tool call comes when grants grow past that.
+- **The Conductor's removal** (GEN-35): after 14 clean days per kind of plan, counted on the Engine screen.

@@ -7,6 +7,7 @@ networks:
     internal: true        # postgres, ollama: no internet
   edge: {}                # litellm egress to providers
   obs: {}                 # Phoenix only: lets Docker publish its UI port (internal networks cannot)
+  engine: {}              # the engine's front door and UI only: lets Docker publish them on 127.0.0.1; neither reaches out
 
 volumes:
   pgdata: {}
@@ -83,4 +84,81 @@ services:
     volumes: [ollama:/root/.ollama]
     networks: [backend]
     mem_limit: 2g
+    logging: *logging
+
+  # The engine (GEN-33, docs/AI-STACK.md §3): Temporal, core on every deployment. Its databases live in the Postgres
+  # above, made by two one-shot services that are safe to repeat; the server keeps its state only there.
+  temporal-db:
+    image: ${POSTGRES_IMAGE}
+    depends_on:
+      postgres: { condition: service_healthy }
+    entrypoint: ["sh", "/setup/db.sh"]
+    environment:
+      PG_PASSWORD: ${PG_PASSWORD:?run via make up}
+      TEMPORAL_DB_PASSWORD: ${TEMPORAL_DB_PASSWORD:?run via make up}
+    volumes: [../config/temporal:/setup:ro]
+    networks: [backend]
+    restart: "no"
+    logging: *logging
+
+  temporal-schema:
+    image: ${TEMPORAL_ADMIN_IMAGE}
+    depends_on:
+      temporal-db: { condition: service_completed_successfully }
+    entrypoint: ["sh", "/setup/schema.sh"]
+    environment:
+      SQL_PLUGIN: postgres12
+      SQL_HOST: postgres
+      SQL_PORT: "5432"
+      SQL_USER: temporal
+      SQL_PASSWORD: ${TEMPORAL_DB_PASSWORD:?run via make up}
+    volumes: [../config/temporal:/setup:ro]
+    networks: [backend]
+    restart: "no"
+    logging: *logging
+
+  temporal:
+    image: ${TEMPORAL_IMAGE}
+    restart: unless-stopped
+    depends_on:
+      temporal-schema: { condition: service_completed_successfully }
+    environment:
+      DB: postgres12
+      DB_PORT: "5432"
+      POSTGRES_SEEDS: postgres
+      POSTGRES_USER: temporal
+      POSTGRES_PWD: ${TEMPORAL_DB_PASSWORD:?run via make up}
+      DBNAME: temporal
+      VISIBILITY_DBNAME: temporal_visibility
+      NUM_HISTORY_SHARDS: "4"           # limit: paces, shards are fixed at the first start; 4 serves one machine's runs
+      BIND_ON_IP: 0.0.0.0
+      DYNAMIC_CONFIG_FILE_PATH: /etc/temporal/dynamic/dynamicconfig.yaml
+    volumes: [../config/temporal:/etc/temporal/dynamic:ro]
+    ports: ["127.0.0.1:7233:7233"]      # the host runner's worker and client; nothing else
+    networks: [backend, engine]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:7243/api/v1/namespaces || exit 1"]
+      interval: 15s
+      timeout: 5s
+      start_period: 40s
+      retries: 5
+    mem_limit: 512m                     # measured 64 MB idle on 9 Nov 2026
+    logging: *logging
+
+  temporal-ui:
+    # Temporal's web UI: run histories. Bound to 127.0.0.1 only; the app serves it at /runs behind its own gate, and
+    # its codec endpoint there decrypts the payloads (GEN-36). Without the codec it shows ciphertext.
+    image: ${TEMPORAL_UI_IMAGE}
+    restart: unless-stopped
+    depends_on:
+      temporal: { condition: service_healthy }
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_UI_PORT: "8080"
+      TEMPORAL_DEFAULT_NAMESPACE: ${AISTACK_NAMESPACE:-home}
+      TEMPORAL_UI_PUBLIC_PATH: /runs     # served inside the app, behind its gate (images/mission-control/server.engine.py)
+      TEMPORAL_CODEC_ENDPOINT: /api/codec   # the app decrypts the payloads it shows
+    ports: ["127.0.0.1:8233:8080"]
+    networks: [backend, engine]
+    mem_limit: 128m
     logging: *logging

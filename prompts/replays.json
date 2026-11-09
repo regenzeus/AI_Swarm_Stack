@@ -273,6 +273,13 @@
    "sha": "607cd09277da"
   }
  ],
+ "intake/TEMPLATE": [
+  {
+   "at": "2026-11-09",
+   "baseline": "new: a template drafted from the owner's description (GEN-34, Describe), with start, end, notify and failure paths",
+   "sha": "39dc94c0d318"
+  }
+ ],
  "intake/TEMP_AGENT": [
   {
    "at": "2026-10-31",
@@ -551,7 +558,7 @@
  "memory/KEEPER_FACTS": [
   {
    "at": "2026-11-02",
-   "baseline": "new prompt: the Memory Keeper\u2019s look at the owner\u2019s long-term facts (MEM-21, replaces FACTS); tried 3 times in the memory trial (eval/trials/memory.yaml, 32 planted facts): precision 1.0 each time, recall 0.87 to 1.0, no true fact touched",
+   "baseline": "new prompt: the Memory Keeper’s look at the owner’s long-term facts (MEM-21, replaces FACTS); tried 3 times in the memory trial (eval/trials/memory.yaml, 32 planted facts): precision 1.0 each time, recall 0.87 to 1.0, no true fact touched",
    "sha": "304b84691fa0"
   },
   {

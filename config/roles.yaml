@@ -1,0 +1,4 @@
+# Who decides a gate of each role (GEN-27, ops/engine/roles.py). Home has one person: every role is the owner's.
+# A work deployment keeps its own file in its deployment folder (AISTACK_ROLES); people's names never come into git.
+default: [owner]
+roles: {}

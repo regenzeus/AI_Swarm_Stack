@@ -1253,7 +1253,11 @@ def main():
     threading.Thread(target=T.worker, daemon=True).start()
     threading.Thread(target=I.worker, daemon=True).start()
     threading.Thread(target=TK.worker, daemon=True, name="task-intake").start()   # tasks given in a sentence (TSK-03)
-    threading.Thread(target=CD.worker, daemon=True, name="conductor").start()      # plan graphs, step by step (TSK-05)
+    import engine.bridge as EB                                                     # GEN-35: the deployment chooses the engine
+    if EB.on():
+        EB.start(sys.modules[__name__])                                            # Temporal runs the plan graphs (docs/AI-STACK.md)
+    else:
+        threading.Thread(target=CD.worker, daemon=True, name="conductor").start()  # plan graphs, step by step (TSK-05)
     threading.Thread(target=EV.worker, daemon=True, name="event-bus").start()      # events, rules, breaking news (TSK-10)
     HI.start()                                                                      # the telemetry history, hourly (TSK-25)
     PN.start()                                                                      # growing files pruned, daily (PLT-21)

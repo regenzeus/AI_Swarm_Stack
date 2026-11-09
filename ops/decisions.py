@@ -215,7 +215,25 @@ def _test_item(st):
                     answers=[{"label": "Answer the test", "act": {"action": "decision_test_answer", "token": t["token"], "answer": "yes"}}]), "test": True}
 
 
-SOURCES = (_builds, _purchases, _phone_steps, _memory, _tasks, _swarm, _keeper, _memory_move, _house, _test_item)
+def _packs(st):
+    """A pack commit waiting for the owner (GEN-21): it always asks, and the old commit runs meanwhile."""
+    from engine import packs as PK
+    yield from PK.decisions(_d)
+
+
+def _trackers(st):
+    """A tracker write in shadow, to be judged, and a kind of write whose measure is met (GEN-25)."""
+    from engine import trackers as TR
+    yield from TR.decisions(_d)
+
+
+def _commands(st):
+    """A pack's command waiting for its approval at a place (GEN-22): by the hash of its file, always the owner's."""
+    from engine import places as PL
+    yield from PL.decisions(_d)
+
+
+SOURCES = (_builds, _purchases, _phone_steps, _memory, _tasks, _swarm, _keeper, _memory_move, _house, _test_item, _packs, _trackers, _commands)
 
 
 def rank(items, now=None):

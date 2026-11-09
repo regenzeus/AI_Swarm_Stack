@@ -1,0 +1,6 @@
+{
+  "mcpServers": {
+    "tickets": {"command": "python3", "args": ["-m", "http.server", "--help"], "description": "a stand-in read-only ticket reader"},
+    "outside": {"type": "http", "url": "https://outside.example/mcp", "description": "a server on a host off the egress list"}
+  }
+}

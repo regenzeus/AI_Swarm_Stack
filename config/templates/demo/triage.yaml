@@ -1,0 +1,22 @@
+template: demo/triage
+about: A request is read, an agent decides what kind it is, and each kind goes its own way to one closing step (the preview's demo of a decision)
+budget: {days: 1}
+nodes:
+  request: {block: start, title: A request arrives, kind: item}
+  read: {block: agent, title: Read the request, agent: analyst}
+  route: {block: branch, title: Decide what kind of request it is, agent: analyst, brief: 'Answer bug, feature or question'}
+  fix: {block: change, title: Fix the bug, agent: builder}
+  plan: {block: agent, title: Plan the feature, agent: analyst}
+  answer: {block: agent, title: Answer the question, agent: analyst}
+  close: {block: tracker, title: Post the outcome, kind: comment}
+  closed: {block: end, title: The request is closed, kind: done}
+edges:
+  - [request, read]
+  - [read, route]
+  - [route, fix, bug]
+  - [route, plan, feature]
+  - [route, answer, question]
+  - [answer, close]
+  - [fix, close]
+  - [plan, close]
+  - [close, closed]

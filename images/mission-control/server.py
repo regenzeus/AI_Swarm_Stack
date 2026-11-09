@@ -22,7 +22,7 @@ from mcp.server.transport_security import TransportSecuritySettings
 from starlette.applications import Starlette
 from starlette.middleware import Middleware
 from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse, StreamingResponse
+from starlette.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse, Response, StreamingResponse
 from starlette.routing import Mount, Route
 from starlette.staticfiles import StaticFiles
 from textcap import cut, tail                    # visible caps and input limits (AGENTS.md, truncation)
@@ -38,7 +38,7 @@ HERMES = "http://hermes:8642/v1/chat/completions"
 PHOENIX = os.environ.get("PHOENIX_URL", "http://phoenix:6006")
 PHOENIX_PORT = 8443                                       # tailscale serve: https://<pc>.ts.net:8443 (tailnet only)
 HERMES_KEY = os.environ.get("API_SERVER_KEY", "")
-ACTIONS = {"claude_task", "claude_cancel", "windows_ask", "forgejo_connect", "create", "run", "pause", "resume", "archive", "update", "memory", "email", "vault_add", "understand", "card_edit",
+ACTIONS = {"engine_decide", "template_save", "template_test", "template_describe", "pack_approve", "pack_refuse", "tracker_shadow_approve", "tracker_shadow_reject", "tracker_live", "command_approve", "claude_task", "claude_cancel", "windows_ask", "forgejo_connect", "create", "run", "pause", "resume", "archive", "update", "memory", "email", "vault_add", "understand", "card_edit",
            "forget", "memory_search", "memory_browse", "memory_move", "build_assign", "build_revise", "build_approve", "build_approve_all", "build_reject", "build_revert",
            "improve_scan", "proposal_accept", "proposal_dismiss", "build_recheck", "build_switch_engine", "codemap", "repo_create", "repo_buildable", "repo_remove", "crew_run", "crew_memory_forget", "crew_memory_undo", "crew_schedule",
            "journal_note", "journal_edit", "health_ack", "swarm_pause", "swarm_confirm", "swarm_reopen", "swarm_autonomy", "swarm_post", "swarm_help_verdict", "swarm_agent_change", "phone_cleanup_do", "phone_cleanup_do_all", "phone_cleanup_undo", "phone_cleanup_dismiss",
@@ -64,6 +64,15 @@ def state():
         return json.loads(STATE.read_text())
     except Exception:
         return {"missions": [], "activity": [], "calls": [], "system": {}, "running": None, "queue": []}
+
+
+def engine_view():
+    """The engine's state and its recent runs, as the runner's bridge writes them (ops/engine/projector.py), or None while
+    the deployment runs the Conductor (ENGINE=conductor: no engine.json)."""
+    try:
+        return json.loads((M / "public/engine.json").read_text())
+    except (OSError, ValueError):
+        return None
 
 
 def mission(slug):
@@ -98,7 +107,7 @@ def _part(name):
 # ---------- app API ----------
 class TailnetOnly(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
-        if request.url.path.startswith(("/api/", "/share")) and not request.headers.get("tailscale-user-login"):
+        if request.url.path.startswith(("/api/", "/share", "/runs")) and not request.headers.get("tailscale-user-login"):
             return JSONResponse({"error": "only reachable through Tailscale"}, status_code=403)
         # SEC-20: tailscale serve adds the owner's login to whatever his browser sends, a page of another site included;
         # a browser names where a request comes from (Sec-Fetch-Site), so a write from anywhere but this app is refused.
@@ -152,6 +161,7 @@ async def api_state(request):
     s["viewer"] = request.headers.get("tailscale-user-name") or request.headers.get("tailscale-user-login", "")
     s["viewer_name"] = display_name(request.headers.get("tailscale-user-name", ""), request.headers.get("tailscale-user-login", ""))
     s["decisions"] = owner_decisions(s)
+    s["engine"] = engine_view()                          # GEN-34: the engine and its runs, for the Engine screen and the Canvas
     s["from_chat"] = MADE_IDX["v"]                       # APP-39: an item made in a chat links back to it
     return JSONResponse(s)
 
@@ -168,10 +178,11 @@ async def api_stream(request):
                 mt = 0
             ph = phone_summary()                      # the AI phone changes on its own clock: part of the stream too
             cs = conn_summary()                       # and so do the app connections (grants, approvals)
-            sig = (mt, json.dumps(ph, sort_keys=True, default=str), json.dumps(cs, sort_keys=True, default=str))
+            eng = engine_view()                       # GEN-34: the engine's runs change on their own clock too
+            sig = (mt, json.dumps(ph, sort_keys=True, default=str), json.dumps(cs, sort_keys=True, default=str), json.dumps(eng, sort_keys=True, default=str))
             if sig != last:
                 last = sig
-                full = {**state(), 'phone': ph, 'connections': cs}
+                full = {**state(), 'phone': ph, 'connections': cs, 'engine': eng}
                 full["decisions"] = owner_decisions(full)
                 full["from_chat"] = MADE_IDX["v"]
                 yield f"data: {json.dumps(full, ensure_ascii=False)}\n\n"
@@ -577,6 +588,9 @@ _part("server.share.py")   # the phone's Share menu (PLT-25)
 
 
 _part("server.wiki.py")   # the wiki views (PLT-25)
+
+
+_part("server.engine.py")   # Temporal's UI behind the app's gate, and its codec (GEN-36, the Runs screen)
 
 
 _part("server.a2a.py")   # outside agents over A2A (PLT-25)
@@ -1003,6 +1017,7 @@ app = Starlette(routes=[
     Route("/", index), Route("/sw.js", sw), Route("/manifest.webmanifest", manifest), Route("/healthz", health),
     Route("/api/state", api_state), Route("/api/stream", api_stream), Route("/api/version", api_version),
     Route("/api/request", api_request, methods=["POST"]), Route("/api/result/{rid}", api_result),
+    Route("/api/codec/decode", api_codec_decode, methods=["POST"]), Route("/runs", runs_proxy), Route("/runs/{path:path}", runs_proxy, methods=["GET", "POST", "PUT", "PATCH", "DELETE"]),
     Route("/api/file", api_file), Route("/api/runlog/{rid}", api_runlog), Route("/api/run/{rid}/timeline", api_run_timeline), Route("/api/rt/runs", api_rt_runs), Route("/api/task/{tid:int}", api_task),
     Route("/api/agent/{aid}/tasks", api_agent_tasks), Route("/api/trials", api_trials), Route("/api/usage", api_usage), Route("/api/rt/run/{run}", api_rt_run),
     Route("/api/rt/run/{run}/stream", api_rt_stream), Route("/api/crew/{cid}", api_crew_one), Route("/api/swarm", api_swarm, methods=["POST"]), Route("/api/swarm/tokens", api_swarm_tokens), Route("/api/swarm/now", api_swarm_now), Route("/api/swarm/timeline", api_swarm_timeline), Route("/api/swarm/interactions", api_swarm_interactions), Route("/api/swarm/delegations", api_swarm_delegations), Route("/api/swarm/room", api_swarm_room), Route("/api/health/issues", api_health_issues), Route("/api/claude/{tid}", api_claude_task), Route("/api/phoenix", api_phoenix), Route("/api/build/{bid}/{kind}", api_build_file),

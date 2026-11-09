@@ -1,0 +1,20 @@
+{
+  "name": "aistack-flow",
+  "private": true,
+  "description": "The template editor: Workflow Builder's editor SDK (Apache 2.0) with the stack's blocks, built into one ES module the app loads",
+  "type": "module",
+  "scripts": {
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@workflowbuilder/sdk": "3.0.0",
+    "@xyflow/react": "12.12.1",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "zustand": "5.1.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "4.7.0",
+    "vite": "6.4.6"
+  }
+}

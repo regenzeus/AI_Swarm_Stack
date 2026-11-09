@@ -50,6 +50,11 @@ const taskMemHref = (p) => (/^[\w.-]+(\/[\w.-]+)*\.md$/.test(p || "") ? `#/read?
 const taskSrcHref = (s) => (/^https?:/.test(s.uri) ? s.uri : s.uri.startsWith("vault:") ? taskMemHref(s.uri.slice(6)) : "");
 const taskLink = (href, html) => (!href ? html : /^https?:/.test(href) ? `<a href="${esc(href)}" target="_blank" rel="noopener noreferrer">${html}</a>` : `<a href="${esc(href)}">${html}</a>`);
 
+function taskEngineLink(t, run) {                    // §10: a plan run on the engine is drawn as its blocks, live, on the Engine screen
+  const wid = `task:${t.id}:${run?.occ || 1}`;
+  return (S?.engine?.runs || []).some((r) => r.id === wid) ? `<a class="btn sm" style="margin-top:8px" href="#/engine/${encodeURIComponent(wid)}">${ic.flow || ic.doc}See it run as blocks</a>` : "";
+}
+
 async function vTask() {
   clearTimeout(taskTimer);
   const id = +route.args[0];
@@ -94,6 +99,7 @@ function taskPage(t) {
     <div class="row wrap small muted" style="gap:4px 8px;margin-top:6px"><span class="pill ${TPILL[t.status] || ""}">${LIVE_T.includes(t.status) && t.status !== "needs_answer" ? '<span class="dot run"></span>' : ""}${esc(tstat(t))}</span>
       <span>#${t.id} · ${t.owner === "stack" ? "the stack's task" : "your task"}${t.kind ? ` · ${esc(TKINDS[t.kind] || t.kind)}` : ""} · ${esc(rhythmText(t.rhythm, t.after))}</span><span>${ic.clock}given ${rel(t.created)}${t.source === "app" ? " by you" : t.source ? ` · from ${esc(t.source)}` : ""}</span></div>
     ${t.goal && t.goal !== t.title ? `<div class="small muted agwhat">${prose(t.goal)}</div>` : ""}
+    ${taskEngineLink(t, run)}
     <div data-tideas="${t.id}"></div>${(queueMicrotask(() => fillTaskIdeas($(`[data-tideas="${t.id}"]`), t.id)), "")}
   </div></div>
   ${many ? `<label class="row small" style="gap:8px;margin-top:12px"><span class="muted">Showing</span><select class="input sm" id="tocc" style="width:auto;max-width:100%;min-width:0;flex:1 1 auto">${t.runs.map((r) => `<option value="${r.occ}" ${r.occ === run.occ ? "selected" : ""}>Run ${r.occ} of ${t.runs.length} · ${esc(day(r.started))}${r.verdict ? ` · ${esc((VWORD[r.verdict] || [r.verdict])[0])}` : r.status ? ` · ${esc(r.status)}` : ""}</option>`).join("")}</select></label>` : ""}

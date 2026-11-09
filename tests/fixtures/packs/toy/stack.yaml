@@ -1,0 +1,5 @@
+# What only the stack knows about this pack's agents (docs/AI-STACK.md §6): harness and model, and each agent's grants
+# (GEN-30): the MCP servers of .mcp.json and the tools a step of it gets, exactly those.
+agents:
+  intake: {harness: claude-code, model: sonnet, mcp: [tickets, outside], tools: [Read, Grep]}
+  reproducer: {harness: claude-code, model: sonnet, tools: [Read, Bash]}

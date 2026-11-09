@@ -186,7 +186,8 @@ def test_chat_on_a_desktop_holds_the_window_and_no_height_overshoots_the_zoom():
     css = (Path(__file__).resolve().parents[1] / "images/mission-control/web/static/app.css").read_text()
     for z in ("1.12", "1.3", "1.6"):
         assert f"zoom: {z}; --z: {z};" in css
-    inside = [ln for ln in css.splitlines() if re.search(r"100d?vh", ln) and not ln.lstrip().startswith(("-webkit-font-smoothing", "/*"))]
+    inside = [ln for ln in css.splitlines() if re.search(r"100d?vh", ln) and not ln.lstrip().startswith(("-webkit-font-smoothing", "/*"))
+              and "zoom: 0." not in ln]   # GEN-34: the editor undoes the zoom itself (its React Flow measures page pixels), so its own height is the window's
     assert inside and all("var(--z, 1)" in ln for ln in inside), [ln for ln in inside if "var(--z, 1)" not in ln]
     assert "body.chatmode .view { height: calc(100dvh / var(--z, 1));" in css and "body.chatmode .chatpane .msgs { flex: 1 1 0; min-height: 0; overflow-y: auto; }" in css
     assert 'body[data-page="home"] .home-today { grid-area: today; display: flex; align-items: stretch; }' in css

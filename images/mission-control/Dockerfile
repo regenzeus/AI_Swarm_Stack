@@ -4,8 +4,18 @@ RUN pip install --no-cache-dir pillow==11.0.0
 COPY icons.py /icons.py
 RUN python /icons.py /out
 
+# The template editor (GEN-34): Workflow Builder's editor SDK with the stack's blocks, built from the locked packages
+FROM node:22.12.0-bookworm-slim AS flow
+WORKDIR /flow
+COPY flow/package.json flow/package-lock.json ./
+RUN npm ci --no-audit --no-fund
+COPY flow/vite.config.mjs ./
+COPY flow/src ./src
+RUN npx vite build
+
 FROM python:3.12-slim
 RUN pip install --no-cache-dir mcp==2.3.0 httpx==0.28.1 pywebpush==2.5.0 py-vapid==1.9.6 pyyaml==6.0.3 pypdf==5.1.0 python-docx==1.1.2 openpyxl==3.1.5 \
+    temporalio==1.34.0 cryptography==50.0.2 \
  && useradd -r -u 10006 mc
 # Vendored front-end libraries and font (the app works without any CDN at runtime)
 ADD https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js /app/web/static/vendor/marked.min.js
@@ -18,6 +28,7 @@ COPY server.py server.*.py obs_core.py runrecord.py otlp.py textcap.py teamroom.
 COPY web /app/web
 COPY guide /app/guide
 COPY --from=icons /out /app/web/static/icons
+COPY --from=flow /flow/dist /app/web/static/vendor/flow
 RUN chmod -R a+rX /app
 USER mc
 EXPOSE 8090 8091 8092 8093

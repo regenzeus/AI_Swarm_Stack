@@ -223,6 +223,7 @@ function vSystem() {
   <div class="section-h"><h2>Tools</h2></div>
   <div id="toolsbox" style="margin-bottom:14px">${stackToolsHtml()}</div>
   ${S.house ? `<a class="banner info" href="#/house" style="margin-bottom:14px">${ic.house}<span class="grow"><b>House</b> · ${S.house.connected ? `${(S.house.things || []).length} things, ${(S.house.echos || []).length} Echos` : S.house.reachable ? "setup not finished" : "Home Assistant not reachable"}</span>${ic.next}</a>` : ""}
+  ${engineBanner()}
   ${a2aCardHtml()}
   <div id="subs" style="margin-bottom:14px"></div>
   <div class="section-h"><h2>Connections</h2></div>
@@ -343,7 +344,11 @@ function onState(s) {
   const wasRunning = S?.running?.id, first = !S;
   S = s;
   lastState = Date.now();
-  if (first && ["mission", "chat", "wiki", "new", "system", "build", "repo", "guide", "crew", "house", "tasks", "files", "file"].includes(route.name)) return render(true);
+  if (first && ["mission", "chat", "wiki", "new", "system", "build", "repo", "guide", "crew", "house", "tasks", "files", "file", "templates", "packs", "trackers", "runs"].includes(route.name)) return render(true);
+  if (route.name === "templates") { if (!route.args[0] && !typing()) render(true); chrome(); return; }
+  if (route.name === "runs") { chrome(); return; }   // Temporal's UI keeps its own state
+  if (route.name === "trackers") { if (!typing() && trackSig() !== TK_SIG) render(true); chrome(); return; }   // GEN-25: redrawn only when the trackers change
+  if (route.name === "packs") { if (!typing() && packSig() !== PK_SIG) render(true); chrome(); return; }   // GEN-21: redrawn only when the packs change   // GEN-34: the list follows; the builder never redraws under your edits
   if (route.name === "tasks" && !first) { tasksUpdate(); chrome(); return; }
   if (first && route.name === "swarm" && ["improve", "agents"].includes(swTab)) return render(true);   // FND-36: they read S
   if (route.name === "house" && !first) { houseUpdate(); chrome(); return; }

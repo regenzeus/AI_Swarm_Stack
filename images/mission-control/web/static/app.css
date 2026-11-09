@@ -1620,3 +1620,83 @@ q.quote { quotes: "“" "”"; }
     width: 100%; max-width: 820px; margin-left: auto; margin-right: auto; box-sizing: border-box; }
 }
 
+
+/* GEN-34: the engine's runs, their blocks and timing (app-engine.js) */
+.eng-node .dot, .eng-row .dot, body[data-page="engine"] .hero .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; vertical-align: 0; margin-right: 3px; box-shadow: inset 0 0 0 1.5px var(--border); }
+.eng-row { display: block; text-decoration: none; color: inherit; }
+.eng-mini { display: flex; gap: 3px; margin-top: 8px; flex-wrap: wrap; }
+.eng-mini i { width: 14px; height: 6px; border-radius: 3px; background: var(--border); }
+.eng-canvas { position: relative; display: flex; flex-direction: column; align-items: center; gap: 34px; padding: 22px 18px 18px; overflow: auto; }
+.eng-wires { position: absolute; left: 0; top: 0; pointer-events: none; overflow: visible; }
+.eng-wires path { fill: none; stroke: color-mix(in srgb, var(--text) 42%, transparent); stroke-width: 2.2; marker-end: url(#engarrow); }
+.eng-wires path.on { stroke: var(--ok); }
+.eng-wires path.loop { stroke: var(--warn); stroke-dasharray: 5 4; }
+.eng-wires text { font-size: 11px; fill: currentColor; opacity: .7; }
+.eng-wires marker path { fill: color-mix(in srgb, var(--text) 55%, transparent); stroke: none; }
+.eng-layer { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; position: relative; z-index: 1; }
+@media (min-width: 900px) {                       /* a desk: the flow runs left to right, parallel blocks stacked in their column */
+  .eng-canvas { flex-direction: row; align-items: center; gap: 46px; padding: 40px 24px 24px; }
+  .eng-layer { flex-direction: column; flex-wrap: nowrap; flex: 0 0 auto; }
+  .eng-canvas .eng-node { flex: 0 0 auto; width: 210px; min-width: 0; }
+}
+.eng-items { display: flex; flex-wrap: wrap; gap: 2px; align-items: center; margin-top: 6px; }
+.eng-items i { width: 10px; height: 6px; border-radius: 2px; background: var(--border); }
+.eng-items i.st-done { background: var(--ok); } .eng-items i.st-running { background: var(--run); }
+.eng-items span { margin-left: 4px; }
+.eng-node { flex: 0 1 230px; min-width: 170px; background: var(--surface); border: 1.5px solid var(--border); border-left-width: 5px; border-radius: 10px; padding: 10px 12px; box-shadow: var(--shadow); }
+.eng-kind { font-size: 11px; letter-spacing: .04em; text-transform: uppercase; opacity: .7; }
+.eng-title { font-weight: 600; margin: 3px 0 6px; overflow-wrap: anywhere; }
+.eng-time { font-size: 12px; opacity: .85; overflow-wrap: anywhere; }
+.eng-act { gap: 8px; margin-top: 8px; }
+.st-running { border-left-color: var(--run); } .st-waiting { border-left-color: var(--warn); } .st-done, .st-completed { border-left-color: var(--ok); }
+.st-failed { border-left-color: var(--err); } .st-skipped, .st-cancelled { opacity: .6; }
+.eng-mini i.st-running, .eng-tl-track i.st-running { background: var(--run); } .eng-mini i.st-done, .eng-tl-track i.st-done { background: var(--ok); }
+.eng-mini i.st-failed, .eng-tl-track i.st-failed { background: var(--err); }
+.eng-mini i.st-waiting, .eng-tl-track i.st-waiting { background: repeating-linear-gradient(45deg, var(--warn) 0 4px, transparent 4px 8px); border: 1px solid var(--warn); }
+.eng-tl { display: flex; flex-direction: column; gap: 6px; }
+.eng-tl-row { display: grid; grid-template-columns: minmax(90px, 30%) 1fr auto; gap: 10px; align-items: center; }
+.eng-tl-name { font-size: 13px; }
+.eng-tl-track { position: relative; height: 12px; background: color-mix(in srgb, var(--border) 45%, transparent); border-radius: 6px; }
+.eng-tl-track i { position: absolute; top: 0; bottom: 0; border-radius: 6px; background: var(--border); }
+.eng-tl-axis { display: flex; justify-content: space-between; margin-top: 4px; }
+@media (max-width: 699px) { .eng-node { flex-basis: 100%; } .eng-tl-row { grid-template-columns: 1fr auto; } .eng-tl-track { grid-column: 1 / -1; } }
+
+/* GEN-34: the template builder (app-templates.js) */
+.tb-new { display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
+.tb-new textarea { width: 100%; box-sizing: border-box; resize: vertical; font: inherit; }
+.tb-newrow { gap: 8px; flex-wrap: wrap; }
+/* the editor (Workflow Builder) fills a framed area the height of the window; its stylesheet's page rules (no page
+   scroll, its own background) are undone here, so the rest of the app keeps its own */
+body:not(.chatmode) { overflow-y: auto; }
+.tb-flow { position: relative; height: max(520px, calc((100dvh / var(--z, 1)) - 230px)); margin-bottom: 14px; border: 1px solid var(--border);
+  border-radius: var(--r); overflow: hidden; background: var(--surface); --wb-public-font-family: Inter, system-ui, sans-serif; }
+.tb-flow > p.tb-wait { padding: 18px; }
+.tb-problem { margin-bottom: 12px; border-color: color-mix(in srgb, var(--warn) 55%, var(--border)); }
+/* React Flow measures in the page's pixels: inside the wide-screen zoom of .shell its arrows miss their blocks. The editor
+   undoes that zoom (zoom multiplies, so 1.12 x 1/1.12 = 1) and keeps the window's height in its own pixels. */
+@media (min-width: 1900px) { .tb-flow { zoom: 0.892857; height: max(580px, calc(100dvh - 260px)); } }
+@media (min-width: 2400px) { .tb-flow { zoom: 0.769231; height: max(670px, calc(100dvh - 300px)); } }
+@media (min-width: 3200px) { .tb-flow { zoom: 0.625; height: max(830px, calc(100dvh - 370px)); } }
+.tb-flow .react-flow__node .wb-text-title-s-emphasized, .tb-flow .react-flow__node .wb-text-label-s { white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }   /* names wrap, never cut */
+.tb-flow [class*="_folder-name_"], .tb-flow [class*="_language-"] { display: none; }
+@media (max-width: 699px) { .tb-flow { height: max(460px, calc((100dvh / var(--z, 1)) - 200px)); margin: 0 -16px 14px; border-radius: 0; border-left: 0; border-right: 0; } }
+@media (max-width: 699px) {                       /* the run and builder pages on a phone: the title has the full width, its buttons go under it */
+  body[data-page="templates"] .hero, body[data-page="engine"] .hero { flex-wrap: wrap; gap: 8px; }
+  body[data-page="templates"] .hero > .grow, body[data-page="engine"] .hero > .grow { flex-basis: 100%; }
+}
+.eng-node[data-open] { cursor: pointer; } .eng-node.sel { outline: 2px solid var(--accent); outline-offset: 2px; }
+.eng-detail { margin-top: 12px; display: flex; flex-direction: column; gap: 10px; }
+.eng-dl { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 4px 14px; margin: 0; font-size: 13px; }
+.eng-dl dt { opacity: .7; } .eng-dl dd { margin: 0; }
+.eng-links { gap: 8px; flex-wrap: wrap; }
+/* GEN-21: packs, and a commit waiting for the owner */
+.pk-wait { border-color: color-mix(in srgb, var(--warn) 55%, var(--border)); }
+.pk-decide { display: flex; flex-direction: column; gap: 10px; border-color: color-mix(in srgb, var(--warn) 55%, var(--border)); }
+.pk-item { border-top: 1px solid var(--border); padding: 8px 0; }
+.pk-item summary { cursor: pointer; overflow-wrap: anywhere; }
+.pk-diff { max-height: none; }
+/* GEN-25: trackers, and each kind of write in shadow or live */
+.tk-kind { display: flex; flex-direction: column; gap: 8px; }
+.tk-item { border-top: 1px solid var(--border); padding-top: 8px; display: flex; flex-direction: column; gap: 6px; }
+/* §10 Runs: Temporal's UI inside the app, the window's height */
+.runs-frame { width: 100%; height: max(560px, calc((100dvh / var(--z, 1)) - 200px)); border: 1px solid var(--border); border-radius: var(--r); background: var(--surface); }

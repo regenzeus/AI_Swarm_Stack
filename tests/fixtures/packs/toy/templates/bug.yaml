@@ -1,0 +1,15 @@
+template: toy/bug
+about: A reported ticket is read, reproduced and answered (the toy pack)
+nodes:
+  report: {block: start, title: A ticket arrives, kind: item}
+  read: {block: agent, title: Read the ticket, agent: 'toy:intake'}
+  reproduce: {block: command, title: Reproduce it, kind: toy.reproduce}
+  answer: {block: agent, title: Answer the reporter, agent: 'toy:intake'}
+  post: {block: tracker, title: Post the answer on the ticket, kind: summary}
+  answered: {block: end, title: Answered, kind: done}
+edges:
+  - [report, read]
+  - [read, reproduce]
+  - [reproduce, answer]
+  - [answer, post]
+  - [post, answered]

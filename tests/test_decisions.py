@@ -258,4 +258,4 @@ process.stdout.write(JSON.stringify([g.map((x) => x.one ? x.one.id : x.items.map
     grouped, together = json.loads(subprocess.run(["node", "-e", js], check=True, capture_output=True, text=True).stdout)
     assert grouped == [["a", "c"], "b", "d"]
     assert together == [{"label": "Approve", "act": {"action": "phone_cleanup_do_all", "ids": ["a", "b"]}}, None, None]   # a mixed group is answered one by one
-    assert "decide: vDecide" in APP_JS and 'const LIVE = new Set(["home", "decide"])' in APP_JS and 'href="#/decide"' in APP_JS
+    assert "decide: vDecide" in APP_JS and 'const LIVE = new Set(["home", "decide", "engine"])' in APP_JS and 'href="#/decide"' in APP_JS
