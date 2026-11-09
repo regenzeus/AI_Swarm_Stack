@@ -65,6 +65,9 @@ appendWindowsPath=false
 default=$U
 EOF
 
+# PLT-35: whole blocks of memory stay free, so calls into WSL from Windows always get their channel
+bash "$STAGE/ops/wsl-memory.sh"
+
 mkdir -p /srv/vault /srv/win-exports /srv/ai/bulk /srv/ai/state
 chown -R "$U:$U" /srv/ai
 grep -q '/srv/vault ' /etc/fstab || cat >> /etc/fstab <<EOF

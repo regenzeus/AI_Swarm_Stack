@@ -455,3 +455,23 @@ items:
       fast-forwarded, so every later run saw nothing to do and the task reported success (review OPS-R3).
     verify: {method: inspection, by: [ops/windows/bitbucket-sync.ps1]}
     trace: [ops/windows/bitbucket-sync.ps1]
+  - id: PLT-35
+    title: Calls into WSL always get their channel
+    statement: "WSL's kernel shall keep whole blocks of memory free (a larger free reserve, earlier reclaim, proactive
+      compaction) and hand its file cache back to Windows every 30 minutes, set once as root and kept across restarts, so a call from Windows into WSL never fails because its
+      Hyper-V socket could not get 512 KB of contiguous memory; a new machine gets the settings from the root bootstrap."
+    type: constraint
+    priority: must
+    status: implemented
+    acceptance: 'Test: the script writes the three settings to sysctl.d, applies them and compacts memory at once, refuses
+      to run without root, and the root bootstrap runs it.'
+    rationale: "9 Nov 2026: calls into WSL timed out again and again (WSAETIMEDOUT); the kernel log showed order-7 page
+      allocation failures in vmbus_alloc_ring and UtilAcceptVsock accept4 failed 110, with 6 GB swapped and Windows at
+      0.4 GB free."
+    parents: [SN-13]
+    sources: ['owner 2026-11-09: Can you stop wsl from timing out all the time? There has to be a fix possible?']
+    verify: {method: test, by: ['tests/test_wsl_memory.py::test_the_settings_are_written_to_sysctl_d_and_applied_at_once',
+      'tests/test_wsl_memory.py::test_it_refuses_to_run_without_root_and_says_how',
+      'tests/test_wsl_memory.py::test_the_file_cache_goes_back_to_windows_every_30_minutes',
+      'tests/test_wsl_memory.py::test_a_new_machine_gets_it_from_the_root_bootstrap']}
+    trace: [ops/wsl-memory.sh, ops/bootstrap-wsl-1-root.sh]
