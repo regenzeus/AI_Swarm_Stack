@@ -229,122 +229,192 @@ items:
     verify: {method: test, by: [tests/test_features.py::test_a_deployment_without_home_never_restores_or_rebuilds_the_home_stack]}
     trace: [ops/restore.sh, ops/new-machine.sh, ops/backup.sh]
   - id: GEN-21
-    title: Packs from outside the repository
-    statement: "A deployment shall load domain packs from folders or repositories outside the stack's repository, pinned by commit: Claude Code plugin folders (agents, skills, MCP servers) plus a stack.yaml (templates, job kinds, classes, rules, grants, exams), namespaced by the pack's name, each commit approved in the queue before it runs."
+    title: 'Packs from outside the repository'
+    statement: "A deployment shall load domain packs from folders or repositories outside the stack's repository, pinned by commit: Claude Code plugin folders (agents, skills, MCP servers) plus a stack.yaml, job kinds, templates and exams, namespaced by the pack's name, each commit approved in the queue before it runs."
     type: functional
     priority: should
-    status: proposed
+    status: planned
     acceptance: 'Test: a toy pack copied outside the repository adds agents, a skill, a template and a job kind; a name clash and an unapproved commit are refused with the reason; home without it is unchanged.'
     parents: [SN-05]
     sources: [docs/AI-STACK.md]
     verify: {method: inspection, by: [docs/AI-STACK.md]}
   - id: GEN-22
-    title: Step kinds are worker jobs, at three places
-    statement: "A pack's step kind shall be a job kind of the worker protocol, run at wsl, windows or wsl-host (the same worker as its own Linux user); per-change values shall arrive as its typed parameters, and the coder shall be able to run a check during its loop."
+    title: 'Commands run at places through the worker protocol'
+    statement: "A pack's command shall be a job kind of the worker protocol, run at wsl, windows or wsl-host (the same worker, as the Linux user the deployment names as owner of its tools and repositories) behind a Temporal task queue per place, with Windows staying pull-only; per-change values arrive as typed parameters, and the coder can run a check during its loop."
     type: functional
     priority: should
-    status: proposed
+    status: planned
     acceptance: "Test: a toy job kind on the wsl-host worker runs with a change's diff, a value outside its type is refused, and the verdict reaches the coder's next prompt in the same build."
     parents: [SN-05]
     sources: [docs/AI-STACK.md]
     verify: {method: inspection, by: [docs/AI-STACK.md]}
   - id: GEN-23
-    title: Templates are saved plans
-    statement: "A pack's task template shall be a fixed plan in the Conductor's plan format with gates, waits, loops, fan-out from an earlier step's answer and a budget, and shall resume after a restart in any state."
+    title: 'Templates are graphs run by one runner'
+    statement: "A pack's template shall be a graph of blocks (agent, command, change, gate, wait, tracker, branch, fan-out, loop back) stored as YAML in the pack's repository, run by one generic graph-runner workflow on Temporal that keeps every gate, wait and check."
     type: functional
     priority: should
-    status: proposed
-    acceptance: 'Test: a toy template with a gate, a 3-round loop, a 5-way fan-out and a wait survives a runner restart in each state, and no checkpoint removes its gate.'
+    status: planned
+    acceptance: 'Test: a toy template with a gate, a 3-round loop, a 5-way fan-out and a wait survives a restart of the worker and of the server in each state, and no step removes its gate.'
     parents: [SN-05]
     sources: [docs/AI-STACK.md]
     verify: {method: inspection, by: [docs/AI-STACK.md]}
   - id: GEN-24
-    title: Waiting for someone outside
-    statement: 'A step shall wait on a key (a tracker item or a pull request) for weeks without holding a slot, resume only on an event with that key, send its reminders and on timeout reach the queue of a named role.'
+    title: 'Waiting for someone outside'
+    statement: 'A run shall wait on a key (a tracker item or a pull request) for weeks without holding a process or slot, resume only on a signal for that key, fire its reminders by durable timers and on timeout reach the queue of a named role.'
     type: functional
     priority: should
-    status: proposed
-    acceptance: 'Test: a toy task waits on T-1; an unrelated event does not wake it, a matching reply does, the reminder fires on a fake clock and the timeout reaches the queue.'
+    status: planned
+    acceptance: "Test: a toy run waits on T-1; an unrelated event does not wake it, a matching reply does, the reminder fires on Temporal's test clock and the timeout reaches the queue."
     parents: [SN-05]
     sources: [docs/AI-STACK.md]
     verify: {method: inspection, by: [docs/AI-STACK.md]}
   - id: GEN-25
-    title: "Trackers, read by polling and written through gates"
-    statement: 'The stack shall poll trackers (Jira Data Center, Forgejo issues) with a cursor, emit events by item key, and write comments, one summary comment, attachments and transitions only as action classes, idempotently, with shadow mode the default for a new tracker.'
+    title: 'Trackers, read by polling and written through gates'
+    statement: 'The stack shall poll trackers (Jira Data Center through atlassian-python-api, Forgejo issues) with a cursor and signal or start the run named after each item, and write comments, one summary comment, attachments and transitions only as action classes, idempotently, with shadow mode per kind of write, each leaving it when the owner taps, after a stated number of approved shadow items.'
     type: functional
     priority: should
-    status: proposed
-    acceptance: 'Test: on a stand-in a new item starts the template once across a restart, the summary comment is edited across three updates, and shadow mode writes nothing outward.'
+    status: planned
+    acceptance: 'Test: on a stand-in a new item starts its run once across a restart, the summary comment is edited across three updates, and shadow mode writes nothing outward.'
     parents: [SN-05]
     sources: [docs/AI-STACK.md]
     verify: {method: inspection, by: [docs/AI-STACK.md]}
   - id: GEN-26
-    title: A branch from a named tag
-    statement: "A change shall start from the base ref its task names, push its branch through FORGE_PUSH, open a draft pull request into the template's target branch, and take pull-request comments as events."
+    title: 'A branch from a named tag'
+    statement: "A change shall start from the base ref its template names, push its branch through FORGE_PUSH, open a draft pull request into the template's target branch, and take pull-request comments as signals."
     type: functional
     priority: should
-    status: proposed
-    acceptance: "Test: on the Bitbucket stand-in a change starts at a tag, opens a draft into a release branch, and a reviewer's comment resumes the task."
+    status: planned
+    acceptance: "Test: on the Bitbucket stand-in a change starts at a tag, opens a draft into a release branch, and a reviewer's comment resumes the run."
     parents: [SN-05]
     sources: [docs/AI-STACK.md]
     verify: {method: inspection, by: [docs/AI-STACK.md]}
   - id: GEN-27
-    title: Gates name roles
+    title: 'Gates name roles'
     statement: 'A gate shall name a role that the deployment maps to people, and each decision shall record who gave it.'
     type: functional
     priority: should
-    status: proposed
+    status: planned
     acceptance: 'Test: a toy template with two gates for two roles waits for each, and an answer from outside the role is refused and recorded.'
     parents: [SN-05]
     sources: [docs/AI-STACK.md]
     verify: {method: inspection, by: [docs/AI-STACK.md]}
   - id: GEN-28
-    title: Named pools of capacity
-    statement: 'A deployment shall name pools with sizes; steps and jobs take leases with a heartbeat, a lost lease is freed, and tasks share a pool in turn.'
+    title: 'Named pools of capacity'
+    statement: 'A deployment shall name pools with sizes; each pool is a task queue whose worker runs at most its size of activities at once, and lost work is given back by its heartbeat.'
     type: functional
     priority: should
-    status: proposed
-    acceptance: 'Test: a 10-item fan-out on a pool of 2 never runs 3 at once, a killed item frees its lease, two tasks share the pool.'
+    status: planned
+    acceptance: 'Test: a 10-item fan-out on a pool of 2 never runs 3 at once, a killed activity is retried, two runs share the pool.'
     parents: [SN-05]
     sources: [docs/AI-STACK.md]
     verify: {method: inspection, by: [docs/AI-STACK.md]}
   - id: GEN-29
-    title: Artifacts by hash
+    title: 'Artifacts by hash'
     statement: "Files a step makes shall be kept by their SHA-256 with the task, step, run and commit that made them, their data class and the deployment's retention, and may be attached to a tracker item or a pull request."
     type: functional
     priority: should
-    status: proposed
+    status: planned
     acceptance: "Test: a toy step's zip is attached to a stand-in item and its record names the commit and run that made it."
     parents: [SN-05]
     sources: [docs/AI-STACK.md]
     verify: {method: inspection, by: [docs/AI-STACK.md]}
   - id: GEN-30
-    title: Tools per agent from the pack
-    statement: 'A pack shall grant each agent its MCP servers and commands; a step gets exactly those, and a server the data class or egress does not allow is dropped.'
+    title: 'Tools per agent from the pack'
+    statement: 'A pack shall grant each agent its MCP servers and commands; a step gets exactly those, a server the data class or egress does not allow is dropped, and agentgateway checks each tool call once grants grow beyond that.'
     type: functional
     priority: should
-    status: proposed
+    status: planned
     acceptance: 'Test: a toy agent calls a stand-in MCP read tool, a second agent without the grant cannot, a server off the egress list is refused.'
     parents: [SN-05]
     sources: [docs/AI-STACK.md]
     verify: {method: inspection, by: [docs/AI-STACK.md]}
   - id: GEN-31
-    title: One record per journey, and pack exams
-    statement: "A finished task shall export as one bundle a person can follow without the app, and a pack's exam cases, each with its outcome, shall run through the replay exam."
+    title: 'One record per journey, and pack exams'
+    statement: "A finished run shall export as one bundle a person can follow without the app, and a pack's exam cases, each with its outcome, shall run through the replay exam."
     type: functional
     priority: should
-    status: proposed
-    acceptance: 'Test: a toy task exports a bundle with its chain from item to decisions, and a toy exam set runs and scores.'
+    status: planned
+    acceptance: 'Test: a toy run exports a bundle with its chain from item to decisions, and a toy exam set runs and scores.'
     parents: [SN-05]
     sources: [docs/AI-STACK.md]
     verify: {method: inspection, by: [docs/AI-STACK.md]}
   - id: GEN-32
-    title: Packs pinned and updated
+    title: 'Packs pinned and updated'
     statement: "An update shall verify the stack's signed tag and that every pinned pack commit is approved; a new pack commit waits in the queue while the old one runs."
     type: functional
     priority: should
-    status: proposed
+    status: planned
     acceptance: 'Test: a new commit in packs.txt leaves the old one running and puts one decision in the queue.'
+    parents: [SN-05]
+    sources: [docs/AI-STACK.md]
+    verify: {method: inspection, by: [docs/AI-STACK.md]}
+  - id: GEN-33
+    title: 'Temporal is the engine'
+    statement: "Long-running work shall run on a self-hosted Temporal server (MIT) that is part of the core on every deployment, home too, as one container with its own database in the stack's Postgres and SQL visibility, one Temporal namespace per deployment, its web UI behind the app's gate, and one Python worker whose activities are the stack's existing steps."
+    type: functional
+    priority: should
+    status: planned
+    acceptance: 'Test: on home and on the work example the server starts with the core; the namespaces of two deployments never list the runs of the other; a toy run starts, waits, survives a server restart and shows in the web UI and in the Tasks tab.'
+    parents: [SN-05]
+    sources: [docs/AI-STACK.md]
+    verify: {method: inspection, by: [docs/AI-STACK.md]}
+  - id: GEN-34
+    title: 'A canvas to build and watch templates'
+    statement: "The app shall have one screen with Workflow Builder's editor (Apache 2.0) to draw a template from blocks, draft one from a description, save it as YAML on a branch of the pack's repository for approval, the YAML staying the source of truth with a lossless round trip and block positions in a separate file, and show a running task's blocks live."
+    type: functional
+    priority: should
+    status: planned
+    acceptance: "Journey: a template is drawn, saved, approved and run, and the canvas shows each block's state change while it runs."
+    parents: [SN-05]
+    sources: [docs/AI-STACK.md]
+    verify: {method: inspection, by: [docs/AI-STACK.md]}
+  - id: GEN-35
+    title: 'One engine after the move'
+    statement: "Home's fixed plans and then the planner's free plans shall move to templates on Temporal, and once every kind of home plan has run on Temporal for 14 days with nothing falling back to the Conductor, the next landing removes the Conductor; until then every run is also a row of the Tasks tab, so the app shows one list."
+    type: functional
+    priority: should
+    status: planned
+    acceptance: "Test: after each stage home's whole check is green, the Tasks tab lists runs of both engines, and the health board counts the days without fallback per kind of plan."
+    parents: [SN-05]
+    sources: [docs/AI-STACK.md]
+    verify: {method: inspection, by: [docs/AI-STACK.md]}
+  - id: GEN-36
+    title: "Customer data never enters the engine's history"
+    statement: "Workflows, activities and signals shall pass only references (artifact hash, path, ticket key, commit, verdict counts); on a customer-class deployment the data converter shall refuse any other payload or one above its tagged size, a payload codec shall encrypt every payload with the deployment's key, the Temporal database shall be left out of every backup that leaves the machine, and the web UI shall decode payloads only through a codec server behind the app's gate."
+    type: functional
+    priority: should
+    status: planned
+    acceptance: "Test: on the work example an activity returning file content fails in the converter, a stored payload is ciphertext, and the backup's plan names no Temporal database."
+    parents: [SN-05]
+    sources: [docs/AI-STACK.md]
+    verify: {method: inspection, by: [docs/AI-STACK.md]}
+  - id: GEN-37
+    title: 'A run pins its template; the runner changes by versioning'
+    statement: "A run shall load its template's graph from the pack commit approved when it starts, through an activity, and read only that recorded copy; the graph runner's own changes shall use Temporal's versioning, and recorded histories of toy runs shall replay against every runner change before it lands."
+    type: functional
+    priority: should
+    status: planned
+    acceptance: 'Test: a template edited while a toy run waits leaves the run on its pinned graph; the replay test fails a non-deterministic runner change and passes a patched one.'
+    parents: [SN-05]
+    sources: [docs/AI-STACK.md]
+    verify: {method: inspection, by: [docs/AI-STACK.md]}
+  - id: GEN-38
+    title: "A run's history stays small"
+    statement: "Fan-out items and each change shall run as child workflows, very large lists in batches within the pending-children limit, and the runner shall continue as new when Temporal suggests it, carrying its pinned graph, current blocks, loop counters, wait keys and due timers under the same workflow id; the health board shows each run's history size."
+    type: functional
+    priority: should
+    status: planned
+    acceptance: 'Test: a toy run with a 300-item fan-out, 6 change rounds and 20 reminders stays under a tenth of the history limit, continues as new at least once, and a signal after that still resumes it.'
+    parents: [SN-05]
+    sources: [docs/AI-STACK.md]
+    verify: {method: inspection, by: [docs/AI-STACK.md]}
+  - id: GEN-39
+    title: 'Temporal upgrades by the update path'
+    statement: 'An update that moves Temporal shall snapshot its database on the machine (never off it on a customer-class deployment), upgrade the schema with temporal-sql-tool and step the server through each minor version in turn, check that the server answers and the replay test passes, and go back to the snapshot when a step fails; the owner never upgrades Temporal by hand.'
+    type: functional
+    priority: should
+    status: planned
+    acceptance: 'Test: an update across two minor versions on a test database runs both schema steps and both servers in order, and a failing step restores the snapshot.'
     parents: [SN-05]
     sources: [docs/AI-STACK.md]
     verify: {method: inspection, by: [docs/AI-STACK.md]}

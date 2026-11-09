@@ -304,3 +304,16 @@ items:
     the knowledge was made at.', sources: ['owner 2026-11-08: Okay design it according to your research. But we do not
     throw out the stuff we made. If nothing else its useful for humans. We keep it. We even give agent access to it but we
     dont dump it into its context. Only best practise as your research suggests. Implement it.', docs/CODER-KNOWLEDGE.md]}
+- {id: DEC-50, date: '2026-11-09', title: 'The AI Stack runs on Temporal, with packs and a canvas; professional tools before
+    our own', decision: 'What the owner asked: reuse professional tools rather than build from scratch, see how the agents
+    work together like Lego Mindstorms, and let Claude choose the engine by research. So: Temporal (MIT) is the core engine
+    on every deployment, with one generic Python graph runner; templates are graphs in a pack''s git, drawn and watched on
+    Workflow Builder''s editor (Apache 2.0); packs are Claude Code plugin folders; the worker protocol keeps its trust model,
+    Windows stays pull-only; the tracker through atlassian-python-api and mcp-atlassian; agentgateway for tool grants later.
+    DBOS is not taken because its dashboard is proprietary. The review added: references only in the history, encrypted and
+    kept off the NAS on a customer-class deployment; a run pins its template and a replay test guards the runner; child workflows
+    and continue-as-new keep histories small; the Conductor is removed after 14 days without fallback; Temporal upgrades run
+    in the update path.', sources: ['owner 2026-11-09: I like reuse of professional tools instead of scratch build. Temporal
+      or DBOS is your call. No experiment. Do research. Then decide.', 'owner 2026-11-09: Mostly yes. Temporal is the right
+      engine, and the Lego approach is a good idea. All five sign-off questions are fine, but four of them need a condition.',
+    docs/AI-STACK.md]}

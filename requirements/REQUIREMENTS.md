@@ -17,7 +17,7 @@ Method, statuses and rules: [README.md](README.md). Names of the parts: [glossar
 | [Constraints](#cst-constraints) (CST) | 15 | 11 | 2 | 1 | 0 | 1 | 0 |
 | [Crew](#crw-crew) (CRW) | 13 | 12 | 0 | 0 | 0 | 0 | 1 |
 | [Gateway](#gw-gateway) (GW) | 9 | 8 | 0 | 0 | 0 | 1 | 0 |
-| [Generalisation](#gen-generalisation) (GEN) | 32 | 10 | 5 | 0 | 2 | 15 | 0 |
+| [Generalisation](#gen-generalisation) (GEN) | 39 | 10 | 5 | 0 | 21 | 3 | 0 |
 | [House](#hse-house) (HSE) | 9 | 9 | 0 | 0 | 0 | 0 | 0 |
 | [Knowledge](#knw-knowledge) (KNW) | 15 | 15 | 0 | 0 | 0 | 0 | 0 |
 | [Memory](#mem-memory) (MEM) | 51 | 49 | 0 | 0 | 0 | 0 | 2 |
@@ -33,7 +33,7 @@ Method, statuses and rules: [README.md](README.md). Names of the parts: [glossar
 | [Task engine](#tsk-task-engine) (TSK) | 45 | 39 | 6 | 0 | 0 | 0 | 0 |
 | [Trials](#trl-trials) (TRL) | 17 | 13 | 2 | 0 | 0 | 2 | 0 |
 | [Voice](#voi-voice) (VOI) | 9 | 8 | 0 | 0 | 0 | 1 | 0 |
-| **All** | **655** | **579** | **35** | **1** | **4** | **29** | **7** |
+| **All** | **662** | **579** | **35** | **1** | **23** | **17** | **7** |
 
 Unit tests claimed by a requirement: 1311 of 1311.
 
@@ -1535,7 +1535,7 @@ The trial's build #11 appeared on the Tasks board as task #89 (source door) besi
 | <a id="sn-02"></a>**SN-02** Out of the loop except for real decisions: the owner is asked only for decisions that are really his (approvals of spending, deploys, deletions, settings, grants), each one tap away with enough context to decide; no scripts to run, no busywork, nothing shown as needing him that does not. | must | [APP-04](#app-04), [APP-05](#app-05), [APP-06](#app-06), [APP-07](#app-07), [APP-13](#app-13), [APP-14](#app-14), [APP-21](#app-21), [APP-25](#app-25), [APP-26](#app-26), [APP-30](#app-30), [APP-31](#app-31), [APP-54](#app-54), [AST-06](#ast-06), [AST-12](#ast-12), [AUT-01](#aut-01), [AUT-02](#aut-02), [AUT-05](#aut-05), [AUT-07](#aut-07), [AUT-08](#aut-08), [CHG-02](#chg-02), [CHG-03](#chg-03), [CNX-02](#cnx-02), [CRW-02](#crw-02), [CRW-05](#crw-05), [CRW-06](#crw-06), [CST-03](#cst-03), [MEM-42](#mem-42), [MIS-07](#mis-07), [MIS-20](#mis-20), [PHN-02](#phn-02), [PHN-11](#phn-11), [PHN-12](#phn-12), [PHN-18](#phn-18), [PHN-20](#phn-20), [PHN-21](#phn-21), [PHN-22](#phn-22), [PHN-24](#phn-24), [PHN-25](#phn-25), [PHN-26](#phn-26), [SHP-01](#shp-01), [SHP-03](#shp-03), [SHP-08](#shp-08), [SWM-05](#swm-05), [SWM-06](#swm-06), [SWM-08](#swm-08), [SWM-33](#swm-33), [SWM-38](#swm-38), [SWM-39](#swm-39), [SWM-40](#swm-40), [SWM-42](#swm-42), [SWM-43](#swm-43), [SWM-44](#swm-44), [SWM-54](#swm-54), [SWM-55](#swm-55), [SWM-61](#swm-61), [SWM-87](#swm-87), [TRL-15](#trl-15), [TSK-03](#tsk-03), [TSK-20](#tsk-20), [TSK-40](#tsk-40), [VOI-08](#voi-08) |
 | <a id="sn-03"></a>**SN-03** Costs nothing to run: Running the stack costs $0 beyond the subscriptions the owner already pays; nothing can spend money by accident. | must | [APP-40](#app-40), [APP-41](#app-41), [APP-42](#app-42), [APP-43](#app-43), [APP-44](#app-44), [APP-45](#app-45), [AST-02](#ast-02), [AST-08](#ast-08), [BLD-06](#bld-06), [CST-02](#cst-02), [CST-15](#cst-15), [GW-02](#gw-02), [GW-04](#gw-04), [GW-09](#gw-09), [MEM-26](#mem-26), [MEM-44](#mem-44), [MIS-04](#mis-04), [MIS-16](#mis-16), [PHN-27](#phn-27), [PLT-11](#plt-11), [PLT-26](#plt-26), [PLT-27](#plt-27), [RES-07](#res-07), [SHP-05](#shp-05), [SWM-13](#swm-13), [SWM-14](#swm-14), [SWM-29](#swm-29), [SWM-40](#swm-40), [SWM-53](#swm-53), [SWM-60](#swm-60), [SWM-62](#swm-62), [SWM-81](#swm-81) |
 | <a id="sn-04"></a>**SN-04** Private data stays home: Notes, reports, memory, chats, mail and files stay on the PC and the NAS; only the model calls leave, and The owner knows which provider sees what. | must | [AUT-03](#aut-03), [CST-04](#cst-04), [CST-06](#cst-06), [GEN-14](#gen-14), [HSE-07](#hse-07), [KNW-05](#knw-05), [KNW-07](#knw-07), [MEM-06](#mem-06), [MEM-18](#mem-18), [MEM-30](#mem-30), [PHN-16](#phn-16), [PHN-19](#phn-19), [RES-01](#res-01), [SEC-03](#sec-03), [SEC-04](#sec-04), [SEC-06](#sec-06), [SEC-17](#sec-17), [SEC-18](#sec-18), [SEC-19](#sec-19), [SEC-22](#sec-22), [SWM-67](#swm-67) |
-| <a id="sn-05"></a>**SN-05** Agents cannot do damage: No agent can spend money, delete data for good, leak private data, change the NAS, the router or phone and PC security settings, or deploy code without the owner's approval; prompt injection from the web or mail cannot steer an agent into any of it. | must | [APP-10](#app-10), [APP-20](#app-20), [APP-61](#app-61), [AST-08](#ast-08), [AST-09](#ast-09), [AST-10](#ast-10), [AST-14](#ast-14), [AUT-01](#aut-01), [AUT-03](#aut-03), [BLD-02](#bld-02), [BLD-07](#bld-07), [BLD-10](#bld-10), [BLD-13](#bld-13), [BLD-16](#bld-16), [BLD-18](#bld-18), [BLD-27](#bld-27), [BLD-28](#bld-28), [BLD-39](#bld-39), [CHG-05](#chg-05), [CHG-12](#chg-12), [CHG-13](#chg-13), [CHG-15](#chg-15), [CNX-01](#cnx-01), [CNX-03](#cnx-03), [CNX-04](#cnx-04), [CNX-05](#cnx-05), [CNX-07](#cnx-07), [CNX-08](#cnx-08), [CNX-09](#cnx-09), [CRW-04](#crw-04), [CRW-10](#crw-10), [CRW-11](#crw-11), [CRW-13](#crw-13), [CST-04](#cst-04), [CST-05](#cst-05), [CST-06](#cst-06), [CST-07](#cst-07), [CST-10](#cst-10), [CST-11](#cst-11), [CST-12](#cst-12), [GEN-01](#gen-01), [GEN-02](#gen-02), [GEN-03](#gen-03), [GEN-04](#gen-04), [GEN-05](#gen-05), [GEN-06](#gen-06), [GEN-07](#gen-07), [GEN-08](#gen-08), [GEN-09](#gen-09), [GEN-10](#gen-10), [GEN-11](#gen-11), [GEN-12](#gen-12), [GEN-13](#gen-13), [GEN-14](#gen-14), [GEN-15](#gen-15), [GEN-16](#gen-16), [GEN-17](#gen-17), [GEN-18](#gen-18), [GEN-19](#gen-19), [GEN-20](#gen-20), [GEN-21](#gen-21), [GEN-22](#gen-22), [GEN-23](#gen-23), [GEN-24](#gen-24), [GEN-25](#gen-25), [GEN-26](#gen-26), [GEN-27](#gen-27), [GEN-28](#gen-28), [GEN-29](#gen-29), [GEN-30](#gen-30), [GEN-31](#gen-31), [GEN-32](#gen-32), [GW-05](#gw-05), [HSE-04](#hse-04), [HSE-05](#hse-05), [HSE-08](#hse-08), [HSE-09](#hse-09), [KNW-04](#knw-04), [KNW-06](#knw-06), [KNW-11](#knw-11), [MEM-04](#mem-04), [MEM-29](#mem-29), [MEM-30](#mem-30), [MEM-39](#mem-39), [MEM-49](#mem-49), [MIS-17](#mis-17), [MIS-28](#mis-28), [PHN-01](#phn-01), [PHN-03](#phn-03), [PHN-04](#phn-04), [PHN-05](#phn-05), [PHN-06](#phn-06), [PHN-07](#phn-07), [PHN-08](#phn-08), [PHN-15](#phn-15), [PLT-02](#plt-02), [PLT-03](#plt-03), [PLT-09](#plt-09), [QA-23](#qa-23), [QA-24](#qa-24), [QA-25](#qa-25), [QA-26](#qa-26), [RES-01](#res-01), [RES-03](#res-03), [RES-04](#res-04), [RES-06](#res-06), [SEC-01](#sec-01), [SEC-02](#sec-02), [SEC-03](#sec-03), [SEC-04](#sec-04), [SEC-05](#sec-05), [SEC-06](#sec-06), [SEC-07](#sec-07), [SEC-08](#sec-08), [SEC-09](#sec-09), [SEC-10](#sec-10), [SEC-11](#sec-11), [SEC-12](#sec-12), [SEC-13](#sec-13), [SEC-14](#sec-14), [SEC-15](#sec-15), [SEC-16](#sec-16), [SEC-20](#sec-20), [SEC-21](#sec-21), [SEC-22](#sec-22), [SHP-05](#shp-05), [SHP-06](#shp-06), [SHP-07](#shp-07), [SHP-09](#shp-09), [SHP-10](#shp-10), [SWM-06](#swm-06), [SWM-109](#swm-109), [SWM-11](#swm-11), [SWM-15](#swm-15), [SWM-23](#swm-23), [SWM-24](#swm-24), [SWM-26](#swm-26), [SWM-42](#swm-42), [SWM-43](#swm-43), [SWM-46](#swm-46), [SWM-51](#swm-51), [SWM-58](#swm-58), [SWM-66](#swm-66), [SWM-67](#swm-67), [SWM-68](#swm-68), [SWM-69](#swm-69), [SWM-70](#swm-70), [SWM-77](#swm-77), [SWM-89](#swm-89), [TRL-05](#trl-05), [TSK-15](#tsk-15), [TSK-20](#tsk-20), [VOI-01](#voi-01), [VOI-03](#voi-03), [VOI-07](#voi-07) |
+| <a id="sn-05"></a>**SN-05** Agents cannot do damage: No agent can spend money, delete data for good, leak private data, change the NAS, the router or phone and PC security settings, or deploy code without the owner's approval; prompt injection from the web or mail cannot steer an agent into any of it. | must | [APP-10](#app-10), [APP-20](#app-20), [APP-61](#app-61), [AST-08](#ast-08), [AST-09](#ast-09), [AST-10](#ast-10), [AST-14](#ast-14), [AUT-01](#aut-01), [AUT-03](#aut-03), [BLD-02](#bld-02), [BLD-07](#bld-07), [BLD-10](#bld-10), [BLD-13](#bld-13), [BLD-16](#bld-16), [BLD-18](#bld-18), [BLD-27](#bld-27), [BLD-28](#bld-28), [BLD-39](#bld-39), [CHG-05](#chg-05), [CHG-12](#chg-12), [CHG-13](#chg-13), [CHG-15](#chg-15), [CNX-01](#cnx-01), [CNX-03](#cnx-03), [CNX-04](#cnx-04), [CNX-05](#cnx-05), [CNX-07](#cnx-07), [CNX-08](#cnx-08), [CNX-09](#cnx-09), [CRW-04](#crw-04), [CRW-10](#crw-10), [CRW-11](#crw-11), [CRW-13](#crw-13), [CST-04](#cst-04), [CST-05](#cst-05), [CST-06](#cst-06), [CST-07](#cst-07), [CST-10](#cst-10), [CST-11](#cst-11), [CST-12](#cst-12), [GEN-01](#gen-01), [GEN-02](#gen-02), [GEN-03](#gen-03), [GEN-04](#gen-04), [GEN-05](#gen-05), [GEN-06](#gen-06), [GEN-07](#gen-07), [GEN-08](#gen-08), [GEN-09](#gen-09), [GEN-10](#gen-10), [GEN-11](#gen-11), [GEN-12](#gen-12), [GEN-13](#gen-13), [GEN-14](#gen-14), [GEN-15](#gen-15), [GEN-16](#gen-16), [GEN-17](#gen-17), [GEN-18](#gen-18), [GEN-19](#gen-19), [GEN-20](#gen-20), [GEN-21](#gen-21), [GEN-22](#gen-22), [GEN-23](#gen-23), [GEN-24](#gen-24), [GEN-25](#gen-25), [GEN-26](#gen-26), [GEN-27](#gen-27), [GEN-28](#gen-28), [GEN-29](#gen-29), [GEN-30](#gen-30), [GEN-31](#gen-31), [GEN-32](#gen-32), [GEN-33](#gen-33), [GEN-34](#gen-34), [GEN-35](#gen-35), [GEN-36](#gen-36), [GEN-37](#gen-37), [GEN-38](#gen-38), [GEN-39](#gen-39), [GW-05](#gw-05), [HSE-04](#hse-04), [HSE-05](#hse-05), [HSE-08](#hse-08), [HSE-09](#hse-09), [KNW-04](#knw-04), [KNW-06](#knw-06), [KNW-11](#knw-11), [MEM-04](#mem-04), [MEM-29](#mem-29), [MEM-30](#mem-30), [MEM-39](#mem-39), [MEM-49](#mem-49), [MIS-17](#mis-17), [MIS-28](#mis-28), [PHN-01](#phn-01), [PHN-03](#phn-03), [PHN-04](#phn-04), [PHN-05](#phn-05), [PHN-06](#phn-06), [PHN-07](#phn-07), [PHN-08](#phn-08), [PHN-15](#phn-15), [PLT-02](#plt-02), [PLT-03](#plt-03), [PLT-09](#plt-09), [QA-23](#qa-23), [QA-24](#qa-24), [QA-25](#qa-25), [QA-26](#qa-26), [RES-01](#res-01), [RES-03](#res-03), [RES-04](#res-04), [RES-06](#res-06), [SEC-01](#sec-01), [SEC-02](#sec-02), [SEC-03](#sec-03), [SEC-04](#sec-04), [SEC-05](#sec-05), [SEC-06](#sec-06), [SEC-07](#sec-07), [SEC-08](#sec-08), [SEC-09](#sec-09), [SEC-10](#sec-10), [SEC-11](#sec-11), [SEC-12](#sec-12), [SEC-13](#sec-13), [SEC-14](#sec-14), [SEC-15](#sec-15), [SEC-16](#sec-16), [SEC-20](#sec-20), [SEC-21](#sec-21), [SEC-22](#sec-22), [SHP-05](#shp-05), [SHP-06](#shp-06), [SHP-07](#shp-07), [SHP-09](#shp-09), [SHP-10](#shp-10), [SWM-06](#swm-06), [SWM-109](#swm-109), [SWM-11](#swm-11), [SWM-15](#swm-15), [SWM-23](#swm-23), [SWM-24](#swm-24), [SWM-26](#swm-26), [SWM-42](#swm-42), [SWM-43](#swm-43), [SWM-46](#swm-46), [SWM-51](#swm-51), [SWM-58](#swm-58), [SWM-66](#swm-66), [SWM-67](#swm-67), [SWM-68](#swm-68), [SWM-69](#swm-69), [SWM-70](#swm-70), [SWM-77](#swm-77), [SWM-89](#swm-89), [TRL-05](#trl-05), [TSK-15](#tsk-15), [TSK-20](#tsk-20), [VOI-01](#voi-01), [VOI-03](#voi-03), [VOI-07](#voi-07) |
 | <a id="sn-06"></a>**SN-06** Usable from the phone, anywhere, one sign-in: Everything is usable and decidable from the owner's phone (installable app, push, Telegram), from anywhere on his tailnet, with his Tailscale login as the only sign-in. | must | [APP-01](#app-01), [APP-02](#app-02), [APP-03](#app-03), [APP-04](#app-04), [APP-08](#app-08), [APP-09](#app-09), [APP-15](#app-15), [APP-17](#app-17), [APP-19](#app-19), [APP-20](#app-20), [APP-37](#app-37), [APP-38](#app-38), [APP-39](#app-39), [AST-01](#ast-01), [AST-03](#ast-03), [AUT-05](#aut-05), [AUT-06](#aut-06), [MIS-15](#mis-15), [MIS-23](#mis-23), [QA-16](#qa-16), [QA-21](#qa-21), [QA-22](#qa-22), [SEC-01](#sec-01), [SEC-02](#sec-02), [SEC-20](#sec-20), [SWM-11](#swm-11), [SWM-57](#swm-57), [SWM-93](#swm-93), [SWM-95](#swm-95), [TSK-02](#tsk-02), [VOI-09](#voi-09) |
 | <a id="sn-07"></a>**SN-07** See what every agent does: For every agent, mission, crew job, build and tool the owner can see what it did step by step, what it read and changed, what it produced, what it cost and when something went wrong, without having to look for it. | must | [APP-07](#app-07), [APP-11](#app-11), [APP-12](#app-12), [APP-16](#app-16), [APP-19](#app-19), [APP-22](#app-22), [APP-23](#app-23), [APP-24](#app-24), [APP-35](#app-35), [APP-36](#app-36), [APP-53](#app-53), [AST-04](#ast-04), [AUT-04](#aut-04), [AUT-07](#aut-07), [BLD-14](#bld-14), [BLD-20](#bld-20), [CHG-16](#chg-16), [CHG-20](#chg-20), [CRW-01](#crw-01), [CRW-02](#crw-02), [CRW-09](#crw-09), [CRW-12](#crw-12), [GW-01](#gw-01), [GW-07](#gw-07), [HSE-02](#hse-02), [MEM-01](#mem-01), [MEM-07](#mem-07), [MEM-09](#mem-09), [MEM-10](#mem-10), [MEM-19](#mem-19), [MEM-22](#mem-22), [MEM-27](#mem-27), [MEM-44](#mem-44), [MEM-45](#mem-45), [MEM-46](#mem-46), [MIS-16](#mis-16), [OBS-01](#obs-01), [OBS-02](#obs-02), [OBS-03](#obs-03), [OBS-04](#obs-04), [OBS-05](#obs-05), [OBS-06](#obs-06), [OBS-07](#obs-07), [OBS-08](#obs-08), [OBS-09](#obs-09), [OBS-10](#obs-10), [OBS-14](#obs-14), [OBS-15](#obs-15), [OBS-18](#obs-18), [PLT-24](#plt-24), [PLT-30](#plt-30), [QA-17](#qa-17), [RES-05](#res-05), [SEC-07](#sec-07), [SHP-11](#shp-11), [SWM-103](#swm-103), [SWM-104](#swm-104), [SWM-105](#swm-105), [SWM-106](#swm-106), [SWM-107](#swm-107), [SWM-110](#swm-110), [SWM-111](#swm-111), [SWM-112](#swm-112), [SWM-113](#swm-113), [SWM-114](#swm-114), [SWM-115](#swm-115), [SWM-17](#swm-17), [SWM-23](#swm-23), [SWM-25](#swm-25), [SWM-30](#swm-30), [SWM-57](#swm-57), [SWM-58](#swm-58), [SWM-64](#swm-64), [SWM-78](#swm-78), [SWM-79](#swm-79), [SWM-80](#swm-80), [SWM-81](#swm-81), [SWM-82](#swm-82), [SWM-84](#swm-84), [SWM-90](#swm-90), [SWM-96](#swm-96), [SWM-99](#swm-99), [TSK-04](#tsk-04), [TSK-09](#tsk-09), [TSK-17](#tsk-17), [TSK-35](#tsk-35), [TSK-42](#tsk-42), [TSK-43](#tsk-43) |
 | <a id="sn-08"></a>**SN-08** The stack maintains and improves itself: Housekeeping agents keep the stack healthy, and the stack proposes and builds its own improvements; the owner approves what ships. | must | [APP-21](#app-21), [AST-11](#ast-11), [AUT-02](#aut-02), [BLD-01](#bld-01), [BLD-03](#bld-03), [BLD-04](#bld-04), [BLD-05](#bld-05), [BLD-08](#bld-08), [BLD-10](#bld-10), [BLD-21](#bld-21), [BLD-22](#bld-22), [BLD-24](#bld-24), [CHG-11](#chg-11), [CHG-15](#chg-15), [CHG-17](#chg-17), [CHG-18](#chg-18), [CHG-19](#chg-19), [CRW-01](#crw-01), [CRW-03](#crw-03), [CRW-04](#crw-04), [CRW-07](#crw-07), [CRW-08](#crw-08), [CRW-09](#crw-09), [CRW-10](#crw-10), [CST-07](#cst-07), [GW-09](#gw-09), [KNW-08](#knw-08), [MEM-11](#mem-11), [MEM-13](#mem-13), [MEM-20](#mem-20), [MEM-38](#mem-38), [MEM-39](#mem-39), [MEM-42](#mem-42), [MEM-43](#mem-43), [MEM-47](#mem-47), [MEM-50](#mem-50), [OBS-13](#obs-13), [PLT-08](#plt-08), [PLT-19](#plt-19), [QA-07](#qa-07), [SEC-08](#sec-08), [SWM-07](#swm-07), [SWM-102](#swm-102), [SWM-18](#swm-18), [SWM-38](#swm-38), [SWM-44](#swm-44), [SWM-45](#swm-45), [SWM-46](#swm-46), [SWM-47](#swm-47), [SWM-61](#swm-61), [SWM-70](#swm-70), [SWM-82](#swm-82), [SWM-83](#swm-83), [SWM-84](#swm-84), [SWM-91](#swm-91), [SWM-92](#swm-92), [SWM-93](#swm-93), [SWM-94](#swm-94), [SWM-95](#swm-95), [SWM-96](#swm-96), [TRL-14](#trl-14), [TRL-15](#trl-15), [TRL-16](#trl-16), [TRL-17](#trl-17), [TSK-13](#tsk-13), [TSK-16](#tsk-16), [TSK-17](#tsk-17), [TSK-42](#tsk-42) |
@@ -3871,9 +3871,9 @@ On a deployment without the home feature, the backup and its drill shall step as
 
 ### GEN-21
 
-**Packs from outside the repository** · should · functional · **proposed**
+**Packs from outside the repository** · should · functional · **planned**
 
-A deployment shall load domain packs from folders or repositories outside the stack's repository, pinned by commit: Claude Code plugin folders (agents, skills, MCP servers) plus a stack.yaml (templates, job kinds, classes, rules, grants, exams), namespaced by the pack's name, each commit approved in the queue before it runs.
+A deployment shall load domain packs from folders or repositories outside the stack's repository, pinned by commit: Claude Code plugin folders (agents, skills, MCP servers) plus a stack.yaml, job kinds, templates and exams, namespaced by the pack's name, each commit approved in the queue before it runs.
 
 - Parents: [SN-05](#sn-05)
 - Sources: `docs/AI-STACK.md`
@@ -3882,9 +3882,9 @@ A deployment shall load domain packs from folders or repositories outside the st
 
 ### GEN-22
 
-**Step kinds are worker jobs, at three places** · should · functional · **proposed**
+**Commands run at places through the worker protocol** · should · functional · **planned**
 
-A pack's step kind shall be a job kind of the worker protocol, run at wsl, windows or wsl-host (the same worker as its own Linux user); per-change values shall arrive as its typed parameters, and the coder shall be able to run a check during its loop.
+A pack's command shall be a job kind of the worker protocol, run at wsl, windows or wsl-host (the same worker, as the Linux user the deployment names as owner of its tools and repositories) behind a Temporal task queue per place, with Windows staying pull-only; per-change values arrive as typed parameters, and the coder can run a check during its loop.
 
 - Parents: [SN-05](#sn-05)
 - Sources: `docs/AI-STACK.md`
@@ -3893,51 +3893,51 @@ A pack's step kind shall be a job kind of the worker protocol, run at wsl, windo
 
 ### GEN-23
 
-**Templates are saved plans** · should · functional · **proposed**
+**Templates are graphs run by one runner** · should · functional · **planned**
 
-A pack's task template shall be a fixed plan in the Conductor's plan format with gates, waits, loops, fan-out from an earlier step's answer and a budget, and shall resume after a restart in any state.
+A pack's template shall be a graph of blocks (agent, command, change, gate, wait, tracker, branch, fan-out, loop back) stored as YAML in the pack's repository, run by one generic graph-runner workflow on Temporal that keeps every gate, wait and check.
 
 - Parents: [SN-05](#sn-05)
 - Sources: `docs/AI-STACK.md`
 - Verified by: inspection: `docs/AI-STACK.md`
-- Acceptance: Test: a toy template with a gate, a 3-round loop, a 5-way fan-out and a wait survives a runner restart in each state, and no checkpoint removes its gate.
+- Acceptance: Test: a toy template with a gate, a 3-round loop, a 5-way fan-out and a wait survives a restart of the worker and of the server in each state, and no step removes its gate.
 
 ### GEN-24
 
-**Waiting for someone outside** · should · functional · **proposed**
+**Waiting for someone outside** · should · functional · **planned**
 
-A step shall wait on a key (a tracker item or a pull request) for weeks without holding a slot, resume only on an event with that key, send its reminders and on timeout reach the queue of a named role.
+A run shall wait on a key (a tracker item or a pull request) for weeks without holding a process or slot, resume only on a signal for that key, fire its reminders by durable timers and on timeout reach the queue of a named role.
 
 - Parents: [SN-05](#sn-05)
 - Sources: `docs/AI-STACK.md`
 - Verified by: inspection: `docs/AI-STACK.md`
-- Acceptance: Test: a toy task waits on T-1; an unrelated event does not wake it, a matching reply does, the reminder fires on a fake clock and the timeout reaches the queue.
+- Acceptance: Test: a toy run waits on T-1; an unrelated event does not wake it, a matching reply does, the reminder fires on Temporal's test clock and the timeout reaches the queue.
 
 ### GEN-25
 
-**Trackers, read by polling and written through gates** · should · functional · **proposed**
+**Trackers, read by polling and written through gates** · should · functional · **planned**
 
-The stack shall poll trackers (Jira Data Center, Forgejo issues) with a cursor, emit events by item key, and write comments, one summary comment, attachments and transitions only as action classes, idempotently, with shadow mode the default for a new tracker.
+The stack shall poll trackers (Jira Data Center through atlassian-python-api, Forgejo issues) with a cursor and signal or start the run named after each item, and write comments, one summary comment, attachments and transitions only as action classes, idempotently, with shadow mode per kind of write, each leaving it when the owner taps, after a stated number of approved shadow items.
 
 - Parents: [SN-05](#sn-05)
 - Sources: `docs/AI-STACK.md`
 - Verified by: inspection: `docs/AI-STACK.md`
-- Acceptance: Test: on a stand-in a new item starts the template once across a restart, the summary comment is edited across three updates, and shadow mode writes nothing outward.
+- Acceptance: Test: on a stand-in a new item starts its run once across a restart, the summary comment is edited across three updates, and shadow mode writes nothing outward.
 
 ### GEN-26
 
-**A branch from a named tag** · should · functional · **proposed**
+**A branch from a named tag** · should · functional · **planned**
 
-A change shall start from the base ref its task names, push its branch through FORGE_PUSH, open a draft pull request into the template's target branch, and take pull-request comments as events.
+A change shall start from the base ref its template names, push its branch through FORGE_PUSH, open a draft pull request into the template's target branch, and take pull-request comments as signals.
 
 - Parents: [SN-05](#sn-05)
 - Sources: `docs/AI-STACK.md`
 - Verified by: inspection: `docs/AI-STACK.md`
-- Acceptance: Test: on the Bitbucket stand-in a change starts at a tag, opens a draft into a release branch, and a reviewer's comment resumes the task.
+- Acceptance: Test: on the Bitbucket stand-in a change starts at a tag, opens a draft into a release branch, and a reviewer's comment resumes the run.
 
 ### GEN-27
 
-**Gates name roles** · should · functional · **proposed**
+**Gates name roles** · should · functional · **planned**
 
 A gate shall name a role that the deployment maps to people, and each decision shall record who gave it.
 
@@ -3948,18 +3948,18 @@ A gate shall name a role that the deployment maps to people, and each decision s
 
 ### GEN-28
 
-**Named pools of capacity** · should · functional · **proposed**
+**Named pools of capacity** · should · functional · **planned**
 
-A deployment shall name pools with sizes; steps and jobs take leases with a heartbeat, a lost lease is freed, and tasks share a pool in turn.
+A deployment shall name pools with sizes; each pool is a task queue whose worker runs at most its size of activities at once, and lost work is given back by its heartbeat.
 
 - Parents: [SN-05](#sn-05)
 - Sources: `docs/AI-STACK.md`
 - Verified by: inspection: `docs/AI-STACK.md`
-- Acceptance: Test: a 10-item fan-out on a pool of 2 never runs 3 at once, a killed item frees its lease, two tasks share the pool.
+- Acceptance: Test: a 10-item fan-out on a pool of 2 never runs 3 at once, a killed activity is retried, two runs share the pool.
 
 ### GEN-29
 
-**Artifacts by hash** · should · functional · **proposed**
+**Artifacts by hash** · should · functional · **planned**
 
 Files a step makes shall be kept by their SHA-256 with the task, step, run and commit that made them, their data class and the deployment's retention, and may be attached to a tracker item or a pull request.
 
@@ -3970,9 +3970,9 @@ Files a step makes shall be kept by their SHA-256 with the task, step, run and c
 
 ### GEN-30
 
-**Tools per agent from the pack** · should · functional · **proposed**
+**Tools per agent from the pack** · should · functional · **planned**
 
-A pack shall grant each agent its MCP servers and commands; a step gets exactly those, and a server the data class or egress does not allow is dropped.
+A pack shall grant each agent its MCP servers and commands; a step gets exactly those, a server the data class or egress does not allow is dropped, and agentgateway checks each tool call once grants grow beyond that.
 
 - Parents: [SN-05](#sn-05)
 - Sources: `docs/AI-STACK.md`
@@ -3981,18 +3981,18 @@ A pack shall grant each agent its MCP servers and commands; a step gets exactly 
 
 ### GEN-31
 
-**One record per journey, and pack exams** · should · functional · **proposed**
+**One record per journey, and pack exams** · should · functional · **planned**
 
-A finished task shall export as one bundle a person can follow without the app, and a pack's exam cases, each with its outcome, shall run through the replay exam.
+A finished run shall export as one bundle a person can follow without the app, and a pack's exam cases, each with its outcome, shall run through the replay exam.
 
 - Parents: [SN-05](#sn-05)
 - Sources: `docs/AI-STACK.md`
 - Verified by: inspection: `docs/AI-STACK.md`
-- Acceptance: Test: a toy task exports a bundle with its chain from item to decisions, and a toy exam set runs and scores.
+- Acceptance: Test: a toy run exports a bundle with its chain from item to decisions, and a toy exam set runs and scores.
 
 ### GEN-32
 
-**Packs pinned and updated** · should · functional · **proposed**
+**Packs pinned and updated** · should · functional · **planned**
 
 An update shall verify the stack's signed tag and that every pinned pack commit is approved; a new pack commit waits in the queue while the old one runs.
 
@@ -4000,6 +4000,83 @@ An update shall verify the stack's signed tag and that every pinned pack commit 
 - Sources: `docs/AI-STACK.md`
 - Verified by: inspection: `docs/AI-STACK.md`
 - Acceptance: Test: a new commit in packs.txt leaves the old one running and puts one decision in the queue.
+
+### GEN-33
+
+**Temporal is the engine** · should · functional · **planned**
+
+Long-running work shall run on a self-hosted Temporal server (MIT) that is part of the core on every deployment, home too, as one container with its own database in the stack's Postgres and SQL visibility, one Temporal namespace per deployment, its web UI behind the app's gate, and one Python worker whose activities are the stack's existing steps.
+
+- Parents: [SN-05](#sn-05)
+- Sources: `docs/AI-STACK.md`
+- Verified by: inspection: `docs/AI-STACK.md`
+- Acceptance: Test: on home and on the work example the server starts with the core; the namespaces of two deployments never list the runs of the other; a toy run starts, waits, survives a server restart and shows in the web UI and in the Tasks tab.
+
+### GEN-34
+
+**A canvas to build and watch templates** · should · functional · **planned**
+
+The app shall have one screen with Workflow Builder's editor (Apache 2.0) to draw a template from blocks, draft one from a description, save it as YAML on a branch of the pack's repository for approval, the YAML staying the source of truth with a lossless round trip and block positions in a separate file, and show a running task's blocks live.
+
+- Parents: [SN-05](#sn-05)
+- Sources: `docs/AI-STACK.md`
+- Verified by: inspection: `docs/AI-STACK.md`
+- Acceptance: Journey: a template is drawn, saved, approved and run, and the canvas shows each block's state change while it runs.
+
+### GEN-35
+
+**One engine after the move** · should · functional · **planned**
+
+Home's fixed plans and then the planner's free plans shall move to templates on Temporal, and once every kind of home plan has run on Temporal for 14 days with nothing falling back to the Conductor, the next landing removes the Conductor; until then every run is also a row of the Tasks tab, so the app shows one list.
+
+- Parents: [SN-05](#sn-05)
+- Sources: `docs/AI-STACK.md`
+- Verified by: inspection: `docs/AI-STACK.md`
+- Acceptance: Test: after each stage home's whole check is green, the Tasks tab lists runs of both engines, and the health board counts the days without fallback per kind of plan.
+
+### GEN-36
+
+**Customer data never enters the engine's history** · should · functional · **planned**
+
+Workflows, activities and signals shall pass only references (artifact hash, path, ticket key, commit, verdict counts); on a customer-class deployment the data converter shall refuse any other payload or one above its tagged size, a payload codec shall encrypt every payload with the deployment's key, the Temporal database shall be left out of every backup that leaves the machine, and the web UI shall decode payloads only through a codec server behind the app's gate.
+
+- Parents: [SN-05](#sn-05)
+- Sources: `docs/AI-STACK.md`
+- Verified by: inspection: `docs/AI-STACK.md`
+- Acceptance: Test: on the work example an activity returning file content fails in the converter, a stored payload is ciphertext, and the backup's plan names no Temporal database.
+
+### GEN-37
+
+**A run pins its template; the runner changes by versioning** · should · functional · **planned**
+
+A run shall load its template's graph from the pack commit approved when it starts, through an activity, and read only that recorded copy; the graph runner's own changes shall use Temporal's versioning, and recorded histories of toy runs shall replay against every runner change before it lands.
+
+- Parents: [SN-05](#sn-05)
+- Sources: `docs/AI-STACK.md`
+- Verified by: inspection: `docs/AI-STACK.md`
+- Acceptance: Test: a template edited while a toy run waits leaves the run on its pinned graph; the replay test fails a non-deterministic runner change and passes a patched one.
+
+### GEN-38
+
+**A run's history stays small** · should · functional · **planned**
+
+Fan-out items and each change shall run as child workflows, very large lists in batches within the pending-children limit, and the runner shall continue as new when Temporal suggests it, carrying its pinned graph, current blocks, loop counters, wait keys and due timers under the same workflow id; the health board shows each run's history size.
+
+- Parents: [SN-05](#sn-05)
+- Sources: `docs/AI-STACK.md`
+- Verified by: inspection: `docs/AI-STACK.md`
+- Acceptance: Test: a toy run with a 300-item fan-out, 6 change rounds and 20 reminders stays under a tenth of the history limit, continues as new at least once, and a signal after that still resumes it.
+
+### GEN-39
+
+**Temporal upgrades by the update path** · should · functional · **planned**
+
+An update that moves Temporal shall snapshot its database on the machine (never off it on a customer-class deployment), upgrade the schema with temporal-sql-tool and step the server through each minor version in turn, check that the server answers and the replay test passes, and go back to the snapshot when a step fails; the owner never upgrades Temporal by hand.
+
+- Parents: [SN-05](#sn-05)
+- Sources: `docs/AI-STACK.md`
+- Verified by: inspection: `docs/AI-STACK.md`
+- Acceptance: Test: an update across two minor versions on a test database runs both schema steps and both servers in order, and a failing step restores the snapshot.
 
 ## HSE House
 
@@ -9390,6 +9467,7 @@ The Voice page shall show spoken questions answered a day and the share answered
 | <a id="dec-47"></a>**DEC-47** Ideas become AI change requests | 2026-11-08 | The owner said on 8 Nov 2026 that the ideas are too spammy and asked for one agent that reads all of them, fits them into the larger picture and combines them into fewer, coherent, polished change requests that are implementation ready; those are what the owner sees, on a page of each repository, each naming the ideas it grew from, and each idea the task and run that produced it. Ideas stay visible on their tasks and agents, but not prominently. So: ideas are internal raw material; an Editor (a stack agent, a crew duty) sorts each idea (in a request, held, covered, dropped, with a reason) and writes the requests; programs check what can be checked before a request is shown; a request built is committed with its change. Built in steps: 1 ideas tied to where they came from (ACR-01), 2 the Editor sorting only, 3 the Editor writing, 4 Build it into the change pipeline. After the design the owner said "Do all"; the name (the Editor) and the ceiling (5 proposed requests per repository) are the design's defaults until the owner says otherwise. | - |
 | <a id="dec-48"></a>**DEC-48** Onboarding runs as fixed steps with quality gates; a model summarises | 2026-11-08 | Onboarding a 1,325-file Java repository on the work deployment on GPT-5 mini said 8/8 done while its code map had 1,325 placeholder nodes and no edges, and the stack's own log at home said the same of every run ("a structural fallback, not a full semantic analysis"): the Understand Anything skill needs Claude Code's subagent channel, which OpenCode lacks, so an agent was asked to run a pipeline it could not run and took shortcuts, and every step was checked for existence, never for quality. So: the code map runs as fixed steps in the container (the plugin's own scan, batching and tree-sitter structure, then nodes and edges from a program; no model, no agent), summaries come from a model one batch per call, and every step has a quality gate and a record (when it last ran, how long, which model, calls, tokens, its numbers). A hollow result is weak, shown as weak, never done. A repository has a kind: the owner's own work gets an engineer's guide (entry points, module map, data model, how to extend it, build and test, fragile areas, glossary) written from its structure; something to evaluate gets the review. The graph view ranks the repository's own code by the links that hold it together, the source pane says which lines it shows and offers the whole file, and the viewer link works off the tailnet. Fixes belong in the stack (the platform), never as local patches on a deployment. | - |
 | <a id="dec-49"></a>**DEC-49** Coding agents get a small card and the brief pushed; everything else onboarding makes stays and is reachable | 2026-11-08 | What the owner asked: how coding agents should work with what onboarding generates, in very large codebases too, keeping the codebase's conventions, and whether it helps at all. The studies say generated overview files pushed into the context do not make agents more correct (ETH Zurich, February 2026: about 3 % worse; a two-agent ablation: no effect on correctness, faster when told about slow tests), selected experience and graph tools for finding code help, and conventions hold when a program checks them; the stack's own exam saw coders use only Bash and never call the memory tool. So: a repository card of at most about 1,500 tokens (commands, rules that are not obvious, fragile areas, one line per part, where to start), made without a model from what onboarding learned, is given first to every coding run, with the owner's pins and strikes; the task brief adds the tests to run first and the closest example for a new file; the file note at first read carries the code map's line, and a wide search hears which folders its hits fall in; after each edit the repository's linter runs on the file; the conventions review reads the card. Nothing made is thrown away: the guide, the wiki, the code map and the facts stay for people and are exported for the coder to grep, never pushed. Update makes the card again and checks the wiki against the changed code. Each layer must prove itself in the replay exam's knowledge arm on a large repository, against an arm without memory, on cases after the commit the knowledge was made at. | - |
+| <a id="dec-50"></a>**DEC-50** The AI Stack runs on Temporal, with packs and a canvas; professional tools before our own | 2026-11-09 | What the owner asked: reuse professional tools rather than build from scratch, see how the agents work together like Lego Mindstorms, and let Claude choose the engine by research. So: Temporal (MIT) is the core engine on every deployment, with one generic Python graph runner; templates are graphs in a pack's git, drawn and watched on Workflow Builder's editor (Apache 2.0); packs are Claude Code plugin folders; the worker protocol keeps its trust model, Windows stays pull-only; the tracker through atlassian-python-api and mcp-atlassian; agentgateway for tool grants later. DBOS is not taken because its dashboard is proprietary. The review added: references only in the history, encrypted and kept off the NAS on a customer-class deployment; a run pins its template and a replay test guards the runner; child workflows and continue-as-new keep histories small; the Conductor is removed after 14 days without fallback; Temporal upgrades run in the update path. | - |
 
 ## Test index
 
