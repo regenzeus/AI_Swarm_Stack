@@ -174,7 +174,9 @@ async function decide(browser) {
   const state = () => page.evaluate(() => fetch("/api/state").then((r) => r.json())).catch(() => ({}));
   const look = (where, count) => page.evaluate(([where, count, id]) => {
     const item = (S?.decisions || []).find((d) => d.id === id), el = document.querySelector(where);
-    return { shown: !!item && !!el && (el.innerText || "").includes(item.what), count: +(document.querySelector(count)?.textContent || "").replace(/\D/g, ""), list: (S?.decisions || []).length };
+    // Home's "Needs you" counts what waits for the owner without the ideas, which have their own card (yoursN()); #/decide counts all
+    const ds = (S?.decisions || []).filter((d) => where !== "#homeneeds" || typeof IDEA_CLS === "undefined" || !IDEA_CLS.has(d.cls));
+    return { shown: !!item && !!el && (el.innerText || "").includes(item.what), count: +(document.querySelector(count)?.textContent || "").replace(/\D/g, ""), list: ds.length };
   }, [where, count, id]);
   const go = (h) => page.evaluate((x) => { location.hash = x; }, h);
   try {
