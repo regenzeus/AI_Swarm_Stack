@@ -4027,10 +4027,10 @@ The app shall have one screen with Workflow Builder's editor (Apache 2.0) to dra
 
 **One engine after the move** · should · functional · **planned**
 
-Home's fixed plans and then the planner's free plans shall move to templates on Temporal, and once every kind of home plan has run on Temporal for 14 days with nothing falling back to the Conductor, the next landing removes the Conductor; until then every run is also a row of the Tasks tab, so the app shows one list.
+Home's fixed plans and the planner's free plans shall move to Temporal in one cutover (the owner chose a big bang on 9 November 2026), with the Conductor kept switched off as the rollback; once every kind of home plan has run on Temporal for 14 days with nothing falling back to the Conductor, the next landing removes the Conductor; until then every run is also a row of the Tasks tab, so the app shows one list.
 
 - Parents: [SN-05](#sn-05)
-- Sources: `docs/AI-STACK.md`
+- Sources: `docs/AI-STACK.md`, `docs/AI-STACK-PLAN.md`
 - Verified by: inspection: `docs/AI-STACK.md`
 - Acceptance: Test: after each stage home's whole check is green, the Tasks tab lists runs of both engines, and the health board counts the days without fallback per kind of plan.
 

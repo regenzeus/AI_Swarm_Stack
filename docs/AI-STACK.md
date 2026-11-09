@@ -286,7 +286,9 @@ commit is approved. A new commit waits in the queue while the old one runs.
 
 ## 15. Order
 
-Each step lands alone, between exam arms, with home's whole check green and no change in what home does.
+**Superseded by the owner's choice of one big bang (9 November 2026):** everything below is built together on one
+integration branch, and home switches in one cutover. The work packages, the state move and the cutover are in
+[AI-STACK-PLAN.md](AI-STACK-PLAN.md). The order below stays as the order of dependencies within that branch.
 
 1. **This design, signed** by the owner.
 2. **The walking skeleton**, against stand-ins and with a toy pack:

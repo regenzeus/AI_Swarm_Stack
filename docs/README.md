@@ -26,6 +26,7 @@ into `requirements/findings.yaml`.
 | [WORK-APPROVALS.md](WORK-APPROVALS.md) | What the owner gets signed off at work before a work deployment, by whom, what to show, and the answer the stack needs |
 | [GENERALISATION.md](GENERALISATION.md) | Generalising the stack: core, domains and deployment, from an audit of the code |
 | [AI-STACK.md](AI-STACK.md) | The AI Stack (proposed, for sign-off): Temporal as the engine, packs from outside the repository, templates drawn on a canvas and watched live, trackers, places, pools, roles, and the tools taken instead of built |
+| [AI-STACK-PLAN.md](AI-STACK-PLAN.md) | The big-bang implementation plan of the AI Stack: pinned versions, where each part of the Conductor goes, new and changed files, 18 work packages, moving home's state, the cutover and its rollback, tests, risks |
 | [MEMORY-TAB.md](MEMORY-TAB.md) | The memory concept: one home per kind of knowledge, the Memory tab, the leak in long-term memory, and what helps a coding task |
 | [MEMORY-STACK.md](MEMORY-STACK.md) | The memory stack, decided and built 7 November 2026 (DEC-44): sectors, layers and collections, subscriptions by role, the opening chosen for each task within a budget, one memory tool, the write gate, the autonomous memory agent, coding memory, the trials (MEM-22 to MEM-49) |
 | [MEMORY-COMMISSIONING.md](MEMORY-COMMISSIONING.md) | The memory stack commissioned on the live stack (7 to 8 November 2026): every feature proven on real data, what commissioning found and fixed, the coding exam's arms, and what it taught |
