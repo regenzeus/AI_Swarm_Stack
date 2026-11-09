@@ -4,7 +4,8 @@ Written 8 November 2026. The owner decided: "The AI Swarm Stack shall be a platf
 run in my home. My home stuff is an example deployment." It carries on from [GENERALISATION.md](GENERALISATION.md)
 (core, domains, deployments) and makes its parked items real, because a second deployment now exists: a work PC where
 the builds need Windows-only tools and customer data may not leave the machine. Decision DEC-45; requirements GEN-04
-to GEN-08, GEN-11 and GEN-13 to GEN-16.
+to GEN-08, GEN-11 and GEN-13 to GEN-16. Its next step, packs and work that waits for people, is designed in
+[AI-STACK.md](AI-STACK.md).
 
 ## 1. Three layers
 

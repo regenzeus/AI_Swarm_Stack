@@ -64,7 +64,7 @@ That project stays out of this. If it ever goes ahead, it would be one more doma
 | GEN-12 | Several people, roles and sign-in | G4 | a second real user |
 | — | Typed step outputs | F4 | hand-offs by reference work today; the need has not shown up |
 | — | Splitting the big files for its own sake | F5 | never as a project: GEN-04 and GEN-09 split what they touch |
-| — | Plugin manifests (`pack.yaml`), Bitbucket, Jira, the regression page | G1, G3, G6 | only for a real domain that needs them; a module and a table are enough today |
+| — | Plugin manifests (`pack.yaml`), Bitbucket, Jira, the regression page | G1, G3, G6 | only for a real domain that needs them; that domain exists now: designed in [AI-STACK.md](AI-STACK.md) (GEN-21 to GEN-32) |
 
 ## Order and how it is proven
 

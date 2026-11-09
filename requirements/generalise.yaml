@@ -228,4 +228,123 @@ items:
     sources: [docs/PLATFORM.md, DEC-45]
     verify: {method: test, by: [tests/test_features.py::test_a_deployment_without_home_never_restores_or_rebuilds_the_home_stack]}
     trace: [ops/restore.sh, ops/new-machine.sh, ops/backup.sh]
-
+  - id: GEN-21
+    title: Packs from outside the repository
+    statement: "A deployment shall load domain packs from folders or repositories outside the stack's repository, pinned by commit: Claude Code plugin folders (agents, skills, MCP servers) plus a stack.yaml (templates, job kinds, classes, rules, grants, exams), namespaced by the pack's name, each commit approved in the queue before it runs."
+    type: functional
+    priority: should
+    status: proposed
+    acceptance: 'Test: a toy pack copied outside the repository adds agents, a skill, a template and a job kind; a name clash and an unapproved commit are refused with the reason; home without it is unchanged.'
+    parents: [SN-05]
+    sources: [docs/AI-STACK.md]
+    verify: {method: inspection, by: [docs/AI-STACK.md]}
+  - id: GEN-22
+    title: Step kinds are worker jobs, at three places
+    statement: "A pack's step kind shall be a job kind of the worker protocol, run at wsl, windows or wsl-host (the same worker as its own Linux user); per-change values shall arrive as its typed parameters, and the coder shall be able to run a check during its loop."
+    type: functional
+    priority: should
+    status: proposed
+    acceptance: "Test: a toy job kind on the wsl-host worker runs with a change's diff, a value outside its type is refused, and the verdict reaches the coder's next prompt in the same build."
+    parents: [SN-05]
+    sources: [docs/AI-STACK.md]
+    verify: {method: inspection, by: [docs/AI-STACK.md]}
+  - id: GEN-23
+    title: Templates are saved plans
+    statement: "A pack's task template shall be a fixed plan in the Conductor's plan format with gates, waits, loops, fan-out from an earlier step's answer and a budget, and shall resume after a restart in any state."
+    type: functional
+    priority: should
+    status: proposed
+    acceptance: 'Test: a toy template with a gate, a 3-round loop, a 5-way fan-out and a wait survives a runner restart in each state, and no checkpoint removes its gate.'
+    parents: [SN-05]
+    sources: [docs/AI-STACK.md]
+    verify: {method: inspection, by: [docs/AI-STACK.md]}
+  - id: GEN-24
+    title: Waiting for someone outside
+    statement: 'A step shall wait on a key (a tracker item or a pull request) for weeks without holding a slot, resume only on an event with that key, send its reminders and on timeout reach the queue of a named role.'
+    type: functional
+    priority: should
+    status: proposed
+    acceptance: 'Test: a toy task waits on T-1; an unrelated event does not wake it, a matching reply does, the reminder fires on a fake clock and the timeout reaches the queue.'
+    parents: [SN-05]
+    sources: [docs/AI-STACK.md]
+    verify: {method: inspection, by: [docs/AI-STACK.md]}
+  - id: GEN-25
+    title: "Trackers, read by polling and written through gates"
+    statement: 'The stack shall poll trackers (Jira Data Center, Forgejo issues) with a cursor, emit events by item key, and write comments, one summary comment, attachments and transitions only as action classes, idempotently, with shadow mode the default for a new tracker.'
+    type: functional
+    priority: should
+    status: proposed
+    acceptance: 'Test: on a stand-in a new item starts the template once across a restart, the summary comment is edited across three updates, and shadow mode writes nothing outward.'
+    parents: [SN-05]
+    sources: [docs/AI-STACK.md]
+    verify: {method: inspection, by: [docs/AI-STACK.md]}
+  - id: GEN-26
+    title: A branch from a named tag
+    statement: "A change shall start from the base ref its task names, push its branch through FORGE_PUSH, open a draft pull request into the template's target branch, and take pull-request comments as events."
+    type: functional
+    priority: should
+    status: proposed
+    acceptance: "Test: on the Bitbucket stand-in a change starts at a tag, opens a draft into a release branch, and a reviewer's comment resumes the task."
+    parents: [SN-05]
+    sources: [docs/AI-STACK.md]
+    verify: {method: inspection, by: [docs/AI-STACK.md]}
+  - id: GEN-27
+    title: Gates name roles
+    statement: 'A gate shall name a role that the deployment maps to people, and each decision shall record who gave it.'
+    type: functional
+    priority: should
+    status: proposed
+    acceptance: 'Test: a toy template with two gates for two roles waits for each, and an answer from outside the role is refused and recorded.'
+    parents: [SN-05]
+    sources: [docs/AI-STACK.md]
+    verify: {method: inspection, by: [docs/AI-STACK.md]}
+  - id: GEN-28
+    title: Named pools of capacity
+    statement: 'A deployment shall name pools with sizes; steps and jobs take leases with a heartbeat, a lost lease is freed, and tasks share a pool in turn.'
+    type: functional
+    priority: should
+    status: proposed
+    acceptance: 'Test: a 10-item fan-out on a pool of 2 never runs 3 at once, a killed item frees its lease, two tasks share the pool.'
+    parents: [SN-05]
+    sources: [docs/AI-STACK.md]
+    verify: {method: inspection, by: [docs/AI-STACK.md]}
+  - id: GEN-29
+    title: Artifacts by hash
+    statement: "Files a step makes shall be kept by their SHA-256 with the task, step, run and commit that made them, their data class and the deployment's retention, and may be attached to a tracker item or a pull request."
+    type: functional
+    priority: should
+    status: proposed
+    acceptance: "Test: a toy step's zip is attached to a stand-in item and its record names the commit and run that made it."
+    parents: [SN-05]
+    sources: [docs/AI-STACK.md]
+    verify: {method: inspection, by: [docs/AI-STACK.md]}
+  - id: GEN-30
+    title: Tools per agent from the pack
+    statement: 'A pack shall grant each agent its MCP servers and commands; a step gets exactly those, and a server the data class or egress does not allow is dropped.'
+    type: functional
+    priority: should
+    status: proposed
+    acceptance: 'Test: a toy agent calls a stand-in MCP read tool, a second agent without the grant cannot, a server off the egress list is refused.'
+    parents: [SN-05]
+    sources: [docs/AI-STACK.md]
+    verify: {method: inspection, by: [docs/AI-STACK.md]}
+  - id: GEN-31
+    title: One record per journey, and pack exams
+    statement: "A finished task shall export as one bundle a person can follow without the app, and a pack's exam cases, each with its outcome, shall run through the replay exam."
+    type: functional
+    priority: should
+    status: proposed
+    acceptance: 'Test: a toy task exports a bundle with its chain from item to decisions, and a toy exam set runs and scores.'
+    parents: [SN-05]
+    sources: [docs/AI-STACK.md]
+    verify: {method: inspection, by: [docs/AI-STACK.md]}
+  - id: GEN-32
+    title: Packs pinned and updated
+    statement: "An update shall verify the stack's signed tag and that every pinned pack commit is approved; a new pack commit waits in the queue while the old one runs."
+    type: functional
+    priority: should
+    status: proposed
+    acceptance: 'Test: a new commit in packs.txt leaves the old one running and puts one decision in the queue.'
+    parents: [SN-05]
+    sources: [docs/AI-STACK.md]
+    verify: {method: inspection, by: [docs/AI-STACK.md]}
