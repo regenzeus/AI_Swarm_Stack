@@ -365,8 +365,7 @@ BUILD_ACTIONS = {"build_assign", "build_revise", "build_approve", "build_approve
                  "build_switch_engine"}
 IMPROVE_ACTIONS = {"improve_scan", "proposal_accept", "proposal_dismiss"}
 REPO_ACTIONS = {"codemap", "repo_create", "repo_buildable", "repo_remove"}
-# crew_schedule answers only with where a schedule is changed now (n8n's canvas, WFL-09), until the app drops its form
-CREW_ACTIONS = {"crew_run", "crew_memory_forget", "crew_memory_undo", "crew_schedule", "health_ack", "phone_cleanup_do", "phone_cleanup_do_all", "phone_cleanup_dismiss", "phone_cleanup_undo"}
+CREW_ACTIONS = {"crew_run", "crew_memory_forget", "crew_memory_undo", "health_ack", "phone_cleanup_do", "phone_cleanup_do_all", "phone_cleanup_dismiss", "phone_cleanup_undo"}
 creating = threading.Lock()            # one new mission at a time (drafting takes a minute or two)
 
 

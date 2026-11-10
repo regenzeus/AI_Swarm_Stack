@@ -239,7 +239,7 @@ function stackHealthHtml(sy, svc) {
       <div class="card grid g2" style="gap:0">${svc.map((s) => `<div class="svc"><span class="dot ${s.state === "running" ? (/unhealthy/.test(s.status) ? "warn" : "ok") : "err"}"></span><span class="n">${esc(s.name)}</span><span class="tiny faint">${esc(s.status.replace(/^Up /, "").replace(/ \(healthy\)/, ""))}</span></div>`).join("")}</div>
     </div>
     <div>
-      <div class="section-h"><h2>Scheduled jobs</h2>${how("stack-page")}</div>
+      <div class="section-h"><h2>Timers without n8n</h2><a class="tiny" href="#/workflows">Every other schedule: Workflows</a>${explain("kept-timers", "The backup, the restore drill and the boot check keep their own timers: they must run when n8n is down. Every other job and task runs on its workflow's schedule.", "Why these")}</div>
       <div class="card list">${(sy.timers || []).map((t) => { const failed = (sy.failed || []).some((f) => f.startsWith(t.unit + ".")); return `<div><div class="ic ${failed ? "err" : ""}">${failed ? ic.alert : ic.clock}</div><div class="grow"><div class="ttl">${esc((S.crew || []).find((c) => c.unit === t.unit)?.name || t.unit)}</div><div class="sub">last ${t.last ? rel(new Date(t.last / 1000).toISOString()) : "–"}</div></div><div class="tiny faint" style="white-space:nowrap">${t.next ? rel(new Date(t.next / 1000).toISOString()) : "–"}</div></div>`; }).join("")}</div>
     </div>
   </div>

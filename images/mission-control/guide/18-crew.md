@@ -52,8 +52,9 @@ An agent whose last three runs failed pauses itself and tells you once; **Resume
 Tap a crew member for its page, the same one every agent has: **Now** (its latest run's log, and the memories the
 curator wants you to look at), **History** (every run of the last 30 days with its log), **Memory** (its journal),
 **Results** (how often it succeeded, how long it takes; for the reviewers how many proposals it made, and how many
-you accepted, built or dismissed) and **Run now**. Its schedule and its on/off switch are its workflow's: open
-**Workflows**, change the time on its schedule trigger or switch it off with Active there.
+you accepted, built or dismissed) and **Run now**. Its schedule and its on/off switch are its workflow's: its **Settings** says the
+schedule in words and **Its workflow** opens it, where you change the time on its schedule trigger or switch it off
+with Active.
 
 The colour of each card in the Agents list is its health: its last result and its 7-day success rate. There is
 one health item per agent: every mission, every crew job, and the engines (Hermes chat, the builder, the Claude

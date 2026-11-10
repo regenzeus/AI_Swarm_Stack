@@ -44,10 +44,11 @@ services
 
 ## Scheduled jobs
 
-Besides your tasks, the stack runs its own maintenance on timers: nightly encrypted backups to the NAS (and a copy
-to OneDrive), a weekly restore test that proves the backups work, vault indexing, memory review, the weekly
-learning run that tidies the vault and wiki, skill syncing, and a monthly check for new versions. The last backup and
-its restore test are at the top of Health.
+Every schedule is a workflow's now (vault indexing, memory review, the weekly tidy, skill syncing, the monthly check for
+new versions and every repeating task): **Workflows** shows them all, and a crew job's or a task's Settings shows its
+schedule with the way to its workflow. **Timers without n8n** lists the three jobs that keep their own timer because
+they must run when n8n is down: the nightly encrypted backup to the NAS (and a copy to OneDrive), the weekly restore
+test that proves the backups work, and the boot check. The last backup and its restore test are at the top of Health.
 
 ## Checks (CI)
 

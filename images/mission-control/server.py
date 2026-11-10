@@ -39,7 +39,7 @@ PHOENIX = os.environ.get("PHOENIX_URL", "http://phoenix:6006")
 HERMES_KEY = os.environ.get("API_SERVER_KEY", "")
 ACTIONS = {"flow_answer", "pack_approve", "pack_refuse", "tracker_shadow_approve", "tracker_shadow_reject", "tracker_live", "command_approve", "claude_task","claude_cancel", "windows_ask", "forgejo_connect", "create", "run", "pause", "resume", "archive", "update", "memory", "email", "vault_add", "understand", "card_edit",
            "forget", "memory_search", "memory_browse", "memory_move", "build_assign", "build_revise", "build_approve", "build_approve_all", "build_reject", "build_revert",
-           "improve_scan", "proposal_accept", "proposal_dismiss", "build_recheck", "build_switch_engine", "codemap", "repo_create", "repo_buildable", "repo_remove", "crew_run", "crew_memory_forget", "crew_memory_undo", "crew_schedule",
+           "improve_scan", "proposal_accept", "proposal_dismiss", "build_recheck", "build_switch_engine", "codemap", "repo_create", "repo_buildable", "repo_remove", "crew_run", "crew_memory_forget", "crew_memory_undo",
            "journal_note", "journal_edit", "health_ack", "swarm_pause", "swarm_confirm", "swarm_reopen", "swarm_autonomy", "swarm_post", "swarm_help_verdict", "swarm_agent_change", "phone_cleanup_do", "phone_cleanup_do_all", "phone_cleanup_undo", "phone_cleanup_dismiss",
            "shop_decide", "shop_limits",           # shop_*: only through /api/shop/* (the owner, never the AI phone or an agent)
            "house_connect", "house_switch", "house_alexa", "house_say", "house_settings", "house_status",   # house_*: /api/house* and the house MCP tools

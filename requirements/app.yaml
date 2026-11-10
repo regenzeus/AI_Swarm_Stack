@@ -781,6 +781,7 @@ items:
     rationale: 'The owner, 10 Nov 2026: "I want the UX polished and updated and no trace of technical debt." The design''s
       section 4: the Stack page was a drawer of 15 things.'
     verify: {method: test, by: [tests/test_app_after_n8n.py::test_the_stack_page_holds_the_stack_and_the_rest_is_where_it_belongs_two_taps_from_the_menu,
+      tests/test_app_after_n8n.py::test_the_runner_lists_the_stack_s_services_with_three_fields_not_docker_s_slow_json,
       tests/test_ux_polish.py::test_the_stack_page_shows_one_part_at_a_time_and_jobs_carry_their_names]}
     trace: [images/mission-control/web/static/app.js, images/mission-control/web/static/app-base.js, images/mission-control/web/static/app-memory.js,
       images/mission-control/web/static/guide.js, images/mission-control/web/static/tools.json, ops/decisions.py]
@@ -877,3 +878,22 @@ items:
     verify: {method: test, by: [tests/test_app_after_n8n.py::test_one_visual_system_every_font_size_is_on_the_type_scale_and_docs_ux_names_the_tokens,
       tests/test_app_layout.py::test_the_desk_uses_the_width_it_has]}
     trace: [images/mission-control/web/static/app.css, images/mission-control/web/static/guide.css, docs/UX.md]
+  - id: APP-68
+    title: A schedule is shown where it is held
+    statement: Every schedule being a workflow's (WFL-09), a crew job's Settings and a mission's form shall show its
+      schedule read-only in plain words, with when it runs next and a link that opens its workflow inside the app; a job
+      on a kept timer shall say it runs without n8n; the Stack page shall list the timers that run without n8n as such and
+      point to Workflows for every other schedule; a run started by a workflow shall say so; and no form shall offer a
+      schedule or a time trigger that nothing would apply.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-01, SN-02]
+    sources: [DEC-51, DEC-53]
+    rationale: 'The scheduler clean-up (10 Nov 2026) moved every schedule to n8n: the crew schedule form only answered with
+      a refusal, and the event bus has no time source any more.'
+    verify: {method: test, by: [tests/test_app_after_n8n.py::test_a_schedule_held_by_a_workflow_is_shown_read_only_with_the_way_to_its_workflow,
+      tests/test_n8n_move.py::test_a_missions_schedule_goes_to_its_task_and_then_its_workflow_holds_it]}
+    trace: [images/mission-control/web/static/app-tasks.js, images/mission-control/web/static/app-runs.js, images/mission-control/web/static/app-workflows.js,
+      images/mission-control/web/static/app-base.js, images/mission-control/web/static/app.js, images/mission-control/server.py, ops/crew.py,
+      ops/missions.requests.py, ops/missions.py]

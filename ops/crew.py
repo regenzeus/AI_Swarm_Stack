@@ -324,9 +324,6 @@ def handle(req, c):
         _cache["t"] = 0
         M.event("crew", "", f"{ag['name']}: started on request", title="Crew")
         return {"started": ag["id"]}
-    if a == "crew_schedule":                              # WFL-09: n8n's canvas holds a job's schedule and its switch
-        raise ValueError("A crew job's schedule and its on/off switch are its workflow's: open Workflows, change its "
-                         "schedule trigger or its Active switch there.")
     if a == "crew_memory_forget":
         return forget(req.get("ids") or [], limit(str(req.get("why", "")), 2000, "the reason"))
     if a == "crew_memory_undo":                           # the owner's Undo of one Memory Keeper change (MEM-21)

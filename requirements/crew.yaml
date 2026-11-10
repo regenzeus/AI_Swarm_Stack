@@ -25,7 +25,8 @@ items:
     status: deprecated
     superseded_by: WFL-11
     reason: "DEC-51: a crew job's schedule and switch are its n8n workflow's since 10 Nov 2026; the owner changes them on
-      n8n's canvas inside the app (Workflows, WFL-11), and crew_schedule refuses with that pointer. Run now stays."
+      n8n's canvas inside the app (Workflows, WFL-11). Its Settings shows the schedule read-only in words with a link to its
+      workflow (APP-68); the crew_schedule action left the app, the server and the runner on 10 Nov 2026. Run now stays."
     parents: [SN-02, SN-07]
     sources: [DEC-05]
     verify: {method: test, by: [tests/test_crew.py::test_text_times_and_intervals, tests/test_crew.py::test_crew_actions_are_validated]}

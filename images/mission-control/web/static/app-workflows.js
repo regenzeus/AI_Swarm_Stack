@@ -132,6 +132,14 @@ async function wfWhereInto(el, wid, ex = "", inList = null, keep = null) {
   if (keep && slot && keep.dataset.src === slot.dataset.src) { slot.parentNode.moveBefore(keep, slot); slot.remove(); keep.hidden = false; }
   else keep?.remove();
 }
+// WFL-09: a schedule held by a workflow, read-only in plain words (a crew job's or a mission's Settings), with the way to
+// change it: the workflow inside the app (its schedule trigger, its Active switch)
+function wfScheduleHtml(text, next, wid) {
+  return `<div class="card pad wf-sched mt-2"><div class="row between wrap gap-2"><b class="wrap">${esc(text || "when called")}</b>
+      <a class="btn sm" href="#/workflows?open=${encodeURIComponent(wid)}">${ic.flow}Its workflow</a></div>
+    <div class="small muted mt-1">${next ? `next ${esc(when(next))}` : text === "switched off" ? "it does not run until it is switched on" : "no run planned on a schedule"}</div>
+    ${explain("wf-sched", "Its workflow starts it: change the schedule on n8n's canvas (its schedule trigger), or switch it off there (its Active switch).", "Where to change it")}</div>`;
+}
 async function wfInInto(el, kind, id) {                // kind: "agent" (an agent card) or "crew" (a crew job)
   if (!el) return;
   const v = await wfView();

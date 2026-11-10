@@ -450,7 +450,7 @@ function settingsForm(body, m) {
   const b = m.brief || {};
   body.innerHTML = `<form class="card pad-l" id="sf" autocomplete="off">
     <label class="field" style="margin-top:0"><span>Title</span><input class="input" name="title" value="${esc(m.title)}" maxlength="80"></label>
-    ${schedHtml(m.schedule)}
+    ${m.workflow ? `<div class="field"><span>Schedule</span>${wfScheduleHtml(m.schedule_text, m.status === "active" ? m.next_run : null, m.workflow)}</div>` : schedHtml(m.schedule)}
     ${trigEditor(m.triggers)}
     ${m.type === "task" ? `<div class="card pad" style="margin-top:16px;padding-top:4px;padding-bottom:4px"><label class="switch"><span><b>Deep research</b><div class="small muted">Every run plans 3–5 research steps, works through them, then combines the findings</div></span><input type="checkbox" name="deep" ${m.depth === "deep" ? "checked" : ""}></label></div>` : ""}
     <div class="field"><span>Cost</span><small style="font-size:13.5px">Runs only on your ChatGPT subscription: $0. If ChatGPT pauses the stack, runs wait and retry every 30 minutes.</small></div>
@@ -467,12 +467,13 @@ function settingsForm(body, m) {
     <div class="form-foot"><button class="btn primary" type="submit">${ic.check}Save</button><a class="btn" href="#/chat?mission=${encodeURIComponent(m.slug)}">${ic.tune}Tune in chat instead</a></div>
   </form>`;
   const f = $("#sf");
-  bindSched(f); bindTrig(f);
+  if (f.smode) bindSched(f);
+  bindTrig(f);
   f.onsubmit = async (e) => {
     e.preventDefault();
-    const sched = readSched(f);
-    if (!sched) return toast("Choose at least one day", true);
-    const fields = { title: f.title.value.trim(), schedule: sched, deliver: readDeliver(f), triggers: readTrig(f) };
+    const sched = m.workflow ? null : readSched(f);                       // a workflow holds its schedule: the form leaves it
+    if (!m.workflow && !sched) return toast("Choose at least one day", true);
+    const fields = { title: f.title.value.trim(), ...(sched ? { schedule: sched } : {}), deliver: readDeliver(f), triggers: readTrig(f) };
     if (m.type === "task") { fields.goal = f.goal.value; fields.depth = f.deep.checked ? "deep" : "standard"; }
     else {
       fields.key_questions = lines(f.kq.value); fields.search = lines(f.search.value); fields.feeds = lines(f.feeds.value); fields.notes = f.notes.value;

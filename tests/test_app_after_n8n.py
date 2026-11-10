@@ -153,3 +153,45 @@ def test_one_visual_system_every_font_size_is_on_the_type_scale_and_docs_ux_name
     for step, undo in (("1.12", "0.892857"), ("1.3", "0.769231"), ("1.6", "0.625")):       # a wide screen's zoom, undone on a tool's frame
         assert f"zoom: {step}; --z: {step};" in css and f".tool-frame {{ zoom: {undo};" in css
     assert "body[data-page=\"workflows\"] .pagehelp, body[data-page=\"traces\"] .pagehelp { display: none; }" in css
+
+
+def test_a_schedule_held_by_a_workflow_is_shown_read_only_with_the_way_to_its_workflow():
+    """WFL-09: every schedule is a workflow's. A crew job's Settings and a mission's form show it in plain words with a
+    link that opens its workflow inside the app; the old schedule form, its presets and the crew_schedule action are
+    gone from the app, the server's allow-list and the runner; the event bus has no time trigger any more; a run n8n
+    started says so; the Stack page names the three timers that run without n8n."""
+    js, wf = webjs.app_js(), (STATIC / "app-workflows.js").read_text()
+    for gone in ("CREW_PRESETS", '" (yours)"', "crew_schedule", 'schedule: ["When"'):
+        assert gone not in js, gone
+    for f in ("images/mission-control/server.py", "ops/crew.py", "ops/missions.requests.py"):
+        assert "crew_schedule" not in (ROOT / f).read_text(), f
+    settings = fn("agentSettings")
+    assert "c.workflow ? wfScheduleHtml(" in settings and "Run now works any time" in settings
+    src = re.search(r"^function wfScheduleHtml\(.*?^\}$", wf, re.M | re.S)[0]
+    run = "const esc = (s) => String(s); const ic = { flow: '' }; const when = (x) => 'in 2 h'; const explain = () => '';\n" + src + \
+        "\nprocess.stdout.write(JSON.stringify([wfScheduleHtml('daily 04:30', 1, 'w1'), wfScheduleHtml('switched off', null, 'w 2')]));"
+    a, b = json.loads(subprocess.run(["node", "-e", run], check=True, capture_output=True, text=True).stdout)
+    assert 'href="#/workflows?open=w1"' in a and "daily 04:30" in a and "next in 2 h" in a
+    assert 'href="#/workflows?open=w%202"' in b and "it does not run until it is switched on" in b
+    form = (STATIC / "app-runs.js").read_text()
+    assert "m.workflow ? `<div class=\"field\"><span>Schedule</span>${wfScheduleHtml(m.schedule_text" in form
+    assert "...(sched ? { schedule: sched } : {})" in form                      # the form leaves a workflow's schedule alone
+    assert 'workflow=wf["id"] if wf else None' in (ROOT / "ops/missions.py").read_text()
+    assert 'n8n: "by its workflow" };' in js and js.count('n8n: "by its workflow"') == 2
+    health = fn("stackHealthHtml")
+    assert "<h2>Timers without n8n</h2>" in health and 'href="#/workflows">Every other schedule: Workflows</a>' in health
+
+
+def test_the_runner_lists_the_stack_s_services_with_three_fields_not_docker_s_slow_json():
+    """The live state reported no service on 10 Nov 2026: `docker ps -a --format "{{json .}}"` makes Docker work out
+    every container's volumes and mounts (3 s quiet, past the runner's 60 s timeout when busy). Three fields take 0.1 s."""
+    import missions as MS
+    seen = []
+
+    def run(*cmd, **k):
+        seen.append(cmd)
+        return "aistack-n8n-1\trunning\tUp 3 minutes (healthy)\naistack-backup-1\texited\tExited (0) 2 hours ago\n\nnot a row\n"
+    assert MS.stack_services(run) == [{"name": "n8n", "state": "running", "status": "Up 3 minutes (healthy)"},
+                                      {"name": "backup", "state": "exited", "status": "Exited (0) 2 hours ago"}]
+    assert seen[0][-1] == "{{.Names}}\t{{.State}}\t{{.Status}}" and not any("json" in x for x in seen[0])
+    assert "services = stack_services()" in (ROOT / "ops/missions.py").read_text()

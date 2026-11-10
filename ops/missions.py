@@ -852,6 +852,16 @@ _part("missions.requests.py")   # the requests from the app and the chat (PLT-25
 _sys = {"t": 0, "data": {}}
 
 
+def stack_services(run=None):
+    """The stack's containers for the Stack page: name, state, status. Three fields, not docker's whole JSON: "{{json .}}"
+    makes Docker work out every container's volumes and mounts, 3 s on a quiet PC and over the minute's timeout on a busy
+    one, so the page listed no service at all (10 Nov 2026)."""
+    out = (run or sh)("docker", "ps", "-a", "--filter", "label=com.docker.compose.project=aistack",
+                      "--format", "{{.Names}}\t{{.State}}\t{{.Status}}")
+    rows = [line.split("\t") for line in out.splitlines()]
+    return [{"name": r[0].removeprefix("aistack-").removesuffix("-1"), "state": r[1], "status": r[2]} for r in rows if len(r) == 3]
+
+
 def system_info():
     if time.time() - _sys["t"] < 60:
         return _sys["data"]
@@ -873,13 +883,7 @@ def system_info():
         pass
     failed = [u for u in sh("systemctl", "--user", "list-units", "--failed", "--plain", "--no-legend").split()
               if u.endswith((".service", ".timer"))]
-    services = []
-    for line in sh("docker", "ps", "-a", "--filter", "label=com.docker.compose.project=aistack", "--format", "{{json .}}").splitlines():
-        try:
-            d = json.loads(line)
-            services.append({"name": d["Names"].removeprefix("aistack-").removesuffix("-1"), "state": d["State"], "status": d["Status"]})
-        except Exception:
-            pass
+    services = stack_services()
 
     def jsonl(p):
         try:
@@ -1014,7 +1018,9 @@ def write_state(c, missions):
             said = NJ.schedule("task", tid, idx=when) if tid else None
             item = {k: m.get(k) for k in ("slug", "title", "type", "status", "schedule", "budget_usd_month", "deliver", "created", "goal",
                                           "topic", "depth", "needs", "task", "once", "files_asked")}
+            wf = NJ.of("task", tid, idx=when) if tid else None        # its schedule is its workflow's: the app shows it read-only
             item.update(schedule_text=said[:1].upper() + said[1:] if said else schedule_text(m.get("schedule")), next_run=nd, runs=runs,
+                        workflow=wf["id"] if wf else None,
                         triggers=[{**tr, "text": X.trigger_text(tr)} for tr in m.get("triggers") or []], wiki=X.wiki_root(m),
                         stats={"runs": st[0], "ok": st[1] or 0, "failed": st[2] or 0, "calls": st[3], "tokens": st[4],
                                "spend": round(st[5], 5), "avg_seconds": round(st[6] or 0), "runs_all": allr[0],

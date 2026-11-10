@@ -149,7 +149,7 @@ const greet = () => { const h = new Date().getHours(); return h < 5 ? "Good nigh
 const STATUS = { active: "Active", paused: "Paused", archived: "Archived", ok: "Done", failed: "Failed", running: "Running", queued: "Queued", skipped: "Skipped", waiting: "Waiting for ChatGPT" };
 const typeIcon = (t) => (t === "briefing" ? ic.news : t === "shopping" ? ic.coin : t === "cleanup" ? ic.trash : ic.rocket);
 const typeName = (t) => (t === "briefing" ? "Briefing" : t === "shopping" ? "Shopping" : t === "cleanup" ? "Cleanup analysis" : "Long-term task");
-const TRIG = { schedule: "scheduled", manual: "on demand", event: "event", restart: "restarted after a deploy" };
+const TRIG = { schedule: "scheduled", manual: "on demand", event: "event", restart: "restarted after a deploy", n8n: "by its workflow" };
 
 function md(text, wl) {
   let body = String(text || "").replace(/^---\n[\s\S]*?\n---\n?/, "");
@@ -412,7 +412,7 @@ function runningCard() {
   const href = r.slug ? `#/mission/${encodeURIComponent(r.slug)}` : "";
   return `<div class="card runcard fadein"${href ? ` data-href="${href}"` : ""}>
     <div class="row between"><a class="row grow" href="${href || "#/"}"><span class="dot run"></span><b class="wrap">${esc(r.title)}</b>${href ? `<span class="tiny faint">${ic.next}</span>` : ""}</a><span class="small muted num" data-since="${esc(r.started)}"></span></div>
-    <div class="small muted" style="margin-top:4px">${r.event ? "⚡ " + esc(r.event.trigger || "Event") : TRIG[r.trigger] === "scheduled" ? "Scheduled run" : "Started on demand"}${r.mode === "deep" ? " · deep research" : r.mode === "alert" ? " · alert" : ""}</div>
+    <div class="small muted" style="margin-top:4px">${r.event ? "⚡ " + esc(r.event.trigger || "Event") : TRIG[r.trigger] === "scheduled" ? "Scheduled run" : r.trigger === "n8n" ? "Started by its workflow" : "Started on demand"}${r.mode === "deep" ? " · deep research" : r.mode === "alert" ? " · alert" : ""}</div>
     ${r.event ? `<div class="small" style="margin-top:6px">${esc(r.event.summary)}</div>` : ""}
     ${stepsHtml(r.steps)}
     <div class="log" id="livelog">${esc((r.tail || []).join("\n")) || "Starting…"}</div>
@@ -595,7 +595,7 @@ const tstat = (t) => t.door === "plan" && t.rhythm?.type === "event" && ["schedu
 const SSTATE = { pending: "waits", running: "running", waiting: "waits for its agent", done: "done", failed: "failed", cancelled: "cancelled", skipped: "dropped by the Orchestrator" };
 // TSK-22: each run of a recurring task with how it started, its own verdict against the definition of done and its answer
 const VWORD = { met: ["met", ""], partly: ["partly met", "warn-t"], "not met": ["not met", "err-t"], failed: ["failed", "err-t"], quiet: ["nothing new", "faint"], "not judged": ["not judged", "faint"] };
-const HOW = { start: "at once", schedule: "on its schedule", owner: "you ran it" };
+const HOW = { start: "at once", schedule: "on its schedule", owner: "you ran it", n8n: "by its workflow" };
 // ---------- TSK-24: a task run from what it read to what came out (the task page's Sources, task.js taskFlowInto) ----------
 // What was read (sources, by site), who worked (each step and its agent), what they found, what came out; a tap shows
 // where a part came from and what it fed. Sources read but never cited are dashed. Drawn from public/maps/<task>.<occ>.json

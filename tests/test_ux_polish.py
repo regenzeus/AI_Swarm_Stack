@@ -27,7 +27,7 @@ def test_the_stack_page_shows_one_part_at_a_time_and_jobs_carry_their_names():
         assert f'part("{part}", ' in v
     page = v + re.search(r"^function stackHealthHtml\(.*?^\}$", APP, re.M | re.S)[0] + re.search(r"^function stackCostsHtml\(.*?^\}$", APP, re.M | re.S)[0]
     assert '(S.crew || []).find((c) => c.unit === t.unit)?.name || t.unit' in page
-    for kept in ("Notifications", "Scheduled jobs", "Services", "Resources", "Agents today", "Accounts and agents", "Appearance"):
+    for kept in ("Notifications", "Timers without n8n", "Services", "Resources", "Agents today", "Accounts and agents", "Appearance"):
         assert f"<h2>{kept}</h2>" in page, kept                # what the stack is stays on the page
 
 

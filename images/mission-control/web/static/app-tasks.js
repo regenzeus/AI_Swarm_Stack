@@ -352,7 +352,7 @@ function bindTasks() {
 const PARAM = { news: ["Search for", "copper supply"], breaking: ["Subject to watch", "Acme Mining"], feed: ["Feed address", "https://example.com/feed.xml"],
   github: ["Repository (owner/name)", "regenzeus/AI_Swarm_Stack"], price: ["Symbol:percent", "ACME:8"], filing: ["US ticker", "ACME"],
   forgejo: ["Repository (empty: all)", "ai-stack"], mail: ["Sender or words (empty: any)", "invoice"], house: ["Thing or room (empty: any)", "front door"],
-  file: ["File name part (empty: any)", ".pdf"], schedule: ["When", "weekdays 07:00"], task: ["Task # or words (empty: any)", ""], mission: ["Mission (empty: any)", ""],
+  file: ["File name part (empty: any)", ".pdf"], task: ["Task # or words (empty: any)", ""], mission: ["Mission (empty: any)", ""],
   calendar: ["When: 60 before, start, end or 15 after", "60 before"] };
 function trigBoardHtml() {
   const b = S.bus || { sources: {}, rules: [], events: [], breaking: [], ratings: {} };
@@ -590,7 +590,7 @@ function feedItems() {
     if (r.status === "ok" && r.summary) out.push({ id: `m:${m.slug}:${r.id || ts}`, ts, kind, agent: m.title, head: r.summary, path: fr.saved?.length ? "" : r.output, big: true,
       files: fr.saved || [], missing: fr.missing || [],
       href: fr.saved?.length || fr.missing?.length ? `#/mission/${encodeURIComponent(m.slug)}?tab=payoff` : r.output ? `#/read?path=${encodeURIComponent(r.output)}&m=${encodeURIComponent(m.slug)}` : `#/mission/${encodeURIComponent(m.slug)}`,
-      meta: [r.trigger === "event" ? "after an event" : r.trigger === "schedule" ? "scheduled" : "on request", dur(r.seconds), r.calls ? `${r.calls} model calls` : ""] });
+      meta: [r.trigger === "event" ? "after an event" : r.trigger === "schedule" ? "scheduled" : r.trigger === "n8n" ? TRIG.n8n : "on request", dur(r.seconds), r.calls ? `${r.calls} model calls` : ""] });
     else if (r.status === "failed") out.push({ id: `m:${m.slug}:${r.id || ts}`, ts, kind: "failed", agent: m.title, tone: "err", head: `Did not finish${r.summary ? `: ${r.summary}` : ""}`,
       href: `#/mission/${encodeURIComponent(m.slug)}?tab=history` });
   }
@@ -788,10 +788,6 @@ function bindCrew() {
   $$("[data-kundo]").forEach((b) => (b.onclick = async () => { b.disabled = true; const r = await act({ action: "crew_memory_undo", change: b.dataset.kundo }, (x) => (x?.undone ? "Undone: the fact is as it was" : "")); if (!r?.undone) b.disabled = false; }));
 }
 
-const CREW_PRESETS = [["every", "5min", "every 5 minutes"], ["every", "10min", "every 10 minutes"], ["every", "1h", "every hour"],
-  ["calendar", "*-*-* 03:30", "daily 03:30"], ["calendar", "*-*-* 07:30", "daily 07:30"], ["calendar", "Mon *-*-* 04:30", "Mondays 04:30"],
-  ["calendar", "Sun *-*-* 04:00", "Sundays 04:00"], ["calendar", "*-*-01 09:00", "monthly, the 1st, 09:00"]];
-
 // ---------- Agents (design "Agents in Mission Control", 28 Oct 2026): one list, one page for every agent ----------
 // An agent is anything that works by itself on a schedule, an event or your request: a mission you gave the stack
 // ("Yours") or a crew job that keeps it in shape ("Housekeeping"). "Mission" stays the word for the job; health is a
@@ -823,7 +819,7 @@ function crewAgent(a) {
   return { key: `crew:${a.id}`, kind: "crew", id: a.id, href: `#/crew/${a.id}`, group: "housekeeping", title: a.name, icon: ic[CREW_IC[a.area]] || ic.layers,
     what: (CREW_AREAS.find(([k]) => k === a.area) || [0, "Crew"])[1], live: a.state === "running", queued: false,
     waiting: a.state === "waiting" ? "" : null, off: a.enabled === false, archived: false, status: a.state,
-    schedule: (a.schedule || "on request") + (a.custom ? " (yours)" : ""), next: a.next || null, last: a.last || null,
+    schedule: a.schedule || "on request", next: a.next || null, last: a.last || null,
     lastOk: a.state === "failed" ? false : a.last ? true : null, step: "", result: a.result || "", issues: a.issues || [], success: a.success_7d,
     often: !!(a.next && a.last && a.next - a.last <= 1800),            // every few minutes: its "next run" says nothing
     needs: n ? [`${n} memor${n > 1 ? "ies" : "y"} to look at`] : [] };
@@ -1309,29 +1305,16 @@ async function agentPayoff(body, kind, A, m, c) {
   }).catch(() => {});
 }
 
-// Settings: the mission's form, or the crew job's schedule
+// Settings: the mission's form, or the crew job's schedule. A crew job's schedule and its switch are its workflow's
+// (WFL-09): here in plain words, with the way to its workflow; a kept timer runs without n8n (the backup, the restore
+// drill and the boot check must run when n8n is down)
 function agentSettings(body, kind, A, m, c) {
   if (m) {
     settingsForm(body, m);
     if (m.type === "shopping") body.insertAdjacentHTML("afterbegin", shopLimitsHtml());
     return;
   }
-  const id = c.id;
-  body.innerHTML = `<div class="card pad-l"><h2>Schedule</h2>${c.schedule === "on request" && !c.custom ? `<div class="small muted" style="margin-top:6px">Runs when the stack needs it; no schedule to set.</div>` : `
-    <div class="small" style="margin-top:6px">Now: <b>${esc(c.schedule || "")}</b>${c.custom ? " (your setting)" : ""}</div>
-    <label class="field"><span>Run</span><select class="input" id="cpre">${CREW_PRESETS.map(([k, v, l]) => `<option value="${k}|${v}" ${l.replace(" minutes", "min").replace(" hour", "1h") === c.schedule || l === c.schedule ? "selected" : ""}>${l}</option>`).join("")}<option value="custom">custom…</option></select></label>
-    <input class="input" id="ccustom" placeholder="e.g. 2h, or Tue *-*-* 05:00" hidden>
-    <div class="row wrap" style="gap:8px;margin-top:8px"><button class="btn sm primary" id="csave">Save schedule</button>${c.custom ? `<button class="btn sm ghost" id="creset">Back to the default</button>` : ""}</div>
-    <label class="switch" style="margin-top:12px"><span><b>Switched on</b><div class="small muted">Off: it doesn't run on its schedule (Run now still works)</div></span><input type="checkbox" id="con" ${c.enabled === false ? "" : "checked"}></label>`}</div>`;
-  const pre = $("#cpre");
-  if (!pre) return;
-  pre.onchange = () => ($("#ccustom").hidden = pre.value !== "custom");
-  $("#csave").onclick = async () => {
-    let [k, value] = pre.value.split("|");
-    if (pre.value === "custom") { value = $("#ccustom").value.trim(); k = /^\d+\s*(s|min|h|d)$/.test(value) ? "every" : "calendar"; }
-    await act({ action: "crew_schedule", id, kind: k, value }, (x) => (x?.schedule ? `Now ${x.schedule}: its next run follows it` : ""));
-  };
-  if ($("#creset")) $("#creset").onclick = async () => { await act({ action: "crew_schedule", id, kind: "reset" }, (x) => (x?.schedule ? `Back to ${x.schedule}: its next run follows it` : "")); };
-  $("#con").onchange = async (e) => { const r = await act({ action: "crew_schedule", id, enabled: e.target.checked }, e.target.checked ? "On: it runs at its next time" : "Off: it does not run until you turn it on"); if (!r) e.target.checked = !e.target.checked; };
+  body.innerHTML = `<div class="card pad-l"><h2>Schedule</h2>${c.workflow ? wfScheduleHtml(c.enabled === false ? "switched off" : c.schedule, c.enabled === false ? null : c.next, c.workflow)
+    : `<div class="small mt-2"><b>${esc(c.schedule || "on request")}</b></div><div class="small muted mt-1">${c.schedule && c.schedule !== "on request" ? "Its own timer starts it, also when n8n is down." : "Runs when the stack needs it."} Run now works any time.</div>`}</div>`;
 }
 
