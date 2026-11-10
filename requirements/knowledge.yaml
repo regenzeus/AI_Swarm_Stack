@@ -32,7 +32,7 @@ items:
     status: implemented
     parents: [SN-10]
     sources: [images/mission-control/guide/08-knowledge.md]
-    verify: {method: inspection, by: [ops/vault-ingest.sh, ops/systemd/vault-ingest.timer]}
+    verify: {method: inspection, by: [ops/vault-ingest.sh, n8n/workflows/crew-vault-ingest.json]}
   - id: KNW-04
     title: Raw sources are never rewritten
     statement: Agents shall never edit an existing file in the vault's raw/, shall cite sources for non-obvious
@@ -62,7 +62,7 @@ items:
     status: implemented
     parents: [SN-05, SN-10]
     sources: [images/mission-control/guide/18-crew.md]
-    verify: {method: inspection, by: [ops/memory_review.py, ops/systemd/memory-review.timer]}
+    verify: {method: inspection, by: [ops/memory_review.py, n8n/workflows/crew-memory-gatekeeper.json]}
   - id: KNW-07
     title: Forgetting on request
     statement: When the owner asks to forget a text, the stack shall remove every stored conversation containing it from

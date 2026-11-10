@@ -183,7 +183,7 @@ items:
   title: One event bus
   statement: The stack shall collect events from news searches and feeds, Forgejo and GitHub activity (read on a schedule,
     since nothing may reach the PC from outside), incoming mail, Home Assistant state changes, the calendar, watched files,
-    prices, filings, schedules and finished tasks into one event log, each with its source, time and content, and shall
+    prices, filings and finished tasks into one event log, each with its source, time and content, and shall
     show for each source when it last looked, what it found, or why it is off.
   type: functional
   priority: must
@@ -210,7 +210,7 @@ items:
   acceptance: 'Test: two matching events within the cooldown start one task; a rule with the model check skips an event the
     check rejects; every firing names its event.'
   verify: {method: test, by: ['tests/test_events.py::test_a_rule_waits_out_its_cooldown_runs_its_check_and_records_every_firing',
-    'tests/test_events.py::test_rules_are_checked_when_saved_and_schedules_come_due']}
+    'tests/test_events.py::test_rules_are_checked_when_saved_and_a_time_is_no_source']}
   trace: [ops/events.py, prompts/intake.md, images/mission-control/web/static/app.js]
 - id: TSK-12
   group: Event fabric
@@ -385,7 +385,7 @@ items:
   gap: Every task the intake plans runs under the Conductor, once, on a schedule, on an event (each firing an
     occurrence, its event in every step's prompt) or after another task, with coding as a build step, code questions as
     Claude steps (DEC-36), a briefing as the desk's plan or, on an event, the desk's alert (TSK-22), and a price
-    watch as checks of its shopping agent, whose purchases stay its own runs (DEC-37). Since 8 Nov 2026 the runner
+    watch as checks of its shopping agent, whose purchases stay its own runs (DEC-37). Since 10 Nov 2026 each later occurrence of a scheduled task is started by its n8n workflow (WFL-09, DEC-51), never by the Conductor's own clock. Since 8 Nov 2026 the runner
     moves every briefing and price watch still running as its mission under the Conductor by itself, so no repeating
     task runs on two engines; a briefing's alerts are its task's too (the rhythm holds the schedule and the triggers;
     an alert's run is the desk's short alert). Still apart are a cleanup analysis (ops/cleanup.py's, on demand) and work
@@ -610,7 +610,7 @@ items:
     'tests/test_journeys.py::test_the_decide_journey_says_so_when_the_runner_does_not_answer_or_the_browser_dies',
     'tests/test_journeys.py::test_the_decide_journey_judges_what_the_browser_saw',
     'tests/test_decisions.py::test_the_test_item_is_marked_and_changes_nothing_but_itself']}
-  trace: [ops/journeys.py, ops/journeys.mjs, ops/decisions.py, ops/crew.py, ops/systemd/crew-journeys.service, ops/systemd/crew-journeys.timer, Makefile]
+  trace: [ops/journeys.py, ops/journeys.mjs, ops/decisions.py, ops/crew.py, ops/systemd/crew-journeys.service, n8n/workflows/crew-journey-checks.json, Makefile]
 - id: TSK-33
   group: Event fabric
   phase: 9
@@ -723,14 +723,14 @@ items:
   group: Everything is a task
   phase: 9
   title: A crew duty is the stack's repeating task
-  statement: Each crew duty shall be the stack's repeating task, its plan the duty and its When the duty's timer, once per
-    duty and following the timer when it changes.
+  statement: Each crew duty shall be the stack's repeating task, its plan the duty and its When the duty's schedule (its
+    n8n workflow's, WFL-09), once per duty and following the schedule when it changes.
   type: functional
   priority: should
   status: implemented
   parents: [SN-07, SN-08]
   sources: [DEC-46, "owner 2026-11-08: I feel like these should just be a special kind of tasks."]
-  acceptance: 'Test: every duty becomes one task of the stack''s, with its timer; a changed timer follows.'
+  acceptance: 'Test: every duty becomes one task of the stack''s, with its schedule; a changed schedule follows.'
   verify: {method: test, by: ['tests/test_tasks_tab.py::test_each_crew_duty_is_the_stack_s_repeating_task']}
   trace: [ops/tasks.py, ops/crew.py]
 - id: TSK-43

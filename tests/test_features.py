@@ -91,7 +91,7 @@ def test_each_unit_names_a_known_feature_and_a_deployment_starts_only_its_timers
     names = {t.name for t in (ROOT / "ops/systemd").glob("*.timer")}
     assert set(DEPLOY.timers()) == names if DEPLOY.FOLDER.name == "home" else True
     work = run("timers", AISTACK_DEPLOYMENT="example-work").stdout.split()
-    assert "backup.timer" not in work and "crew-postmaster.timer" not in work and "crew-checker.timer" in work
+    assert "backup.timer" not in work and "restore-drill.timer" not in work and "stack-ready.timer" in work
     assert "ops/deployment.py timers" in (ROOT / "ops/new-machine.sh").read_text()
 
 

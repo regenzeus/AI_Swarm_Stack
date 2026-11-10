@@ -1,0 +1,89 @@
+{
+  "active": true,
+  "connections": {
+    "Every night at 04:30": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Run the Memory Keeper",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Run now": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Run the Memory Keeper",
+            "type": "main"
+          }
+        ]
+      ]
+    }
+  },
+  "id": "aistackMemKeeper",
+  "name": "Memory Keeper",
+  "nodes": [
+    {
+      "id": "7a1d3c55-0f6e-4b8a-8d0e-3f2b9c4e1b01",
+      "name": "Every night at 04:30",
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "expression": "30 4 * * *",
+              "field": "cronExpression"
+            }
+          ]
+        }
+      },
+      "position": [
+        0,
+        0
+      ],
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2
+    },
+    {
+      "id": "7a1d3c55-0f6e-4b8a-8d0e-3f2b9c4e1b02",
+      "name": "Run the Memory Keeper",
+      "notes": "The crew job memory, as Run now starts it; the node waits for its result (WFL-05, WFL-06).",
+      "parameters": {
+        "job": "memory",
+        "kind": "crew",
+        "title": "Memory Keeper"
+      },
+      "position": [
+        260,
+        0
+      ],
+      "type": "CUSTOM.aistackStep",
+      "typeVersion": 1,
+      "webhookId": "7a1d3c55-0f6e-4b8a-8d0e-3f2b9c4e1b13"
+    },
+    {
+      "id": "de30da64-dd3f-15e0-6510-14cf2553ddb4",
+      "name": "Run now",
+      "notes": "Starts the job now, as its schedule would (POST).",
+      "parameters": {
+        "httpMethod": "POST",
+        "options": {},
+        "path": "run/memory-keeper"
+      },
+      "position": [
+        0,
+        160
+      ],
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "webhookId": "7d6feec1-36f8-fda0-c3c4-2094231b2fa0"
+    }
+  ],
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Berlin"
+  }
+}

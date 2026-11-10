@@ -1,8 +1,0 @@
-[Unit]
-Description=Crew: journey checks, nightly (after the backup, before the morning briefings)
-[Timer]
-OnCalendar=*-*-* 04:10
-Persistent=true
-RandomizedDelaySec=10min
-[Install]
-WantedBy=timers.target

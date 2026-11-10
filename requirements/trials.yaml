@@ -194,8 +194,9 @@ items:
     sources: ['chat 2026-11-02: Turn trials into a standing benchmark', docs/NEXT-PHASE.md]
     verify: {method: test, by: [tests/test_rotation.py::test_each_night_has_its_trial_and_sunday_rests,
         tests/test_rotation.py::test_it_starts_the_trial_only_when_the_stack_is_idle]}
-    trace: [ops/rotation.py, ops/systemd/rotation.timer, ops/systemd/rotation.service]
-    gap: "From 2 Nov 2026 rotation.timer starts one trial a night at 01:00 (research accuracy twice, stack-trace,
+    trace: [ops/rotation.py, n8n/workflows/crew-trial-rotation.json, ops/systemd/rotation.service]
+    gap: "From 2 Nov 2026 one trial a night starts at 01:00 (its timer until 10 Nov 2026, then its n8n workflow,
+      crew-trial-rotation.json, which waits for its switch) (research accuracy twice, stack-trace,
       semver, mqtt-trace, Mustache; Sunday rests) when the stack is idle, else skips the night with why. #/trials
       shows each run beside the one before (score, time, tokens, code version) but draws no trend over the weeks
       yet; the memory trial runs on the Keeper's own path, and review catch, offer picking, the phone routine and the

@@ -1,0 +1,89 @@
+{
+  "active": true,
+  "connections": {
+    "On its schedule (0 10 * * 0)": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Crew: Phone cleanup",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Run now": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Crew: Phone cleanup",
+            "type": "main"
+          }
+        ]
+      ]
+    }
+  },
+  "id": "aisc20bc6a042ea4",
+  "name": "Crew: Phone cleanup",
+  "nodes": [
+    {
+      "id": "4304deeb-1b61-1da2-f4b0-3ccd7ee47c9f",
+      "name": "On its schedule (0 10 * * 0)",
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "expression": "0 10 * * 0",
+              "field": "cronExpression"
+            }
+          ]
+        }
+      },
+      "position": [
+        0,
+        0
+      ],
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2
+    },
+    {
+      "id": "216da25d-5972-9bca-c380-4266f0a09e09",
+      "name": "Crew: Phone cleanup",
+      "notes": "The crew job phone-cleanup (crew-phone-cleanup.service), as Run now starts it (WFL-05).",
+      "parameters": {
+        "job": "phone-cleanup",
+        "kind": "crew",
+        "title": "Crew: Phone cleanup"
+      },
+      "position": [
+        260,
+        0
+      ],
+      "type": "CUSTOM.aistackStep",
+      "typeVersion": 1,
+      "webhookId": "ca5d1173-5680-e71e-096e-d749a6bccbaf"
+    },
+    {
+      "id": "f5314e0f-5780-4861-690f-549f4a465949",
+      "name": "Run now",
+      "notes": "Starts the job now, as its schedule would (POST).",
+      "parameters": {
+        "httpMethod": "POST",
+        "options": {},
+        "path": "run/crew-phone-cleanup"
+      },
+      "position": [
+        0,
+        160
+      ],
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "webhookId": "559297af-78d7-4eab-ebd7-fc7a9c9f037f"
+    }
+  ],
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Berlin"
+  }
+}

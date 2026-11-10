@@ -37,8 +37,8 @@ Every part of the stack runs as its own service. Green means running, amber mean
 means stopped. Services restart themselves after crashes and after the PC reboots.
 
 When you start the PC, the stack comes online by itself in a few minutes; the top of this page says when it last did and
-how long it took, and Telegram gets one line. Missions wait until it is up, then the ones the PC slept through run. The
-nightly jobs catch up one after the other over the next two hours, so the first hour is busier than usual. If it is
+how long it took, and Telegram gets one line. Jobs wait until it is up. The backup and the restore drill the PC slept through catch up one after the other; other
+jobs run at their next time (n8n starts them and does not catch up a time the PC was off). If it is
 still down after 10 minutes, one message names the cause.
 
 ```live

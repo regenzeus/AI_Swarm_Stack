@@ -273,13 +273,6 @@
    "sha": "607cd09277da"
   }
  ],
- "intake/TEMPLATE": [
-  {
-   "at": "2026-11-09",
-   "baseline": "new: a template drafted from the owner's description (GEN-34, Describe), with start, end, notify and failure paths",
-   "sha": "39dc94c0d318"
-  }
- ],
  "intake/TEMP_AGENT": [
   {
    "at": "2026-10-31",

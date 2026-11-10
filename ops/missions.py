@@ -3,7 +3,8 @@
 Missions are files in the vault, missions/<slug>/MISSION.md (YAML front matter + goal text):
   type      briefing (Topic Desk, topics/<slug>/TOPIC.md) | task (a long-term agent mission, Hermes profile "mission")
   status    active | paused | archived
-  schedule  daily HH:MM | weekdays HH:MM | weekly mon,thu HH:MM | every Nh | manual (on demand only)
+  schedule  daily HH:MM | weekdays HH:MM | weekly mon,thu HH:MM | every Nh | manual (on demand only); the mission's task
+            gets an n8n workflow with that schedule, and n8n starts its runs (WFL-09, ops/n8n_jobs.py)
   triggers  events that start a run: sec_filing (tickers), price_move (symbol, pct), news (query)  [mission_extras]
   depth     standard | deep (tasks: plan -> research steps -> synthesis)
   deliver [telegram, app, email]. Subscription only: when ChatGPT pauses the stack, a run waits and retries.
@@ -73,7 +74,6 @@ HERMES = "aistack-hermes-1"
 LITELLM = "http://127.0.0.1:4000/v1/chat/completions"
 KEY_OF = {"briefing": "vk-desk", "task": "vk-mission", "shopping": "vk-mission",   # shopping: ops/shopping.py
           "cleanup": "vk-mission"}                                                    # cleanup: ops/cleanup.py (phone or PC)
-DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
 # limit: stops, one mission run past this counts as failed
 TASK_TIMEOUT = 40 * 60
 RETRY_MIN, MAX_WAITS = 30, 16           # subscription only: a paused run retries every 30 min, for up to 8 hours
@@ -419,29 +419,6 @@ def valid_schedule(s):
     return int(hh) < 24 and int(mm) < 60 and (not m[7] or 1 <= int(m[7]) <= 24)
 
 
-def due_times(s, t):
-    """Scheduled times of the last 8 days up to tomorrow, ascending, each in the local time of its own day: the wall clock
-    is counted naive and each time gets its own day's offset (review RUN-R29: t's fixed offset was given to every day, so
-    across a daylight-saving change yesterday's 06:30 had today's offset, did not match the run recorded for it, and was
-    queued again)."""
-    m = SCHED.match(s or "")
-    if not m or s == "manual":
-        return []
-    aware = t.tzinfo is not None
-    base = (t.astimezone().replace(tzinfo=None) if aware else t).replace(hour=0, minute=0, second=0, microsecond=0)
-    local = (lambda x: x.astimezone()) if aware else (lambda x: x)      # naive wall time -> its own day's offset
-    out = []
-    for d in range(-8, 2):
-        day = base + dt.timedelta(days=d)
-        if m[7]:
-            out += [local(day + dt.timedelta(hours=h)) for h in range(0, 24, int(m[7]))]
-            continue
-        hh, mm = (int(m[2]), int(m[3])) if m[1] else (int(m[5]), int(m[6]))
-        if m[1] == "daily" or (m[1] == "weekdays" and day.weekday() < 5) or (m[4] and DAYS[day.weekday()] in m[4].split(",")):
-            out.append(local(day.replace(hour=hh, minute=mm)))
-    return out
-
-
 def schedule_text(s):
     m = SCHED.match(s or "")
     if not m or s == "manual":
@@ -466,11 +443,6 @@ def period(m):
     return "Weekly" if (m.get("schedule") or "").startswith("weekly") else "Daily"
 
 
-def next_due(s, t):
-    """The next scheduled time after t (looks a week ahead, so weekly schedules always have one)."""
-    return next((d for d in due_times(s, t + dt.timedelta(days=7)) if d > t), None)
-
-
 _bad = set()
 
 
@@ -485,25 +457,6 @@ def bad_mission(m, e):
                   push=True, title="Missions")
         except Exception:
             pass
-
-
-def check_schedules(missions, c):
-    t = now()
-    for m in missions.values():
-        try:
-            if m.get("status") != "active":
-                continue
-            created = dt.datetime.fromisoformat(str(m.get("created", "2000-01-01T00:00:00+00:00")))
-            if created.tzinfo is None:
-                created = created.astimezone()
-            past = [d for d in due_times(m.get("schedule"), t) if created < d <= t and t - d < dt.timedelta(hours=20)]
-            if not past:
-                continue
-            due = past[-1].isoformat()
-            if not c.execute("select 1 from runs where slug=? and due=?", (m["slug"], due)).fetchone():
-                enqueue(c, m["slug"], "schedule", due)
-        except Exception as e:                 # RUN-R15: one bad MISSION.md (a hand-edited date or schedule) stops no other
-            bad_mission(m, e)
 
 
 REPEAT_WINDOW_H = 6                  # an identical event within this many hours is a loop, not news
@@ -711,7 +664,7 @@ def execute(c, row, missions):
     RTM.start(f"mission-run:{rid}", f"mission:{m['slug']}", f"Mission · {m['title']} · run {rid}", data={"manifest": {"agent": f"mission:{m['slug']}", "type": m["type"], "mode": mode, "prompts": P.version("mission"),
               "trigger": row["trigger"], "key": KEY_OF.get(m["type"]), "card": REG.hash_of(card)}})
     J.begin(f"mission:{m['slug']}", m["title"], run=f"mission-run:{rid}", card=card, wiki=X.wiki_root(m))   # MEM-05: its opening
-    event("run_started", m["slug"], {"schedule": "Scheduled run started", "event": f"Event run started: {(ev or {}).get('trigger', '')}"}
+    event("run_started", m["slug"], {"n8n": "Scheduled run started (its n8n workflow)", "event": f"Event run started: {(ev or {}).get('trigger', '')}"}
           .get(row["trigger"], "Run started (on demand)") + (" · deep research" if mode == "deep" else ""), title=m["title"])
     try:
         if mode == "alert":
@@ -1024,9 +977,13 @@ def tail(path, n=14):
 
 
 def write_state(c, missions):
+    import n8n_jobs as NJ
     t = now()
     out = []
     month_ago = (t - dt.timedelta(days=30)).isoformat()
+    TK.table(c)
+    tasks_of = {r[0]: r[1] for r in c.execute("select ref, id from tasks where door='mission'")}
+    when = NJ.index()                                  # WFL-09: a mission's runs on a schedule come from its task's workflow
     for m in missions.values():
         try:
             runs = [dict(r) for r in c.execute("select id, trigger, status, started, ended, seconds, calls, tokens, spend, models, "
@@ -1039,10 +996,12 @@ def write_state(c, missions):
                            (m["slug"], month_ago)).fetchone()
             allr = c.execute("select count(*), coalesce(sum(tokens),0), coalesce(sum(spend),0) from runs where slug=? and status in ('ok','failed')",
                              (m["slug"],)).fetchone()
-            nd = next_due(m.get("schedule"), t) if m.get("status") == "active" else None
+            tid = tasks_of.get(m["slug"]) or m.get("task")       # a moved briefing's or price watch's: its task's
+            nd = NJ.next_run("task", tid, now=t, idx=when) if tid and m.get("status") == "active" else None
+            said = NJ.schedule("task", tid, idx=when) if tid else None
             item = {k: m.get(k) for k in ("slug", "title", "type", "status", "schedule", "budget_usd_month", "deliver", "created", "goal",
                                           "topic", "depth", "needs", "task", "once", "files_asked")}
-            item.update(schedule_text=schedule_text(m.get("schedule")), next_run=nd.isoformat() if nd else None, runs=runs,
+            item.update(schedule_text=said[:1].upper() + said[1:] if said else schedule_text(m.get("schedule")), next_run=nd, runs=runs,
                         triggers=[{**tr, "text": X.trigger_text(tr)} for tr in m.get("triggers") or []], wiki=X.wiki_root(m),
                         stats={"runs": st[0], "ok": st[1] or 0, "failed": st[2] or 0, "calls": st[3], "tokens": st[4],
                                "spend": round(st[5], 5), "avg_seconds": round(st[6] or 0), "runs_all": allr[0],
@@ -1255,11 +1214,11 @@ def main():
     threading.Thread(target=T.worker, daemon=True).start()
     threading.Thread(target=I.worker, daemon=True).start()
     threading.Thread(target=TK.worker, daemon=True, name="task-intake").start()   # tasks given in a sentence (TSK-03)
-    import engine.bridge as EB                                                     # GEN-35: the deployment chooses the engine
-    if EB.on():
-        EB.start(sys.modules[__name__])                                            # Temporal runs the plan graphs (docs/AI-STACK.md)
-    else:
-        threading.Thread(target=CD.worker, daemon=True, name="conductor").start()  # plan graphs, step by step (TSK-05)
+    import flows as FW                                                             # WFL-05: the steps n8n starts
+    FW.start(sys.modules[__name__])
+    import flows_view as FV                                                        # WFL-11: each workflow's runs, for the app's pages
+    FV.start(sys.modules[__name__])
+    threading.Thread(target=CD.worker, daemon=True, name="conductor").start()      # plan graphs, step by step (TSK-05)
     threading.Thread(target=EV.worker, daemon=True, name="event-bus").start()      # events, rules, breaking news (TSK-10)
     HI.start()                                                                      # the telemetry history, hourly (TSK-25)
     PN.start()                                                                      # growing files pruned, daily (PLT-21)
@@ -1269,13 +1228,11 @@ def main():
     last_state = last_cost = 0
     while not stop.is_set():
         missions = {}
-        for part in ("inbox", "schedules", "costs", "state"):   # RUN-R15: one part that fails stops none of the others
+        for part in ("inbox", "costs", "state"):   # RUN-R15: one part that fails stops none of the others
             try:
                 if part == "inbox":
                     process_inbox()
                     missions = load_missions()
-                elif part == "schedules":
-                    check_schedules(missions, c)
                 elif part == "costs" and time.time() - last_cost > 30:
                     last_cost = time.time()
                     refresh_costs(c, missions)

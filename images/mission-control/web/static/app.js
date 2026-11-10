@@ -5,14 +5,14 @@ let TOOLS = null, toolQuery = "";
 const toolsHere = (d) => ({ ...d, tools: (d.tools || []).filter((x) => !("host" in x) || (x.host && !/^https?:\/\/(:|\/|$)/.test(x.host))) });   // no address in this deployment: no tile
 const toolsLoad = () => (TOOLS ? Promise.resolve(TOOLS) : fetch("/static/tools.json").then((r) => r.text()).then((t) => (TOOLS = toolsHere(JSON.parse(t.replace(/\{\{(\w+)\}\}/g, (_, k) => DEPLOY[k] || ""))))).catch(() => ({ tools: [], pages: [] })));
 const toolBase = (t) => (t.host.startsWith("tailnet") ? HOSTURL + t.host.slice(7) : t.host);
-const toolUrl = (t, m) => toolBase(t) + m.path;
-const toolAtHome = (t) => !t.host.startsWith("tailnet") && !t.host.includes("tailscale.com");   // the home network only
+const toolUrl = (t, m) => (t.host === "app" ? m.path : toolBase(t) + m.path);   // host "app": a page of this app (n8n inside it, WFL-13)
+const toolAtHome = (t) => t.host !== "app" && !t.host.startsWith("tailnet") && !t.host.includes("tailscale.com");   // the home network only
 const toolOf = (id) => (TOOLS?.tools || []).find((t) => t.id === id);
 function toolState(t) {
   if (t.status === "house" && S.house) return S.house.reachable ? ["ok", "up"] : ["err", "not reachable"];
   return null;
 }
-const toolLinks = (t) => t.menus.map((m) => `<a class="tag" href="${esc(toolUrl(t, m))}" target="_blank" rel="noopener">${esc(m.name)}</a>`).join("");
+const toolLinks = (t) => t.menus.map((m) => `<a class="tag" href="${esc(toolUrl(t, m))}"${t.host === "app" && m.path.startsWith("/#/") ? "" : ' target="_blank" rel="noopener"'}>${esc(m.name)}</a>`).join("");
 
 function stackToolsHtml() {
   if (!TOOLS) return `<div class="skeleton" style="height:120px"></div>`;
@@ -29,7 +29,7 @@ function toolHits(q) {
   if (!words.length || !TOOLS) return [];
   const hit = (s) => words.every((w) => s.toLowerCase().includes(w));
   const pages = TOOLS.pages.filter(([n, , w]) => hit(`${n} ${w}`)).map(([n, href]) => ({ name: `${APPNAME()} → ${n}`, href, ext: false }));
-  const menus = TOOLS.tools.flatMap((t) => t.menus.filter((m) => hit(`${t.name} ${m.name} ${m.words || ""} ${t.what}`)).map((m) => ({ name: `${t.name} → ${m.name}`, href: toolUrl(t, m), ext: true })));
+  const menus = TOOLS.tools.flatMap((t) => t.menus.filter((m) => hit(`${t.name} ${m.name} ${m.words || ""} ${t.what}`)).map((m) => ({ name: `${t.name} → ${m.name}`, href: toolUrl(t, m), ext: !(t.host === "app" && m.path.startsWith("/#/")) })));
   return [...pages, ...menus];
 }
 

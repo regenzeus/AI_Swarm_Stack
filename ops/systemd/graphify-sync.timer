@@ -1,8 +1,0 @@
-# feature: builder
-[Unit]
-Description=Check ~/code repos for new commits every 60 s
-[Timer]
-OnBootSec=2min
-OnUnitInactiveSec=60s
-[Install]
-WantedBy=timers.target

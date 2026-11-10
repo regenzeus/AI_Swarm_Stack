@@ -58,7 +58,9 @@ def test_a_pass_saves_its_sorting_and_changes_nothing(tmp_path, monkeypatch):
 def test_the_editor_is_a_crew_duty_with_its_card_units_and_prompt():
     assert any(c["id"] == "editor" and c["unit"] == "crew-editor" for c in CR.CREW)
     assert "editor\": ED.run" in (ROOT / "ops/crew.py").read_text()
-    assert (ROOT / "ops/systemd/crew-editor.timer").exists() and "python3 ops/crew.py editor" in (ROOT / "ops/systemd/crew-editor.service").read_text()
+    assert "python3 ops/crew.py editor" in (ROOT / "ops/systemd/crew-editor.service").read_text()
+    import n8n_jobs as NJ                                                       # n8n starts it each morning (WFL-09)
+    assert NJ.schedule("crew", "editor", NJ.index(ROOT / "n8n/workflows", ROOT / "no-such-folder")) == "daily 07:15"
     cards = {c["id"]: c for c in __import__("yaml").safe_load((ROOT / "config/agents.yaml").read_text())["agents"]}
     assert cards["editor"]["jobs"] == ["crew-editor"] and cards["editor"]["prompts"] == "prompts/editor.md"
     assert any(r.get("baseline") for r in json.loads((ROOT / "prompts/replays.json").read_text())["editor/SORT"])

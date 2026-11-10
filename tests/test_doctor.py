@@ -104,7 +104,9 @@ def test_a_new_alert_calls_the_doctor_at_most_every_30_minutes(D, monkeypatch):
     T = 1_800_000_000
     C = D.C
     C.M = types.SimpleNamespace(event=lambda *a, **k: None)
-    monkeypatch.setattr(C, "sh", lambda *a, **k: "enabled\n")
+    import n8n_jobs as NJ
+    on = {"active": True}
+    monkeypatch.setattr(NJ, "of", lambda kind, key, idx=None: on if (kind, key) == ("crew", "doctor") else None)
     started = []
     monkeypatch.setattr(C.subprocess, "run", lambda cmd, **k: started.append(cmd) or types.SimpleNamespace(returncode=0))
     assert C.call_doctor(["Health doctor: the last run failed"], now=T) is False     # never for its own issues
@@ -112,13 +114,14 @@ def test_a_new_alert_calls_the_doctor_at_most_every_30_minutes(D, monkeypatch):
     assert C.call_doctor(["RAM upgrade: partial read"], now=T + 29 * 60) is False
     assert C.call_doctor(["RAM upgrade: partial read"], now=T + 31 * 60) is True
     assert started == [["systemctl", "--user", "start", "--no-block", "crew-doctor.service"]] * 2
-    monkeypatch.setattr(C, "sh", lambda *a, **k: "disabled\n")
-    assert C.call_doctor(["x: y"], now=T + 10 ** 6) is False                       # switched off by the owner: stays off
+    on["active"] = False
+    assert C.call_doctor(["x: y"], now=T + 10 ** 6) is False                       # its workflow switched off by the owner: stays off
 
 
 def test_the_doctor_is_a_crew_agent_with_its_units(D):
     a = D.C.BY_ID["doctor"]
     assert a["unit"] == "crew-doctor" and a["agent"] and "doctor" in D.C.PROPOSERS
     svc = (ROOT / "ops/systemd/crew-doctor.service").read_text()
-    assert "ops/crew.py doctor" in svc and "OnUnitActiveSec=6h" in (ROOT / "ops/systemd/crew-doctor.timer").read_text()
-    assert D.C.schedule_of("crew-doctor") in ("every 6h", "on request")       # "on request" until the timer is installed
+    assert "ops/crew.py doctor" in svc and not (ROOT / "ops/systemd/crew-doctor.timer").exists()
+    import n8n_jobs as NJ
+    assert NJ.schedule("crew", "doctor", NJ.index(ROOT / "n8n/workflows", ROOT / "no-such-folder")) == "every 6 hours"   # its workflow's (WFL-09)

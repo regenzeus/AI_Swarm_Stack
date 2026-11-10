@@ -1,0 +1,89 @@
+{
+  "active": true,
+  "connections": {
+    "On its schedule (30 6 * * *)": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Task #11: Copper mining",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Run now": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Task #11: Copper mining",
+            "type": "main"
+          }
+        ]
+      ]
+    }
+  },
+  "id": "aist8c51f493a268",
+  "name": "Task #11: Copper mining",
+  "nodes": [
+    {
+      "id": "63edc28c-9e16-3c22-808a-1f7d22b08524",
+      "name": "On its schedule (30 6 * * *)",
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "expression": "30 6 * * *",
+              "field": "cronExpression"
+            }
+          ]
+        }
+      },
+      "position": [
+        0,
+        0
+      ],
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2
+    },
+    {
+      "id": "2942a1f0-0ca3-f384-328c-5742297b6bd9",
+      "name": "Task #11: Copper mining",
+      "notes": "One run of the task: an occurrence of its plan (WFL-05).",
+      "parameters": {
+        "kind": "task",
+        "task": 11,
+        "title": "Task #11: Copper mining"
+      },
+      "position": [
+        260,
+        0
+      ],
+      "type": "CUSTOM.aistackStep",
+      "typeVersion": 1,
+      "webhookId": "04cf6e5a-3cd4-5597-a6e7-17b0d1d52161"
+    },
+    {
+      "id": "74ed4ed0-0d74-13a8-e437-82915f41229b",
+      "name": "Run now",
+      "notes": "Starts the job now, as its schedule would (POST).",
+      "parameters": {
+        "httpMethod": "POST",
+        "options": {},
+        "path": "run/task-11-copper-mining"
+      },
+      "position": [
+        0,
+        160
+      ],
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "webhookId": "731b5fdf-4fec-ee7c-7fd7-4465b1b7eedf"
+    }
+  ],
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Berlin"
+  }
+}

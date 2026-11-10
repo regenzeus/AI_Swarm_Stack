@@ -3,7 +3,7 @@
 token, an outbox that keeps writes while the service is down (SWM-72), and everything the host does with the Ledger.
 
   python3 ops/swarm_client.py feed      publish the app's view and copy new Ledger events into the activity feed
-                                        (swarm-sync.timer, every minute)
+                                        (its n8n workflow, every minute)
   python3 ops/swarm_client.py migrate   the one-way import of the old proposals table (done on 2026-10-29; idempotent)
   python3 ops/swarm_client.py health    the service's health
 

@@ -1,0 +1,49 @@
+{
+  "name": "toy/triage",
+  "nodes": [
+    {
+      "name": "A ticket arrives",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "toy-triage"
+      }
+    },
+    {
+      "name": "Bug or question",
+      "type": "CUSTOM.aistackStep",
+      "typeVersion": 1,
+      "position": [
+        260,
+        0
+      ],
+      "parameters": {
+        "title": "Bug or question",
+        "kind": "agent",
+        "agent": "toy:intake",
+        "brief": "Answer with one of: bug, question"
+      }
+    }
+  ],
+  "connections": {
+    "A ticket arrives": {
+      "main": [
+        [
+          {
+            "node": "Bug or question",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

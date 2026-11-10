@@ -1,0 +1,90 @@
+{
+  "active": true,
+  "connections": {
+    "On its schedule (* * * * *)": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Crew: Swarm sync",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Run now": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Crew: Swarm sync",
+            "type": "main"
+          }
+        ]
+      ]
+    }
+  },
+  "id": "aisc33b90ad7380d",
+  "name": "Crew: Swarm sync",
+  "nodes": [
+    {
+      "id": "57f3f1b2-c8eb-175c-dca2-456ce4da5d40",
+      "name": "On its schedule (* * * * *)",
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "expression": "* * * * *",
+              "field": "cronExpression"
+            }
+          ]
+        }
+      },
+      "position": [
+        0,
+        0
+      ],
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2
+    },
+    {
+      "id": "c823189e-34c5-1375-d0b5-2212523c6f46",
+      "name": "Crew: Swarm sync",
+      "notes": "The crew job swarm-sync (swarm-sync.service), as Run now starts it (WFL-05).",
+      "parameters": {
+        "job": "swarm-sync",
+        "kind": "crew",
+        "title": "Crew: Swarm sync"
+      },
+      "position": [
+        260,
+        0
+      ],
+      "type": "CUSTOM.aistackStep",
+      "typeVersion": 1,
+      "webhookId": "d65720a6-5304-df41-8c68-db96d3631cf9"
+    },
+    {
+      "id": "5855e61c-8c97-a22d-e580-3328b9428c45",
+      "name": "Run now",
+      "notes": "Starts the job now, as its schedule would (POST).",
+      "parameters": {
+        "httpMethod": "POST",
+        "options": {},
+        "path": "run/crew-swarm-sync"
+      },
+      "position": [
+        0,
+        160
+      ],
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "webhookId": "d786e459-c834-19f2-64f1-0671d9767ff6"
+    }
+  ],
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "none",
+    "timezone": "Europe/Berlin"
+  }
+}

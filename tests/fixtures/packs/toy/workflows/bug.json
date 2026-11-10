@@ -1,0 +1,75 @@
+{
+  "name": "toy/bug",
+  "nodes": [
+    {
+      "name": "A ticket arrives",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "toy-bug"
+      }
+    },
+    {
+      "name": "Read the ticket",
+      "type": "CUSTOM.aistackStep",
+      "typeVersion": 1,
+      "position": [
+        260,
+        0
+      ],
+      "parameters": {
+        "title": "Read the ticket",
+        "kind": "agent",
+        "agent": "toy:intake",
+        "brief": "Read the ticket and say what is missing"
+      }
+    },
+    {
+      "name": "Answer the reporter",
+      "type": "CUSTOM.aistackStep",
+      "typeVersion": 1,
+      "position": [
+        520,
+        0
+      ],
+      "parameters": {
+        "title": "Answer the reporter",
+        "kind": "agent",
+        "agent": "toy:intake",
+        "brief": "Answer the reporter on the ticket"
+      }
+    }
+  ],
+  "connections": {
+    "A ticket arrives": {
+      "main": [
+        [
+          {
+            "node": "Read the ticket",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read the ticket": {
+      "main": [
+        [
+          {
+            "node": "Answer the reporter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

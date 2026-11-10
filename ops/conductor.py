@@ -6,9 +6,10 @@ restart of the runner resumes the task at its first unfinished step and never ru
 Every task the intake plans reaches the Conductor (TSK-21, docs/SWARM-DESIGN.md): one-off and scheduled, one step
 or many, coding work as a build step and code questions as Claude steps, a briefing as the Topic Desk's plan and a
 price watch as checks of its shopping agent (whose purchases stay its own runs, after the owner's approval). A task runs
-in **occurrences**: a one-off task once, a scheduled one at once and then on its schedule, an event-triggered one each
-time its trigger fires (the event is in every step's prompt); each occurrence copies the plan (the template) into its
-own steps (TSK-22) and is judged against the definition of done (ops/staffing.py). A plan step with "each": [...]
+in **occurrences**: a one-off task once, a scheduled one at once and then each time its n8n workflow starts it (WFL-09,
+ops/flows.py run_task), an event-triggered one each time its trigger fires (the event is in every step's prompt); each
+occurrence copies the plan (the template) into its own steps (TSK-22) and is judged against the definition of done
+(ops/staffing.py). A plan step with "each": [...]
 fans out into one step per item, run in parallel as headroom allows; the steps after it get every result.
 
 Harness adapters, one contract (run the step's prompt as its agent, give back its answer or say it is waiting):
@@ -59,10 +60,6 @@ import stepkinds
 import textcap
 import textcap as TC
 import deployment as DEPLOY                        # this deployment's hosts and paths (deployments/<name>/deployment.env)
-# The plan's checks, its folding and their constants live in the engine's graph model now, one copy for both engines
-# until this module is retired (GEN-35, docs/AI-STACK-PLAN.md WP3).
-from engine.graph import BUILDER, CARD_STEPS, EACH, HARNESSES, LOOP_MAX, NEW, fold_builders, runs_steps  # noqa: F401
-from engine import graph as G
 
 ROOT = Path(__file__).resolve().parent.parent
 # limit: waits, steps at once: the PC's memory and the subscriptions decide (DEC-24)
@@ -71,6 +68,13 @@ SLOTS = 2                                         # steps at once: RAM (16 GB) a
 ATTEMPTS = 2                                      # a step that fails twice fails its task (a limit or a restart is no attempt)
 # limit: drops, the oldest event waiting for one task's next run; said in the activity feed (TSK-21)
 QUEUE = 5                                         # cap: list (events waiting for one task's next run; the oldest are dropped, said in the feed)
+NEW = "new"                                       # TSK-15: the intake's word for "no agent fits": a temporary agent is written
+BUILDER = "builder"                               # its steps run as build assignments
+HARNESSES = ("hermes", "claude-code", "python", "opencode")   # the harnesses a step can run on (TSK-07)
+CARD_STEPS = ("build", "check")                   # TRL-07, TRL-08: a card's steps are builds in its lane, or the judge's checks
+EACH = 50                                         # limit: refuses, a plan fanning out over more names the limit on the task: the pools pace the copies
+# limit: stops, fix rounds a check may send back (TRL-08)
+LOOP_MAX = 4
 BLOCKED = re.compile(r"\A\s*(?:\**\s*)?(?:step \d+ (?:is )?)?BLOCKED\**\s*:\s*\**\s*(.+)", re.I)         # a step that could not do its work says so first (TASK_STEP): it fails,
 WRITTEN = ("hermes", "python", "temp", "opencode")   # it is not done (task #104 "done" with no phone tool, 1 Nov 2026)
 QUIET = ("Nothing new was chosen", "No price drop")   # a run whose answer starts so found nothing to send: kept, not judged
@@ -99,9 +103,6 @@ RESULTS = Path("/srv/vault/tasks")                # the finished task's answer, 
 M = None                                          # ops/missions.py, set by its main()
 slots = threading.BoundedSemaphore(SLOTS)
 lock = threading.RLock()                          # FND-84: the worker ticks under it and start() takes it again
-
-
-ON_CANCEL = []                                    # called with (c, t, occ) when the owner cancels a task (the engine's bridge, WP6)
 
 
 class Waiting(Exception):
@@ -173,12 +174,108 @@ def step_ref(c, kind, ref, task):
     c.commit()
 
 
-# ---------- the plan graph (TSK-05): checked by engine.graph, expanded here into the Conductor's steps ----------
+# ---------- the plan graph (TSK-05) ----------
+def runs_steps(card):
+    """Can this agent do a step? Its steps are builds or checks (TRL-07), or its harness has an adapter and a python agent
+    has its own key."""
+    if card.get("step_kind") in CARD_STEPS:
+        return True
+    return card.get("harness") in HARNESSES and (card["harness"] != "python" or card.get("key") not in (None, "none"))
+
+
+def fold_builders(plan):
+    """Consecutive builder steps become one build, each a stage of its brief (TRL-10). Every builder step is a build and
+    a build that commits nothing fails, so the first trial's plan (read the spec and plan; implement; run the tests and
+    fix) failed at its first step though the builder did that work well (trial semver, 1 Nov 2026). A builder step
+    whose only predecessor is a builder step that nothing else waits for joins it as its next stage."""
+    steps = [dict(p, after=sorted({int(a) for a in p.get("after") or [] if str(a).isdigit()})) for p in plan]
+    while True:
+        for j, p in enumerate(steps, 1):
+            k = p["after"][0] if len(p["after"]) == 1 else 0
+            q = steps[k - 1] if 1 <= k <= len(steps) and k != j else None
+            if (p.get("agent") != BUILDER or p.get("each") or not q or q.get("agent") != BUILDER or q.get("each")
+                    or any(k in s["after"] for n, s in enumerate(steps, 1) if n != j)):
+                continue
+            stages = (q.get("stages") or [str(q.get("step", "")).strip()]) + [str(p.get("step", "")).strip()]
+            joined = {**q, "stages": stages, "step": "; ".join(f"Stage {n}: {s}" for n, s in enumerate(stages, 1)),
+                      "why": "; ".join(x for x in (q.get("why"), p.get("why")) if x)}
+            out = []
+            for n, s in enumerate(steps, 1):
+                if n == j:
+                    continue
+                s = joined if n == k else s
+                after = sorted({k if a == j else a for a in s["after"]})
+                lp = s.get("loop")
+                if isinstance(lp, dict) and str(lp.get("to", "")).isdigit():      # a check that loops to a folded stage loops to the build
+                    to = k if int(lp["to"]) == j else int(lp["to"])
+                    lp = {**lp, "to": to - (to > j)}
+                out.append({**s, "after": [a - (a > j) for a in after], **({"loop": lp} if lp else {})})
+            steps = out
+            break
+        else:
+            return steps
+
+
+def plan_nodes(plan, agents, own_steps=None):
+    """The intake's plan -> its nodes, each {title, agent, after (1-based), items, harness, model, why, loop}, or
+    ValueError: a step that waits for a step that is not there, an agent that cannot do a step, a loop that is not a
+    check's, or a plan with a cycle, is refused."""
+    own_steps = own_steps or {}
+    n = len(plan)
+    for i, p in enumerate(plan, 1):                      # a step that waits for one that is not there: refused before folding
+        bad = [a for a in {int(a) for a in p.get("after") or [] if str(a).isdigit()} if not 1 <= a <= n or a == i]
+        if bad:
+            raise ValueError(f"step {i} waits for step {bad[0]}, which is not another step of the plan")
+    plan = fold_builders(plan)
+    nodes, n = [], len(plan)
+    for i, p in enumerate(plan, 1):
+        after = sorted({int(a) for a in p.get("after") or [] if str(a).isdigit()})
+        bad = [a for a in after if not 1 <= a <= n or a == i]
+        if bad:
+            raise ValueError(f"step {i} waits for step {bad[0]}, which is not another step of the plan")
+        a = p.get("agent")
+        card = agents.get(a)
+        if a == NEW:                                   # a temporary agent, written when the step starts (ops/staffing.py)
+            card = {"harness": "temp", "model": "gpt-sub"}
+        elif not card or not runs_steps(card):
+            raise ValueError(f"step {i}: {a!r} is no agent that can do a step (one on {', '.join(HARNESSES)})")
+        items = TC.limit_items([str(x).strip() for x in p.get("each") or [] if str(x).strip()], EACH, f"items to fan out in step {i}")
+        harness = (p["harness"] if p.get("harness") in own_steps.get(a, ()) else "build" if a == BUILDER
+                   else card["step_kind"] if card.get("step_kind") in CARD_STEPS else card["harness"])
+        lp = p.get("loop")
+        if lp is not None:                                 # TRL-08: a check may send failures back to an earlier step
+            to, mx = lp.get("to") if isinstance(lp, dict) else None, lp.get("max", 2) if isinstance(lp, dict) else None
+            if harness != "check" or not str(to).isdigit() or not 1 <= int(to) < i or not str(mx).isdigit():
+                raise ValueError(f"step {i}: only a check loops, back to an earlier step, a few times")
+            lp = {"to": int(to), "max": min(int(mx), LOOP_MAX)}
+        model = p["model"] if p.get("model") and harness in ("python", "temp") else card.get("model")   # TSK-30: the owner's model where a
+        nodes.append({"title": str(p.get("step", "")).strip() or f"Step {i}", "agent": a, "after": after, "items": items or [None],   # step makes its own call
+                      "harness": harness, "model": model, "why": str(p.get("why", "")).strip(), "loop": lp})
+    _acyclic({i: nd["after"] for i, nd in enumerate(nodes, 1)})
+    return nodes
+
+
+def _acyclic(after):
+    """after: step -> the steps it waits for. A cycle is refused, naming it."""
+    done = set()
+
+    def visit(i, path):
+        if i in path:
+            raise ValueError(f"the plan has a cycle: step {' → step '.join(map(str, path[path.index(i):] + [i]))}")
+        if i in done:
+            return
+        for a in after[i]:
+            visit(a, path + [i])
+        done.add(i)
+    for i in after:
+        visit(i, [])
+
+
 def graph(plan, agents=None):
     """The intake's plan -> steps with their dependencies (1-based step numbers in "after"), or ValueError: a step
-    that waits for a step that is not there, or a plan with a cycle, is refused (engine.graph.plan_nodes). A plan step
+    that waits for a step that is not there, or a plan with a cycle, is refused (plan_nodes). A plan step
     with "each": [items] becomes one step per item (TSK-22), and a step that waits for it waits for every copy."""
-    nodes = G.plan_nodes(plan, agents or cards(), OWN_STEPS)
+    nodes = plan_nodes(plan, agents or cards(), OWN_STEPS)
     idxs, out = {}, []                                 # plan step -> its steps (one, or one per item)
     for i, nd in enumerate(nodes, 1):
         idxs[i] = list(range(len(out) + 1, len(out) + 1 + len(nd["items"])))
@@ -837,11 +934,6 @@ def cancel(c, t):
         M.log(f"conductor: task {t['id']}: its Claude tasks not cancelled: {type(e).__name__}: {e}")
     TK.put(c, t["id"], status="cancelled")                # a recurring task stops for good: no further occurrence starts
     RTM.end(run_of(t["id"], occ), "conductor", "stopped", "cancelled by the owner", None)
-    for hook in ON_CANCEL:                                # the engine's bridge: the run's workflow ends too (WP6)
-        try:
-            hook(c, t, occ)
-        except Exception as e:
-            M.log(f"conductor: task {t['id']}: the engine's run not told to stop: {type(e).__name__}: {e}")
 
 
 # ---------- the worker ----------
@@ -914,19 +1006,6 @@ def finish(c, t, ss, ok):
            buttons=[[("🔍 Open the task", f"{M.X.APP}/#/task/{t['id']}")]])
 
 
-def due(c, t, at=None):
-    """A scheduled plan task's next occurrence is due: its schedule's next time after the last one started has come."""
-    last = c.execute("select max(started) from task_occ where task=?", (t["id"],)).fetchone()[0] or t["created"]
-    nxt = M.next_due(t["rhythm"].get("schedule"), dt.datetime.fromisoformat(last))
-    return bool(nxt) and nxt <= (at or M.now())
-
-
-def next_run(c, t):
-    last = c.execute("select max(started) from task_occ where task=?", (t["id"],)).fetchone()[0] or t["created"]
-    nxt = M.next_due(t["rhythm"].get("schedule"), dt.datetime.fromisoformat(last))
-    return nxt.isoformat(timespec="minutes") if nxt else None
-
-
 def routed(c, t, s, agents):
     """TSK-14: the step goes to the agent that did this kind of task best, or away from a subscription at its limit."""
     import staffing as ST
@@ -941,8 +1020,8 @@ def routed(c, t, s, agents):
 
 
 def tick_starts(c):
-    """The runs that start now: a task's next run for the oldest event waiting for it (TSK-21), and each scheduled task
-    that is due (TSK-22). The same for both engines: the engine's bridge calls this too (docs/AI-STACK-PLAN.md WP6)."""
+    """The runs that start now: a task's next run for the oldest event waiting for it (TSK-21). A run on a schedule is
+    started by the task's n8n workflow through the step service (WFL-09, ops/flows.py run_task), never here."""
     import tasks as TK
     for r in c.execute("select distinct e.task from task_events e join tasks t on t.id = e.task where e.occ is null and t.door='plan' "
                        "and t.status in ('scheduled', 'done', 'failed')").fetchall():           # TSK-21: an event starts a run
@@ -954,17 +1033,11 @@ def tick_starts(c):
         c.commit()
         M.event("task", "", TC.cut(f"Task #{r['task']} run {occ_of(c, r['task'])} started by an event: {ev.get('trigger', '')}: {ev.get('summary', '')}", 300),  # cap: preview
                 title="Tasks")
-    for r in c.execute("select id from tasks where door='plan' and status='scheduled'").fetchall():   # TSK-22: on its schedule
-        t = TK.row(c, r["id"])
-        if t["rhythm"].get("type") == "schedule" and due(c, t):
-            start(c, TK.row(c, t["id"]), trigger="schedule")
-            TK.put(c, t["id"], status="running")
-            M.event("task", "", f"Task #{t['id']} run {occ_of(c, t['id'])} started on its schedule: {t['title']}", title="Tasks")
 
 
 def tick(c, start_thread=None):
     """One pass over the running plan tasks: runs that start now start, finished ones close, ready steps start (with
-    headroom, within SLOTS). With ENGINE=temporal the engine runs the steps instead, and only tick_starts is used."""
+    headroom, within SLOTS)."""
     import tasks as TK
     agents = cards()
     tick_starts(c)

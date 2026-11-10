@@ -1,0 +1,168 @@
+"""Trackers and the forge (GEN-25, GEN-26, docs/AI-STACK.md), on stand-ins: a changed item is handed on once for the
+run named after it, and a restart hands nothing on twice; the summary comment is edited across three updates; shadow
+mode writes nothing outward until the owner lets a kind go live; a change starts at a tag, opens a draft into a release
+branch, and a reviewer's comment is handed on once."""
+import json
+import subprocess
+
+import pytest
+
+from domain import forgework as FW
+from domain import trackers as TR
+
+
+@pytest.fixture
+def world(tmp_path, monkeypatch):
+    store = tmp_path / "standin.json"
+    store.write_text(json.dumps({"items": {}}))
+    cfg = tmp_path / "trackers.yaml"
+    cfg.write_text(f"shadow_needed: 2\ntrackers:\n  - {{name: test, kind: standin, path: {store}, workflow: toy/ask}}\n")
+    monkeypatch.setenv("AISTACK_TRACKERS", str(cfg))
+    monkeypatch.setenv("AISTACK_TRACKER_STATE", str(tmp_path / "state"))
+
+    def item(key, updated, comments=()):
+        db = json.loads(store.read_text())
+        db["items"][key] = {"updated": updated, "title": f"ticket {key}", "comments": [{"id": i + 1, "author": a, "body": b} for i, (a, b) in enumerate(comments)]}
+        store.write_text(json.dumps(db))
+    return {"store": store, "item": item, "tmp": tmp_path}
+
+
+def test_a_changed_item_is_handed_on_once_for_the_run_named_after_it_and_a_restart_hands_on_nothing_twice(world):
+    world["item"]("T-1", "2026-11-09T10:00:00")
+    ev = TR.poll()
+    assert ev == [{"tracker": "test", "key": "T-1", "run": "toy/ask:test/T-1", "ref": "item:test/T-1@2026-11-09T10:00:00", "comments": []}]
+    assert TR.poll() == []                                                               # the cursor holds across passes and restarts
+    world["item"]("T-1", "2026-11-09T11:00:00")
+    assert [(e["run"], e["ref"]) for e in TR.poll()] == [("toy/ask:test/T-1", "item:test/T-1@2026-11-09T11:00:00")]   # one item, one run's name
+    (world["tmp"] / "state/test.json").unlink()                                          # a restart that lost the cursor hands the item on again,
+    assert [e["run"] for e in TR.poll()] == ["toy/ask:test/T-1"]                         # under the same name, so its run is found, not doubled
+    assert json.loads(world["store"].read_text())["items"]["T-1"]["comments"] == []      # reading writes nothing back
+
+
+def test_a_comment_from_someone_else_is_handed_on_once(world):
+    world["item"]("T-2", "2026-11-09T10:00:00", [("reporter", "it breaks at 2 GB"), ("ai-stack", "noted")])
+    assert [e["comments"] for e in TR.poll()] == [["comment:test/T-2/1"]]               # the stack's own comment is no event
+    world["item"]("T-2", "2026-11-09T10:05:00", [("reporter", "it breaks at 2 GB"), ("ai-stack", "noted"), ("reporter", "also at 3 GB")])
+    assert [e["comments"] for e in TR.poll()] == [["comment:test/T-2/3"]]
+
+
+def test_shadow_writes_nothing_outward_until_the_owner_lets_a_kind_go_live_after_its_measure(world):
+    world["item"]("T-3", "2026-11-09T10:00:00")
+    r = TR.write({"tracker": "test", "kind": "comment", "key": "T-3", "body": "Reproduced on the large input", "write_id": "run/n/r0"})
+    assert r["shadow"] and json.loads(world["store"].read_text())["items"]["T-3"]["comments"] == []
+    make = lambda *a, **k: {"id": a[0], "cls": a[1], **k}                                # noqa: E731
+    assert [d["id"] for d in TR.decisions(make)] == ["shadow:comment:run/n/r0"]
+    TR.write({"tracker": "test", "kind": "comment", "key": "T-3", "body": "again", "write_id": "run/n/r1"})
+    for wid in ("run/n/r0", "run/n/r1"):
+        assert TR.handle({"action": "tracker_shadow_approve", "kind": "comment", "id": wid})["ok"]
+    live = [d for d in TR.decisions(make) if d["id"] == "tracker-live:comment"]
+    assert live and live[0]["cls"] == "tracker-comment"                                  # the measure (2) is met: the owner may
+    assert TR.handle({"action": "tracker_live", "kind": "comment", "live": True})["live"]
+    TR.write({"tracker": "test", "kind": "comment", "key": "T-3", "body": "Fixed on the release branch", "write_id": "run/n/r2"})
+    TR.write({"tracker": "test", "kind": "comment", "key": "T-3", "body": "Fixed on the release branch", "write_id": "run/n/r2"})   # a retry
+    cs = json.loads(world["store"].read_text())["items"]["T-3"]["comments"]
+    assert len(cs) == 1 and cs[0]["body"].startswith("Fixed on the release branch")
+    k = TR.view()["kinds"][0]
+    assert k["kind"] == "comment" and k["live"] and k["approved"] == 2
+    r = TR.write({"tracker": "test", "kind": "transition", "key": "T-3", "body": "Done", "write_id": "w9"})
+    assert r.get("shadow") is True and "status" not in json.loads(world["store"].read_text())["items"]["T-3"]   # each kind on its own
+
+
+def test_the_one_summary_comment_is_edited_across_three_updates(world):
+    world["item"]("T-4", "2026-11-09T10:00:00")
+    TR.handle({"action": "tracker_live", "kind": "summary", "live": True})
+    for n in range(3):
+        TR.write({"tracker": "test", "kind": "summary", "key": "T-4", "body": f"Update {n + 1}", "write_id": f"run/sum/r{n}"})
+    cs = json.loads(world["store"].read_text())["items"]["T-4"]["comments"]
+    assert len(cs) == 1 and "Update 3" in cs[0]["body"] and TR.SUMMARY_MARK in cs[0]["body"] and cs[0].get("edited")
+
+
+def test_a_write_to_an_unknown_tracker_or_of_an_unknown_kind_is_refused_with_the_reason(world):
+    assert "no tracker 'nope'" in TR.write({"tracker": "nope", "kind": "comment", "key": "x", "write_id": "w"})["why"]
+    assert "a tracker write is one of" in TR.write({"tracker": "test", "kind": "shout", "key": "x", "write_id": "w"})["why"]
+
+
+class FakeJira:
+    def __init__(self):
+        self.jqls, self.cs, self.edited = [], [{"id": "7", "author": {"name": "ai-stack"}, "body": f"{TR.SUMMARY_MARK}\nold"}], []
+
+    def jql(self, q, limit, fields):
+        self.jqls.append(q)
+        return {"issues": [{"key": "DEMO-1", "fields": {"updated": "2026-11-09T10:00:00.000+0000", "summary": "s", "status": {"name": "Open"}, "labels": []}}]}
+
+    def issue_get_comments(self, key):
+        return {"comments": self.cs}
+
+    def issue_edit_comment(self, key, cid, text):
+        self.edited.append((key, cid, text))
+
+    def issue_add_comment(self, key, text):
+        raise AssertionError("the summary is edited, never added again")
+
+
+def test_jira_reads_by_jql_with_its_cursor_and_edits_its_one_summary():
+    fake = FakeJira()
+    j = TR.Jira({"query": "project = DEMO"}, client=fake)
+    items, cur = j.changes("2026-11-09T09:00:00")
+    assert fake.jqls == ['project = DEMO AND updated > "2026-11-09 09:00" ORDER BY updated ASC'] and items[0]["key"] == "DEMO-1" and cur == items[0]["updated"]
+    j.put("DEMO-1", "summary", "new", "w1")
+    assert fake.edited[0][:2] == ("DEMO-1", "7") and "new" in fake.edited[0][2]
+
+
+def git(cwd, *a):
+    return subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@localhost", *a], cwd=cwd, check=True, capture_output=True, text=True).stdout.strip()
+
+
+class Forge:
+    """The Bitbucket stand-in: what the stack asked of it, and a reviewer's comment."""
+
+    def __init__(self):
+        self.opened, self.cs = [], []
+
+    def open_pr(self, origin, head, base, title, body, draft=False, from_repo=None):
+        self.opened.append({"head": head, "base": base, "draft": draft})
+        return {"number": 42, "url": "https://bitbucket.example/pr/42"}
+
+    def comments(self, origin, number):
+        return self.cs
+
+
+def test_a_change_starts_at_a_tag_opens_a_draft_into_a_release_branch_and_a_reviewers_comment_is_handed_on_once(world):
+    up = world["tmp"] / "upstream.git"
+    work = world["tmp"] / "seed"
+    work.mkdir()
+    git(work, "init", "-q", "-b", "main")
+    (work / "a.txt").write_text("one\n")
+    git(work, "add", "-A")
+    git(work, "commit", "-q", "-m", "one")
+    git(work, "tag", "v1.0")
+    git(work, "branch", "release/1")
+    (work / "a.txt").write_text("two\n")
+    git(work, "commit", "-q", "-am", "two")
+    tagged = git(work, "rev-parse", "v1.0")
+    git(world["tmp"], "clone", "-q", "--bare", str(work), str(up))
+    clone = world["tmp"] / "clone"
+    git(world["tmp"], "clone", "-q", str(up), str(clone))
+    branch = FW.branch_name("T-5", "Fix the export at 2 GB")
+    assert branch == "ai/T-5-fix-the-export-at-2-gb" and FW.start(clone, "v1.0", branch) == tagged      # from the tag, not main
+    forge = Forge()
+    pr = FW.publish(clone, branch, str(up), forge, "ssh://bitbucket.example/PROJ/repo.git", "release/1", "Fix it", "body", "toy/ask:test/T-5", "test/T-5")
+    assert pr["number"] == 42 and forge.opened == [{"head": branch, "base": "release/1", "draft": True}]
+    assert git(up, "rev-parse", branch) == tagged                                          # pushed through FORGE_PUSH
+    assert FW.poll_prs(forge) == []                                                        # no comment yet: nothing to hand on
+    forge.cs = [{"id": 1, "author": "ai-stack", "body": "opened"}, {"id": 2, "author": "reviewer", "body": "please add a test"}]
+    assert FW.poll_prs(forge) == [{"run": "toy/ask:test/T-5", "key": "test/T-5", "ref": "pr:42", "comments": ["pr-comment:42/2"]}]
+    assert FW.poll_prs(forge) == []                                                        # a comment is handed on once
+
+
+def test_trackers_are_the_apps_and_the_queues():
+    from pathlib import Path
+    root = Path(__file__).resolve().parents[1]
+    js = (root / "images/mission-control/web/static/app-trackers.js").read_text()
+    assert "function vTrackers(" in js and 'data-tk="tracker_shadow_approve"' in js and 'action: "tracker_live"' in js
+    assert '"tracker_shadow_approve", "tracker_shadow_reject", "tracker_live"' in (root / "images/mission-control/server.py").read_text()
+    import decisions as DQ
+    assert DQ._trackers in DQ.SOURCES
+    cls = __import__("yaml").safe_load((root / "config/autonomy.yaml").read_text())["classes"]
+    assert all(f"tracker-{k}" in cls for k in TR.KINDS) and cls["tracker-transition"]["floor"] == "people" and cls["tracker-attach"]["floor"] == "people"
+    assert [t["workflow"] for t in TR.view({"shadow_needed": 5, "trackers": [{"name": "t", "kind": "standin", "workflow": "toy/bug"}]})["trackers"]] == ["toy/bug"]

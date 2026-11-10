@@ -15,17 +15,17 @@ Method, statuses and rules: [README.md](README.md). Names of the parts: [glossar
 | [Change requests](#chg-change-requests) (CHG) | 20 | 18 | 2 | 0 | 0 | 0 | 0 |
 | [Connections](#cnx-connections) (CNX) | 9 | 9 | 0 | 0 | 0 | 0 | 0 |
 | [Constraints](#cst-constraints) (CST) | 15 | 11 | 2 | 1 | 0 | 1 | 0 |
-| [Crew](#crw-crew) (CRW) | 13 | 12 | 0 | 0 | 0 | 0 | 1 |
+| [Crew](#crw-crew) (CRW) | 13 | 11 | 0 | 0 | 0 | 0 | 2 |
 | [Gateway](#gw-gateway) (GW) | 9 | 8 | 0 | 0 | 0 | 1 | 0 |
-| [Generalisation](#gen-generalisation) (GEN) | 39 | 26 | 8 | 0 | 2 | 3 | 0 |
+| [Generalisation](#gen-generalisation) (GEN) | 39 | 11 | 13 | 0 | 2 | 3 | 10 |
 | [House](#hse-house) (HSE) | 9 | 9 | 0 | 0 | 0 | 0 | 0 |
 | [Knowledge](#knw-knowledge) (KNW) | 15 | 15 | 0 | 0 | 0 | 0 | 0 |
 | [Memory](#mem-memory) (MEM) | 51 | 49 | 0 | 0 | 0 | 0 | 2 |
-| [Missions](#mis-missions) (MIS) | 28 | 25 | 1 | 0 | 0 | 1 | 1 |
+| [Missions](#mis-missions) (MIS) | 28 | 24 | 1 | 0 | 0 | 1 | 2 |
 | [Observability](#obs-observability) (OBS) | 18 | 18 | 0 | 0 | 0 | 0 | 0 |
 | [AI phone](#phn-ai-phone) (PHN) | 27 | 27 | 0 | 0 | 0 | 0 | 0 |
-| [Platform](#plt-platform) (PLT) | 36 | 32 | 3 | 0 | 0 | 1 | 0 |
-| [Quality and process](#qa-quality-and-process) (QA) | 26 | 25 | 0 | 0 | 0 | 1 | 0 |
+| [Platform](#plt-platform) (PLT) | 37 | 33 | 3 | 0 | 0 | 1 | 0 |
+| [Quality and process](#qa-quality-and-process) (QA) | 27 | 25 | 1 | 0 | 0 | 1 | 0 |
 | [Research](#res-research) (RES) | 7 | 6 | 1 | 0 | 0 | 0 | 0 |
 | [Security](#sec-security) (SEC) | 22 | 20 | 2 | 0 | 0 | 0 | 0 |
 | [Shopping](#shp-shopping) (SHP) | 13 | 12 | 0 | 0 | 0 | 1 | 0 |
@@ -33,9 +33,10 @@ Method, statuses and rules: [README.md](README.md). Names of the parts: [glossar
 | [Task engine](#tsk-task-engine) (TSK) | 45 | 39 | 6 | 0 | 0 | 0 | 0 |
 | [Trials](#trl-trials) (TRL) | 17 | 13 | 2 | 0 | 0 | 2 | 0 |
 | [Voice](#voi-voice) (VOI) | 9 | 8 | 0 | 0 | 0 | 1 | 0 |
-| **All** | **664** | **597** | **38** | **1** | **4** | **17** | **7** |
+| [Workflows](#wfl-workflows) (WFL) | 14 | 10 | 4 | 0 | 0 | 0 | 0 |
+| **All** | **680** | **591** | **48** | **1** | **4** | **17** | **19** |
 
-Unit tests claimed by a requirement: 1424 of 1424.
+Unit tests claimed by a requirement: 1410 of 1410.
 
 ## Findings
 
@@ -1533,17 +1534,17 @@ The trial's build #11 appeared on the Tasks board as task #89 (source door) besi
 |---|---|---|
 | <a id="sn-01"></a>**SN-01** A personal AI team that works by itself: Agents read the news, research companies and topics, watch filings and prices, and deliver briefings, alerts and research results on their own, so that the owner mostly just reads results. | must | [APP-05](#app-05), [APP-25](#app-25), [APP-26](#app-26), [APP-30](#app-30), [APP-31](#app-31), [APP-32](#app-32), [APP-33](#app-33), [APP-34](#app-34), [APP-35](#app-35), [APP-46](#app-46), [APP-47](#app-47), [APP-48](#app-48), [APP-49](#app-49), [APP-50](#app-50), [APP-51](#app-51), [APP-52](#app-52), [AST-01](#ast-01), [AST-05](#ast-05), [AST-07](#ast-07), [AST-13](#ast-13), [BLD-25](#bld-25), [CST-01](#cst-01), [MIS-01](#mis-01), [MIS-02](#mis-02), [MIS-06](#mis-06), [MIS-08](#mis-08), [MIS-09](#mis-09), [MIS-10](#mis-10), [MIS-11](#mis-11), [MIS-13](#mis-13), [MIS-14](#mis-14), [MIS-15](#mis-15), [MIS-21](#mis-21), [MIS-22](#mis-22), [MIS-23](#mis-23), [RES-02](#res-02), [RES-03](#res-03), [RES-04](#res-04), [RES-05](#res-05), [SHP-13](#shp-13), [VOI-09](#voi-09) |
 | <a id="sn-02"></a>**SN-02** Out of the loop except for real decisions: the owner is asked only for decisions that are really his (approvals of spending, deploys, deletions, settings, grants), each one tap away with enough context to decide; no scripts to run, no busywork, nothing shown as needing him that does not. | must | [APP-04](#app-04), [APP-05](#app-05), [APP-06](#app-06), [APP-07](#app-07), [APP-13](#app-13), [APP-14](#app-14), [APP-21](#app-21), [APP-25](#app-25), [APP-26](#app-26), [APP-30](#app-30), [APP-31](#app-31), [APP-54](#app-54), [AST-06](#ast-06), [AST-12](#ast-12), [AUT-01](#aut-01), [AUT-02](#aut-02), [AUT-05](#aut-05), [AUT-07](#aut-07), [AUT-08](#aut-08), [CHG-02](#chg-02), [CHG-03](#chg-03), [CNX-02](#cnx-02), [CRW-02](#crw-02), [CRW-05](#crw-05), [CRW-06](#crw-06), [CST-03](#cst-03), [MEM-42](#mem-42), [MIS-07](#mis-07), [MIS-20](#mis-20), [PHN-02](#phn-02), [PHN-11](#phn-11), [PHN-12](#phn-12), [PHN-18](#phn-18), [PHN-20](#phn-20), [PHN-21](#phn-21), [PHN-22](#phn-22), [PHN-24](#phn-24), [PHN-25](#phn-25), [PHN-26](#phn-26), [SHP-01](#shp-01), [SHP-03](#shp-03), [SHP-08](#shp-08), [SWM-05](#swm-05), [SWM-06](#swm-06), [SWM-08](#swm-08), [SWM-33](#swm-33), [SWM-38](#swm-38), [SWM-39](#swm-39), [SWM-40](#swm-40), [SWM-42](#swm-42), [SWM-43](#swm-43), [SWM-44](#swm-44), [SWM-54](#swm-54), [SWM-55](#swm-55), [SWM-61](#swm-61), [SWM-87](#swm-87), [TRL-15](#trl-15), [TSK-03](#tsk-03), [TSK-20](#tsk-20), [TSK-40](#tsk-40), [VOI-08](#voi-08) |
-| <a id="sn-03"></a>**SN-03** Costs nothing to run: Running the stack costs $0 beyond the subscriptions the owner already pays; nothing can spend money by accident. | must | [APP-40](#app-40), [APP-41](#app-41), [APP-42](#app-42), [APP-43](#app-43), [APP-44](#app-44), [APP-45](#app-45), [AST-02](#ast-02), [AST-08](#ast-08), [BLD-06](#bld-06), [CST-02](#cst-02), [CST-15](#cst-15), [GW-02](#gw-02), [GW-04](#gw-04), [GW-09](#gw-09), [MEM-26](#mem-26), [MEM-44](#mem-44), [MIS-04](#mis-04), [MIS-16](#mis-16), [PHN-27](#phn-27), [PLT-11](#plt-11), [PLT-26](#plt-26), [PLT-27](#plt-27), [RES-07](#res-07), [SHP-05](#shp-05), [SWM-13](#swm-13), [SWM-14](#swm-14), [SWM-29](#swm-29), [SWM-40](#swm-40), [SWM-53](#swm-53), [SWM-60](#swm-60), [SWM-62](#swm-62), [SWM-81](#swm-81) |
+| <a id="sn-03"></a>**SN-03** Costs nothing to run: Running the stack costs $0 beyond the subscriptions the owner already pays; nothing can spend money by accident. | must | [APP-40](#app-40), [APP-41](#app-41), [APP-42](#app-42), [APP-43](#app-43), [APP-44](#app-44), [APP-45](#app-45), [AST-02](#ast-02), [AST-08](#ast-08), [BLD-06](#bld-06), [CST-02](#cst-02), [CST-15](#cst-15), [GW-02](#gw-02), [GW-04](#gw-04), [GW-09](#gw-09), [MEM-26](#mem-26), [MEM-44](#mem-44), [MIS-04](#mis-04), [MIS-16](#mis-16), [PHN-27](#phn-27), [PLT-11](#plt-11), [PLT-26](#plt-26), [PLT-27](#plt-27), [RES-07](#res-07), [SHP-05](#shp-05), [SWM-13](#swm-13), [SWM-14](#swm-14), [SWM-29](#swm-29), [SWM-40](#swm-40), [SWM-53](#swm-53), [SWM-60](#swm-60), [SWM-62](#swm-62), [SWM-81](#swm-81), [WFL-07](#wfl-07), [WFL-10](#wfl-10), [WFL-11](#wfl-11), [WFL-14](#wfl-14) |
 | <a id="sn-04"></a>**SN-04** Private data stays home: Notes, reports, memory, chats, mail and files stay on the PC and the NAS; only the model calls leave, and The owner knows which provider sees what. | must | [AUT-03](#aut-03), [CST-04](#cst-04), [CST-06](#cst-06), [GEN-14](#gen-14), [HSE-07](#hse-07), [KNW-05](#knw-05), [KNW-07](#knw-07), [MEM-06](#mem-06), [MEM-18](#mem-18), [MEM-30](#mem-30), [PHN-16](#phn-16), [PHN-19](#phn-19), [RES-01](#res-01), [SEC-03](#sec-03), [SEC-04](#sec-04), [SEC-06](#sec-06), [SEC-17](#sec-17), [SEC-18](#sec-18), [SEC-19](#sec-19), [SEC-22](#sec-22), [SWM-67](#swm-67) |
-| <a id="sn-05"></a>**SN-05** Agents cannot do damage: No agent can spend money, delete data for good, leak private data, change the NAS, the router or phone and PC security settings, or deploy code without the owner's approval; prompt injection from the web or mail cannot steer an agent into any of it. | must | [APP-10](#app-10), [APP-20](#app-20), [APP-61](#app-61), [AST-08](#ast-08), [AST-09](#ast-09), [AST-10](#ast-10), [AST-14](#ast-14), [AUT-01](#aut-01), [AUT-03](#aut-03), [BLD-02](#bld-02), [BLD-07](#bld-07), [BLD-10](#bld-10), [BLD-13](#bld-13), [BLD-16](#bld-16), [BLD-18](#bld-18), [BLD-27](#bld-27), [BLD-28](#bld-28), [BLD-39](#bld-39), [CHG-05](#chg-05), [CHG-12](#chg-12), [CHG-13](#chg-13), [CHG-15](#chg-15), [CNX-01](#cnx-01), [CNX-03](#cnx-03), [CNX-04](#cnx-04), [CNX-05](#cnx-05), [CNX-07](#cnx-07), [CNX-08](#cnx-08), [CNX-09](#cnx-09), [CRW-04](#crw-04), [CRW-10](#crw-10), [CRW-11](#crw-11), [CRW-13](#crw-13), [CST-04](#cst-04), [CST-05](#cst-05), [CST-06](#cst-06), [CST-07](#cst-07), [CST-10](#cst-10), [CST-11](#cst-11), [CST-12](#cst-12), [GEN-01](#gen-01), [GEN-02](#gen-02), [GEN-03](#gen-03), [GEN-04](#gen-04), [GEN-05](#gen-05), [GEN-06](#gen-06), [GEN-07](#gen-07), [GEN-08](#gen-08), [GEN-09](#gen-09), [GEN-10](#gen-10), [GEN-11](#gen-11), [GEN-12](#gen-12), [GEN-13](#gen-13), [GEN-14](#gen-14), [GEN-15](#gen-15), [GEN-16](#gen-16), [GEN-17](#gen-17), [GEN-18](#gen-18), [GEN-19](#gen-19), [GEN-20](#gen-20), [GEN-21](#gen-21), [GEN-22](#gen-22), [GEN-23](#gen-23), [GEN-24](#gen-24), [GEN-25](#gen-25), [GEN-26](#gen-26), [GEN-27](#gen-27), [GEN-28](#gen-28), [GEN-29](#gen-29), [GEN-30](#gen-30), [GEN-31](#gen-31), [GEN-32](#gen-32), [GEN-33](#gen-33), [GEN-34](#gen-34), [GEN-35](#gen-35), [GEN-36](#gen-36), [GEN-37](#gen-37), [GEN-38](#gen-38), [GEN-39](#gen-39), [GW-05](#gw-05), [HSE-04](#hse-04), [HSE-05](#hse-05), [HSE-08](#hse-08), [HSE-09](#hse-09), [KNW-04](#knw-04), [KNW-06](#knw-06), [KNW-11](#knw-11), [MEM-04](#mem-04), [MEM-29](#mem-29), [MEM-30](#mem-30), [MEM-39](#mem-39), [MEM-49](#mem-49), [MIS-17](#mis-17), [MIS-28](#mis-28), [PHN-01](#phn-01), [PHN-03](#phn-03), [PHN-04](#phn-04), [PHN-05](#phn-05), [PHN-06](#phn-06), [PHN-07](#phn-07), [PHN-08](#phn-08), [PHN-15](#phn-15), [PLT-02](#plt-02), [PLT-03](#plt-03), [PLT-09](#plt-09), [QA-23](#qa-23), [QA-24](#qa-24), [QA-25](#qa-25), [QA-26](#qa-26), [RES-01](#res-01), [RES-03](#res-03), [RES-04](#res-04), [RES-06](#res-06), [SEC-01](#sec-01), [SEC-02](#sec-02), [SEC-03](#sec-03), [SEC-04](#sec-04), [SEC-05](#sec-05), [SEC-06](#sec-06), [SEC-07](#sec-07), [SEC-08](#sec-08), [SEC-09](#sec-09), [SEC-10](#sec-10), [SEC-11](#sec-11), [SEC-12](#sec-12), [SEC-13](#sec-13), [SEC-14](#sec-14), [SEC-15](#sec-15), [SEC-16](#sec-16), [SEC-20](#sec-20), [SEC-21](#sec-21), [SEC-22](#sec-22), [SHP-05](#shp-05), [SHP-06](#shp-06), [SHP-07](#shp-07), [SHP-09](#shp-09), [SHP-10](#shp-10), [SWM-06](#swm-06), [SWM-109](#swm-109), [SWM-11](#swm-11), [SWM-15](#swm-15), [SWM-23](#swm-23), [SWM-24](#swm-24), [SWM-26](#swm-26), [SWM-42](#swm-42), [SWM-43](#swm-43), [SWM-46](#swm-46), [SWM-51](#swm-51), [SWM-58](#swm-58), [SWM-66](#swm-66), [SWM-67](#swm-67), [SWM-68](#swm-68), [SWM-69](#swm-69), [SWM-70](#swm-70), [SWM-77](#swm-77), [SWM-89](#swm-89), [TRL-05](#trl-05), [TSK-15](#tsk-15), [TSK-20](#tsk-20), [VOI-01](#voi-01), [VOI-03](#voi-03), [VOI-07](#voi-07) |
+| <a id="sn-05"></a>**SN-05** Agents cannot do damage: No agent can spend money, delete data for good, leak private data, change the NAS, the router or phone and PC security settings, or deploy code without the owner's approval; prompt injection from the web or mail cannot steer an agent into any of it. | must | [APP-10](#app-10), [APP-20](#app-20), [APP-61](#app-61), [AST-08](#ast-08), [AST-09](#ast-09), [AST-10](#ast-10), [AST-14](#ast-14), [AUT-01](#aut-01), [AUT-03](#aut-03), [BLD-02](#bld-02), [BLD-07](#bld-07), [BLD-10](#bld-10), [BLD-13](#bld-13), [BLD-16](#bld-16), [BLD-18](#bld-18), [BLD-27](#bld-27), [BLD-28](#bld-28), [BLD-39](#bld-39), [CHG-05](#chg-05), [CHG-12](#chg-12), [CHG-13](#chg-13), [CHG-15](#chg-15), [CNX-01](#cnx-01), [CNX-03](#cnx-03), [CNX-04](#cnx-04), [CNX-05](#cnx-05), [CNX-07](#cnx-07), [CNX-08](#cnx-08), [CNX-09](#cnx-09), [CRW-04](#crw-04), [CRW-10](#crw-10), [CRW-11](#crw-11), [CRW-13](#crw-13), [CST-04](#cst-04), [CST-05](#cst-05), [CST-06](#cst-06), [CST-07](#cst-07), [CST-10](#cst-10), [CST-11](#cst-11), [CST-12](#cst-12), [GEN-01](#gen-01), [GEN-02](#gen-02), [GEN-03](#gen-03), [GEN-04](#gen-04), [GEN-05](#gen-05), [GEN-06](#gen-06), [GEN-07](#gen-07), [GEN-08](#gen-08), [GEN-09](#gen-09), [GEN-10](#gen-10), [GEN-11](#gen-11), [GEN-12](#gen-12), [GEN-13](#gen-13), [GEN-14](#gen-14), [GEN-15](#gen-15), [GEN-16](#gen-16), [GEN-17](#gen-17), [GEN-18](#gen-18), [GEN-19](#gen-19), [GEN-20](#gen-20), [GEN-21](#gen-21), [GEN-22](#gen-22), [GEN-23](#gen-23), [GEN-24](#gen-24), [GEN-25](#gen-25), [GEN-26](#gen-26), [GEN-27](#gen-27), [GEN-28](#gen-28), [GEN-29](#gen-29), [GEN-30](#gen-30), [GEN-31](#gen-31), [GEN-32](#gen-32), [GEN-33](#gen-33), [GEN-34](#gen-34), [GEN-35](#gen-35), [GEN-36](#gen-36), [GEN-37](#gen-37), [GEN-38](#gen-38), [GEN-39](#gen-39), [GW-05](#gw-05), [HSE-04](#hse-04), [HSE-05](#hse-05), [HSE-08](#hse-08), [HSE-09](#hse-09), [KNW-04](#knw-04), [KNW-06](#knw-06), [KNW-11](#knw-11), [MEM-04](#mem-04), [MEM-29](#mem-29), [MEM-30](#mem-30), [MEM-39](#mem-39), [MEM-49](#mem-49), [MIS-17](#mis-17), [MIS-28](#mis-28), [PHN-01](#phn-01), [PHN-03](#phn-03), [PHN-04](#phn-04), [PHN-05](#phn-05), [PHN-06](#phn-06), [PHN-07](#phn-07), [PHN-08](#phn-08), [PHN-15](#phn-15), [PLT-02](#plt-02), [PLT-03](#plt-03), [PLT-09](#plt-09), [QA-23](#qa-23), [QA-24](#qa-24), [QA-25](#qa-25), [QA-26](#qa-26), [RES-01](#res-01), [RES-03](#res-03), [RES-04](#res-04), [RES-06](#res-06), [SEC-01](#sec-01), [SEC-02](#sec-02), [SEC-03](#sec-03), [SEC-04](#sec-04), [SEC-05](#sec-05), [SEC-06](#sec-06), [SEC-07](#sec-07), [SEC-08](#sec-08), [SEC-09](#sec-09), [SEC-10](#sec-10), [SEC-11](#sec-11), [SEC-12](#sec-12), [SEC-13](#sec-13), [SEC-14](#sec-14), [SEC-15](#sec-15), [SEC-16](#sec-16), [SEC-20](#sec-20), [SEC-21](#sec-21), [SEC-22](#sec-22), [SHP-05](#shp-05), [SHP-06](#shp-06), [SHP-07](#shp-07), [SHP-09](#shp-09), [SHP-10](#shp-10), [SWM-06](#swm-06), [SWM-109](#swm-109), [SWM-11](#swm-11), [SWM-15](#swm-15), [SWM-23](#swm-23), [SWM-24](#swm-24), [SWM-26](#swm-26), [SWM-42](#swm-42), [SWM-43](#swm-43), [SWM-46](#swm-46), [SWM-51](#swm-51), [SWM-58](#swm-58), [SWM-66](#swm-66), [SWM-67](#swm-67), [SWM-68](#swm-68), [SWM-69](#swm-69), [SWM-70](#swm-70), [SWM-77](#swm-77), [SWM-89](#swm-89), [TRL-05](#trl-05), [TSK-15](#tsk-15), [TSK-20](#tsk-20), [VOI-01](#voi-01), [VOI-03](#voi-03), [VOI-07](#voi-07), [WFL-01](#wfl-01), [WFL-02](#wfl-02), [WFL-05](#wfl-05), [WFL-06](#wfl-06), [WFL-08](#wfl-08), [WFL-09](#wfl-09), [WFL-12](#wfl-12), [WFL-13](#wfl-13) |
 | <a id="sn-06"></a>**SN-06** Usable from the phone, anywhere, one sign-in: Everything is usable and decidable from the owner's phone (installable app, push, Telegram), from anywhere on his tailnet, with his Tailscale login as the only sign-in. | must | [APP-01](#app-01), [APP-02](#app-02), [APP-03](#app-03), [APP-04](#app-04), [APP-08](#app-08), [APP-09](#app-09), [APP-15](#app-15), [APP-17](#app-17), [APP-19](#app-19), [APP-20](#app-20), [APP-37](#app-37), [APP-38](#app-38), [APP-39](#app-39), [AST-01](#ast-01), [AST-03](#ast-03), [AUT-05](#aut-05), [AUT-06](#aut-06), [MIS-15](#mis-15), [MIS-23](#mis-23), [QA-16](#qa-16), [QA-21](#qa-21), [QA-22](#qa-22), [SEC-01](#sec-01), [SEC-02](#sec-02), [SEC-20](#sec-20), [SWM-11](#swm-11), [SWM-57](#swm-57), [SWM-93](#swm-93), [SWM-95](#swm-95), [TSK-02](#tsk-02), [VOI-09](#voi-09) |
 | <a id="sn-07"></a>**SN-07** See what every agent does: For every agent, mission, crew job, build and tool the owner can see what it did step by step, what it read and changed, what it produced, what it cost and when something went wrong, without having to look for it. | must | [APP-07](#app-07), [APP-11](#app-11), [APP-12](#app-12), [APP-16](#app-16), [APP-19](#app-19), [APP-22](#app-22), [APP-23](#app-23), [APP-24](#app-24), [APP-35](#app-35), [APP-36](#app-36), [APP-53](#app-53), [AST-04](#ast-04), [AUT-04](#aut-04), [AUT-07](#aut-07), [BLD-14](#bld-14), [BLD-20](#bld-20), [CHG-16](#chg-16), [CHG-20](#chg-20), [CRW-01](#crw-01), [CRW-02](#crw-02), [CRW-09](#crw-09), [CRW-12](#crw-12), [GW-01](#gw-01), [GW-07](#gw-07), [HSE-02](#hse-02), [MEM-01](#mem-01), [MEM-07](#mem-07), [MEM-09](#mem-09), [MEM-10](#mem-10), [MEM-19](#mem-19), [MEM-22](#mem-22), [MEM-27](#mem-27), [MEM-44](#mem-44), [MEM-45](#mem-45), [MEM-46](#mem-46), [MIS-16](#mis-16), [OBS-01](#obs-01), [OBS-02](#obs-02), [OBS-03](#obs-03), [OBS-04](#obs-04), [OBS-05](#obs-05), [OBS-06](#obs-06), [OBS-07](#obs-07), [OBS-08](#obs-08), [OBS-09](#obs-09), [OBS-10](#obs-10), [OBS-14](#obs-14), [OBS-15](#obs-15), [OBS-18](#obs-18), [PLT-24](#plt-24), [PLT-30](#plt-30), [QA-17](#qa-17), [RES-05](#res-05), [SEC-07](#sec-07), [SHP-11](#shp-11), [SWM-103](#swm-103), [SWM-104](#swm-104), [SWM-105](#swm-105), [SWM-106](#swm-106), [SWM-107](#swm-107), [SWM-110](#swm-110), [SWM-111](#swm-111), [SWM-112](#swm-112), [SWM-113](#swm-113), [SWM-114](#swm-114), [SWM-115](#swm-115), [SWM-17](#swm-17), [SWM-23](#swm-23), [SWM-25](#swm-25), [SWM-30](#swm-30), [SWM-57](#swm-57), [SWM-58](#swm-58), [SWM-64](#swm-64), [SWM-78](#swm-78), [SWM-79](#swm-79), [SWM-80](#swm-80), [SWM-81](#swm-81), [SWM-82](#swm-82), [SWM-84](#swm-84), [SWM-90](#swm-90), [SWM-96](#swm-96), [SWM-99](#swm-99), [TSK-04](#tsk-04), [TSK-09](#tsk-09), [TSK-17](#tsk-17), [TSK-35](#tsk-35), [TSK-42](#tsk-42), [TSK-43](#tsk-43) |
-| <a id="sn-08"></a>**SN-08** The stack maintains and improves itself: Housekeeping agents keep the stack healthy, and the stack proposes and builds its own improvements; the owner approves what ships. | must | [APP-21](#app-21), [AST-11](#ast-11), [AUT-02](#aut-02), [BLD-01](#bld-01), [BLD-03](#bld-03), [BLD-04](#bld-04), [BLD-05](#bld-05), [BLD-08](#bld-08), [BLD-10](#bld-10), [BLD-21](#bld-21), [BLD-22](#bld-22), [BLD-24](#bld-24), [CHG-11](#chg-11), [CHG-15](#chg-15), [CHG-17](#chg-17), [CHG-18](#chg-18), [CHG-19](#chg-19), [CRW-01](#crw-01), [CRW-03](#crw-03), [CRW-04](#crw-04), [CRW-07](#crw-07), [CRW-08](#crw-08), [CRW-09](#crw-09), [CRW-10](#crw-10), [CST-07](#cst-07), [GW-09](#gw-09), [KNW-08](#knw-08), [MEM-11](#mem-11), [MEM-13](#mem-13), [MEM-20](#mem-20), [MEM-38](#mem-38), [MEM-39](#mem-39), [MEM-42](#mem-42), [MEM-43](#mem-43), [MEM-47](#mem-47), [MEM-50](#mem-50), [OBS-13](#obs-13), [PLT-08](#plt-08), [PLT-19](#plt-19), [QA-07](#qa-07), [SEC-08](#sec-08), [SWM-07](#swm-07), [SWM-102](#swm-102), [SWM-18](#swm-18), [SWM-38](#swm-38), [SWM-44](#swm-44), [SWM-45](#swm-45), [SWM-46](#swm-46), [SWM-47](#swm-47), [SWM-61](#swm-61), [SWM-70](#swm-70), [SWM-82](#swm-82), [SWM-83](#swm-83), [SWM-84](#swm-84), [SWM-91](#swm-91), [SWM-92](#swm-92), [SWM-93](#swm-93), [SWM-94](#swm-94), [SWM-95](#swm-95), [SWM-96](#swm-96), [TRL-14](#trl-14), [TRL-15](#trl-15), [TRL-16](#trl-16), [TRL-17](#trl-17), [TSK-13](#tsk-13), [TSK-16](#tsk-16), [TSK-17](#tsk-17), [TSK-42](#tsk-42) |
+| <a id="sn-08"></a>**SN-08** The stack maintains and improves itself: Housekeeping agents keep the stack healthy, and the stack proposes and builds its own improvements; the owner approves what ships. | must | [APP-21](#app-21), [AST-11](#ast-11), [AUT-02](#aut-02), [BLD-01](#bld-01), [BLD-03](#bld-03), [BLD-04](#bld-04), [BLD-05](#bld-05), [BLD-08](#bld-08), [BLD-10](#bld-10), [BLD-21](#bld-21), [BLD-22](#bld-22), [BLD-24](#bld-24), [CHG-11](#chg-11), [CHG-15](#chg-15), [CHG-17](#chg-17), [CHG-18](#chg-18), [CHG-19](#chg-19), [CRW-01](#crw-01), [CRW-03](#crw-03), [CRW-04](#crw-04), [CRW-07](#crw-07), [CRW-08](#crw-08), [CRW-09](#crw-09), [CRW-10](#crw-10), [CST-07](#cst-07), [GW-09](#gw-09), [KNW-08](#knw-08), [MEM-11](#mem-11), [MEM-13](#mem-13), [MEM-20](#mem-20), [MEM-38](#mem-38), [MEM-39](#mem-39), [MEM-42](#mem-42), [MEM-43](#mem-43), [MEM-47](#mem-47), [MEM-50](#mem-50), [OBS-13](#obs-13), [PLT-08](#plt-08), [PLT-19](#plt-19), [QA-07](#qa-07), [SEC-08](#sec-08), [SWM-07](#swm-07), [SWM-102](#swm-102), [SWM-18](#swm-18), [SWM-38](#swm-38), [SWM-44](#swm-44), [SWM-45](#swm-45), [SWM-46](#swm-46), [SWM-47](#swm-47), [SWM-61](#swm-61), [SWM-70](#swm-70), [SWM-82](#swm-82), [SWM-83](#swm-83), [SWM-84](#swm-84), [SWM-91](#swm-91), [SWM-92](#swm-92), [SWM-93](#swm-93), [SWM-94](#swm-94), [SWM-95](#swm-95), [SWM-96](#swm-96), [TRL-14](#trl-14), [TRL-15](#trl-15), [TRL-16](#trl-16), [TRL-17](#trl-17), [TSK-13](#tsk-13), [TSK-16](#tsk-16), [TSK-17](#tsk-17), [TSK-42](#tsk-42), [WFL-03](#wfl-03) |
 | <a id="sn-09"></a>**SN-09** Nothing is ever lost: Data and configuration are backed up, the backups are proven to restore, and the whole stack can move to a new PC. | must | [AST-10](#ast-10), [AUT-04](#aut-04), [CNX-03](#cnx-03), [CST-05](#cst-05), [KNW-01](#knw-01), [KNW-11](#knw-11), [MEM-08](#mem-08), [MEM-12](#mem-12), [MEM-14](#mem-14), [MEM-17](#mem-17), [MEM-21](#mem-21), [MEM-35](#mem-35), [MEM-48](#mem-48), [PLT-12](#plt-12), [PLT-13](#plt-13), [PLT-14](#plt-14), [PLT-15](#plt-15), [PLT-16](#plt-16), [PLT-17](#plt-17), [PLT-33](#plt-33), [PLT-34](#plt-34), [SWM-30](#swm-30), [SWM-35](#swm-35), [SWM-36](#swm-36), [SWM-73](#swm-73), [SWM-76](#swm-76) |
 | <a id="sn-10"></a>**SN-10** Knowledge that grows and answers with sources: Everything the owner and his agents write becomes a searchable, linked knowledge base (vault, wikis, long-term memory) that answers questions with citations. | must | [APP-15](#app-15), [CHG-08](#chg-08), [CHG-09](#chg-09), [CRW-13](#crw-13), [KNW-01](#knw-01), [KNW-02](#knw-02), [KNW-03](#knw-03), [KNW-04](#knw-04), [KNW-05](#knw-05), [KNW-06](#knw-06), [KNW-08](#knw-08), [KNW-09](#knw-09), [KNW-10](#knw-10), [KNW-12](#knw-12), [KNW-13](#knw-13), [KNW-14](#knw-14), [KNW-15](#knw-15), [MEM-01](#mem-01), [MEM-02](#mem-02), [MEM-03](#mem-03), [MEM-04](#mem-04), [MEM-05](#mem-05), [MEM-06](#mem-06), [MEM-09](#mem-09), [MEM-10](#mem-10), [MEM-12](#mem-12), [MEM-14](#mem-14), [MEM-15](#mem-15), [MEM-16](#mem-16), [MEM-17](#mem-17), [MEM-18](#mem-18), [MEM-19](#mem-19), [MEM-20](#mem-20), [MEM-21](#mem-21), [MEM-22](#mem-22), [MEM-23](#mem-23), [MEM-24](#mem-24), [MEM-25](#mem-25), [MEM-26](#mem-26), [MEM-27](#mem-27), [MEM-28](#mem-28), [MEM-29](#mem-29), [MEM-33](#mem-33), [MEM-34](#mem-34), [MEM-35](#mem-35), [MEM-36](#mem-36), [MEM-37](#mem-37), [MEM-38](#mem-38), [MEM-40](#mem-40), [MEM-41](#mem-41), [MEM-45](#mem-45), [MEM-46](#mem-46), [MEM-48](#mem-48), [MEM-49](#mem-49), [MEM-50](#mem-50), [MEM-51](#mem-51), [MIS-01](#mis-01), [MIS-11](#mis-11), [MIS-18](#mis-18), [MIS-19](#mis-19), [MIS-21](#mis-21), [MIS-28](#mis-28), [SWM-66](#swm-66), [TSK-34](#tsk-34) |
 | <a id="sn-11"></a>**SN-11** Hands in the real world, under control: Agents can act through the AI phone, Gmail, shopping and the House (lights, plugs, Echos), each only within grants and approvals the owner controls, with Stop and a log. | should | [CNX-01](#cnx-01), [CNX-02](#cnx-02), [CRW-11](#crw-11), [CST-12](#cst-12), [HSE-01](#hse-01), [HSE-02](#hse-02), [HSE-03](#hse-03), [HSE-05](#hse-05), [HSE-06](#hse-06), [HSE-07](#hse-07), [MIS-17](#mis-17), [PHN-01](#phn-01), [PHN-02](#phn-02), [PHN-05](#phn-05), [PHN-13](#phn-13), [PHN-14](#phn-14), [PHN-17](#phn-17), [PHN-18](#phn-18), [PHN-19](#phn-19), [PHN-22](#phn-22), [PHN-23](#phn-23), [PLT-22](#plt-22), [SHP-01](#shp-01), [SHP-02](#shp-02), [SHP-03](#shp-03), [SHP-04](#shp-04), [SHP-11](#shp-11), [SHP-13](#shp-13), [SWM-26](#swm-26), [TRL-16](#trl-16), [VOI-01](#voi-01), [VOI-02](#voi-02), [VOI-03](#voi-03), [VOI-04](#voi-04), [VOI-05](#voi-05), [VOI-06](#voi-06), [VOI-08](#voi-08) |
 | <a id="sn-12"></a>**SN-12** English everywhere: Chat, app, reports, wikis, Telegram, code, docs and commit messages are in English. | must | [CST-09](#cst-09), [MIS-12](#mis-12), [TSK-35](#tsk-35) |
-| <a id="sn-13"></a>**SN-13** Runs unattended for months: The stack keeps working through usage-limit pauses, restarts, deploys, reboots and power cuts, and recovers by itself; no work, approval or message is lost on a restart. | must | [APP-23](#app-23), [APP-24](#app-24), [AST-03](#ast-03), [AST-12](#ast-12), [BLD-03](#bld-03), [BLD-06](#bld-06), [BLD-09](#bld-09), [BLD-12](#bld-12), [CNX-06](#cnx-06), [CST-03](#cst-03), [CST-08](#cst-08), [CST-14](#cst-14), [GW-03](#gw-03), [GW-04](#gw-04), [GW-06](#gw-06), [GW-08](#gw-08), [MEM-05](#mem-05), [MEM-07](#mem-07), [MEM-08](#mem-08), [MEM-15](#mem-15), [MEM-16](#mem-16), [MEM-21](#mem-21), [MEM-34](#mem-34), [MEM-40](#mem-40), [MEM-41](#mem-41), [MEM-43](#mem-43), [MEM-51](#mem-51), [MIS-03](#mis-03), [MIS-04](#mis-04), [MIS-05](#mis-05), [MIS-10](#mis-10), [OBS-03](#obs-03), [OBS-04](#obs-04), [PHN-09](#phn-09), [PHN-10](#phn-10), [PHN-11](#phn-11), [PHN-14](#phn-14), [PHN-25](#phn-25), [PLT-04](#plt-04), [PLT-05](#plt-05), [PLT-06](#plt-06), [PLT-07](#plt-07), [PLT-08](#plt-08), [PLT-09](#plt-09), [PLT-10](#plt-10), [PLT-11](#plt-11), [PLT-13](#plt-13), [PLT-18](#plt-18), [PLT-21](#plt-21), [PLT-23](#plt-23), [PLT-27](#plt-27), [PLT-28](#plt-28), [PLT-29](#plt-29), [PLT-30](#plt-30), [PLT-31](#plt-31), [PLT-32](#plt-32), [PLT-35](#plt-35), [PLT-36](#plt-36), [QA-17](#qa-17), [SHP-12](#shp-12), [SWM-12](#swm-12), [SWM-19](#swm-19), [SWM-31](#swm-31), [SWM-47](#swm-47), [SWM-52](#swm-52), [SWM-53](#swm-53), [SWM-63](#swm-63), [SWM-71](#swm-71), [SWM-72](#swm-72), [SWM-73](#swm-73), [SWM-76](#swm-76), [SWM-85](#swm-85), [SWM-87](#swm-87), [TSK-06](#tsk-06), [TSK-08](#tsk-08) |
+| <a id="sn-13"></a>**SN-13** Runs unattended for months: The stack keeps working through usage-limit pauses, restarts, deploys, reboots and power cuts, and recovers by itself; no work, approval or message is lost on a restart. | must | [APP-23](#app-23), [APP-24](#app-24), [AST-03](#ast-03), [AST-12](#ast-12), [BLD-03](#bld-03), [BLD-06](#bld-06), [BLD-09](#bld-09), [BLD-12](#bld-12), [CNX-06](#cnx-06), [CST-03](#cst-03), [CST-08](#cst-08), [CST-14](#cst-14), [GW-03](#gw-03), [GW-04](#gw-04), [GW-06](#gw-06), [GW-08](#gw-08), [MEM-05](#mem-05), [MEM-07](#mem-07), [MEM-08](#mem-08), [MEM-15](#mem-15), [MEM-16](#mem-16), [MEM-21](#mem-21), [MEM-34](#mem-34), [MEM-40](#mem-40), [MEM-41](#mem-41), [MEM-43](#mem-43), [MEM-51](#mem-51), [MIS-03](#mis-03), [MIS-04](#mis-04), [MIS-05](#mis-05), [MIS-10](#mis-10), [OBS-03](#obs-03), [OBS-04](#obs-04), [PHN-09](#phn-09), [PHN-10](#phn-10), [PHN-11](#phn-11), [PHN-14](#phn-14), [PHN-25](#phn-25), [PLT-04](#plt-04), [PLT-05](#plt-05), [PLT-06](#plt-06), [PLT-07](#plt-07), [PLT-08](#plt-08), [PLT-09](#plt-09), [PLT-10](#plt-10), [PLT-11](#plt-11), [PLT-13](#plt-13), [PLT-18](#plt-18), [PLT-21](#plt-21), [PLT-23](#plt-23), [PLT-27](#plt-27), [PLT-28](#plt-28), [PLT-29](#plt-29), [PLT-30](#plt-30), [PLT-31](#plt-31), [PLT-32](#plt-32), [PLT-35](#plt-35), [PLT-36](#plt-36), [PLT-37](#plt-37), [QA-17](#qa-17), [QA-27](#qa-27), [SHP-12](#shp-12), [SWM-12](#swm-12), [SWM-19](#swm-19), [SWM-31](#swm-31), [SWM-47](#swm-47), [SWM-52](#swm-52), [SWM-53](#swm-53), [SWM-63](#swm-63), [SWM-71](#swm-71), [SWM-72](#swm-72), [SWM-73](#swm-73), [SWM-76](#swm-76), [SWM-85](#swm-85), [SWM-87](#swm-87), [TSK-06](#tsk-06), [TSK-08](#tsk-08), [WFL-02](#wfl-02), [WFL-04](#wfl-04) |
 | <a id="sn-14"></a>**SN-14** Understand and change any codebase: The stack can study any repository (code graph, code map), answer questions about it, change the owner's own repositories through the builder, and check code against large specifications. | should | [APP-57](#app-57), [APP-58](#app-58), [APP-59](#app-59), [APP-60](#app-60), [APP-61](#app-61), [AST-09](#ast-09), [BLD-01](#bld-01), [BLD-11](#bld-11), [BLD-15](#bld-15), [BLD-17](#bld-17), [BLD-18](#bld-18), [BLD-19](#bld-19), [BLD-23](#bld-23), [BLD-25](#bld-25), [BLD-26](#bld-26), [BLD-27](#bld-27), [CHG-01](#chg-01), [CHG-02](#chg-02), [CHG-03](#chg-03), [CHG-04](#chg-04), [CHG-05](#chg-05), [CHG-06](#chg-06), [CHG-07](#chg-07), [CHG-08](#chg-08), [CHG-09](#chg-09), [CHG-10](#chg-10), [CHG-12](#chg-12), [CHG-13](#chg-13), [CHG-14](#chg-14), [CHG-16](#chg-16), [CHG-17](#chg-17), [CHG-18](#chg-18), [CHG-19](#chg-19), [CHG-20](#chg-20), [MEM-31](#mem-31), [MEM-32](#mem-32), [MEM-37](#mem-37), [QA-14](#qa-14) |
 | <a id="sn-15"></a>**SN-15** A codebase AI agents can develop safely: The repository is organised for coding agents (rules per directory, checks, tests, docs that stay true), so that agents can change it without breaking it. | must | [APP-13](#app-13), [AST-07](#ast-07), [AST-11](#ast-11), [AUT-08](#aut-08), [CHG-07](#chg-07), [CRW-07](#crw-07), [CRW-08](#crw-08), [CST-08](#cst-08), [CST-13](#cst-13), [KNW-13](#knw-13), [MEM-31](#mem-31), [MEM-32](#mem-32), [PLT-24](#plt-24), [PLT-25](#plt-25), [PLT-26](#plt-26), [PLT-33](#plt-33), [QA-01](#qa-01), [QA-02](#qa-02), [QA-03](#qa-03), [QA-04](#qa-04), [QA-05](#qa-05), [QA-06](#qa-06), [QA-07](#qa-07), [QA-13](#qa-13), [QA-16](#qa-16), [QA-18](#qa-18), [QA-19](#qa-19), [QA-20](#qa-20), [QA-21](#qa-21), [QA-22](#qa-22), [SEC-15](#sec-15), [SWM-01](#swm-01), [SWM-16](#swm-16), [SWM-22](#swm-22), [SWM-28](#swm-28), [SWM-37](#swm-37), [SWM-41](#swm-41), [SWM-85](#swm-85), [SWM-88](#swm-88) |
 | <a id="sn-16"></a>**SN-16** Known, current and checkable requirements: What the stack must do is written down properly, kept current with every change, and contradictions between the parts are found and shown. | must | [APP-14](#app-14), [APP-18](#app-18), [MEM-02](#mem-02), [MEM-11](#mem-11), [MEM-13](#mem-13), [MEM-23](#mem-23), [MEM-47](#mem-47), [QA-06](#qa-06), [QA-08](#qa-08), [QA-09](#qa-09), [QA-10](#qa-10), [QA-11](#qa-11), [QA-12](#qa-12), [QA-13](#qa-13), [QA-14](#qa-14), [QA-15](#qa-15), [SWM-03](#swm-03), [SWM-20](#swm-20), [SWM-35](#swm-35), [SWM-55](#swm-55), [SWM-88](#swm-88), [TRL-02](#trl-02), [TRL-14](#trl-14), [TRL-17](#trl-17) |
@@ -1575,7 +1576,7 @@ A crew duty, the Editor, shall once a day give every open idea one verdict with 
 - Parents: [ACR-01](#acr-01)
 - Sources: [DEC-47](#dec-47), `owner, 8 Nov 2026: We need an agent that will filter out the good ideas. At the moment it is too spammy.`
 - Verified by: test: `tests/test_editor.py::test_the_editor_keeps_only_verdicts_it_can_check_and_groups_requests`, `tests/test_editor.py::test_the_editor_s_context_holds_the_ideas_the_owner_s_reasons_and_planned_work`, `tests/test_editor.py::test_a_pass_saves_its_sorting_and_changes_nothing`, `tests/test_editor.py::test_the_editor_is_a_crew_duty_with_its_card_units_and_prompt`, `tests/test_editor.py::test_each_idea_and_the_ideas_view_show_the_editor_s_sorting`
-- Trace: `ops/editor.py`, `prompts/editor.md`, `ops/systemd/crew-editor.service`, `ops/systemd/crew-editor.timer`, `config/agents.yaml`, `ops/crew.py`, `images/mission-control/server.py`, `images/mission-control/server.a2a.py`
+- Trace: `ops/editor.py`, `prompts/editor.md`, `ops/systemd/crew-editor.service`, `n8n/workflows/crew-editor.json`, `config/agents.yaml`, `ops/crew.py`, `images/mission-control/server.py`, `images/mission-control/server.a2a.py`
 
 ## APP App
 
@@ -2330,7 +2331,7 @@ Hermes' skills shall be mirrored to git every 5 minutes, and a learned skill wit
 
 - Parents: [SN-05](#sn-05), [SN-09](#sn-09)
 - Sources: `images/mission-control/guide/18-crew.md`
-- Verified by: inspection: `ops/skills_sync.py`, `ops/systemd/skills-sync.timer`
+- Verified by: inspection: `ops/skills_sync.py`, `n8n/workflows/crew-skill-keeper.json`
 
 ### AST-11
 
@@ -2362,7 +2363,7 @@ Every morning at 07:30 the digest shall send the night's results to Telegram.
 
 - Parents: [SN-01](#sn-01)
 - Sources: `images/mission-control/guide/07-delivery.md`
-- Verified by: inspection: `ops/digest.py`, `ops/systemd/digest.timer`
+- Verified by: inspection: `ops/digest.py`, `n8n/workflows/crew-daily-digest.json`
 
 ### AST-14
 
@@ -2672,7 +2673,7 @@ When a repository's HEAD changes, its code graph shall be rebuilt within 2 minut
 
 - Parents: [SN-14](#sn-14)
 - Sources: `images/graphify/AGENTS.md`
-- Verified by: inspection: `ops/graphify-sync.sh`, `ops/systemd/graphify-sync.timer`
+- Verified by: inspection: `ops/graphify-sync.sh`, `n8n/workflows/crew-code-graph.json`
 
 ### BLD-20
 
@@ -2755,7 +2756,7 @@ Onboarding shall, after the code graph and without a model, write the facts of a
 - Parents: [SN-05](#sn-05), [SN-14](#sn-14)
 - Sources: `docs/REPO-KNOWLEDGE.md`, `images/mission-control/guide/11-code.md`, `images/repointel/AGENTS.md`
 - Verified by: test: `tests/test_repofacts.py::test_the_facts_have_one_shape_from_both_tools`, `tests/test_repofacts.py::test_a_repository_s_requirements_are_read_as_data_never_imported`, `tests/test_repofacts.py::test_a_tool_that_fails_leaves_the_other_s_results_and_says_what_is_unknown`, `tests/test_repofacts.py::test_neither_tool_can_touch_the_real_clone`, `tests/test_repofacts.py::test_what_a_tool_left_that_the_host_cannot_remove_goes_through_the_image`, `tests/test_repofacts.py::test_coupling_that_says_nothing_is_left_out`, `tests/test_repofacts.py::test_a_shallow_clone_gets_its_whole_history_and_a_fetch_that_fails_is_said`, `tests/test_repofacts.py::test_facts_follow_head_as_the_graph_does_and_a_failure_waits_for_the_next_commit`, `tests/test_repofacts.py::test_facts_with_an_unknown_part_are_tried_again_a_day_later`, `tests/test_repofacts.py::test_a_killed_tool_gets_more_room_once_and_a_hang_is_stopped_and_said`, `tests/test_repofacts.py::test_rows_past_the_top_are_said`, `tests/test_repofacts.py::test_the_image_is_pinned_checked_and_built_the_way_the_others_are`, `tests/test_repofacts.py::test_the_timer_keeps_them_current_the_way_the_graph_is_kept`, `tests/test_repofacts.py::test_the_wiki_s_first_version_gets_the_facts_as_evidence`, `tests/test_onboard.py::test_a_new_clone_has_its_whole_history_with_its_hooks_off`, `tests/test_onboard.py::test_the_facts_step_comes_after_the_graph_is_resumable_and_says_what_is_unknown`, `tests/test_onboard.py::test_the_facts_wait_for_memory_and_only_no_result_at_all_is_a_failed_try`, `tests/test_onboard.py::test_removing_a_repository_takes_its_facts`, `tests/test_repos.py::test_the_facts_route_has_one_shape_with_or_without_facts`, `tests/test_repowiki.py::test_the_first_version_is_seeded_from_the_measured_facts_too`
-- Trace: `ops/repofacts.py`, `ops/onboard.py`, `ops/repowiki.py`, `ops/crew.py`, `ops/upgrade_check.py`, `ops/systemd/repofacts-sync.service`, `ops/systemd/repofacts-sync.timer`, `images/repointel/Dockerfile`, `images/mission-control/server.py`
+- Trace: `ops/repofacts.py`, `ops/onboard.py`, `ops/repowiki.py`, `ops/crew.py`, `ops/upgrade_check.py`, `ops/systemd/repofacts-sync.service`, `n8n/workflows/crew-repository-facts.json`, `images/repointel/Dockerfile`, `images/mission-control/server.py`
 - Refined by: [BLD-37](#bld-37)
 
 ### BLD-28
@@ -3402,22 +3403,24 @@ The gateway may serve one strong Claude model on the API key of the Console orga
 
 **Crew jobs are agents** · must · functional · **implemented**
 
-Each crew job shall appear as an agent with its schedule, last and next run, last result and health, taken from its systemd unit.
+Each crew job shall appear as an agent with its schedule, last and next run, last result and health: its schedule, next run and on/off switch from its n8n workflow (WFL-09; the backup's and the restore drill's from their timers), its runs from its systemd unit or, after a restart of WSL, from the step service's record.
 
 - Parents: [SN-07](#sn-07), [SN-08](#sn-08)
 - Sources: `images/mission-control/guide/18-crew.md`
-- Verified by: test: `tests/test_crew.py::test_systemd_state_becomes_crew_cards`
-- Trace: `ops/crew.py`
+- Verified by: test: `tests/test_crew.py::test_systemd_state_becomes_crew_cards`, `tests/test_crew.py::test_text_times_and_intervals`, `tests/test_crew.py::test_crew_actions_are_validated`, `tests/test_n8n_move.py::test_a_jobs_schedule_and_next_run_come_from_its_workflows_cron`
+- Trace: `ops/crew.py`, `ops/n8n_jobs.py`
 
 ### CRW-02
 
-**Crew schedules are editable in the app** · must · functional · **implemented**
+**Crew schedules are editable in the app** · must · functional · **deprecated**
 
 The owner shall be able to set a crew job's schedule (a preset, an interval or an OnCalendar time), switch it off or on, and run it now from its Settings, applied as a systemd drop-in.
 
 - Parents: [SN-02](#sn-02), [SN-07](#sn-07)
 - Sources: [DEC-05](#dec-05)
 - Verified by: test: `tests/test_crew.py::test_text_times_and_intervals`, `tests/test_crew.py::test_crew_actions_are_validated`
+- Reason: DEC-51: a crew job's schedule and switch are its n8n workflow's since 10 Nov 2026; the owner changes them on n8n's canvas inside the app (Workflows, WFL-11), and crew_schedule refuses with that pointer. Run now stays.
+- Superseded by: `W`, `F`, `L`, `-`, `1`, `1`
 
 ### CRW-03
 
@@ -3468,11 +3471,12 @@ Each proposing agent shall keep at most its cap of open proposals (doctor 6, mai
 
 **The maintainability review** · should · functional · **implemented**
 
-Every Monday the maintainability review shall read the code read-only with Claude Code and propose at most 2 changes, only where code changed often lately, caused a recent bug or where docs now mislead.
+Every Monday the maintainability review shall read the code read-only with Claude Code and propose at most 2 changes, only where code changed often lately, caused a recent bug or where docs now mislead. It shall read origin's newest main from the builder's own clone, made from Forgejo when the machine has none yet (as every crew answer and replay in the sandbox does).
 
 - Parents: [SN-08](#sn-08), [SN-15](#sn-15)
-- Sources: `images/mission-control/guide/18-crew.md`
-- Verified by: inspection: `ops/crew.py`, `ops/systemd/crew-maintainability.timer`
+- Sources: `images/mission-control/guide/18-crew.md`, `exercise through n8n, 10 Nov 2026: the review failed on a missing workbench clone`
+- Verified by: test: `tests/test_crew.py::test_the_review_and_the_board_answers_get_the_builders_clone_first_also_on_a_fresh_machine`
+- Trace: `ops/crew.py`, `ops/evals.py`, `ops/builds.py`, `n8n/workflows/crew-maintainability-review.json`
 
 ### CRW-08
 
@@ -3871,112 +3875,117 @@ On a deployment without the home feature, the backup and its drill shall step as
 
 ### GEN-21
 
-**Packs from outside the repository** · should · functional · **implemented**
+**Packs from outside the repository** · should · functional · **partial**
 
-A deployment shall load domain packs from folders or repositories outside the stack's repository, pinned by commit: Claude Code plugin folders (agents, skills, MCP servers) plus a stack.yaml, job kinds, templates and exams, namespaced by the pack's name, each commit approved in the queue before it runs.
+A deployment shall load domain packs from folders or repositories outside the stack's repository, pinned by commit: Claude Code plugin folders (agents, skills, MCP servers) plus a stack.yaml, job kinds, n8n workflows and exams, namespaced by the pack's name, each commit approved in the queue before it runs; a pack's workflow that is no n8n workflow or uses n8n's command node is refused with the reason.
 
 - Parents: [SN-05](#sn-05)
-- Sources: `docs/AI-STACK.md`
-- Verified by: test: `tests/test_engine_packs.py::test_an_unapproved_pack_does_not_run_and_waits_in_the_queue_with_its_manifest_prompts_commands_and_diff`, `tests/test_engine_packs.py::test_an_approved_pack_adds_its_agents_skill_template_and_job_kind_from_a_read_only_checkout`, `tests/test_engine_packs.py::test_a_pack_that_clashes_or_names_no_commit_of_its_source_is_refused_with_the_reason`, `tests/test_engine_packs.py::test_two_packs_of_one_name_and_a_manifest_naming_another_pack_are_refused`, `tests/test_engine_packs.py::test_home_without_packs_is_unchanged`, `tests/test_engine_packs.py::test_packs_are_the_apps_and_the_queues`, `tests/test_engine_activities.py::test_a_templates_agent_and_decision_blocks_run_through_the_conductors_steps_and_its_task_finishes`, `tests/test_engine_activities.py::test_each_item_of_a_template_blocks_fan_out_gets_a_row_of_its_own`, `tests/test_engine_activities.py::test_a_deciders_answer_is_read_for_one_of_its_branches`
-- Acceptance: Test: a toy pack copied outside the repository adds agents, a skill, a template and a job kind; a name clash and an unapproved commit are refused with the reason; home without it is unchanged.
-- Trace: `ops/engine/packs.py`, `images/mission-control/web/static/app-packs.js`, `tests/fixtures/packs/toy/stack.yaml`, `ops/engine/activities.py`
+- Sources: `docs/AI-STACK.md`, [DEC-51](#dec-51)
+- Verified by: test: `tests/test_domain_packs.py::test_an_unapproved_pack_does_not_run_and_waits_in_the_queue_with_its_manifest_prompts_commands_and_diff`, `tests/test_domain_packs.py::test_an_approved_pack_adds_its_agents_skill_workflow_and_job_kind_from_a_read_only_checkout`, `tests/test_domain_packs.py::test_a_pack_that_clashes_or_names_no_commit_of_its_source_is_refused_with_the_reason`, `tests/test_domain_packs.py::test_two_packs_of_one_name_and_a_manifest_naming_another_pack_are_refused`, `tests/test_domain_packs.py::test_home_without_packs_is_unchanged`, `tests/test_domain_packs.py::test_a_pack_workflow_that_is_no_n8n_workflow_or_runs_a_shell_command_is_refused_with_the_reason`, `tests/test_domain_packs.py::test_packs_are_the_apps_and_the_queues`
+- Acceptance: Test: a toy pack copied outside the repository adds agents, a skill, a workflow and a job kind; a name clash, an unapproved commit and a workflow that runs a shell command are refused with the reason; home without it is unchanged.
+- Trace: `ops/domain/packs.py`, `ops/domain/__init__.py`, `ops/decisions.py`, `images/mission-control/web/static/app-packs.js`, `tests/fixtures/packs/toy/stack.yaml`, `tests/fixtures/packs/toy/workflows/bug.json`
+- Gap: Packs are read, checked, approved per commit and pinned; a running pack's workflows are not imported into n8n yet (WFL-08 imports the repository's own), and its agents are not in the AI Stack step's list yet (WFL-06).
 
 ### GEN-22
 
 **Commands run at places through the worker protocol** · should · functional · **partial**
 
-A pack's command shall be a job kind of the worker protocol, run at wsl, windows or wsl-host (the same worker, as the Linux user the deployment names as owner of its tools and repositories) behind a Temporal task queue per place, with Windows staying pull-only; per-change values arrive as typed parameters, and the coder can run a check during its loop.
+A pack's command shall be a job kind of the worker protocol, run at wsl, windows or wsl-host (the same worker, as the Linux user the deployment names as owner of its tools and repositories), each kind approved at its place by its hash, with Windows staying pull-only; per-change values arrive as typed parameters, and the coder can run a check during its loop.
 
 - Parents: [SN-05](#sn-05)
 - Sources: `docs/AI-STACK.md`
-- Verified by: test: `tests/test_engine_activities.py::test_a_home_plan_runs_on_the_engine_through_the_conductors_own_steps_and_finish`, `tests/test_engine_activities.py::test_a_step_that_fails_twice_fails_the_run_and_the_task_with_its_reason`, `tests/test_engine_activities.py::test_a_gate_is_asked_once_per_run_and_node_even_when_asked_again`, `tests/test_engine_places.py::test_a_command_runs_at_the_wsl_host_place_only_once_approved_there_by_its_hash_and_a_value_outside_its_type_is_refused`, `tests/test_engine_places.py::test_the_engine_queues_are_its_own_the_pools_at_their_size_and_each_place`, `tests/test_engine_places.py::test_commands_are_the_queues_and_the_engines`
+- Verified by: test: `tests/test_domain_places.py::test_a_command_runs_at_the_wsl_host_place_only_once_approved_there_by_its_hash_and_a_value_outside_its_type_is_refused`, `tests/test_domain_places.py::test_commands_are_the_queues`
 - Acceptance: Test: a toy job kind on the wsl-host worker runs with a change's diff, a value outside its type is refused, and the verdict reaches the coder's next prompt in the same build.
-- Trace: `ops/engine/activities.py`, `ops/engine/places.py`, `ops/wslhost-setup.sh`
-- Gap: The places, their task queues, the typed values and the approval of each job kind by its hash at each place are built and tested; the coder starting a check job from inside its build and reading the verdict in the same build is not built yet (docs/AI-STACK.md §17).
+- Trace: `ops/domain/places.py`, `ops/wslhost-setup.sh`
+- Gap: The places, the typed values and the approval of each job kind by its hash at each place are built and tested; no workflow starts a command yet (the AI Stack step has no command kind, WFL-06), and the coder starting a check job from inside its build and reading the verdict in the same build is not built (docs/AI-STACK.md).
 
 ### GEN-23
 
-**Templates are graphs run by one runner** · should · functional · **implemented**
+**Templates are graphs run by one runner** · should · functional · **deprecated**
 
-A pack's template shall be a graph of blocks (one start, agent, command, change, gate, wait, tracker, branch, notify, fan-out, loop back, failure path, one or more ends) stored as YAML in the pack's repository, run by one generic graph-runner workflow on Temporal that keeps every gate, wait and check.
+A pack's template shall be a graph of blocks stored as YAML in the pack's repository, run by one generic graph-runner workflow on Temporal that keeps every gate, wait and check.
 
 - Parents: [SN-05](#sn-05)
-- Sources: `docs/AI-STACK.md`
-- Verified by: test: `tests/test_engine_graph.py::test_a_template_in_canonical_form_round_trips_byte_for_byte`, `tests/test_engine_graph.py::test_a_template_that_is_not_canonical_is_refused_with_its_canonical_form`, `tests/test_engine_graph.py::test_a_template_is_refused_for_what_it_gets_wrong`, `tests/test_engine_graph.py::test_a_plan_converts_one_to_one_with_its_fan_out_and_its_loop`, `tests/test_engine_graph.py::test_a_plan_is_refused_with_the_conductors_own_words`, `tests/test_engine_graph.py::test_the_conductor_uses_the_same_checks_until_it_is_retired`, `tests/test_engine_graph.py::test_the_graph_is_one_of_the_engines_known_shapes_and_needs_no_temporal`, `tests/test_engine_graph.py::test_durations_read_seconds_minutes_hours_and_days`, `tests/test_engine_runner.py::test_a_check_that_still_fails_after_its_rounds_fails_the_run_with_the_reason`, `tests/test_engine_runner.py::test_a_gate_answered_no_fails_the_run_and_says_who`, `tests/test_engine_graph.py::test_a_branch_keeps_its_names_on_its_edges_and_a_brief_in_canonical_form`, `tests/test_engine_graph.py::test_a_branch_needs_named_edges_and_only_a_branch_names_them`, `tests/test_engine_runner.py::test_a_branch_takes_the_way_its_agent_names_skips_the_others_and_the_join_after_still_runs`, `tests/test_engine_runner.py::test_a_branch_answer_that_names_no_branch_fails_the_run_with_the_branches_it_has`, `tests/test_engine_graph.py::test_a_template_runs_from_one_start_to_its_ends_with_a_failure_path_and_a_notify`, `tests/test_engine_graph.py::test_a_template_without_one_start_or_with_a_dead_end_is_refused_saying_what_to_draw`, `tests/test_engine_runner.py::test_a_failed_block_with_a_failure_path_goes_down_it_and_the_run_ends_as_stopped_not_failed`, `tests/test_engine_runner.py::test_a_block_that_succeeds_closes_its_failure_path_and_the_run_ends_done`
-- Acceptance: Test: a toy template with a gate, a 3-round loop, a 5-way fan-out and a wait survives a restart of the worker and of the server in each state, and no step removes its gate.
-- Trace: `ops/engine/graph.py`, `ops/engine/shapes.py`, `ops/conductor.py`, `ops/engine/runner.py`
+- Sources: `docs/N8N-MIGRATION.md`
+- Verified by: inspection: `docs/N8N-MIGRATION.md`
+- Reason: DEC-51, DEC-52: n8n's workflows, kept as JSON in git (WFL-08), replaced the graph templates and their runner; both were removed on 10 Nov 2026.
+- Superseded by: `W`, `F`, `L`, `-`, `0`, `8`
 
 ### GEN-24
 
-**Waiting for someone outside** · should · functional · **implemented**
+**Waiting for someone outside** · should · functional · **deprecated**
 
 A run shall wait on a key (a tracker item or a pull request) for weeks without holding a process or slot, resume only on a signal for that key, fire its reminders by durable timers and on timeout reach the queue of a named role.
 
 - Parents: [SN-05](#sn-05)
-- Sources: `docs/AI-STACK.md`
-- Verified by: test: `tests/test_engine_runner.py::test_a_template_runs_to_the_end_through_its_wait_its_gate_its_fan_out_and_its_loop`, `tests/test_engine_runner.py::test_reminders_come_on_time_and_a_timeout_asks_the_role_named_for_it`
-- Acceptance: Test: a toy run waits on T-1; an unrelated event does not wake it, a matching reply does, the reminder fires on Temporal's test clock and the timeout reaches the queue.
-- Trace: `ops/engine/runner.py`
+- Sources: `docs/N8N-MIGRATION.md`
+- Verified by: inspection: `docs/N8N-MIGRATION.md`
+- Reason: DEC-51, DEC-52: a workflow waits in n8n, which holds no process for it and survives restarts, and asks the owner in Needs you (WFL-07); Temporal's signal waits were removed on 10 Nov 2026.
+- Superseded by: `W`, `F`, `L`, `-`, `0`, `7`
 
 ### GEN-25
 
-**Trackers, read by polling and written through gates** · should · functional · **implemented**
+**Trackers, read by polling and written through gates** · should · functional · **partial**
 
-The stack shall poll trackers (Jira Data Center through atlassian-python-api, Forgejo issues) with a cursor and signal or start the run named after each item, and write comments, one summary comment, attachments and transitions only as action classes, idempotently, with shadow mode per kind of write, each leaving it when the owner taps, after a stated number of approved shadow items.
+The stack shall poll trackers (Jira Data Center through atlassian-python-api, Forgejo issues) with a cursor and hand each change of an item on once, with the comments from others not handed on before, for the run named after the item, and write comments, one summary comment, attachments and transitions only as action classes, idempotently, with shadow mode per kind of write, each leaving it when the owner taps, after a stated number of approved shadow items.
 
 - Parents: [SN-05](#sn-05)
 - Sources: `docs/AI-STACK.md`
-- Verified by: test: `tests/test_engine_trackers.py::test_a_new_item_starts_its_run_once_across_a_restart_and_an_ended_run_is_not_started_again`, `tests/test_engine_trackers.py::test_a_comment_from_someone_else_signals_the_run_once`, `tests/test_engine_trackers.py::test_shadow_writes_nothing_outward_until_the_owner_lets_a_kind_go_live_after_its_measure`, `tests/test_engine_trackers.py::test_the_one_summary_comment_is_edited_across_three_updates`, `tests/test_engine_trackers.py::test_a_write_to_an_unknown_tracker_or_of_an_unknown_kind_is_refused_with_the_reason`, `tests/test_engine_trackers.py::test_jira_reads_by_jql_with_its_cursor_and_edits_its_one_summary`, `tests/test_engine_trackers.py::test_trackers_are_the_apps_the_queues_and_the_runtimes`
-- Acceptance: Test: on a stand-in a new item starts its run once across a restart, the summary comment is edited across three updates, and shadow mode writes nothing outward.
-- Trace: `ops/engine/trackers.py`, `images/mission-control/web/static/app-trackers.js`
+- Verified by: test: `tests/test_domain_trackers.py::test_a_changed_item_is_handed_on_once_for_the_run_named_after_it_and_a_restart_hands_on_nothing_twice`, `tests/test_domain_trackers.py::test_a_comment_from_someone_else_is_handed_on_once`, `tests/test_domain_trackers.py::test_shadow_writes_nothing_outward_until_the_owner_lets_a_kind_go_live_after_its_measure`, `tests/test_domain_trackers.py::test_the_one_summary_comment_is_edited_across_three_updates`, `tests/test_domain_trackers.py::test_a_write_to_an_unknown_tracker_or_of_an_unknown_kind_is_refused_with_the_reason`, `tests/test_domain_trackers.py::test_jira_reads_by_jql_with_its_cursor_and_edits_its_one_summary`, `tests/test_domain_trackers.py::test_trackers_are_the_apps_and_the_queues`
+- Acceptance: Test: on a stand-in a changed item is handed on once across a restart under one run name, the summary comment is edited across three updates, and shadow mode writes nothing outward.
+- Trace: `ops/domain/trackers.py`, `images/mission-control/web/static/app-trackers.js`
+- Gap: Reading with a cursor, writing in shadow and going live are built and tested; no n8n workflow polls the trackers or writes to them yet (the engine's pass did until 10 Nov 2026), so no deployment reads a tracker today.
 
 ### GEN-26
 
-**A branch from a named tag** · should · functional · **implemented**
+**A branch from a named tag** · should · functional · **partial**
 
-A change shall start from the base ref its template names, push its branch through FORGE_PUSH, open a draft pull request into the template's target branch, and take pull-request comments as signals.
+A change shall start from the base ref its workflow names, push its branch through FORGE_PUSH, open a draft pull request into the workflow's target branch, and hand on each pull-request comment from someone else once to its run.
 
 - Parents: [SN-05](#sn-05)
 - Sources: `docs/AI-STACK.md`
-- Verified by: test: `tests/test_engine_trackers.py::test_a_change_starts_at_a_tag_opens_a_draft_into_a_release_branch_and_a_reviewers_comment_resumes_the_run`
-- Acceptance: Test: on the Bitbucket stand-in a change starts at a tag, opens a draft into a release branch, and a reviewer's comment resumes the run.
-- Trace: `ops/engine/forgework.py`, `ops/forge.py`
+- Verified by: test: `tests/test_domain_trackers.py::test_a_change_starts_at_a_tag_opens_a_draft_into_a_release_branch_and_a_reviewers_comment_is_handed_on_once`
+- Acceptance: Test: on the Bitbucket stand-in a change starts at a tag, opens a draft into a release branch, and a reviewer's comment is handed on once.
+- Trace: `ops/domain/forgework.py`, `ops/forge.py`
+- Gap: Starting at the tag, pushing, the draft pull request and handing on comments are built and tested; no workflow uses them yet.
 
 ### GEN-27
 
-**Gates name roles** · should · functional · **implemented**
+**Decisions name roles** · should · functional · **partial**
 
-A gate shall name a role that the deployment maps to people, and each decision shall record who gave it.
+A question for people shall name a role that the deployment maps to people, and each decision shall record who gave it; an answer from outside the role is refused.
 
 - Parents: [SN-05](#sn-05)
 - Sources: `docs/AI-STACK.md`
-- Verified by: test: `tests/test_engine_runner.py::test_two_gates_wait_for_their_own_roles_and_an_answer_from_outside_a_role_is_refused_and_recorded`, `tests/test_engine_roles.py::test_every_role_is_the_owners_at_home_and_a_deployment_maps_roles_to_its_people`, `tests/test_engine_roles.py::test_the_repositorys_roles_file_names_no_person`
-- Acceptance: Test: a toy template with two gates for two roles waits for each, and an answer from outside the role is refused and recorded.
-- Trace: `ops/engine/roles.py`, `config/roles.yaml`
+- Verified by: test: `tests/test_domain_roles.py::test_every_role_is_the_owners_at_home_and_a_deployment_maps_roles_to_its_people`, `tests/test_domain_roles.py::test_the_repositorys_roles_file_names_no_person`
+- Acceptance: Test: a deployment maps two roles to its people, a role it does not name goes to its default people, and an answer from outside a role is refused.
+- Trace: `ops/domain/roles.py`, `config/roles.yaml`
+- Gap: The map of roles to people is built and tested; a workflow's question (WFL-07) goes to the owner, and naming a role on it is not wired yet.
 
 ### GEN-28
 
-**Named pools of capacity** · should · functional · **implemented**
+**Named pools of capacity** · should · functional · **deprecated**
 
 A deployment shall name pools with sizes; each pool is a task queue whose worker runs at most its size of activities at once, and lost work is given back by its heartbeat.
 
 - Parents: [SN-05](#sn-05)
-- Sources: `docs/AI-STACK.md`
-- Verified by: test: `tests/test_engine_places.py::test_a_ten_item_fan_out_on_a_pool_of_two_never_runs_three_at_once_two_runs_share_it_and_a_failed_attempt_is_retried`
-- Acceptance: Test: a 10-item fan-out on a pool of 2 never runs 3 at once, a killed activity is retried, two runs share the pool.
-- Trace: `ops/engine/places.py`
+- Sources: `docs/N8N-MIGRATION.md`
+- Verified by: inspection: `docs/N8N-MIGRATION.md`
+- Reason: DEC-51, DEC-52: pools were Temporal task queues and went with it on 10 Nov 2026; the step service (WFL-05) runs each step through the runner's own headroom check and slots.
+- Superseded by: `W`, `F`, `L`, `-`, `0`, `5`
 
 ### GEN-29
 
-**Artifacts by hash** · should · functional · **implemented**
+**Artifacts by hash** · should · functional · **partial**
 
 Files a step makes shall be kept by their SHA-256 with the task, step, run and commit that made them, their data class and the deployment's retention, and may be attached to a tracker item or a pull request.
 
 - Parents: [SN-05](#sn-05)
 - Sources: `docs/AI-STACK.md`
-- Verified by: test: `tests/test_engine_places.py::test_a_steps_file_is_kept_by_its_hash_with_its_maker_attached_to_a_stand_in_item_and_removed_past_its_retention`
+- Verified by: test: `tests/test_domain_places.py::test_a_steps_file_is_kept_by_its_hash_with_its_maker_attached_to_a_stand_in_item_and_removed_past_its_retention`
 - Acceptance: Test: a toy step's zip is attached to a stand-in item and its record names the commit and run that made it.
-- Trace: `ops/engine/artifacts.py`
+- Trace: `ops/domain/artifacts.py`
+- Gap: The store, its records, its retention and the attachment to a tracker item are built and tested; no step keeps its files there yet (the engine's command block did until 10 Nov 2026), and nothing prunes it on a schedule.
 
 ### GEN-30
 
@@ -3986,22 +3995,23 @@ A pack shall grant each agent its MCP servers and commands; a step gets exactly 
 
 - Parents: [SN-05](#sn-05)
 - Sources: `docs/AI-STACK.md`
-- Verified by: test: `tests/test_engine_packs.py::test_a_pack_agent_gets_exactly_its_grants_and_a_server_off_the_egress_list_is_refused`
+- Verified by: test: `tests/test_domain_packs.py::test_a_pack_agent_gets_exactly_its_grants_and_a_server_off_the_egress_list_is_refused`
 - Acceptance: Test: a toy agent calls a stand-in MCP read tool, a second agent without the grant cannot, a server off the egress list is refused.
-- Trace: `ops/engine/packs.py`, `tests/fixtures/packs/toy/.mcp.json`
-- Gap: Each pack agent's step gets exactly its granted MCP servers and tools, and a server off the egress list is dropped; agentgateway, which checks each tool call once grants grow beyond that, is not set up yet (docs/AI-STACK.md §17).
+- Trace: `ops/domain/packs.py`, `tests/fixtures/packs/toy/.mcp.json`
+- Gap: Each pack agent's grants and Claude Code's arguments for them are built, and a server off the egress list is dropped; no step of a pack agent runs yet (GEN-21), and agentgateway, which checks each tool call once grants grow beyond that, is not set up (docs/AI-STACK.md).
 
 ### GEN-31
 
-**One record per journey, and pack exams** · should · functional · **implemented**
+**One record per journey, and pack exams** · should · functional · **partial**
 
-A finished run shall export as one bundle a person can follow without the app, and a pack's exam cases, each with its outcome, shall run through the replay exam.
+A finished run shall export as one bundle a person can follow without the app, and a pack's exam cases, each with its outcome, shall run through the workflow they name and score.
 
 - Parents: [SN-05](#sn-05)
 - Sources: `docs/AI-STACK.md`
-- Verified by: test: `tests/test_engine_record.py::test_a_toy_run_exports_one_bundle_with_its_chain_from_item_to_decisions_and_the_files_it_made`, `tests/test_engine_record.py::test_a_toy_exam_set_runs_through_its_template_and_scores_naming_the_case_it_got_wrong`
+- Verified by: test: `tests/test_domain_record.py::test_a_toy_run_exports_one_bundle_with_its_chain_from_item_to_decisions_and_the_files_it_made`, `tests/test_domain_record.py::test_a_toy_exam_set_runs_through_its_workflow_and_scores_naming_the_case_it_got_wrong`
 - Acceptance: Test: a toy run exports a bundle with its chain from item to decisions, and a toy exam set runs and scores.
-- Trace: `ops/engine/record.py`, `tests/fixtures/packs/toy/exams/bugs.yaml`
+- Trace: `ops/domain/record.py`, `tests/fixtures/packs/toy/exams/bugs.yaml`
+- Gap: The bundle and the exam's scoring are built and tested on a run's data; reading a run from n8n's execution to export it, and running an exam case through n8n, are not built yet.
 
 ### GEN-32
 
@@ -4011,94 +4021,95 @@ An update shall verify the stack's signed tag and that every pinned pack commit 
 
 - Parents: [SN-05](#sn-05)
 - Sources: `docs/AI-STACK.md`
-- Verified by: test: `tests/test_engine_packs.py::test_a_new_commit_leaves_the_old_one_running_and_puts_one_decision_in_the_queue_and_a_refusal_keeps_it_out`
+- Verified by: test: `tests/test_domain_packs.py::test_a_new_commit_leaves_the_old_one_running_and_puts_one_decision_in_the_queue_and_a_refusal_keeps_it_out`
 - Acceptance: Test: a new commit in packs.txt leaves the old one running and puts one decision in the queue.
-- Trace: `ops/engine/packs.py`
+- Trace: `ops/domain/packs.py`
 
 ### GEN-33
 
-**Temporal is the engine** · should · functional · **implemented**
+**Temporal is the engine** · should · functional · **deprecated**
 
-Long-running work shall run on a self-hosted Temporal server (MIT) that is part of the core on every deployment, home too, as one container with its own database in the stack's Postgres and SQL visibility, one Temporal namespace per deployment, its web UI behind the app's gate, and one Python worker whose activities are the stack's existing steps.
+Long-running work shall run on a self-hosted Temporal server that is part of the core on every deployment.
 
 - Parents: [SN-05](#sn-05)
-- Sources: `docs/AI-STACK.md`
-- Verified by: test: `tests/test_engine_service.py::test_the_engine_is_part_of_the_core_and_starts_only_after_its_databases_and_schema`, `tests/test_engine_service.py::test_the_engine_images_are_pinned_by_digest_in_versions_env`, `tests/test_engine_service.py::test_the_engine_is_reached_only_from_this_machine`, `tests/test_engine_service.py::test_the_engine_uses_its_own_role_and_the_secret_of_that_role`, `tests/test_engine_service.py::test_the_schema_is_set_up_then_moved_to_the_pinned_version_every_start`, `tests/test_engine_service.py::test_the_server_reads_a_dynamic_config_that_names_the_history_limits`, `tests/test_engine_service.py::test_the_runner_environment_is_pinned_checksummed_and_follows_its_lock`, `tests/test_engine_lib.py::test_a_namespace_is_the_deployment_folder_name_and_is_made_once`, `tests/test_engine_lib.py::test_the_runners_threads_reach_the_engine_through_its_own_loop`
-- Acceptance: Test: on home and on the work example the server starts with the core; the namespaces of two deployments never list the runs of the other; a toy run starts, waits, survives a server restart and shows in the web UI and in the Tasks tab.
-- Trace: `compose/core.yaml`, `versions.env`, `config/temporal/db.sh`, `config/temporal/schema.sh`, `config/temporal/dynamicconfig.yaml`, `ops/runner_env.sh`, `ops/runner-requirements.txt`, `ops/runner-requirements.lock`, `tests/requirements.txt`, `ops/engine/__init__.py`, `ops/engine/client.py`, `ops/engine/worker.py`, `images/builder/temporal-test-bin.py`, `images/builder/Dockerfile`
+- Sources: `docs/N8N-MIGRATION.md`
+- Verified by: inspection: `compose/core.yaml`
+- Reason: DEC-51, DEC-52: n8n is the core's one orchestrator (WFL-01); Temporal, its databases, its worker and its SDK were removed on 10 Nov 2026.
+- Superseded by: `W`, `F`, `L`, `-`, `0`, `1`
 
 ### GEN-34
 
-**A canvas to build and watch templates** · should · functional · **implemented**
+**A canvas to build and watch templates** · should · functional · **deprecated**
 
-The app shall have one screen with Workflow Builder's editor (Apache 2.0) to draw a template from blocks, draft one from a description, save it as YAML on a branch of the pack's repository for approval, the YAML staying the source of truth with a lossless round trip and block positions in a separate file, and show a running task's blocks live.
+The app shall have one screen with Workflow Builder's editor to draw a template from blocks and show a running task's blocks live.
 
 - Parents: [SN-05](#sn-05)
-- Sources: `docs/AI-STACK.md`
-- Verified by: test: `tests/test_engine_view.py::test_the_projector_shows_a_running_run_with_its_blocks_edges_status_and_timing`, `tests/test_engine_view.py::test_the_apps_state_and_its_stream_carry_the_engine`, `tests/test_engine_view.py::test_the_engine_screen_and_its_canvas_are_part_of_the_app_and_redraw_live`, `tests/test_engine_view.py::test_the_demo_templates_are_in_their_canonical_form`, `tests/test_engine_templates.py::test_a_saved_template_is_its_canonical_yaml_with_its_fork_join_and_loop`, `tests/test_engine_templates.py::test_a_template_with_a_fault_is_not_saved_and_the_graph_model_says_why`, `tests/test_engine_templates.py::test_the_list_shows_the_repositorys_templates_and_the_drafts_with_their_problems`, `tests/test_engine_templates.py::test_a_test_run_starts_only_from_what_was_saved_and_only_where_the_engine_runs`, `tests/test_engine_templates.py::test_a_block_may_name_only_agents_that_can_do_a_step`, `tests/test_engine_templates.py::test_the_builder_is_part_of_the_app_reachable_from_tasks_and_drawn_on_the_first_state`, `tests/test_engine_templates.py::test_the_editor_s_block_positions_are_kept_beside_the_template_and_listed_with_it`, `tests/test_engine_templates.py::test_the_editor_is_workflow_builder_pinned_and_locked_and_offers_every_block_of_the_graph_model`, `tests/test_engine_templates.py::test_a_description_becomes_a_checked_draft_named_as_the_owner_said`, `tests/test_engine_templates.py::test_a_refused_draft_is_asked_for_again_with_the_refusal_and_a_second_refusal_is_said`, `tests/test_engine_templates.py::test_a_description_needs_words_and_a_name_and_a_model_that_answers`, `tests/test_engine_templates.py::test_describe_is_on_the_templates_screen_and_an_action_of_the_app_and_the_runner`, `tests/test_engine_templates.py::test_the_editor_undoes_the_wide_screen_zoom_at_every_width_so_its_arrows_meet_their_blocks`
-- Acceptance: Journey: a template is drawn, saved, approved and run, and the canvas shows each block's state change while it runs.
-- Trace: `ops/engine/projector.py`, `ops/engine/preview.py`, `images/mission-control/web/static/app-engine.js`, `images/mission-control/server.py`, `config/templates/demo/ticket.yaml`, `config/templates/demo/briefing.yaml`, `config/templates/demo/triage.yaml`, `ops/engine/templates.py`, `images/mission-control/web/static/app-templates.js`, `images/mission-control/flow/src/main.jsx`, `images/mission-control/flow/src/blocks.js`, `images/mission-control/flow/package.json`, `images/mission-control/flow/package-lock.json`, `images/mission-control/flow/vite.config.mjs`, `images/mission-control/Dockerfile`
+- Sources: `docs/N8N-MIGRATION.md`
+- Verified by: inspection: `docs/N8N-MIGRATION.md`
+- Trace: `images/mission-control/web/static/app-engine.js`, `images/mission-control/web/static/app-templates.js`
+- Reason: DEC-51, DEC-52: n8n's canvas, with the stack's own node (WFL-06), replaced the block editor, which was removed on 10 Nov 2026; the app's Engine, Runs and Templates screens show no data since and go in the app's own clean-up.
+- Superseded by: `W`, `F`, `L`, `-`, `0`, `6`
 
 ### GEN-35
 
-**One engine after the move** · should · functional · **partial**
+**One engine after the move** · should · functional · **deprecated**
 
-Home's fixed plans and the planner's free plans shall move to Temporal in one cutover (the owner chose a big bang on 9 November 2026), with the Conductor kept switched off as the rollback; once every kind of home plan has run on Temporal for 14 days with nothing falling back to the Conductor, the next landing removes the Conductor; until then every run is also a row of the Tasks tab, so the app shows one list.
+Home's fixed plans and the planner's free plans shall move to Temporal in one cutover, with the Conductor kept as the rollback.
 
 - Parents: [SN-05](#sn-05)
-- Sources: `docs/AI-STACK.md`, `docs/AI-STACK-PLAN.md`
-- Verified by: test: `tests/test_engine_bridge.py::test_the_deployment_chooses_the_engine_and_the_conductor_stays_the_default`, `tests/test_engine_bridge.py::test_a_started_plan_runs_on_the_engine_once_and_ends_as_the_conductor_ends_it`, `tests/test_engine_bridge.py::test_a_queued_event_starts_the_next_run_on_the_engine`, `tests/test_engine_bridge.py::test_a_cancel_stops_the_engines_run`, `tests/test_engine_bridge.py::test_a_step_waiting_for_its_work_elsewhere_holds_no_slot_and_finishes_when_the_work_is_done`, `tests/test_engine_bridge.py::test_the_orchestrator_looks_again_between_waves_and_the_run_follows_its_added_step`, `tests/test_engine_cutover.py::test_the_switch_is_an_override_the_bridge_reads_before_the_deployment_and_each_switch_is_logged`, `tests/test_engine_cutover.py::test_the_smoke_checks_pass_on_a_real_temporal`, `tests/test_engine_cutover.py::test_the_smoke_checks_say_no_when_temporal_does_not_answer`, `tests/test_engine_cutover.py::test_a_rollback_cancels_the_open_runs_forgets_them_and_switches_to_the_conductor`, `tests/test_engine_cutover.py::test_the_clean_days_are_counted_per_kind_of_plan`
-- Acceptance: Test: after each stage home's whole check is green, the Tasks tab lists runs of both engines, and the health board counts the days without fallback per kind of plan.
-- Trace: `ops/engine/bridge.py`, `ops/engine/activities.py`, `ops/conductor.py`, `ops/missions.py`, `deployments/home/deployment.env`, `ops/engine/cutover.py`, `ops/systemd/missions.service`
-- Gap: The cutover tool, its smoke checks, the switch, the rollback and the count of clean days per kind of plan are built; the Conductor is removed only after 14 clean days per kind of plan (docs/AI-STACK-PLAN.md §6 step 9).
+- Sources: `docs/N8N-MIGRATION.md`
+- Verified by: inspection: `docs/N8N-MIGRATION.md`
+- Reason: DEC-51, DEC-52: plans move to n8n one switch at a time (WFL-09); the Temporal cutover was rolled back on 10 Nov 2026 at 10:40 and removed the same day.
+- Superseded by: `W`, `F`, `L`, `-`, `0`, `9`
 
 ### GEN-36
 
-**Customer data never enters the engine's history** · should · functional · **implemented**
+**Customer data never enters the engine's history** · should · functional · **deprecated**
 
-Workflows, activities and signals shall pass only references (artifact hash, path, ticket key, commit, verdict counts); on a customer-class deployment the data converter shall refuse any other payload or one above its tagged size, a payload codec shall encrypt every payload with the deployment's key, the Temporal database shall be left out of every backup that leaves the machine, and the web UI shall decode payloads only through a codec server behind the app's gate.
+Workflows, activities and signals shall pass only references, encrypted with the deployment's key, and the Temporal database shall be left out of every backup that leaves the machine on a customer-class deployment.
 
 - Parents: [SN-05](#sn-05)
-- Sources: `docs/AI-STACK.md`
-- Verified by: test: `tests/test_engine_service.py::test_a_customer_class_backup_leaves_the_engine_databases_out`, `tests/test_engine_service.py::test_the_data_guard_tells_scripts_whether_the_deployment_holds_customer_data`, `tests/test_engine_lib.py::test_every_payload_is_encrypted_with_the_deployments_key_and_only_that_key_reads_it`, `tests/test_engine_lib.py::test_the_codec_key_comes_from_the_secret_and_a_wrong_one_is_refused_without_showing_it`, `tests/test_engine_lib.py::test_a_customer_class_converter_refuses_content_and_passes_references`, `tests/test_engine_lib.py::test_inside_a_real_run_a_customer_class_deployment_fails_the_step_that_returns_content`, `tests/test_engine_lib.py::test_home_is_not_strict_but_its_history_is_ciphertext_too`, `tests/test_engine_view.py::test_the_runs_screen_shows_temporals_ui_behind_the_apps_gate_and_its_codec_decrypts_what_the_engine_encrypted`
-- Acceptance: Test: on the work example an activity returning file content fails in the converter, a stored payload is ciphertext, and the backup's plan names no Temporal database.
-- Trace: `ops/backup.sh`, `ops/dataguard.py`, `ops/engine/converter.py`, `images/mission-control/server.engine.py`
+- Sources: `docs/N8N-MIGRATION.md`
+- Verified by: inspection: `docs/N8N-MIGRATION.md`
+- Trace: `images/mission-control/server.engine.py`
+- Reason: DEC-51, DEC-52: the engine's history, its codec and its backup rule went with Temporal on 10 Nov 2026; n8n keeps a run's data 30 days (WFL-04) and the data guard (GEN-14) keeps a customer-class deployment's data on the machine.
+- Superseded by: `W`, `F`, `L`, `-`, `0`, `4`
 
 ### GEN-37
 
-**A run pins its template; the runner changes by versioning** · should · functional · **implemented**
+**A run pins its template; the runner changes by versioning** · should · functional · **deprecated**
 
-A run shall load its template's graph from the pack commit approved when it starts, through an activity, and read only that recorded copy; the graph runner's own changes shall use Temporal's versioning, and recorded histories of toy runs shall replay against every runner change before it lands.
+A run shall load its template's graph from the pack commit approved when it starts, and the graph runner's own changes shall use Temporal's versioning.
 
 - Parents: [SN-05](#sn-05)
-- Sources: `docs/AI-STACK.md`
-- Verified by: test: `tests/test_engine_runner.py::test_a_long_wait_continues_the_run_as_new_and_signals_still_find_it_and_it_replays`, `tests/test_engine_runner.py::test_the_run_is_rebuilt_from_its_history_at_every_step_as_after_a_restart_and_a_cancel_ends_it`
-- Acceptance: Test: a template edited while a toy run waits leaves the run on its pinned graph; the replay test fails a non-deterministic runner change and passes a patched one.
-- Trace: `ops/engine/runner.py`
+- Sources: `docs/N8N-MIGRATION.md`
+- Verified by: inspection: `docs/N8N-MIGRATION.md`
+- Reason: DEC-51, DEC-52: workflows are versioned in git and imported by deploys (WFL-08); the graph runner and its replay test were removed on 10 Nov 2026.
+- Superseded by: `W`, `F`, `L`, `-`, `0`, `8`
 
 ### GEN-38
 
-**A run's history stays small** · should · functional · **implemented**
+**A run's history stays small** · should · functional · **deprecated**
 
-Fan-out items and each change shall run as child workflows, very large lists in batches within the pending-children limit, and the runner shall continue as new when Temporal suggests it, carrying its pinned graph, current blocks, loop counters, wait keys and due timers under the same workflow id; the health board shows each run's history size.
+Fan-out items and each change shall run as child workflows, and the runner shall continue as new when Temporal suggests it.
 
 - Parents: [SN-05](#sn-05)
-- Sources: `docs/AI-STACK.md`
-- Verified by: test: `tests/test_engine_runner.py::test_a_fan_out_of_300_items_stays_small_in_the_parents_history`
-- Acceptance: Test: a toy run with a 300-item fan-out, 6 change rounds and 20 reminders stays under a tenth of the history limit, continues as new at least once, and a signal after that still resumes it.
-- Trace: `ops/engine/runner.py`
+- Sources: `docs/N8N-MIGRATION.md`
+- Verified by: inspection: `docs/N8N-MIGRATION.md`
+- Reason: DEC-51, DEC-52: n8n prunes its executions after 30 days (WFL-04); Temporal's histories went with it on 10 Nov 2026.
+- Superseded by: `W`, `F`, `L`, `-`, `0`, `4`
 
 ### GEN-39
 
-**Temporal upgrades by the update path** · should · functional · **implemented**
+**Temporal upgrades by the update path** · should · functional · **deprecated**
 
-An update that moves Temporal shall snapshot its database on the machine (never off it on a customer-class deployment), upgrade the schema with temporal-sql-tool and step the server through each minor version in turn, check that the server answers and the replay test passes, and go back to the snapshot when a step fails; the owner never upgrades Temporal by hand.
+An update that moves Temporal shall step its schema and server through each minor version in turn and go back to a snapshot when a step fails.
 
 - Parents: [SN-05](#sn-05)
-- Sources: `docs/AI-STACK.md`
-- Verified by: test: `tests/test_temporal_upgrade.py::test_an_update_across_two_minor_versions_runs_each_schema_server_and_check_in_order`, `tests/test_temporal_upgrade.py::test_a_failing_step_restores_the_snapshot_and_starts_the_old_server_again`, `tests/test_temporal_upgrade.py::test_a_step_back_a_major_version_and_a_skipped_minor_are_refused`, `tests/test_temporal_upgrade.py::test_the_pinned_version_is_in_the_step_table_with_the_same_images`, `tests/test_temporal_upgrade.py::test_the_update_moves_temporal_first_and_stays_put_when_that_fails`
-- Acceptance: Test: an update across two minor versions on a test database runs both schema steps and both servers in order, and a failing step restores the snapshot.
-- Trace: `ops/temporal_upgrade.py`, `config/temporal/steps.yaml`, `ops/update.py`
+- Sources: `docs/N8N-MIGRATION.md`
+- Verified by: inspection: `docs/N8N-MIGRATION.md`
+- Reason: DEC-51, DEC-52: n8n is pinned by digest like every image (WFL-01); the Temporal upgrade path was removed on 10 Nov 2026.
+- Superseded by: `W`, `F`, `L`, `-`, `0`, `1`
 
 ## HSE House
 
@@ -4225,7 +4236,7 @@ When a note, web page or file is added (app, chat or the vault inbox), the stack
 
 - Parents: [SN-10](#sn-10)
 - Sources: `images/mission-control/guide/08-knowledge.md`
-- Verified by: inspection: `ops/vault-ingest.sh`, `ops/systemd/vault-ingest.timer`
+- Verified by: inspection: `ops/vault-ingest.sh`, `n8n/workflows/crew-vault-ingest.json`
 
 ### KNW-04
 
@@ -4255,7 +4266,7 @@ Every 10 minutes the memory gatekeeper shall decide staged memory writes by rule
 
 - Parents: [SN-05](#sn-05), [SN-10](#sn-10)
 - Sources: `images/mission-control/guide/18-crew.md`
-- Verified by: inspection: `ops/memory_review.py`, `ops/systemd/memory-review.timer`
+- Verified by: inspection: `ops/memory_review.py`, `n8n/workflows/crew-memory-gatekeeper.json`
 
 ### KNW-07
 
@@ -4606,7 +4617,7 @@ One agent, the Memory Keeper, shall look after every memory store every night (i
 - Parents: [SN-10](#sn-10), [SN-09](#sn-09), [SN-13](#sn-13)
 - Sources: [DEC-31](#dec-31), [DEC-40](#dec-40), [DEC-44](#dec-44), `docs/MEMORY.md`
 - Verified by: test: `tests/test_keeper.py::test_each_change_is_logged_with_what_was_there_and_undone`, `tests/test_keeper.py::test_nothing_is_changed_while_the_trial_has_not_passed_three_times_on_the_current_prompt`, `tests/test_keeper.py::test_the_crew_saves_the_keeper_s_report_and_undoes_a_change_on_the_owner_s_tap`
-- Trace: `ops/keeper.py`, `ops/crew.py`, `ops/missions.py`, `config/agents.yaml`, `ops/systemd/crew-memory.timer`, `prompts/memory.md`, `images/mission-control/server.py`, `images/mission-control/web/static/app-base.js`, `images/mission-control/guide/08-knowledge.md`
+- Trace: `ops/keeper.py`, `ops/crew.py`, `ops/missions.py`, `config/agents.yaml`, `n8n/workflows/memory-keeper.json`, `prompts/memory.md`, `images/mission-control/server.py`, `images/mission-control/web/static/app-base.js`, `images/mission-control/guide/08-knowledge.md`
 
 ### MEM-22
 
@@ -4957,21 +4968,24 @@ Each mission shall be vault/missions/<slug>/MISSION.md with its type (briefing o
 
 **Schedules** · must · functional · **implemented**
 
-The runner shall accept the schedules daily HH:MM, weekdays HH:MM, weekly <days> HH:MM, every Nh (1 to 24) and manual, refuse any other text, and compute each mission's next run from it.
+The runner shall accept the schedules daily HH:MM, weekdays HH:MM, weekly <days> HH:MM, every Nh (1 to 24) and manual and refuse any other text; a mission's schedule shall become its task's n8n workflow (WFL-09), from which its next run is read.
 
 - Parents: [SN-01](#sn-01)
 - Sources: `images/mission-control/guide/04-missions.md`
-- Verified by: test: `tests/test_runner.py::test_a_slot_keeps_its_own_days_offset_across_a_clock_change`, `tests/test_runner.py::test_one_bad_mission_file_stops_no_other`, `tests/test_runner.py::test_valid_schedule`, `tests/test_runner.py::test_due_times_and_next`, `tests/test_runner.py::test_schedule_text`
+- Verified by: test: `tests/test_runner.py::test_valid_schedule`, `tests/test_runner.py::test_schedule_text`, `tests/test_n8n_move.py::test_a_jobs_schedule_and_next_run_come_from_its_workflows_cron`, `tests/test_n8n_move.py::test_a_missions_schedule_goes_to_its_task_and_then_its_workflow_holds_it`
+- Trace: `ops/missions.py`, `ops/missions.requests.py`, `ops/n8n_jobs.py`
 
 ### MIS-03
 
-**A missed run catches up once** · must · functional · **implemented**
+**A missed run catches up once** · must · functional · **deprecated**
 
 When the PC was off at a scheduled time, the runner shall run the mission once when it is back (within 20 hours), never for a time before the mission was created, and not after a resume.
 
 - Parents: [SN-13](#sn-13)
 - Sources: `images/mission-control/guide/04-missions.md`
-- Verified by: test: `tests/test_runner.py::test_check_schedules_catches_up_once_and_not_before_created`, `tests/test_runner.py::test_update_validates_and_resume_skips_catch_up`
+- Verified by: inspection: `docs/N8N-MIGRATION.md`
+- Reason: DEC-51: n8n starts every scheduled run since 10 Nov 2026 and the runner's own schedule check is removed; n8n's schedule trigger does not catch up a time the PC was off (WFL-09's gap).
+- Superseded by: `W`, `F`, `L`, `-`, `0`, `9`
 
 ### MIS-04
 
@@ -5820,11 +5834,11 @@ A Windows task shall check the WSL disk at logon and every 15 minutes and repair
 
 **Deploy rebuilds what changed** · must · functional · **implemented**
 
-When a change is deployed, ops/deploy.py shall rebuild the changed images, recreate their services, reconfigure the Hermes profiles, install changed units (enabling a timer it brings for the first time), restart the runner when one of its modules changed and the swarm service when the agent cards changed, and then run the health checks and the smoke test.
+When a change is deployed, ops/deploy.py shall rebuild the changed images, recreate their services, reconfigure the Hermes profiles, install changed units (enabling a timer it brings for the first time, and stopping, disabling and deleting a unit the repository dropped), restart the runner when one of its modules changed and the swarm service when the agent cards changed, and then run the health checks and the smoke test.
 
 - Parents: [SN-08](#sn-08), [SN-13](#sn-13)
 - Sources: `docs/MISSION-CONTROL.md`
-- Verified by: test: `tests/test_builds.py::test_approved_build_merges_deploys_or_rolls_back`, `tests/test_cleanup.py::test_deploy_restarts_the_runner_for_any_of_its_modules`, `tests/test_deploy.py::test_a_new_timer_is_enabled_with_its_first_deploy_and_a_known_one_keeps_its_state`, `tests/test_deploy.py::test_a_card_change_restarts_the_swarm_service_so_the_agents_get_it`
+- Verified by: test: `tests/test_builds.py::test_approved_build_merges_deploys_or_rolls_back`, `tests/test_cleanup.py::test_deploy_restarts_the_runner_for_any_of_its_modules`, `tests/test_deploy.py::test_a_new_timer_is_enabled_with_its_first_deploy_and_a_known_one_keeps_its_state`, `tests/test_deploy.py::test_a_unit_the_repository_dropped_goes_from_this_machine_with_the_next_deploy`, `tests/test_deploy.py::test_a_card_change_restarts_the_swarm_service_so_the_agents_get_it`
 - Trace: `ops/deploy.py`
 - Findings: [FND-37](#fnd-37)
 
@@ -5948,7 +5962,7 @@ Every month the upgrade check shall report pinned components that have newer rel
 - Parents: [SN-08](#sn-08), [CST-08](#cst-08)
 - Sources: `UPGRADE.md`
 - Verified by: test: `tests/test_upgrade_check.py::test_every_pin_is_read_and_the_ones_it_missed_are_in`, `tests/test_upgrade_check.py::test_a_failed_lookup_is_a_row_and_part_of_the_message`
-- Trace: `ops/upgrade_check.py`, `ops/systemd/upgrade-check.timer`
+- Trace: `ops/upgrade_check.py`, `n8n/workflows/crew-upgrade-check.json`
 
 ### PLT-20
 
@@ -6002,7 +6016,7 @@ When a container that shares another container's network (network_mode service:)
 
 **One kind of job** · should · functional · **proposed**
 
-Missions, crew jobs and planned work shall all be tasks with a rhythm, a door, a definition of done and a page; machine upkeep stays on system timers but reports each run as a task run, so that one list and one audit show everything that runs.
+Missions, crew jobs and planned work shall all be tasks with a rhythm, a door, a definition of done and a page; upkeep that must run when n8n is down stays on system timers but reports each run as a task run, so that one list and one audit show everything that runs.
 
 - Parents: [SN-15](#sn-15), [SN-07](#sn-07)
 - Sources: `chat 2026-11-02: fold missions and crew jobs into tasks with schedules`, `docs/NEXT-PHASE.md`
@@ -6041,7 +6055,7 @@ WSL shall have a swap of 16 GB on an SSD with room for it, so the memory of idle
 - Parents: [SN-13](#sn-13), [SN-03](#sn-03)
 - Sources: `chat 2026-11-02: you need to make due with small ram ... it forces us to optimize`, `chat 2026-11-02: Can we not use ssd memory as ram? ... We could make space in ssd and give generous capa. ... Do both.`, `docs/NEXT-PHASE.md`
 - Verified by: test: `tests/test_recycle.py::test_busy_names_what_runs_and_ignores_a_stale_task`, `tests/test_recycle.py::test_an_idle_night_restarts_the_three_and_logs_memory_before_and_after`, `tests/test_recycle.py::test_a_busy_hour_skips_the_night_without_restarting`
-- Trace: `ops/recycle.py`, `ops/systemd/recycle.timer`, `ops/systemd/recycle.service`, `ops/windows/host-setup.ps1`
+- Trace: `ops/recycle.py`, `n8n/workflows/crew-nightly-restart.json`, `ops/systemd/recycle.service`, `ops/windows/host-setup.ps1`
 - Gap: The doctor's check of each container against its budget, and on-demand services for trials and builds.
 - Rationale: On 2 Nov the 3 GB swap was full, held mostly by idle qmd, Hindsight, Open WebUI and Phoenix; Open WebUI was back at 655 MB an hour after a restart.
 
@@ -6049,7 +6063,7 @@ WSL shall have a swap of 16 GB on an SSD with room for it, so the memory of idle
 
 **Nothing starts against a stack that is not up** · must · functional · **implemented**
 
-The runner and every scheduled job shall first ask whether the stack is up (the boot check done, Docker answering, the services every job leans on running and not paused, the gateway live). Until it is, the runner shall start nothing and keep queued runs queued; a job shall wait or be skipped, not fail; a run the stack went away under shall wait and run again; and jobs the PC slept through shall catch up one after the other. No health alert shall go out during a start or while the stack is down, and the hours the PC was off shall not make a job overdue. If the stack stays down for 10 minutes, one message shall name the cause, and one shall say when it is back.
+The runner and every scheduled job shall first ask whether the stack is up (the boot check done, Docker answering, the services every job leans on running and not paused, the gateway live). Until it is, the runner shall start nothing and keep queued runs queued; a job shall wait or be skipped, not fail; a run the stack went away under shall wait and run again; and the kept timers' jobs the PC slept through (the backup, the restore drill) shall catch up one after the other. No health alert shall go out during a start or while the stack is down, and the hours the PC was off shall not make a job overdue. If the stack stays down for 10 minutes, one message shall name the cause, and one shall say when it is back.
 
 - Parents: [SN-13](#sn-13)
 - Sources: `chat 2026-11-04: I restarted the PC and we had a lot of failures ... When I start PC everything should go online and working again. No failures.`, `docs/PROBES.md`
@@ -6079,7 +6093,7 @@ Each boot shall leave one line in /srv/ai/state/boots.jsonl (when, how long unti
 
 - Parents: [SN-13](#sn-13), [SN-07](#sn-07)
 - Sources: `chat 2026-11-04: When I start PC everything should go online and working again.`
-- Verified by: test: `tests/test_boot.py::test_the_first_check_of_a_boot_restarts_hermes_opens_the_gate_logs_it_and_says_so_once`, `tests/test_boot.py::test_missing_tools_still_open_the_gate_say_what_is_missing_and_fail_the_unit`, `tests/test_boot.py::test_the_message_names_services_that_did_not_come_up_and_a_slow_docker`
+- Verified by: test: `tests/test_boot.py::test_the_first_check_of_a_boot_restarts_hermes_opens_the_gate_logs_it_and_says_so_once`, `tests/test_boot.py::test_missing_tools_still_open_the_gate_say_what_is_missing_and_fail_the_unit`, `tests/test_boot.py::test_the_check_waits_only_for_tools_the_main_key_is_granted`, `tests/test_boot.py::test_set_up_jobs_that_ran_once_are_not_counted_as_down`, `tests/test_boot.py::test_the_message_names_services_that_did_not_come_up_and_a_slow_docker`
 - Trace: `ops/stack_ready.py`, `ops/missions.py`, `images/mission-control/web/static/app.js`
 - Findings: [FND-119](#fnd-119)
 
@@ -6148,14 +6162,26 @@ WSL's kernel shall keep whole blocks of memory free (a larger free reserve, earl
 
 **A full Windows disk never stops the stack unannounced** · must · constraint · **implemented**
 
-Every 20 s the runner shall read the free space on Windows C:, which holds WSL's whole disk; below 20 GB it shall prune the unused Docker build cache (at most once an hour, never images in use, containers or volumes) and tell the owner once per episode, and below 6 GB it shall alert the owner urgently, at most once an hour.
+Every 20 s the runner shall read the free space on Windows C:, which holds WSL's whole disk; below 10 GB it shall prune the unused Docker build cache (at most once an hour, never images in use, containers or volumes) and tell the owner once per episode, and below 5 GB it shall alert the owner urgently, at most once an hour.
 
 - Parents: [SN-13](#sn-13)
 - Sources: `owner 2026-11-10: Cant reach stack from mobile`
 - Verified by: test: `tests/test_diskguard.py::test_low_disk_prunes_the_build_cache_and_tells_the_owner_once`, `tests/test_diskguard.py::test_nearly_full_alerts_urgently_at_most_once_an_hour`, `tests/test_diskguard.py::test_enough_space_or_no_reading_does_nothing_and_recovery_ends_the_episode`, `tests/test_diskguard.py::test_the_runner_checks_every_reading_of_the_host_probe`
-- Acceptance: Test: a low reading prunes the build cache and dangling images and tells the owner once; a nearly full one also alerts urgently, paced to once an hour; enough space or no reading does nothing; recovery above 25 GB ends the episode; the runner checks every host reading.
+- Acceptance: Test: a low reading prunes the build cache and dangling images and tells the owner once; a nearly full one also alerts urgently, paced to once an hour; enough space or no reading does nothing; recovery above 13 GB ends the episode; the runner checks every host reading. (10 Nov 2026: 20 GB wiped the cache every hour while C: sat near 14 GB, so every image build started from nothing.)
 - Trace: `ops/diskguard.py`, `ops/missions.py`
 - Rationale: 10 Nov 2026, 03:36: a night of image builds grew the Docker build cache to 52 GB and the WSL disk file to 135 GB; C: reached 0.2 GB free, WSL stopped and would not start (E_FAIL), and the owner's phone got HTTP 501. The Stack page showed C:'s free space, but nothing acted on it.
+
+### PLT-37
+
+**The runner has its own pinned Python environment** · must · constraint · **implemented**
+
+The host runner shall run in a Python environment of its own, outside the system Python, made by uv (pinned by version and checksum, no sudo) from a lock with a hash for every package, and made again only when the lock changes; the tests shall use the same pins.
+
+- Parents: [SN-13](#sn-13)
+- Sources: [DEC-52](#dec-52)
+- Verified by: test: `tests/test_runner_env.py::test_the_runner_environment_is_pinned_checksummed_and_follows_its_lock`
+- Acceptance: Test: uv is pinned by version and checksum, the lock holds the pins with their hashes, the tests use the same pins, and the runner unit runs in that environment.
+- Trace: `ops/runner_env.sh`, `ops/runner-requirements.txt`, `ops/runner-requirements.lock`, `tests/requirements.txt`, `ops/systemd/missions.service`
 
 ## QA Quality and process
 
@@ -6448,6 +6474,20 @@ A check that could not run shall report unknown, never pass or silence, and the 
 - Sources: `GEN-01 in the generalising audit of 7 Nov 2026`
 - Verified by: test: `tests/test_unknown.py::test_a_board_that_cannot_be_read_proves_nothing_and_reopens_nothing`, `tests/test_unknown.py::test_a_readable_board_still_passes_and_fails`, `tests/test_unknown.py::test_a_check_that_cannot_read_its_logs_or_metric_is_unknown`, `tests/test_unknown.py::test_the_checker_s_unknown_reaches_its_card_on_the_board`, `tests/test_unknown.py::test_a_job_s_unknown_is_one_alert_on_its_card_and_its_next_clean_run_clears_it`, `tests/test_unknown.py::test_an_unreadable_backup_log_is_an_alert_on_the_drill_and_one_bad_line_costs_one_line`, `tests/test_unknown.py::test_one_bad_line_in_the_app_s_errors_keeps_the_alert_and_says_so`, `tests/test_unknown.py::test_docker_failing_is_a_note_then_an_alert_and_never_no_cut_networks`, `tests/test_unknown.py::test_the_default_docker_call_treats_a_failed_exit_as_a_failure`, `tests/test_unknown.py::test_memory_that_cannot_be_read_is_an_alert_on_this_pc`, `tests/test_unknown.py::test_a_runtime_database_error_is_reported_and_reaches_the_memory_keeper_s_card`, `tests/test_unknown.py::test_code_that_cannot_be_read_is_no_zero_similarity`, `tests/test_unknown.py::test_a_review_with_a_lens_not_done_is_incomplete_and_not_approved`, `tests/test_builds.py::test_approve_all_leaves_out_a_review_with_a_lens_not_done`, `tests/test_unknown.py::test_the_queue_does_not_recommend_a_review_with_a_lens_not_done`, `tests/test_unknown.py::test_the_build_page_shows_an_incomplete_review_and_counts_it_out`, `tests/test_unknown.py::test_a_missing_tool_fails_the_checks_unless_this_place_lacks_it_and_the_summary_says_so`, `tests/test_unknown.py::test_the_summary_line_names_what_a_place_lacks_on_purpose`, `tests/test_unknown.py::test_the_builder_lacks_compose_on_purpose_and_nothing_else_may_be_missing`, `tests/test_unknown.py::test_the_self_review_says_what_it_could_not_read`, `tests/test_unknown.py::test_a_nas_that_gives_no_answer_stays_quiet_and_any_other_ssh_failure_is_unknown`, `tests/test_unknown.py::test_a_nas_that_took_the_connection_and_stopped_answering_is_not_asleep`, `tests/test_unknown.py::test_the_postmaster_s_unknown_reaches_its_card_on_the_board`
 - Trace: `ops/crew.py`, `ops/checker.py`, `ops/keeper.py`, `ops/trials.py`, `ops/builds.py`, `ops/decisions.py`, `ops/check.sh`, `ops/improve.py`, `ops/postmaster.py`, `images/mission-control/web/static/app-memory.js`, `ops/builds.review.py`
+
+### QA-27
+
+**The landing's tests run in parallel** · should · quality · **partial**
+
+The checks shall run the whole test suite over worker processes (six by default, leaving the running stack two threads), each with a temp folder of its own, so a landing waits minutes, not a quarter of an hour, and no test meets another's files.
+
+- Parents: [SN-13](#sn-13)
+- Sources: `owner 2026-11-10: I do not always want you to wait 15min. This is too slow. ... Parallel tests.`
+- Verified by: test: `tests/test_parallel_tests.py::test_the_checks_run_the_suite_over_workers_when_xdist_is_there`, `tests/test_parallel_tests.py::test_each_test_process_has_a_temp_folder_of_its_own`, `tests/test_parallel_tests.py::test_the_publish_runs_the_snapshots_tests_over_workers_too`
+- Acceptance: Test: the checks run pytest with workers when pytest-xdist is there, and CI installs it; each test process has its own temp folder.
+- Trace: `ops/check.sh`, `ops/publish.py`, `tests/conftest.py`, `tests/requirements.txt`
+- Gap: the builder image does not carry pytest-xdist yet (a rebuild from scratch after the build cache was pruned); it is installed in the running builder container, and the image takes it at its next rebuild.
+- Rationale: 10 Nov 2026 a landing took about 15 minutes, 12 to 14 of them for about 1,600 tests on one of eight cores; a lock file another user had left in /tmp failed one landing.
 
 ## RES Research
 
@@ -6932,7 +6972,7 @@ A shopping task shall track its delivery, ask the owner once that the item arriv
 
 **Every agent described in one place** · must · functional · **partial**
 
-Every agent shall be described once, as an agent card in config/agents.yaml, and its crew unit and timer, its gateway key with MCP grants, its Hermes profile settings, its Board contact and wake rules and its card under Tasks → Team shall be generated from that card.
+Every agent shall be described once, as an agent card in config/agents.yaml, and its crew unit and workflow, its gateway key with MCP grants, its Hermes profile settings, its Board contact and wake rules and its card under Tasks → Team shall be generated from that card.
 
 - Parents: [SN-17](#sn-17), [SN-15](#sn-15)
 - Sources: [DEC-15](#dec-15), `design: AI Stack Agent Swarm (claude.ai artifact 18fPjMRbQnxSVikesY8w6M)`
@@ -7022,7 +7062,7 @@ When the owner pauses an agent, a role or the whole swarm in Mission Control, th
 - Sources: [DEC-15](#dec-15), `OWASP Top 10 for Agentic Applications 2026 ASI10 rogue agents`
 - Verified by: test: `tests/test_swarm_ledger.py::test_paused_agents_are_refused`, `tests/test_swarm_client.py::test_the_owner_pauses_and_resumes_agents_from_the_app`, `tests/test_runner.py::test_a_paused_agents_runs_are_skipped`
 - Phase: 1 Ledger, registry and run contract
-- Acceptance: Test: after a pause, a swarm tool call from the agent is refused and a due timer run is skipped with the reason paused; demonstration on the phone.
+- Acceptance: Test: after a pause, a swarm tool call from the agent is refused and a due scheduled run is skipped with the reason paused; demonstration on the phone.
 - Trace: `images/swarm/ledger.py`, `ops/swarm_client.py`, `ops/missions.py`, `ops/crew.py`, `ops/improve.py`, `images/mission-control/web/static/app.js`
 
 #### SWM-27
@@ -7992,7 +8032,7 @@ Every Ledger event shall appear as an activity event on the owner's timelines, a
 - Verified by: test: `tests/test_swarm_client.py::test_ledger_changes_reach_the_activity_feed_once`
 - Phase: 1 Ledger, registry and run contract
 - Acceptance: Test: an upsert and a message from a run show in that run's view and on the activity feed.
-- Trace: `images/mission-control/web/static/app.js`, `ops/swarm_client.py`, `ops/systemd/swarm-sync.timer`
+- Trace: `images/mission-control/web/static/app.js`, `ops/swarm_client.py`, `n8n/workflows/crew-swarm-sync.json`
 
 #### SWM-79
 
@@ -8091,7 +8131,7 @@ Every month the Coach shall read every scorecard and open agent-change artifacts
 - Verified by: test: `tests/test_swarm_phase5.py::test_a_scorecard_with_40_percent_declined_ideas_yields_one_agent_change_naming_its_target`
 - Phase: 5 Improvement loop: replay sets, the evaluation gate, the Coach
 - Acceptance: Test: a fixture scorecard with 40% declined ideas yields one agent-change artifact naming the target score.
-- Trace: `ops/coach.py`, `config/agents.yaml`, `ops/systemd/crew-coach.timer`
+- Trace: `ops/coach.py`, `config/agents.yaml`, `n8n/workflows/crew-coach.json`
 - Findings: [FND-34](#fnd-34)
 
 #### SWM-84
@@ -8457,7 +8497,7 @@ The map, the Activity feed and the timeline shall be drawn from one list of inte
 
 **Every run has one cause** · should · functional · **implemented**
 
-Every run shall have exactly one cause (you, an agent, its timer, a rule, an alert, a test, or unknown), crew jobs recording theirs when they start; what is unknown or from before it was recorded shall be counted on screen, never hidden, and a lumped starter such as Hermes shall be settled to the real agent.
+Every run shall have exactly one cause (you, an agent, its schedule, a rule, an alert, a test, or unknown), crew jobs recording theirs when they start; what is unknown or from before it was recorded shall be counted on screen, never hidden, and a lumped starter such as Hermes shall be settled to the real agent.
 
 - Parents: [SN-07](#sn-07), [SN-17](#sn-17)
 - Sources: [DEC-28](#dec-28)
@@ -8662,7 +8702,7 @@ Every agent run, model call and tool call of a task shall be part of one trace f
 
 **One event bus** · must · functional · **implemented**
 
-The stack shall collect events from news searches and feeds, Forgejo and GitHub activity (read on a schedule, since nothing may reach the PC from outside), incoming mail, Home Assistant state changes, the calendar, watched files, prices, filings, schedules and finished tasks into one event log, each with its source, time and content, and shall show for each source when it last looked, what it found, or why it is off.
+The stack shall collect events from news searches and feeds, Forgejo and GitHub activity (read on a schedule, since nothing may reach the PC from outside), incoming mail, Home Assistant state changes, the calendar, watched files, prices, filings and finished tasks into one event log, each with its source, time and content, and shall show for each source when it last looked, what it found, or why it is off.
 
 - Parents: [SN-20](#sn-20), [CST-04](#cst-04)
 - Sources: `owner 2026-10-31: trigger on different kinds of events, like a particular news event breaking`, `docs/SWARM-ROADMAP.md`
@@ -8679,7 +8719,7 @@ When a trigger rule's condition matches an event, the stack shall start a task f
 
 - Parents: [SN-20](#sn-20), [SN-19](#sn-19)
 - Sources: `docs/SWARM-ROADMAP.md`
-- Verified by: test: `tests/test_events.py::test_a_rule_waits_out_its_cooldown_runs_its_check_and_records_every_firing`, `tests/test_events.py::test_rules_are_checked_when_saved_and_schedules_come_due`
+- Verified by: test: `tests/test_events.py::test_a_rule_waits_out_its_cooldown_runs_its_check_and_records_every_firing`, `tests/test_events.py::test_rules_are_checked_when_saved_and_a_time_is_no_source`
 - Phase: 3 Event fabric
 - Acceptance: Test: two matching events within the cooldown start one task; a rule with the model check skips an event the check rejects; every firing names its event.
 - Trace: `ops/events.py`, `prompts/intake.md`, `images/mission-control/web/static/app.js`
@@ -8824,7 +8864,7 @@ Every occurrence of every task, one-off, scheduled, event-triggered or after ano
 - Phase: 6 Every task a plan graph
 - Acceptance: Test: a scheduled briefing task, an event-triggered task and a one-step chat task each run as a plan graph with their steps in the task's trace.
 - Trace: `ops/missions.py`, `ops/mission_extras.py`, `ops/shopping.py`, `ops/conductor.py`, `ops/shop_steps.py`, `ops/desk_steps.py`, `ops/tasks.py`
-- Gap: Every task the intake plans runs under the Conductor, once, on a schedule, on an event (each firing an occurrence, its event in every step's prompt) or after another task, with coding as a build step, code questions as Claude steps (DEC-36), a briefing as the desk's plan or, on an event, the desk's alert (TSK-22), and a price watch as checks of its shopping agent, whose purchases stay its own runs (DEC-37). Since 8 Nov 2026 the runner moves every briefing and price watch still running as its mission under the Conductor by itself, so no repeating task runs on two engines; a briefing's alerts are its task's too (the rhythm holds the schedule and the triggers; an alert's run is the desk's short alert). Still apart are a cleanup analysis (ops/cleanup.py's, on demand) and work started at a door directly (a chat, a build, a Claude question), which is followed there, not run as a graph.
+- Gap: Every task the intake plans runs under the Conductor, once, on a schedule, on an event (each firing an occurrence, its event in every step's prompt) or after another task, with coding as a build step, code questions as Claude steps (DEC-36), a briefing as the desk's plan or, on an event, the desk's alert (TSK-22), and a price watch as checks of its shopping agent, whose purchases stay its own runs (DEC-37). Since 10 Nov 2026 each later occurrence of a scheduled task is started by its n8n workflow (WFL-09, DEC-51), never by the Conductor's own clock. Since 8 Nov 2026 the runner moves every briefing and price watch still running as its mission under the Conductor by itself, so no repeating task runs on two engines; a briefing's alerts are its task's too (the rhythm holds the schedule and the triggers; an alert's run is the desk's short alert). Still apart are a cleanup analysis (ops/cleanup.py's, on demand) and work started at a door directly (a chat, a build, a Claude question), which is followed there, not run as a graph.
 - Findings: [FND-84](#fnd-84)
 
 #### TSK-22
@@ -8976,7 +9016,7 @@ Checks shall follow the owner's journeys end to end, giving a task and following
 - Verified by: test: `tests/test_journeys.py::test_a_route_that_scrolls_sideways_at_375_px_and_each_other_screen_fault_fail_the_check`, `tests/test_journeys.py::test_a_broken_make_target_fails_the_check_and_every_real_target_dry_runs`, `tests/test_journeys.py::test_a_mangled_email_headline_fails_the_check_and_the_desk_s_email_passes_it`, `tests/test_journeys.py::test_a_task_given_in_a_sentence_is_followed_to_its_result_and_a_broken_hand_over_fails_it`, `tests/test_journeys.py::test_the_replay_is_the_newest_finished_planned_task`, `tests/test_journeys.py::test_a_failed_journey_is_an_alert_on_the_health_board_and_runs_nightly`, `tests/test_journeys.py::test_the_browser_half_measures_what_the_owner_sees`, `tests/test_journeys.py::test_the_decide_journey_takes_a_test_item_through_the_queue_and_leaves_nothing_behind`, `tests/test_journeys.py::test_the_decide_journey_fails_when_deciding_stops_working`, `tests/test_journeys.py::test_the_decide_journey_says_so_when_the_runner_does_not_answer_or_the_browser_dies`, `tests/test_journeys.py::test_the_decide_journey_judges_what_the_browser_saw`, `tests/test_decisions.py::test_the_test_item_is_marked_and_changes_nothing_but_itself`
 - Phase: 8 Customisation and UX
 - Acceptance: Test: a route that scrolls sideways at 375 px, a broken make target, a mangled email headline and a decision action that stopped working each fail the check.
-- Trace: `ops/journeys.py`, `ops/journeys.mjs`, `ops/decisions.py`, `ops/crew.py`, `ops/systemd/crew-journeys.service`, `ops/systemd/crew-journeys.timer`, `Makefile`
+- Trace: `ops/journeys.py`, `ops/journeys.mjs`, `ops/decisions.py`, `ops/crew.py`, `ops/systemd/crew-journeys.service`, `n8n/workflows/crew-journey-checks.json`, `Makefile`
 - Findings: [FND-86](#fnd-86)
 
 ### Event fabric
@@ -9069,13 +9109,13 @@ Every mission shall be a task however old it is, an archived one as done, so tha
 
 **A crew duty is the stack's repeating task** · should · functional · **implemented**
 
-Each crew duty shall be the stack's repeating task, its plan the duty and its When the duty's timer, once per duty and following the timer when it changes.
+Each crew duty shall be the stack's repeating task, its plan the duty and its When the duty's schedule (its n8n workflow's, WFL-09), once per duty and following the schedule when it changes.
 
 - Parents: [SN-07](#sn-07), [SN-08](#sn-08)
 - Sources: [DEC-46](#dec-46), `owner 2026-11-08: I feel like these should just be a special kind of tasks.`
 - Verified by: test: `tests/test_tasks_tab.py::test_each_crew_duty_is_the_stack_s_repeating_task`
 - Phase: 9 More reach
-- Acceptance: Test: every duty becomes one task of the stack's, with its timer; a changed timer follows.
+- Acceptance: Test: every duty becomes one task of the stack's, with its schedule; a changed schedule follows.
 - Trace: `ops/tasks.py`, `ops/crew.py`
 
 #### TSK-43
@@ -9327,8 +9367,8 @@ One trial shall run each night at 01:00 in a weekly rotation (research accuracy,
 - Parents: [SN-08](#sn-08), [SN-16](#sn-16)
 - Sources: `chat 2026-11-02: Turn trials into a standing benchmark`, `docs/NEXT-PHASE.md`
 - Verified by: test: `tests/test_rotation.py::test_each_night_has_its_trial_and_sunday_rests`, `tests/test_rotation.py::test_it_starts_the_trial_only_when_the_stack_is_idle`
-- Trace: `ops/rotation.py`, `ops/systemd/rotation.timer`, `ops/systemd/rotation.service`
-- Gap: From 2 Nov 2026 rotation.timer starts one trial a night at 01:00 (research accuracy twice, stack-trace, semver, mqtt-trace, Mustache; Sunday rests) when the stack is idle, else skips the night with why. #/trials shows each run beside the one before (score, time, tokens, code version) but draws no trend over the weeks yet; the memory trial runs on the Keeper's own path, and review catch, offer picking, the phone routine and the voice test do not exist yet.
+- Trace: `ops/rotation.py`, `n8n/workflows/crew-trial-rotation.json`, `ops/systemd/rotation.service`
+- Gap: From 2 Nov 2026 one trial a night starts at 01:00 (its timer until 10 Nov 2026, then its n8n workflow, crew-trial-rotation.json, which waits for its switch) (research accuracy twice, stack-trace, semver, mqtt-trace, Mustache; Sunday rests) when the stack is idle, else skips the night with why. #/trials shows each run beside the one before (score, time, tokens, code version) but draws no trend over the weeks yet; the memory trial runs on the Keeper's own path, and review catch, offer picking, the phone routine and the voice test do not exist yet.
 
 ### TRL-15
 
@@ -9462,6 +9502,179 @@ The Voice page shall show spoken questions answered a day and the share answered
 - Sources: `docs/NEXT-PHASE.md`
 - Verified by: -
 
+## WFL Workflows
+
+### WFL-01
+
+**n8n is part of the core** · must · constraint · **implemented**
+
+n8n shall run as a core service on every deployment, its image pinned by digest in versions.env, its port published on 127.0.0.1 only and opened to the owner on the tailnet, never on the internet.
+
+- Parents: [SN-05](#sn-05)
+- Sources: [DEC-51](#dec-51), `docs/N8N-MIGRATION.md`
+- Verified by: test: `tests/test_n8n_service.py::test_n8n_is_part_of_the_core_and_starts_after_its_database`, `tests/test_n8n_service.py::test_the_n8n_image_is_pinned_by_digest`, `tests/test_n8n_service.py::test_n8n_is_reached_only_from_this_machine`
+- Acceptance: Test: the compose core has n8n without a profile, after its database job; the image carries a digest; every published port is on 127.0.0.1.
+- Trace: `compose/core.yaml`, `versions.env`
+
+### WFL-02
+
+**n8n keeps its data in the stack's Postgres** · must · constraint · **implemented**
+
+n8n shall use its own role and database in the stack's Postgres, made by a one-shot job that is safe to repeat, so the nightly backup holds its workflows, credentials and executions; its database password and the key that encrypts its stored credentials shall come from the sops secrets.
+
+- Parents: [SN-05](#sn-05), [SN-13](#sn-13)
+- Sources: [DEC-51](#dec-51), `docs/N8N-MIGRATION.md`
+- Verified by: test: `tests/test_n8n_service.py::test_n8n_uses_its_own_role_database_and_secrets`, `tests/test_n8n_service.py::test_the_database_setup_is_safe_to_repeat`, `tests/test_n8n_service.py::test_the_boot_check_counts_the_database_job_as_set_up`
+- Acceptance: Test: n8n-db runs the setup script with the admin and n8n passwords; n8n reads its database and encryption key from variables that make up refuses to start without; the boot check counts n8n-db as a set-up job.
+- Trace: `config/n8n/db.sh`, `compose/core.yaml`, `ops/stack_ready.py`
+
+### WFL-03
+
+**n8n sends nothing home and runs no shell command** · must · constraint · **implemented**
+
+n8n shall send no telemetry, version pings or survey, and its Execute Command node shall stay off; a command runs only at a place, approved by its fingerprint (GEN-22).
+
+- Parents: [SN-08](#sn-08)
+- Sources: [DEC-51](#dec-51), `docs/N8N-MIGRATION.md`
+- Verified by: test: `tests/test_n8n_service.py::test_n8n_sends_nothing_home_and_keeps_its_command_node_off`
+- Acceptance: Test: the service sets diagnostics, version notifications and personalisation off and lists the Execute Command and local file nodes as excluded.
+- Trace: `compose/core.yaml`
+
+### WFL-04
+
+**n8n's history stays small** · should · quality · **implemented**
+
+n8n shall prune execution data older than 30 days.
+
+- Parents: [SN-13](#sn-13)
+- Sources: [DEC-51](#dec-51)
+- Verified by: test: `tests/test_n8n_service.py::test_n8n_prunes_executions_after_30_days`
+- Acceptance: Test: pruning is on with a 720-hour age, tagged as a limit.
+- Trace: `compose/core.yaml`
+
+### WFL-05
+
+**Steps run through one step service** · must · interface · **implemented**
+
+n8n shall start every step of the stack's own work through Mission Control's step service, which hands it to the runner and returns at once; the runner calls n8n's resume URL with the result, also after a restart of either side. The step kinds are agent, crew, task, ask, notify, build (a coding change in the builder sandbox), recall (a memory search), remember (a note through the memory gate), command (a job kind at a place) and plan (an improvised plan's steps in waves), each run through the stack's own code for that work. A crew job whose unit is still running shall answer at once that the run in progress covers it, never start a second or wait behind it.
+
+- Parents: [SN-05](#sn-05)
+- Sources: [DEC-51](#dec-51), `docs/N8N-MIGRATION.md`
+- Verified by: test: `tests/test_flows.py::test_a_request_is_checked_before_anything_runs`, `tests/test_flows.py::test_the_answer_only_ever_goes_to_n8n_on_this_machine`, `tests/test_flows.py::test_an_agent_step_runs_through_the_conductors_own_runner_and_n8n_gets_the_answer`, `tests/test_flows.py::test_an_answer_n8n_did_not_take_is_sent_again_after_a_restart_without_running_the_step_again`, `tests/test_flows.py::test_a_step_that_fails_twice_answers_failed_with_its_reason`, `tests/test_flows.py::test_a_refused_request_runs_nothing_and_says_why`, `tests/test_flows.py::test_a_crew_job_runs_as_its_own_unit_and_waits_for_it`, `tests/test_flows.py::test_a_crew_job_still_running_covers_the_next_run_at_once`, `tests/test_flows.py::test_the_runner_starts_the_step_worker_and_the_app_serves_the_step_port_on_its_own_network`, `tests/test_flows.py::test_the_step_port_drops_a_step_for_the_runner_and_answers_what_is_known`, `tests/test_flows.py::test_an_agent_reads_its_brief_as_its_step`, `tests/test_flows.py::test_the_new_kinds_are_checked_before_anything_runs`, `tests/test_flows.py::test_a_coding_change_runs_as_the_conductors_build_step_and_answers_with_its_build`, `tests/test_flows.py::test_a_memory_search_answers_with_its_hits_each_cut`, `tests/test_flows.py::test_a_note_enters_memory_only_through_the_memory_tools_gate`, `tests/test_flows.py::test_a_command_runs_at_its_place_only_once_approved_there_and_is_submitted_once`, `tests/test_flows.py::test_a_plan_runs_in_waves_through_the_agent_path_and_answers_every_steps_output`
+- Acceptance: Test: a request is checked before anything runs; an agent step runs through the Conductor's own step runner on a row of its own and n8n gets the answer at this machine's n8n only; the agent reads its brief as its step; an answer n8n did not take is sent again after a restart without running the step again; a failed step answers with its reason; a crew job runs as its unit; the app's step port is on a network only n8n shares; a coding change runs as the Conductor's build step and answers with its build, branch, pull request and checks; a memory search answers with its hits, each cut visibly; a note enters memory only through the memory tool's gate; a command runs at its place only once approved there and is submitted once, also across a restart; a plan runs its steps in waves through the agent path and a step after a failed one does not run.
+- Trace: `ops/flows.py`, `images/mission-control/server.flows.py`, `images/mission-control/server.py`, `ops/missions.py`, `compose/core.yaml`, `compose/apps.yaml`, `ops/domain/packs.py`, `ops/domain/places.py`, `ops/memstack.py`
+
+### WFL-06
+
+**The stack's own nodes on the canvas** · should · functional · **implemented**
+
+The canvas shall have the stack's own node, AI Stack step, whose kind makes it one block of the palette (agent, build, crew, task, ask, notify, recall, remember, command, plan), which sends the step to the step service and waits for its answer; its Agent, Crew job, Place and Repository pickers shall list the stack's own choices, read live from the step service; an answer whose status is not done shall end the n8n run as an error; every workflow of the repository uses it.
+
+- Parents: [SN-05](#sn-05)
+- Sources: [DEC-51](#dec-51), `docs/N8N-MIGRATION.md`
+- Verified by: test: `tests/test_n8n_sync.py::test_the_ai_stack_step_sends_the_step_waits_and_gives_the_answer`, `tests/test_n8n_sync.py::test_every_workflow_in_the_repository_is_a_whole_n8n_workflow`, `tests/test_n8n_ask.py::test_a_workflow_tells_the_owner_through_the_stacks_own_notifications`, `tests/test_flows.py::test_the_nodes_pickers_read_the_agents_crew_jobs_places_and_repositories_the_runner_writes`, `tests/test_n8n_sync.py::test_the_ai_stack_step_offers_every_block_with_the_stacks_live_lists`, `tests/test_n8n_sync.py::test_an_answer_that_is_not_done_ends_the_n8n_run_as_an_error`
+- Acceptance: Test: the node posts with its execution's resume URL, waits and gives the answer; it offers every kind of the step service with its fields; its pickers load the agents, crew jobs, places and repositories from the step service's catalog, which the runner writes; an answer that is not done fails the node on resume with the answer's error and the whole answer kept; n8n loads it from the repository; every workflow's work goes through it. Shown on a throwaway n8n 2.44.7 with a stand-in step service on 10 Nov 2026: a workflow of plan, recall, command, remember and coding change blocks waited, was resumed five times and ended in success; a failed answer ended its run as an error; the pickers' methods listed the stand-in's agents, crew jobs, places and repositories.
+- Trace: `n8n/custom/AistackStep.node.js`, `compose/core.yaml`, `ops/n8n_gen.py`, `ops/flows.py`, `images/mission-control/server.flows.py`
+
+### WFL-07
+
+**The owner decides in Needs you** · must · functional · **implemented**
+
+A workflow that needs the owner shall put one question into Needs you with the answers it offers and wait; the owner is told once, and the owner's tap there shall resume it; nothing but one of the offered answers, once, counts.
+
+- Parents: [SN-03](#sn-03)
+- Sources: [DEC-51](#dec-51), `docs/N8N-MIGRATION.md`
+- Verified by: test: `tests/test_n8n_ask.py::test_a_question_waits_in_needs_you_and_the_owners_tap_resumes_the_workflow`, `tests/test_n8n_ask.py::test_only_one_of_the_offered_answers_counts_and_only_once`, `tests/test_n8n_ask.py::test_a_question_is_checked_before_it_is_asked`, `tests/test_n8n_ask.py::test_the_app_lets_the_owner_answer_and_the_runner_hands_it_to_the_step_service`
+- Acceptance: Test: a question waits in Needs you with its answers as buttons and the owner's tap resumes the workflow; only an offered answer counts, once; a question is checked before it is asked; the app and the runner carry the answer.
+- Trace: `ops/flows.py`, `ops/decisions.py`, `ops/missions.requests.py`, `images/mission-control/server.py`
+
+### WFL-08
+
+**Workflows live in git** · must · process · **partial**
+
+Every workflow of a deployment shall be a JSON file in its repository; a change made on the canvas shall be exported and committed through the landing path, and a deploy shall import the repository's workflows.
+
+- Parents: [SN-05](#sn-05)
+- Sources: [DEC-51](#dec-51), `docs/N8N-MIGRATION.md`
+- Verified by: test: `tests/test_n8n_sync.py::test_every_workflow_in_the_repository_is_a_whole_n8n_workflow`, `tests/test_n8n_sync.py::test_every_scheduled_job_runs_on_n8n`, `tests/test_n8n_sync.py::test_a_deploy_imports_the_repositorys_workflows_each_as_its_file_says`, `tests/test_n8n_sync.py::test_an_export_is_stable_for_git`
+- Acceptance: Test: every workflow in the repository is a whole n8n workflow that reaches the step service and waits; a deploy imports them, each active as its file says; an export is stable for git.
+- Trace: `ops/n8n_sync.py`, `n8n/workflows/stack-self-test.json`, `n8n/workflows/memory-keeper.json`, `ops/deploy.py`, `compose/core.yaml`
+- Gap: the export runs by hand in a session's worktree; no job commits canvas changes yet.
+
+### WFL-09
+
+**One scheduler** · must · constraint · **partial**
+
+n8n shall be the one thing that decides when work starts on a schedule. Every scheduled job (a crew job, a task on a schedule, the task of a mission on a schedule) shall run from its own n8n workflow, and its schedule, next run and on/off switch shall be read from that workflow. The rule's only exceptions are the systemd timers of the units that must run when n8n is down: the boot check (it brings the stack, n8n included, up), the backup and the restore drill (they hold n8n's own database). A task that gets a schedule shall get its workflow once, made by the runner; a task that is over shall have its workflow switched off; after that its schedule is changed on n8n's canvas. One switch shall publish or unpublish a workflow.
+
+- Parents: [SN-05](#sn-05)
+- Sources: [DEC-51](#dec-51), `docs/N8N-MIGRATION.md`, `ops/systemd/AGENTS.md`
+- Verified by: test: `tests/test_n8n_move.py::test_a_jobs_schedule_and_next_run_come_from_its_workflows_cron`, `tests/test_n8n_move.py::test_a_generated_workflow_is_inactive_and_goes_through_the_step_service`, `tests/test_n8n_move.py::test_one_switch_turns_a_job_on_and_off_on_n8n`, `tests/test_n8n_move.py::test_a_task_that_gets_a_schedule_gets_its_workflow_once_and_a_cancelled_ones_goes_off`, `tests/test_n8n_move.py::test_the_runners_word_wins_until_git_holds_it_and_a_deploy_keeps_it`, `tests/test_n8n_move.py::test_n8n_starts_one_occurrence_of_a_plan_task_and_gets_its_answer_when_it_has_finished`, `tests/test_n8n_move.py::test_n8n_starts_one_run_of_a_missions_task_and_waits_for_it`, `tests/test_n8n_move.py::test_a_missions_schedule_goes_to_its_task_and_then_its_workflow_holds_it`, `tests/test_n8n_move.py::test_nothing_but_n8n_and_the_kept_timers_starts_work_on_a_schedule`, `tests/test_crew.py::test_systemd_state_becomes_crew_cards`
+- Acceptance: Test: a job's schedule and next run come from its workflow's cron, also across a clock change; a generated workflow is inactive and goes through the step service; one switch publishes or unpublishes it; a task that gets a schedule gets its workflow once, the app's pages know it, and a cancelled task's goes off (a repository workflow too, and a deploy keeps it off); n8n starts one run of a plan task or of a mission's task and a cancelled task is refused; a mission's schedule goes to its task, then its workflow holds it; the repository has only the three kept timers and every crew job that ran on a timer has its workflow.
+- Trace: `ops/n8n_jobs.py`, `ops/n8n_gen.py`, `ops/n8n_switch.py`, `ops/n8n_sync.py`, `ops/flows.py`, `ops/flows_view.py`, `ops/crew.py`, `ops/tasks.py`, `ops/missions.py`, `ops/missions.requests.py`, `ops/systemd/AGENTS.md`, `n8n/workflows/AGENTS.md`
+- Gap: Since 10 Nov 2026 n8n starts every scheduled job, and the old schedulers are removed (WFL-12). Not on n8n yet: the weekly self-review keeps its own clock inside the runner (ops/improve.py, a thread, no unit the step service could start). A run the PC slept through is not caught up: n8n's schedule trigger has no catch-up (the timers had Persistent=true); only the backup and the restore drill keep it.
+
+### WFL-10
+
+**Home shows every run** · must · functional · **partial**
+
+Each step a workflow runs shall report how it ended to Home's feed, naming its n8n run; a failed or refused one is pushed to the owner.
+
+- Parents: [SN-03](#sn-03)
+- Sources: [DEC-51](#dec-51), `docs/N8N-MIGRATION.md`
+- Verified by: test: `tests/test_flows.py::test_home_hears_how_each_step_of_a_workflow_ended`
+- Acceptance: Test: a finished step is said on Home's feed with its n8n run; a refused one is pushed.
+- Trace: `ops/flows.py`
+- Gap: the feed names the n8n run by number; the run opens inside the app from its task's or crew job's page (Where it runs, WFL-11), not yet from the feed item itself.
+
+### WFL-11
+
+**Workflows in the menu** · should · functional · **implemented**
+
+On the desk the app's menu shall open a Workflows page with n8n's editor inside the app, beside the app's menu; on a phone that page shall list each workflow with whether n8n runs it, its schedule and its last run with its state and time, and the phone's menu shall have no Workflows entry. A task or crew job that belongs to a workflow shall show at the top of its page its workflow, the run, its state and the step it is on, with the run's canvas on the desk and its steps as a list on a phone; an agent's and a crew job's page shall list every workflow it is a step of, each opening inside the app.
+
+- Parents: [SN-03](#sn-03)
+- Sources: [DEC-51](#dec-51), `docs/N8N-MIGRATION.md`
+- Verified by: test: `tests/test_n8n_ux.py::test_the_desk_menu_opens_n8n_inside_the_app_and_the_phone_menu_does_not_show_it`, `tests/test_n8n_ux.py::test_the_phone_lists_each_workflow_with_its_schedule_and_last_run`, `tests/test_n8n_ux.py::test_task_and_crew_pages_show_where_they_run`, `tests/test_n8n_ux.py::test_an_agents_page_lists_every_workflow_it_is_in`, `tests/test_n8n_ux.py::test_the_stack_pages_tools_know_n8ns_pages_inside_the_app`, `tests/test_n8n_inapp.py::test_the_view_has_every_workflow_its_schedule_its_steps_and_its_recent_runs`, `tests/test_n8n_inapp.py::test_a_question_waits_for_the_owner_and_old_runs_leave_the_view`, `tests/test_n8n_inapp.py::test_a_schedule_reads_in_words`, `tests/test_n8n_inapp.py::test_the_runner_writes_the_view_beside_the_step_service`
+- Acceptance: Test: the desk menu opens #/workflows with n8n in a frame and the phone menu does not show it; the phone lists the workflows from the runner's view; task and crew pages show where they run; agent pages list their workflows; the runner's view has every workflow with its schedule, steps and recent runs; the Stack page's tools know n8n's pages.
+- Trace: `images/mission-control/web/static/app-workflows.js`, `images/mission-control/web/static/app-base.js`, `images/mission-control/web/static/tools.json`, `images/mission-control/web/static/app-tasks.js`, `images/mission-control/web/static/task.js`, `images/mission-control/web/static/swarm.js`, `images/mission-control/web/static/app.css`, `images/mission-control/web/index.html`, `images/mission-control/server.n8n.py`, `ops/flows_view.py`, `ops/missions.py`
+
+### WFL-12
+
+**The old engines go** · must · process · **partial**
+
+Once no work runs on them, Temporal, the Conductor's scheduling, the block editor with its screens and the crew's systemd timers shall be removed, with their requirements rewritten or retired.
+
+- Parents: [SN-05](#sn-05)
+- Sources: [DEC-51](#dec-51), [DEC-52](#dec-52), `docs/N8N-MIGRATION.md`
+- Verified by: test: `tests/test_n8n_move.py::test_nothing_but_n8n_and_the_kept_timers_starts_work_on_a_schedule`, `tests/test_deploy.py::test_a_unit_the_repository_dropped_goes_from_this_machine_with_the_next_deploy`
+- Trace: `ops/deploy.py`, `ops/systemd/AGENTS.md`, `docs/N8N-MIGRATION.md`
+- Gap: Removed: Temporal and the block editor with their requirements (DEC-52, 10 Nov 2026); the crew's 23 timers (a deploy deletes their installed copies), the Conductor's schedule path, the missions' own schedule check, the event bus's time source, the crew's schedule form behind crew_schedule, and Temporal's two secrets (10 Nov 2026, WFL-09). Left for the app's clean-up: the Engine, Runs and Templates screens and their codec and Runs proxy (images/mission-control/server.engine.py).
+
+### WFL-13
+
+**Run now through n8n** · should · functional · **implemented**
+
+Every scheduled workflow of the repository shall have a second trigger, a webhook Run now (POST, path run/<its file's stem>, ids derived from the workflow's id) on the same AI Stack step, so a job can be started on demand through n8n as its schedule would start it; generating the workflows again adds it once and keeps each file's id, active state and canvas changes.
+
+- Parents: [SN-05](#sn-05)
+- Sources: [DEC-51](#dec-51), `docs/N8N-MIGRATION.md`
+- Verified by: test: `tests/test_n8n_sync.py::test_every_scheduled_workflow_can_be_run_now_through_n8n`, `tests/test_n8n_move.py::test_regenerating_adds_run_now_once_and_keeps_each_files_id_and_active`, `tests/test_n8n_move.py::test_a_generated_workflow_is_inactive_and_goes_through_the_step_service`
+- Acceptance: Test: every crew and task workflow and the Memory Keeper's has Run now on its step with its fixed path and ids, added once; regenerating adds it to an existing file and changes nothing else. Shown on a throwaway n8n 2.44.7 on 10 Nov 2026: POST webhook/run/crew-checker and webhook/run/memory-keeper each started a run that ended in success.
+- Trace: `ops/n8n_gen.py`, `n8n/workflows/crew-checker.json`, `n8n/workflows/memory-keeper.json`, `n8n/workflows/AGENTS.md`
+
+### WFL-14
+
+**n8n inside the app, behind its gate** · should · functional · **implemented**
+
+The app shall serve n8n's editor under its own address at /n8n/, reachable only with the owner's Tailscale login and refusing a write from another site, passing methods, query strings, bodies, cookies and n8n's live updates through as they stream, and letting only the app's own pages frame it; n8n's webhooks and resume URLs stay at n8n's own root on its tailnet port.
+
+- Parents: [SN-03](#sn-03)
+- Sources: [DEC-51](#dec-51), `docs/N8N-MIGRATION.md`
+- Verified by: test: `tests/test_n8n_inapp.py::test_n8n_is_served_under_the_apps_address_behind_its_gate`, `tests/test_n8n_inapp.py::test_n8ns_live_updates_stream_through_the_app`, `tests/test_n8n_inapp.py::test_compose_puts_n8n_under_n8n_with_live_updates_over_plain_http`, `tests/test_n8n_inapp.py::test_a_resume_url_stays_at_n8ns_root`
+- Acceptance: Test: without the login n8n is never asked; with it the prefix is taken off, the query, body, cookies and every Set-Cookie pass, X-Frame-Options gives way to frame-ancestors self, a write from another site is refused, n8n down answers 502; live updates stream; compose sets N8N_PATH, the SSE push and the app's address; a resume URL under /n8n/ is refused.
+- Trace: `images/mission-control/server.n8n.py`, `images/mission-control/server.py`, `images/mission-control/web/sw.js`, `compose/core.yaml`, `compose/apps.yaml`, `ops/windows/host-setup.ps1`
+
 ## Decisions
 
 | Decision | Date | What | Supersedes |
@@ -9516,6 +9729,8 @@ The Voice page shall show spoken questions answered a day and the share answered
 | <a id="dec-48"></a>**DEC-48** Onboarding runs as fixed steps with quality gates; a model summarises | 2026-11-08 | Onboarding a 1,325-file Java repository on the work deployment on GPT-5 mini said 8/8 done while its code map had 1,325 placeholder nodes and no edges, and the stack's own log at home said the same of every run ("a structural fallback, not a full semantic analysis"): the Understand Anything skill needs Claude Code's subagent channel, which OpenCode lacks, so an agent was asked to run a pipeline it could not run and took shortcuts, and every step was checked for existence, never for quality. So: the code map runs as fixed steps in the container (the plugin's own scan, batching and tree-sitter structure, then nodes and edges from a program; no model, no agent), summaries come from a model one batch per call, and every step has a quality gate and a record (when it last ran, how long, which model, calls, tokens, its numbers). A hollow result is weak, shown as weak, never done. A repository has a kind: the owner's own work gets an engineer's guide (entry points, module map, data model, how to extend it, build and test, fragile areas, glossary) written from its structure; something to evaluate gets the review. The graph view ranks the repository's own code by the links that hold it together, the source pane says which lines it shows and offers the whole file, and the viewer link works off the tailnet. Fixes belong in the stack (the platform), never as local patches on a deployment. | - |
 | <a id="dec-49"></a>**DEC-49** Coding agents get a small card and the brief pushed; everything else onboarding makes stays and is reachable | 2026-11-08 | What the owner asked: how coding agents should work with what onboarding generates, in very large codebases too, keeping the codebase's conventions, and whether it helps at all. The studies say generated overview files pushed into the context do not make agents more correct (ETH Zurich, February 2026: about 3 % worse; a two-agent ablation: no effect on correctness, faster when told about slow tests), selected experience and graph tools for finding code help, and conventions hold when a program checks them; the stack's own exam saw coders use only Bash and never call the memory tool. So: a repository card of at most about 1,500 tokens (commands, rules that are not obvious, fragile areas, one line per part, where to start), made without a model from what onboarding learned, is given first to every coding run, with the owner's pins and strikes; the task brief adds the tests to run first and the closest example for a new file; the file note at first read carries the code map's line, and a wide search hears which folders its hits fall in; after each edit the repository's linter runs on the file; the conventions review reads the card. Nothing made is thrown away: the guide, the wiki, the code map and the facts stay for people and are exported for the coder to grep, never pushed. Update makes the card again and checks the wiki against the changed code. Each layer must prove itself in the replay exam's knowledge arm on a large repository, against an arm without memory, on cases after the commit the knowledge was made at. | - |
 | <a id="dec-50"></a>**DEC-50** The AI Stack runs on Temporal, with packs and a canvas; professional tools before our own | 2026-11-09 | What the owner asked: reuse professional tools rather than build from scratch, see how the agents work together like Lego Mindstorms, and let Claude choose the engine by research. So: Temporal (MIT) is the core engine on every deployment, with one generic Python graph runner; templates are graphs in a pack's git, drawn and watched on Workflow Builder's editor (Apache 2.0); packs are Claude Code plugin folders; the worker protocol keeps its trust model, Windows stays pull-only; the tracker through atlassian-python-api and mcp-atlassian; agentgateway for tool grants later. DBOS is not taken because its dashboard is proprietary. The review added: references only in the history, encrypted and kept off the NAS on a customer-class deployment; a run pins its template and a replay test guards the runner; child workflows and continue-as-new keep histories small; the Conductor is removed after 14 days without fallback; Temporal upgrades run in the update path. | - |
+| <a id="dec-51"></a>**DEC-51** n8n is the stack's workflow pillar; Temporal and our editor go | 2026-11-10 | What the owner found: the new engine layer was hard to reach, half migrated (9 of about 35 recurring jobs) and rough, and four mechanisms decided when work starts. So: n8n (self-hosted, Sustainable Use License, free for personal and internal business use) becomes the one place that decides when work starts and in what order, with its canvas and run history; the stack's services stay the workers behind one step service; workflows live in git; the owner decides in Needs you; packs, places, trackers and artifacts from DEC-50 stay; Temporal, the Conductor's scheduling, the block editor and the crew's timers are removed once no work runs on them. Stability first: the disk guard and the boot check before any move. | ['DEC-50'] |
+| <a id="dec-52"></a>**DEC-52** Temporal is removed; n8n is the one orchestrator | 2026-11-10 | What the owner asked: no technical debt, the repository in a clean state. So, after the runner went back to the Conductor for plans (10 Nov 2026, 10:40) and Temporal stood idle: Temporal's four services, its network, its databases' setup, its upgrade path, its SDK in the runner, the builder and the app, the graph runner, the bridge, the cutover, the codec, the preview, the graph template format, the block editor and its build are removed. What the n8n design keeps from DEC-50 stays, freed from Temporal, in ops/domain: packs (now bringing n8n workflows), places, trackers and the forge, roles, saved files and a run's record. The Conductor keeps its own plan checks and runs plans until their move to n8n (WFL-09). The app's Engine, Runs and Templates screens go in the app's own clean-up. | ['DEC-50'] |
 
 ## Test index
 
@@ -9574,7 +9789,9 @@ The Voice page shall show spoken questions answered a day and the share answered
 | `tests/test_boot.py::test_missing_tools_still_open_the_gate_say_what_is_missing_and_fail_the_unit` | [PLT-30](#plt-30) |
 | `tests/test_boot.py::test_no_health_alert_while_the_stack_starts_or_is_down` | [PLT-28](#plt-28) |
 | `tests/test_boot.py::test_queued_runs_stay_queued_while_the_stack_is_down` | [PLT-28](#plt-28) |
+| `tests/test_boot.py::test_set_up_jobs_that_ran_once_are_not_counted_as_down` | [PLT-30](#plt-30) |
 | `tests/test_boot.py::test_the_backup_waits_only_for_its_databases` | [PLT-28](#plt-28) |
+| `tests/test_boot.py::test_the_check_waits_only_for_tools_the_main_key_is_granted` | [PLT-30](#plt-30) |
 | `tests/test_boot.py::test_the_cli_exits_1_when_the_stack_is_down_so_systemd_skips_the_job` | [PLT-28](#plt-28) |
 | `tests/test_boot.py::test_the_first_check_of_a_boot_restarts_hermes_opens_the_gate_logs_it_and_says_so_once` | [PLT-30](#plt-30) |
 | `tests/test_boot.py::test_the_gate_opens_only_when_docker_the_services_and_the_gateway_are_up` | [PLT-28](#plt-28) |
@@ -9779,11 +9996,12 @@ The Voice page shall show spoken questions answered a day and the share answered
 | `tests/test_conductor.py::test_the_worker_starts_an_event_s_and_a_schedule_s_run_while_it_holds_its_lock_and_heals_a_half_start` | [TSK-21](#tsk-21) |
 | `tests/test_conductor.py::test_two_modules_claiming_one_step_or_task_kind_are_refused_at_import` | [TSK-36](#tsk-36) |
 | `tests/test_crew.py::test_a_crew_job_without_a_swarm_card_opens_no_swarm_run` | [SWM-64](#swm-64) |
-| `tests/test_crew.py::test_crew_actions_are_validated` | [CRW-02](#crw-02), [SEC-11](#sec-11) |
+| `tests/test_crew.py::test_crew_actions_are_validated` | [CRW-01](#crw-01), [CRW-02](#crw-02), [SEC-11](#sec-11) |
 | `tests/test_crew.py::test_forget_soft_retires_only_the_given_facts` | [KNW-08](#knw-08) |
-| `tests/test_crew.py::test_systemd_state_becomes_crew_cards` | [APP-11](#app-11), [CRW-01](#crw-01) |
+| `tests/test_crew.py::test_systemd_state_becomes_crew_cards` | [APP-11](#app-11), [CRW-01](#crw-01), [WFL-09](#wfl-09) |
 | `tests/test_crew.py::test_test_agent_finds_flaky_failing_and_slow` | [CRW-08](#crw-08) |
-| `tests/test_crew.py::test_text_times_and_intervals` | [CRW-02](#crw-02) |
+| `tests/test_crew.py::test_text_times_and_intervals` | [CRW-01](#crw-01), [CRW-02](#crw-02) |
+| `tests/test_crew.py::test_the_review_and_the_board_answers_get_the_builders_clone_first_also_on_a_fresh_machine` | [CRW-07](#crw-07) |
 | `tests/test_crew.py::test_untested_functions` | [CRW-08](#crw-08) |
 | `tests/test_customise.py::test_a_tool_added_is_a_grant_the_owner_confirms_and_a_tool_removed_needs_only_the_replay` | [TSK-29](#tsk-29) |
 | `tests/test_customise.py::test_an_agent_s_model_change_is_an_agent_change_put_up_for_its_replay` | [TSK-28](#tsk-28) |
@@ -9809,6 +10027,7 @@ The Voice page shall show spoken questions answered a day and the share answered
 | `tests/test_deploy.py::test_a_deploy_is_recorded_with_its_source` | [BLD-20](#bld-20) |
 | `tests/test_deploy.py::test_a_new_timer_is_enabled_with_its_first_deploy_and_a_known_one_keeps_its_state` | [PLT-08](#plt-08) |
 | `tests/test_deploy.py::test_a_second_deploy_waits_and_then_gives_up` | [PLT-10](#plt-10) |
+| `tests/test_deploy.py::test_a_unit_the_repository_dropped_goes_from_this_machine_with_the_next_deploy` | [PLT-08](#plt-08), [WFL-12](#wfl-12) |
 | `tests/test_deploy.py::test_an_image_is_built_after_the_image_it_is_built_from` | [BLD-20](#bld-20) |
 | `tests/test_deploy.py::test_every_image_has_a_tag_the_deploy_rebuilds_also_one_run_from_an_ops_script` | [MEM-13](#mem-13) |
 | `tests/test_deploy.py::test_the_landing_script_checks_before_it_merges` | [BLD-20](#bld-20) |
@@ -9853,116 +10072,40 @@ The Voice page shall show spoken questions answered a day and the share answered
 | `tests/test_doctor.py::test_evidence_is_redacted` | [SEC-16](#sec-16) |
 | `tests/test_doctor.py::test_open_issues_come_from_the_board_one_per_issue` | [CRW-09](#crw-09) |
 | `tests/test_doctor.py::test_the_doctor_is_a_crew_agent_with_its_units` | [CRW-09](#crw-09) |
+| `tests/test_domain_packs.py::test_a_new_commit_leaves_the_old_one_running_and_puts_one_decision_in_the_queue_and_a_refusal_keeps_it_out` | [GEN-32](#gen-32) |
+| `tests/test_domain_packs.py::test_a_pack_agent_gets_exactly_its_grants_and_a_server_off_the_egress_list_is_refused` | [GEN-30](#gen-30) |
+| `tests/test_domain_packs.py::test_a_pack_that_clashes_or_names_no_commit_of_its_source_is_refused_with_the_reason` | [GEN-21](#gen-21) |
+| `tests/test_domain_packs.py::test_a_pack_workflow_that_is_no_n8n_workflow_or_runs_a_shell_command_is_refused_with_the_reason` | [GEN-21](#gen-21) |
+| `tests/test_domain_packs.py::test_an_approved_pack_adds_its_agents_skill_workflow_and_job_kind_from_a_read_only_checkout` | [GEN-21](#gen-21) |
+| `tests/test_domain_packs.py::test_an_unapproved_pack_does_not_run_and_waits_in_the_queue_with_its_manifest_prompts_commands_and_diff` | [GEN-21](#gen-21) |
+| `tests/test_domain_packs.py::test_home_without_packs_is_unchanged` | [GEN-21](#gen-21) |
+| `tests/test_domain_packs.py::test_packs_are_the_apps_and_the_queues` | [GEN-21](#gen-21) |
+| `tests/test_domain_packs.py::test_two_packs_of_one_name_and_a_manifest_naming_another_pack_are_refused` | [GEN-21](#gen-21) |
+| `tests/test_domain_places.py::test_a_command_runs_at_the_wsl_host_place_only_once_approved_there_by_its_hash_and_a_value_outside_its_type_is_refused` | [GEN-22](#gen-22) |
+| `tests/test_domain_places.py::test_a_steps_file_is_kept_by_its_hash_with_its_maker_attached_to_a_stand_in_item_and_removed_past_its_retention` | [GEN-29](#gen-29) |
+| `tests/test_domain_places.py::test_commands_are_the_queues` | [GEN-22](#gen-22) |
+| `tests/test_domain_record.py::test_a_toy_exam_set_runs_through_its_workflow_and_scores_naming_the_case_it_got_wrong` | [GEN-31](#gen-31) |
+| `tests/test_domain_record.py::test_a_toy_run_exports_one_bundle_with_its_chain_from_item_to_decisions_and_the_files_it_made` | [GEN-31](#gen-31) |
+| `tests/test_domain_roles.py::test_every_role_is_the_owners_at_home_and_a_deployment_maps_roles_to_its_people` | [GEN-27](#gen-27) |
+| `tests/test_domain_roles.py::test_the_repositorys_roles_file_names_no_person` | [GEN-27](#gen-27) |
+| `tests/test_domain_trackers.py::test_a_change_starts_at_a_tag_opens_a_draft_into_a_release_branch_and_a_reviewers_comment_is_handed_on_once` | [GEN-26](#gen-26) |
+| `tests/test_domain_trackers.py::test_a_changed_item_is_handed_on_once_for_the_run_named_after_it_and_a_restart_hands_on_nothing_twice` | [GEN-25](#gen-25) |
+| `tests/test_domain_trackers.py::test_a_comment_from_someone_else_is_handed_on_once` | [GEN-25](#gen-25) |
+| `tests/test_domain_trackers.py::test_a_write_to_an_unknown_tracker_or_of_an_unknown_kind_is_refused_with_the_reason` | [GEN-25](#gen-25) |
+| `tests/test_domain_trackers.py::test_jira_reads_by_jql_with_its_cursor_and_edits_its_one_summary` | [GEN-25](#gen-25) |
+| `tests/test_domain_trackers.py::test_shadow_writes_nothing_outward_until_the_owner_lets_a_kind_go_live_after_its_measure` | [GEN-25](#gen-25) |
+| `tests/test_domain_trackers.py::test_the_one_summary_comment_is_edited_across_three_updates` | [GEN-25](#gen-25) |
+| `tests/test_domain_trackers.py::test_trackers_are_the_apps_and_the_queues` | [GEN-25](#gen-25) |
 | `tests/test_editor.py::test_a_pass_saves_its_sorting_and_changes_nothing` | [ACR-02](#acr-02) |
 | `tests/test_editor.py::test_each_idea_and_the_ideas_view_show_the_editor_s_sorting` | [ACR-02](#acr-02) |
 | `tests/test_editor.py::test_the_editor_is_a_crew_duty_with_its_card_units_and_prompt` | [ACR-02](#acr-02) |
 | `tests/test_editor.py::test_the_editor_keeps_only_verdicts_it_can_check_and_groups_requests` | [ACR-02](#acr-02) |
 | `tests/test_editor.py::test_the_editor_s_context_holds_the_ideas_the_owner_s_reasons_and_planned_work` | [ACR-02](#acr-02) |
 | `tests/test_egress_ipv6.py::test_an_ipv6_rule_that_cannot_be_set_stops_a_container_that_has_ipv6` | [PHN-08](#phn-08) |
-| `tests/test_engine_activities.py::test_a_deciders_answer_is_read_for_one_of_its_branches` | [GEN-21](#gen-21) |
-| `tests/test_engine_activities.py::test_a_gate_is_asked_once_per_run_and_node_even_when_asked_again` | [GEN-22](#gen-22) |
-| `tests/test_engine_activities.py::test_a_home_plan_runs_on_the_engine_through_the_conductors_own_steps_and_finish` | [GEN-22](#gen-22) |
-| `tests/test_engine_activities.py::test_a_step_that_fails_twice_fails_the_run_and_the_task_with_its_reason` | [GEN-22](#gen-22) |
-| `tests/test_engine_activities.py::test_a_templates_agent_and_decision_blocks_run_through_the_conductors_steps_and_its_task_finishes` | [GEN-21](#gen-21) |
-| `tests/test_engine_activities.py::test_each_item_of_a_template_blocks_fan_out_gets_a_row_of_its_own` | [GEN-21](#gen-21) |
-| `tests/test_engine_bridge.py::test_a_cancel_stops_the_engines_run` | [GEN-35](#gen-35) |
-| `tests/test_engine_bridge.py::test_a_queued_event_starts_the_next_run_on_the_engine` | [GEN-35](#gen-35) |
-| `tests/test_engine_bridge.py::test_a_started_plan_runs_on_the_engine_once_and_ends_as_the_conductor_ends_it` | [GEN-35](#gen-35) |
-| `tests/test_engine_bridge.py::test_a_step_waiting_for_its_work_elsewhere_holds_no_slot_and_finishes_when_the_work_is_done` | [GEN-35](#gen-35) |
-| `tests/test_engine_bridge.py::test_the_deployment_chooses_the_engine_and_the_conductor_stays_the_default` | [GEN-35](#gen-35) |
-| `tests/test_engine_bridge.py::test_the_orchestrator_looks_again_between_waves_and_the_run_follows_its_added_step` | [GEN-35](#gen-35) |
-| `tests/test_engine_cutover.py::test_a_rollback_cancels_the_open_runs_forgets_them_and_switches_to_the_conductor` | [GEN-35](#gen-35) |
-| `tests/test_engine_cutover.py::test_the_clean_days_are_counted_per_kind_of_plan` | [GEN-35](#gen-35) |
-| `tests/test_engine_cutover.py::test_the_smoke_checks_pass_on_a_real_temporal` | [GEN-35](#gen-35) |
-| `tests/test_engine_cutover.py::test_the_smoke_checks_say_no_when_temporal_does_not_answer` | [GEN-35](#gen-35) |
-| `tests/test_engine_cutover.py::test_the_switch_is_an_override_the_bridge_reads_before_the_deployment_and_each_switch_is_logged` | [GEN-35](#gen-35) |
-| `tests/test_engine_graph.py::test_a_branch_keeps_its_names_on_its_edges_and_a_brief_in_canonical_form` | [GEN-23](#gen-23) |
-| `tests/test_engine_graph.py::test_a_branch_needs_named_edges_and_only_a_branch_names_them` | [GEN-23](#gen-23) |
-| `tests/test_engine_graph.py::test_a_plan_converts_one_to_one_with_its_fan_out_and_its_loop` | [GEN-23](#gen-23) |
-| `tests/test_engine_graph.py::test_a_plan_is_refused_with_the_conductors_own_words` | [GEN-23](#gen-23) |
-| `tests/test_engine_graph.py::test_a_template_in_canonical_form_round_trips_byte_for_byte` | [GEN-23](#gen-23) |
-| `tests/test_engine_graph.py::test_a_template_is_refused_for_what_it_gets_wrong` | [GEN-23](#gen-23) |
-| `tests/test_engine_graph.py::test_a_template_runs_from_one_start_to_its_ends_with_a_failure_path_and_a_notify` | [GEN-23](#gen-23) |
-| `tests/test_engine_graph.py::test_a_template_that_is_not_canonical_is_refused_with_its_canonical_form` | [GEN-23](#gen-23) |
-| `tests/test_engine_graph.py::test_a_template_without_one_start_or_with_a_dead_end_is_refused_saying_what_to_draw` | [GEN-23](#gen-23) |
-| `tests/test_engine_graph.py::test_durations_read_seconds_minutes_hours_and_days` | [GEN-23](#gen-23) |
-| `tests/test_engine_graph.py::test_the_conductor_uses_the_same_checks_until_it_is_retired` | [GEN-23](#gen-23) |
-| `tests/test_engine_graph.py::test_the_graph_is_one_of_the_engines_known_shapes_and_needs_no_temporal` | [GEN-23](#gen-23) |
-| `tests/test_engine_lib.py::test_a_customer_class_converter_refuses_content_and_passes_references` | [GEN-36](#gen-36) |
-| `tests/test_engine_lib.py::test_a_namespace_is_the_deployment_folder_name_and_is_made_once` | [GEN-33](#gen-33) |
-| `tests/test_engine_lib.py::test_every_payload_is_encrypted_with_the_deployments_key_and_only_that_key_reads_it` | [GEN-36](#gen-36) |
-| `tests/test_engine_lib.py::test_home_is_not_strict_but_its_history_is_ciphertext_too` | [GEN-36](#gen-36) |
-| `tests/test_engine_lib.py::test_inside_a_real_run_a_customer_class_deployment_fails_the_step_that_returns_content` | [GEN-36](#gen-36) |
-| `tests/test_engine_lib.py::test_the_codec_key_comes_from_the_secret_and_a_wrong_one_is_refused_without_showing_it` | [GEN-36](#gen-36) |
-| `tests/test_engine_lib.py::test_the_runners_threads_reach_the_engine_through_its_own_loop` | [GEN-33](#gen-33) |
-| `tests/test_engine_packs.py::test_a_new_commit_leaves_the_old_one_running_and_puts_one_decision_in_the_queue_and_a_refusal_keeps_it_out` | [GEN-32](#gen-32) |
-| `tests/test_engine_packs.py::test_a_pack_agent_gets_exactly_its_grants_and_a_server_off_the_egress_list_is_refused` | [GEN-30](#gen-30) |
-| `tests/test_engine_packs.py::test_a_pack_that_clashes_or_names_no_commit_of_its_source_is_refused_with_the_reason` | [GEN-21](#gen-21) |
-| `tests/test_engine_packs.py::test_an_approved_pack_adds_its_agents_skill_template_and_job_kind_from_a_read_only_checkout` | [GEN-21](#gen-21) |
-| `tests/test_engine_packs.py::test_an_unapproved_pack_does_not_run_and_waits_in_the_queue_with_its_manifest_prompts_commands_and_diff` | [GEN-21](#gen-21) |
-| `tests/test_engine_packs.py::test_home_without_packs_is_unchanged` | [GEN-21](#gen-21) |
-| `tests/test_engine_packs.py::test_packs_are_the_apps_and_the_queues` | [GEN-21](#gen-21) |
-| `tests/test_engine_packs.py::test_two_packs_of_one_name_and_a_manifest_naming_another_pack_are_refused` | [GEN-21](#gen-21) |
-| `tests/test_engine_places.py::test_a_command_runs_at_the_wsl_host_place_only_once_approved_there_by_its_hash_and_a_value_outside_its_type_is_refused` | [GEN-22](#gen-22) |
-| `tests/test_engine_places.py::test_a_steps_file_is_kept_by_its_hash_with_its_maker_attached_to_a_stand_in_item_and_removed_past_its_retention` | [GEN-29](#gen-29) |
-| `tests/test_engine_places.py::test_a_ten_item_fan_out_on_a_pool_of_two_never_runs_three_at_once_two_runs_share_it_and_a_failed_attempt_is_retried` | [GEN-28](#gen-28) |
-| `tests/test_engine_places.py::test_commands_are_the_queues_and_the_engines` | [GEN-22](#gen-22) |
-| `tests/test_engine_places.py::test_the_engine_queues_are_its_own_the_pools_at_their_size_and_each_place` | [GEN-22](#gen-22) |
-| `tests/test_engine_record.py::test_a_toy_exam_set_runs_through_its_template_and_scores_naming_the_case_it_got_wrong` | [GEN-31](#gen-31) |
-| `tests/test_engine_record.py::test_a_toy_run_exports_one_bundle_with_its_chain_from_item_to_decisions_and_the_files_it_made` | [GEN-31](#gen-31) |
-| `tests/test_engine_roles.py::test_every_role_is_the_owners_at_home_and_a_deployment_maps_roles_to_its_people` | [GEN-27](#gen-27) |
-| `tests/test_engine_roles.py::test_the_repositorys_roles_file_names_no_person` | [GEN-27](#gen-27) |
-| `tests/test_engine_runner.py::test_a_block_that_succeeds_closes_its_failure_path_and_the_run_ends_done` | [GEN-23](#gen-23) |
-| `tests/test_engine_runner.py::test_a_branch_answer_that_names_no_branch_fails_the_run_with_the_branches_it_has` | [GEN-23](#gen-23) |
-| `tests/test_engine_runner.py::test_a_branch_takes_the_way_its_agent_names_skips_the_others_and_the_join_after_still_runs` | [GEN-23](#gen-23) |
-| `tests/test_engine_runner.py::test_a_check_that_still_fails_after_its_rounds_fails_the_run_with_the_reason` | [GEN-23](#gen-23) |
-| `tests/test_engine_runner.py::test_a_failed_block_with_a_failure_path_goes_down_it_and_the_run_ends_as_stopped_not_failed` | [GEN-23](#gen-23) |
-| `tests/test_engine_runner.py::test_a_fan_out_of_300_items_stays_small_in_the_parents_history` | [GEN-38](#gen-38) |
-| `tests/test_engine_runner.py::test_a_gate_answered_no_fails_the_run_and_says_who` | [GEN-23](#gen-23) |
-| `tests/test_engine_runner.py::test_a_long_wait_continues_the_run_as_new_and_signals_still_find_it_and_it_replays` | [GEN-37](#gen-37) |
-| `tests/test_engine_runner.py::test_a_template_runs_to_the_end_through_its_wait_its_gate_its_fan_out_and_its_loop` | [GEN-24](#gen-24) |
-| `tests/test_engine_runner.py::test_reminders_come_on_time_and_a_timeout_asks_the_role_named_for_it` | [GEN-24](#gen-24) |
-| `tests/test_engine_runner.py::test_the_run_is_rebuilt_from_its_history_at_every_step_as_after_a_restart_and_a_cancel_ends_it` | [GEN-37](#gen-37) |
-| `tests/test_engine_runner.py::test_two_gates_wait_for_their_own_roles_and_an_answer_from_outside_a_role_is_refused_and_recorded` | [GEN-27](#gen-27) |
-| `tests/test_engine_service.py::test_a_customer_class_backup_leaves_the_engine_databases_out` | [GEN-36](#gen-36) |
-| `tests/test_engine_service.py::test_the_data_guard_tells_scripts_whether_the_deployment_holds_customer_data` | [GEN-36](#gen-36) |
-| `tests/test_engine_service.py::test_the_engine_images_are_pinned_by_digest_in_versions_env` | [GEN-33](#gen-33) |
-| `tests/test_engine_service.py::test_the_engine_is_part_of_the_core_and_starts_only_after_its_databases_and_schema` | [GEN-33](#gen-33) |
-| `tests/test_engine_service.py::test_the_engine_is_reached_only_from_this_machine` | [GEN-33](#gen-33) |
-| `tests/test_engine_service.py::test_the_engine_uses_its_own_role_and_the_secret_of_that_role` | [GEN-33](#gen-33) |
-| `tests/test_engine_service.py::test_the_runner_environment_is_pinned_checksummed_and_follows_its_lock` | [GEN-33](#gen-33) |
-| `tests/test_engine_service.py::test_the_schema_is_set_up_then_moved_to_the_pinned_version_every_start` | [GEN-33](#gen-33) |
-| `tests/test_engine_service.py::test_the_server_reads_a_dynamic_config_that_names_the_history_limits` | [GEN-33](#gen-33) |
-| `tests/test_engine_templates.py::test_a_block_may_name_only_agents_that_can_do_a_step` | [GEN-34](#gen-34) |
-| `tests/test_engine_templates.py::test_a_description_becomes_a_checked_draft_named_as_the_owner_said` | [GEN-34](#gen-34) |
-| `tests/test_engine_templates.py::test_a_description_needs_words_and_a_name_and_a_model_that_answers` | [GEN-34](#gen-34) |
-| `tests/test_engine_templates.py::test_a_refused_draft_is_asked_for_again_with_the_refusal_and_a_second_refusal_is_said` | [GEN-34](#gen-34) |
-| `tests/test_engine_templates.py::test_a_saved_template_is_its_canonical_yaml_with_its_fork_join_and_loop` | [GEN-34](#gen-34) |
-| `tests/test_engine_templates.py::test_a_template_with_a_fault_is_not_saved_and_the_graph_model_says_why` | [GEN-34](#gen-34) |
-| `tests/test_engine_templates.py::test_a_test_run_starts_only_from_what_was_saved_and_only_where_the_engine_runs` | [GEN-34](#gen-34) |
-| `tests/test_engine_templates.py::test_describe_is_on_the_templates_screen_and_an_action_of_the_app_and_the_runner` | [GEN-34](#gen-34) |
-| `tests/test_engine_templates.py::test_the_builder_is_part_of_the_app_reachable_from_tasks_and_drawn_on_the_first_state` | [GEN-34](#gen-34) |
-| `tests/test_engine_templates.py::test_the_editor_is_workflow_builder_pinned_and_locked_and_offers_every_block_of_the_graph_model` | [GEN-34](#gen-34) |
-| `tests/test_engine_templates.py::test_the_editor_s_block_positions_are_kept_beside_the_template_and_listed_with_it` | [GEN-34](#gen-34) |
-| `tests/test_engine_templates.py::test_the_editor_undoes_the_wide_screen_zoom_at_every_width_so_its_arrows_meet_their_blocks` | [GEN-34](#gen-34) |
-| `tests/test_engine_templates.py::test_the_list_shows_the_repositorys_templates_and_the_drafts_with_their_problems` | [GEN-34](#gen-34) |
-| `tests/test_engine_trackers.py::test_a_change_starts_at_a_tag_opens_a_draft_into_a_release_branch_and_a_reviewers_comment_resumes_the_run` | [GEN-26](#gen-26) |
-| `tests/test_engine_trackers.py::test_a_comment_from_someone_else_signals_the_run_once` | [GEN-25](#gen-25) |
-| `tests/test_engine_trackers.py::test_a_new_item_starts_its_run_once_across_a_restart_and_an_ended_run_is_not_started_again` | [GEN-25](#gen-25) |
-| `tests/test_engine_trackers.py::test_a_write_to_an_unknown_tracker_or_of_an_unknown_kind_is_refused_with_the_reason` | [GEN-25](#gen-25) |
-| `tests/test_engine_trackers.py::test_jira_reads_by_jql_with_its_cursor_and_edits_its_one_summary` | [GEN-25](#gen-25) |
-| `tests/test_engine_trackers.py::test_shadow_writes_nothing_outward_until_the_owner_lets_a_kind_go_live_after_its_measure` | [GEN-25](#gen-25) |
-| `tests/test_engine_trackers.py::test_the_one_summary_comment_is_edited_across_three_updates` | [GEN-25](#gen-25) |
-| `tests/test_engine_trackers.py::test_trackers_are_the_apps_the_queues_and_the_runtimes` | [GEN-25](#gen-25) |
-| `tests/test_engine_view.py::test_the_apps_state_and_its_stream_carry_the_engine` | [GEN-34](#gen-34) |
-| `tests/test_engine_view.py::test_the_demo_templates_are_in_their_canonical_form` | [GEN-34](#gen-34) |
-| `tests/test_engine_view.py::test_the_engine_screen_and_its_canvas_are_part_of_the_app_and_redraw_live` | [GEN-34](#gen-34) |
-| `tests/test_engine_view.py::test_the_projector_shows_a_running_run_with_its_blocks_edges_status_and_timing` | [GEN-34](#gen-34) |
-| `tests/test_engine_view.py::test_the_runs_screen_shows_temporals_ui_behind_the_apps_gate_and_its_codec_decrypts_what_the_engine_encrypted` | [GEN-36](#gen-36) |
 | `tests/test_events.py::test_a_rule_waits_out_its_cooldown_runs_its_check_and_records_every_firing` | [TSK-11](#tsk-11) |
 | `tests/test_events.py::test_breaking_news_is_three_publishers_on_one_new_story_within_30_minutes` | [TSK-12](#tsk-12) |
 | `tests/test_events.py::test_mail_and_forgejo_are_read_only_while_a_rule_asks_and_a_baseline_is_not_new` | [TSK-10](#tsk-10) |
-| `tests/test_events.py::test_rules_are_checked_when_saved_and_schedules_come_due` | [TSK-11](#tsk-11) |
+| `tests/test_events.py::test_rules_are_checked_when_saved_and_a_time_is_no_source` | [TSK-11](#tsk-11) |
 | `tests/test_events.py::test_the_local_sources_each_fire` | [TSK-10](#tsk-10) |
 | `tests/test_events.py::test_the_web_sources_baseline_first_then_fire_their_rules` | [TSK-10](#tsk-10) |
 | `tests/test_features.py::test_a_deployment_without_home_never_restores_or_rebuilds_the_home_stack` | [GEN-20](#gen-20) |
@@ -9993,6 +10136,25 @@ The Voice page shall show spoken questions answered a day and the share answered
 | `tests/test_files.py::test_the_run_is_partial_when_an_asked_file_is_missing` | [MIS-25](#mis-25) |
 | `tests/test_files.py::test_the_run_s_end_names_what_is_missing_and_attaches_what_it_saved` | [MIS-25](#mis-25) |
 | `tests/test_files.py::test_what_the_stack_cannot_make_is_refused_with_the_reason` | [MIS-27](#mis-27) |
+| `tests/test_flows.py::test_a_coding_change_runs_as_the_conductors_build_step_and_answers_with_its_build` | [WFL-05](#wfl-05) |
+| `tests/test_flows.py::test_a_command_runs_at_its_place_only_once_approved_there_and_is_submitted_once` | [WFL-05](#wfl-05) |
+| `tests/test_flows.py::test_a_crew_job_runs_as_its_own_unit_and_waits_for_it` | [WFL-05](#wfl-05) |
+| `tests/test_flows.py::test_a_crew_job_still_running_covers_the_next_run_at_once` | [WFL-05](#wfl-05) |
+| `tests/test_flows.py::test_a_memory_search_answers_with_its_hits_each_cut` | [WFL-05](#wfl-05) |
+| `tests/test_flows.py::test_a_note_enters_memory_only_through_the_memory_tools_gate` | [WFL-05](#wfl-05) |
+| `tests/test_flows.py::test_a_plan_runs_in_waves_through_the_agent_path_and_answers_every_steps_output` | [WFL-05](#wfl-05) |
+| `tests/test_flows.py::test_a_refused_request_runs_nothing_and_says_why` | [WFL-05](#wfl-05) |
+| `tests/test_flows.py::test_a_request_is_checked_before_anything_runs` | [WFL-05](#wfl-05) |
+| `tests/test_flows.py::test_a_step_that_fails_twice_answers_failed_with_its_reason` | [WFL-05](#wfl-05) |
+| `tests/test_flows.py::test_an_agent_reads_its_brief_as_its_step` | [WFL-05](#wfl-05) |
+| `tests/test_flows.py::test_an_agent_step_runs_through_the_conductors_own_runner_and_n8n_gets_the_answer` | [WFL-05](#wfl-05) |
+| `tests/test_flows.py::test_an_answer_n8n_did_not_take_is_sent_again_after_a_restart_without_running_the_step_again` | [WFL-05](#wfl-05) |
+| `tests/test_flows.py::test_home_hears_how_each_step_of_a_workflow_ended` | [WFL-10](#wfl-10) |
+| `tests/test_flows.py::test_the_answer_only_ever_goes_to_n8n_on_this_machine` | [WFL-05](#wfl-05) |
+| `tests/test_flows.py::test_the_new_kinds_are_checked_before_anything_runs` | [WFL-05](#wfl-05) |
+| `tests/test_flows.py::test_the_nodes_pickers_read_the_agents_crew_jobs_places_and_repositories_the_runner_writes` | [WFL-06](#wfl-06) |
+| `tests/test_flows.py::test_the_runner_starts_the_step_worker_and_the_app_serves_the_step_port_on_its_own_network` | [WFL-05](#wfl-05) |
+| `tests/test_flows.py::test_the_step_port_drops_a_step_for_the_runner_and_answers_what_is_known` | [WFL-05](#wfl-05) |
 | `tests/test_forge.py::test_bitbucket_dc_opens_a_draft_comments_reads_state_and_ci_and_declines` | [GEN-04](#gen-04) |
 | `tests/test_forge.py::test_forgejo_is_home_as_before_and_no_token_means_no_call` | [GEN-04](#gen-04) |
 | `tests/test_forge.py::test_the_work_example_uses_bitbucket_and_never_merges_and_a_build_is_not_merged_there` | [GEN-04](#gen-04) |
@@ -10239,6 +10401,50 @@ The Voice page shall show spoken questions answered a day and the share answered
 | `tests/test_modelpolicy.py::test_no_claude_call_passes_the_oauth_token_itself_and_the_checks_run_the_policy` | [GEN-05](#gen-05) |
 | `tests/test_modelpolicy.py::test_the_claude_cli_under_a_gateway_gets_the_gateway_and_never_the_oauth_token` | [GEN-05](#gen-05) |
 | `tests/test_modelpolicy.py::test_the_gateway_token_reaches_the_gateway_container_under_one_name` | [GEN-05](#gen-05) |
+| `tests/test_n8n_ask.py::test_a_question_is_checked_before_it_is_asked` | [WFL-07](#wfl-07) |
+| `tests/test_n8n_ask.py::test_a_question_waits_in_needs_you_and_the_owners_tap_resumes_the_workflow` | [WFL-07](#wfl-07) |
+| `tests/test_n8n_ask.py::test_a_workflow_tells_the_owner_through_the_stacks_own_notifications` | [WFL-06](#wfl-06) |
+| `tests/test_n8n_ask.py::test_only_one_of_the_offered_answers_counts_and_only_once` | [WFL-07](#wfl-07) |
+| `tests/test_n8n_ask.py::test_the_app_lets_the_owner_answer_and_the_runner_hands_it_to_the_step_service` | [WFL-07](#wfl-07) |
+| `tests/test_n8n_inapp.py::test_a_question_waits_for_the_owner_and_old_runs_leave_the_view` | [WFL-11](#wfl-11) |
+| `tests/test_n8n_inapp.py::test_a_resume_url_stays_at_n8ns_root` | [WFL-14](#wfl-14) |
+| `tests/test_n8n_inapp.py::test_a_schedule_reads_in_words` | [WFL-11](#wfl-11) |
+| `tests/test_n8n_inapp.py::test_compose_puts_n8n_under_n8n_with_live_updates_over_plain_http` | [WFL-14](#wfl-14) |
+| `tests/test_n8n_inapp.py::test_n8n_is_served_under_the_apps_address_behind_its_gate` | [WFL-14](#wfl-14) |
+| `tests/test_n8n_inapp.py::test_n8ns_live_updates_stream_through_the_app` | [WFL-14](#wfl-14) |
+| `tests/test_n8n_inapp.py::test_the_runner_writes_the_view_beside_the_step_service` | [WFL-11](#wfl-11) |
+| `tests/test_n8n_inapp.py::test_the_view_has_every_workflow_its_schedule_its_steps_and_its_recent_runs` | [WFL-11](#wfl-11) |
+| `tests/test_n8n_move.py::test_a_generated_workflow_is_inactive_and_goes_through_the_step_service` | [WFL-09](#wfl-09), [WFL-13](#wfl-13) |
+| `tests/test_n8n_move.py::test_a_jobs_schedule_and_next_run_come_from_its_workflows_cron` | [CRW-01](#crw-01), [MIS-02](#mis-02), [WFL-09](#wfl-09) |
+| `tests/test_n8n_move.py::test_a_missions_schedule_goes_to_its_task_and_then_its_workflow_holds_it` | [MIS-02](#mis-02), [WFL-09](#wfl-09) |
+| `tests/test_n8n_move.py::test_a_task_that_gets_a_schedule_gets_its_workflow_once_and_a_cancelled_ones_goes_off` | [WFL-09](#wfl-09) |
+| `tests/test_n8n_move.py::test_n8n_starts_one_occurrence_of_a_plan_task_and_gets_its_answer_when_it_has_finished` | [WFL-09](#wfl-09) |
+| `tests/test_n8n_move.py::test_n8n_starts_one_run_of_a_missions_task_and_waits_for_it` | [WFL-09](#wfl-09) |
+| `tests/test_n8n_move.py::test_nothing_but_n8n_and_the_kept_timers_starts_work_on_a_schedule` | [WFL-09](#wfl-09), [WFL-12](#wfl-12) |
+| `tests/test_n8n_move.py::test_one_switch_turns_a_job_on_and_off_on_n8n` | [WFL-09](#wfl-09) |
+| `tests/test_n8n_move.py::test_regenerating_adds_run_now_once_and_keeps_each_files_id_and_active` | [WFL-13](#wfl-13) |
+| `tests/test_n8n_move.py::test_the_runners_word_wins_until_git_holds_it_and_a_deploy_keeps_it` | [WFL-09](#wfl-09) |
+| `tests/test_n8n_service.py::test_n8n_is_part_of_the_core_and_starts_after_its_database` | [WFL-01](#wfl-01) |
+| `tests/test_n8n_service.py::test_n8n_is_reached_only_from_this_machine` | [WFL-01](#wfl-01) |
+| `tests/test_n8n_service.py::test_n8n_prunes_executions_after_30_days` | [WFL-04](#wfl-04) |
+| `tests/test_n8n_service.py::test_n8n_sends_nothing_home_and_keeps_its_command_node_off` | [WFL-03](#wfl-03) |
+| `tests/test_n8n_service.py::test_n8n_uses_its_own_role_database_and_secrets` | [WFL-02](#wfl-02) |
+| `tests/test_n8n_service.py::test_the_boot_check_counts_the_database_job_as_set_up` | [WFL-02](#wfl-02) |
+| `tests/test_n8n_service.py::test_the_database_setup_is_safe_to_repeat` | [WFL-02](#wfl-02) |
+| `tests/test_n8n_service.py::test_the_n8n_image_is_pinned_by_digest` | [WFL-01](#wfl-01) |
+| `tests/test_n8n_sync.py::test_a_deploy_imports_the_repositorys_workflows_each_as_its_file_says` | [WFL-08](#wfl-08) |
+| `tests/test_n8n_sync.py::test_an_answer_that_is_not_done_ends_the_n8n_run_as_an_error` | [WFL-06](#wfl-06) |
+| `tests/test_n8n_sync.py::test_an_export_is_stable_for_git` | [WFL-08](#wfl-08) |
+| `tests/test_n8n_sync.py::test_every_scheduled_job_runs_on_n8n` | [WFL-08](#wfl-08) |
+| `tests/test_n8n_sync.py::test_every_scheduled_workflow_can_be_run_now_through_n8n` | [WFL-13](#wfl-13) |
+| `tests/test_n8n_sync.py::test_every_workflow_in_the_repository_is_a_whole_n8n_workflow` | [WFL-06](#wfl-06), [WFL-08](#wfl-08) |
+| `tests/test_n8n_sync.py::test_the_ai_stack_step_offers_every_block_with_the_stacks_live_lists` | [WFL-06](#wfl-06) |
+| `tests/test_n8n_sync.py::test_the_ai_stack_step_sends_the_step_waits_and_gives_the_answer` | [WFL-06](#wfl-06) |
+| `tests/test_n8n_ux.py::test_an_agents_page_lists_every_workflow_it_is_in` | [WFL-11](#wfl-11) |
+| `tests/test_n8n_ux.py::test_task_and_crew_pages_show_where_they_run` | [WFL-11](#wfl-11) |
+| `tests/test_n8n_ux.py::test_the_desk_menu_opens_n8n_inside_the_app_and_the_phone_menu_does_not_show_it` | [WFL-11](#wfl-11) |
+| `tests/test_n8n_ux.py::test_the_phone_lists_each_workflow_with_its_schedule_and_last_run` | [WFL-11](#wfl-11) |
+| `tests/test_n8n_ux.py::test_the_stack_pages_tools_know_n8ns_pages_inside_the_app` | [WFL-11](#wfl-11) |
 | `tests/test_new_machine_docs.py::test_documented_builder_default_matches_configuration` | [PLT-17](#plt-17) |
 | `tests/test_new_machine_docs.py::test_rehearsal_checklist_keeps_manual_steps_isolated` | [PLT-17](#plt-17) |
 | `tests/test_new_machine_docs.py::test_required_setup_topics` | [PLT-17](#plt-17) |
@@ -10303,6 +10509,9 @@ The Voice page shall show spoken questions answered a day and the share answered
 | `tests/test_otlp.py::test_a_task_run_is_one_trace_from_the_run_to_every_model_and_tool_call` | [TSK-09](#tsk-09), [TSK-26](#tsk-26) |
 | `tests/test_otlp.py::test_only_claude_runs_are_traced_when_they_end` | [SWM-79](#swm-79) |
 | `tests/test_otlp.py::test_the_protobuf_is_an_otlp_export_request` | [SWM-79](#swm-79) |
+| `tests/test_parallel_tests.py::test_each_test_process_has_a_temp_folder_of_its_own` | [QA-27](#qa-27) |
+| `tests/test_parallel_tests.py::test_the_checks_run_the_suite_over_workers_when_xdist_is_there` | [QA-27](#qa-27) |
+| `tests/test_parallel_tests.py::test_the_publish_runs_the_snapshots_tests_over_workers_too` | [QA-27](#qa-27) |
 | `tests/test_phone.py::test_a_job_covers_its_steps_and_a_step_outside_it_is_refused_not_carded` | [PHN-26](#phn-26) |
 | `tests/test_phone.py::test_a_mismatch_stops_without_buying` | [SHP-09](#shp-09) |
 | `tests/test_phone.py::test_a_pin_locked_phone_is_never_unlocked` | [PHN-06](#phn-06) |
@@ -10547,23 +10756,20 @@ The Voice page shall show spoken questions answered a day and the share answered
 | `tests/test_runner.py::test_a_burst_of_locks_writes_who_held_what_once` | [MIS-01](#mis-01) |
 | `tests/test_runner.py::test_a_paused_agents_runs_are_skipped` | [SWM-26](#swm-26) |
 | `tests/test_runner.py::test_a_run_a_restart_cut_off_says_why_and_waits_for_the_stack` | [MIS-05](#mis-05) |
-| `tests/test_runner.py::test_a_slot_keeps_its_own_days_offset_across_a_clock_change` | [MIS-02](#mis-02) |
 | `tests/test_runner.py::test_a_write_that_fails_on_a_lock_gives_up_its_transaction` | [MIS-01](#mis-01) |
-| `tests/test_runner.py::test_check_schedules_catches_up_once_and_not_before_created` | [MIS-03](#mis-03) |
 | `tests/test_runner.py::test_create_and_unknown_actions_are_validated` | [SEC-11](#sec-11) |
 | `tests/test_runner.py::test_create_refuses_a_duplicate_within_30_minutes` | [MIS-07](#mis-07) |
 | `tests/test_runner.py::test_create_task_writes_mission_and_queues_first_run` | [MIS-01](#mis-01), [MIS-06](#mis-06) |
-| `tests/test_runner.py::test_due_times_and_next` | [MIS-02](#mis-02) |
 | `tests/test_runner.py::test_enqueue_dedup_but_events_always_queue` | [MIS-04](#mis-04) |
-| `tests/test_runner.py::test_one_bad_mission_file_stops_no_other` | [MIS-02](#mis-02) |
 | `tests/test_runner.py::test_one_runner_at_a_time` | [MIS-04](#mis-04) |
 | `tests/test_runner.py::test_paused` | [MIS-05](#mis-05) |
 | `tests/test_runner.py::test_schedule_text` | [MIS-02](#mis-02) |
 | `tests/test_runner.py::test_section_parsing` | [MIS-11](#mis-11) |
 | `tests/test_runner.py::test_slugify_is_unique_and_ascii` | [MIS-06](#mis-06) |
 | `tests/test_runner.py::test_spend_window_query_window_is_utc` | [MIS-16](#mis-16) |
-| `tests/test_runner.py::test_update_validates_and_resume_skips_catch_up` | [MIS-03](#mis-03), [MIS-08](#mis-08) |
+| `tests/test_runner.py::test_update_validates_and_resume_skips_catch_up` | [MIS-08](#mis-08) |
 | `tests/test_runner.py::test_valid_schedule` | [MIS-02](#mis-02) |
+| `tests/test_runner_env.py::test_the_runner_environment_is_pinned_checksummed_and_follows_its_lock` | [PLT-37](#plt-37) |
 | `tests/test_runtime.py::test_a_bad_event_or_a_refused_batch_jams_nothing_and_a_spool_link_is_not_followed` | [OBS-04](#obs-04) |
 | `tests/test_runtime.py::test_a_declared_wait_is_not_a_stall` | [OBS-03](#obs-03) |
 | `tests/test_runtime.py::test_a_hermes_run_without_a_ref_joins_the_live_step_of_its_agent` | [TSK-09](#tsk-09) |
@@ -10802,11 +11008,6 @@ The Voice page shall show spoken questions answered a day and the share answered
 | `tests/test_team_roster.py::test_team_who_shows_an_agent_s_card_and_open_work_but_not_what_the_asker_may_not_see` | [SWM-108](#swm-108) |
 | `tests/test_team_roster.py::test_team_work_shows_runs_settled_work_and_help_given_to_others` | [SWM-108](#swm-108) |
 | `tests/test_telemetry.py::test_timeline_merges_sources_and_warns` | [OBS-06](#obs-06) |
-| `tests/test_temporal_upgrade.py::test_a_failing_step_restores_the_snapshot_and_starts_the_old_server_again` | [GEN-39](#gen-39) |
-| `tests/test_temporal_upgrade.py::test_a_step_back_a_major_version_and_a_skipped_minor_are_refused` | [GEN-39](#gen-39) |
-| `tests/test_temporal_upgrade.py::test_an_update_across_two_minor_versions_runs_each_schema_server_and_check_in_order` | [GEN-39](#gen-39) |
-| `tests/test_temporal_upgrade.py::test_the_pinned_version_is_in_the_step_table_with_the_same_images` | [GEN-39](#gen-39) |
-| `tests/test_temporal_upgrade.py::test_the_update_moves_temporal_first_and_stays_put_when_that_fails` | [GEN-39](#gen-39) |
 | `tests/test_termguard.py::test_a_commit_holding_a_forbidden_term_is_refused_and_a_clean_one_passes` | [SEC-22](#sec-22) |
 | `tests/test_termguard.py::test_a_push_of_a_commit_that_skipped_the_hooks_is_refused` | [SEC-22](#sec-22) |
 | `tests/test_termguard.py::test_the_runners_own_push_is_guarded_and_a_removed_line_is_no_leak` | [SEC-22](#sec-22) |

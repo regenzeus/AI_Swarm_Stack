@@ -1,0 +1,89 @@
+{
+  "active": true,
+  "connections": {
+    "On its schedule (30 8 * * *)": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Task #5: Home Assistant Voice speaker (one to try)",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Run now": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Task #5: Home Assistant Voice speaker (one to try)",
+            "type": "main"
+          }
+        ]
+      ]
+    }
+  },
+  "id": "aist238e0bb5aa21",
+  "name": "Task #5: Home Assistant Voice speaker (one to try)",
+  "nodes": [
+    {
+      "id": "2b48fc0f-315b-c02b-3e73-7a8885c1ec0d",
+      "name": "On its schedule (30 8 * * *)",
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "expression": "30 8 * * *",
+              "field": "cronExpression"
+            }
+          ]
+        }
+      },
+      "position": [
+        0,
+        0
+      ],
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2
+    },
+    {
+      "id": "d78cd29e-0adc-d6eb-1851-d008a8c58fcc",
+      "name": "Task #5: Home Assistant Voice speaker (one to try)",
+      "notes": "One run of the task: an occurrence of its plan (WFL-05).",
+      "parameters": {
+        "kind": "task",
+        "task": 5,
+        "title": "Task #5: Home Assistant Voice speaker (one to try)"
+      },
+      "position": [
+        260,
+        0
+      ],
+      "type": "CUSTOM.aistackStep",
+      "typeVersion": 1,
+      "webhookId": "b15a1ed7-f506-c64f-30e0-aa696e8c3987"
+    },
+    {
+      "id": "47d2abe1-2f15-4b57-c1a7-34f8c89e9d36",
+      "name": "Run now",
+      "notes": "Starts the job now, as its schedule would (POST).",
+      "parameters": {
+        "httpMethod": "POST",
+        "options": {},
+        "path": "run/task-5-home-assistant-voice-speaker-one-to-try"
+      },
+      "position": [
+        0,
+        160
+      ],
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "webhookId": "d308511e-ae1f-c843-d3ae-516577ca1714"
+    }
+  ],
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Berlin"
+  }
+}

@@ -1,0 +1,89 @@
+{
+  "active": false,
+  "connections": {
+    "On its schedule (0 1 * * *)": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Crew: Trial rotation",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Run now": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Crew: Trial rotation",
+            "type": "main"
+          }
+        ]
+      ]
+    }
+  },
+  "id": "aisce839b1f70773",
+  "name": "Crew: Trial rotation",
+  "nodes": [
+    {
+      "id": "2c30f425-ecb7-eea5-edb8-c5015e7b32b6",
+      "name": "On its schedule (0 1 * * *)",
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "expression": "0 1 * * *",
+              "field": "cronExpression"
+            }
+          ]
+        }
+      },
+      "position": [
+        0,
+        0
+      ],
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2
+    },
+    {
+      "id": "0cdc766f-82b1-19ac-6825-703353d11a49",
+      "name": "Crew: Trial rotation",
+      "notes": "The crew job rotation (rotation.service), as Run now starts it (WFL-05).",
+      "parameters": {
+        "job": "rotation",
+        "kind": "crew",
+        "title": "Crew: Trial rotation"
+      },
+      "position": [
+        260,
+        0
+      ],
+      "type": "CUSTOM.aistackStep",
+      "typeVersion": 1,
+      "webhookId": "27afd901-60ed-7ea4-d811-5010a1a9d400"
+    },
+    {
+      "id": "2848cfe7-b926-cc87-e19f-6a53437665da",
+      "name": "Run now",
+      "notes": "Starts the job now, as its schedule would (POST).",
+      "parameters": {
+        "httpMethod": "POST",
+        "options": {},
+        "path": "run/crew-trial-rotation"
+      },
+      "position": [
+        0,
+        160
+      ],
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "webhookId": "6f579d65-1ee1-61e6-babb-865e9d2ba5fa"
+    }
+  ],
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Berlin"
+  }
+}

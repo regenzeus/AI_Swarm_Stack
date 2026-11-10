@@ -144,8 +144,6 @@ if __name__ == "__main__":
             sys.exit("this deployment has no egress list (deployments/<name>/egress.txt): nothing to enforce")
         print("\n".join(rules(args[1], hosts)))
         sys.exit(0)
-    if args == ["customer"]:                     # for scripts: exit 0 when this deployment holds customer data (GEN-36)
-        sys.exit(0 if customer() else 1)
     if args == ["probe"]:
         hosts = egress_hosts()
         if hosts is None:

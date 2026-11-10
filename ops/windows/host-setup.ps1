@@ -27,3 +27,7 @@ Register-ScheduledTask -TaskName "ai-stack WSL keepalive" -Action $action -Trigg
 
 # 3) Publish Open WebUI on the tailnet only (Serve must be enabled once in the Tailscale admin).
 & "C:\Program Files\Tailscale\tailscale.exe" serve --bg --https=443 http://127.0.0.1:3080
+# n8n on its own tailnet port (WFL-01, docs/N8N-MIGRATION.md): webhooks at its root. The editor lives inside the app at
+# https://<pc>:8447/n8n/ (WFL-13); the second line is a direct fallback for when the app is down, at https://<pc>:8450/n8n/
+& "C:\Program Files\Tailscale\tailscale.exe" serve --bg --https=8450 http://127.0.0.1:5678
+& "C:\Program Files\Tailscale\tailscale.exe" serve --bg --https=8450 --set-path=/n8n http://127.0.0.1:5678

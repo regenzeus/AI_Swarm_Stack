@@ -45,9 +45,30 @@ def test_the_lock_is_held_across_processes(tmp_path):
 
 
 def test_a_new_timer_is_enabled_with_its_first_deploy_and_a_known_one_keeps_its_state(tmp_path):
-    (tmp_path / "crew-checker.timer").write_text("[Timer]\n")              # installed before: the owner may have switched it off
-    units = ["ops/systemd/crew-checker.timer", "ops/systemd/crew-coach.timer", "ops/systemd/crew-coach.service"]
-    assert deploy.new_timers(units, tmp_path) == ["crew-coach.timer"]
+    (tmp_path / "restore-drill.timer").write_text("[Timer]\n")             # installed before: the owner may have switched it off
+    units = ["ops/systemd/restore-drill.timer", "ops/systemd/stack-ready.timer", "ops/systemd/stack-ready.service"]
+    assert deploy.new_timers(units, tmp_path) == ["stack-ready.timer"]
+
+
+def test_a_unit_the_repository_dropped_goes_from_this_machine_with_the_next_deploy(tmp_path):
+    """WFL-12: a timer removed from the repository is stopped, disabled and deleted with its drop-ins, so it never fires
+    again beside n8n; a Docker drop-in goes at Docker's next start (a deploy never restarts Docker)."""
+    (tmp_path / "crew-coach.timer").write_text("[Timer]\n")
+    (tmp_path / "crew-coach.timer.d").mkdir()
+    (tmp_path / "crew-coach.timer.d/mission-control.conf").write_text("[Timer]\n")      # a schedule the app once set
+    (tmp_path / "docker.service.d").mkdir()
+    (tmp_path / "docker.service.d/old.conf").write_text("[Service]\n")
+    changed = ["ops/systemd/crew-coach.timer", "ops/systemd/docker-old.conf", "ops/systemd/backup.timer",
+               "ops/systemd/never-installed.timer", "ops/crew.py"]
+    gone = deploy.gone_units(changed)
+    assert gone == ["ops/systemd/crew-coach.timer", "ops/systemd/docker-old.conf", "ops/systemd/never-installed.timer"]
+    calls = []
+    assert deploy.remove_units(gone, tmp_path, sh=lambda *a: calls.append(a) or True) == ["crew-coach.timer", "old.conf"]
+    assert calls == [("systemctl", "--user", "disable", "--now", "crew-coach.timer")]
+    assert not any((tmp_path / n).exists() for n in ("crew-coach.timer", "crew-coach.timer.d", "docker.service.d/old.conf"))
+    src = (deploy.R / "ops/deploy.py").read_text()
+    main = src[src.index("def main("):]
+    assert main.index("remove_units(gone_units(changed)") < main.index('run("systemctl", "--user", "daemon-reload")')
 
 
 def test_a_card_change_restarts_the_swarm_service_so_the_agents_get_it():

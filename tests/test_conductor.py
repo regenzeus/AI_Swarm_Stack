@@ -22,8 +22,7 @@ PLAN = [{"step": "Find the facts", "agent": "scout", "why": "reads the web", "af
         {"step": "Summarise", "agent": "desk", "why": "writes briefings", "after": [2, 3]}]
 
 
-# K, the Conductor's fixture (a task with PLAN started, fake adapters, a fake runner), is in tests/conftest.py:
-# the engine's activity tests use the same one (docs/AI-STACK-PLAN.md WP5).
+# K, the Conductor's fixture (a task with PLAN started, fake adapters, a fake runner), is in tests/conftest.py.
 
 def tick(K):
     CD.tick(K.c, start_thread=lambda f: f())
@@ -208,30 +207,37 @@ def test_the_owner_can_cancel_and_every_planned_task_goes_to_the_conductor(K):
 
 
 def scheduled(K, plan, schedule="weekly mon 08:00"):
-    import missions as MM
     K.c.execute("update tasks set rhythm=?, spec=? where id=?", (json.dumps({"type": "schedule", "schedule": schedule}), json.dumps({"plan": plan}), K.tid))
     K.c.execute("delete from task_steps"); K.c.execute("delete from task_occ"); K.c.commit()
-    CD.M.next_due, CD.M.now = MM.next_due, MM.now
     CD.start(K.c, TK.row(K.c, K.tid))
-    return MM
 
 
-def test_a_scheduled_task_runs_at_once_then_each_time_from_its_template_with_its_own_trace(K):
-    MM = scheduled(K, [{"step": "Look it up", "agent": "scout", "why": "reads the web", "after": []}])
+def test_a_scheduled_task_runs_at_once_then_each_time_from_its_template_with_its_own_trace(K, monkeypatch):
+    """Its first run at once; every later one when its n8n workflow starts it (WFL-09): the runner never starts it by itself."""
+    import flows as FW
+    import n8n_jobs as NJ
+    import types
+    scheduled(K, [{"step": "Look it up", "agent": "scout", "why": "reads the web", "after": []}])
     tick(K); tick(K)
     t = TK.row(K.c, K.tid)
     assert t["status"] == "scheduled" and t["spec"]["result"].endswith("-1.md") and "Task #%d run 1 is done" % K.tid in K.sent[-1]
     assert [o["status"] for o in CD.occurrences(K.c, K.tid)] == ["done"] and ("end", f"task:{K.tid}", "done") in K.runs
-    tick(K)
-    assert len(CD.occurrences(K.c, K.tid)) == 1                                       # not due before Monday
-    K.c.execute("update task_occ set started=? where task=?", ((MM.now() - __import__("datetime").timedelta(days=8)).isoformat(), K.tid)); K.c.commit()
-    tick(K)
-    assert [o["occ"] for o in CD.occurrences(K.c, K.tid)] == [2, 1] and TK.row(K.c, K.tid)["status"] == "running"
-    assert ("start", f"task:{K.tid}.2", None) in K.runs and [s["occ"] for s in CD.steps(K.c, K.tid)] == [2]
-    tick(K)
-    assert ("start", f"task:{K.tid}.2:step:1", f"task:{K.tid}.2") in K.runs and CD.steps(K.c, K.tid, 1)[0]["status"] == "done"
+    K.c.execute("update task_occ set started='2020-01-01T00:00:00+00:00' where task=?", (K.tid,)); K.c.commit()
+    tick(K); tick(K)
+    assert len(CD.occurrences(K.c, K.tid)) == 1                                       # however long ago: never started here
+    FW.M = types.SimpleNamespace(db=K.conn, stop=CD.M.stop, log=print, event=lambda *a, **k: None)
+    seen = []
+    a = FW.run_task(K.c, "n8n-run-2", K.tid, sleep=lambda s: seen.append(tick(K)))   # n8n starts run 2; the worker runs it
+    assert a["status"] == "done" and a["occ"] == 2 and [o["occ"] for o in CD.occurrences(K.c, K.tid)] == [2, 1]
+    assert ("start", f"task:{K.tid}.2", None) in K.runs and ("start", f"task:{K.tid}.2:step:1", f"task:{K.tid}.2") in K.runs
+    assert CD.steps(K.c, K.tid, 1)[0]["status"] == "done" and TK.row(K.c, K.tid)["status"] == "scheduled"
+    wf = {"id": "aist0000000000aa", "active": True, "settings": {"timezone": "Europe/Berlin"}, "nodes": [
+        {"type": "n8n-nodes-base.scheduleTrigger", "parameters": {"rule": {"interval": [{"field": "cronExpression", "expression": "0 8 * * 1"}]}}},
+        {"type": "CUSTOM.aistackStep", "parameters": {"kind": "task", "task": K.tid}}]}
+    monkeypatch.setattr(NJ, "index", lambda repo=None, made=None: {("task", K.tid): {"id": wf["id"], "name": "x", "active": True, "cron": "0 8 * * 1",
+                                                                                      "tz": "Europe/Berlin", "file": "x.json", "made": False}})
     nxt = TK.state(K.c)["tasks"][0]
-    assert nxt["next_run"] and nxt["last_run"]["live"] in (f"task:{K.tid}", f"task:{K.tid}.2")
+    assert "T08:00" in nxt["next_run"] and nxt["last_run"]["live"] in (f"task:{K.tid}", f"task:{K.tid}.2")   # its workflow's next Monday 08:00
 
 
 def test_a_step_with_items_fans_out_in_parallel_and_the_next_waits_for_every_copy(K):

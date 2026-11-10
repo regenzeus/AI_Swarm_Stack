@@ -15,7 +15,7 @@ call to the code graph): brief() picks the files, what changes with them, how of
 the wiki's lines on them and what failed before. It is marked as data and says the code wins.
 
   python3 ops/repofacts.py build <name>            the facts of one repository now (make facts)
-  python3 ops/repofacts.py sync                    rebuild those whose HEAD moved (repofacts-sync.timer), one at a time
+  python3 ops/repofacts.py sync                    rebuild those whose HEAD moved (its n8n workflow, every 5 minutes), one at a time
   python3 ops/repofacts.py brief <name> <request>  print a brief (no history is changed; files by the request's words)
 """
 import fcntl

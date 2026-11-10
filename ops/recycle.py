@@ -3,7 +3,7 @@ so their memory does not pile up in swap (on 2 Nov they held 1.6 GB of the 3 GB 
 hour after a restart). Their data is on volumes; a restart takes seconds. Each night's memory before and after goes to
 /srv/ai/state/recycle.jsonl.
 
-  python3 ops/recycle.py          restart them when the stack is idle (recycle.timer, 03:50; waits up to an hour)
+  python3 ops/recycle.py          restart them when the stack is idle (its n8n workflow, 03:50; waits up to an hour)
 """
 import datetime as dt
 import json

@@ -1,0 +1,90 @@
+{
+  "active": false,
+  "connections": {
+    "On its schedule (* * * * *)": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Crew: Vault ingest",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Run now": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Crew: Vault ingest",
+            "type": "main"
+          }
+        ]
+      ]
+    }
+  },
+  "id": "aisc87723853354a",
+  "name": "Crew: Vault ingest",
+  "nodes": [
+    {
+      "id": "5aecf55f-c6dd-a1e2-60bf-3058ecef3fb9",
+      "name": "On its schedule (* * * * *)",
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "expression": "* * * * *",
+              "field": "cronExpression"
+            }
+          ]
+        }
+      },
+      "position": [
+        0,
+        0
+      ],
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2
+    },
+    {
+      "id": "6c3955f0-6a53-8b33-56cf-6afbb32c7f56",
+      "name": "Crew: Vault ingest",
+      "notes": "The crew job vault-ingest (vault-ingest.service), as Run now starts it (WFL-05).",
+      "parameters": {
+        "job": "vault-ingest",
+        "kind": "crew",
+        "title": "Crew: Vault ingest"
+      },
+      "position": [
+        260,
+        0
+      ],
+      "type": "CUSTOM.aistackStep",
+      "typeVersion": 1,
+      "webhookId": "eeff5a10-adde-db63-a001-2eb14f461d8f"
+    },
+    {
+      "id": "9d1988e6-8d01-20f1-c38c-d57c05e90fee",
+      "name": "Run now",
+      "notes": "Starts the job now, as its schedule would (POST).",
+      "parameters": {
+        "httpMethod": "POST",
+        "options": {},
+        "path": "run/crew-vault-ingest"
+      },
+      "position": [
+        0,
+        160
+      ],
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "webhookId": "57015918-7daa-b101-cf3c-0a426b2ef526"
+    }
+  ],
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "none",
+    "timezone": "Europe/Berlin"
+  }
+}

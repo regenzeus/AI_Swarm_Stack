@@ -78,6 +78,33 @@ def test_crew_actions_are_validated(C, monkeypatch):
     assert calls[-1] == ["systemctl", "--user", "start", "--no-block", "backup.service"]
 
 
+def test_the_review_and_the_board_answers_get_the_builders_clone_first_also_on_a_fresh_machine(C, monkeypatch):
+    """The maintainability review once failed before any model call: it read a workbench clone a fresh machine does not
+    have. The review, a crew agent's Board answers and a replay take the clone through the builder's own path first."""
+    import builds as B
+    import evals as EV
+    from pathlib import Path
+    calls = []
+    monkeypatch.setattr(B, "clone", lambda repo, slot=None: calls.append(("clone", repo)) or Path("/srv/ai/workbench/ai-stack"))
+    monkeypatch.setattr(B, "git", lambda path, *a, **k: calls.append(("git", *a)) or "")
+    monkeypatch.setattr(C, "save", lambda *a, **k: None)
+
+    def run(cmd, **k):
+        calls.append(("run", *cmd[:2]))
+        raise RuntimeError("the sandbox is not here in a test")
+    monkeypatch.setattr(C.subprocess, "run", run)
+    for go in (lambda: C.maintainability(None), lambda: C._ask_claude("answer", "tests"),
+               lambda: EV.ask({"id": "x", "model": "claude-subscription"}, "text")):
+        calls.clear()
+        with pytest.raises(RuntimeError, match="sandbox"):
+            go()
+        assert calls[0] == ("clone", "ai-stack") and calls[-1] == ("run", "docker", "exec")       # the clone first, then the sandbox
+    calls.clear()
+    with pytest.raises(RuntimeError):
+        C.maintainability(None)
+    assert calls[:2] == [("clone", "ai-stack"), ("git", "fetch", "-q", "origin")]              # the review reads origin's newest main
+
+
 def test_forget_soft_retires_only_the_given_facts(C, monkeypatch, tmp_path):
     C.M = types.SimpleNamespace(event=lambda *a, **k: None)
     monkeypatch.setattr(C, "OUT", tmp_path)

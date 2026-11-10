@@ -105,7 +105,7 @@ items:
     status: implemented
     parents: [SN-05, SN-09]
     sources: [images/mission-control/guide/18-crew.md]
-    verify: {method: inspection, by: [ops/skills_sync.py, ops/systemd/skills-sync.timer]}
+    verify: {method: inspection, by: [ops/skills_sync.py, n8n/workflows/crew-skill-keeper.json]}
   - id: AST-11
     title: The skill curator is gated by the benchmark
     statement: The weekly skill curation shall keep its changes only if the frozen benchmark's gate subset scores at
@@ -140,7 +140,7 @@ items:
     status: implemented
     parents: [SN-01]
     sources: [images/mission-control/guide/07-delivery.md]
-    verify: {method: inspection, by: [ops/digest.py, ops/systemd/digest.timer]}
+    verify: {method: inspection, by: [ops/digest.py, n8n/workflows/crew-daily-digest.json]}
   - id: AST-14
     title: Hermes never approves
     statement: Hermes' tools shall be able to read builds, request changes and re-run checks, and shall never be able

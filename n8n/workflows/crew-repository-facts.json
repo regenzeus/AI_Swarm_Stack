@@ -1,0 +1,90 @@
+{
+  "active": true,
+  "connections": {
+    "On its schedule (*/5 * * * *)": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Crew: Repository facts",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Run now": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Crew: Repository facts",
+            "type": "main"
+          }
+        ]
+      ]
+    }
+  },
+  "id": "aisc75c771a1fc07",
+  "name": "Crew: Repository facts",
+  "nodes": [
+    {
+      "id": "f63f33c1-3806-791b-fcfb-afe8bc1bf095",
+      "name": "On its schedule (*/5 * * * *)",
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "expression": "*/5 * * * *",
+              "field": "cronExpression"
+            }
+          ]
+        }
+      },
+      "position": [
+        0,
+        0
+      ],
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2
+    },
+    {
+      "id": "3d099cce-48ab-9606-0b5b-bd8a97d8cc90",
+      "name": "Crew: Repository facts",
+      "notes": "The crew job repofacts-sync (repofacts-sync.service), as Run now starts it (WFL-05).",
+      "parameters": {
+        "job": "repofacts-sync",
+        "kind": "crew",
+        "title": "Crew: Repository facts"
+      },
+      "position": [
+        260,
+        0
+      ],
+      "type": "CUSTOM.aistackStep",
+      "typeVersion": 1,
+      "webhookId": "712cb6de-3a7b-69b3-7821-a9f7e41d7f29"
+    },
+    {
+      "id": "e01f2d66-572b-6e13-07f6-9ce5ae4ef2f9",
+      "name": "Run now",
+      "notes": "Starts the job now, as its schedule would (POST).",
+      "parameters": {
+        "httpMethod": "POST",
+        "options": {},
+        "path": "run/crew-repository-facts"
+      },
+      "position": [
+        0,
+        160
+      ],
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "webhookId": "90778a64-3ab7-84a0-8acc-2739cffe796c"
+    }
+  ],
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "none",
+    "timezone": "Europe/Berlin"
+  }
+}

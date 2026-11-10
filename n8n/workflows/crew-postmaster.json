@@ -1,0 +1,89 @@
+{
+  "active": true,
+  "connections": {
+    "On its schedule (0 * * * *)": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Crew: Postmaster",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Run now": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Crew: Postmaster",
+            "type": "main"
+          }
+        ]
+      ]
+    }
+  },
+  "id": "aisc487a1dd9df8f",
+  "name": "Crew: Postmaster",
+  "nodes": [
+    {
+      "id": "07096063-e9ae-ba2d-ba5e-5286d02dc6f3",
+      "name": "On its schedule (0 * * * *)",
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "expression": "0 * * * *",
+              "field": "cronExpression"
+            }
+          ]
+        }
+      },
+      "position": [
+        0,
+        0
+      ],
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2
+    },
+    {
+      "id": "a902ff39-47a0-04f4-432a-7942e4c895a1",
+      "name": "Crew: Postmaster",
+      "notes": "The crew job postmaster (crew-postmaster.service), as Run now starts it (WFL-05).",
+      "parameters": {
+        "job": "postmaster",
+        "kind": "crew",
+        "title": "Crew: Postmaster"
+      },
+      "position": [
+        260,
+        0
+      ],
+      "type": "CUSTOM.aistackStep",
+      "typeVersion": 1,
+      "webhookId": "06e0bc47-8fef-17fb-89b7-e208bb048a88"
+    },
+    {
+      "id": "db39d460-44d3-15b7-99f3-2bade60fe05a",
+      "name": "Run now",
+      "notes": "Starts the job now, as its schedule would (POST).",
+      "parameters": {
+        "httpMethod": "POST",
+        "options": {},
+        "path": "run/crew-postmaster"
+      },
+      "position": [
+        0,
+        160
+      ],
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "webhookId": "a1921e3c-6467-fedf-ce6d-b68a1b366a2b"
+    }
+  ],
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Berlin"
+  }
+}

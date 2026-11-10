@@ -1,7 +1,0 @@
-[Unit]
-Description=One trial a night in the weekly rotation (TRL-14)
-[Timer]
-OnCalendar=*-*-* 01:00
-Persistent=false
-[Install]
-WantedBy=timers.target

@@ -15,14 +15,12 @@ gets what it needs under `environment:`, as `${NAME:?run via make}`.
 
 | Service | File | What it is |
 |---|---|---|
-| `postgres` | core | LiteLLM's database (keys, spend logs), and the engine's two databases under their own role |
+| `postgres` | core | LiteLLM's database (keys, spend logs), and n8n's database under its own role |
 | `litellm` | core | the model gateway: every model call and MCP tool server, one virtual key per agent |
 | `phoenix` | core | traces of the model calls and task runs |
 | `ollama` | core | the smoke test's tiny model, reachable only through LiteLLM with vk-smoke |
-| `temporal-db` | core | one-shot at each start: the engine's role and databases in `postgres`, safe to repeat (GEN-33) |
-| `temporal-schema` | core | one-shot at each start: the engine's schema, set up and moved to the pinned version |
-| `temporal` | core | the engine (Temporal): durable runs, waits, timers and task queues; on 127.0.0.1:7233 for the host runner only |
-| `temporal-ui` | core | Temporal's web UI for run histories, on 127.0.0.1:8233; it decodes payloads only through the codec server (GEN-36) |
+| `n8n-db` | core | one-shot at each start: n8n's role and database in `postgres`, safe to repeat (WFL-02) |
+| `n8n` | core | the workflow pillar (n8n, DEC-51): schedules, triggers, waits and the canvas; on 127.0.0.1:5678 for the runner and tailscale serve's direct port only; its editor is inside the app (`N8N_PATH=/n8n/`, SSE live updates, Mission Control proxies it on `stepnet`, WFL-14); the stack's steps through Mission Control's step service on `stepnet` (WFL-01, WFL-05) |
 | `hermes` | apps | the assistant (Hermes Agent) with its profiles: main, scout, mission, curator |
 | `hermes-dashboard` | apps | Hermes' own admin UI, in Hermes' network namespace |
 | `gate-hermes-dashboard` | apps | the tailnet sign-in gate in front of the Hermes dashboard |

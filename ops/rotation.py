@@ -1,4 +1,4 @@
-"""TRL-14: the trials as a weekly rotation, one a night at 01:00 (rotation.timer), never two at once and never while the
+"""TRL-14: the trials as a weekly rotation, one a night at 01:00 (its n8n workflow), never two at once and never while the
 stack works (the same idle test as the nightly restart, ops/recycle.py: a mission, a task, a build, a trial, a
 landing, a backup or a crew job). Busy at 01:00, it looks again every 10 minutes for two hours, then skips the night.
 Each night's pick, start or skip goes to /srv/ai/state/rotation.jsonl; each run's score is the trial's own record

@@ -335,4 +335,23 @@ items:
       tests/test_unknown.py::test_a_nas_that_took_the_connection_and_stopped_answering_is_not_asleep,
       tests/test_unknown.py::test_the_postmaster_s_unknown_reaches_its_card_on_the_board]}
     trace: [ops/crew.py, ops/checker.py, ops/keeper.py, ops/trials.py, ops/builds.py, ops/decisions.py, ops/check.sh, ops/improve.py, ops/postmaster.py, images/mission-control/web/static/app-memory.js, ops/builds.review.py]
-
+  - id: QA-27
+    title: The landing's tests run in parallel
+    statement: The checks shall run the whole test suite over worker processes (six by default, leaving the
+      running stack two threads), each with a temp folder of its own, so a landing waits minutes, not a quarter of an
+      hour, and no test meets another's files.
+    type: quality
+    priority: should
+    status: partial
+    parents: [SN-13]
+    sources: ['owner 2026-11-10: I do not always want you to wait 15min. This is too slow. ... Parallel tests.']
+    rationale: 10 Nov 2026 a landing took about 15 minutes, 12 to 14 of them for about 1,600 tests on one of eight cores;
+      a lock file another user had left in /tmp failed one landing.
+    acceptance: 'Test: the checks run pytest with workers when pytest-xdist is there, and CI installs it; each test
+      process has its own temp folder.'
+    gap: the builder image does not carry pytest-xdist yet (a rebuild from scratch after the build cache was pruned);
+      it is installed in the running builder container, and the image takes it at its next rebuild.
+    verify: {method: test, by: ['tests/test_parallel_tests.py::test_the_checks_run_the_suite_over_workers_when_xdist_is_there',
+      'tests/test_parallel_tests.py::test_each_test_process_has_a_temp_folder_of_its_own',
+      'tests/test_parallel_tests.py::test_the_publish_runs_the_snapshots_tests_over_workers_too']}
+    trace: [ops/check.sh, ops/publish.py, tests/conftest.py, tests/requirements.txt]

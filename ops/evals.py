@@ -90,6 +90,8 @@ def ask(card, text, ref=""):
     model = card.get("model")
     if model == "claude-subscription":
         import runtime as RTM
+        import crew as CR
+        CR.main_clone(fetch=False)                    # its working folder in the sandbox, also on a fresh machine
         p = subprocess.run(["docker", "exec", "-u", "hermes", *MP.claude_args(), "-w", "/work/ai-stack", *RTM.env_args(),
                             "-e", f"AISTACK_AGENT=claude-eval-{card['id']}", "-e", f"AISTACK_TITLE=replay of {card['id']} {ref}", BUILDER,
                             # limit: stops, a replay is one answer, no tools

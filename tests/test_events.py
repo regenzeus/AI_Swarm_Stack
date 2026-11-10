@@ -72,7 +72,7 @@ def test_the_local_sources_each_fire(B, monkeypatch):
     import inbox as IN
     import tasks as TK
     monkeypatch.setattr(TK, "create", B.create)                                    # task and mission events start tasks the usual way
-    for src, param in (("forgejo", "ai-stack"), ("mail", "invoice"), ("house", "front door"), ("file", ".pdf"), ("schedule", "every 1h"), ("task", ""), ("mission", "")):
+    for src, param in (("forgejo", "ai-stack"), ("mail", "invoice"), ("house", "front door"), ("file", ".pdf"), ("task", ""), ("mission", "")):
         rule(B, source=src, param=param, name=f"on {src}")
     monkeypatch.setenv("FORGEJO_TOKEN", "x")
     monkeypatch.setattr(Bu, "repos", lambda: ["ai-stack"])
@@ -97,12 +97,11 @@ def test_the_local_sources_each_fire(B, monkeypatch):
     EV.files(B.c, folder=d, create=B.create)                                      # baseline
     (d / "scan.pdf").write_text("x")
     EV.files(B.c, folder=d, create=B.create)
-    EV.schedules(B.c, create=B.create)
     EV.task_done(B.c, {"id": 7, "title": "RAM check", "goal": "g"}, "done")
     EV.mission_event(B.c, "copper", {"kind": "news", "trigger": "News about copper", "summary": "3 new articles"})
     srcs = [r["source"] for r in B.c.execute("select source from bus where baseline=0 order by id").fetchall()]
-    assert srcs == ["forgejo", "mail", "house", "file", "schedule", "task", "mission"]
-    assert [f["decision"] for f in fired(B)] == ["fired"] * 7 and len(B.made) == 7
+    assert srcs == ["forgejo", "mail", "house", "file", "task", "mission"]
+    assert [f["decision"] for f in fired(B)] == ["fired"] * 6 and len(B.made) == 6
     titles = [r["title"] for r in B.c.execute("select title from bus where baseline=0 order by id").fetchall()]
     assert titles[:4] == ["ai-stack: Fix the wiki map", "Invoice 42", "Front door: off → on", "scan.pdf"]
     monkeypatch.setattr(IN, "granted", lambda scope="read": False)
@@ -112,11 +111,11 @@ def test_the_local_sources_each_fire(B, monkeypatch):
 
 def test_mail_and_forgejo_are_read_only_while_a_rule_asks_and_a_baseline_is_not_new(B, monkeypatch):
     calls = []
-    for f in ("schedules", "house", "files", "forgejo", "mail"):
+    for f in ("house", "files", "forgejo", "mail"):
         monkeypatch.setattr(EV, f, lambda c, f=f: calls.append(f))
     EV._last.update(local=0, mail=0, web=10 ** 12)
     EV.tick(B.c)
-    assert calls == ["schedules", "house", "files"] and EV.state(B.c)["bus"]["sources"]["mail"]["off"] == "no rule asks for it"
+    assert calls == ["house", "files"] and EV.state(B.c)["bus"]["sources"]["mail"]["off"] == "no rule asks for it"
     rule(B, source="mail", param="invoice")
     EV._last.update(local=0)
     EV.tick(B.c)
@@ -169,7 +168,8 @@ def test_breaking_news_is_three_publishers_on_one_new_story_within_30_minutes(B)
     assert EV.state(B.c)["bus"]["ratings"] == {"right": 1, "not_news": 0, "raised": 1}
 
 
-def test_rules_are_checked_when_saved_and_schedules_come_due():
+def test_rules_are_checked_when_saved_and_a_time_is_no_source():
+    """WFL-09: a time is n8n's (a workflow's Schedule trigger), so a rule on a schedule is refused like any unknown source."""
     c = sqlite3.connect(":memory:")
     c.row_factory = sqlite3.Row
     EV.table(c)
@@ -179,9 +179,6 @@ def test_rules_are_checked_when_saved_and_schedules_come_due():
                 {"source": "price", "param": "ACME"}, {"source": "schedule", "param": "at noon"}, {"source": "news", "param": "copper", "task": "go"}):
         with pytest.raises(ValueError):
             EV.save_rule(c, {"name": "x rule", "task": "Tell me about it", **{("when" if k == "source" else k): v for k, v in bad.items()}})
-    t = dt.datetime(2026, 11, 2, 7, 5).astimezone()                               # a Monday
-    assert EV.due("weekdays 07:00", None, t) and not EV.due("weekdays 07:00", t.isoformat(), t)
-    assert not EV.due("weekly sat,sun 07:00", None, t) and EV.due("every 6h", (t - dt.timedelta(hours=7)).isoformat(), t)
-    assert not EV.due("daily 08:00", None, t)
+    assert "schedule" not in EV.SOURCES and not hasattr(EV, "schedules")
     app = "".join(webjs.app_js().split("rule_save")[1:2])
     assert "when: f.source.value" in app[:200]                                    # the form sends "when", which the server leaves alone

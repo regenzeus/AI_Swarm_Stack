@@ -2,13 +2,14 @@
 and the stack with it (10 Nov 2026, 03:36: a night of image builds grew the Docker build cache to 52 GB; C: had 0.2 GB
 left and the distro would not start again). Every 20 s the runner reads C: free space from the host probe
 (ops/windows/host-probe.ps1) and, when it runs low, prunes the Docker build cache (it only makes builds faster; images,
-containers and volumes stay) and tells the owner; nearly full, it tells them at once what is left.
+containers and volumes stay) and tells the owner; nearly full, it tells them at once what is left. The space the
+cache leaves inside WSL is reused by WSL without growing its disk file, so the guard acts only when C: itself runs low.
   python3 ops/diskguard.py     the reading now and what the guard would do"""
 import time
 
-LOW_GB = 20                    # below this free on C:, the build cache goes
-CLEAR_GB = 25                  # above this again, the next low is a new episode (no flapping alerts)
-CRIT_GB = 6                    # below this, an urgent alert: WSL is close to stopping
+LOW_GB = 10                    # below this free on C:, the build cache goes (20 wiped it every hour: C: sits near 14 GB)
+CLEAR_GB = 13                  # above this again, the next low is a new episode (no flapping alerts)
+CRIT_GB = 5                    # below this, an urgent alert: WSL is close to stopping
 RELIEF_EVERY_S = 3600          # limit: paces, at most one prune an hour (a second prune of an empty cache frees nothing)
 ALERT_EVERY_S = 3600           # limit: drops, at most one urgent alert an hour (the reading repeats every 20 s)
 PRUNE = (("docker", "builder", "prune", "-af"),   # cap: the whole unused build cache; the next build makes its layers again

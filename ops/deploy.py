@@ -15,7 +15,7 @@ One deploy at a time (PLT-10): every deploy, from the builder or a session, hold
 waits up to LOCK_WAIT seconds and then gives up without touching the stack (exit 1). Sessions also hold
 ~/.aistack-land.lock around merge + deploy; that is a different file, so the two never deadlock.
 """
-import fcntl, json, os, re, subprocess, sys, time, urllib.request
+import fcntl, json, os, re, shutil, subprocess, sys, time, urllib.request
 from pathlib import Path
 
 R = Path(__file__).resolve().parent.parent
@@ -121,6 +121,29 @@ def new_timers(units, dest):
     owner switched off keeps its state, because its file is already installed."""
     return [Path(f).name for f in units if f.endswith(".timer") and not (Path(dest) / Path(f).name).exists()
             and DEPLOY.unit_feature(R / f) in DEPLOY.ON]          # a timer of a feature that is off is not started (GEN-13)
+
+
+def gone_units(changed, root=R):
+    """The files of ops/systemd this deploy removes from the repository."""
+    return [f for f in changed if f.startswith("ops/systemd/") and not (Path(root) / f).exists()]
+
+
+def remove_units(gone, dest, sh=None):
+    """A unit the repository no longer has goes from this machine too: stopped and disabled, its installed file and its
+    drop-ins deleted (WFL-12: a timer removed from the repository would otherwise fire on). The caller reloads systemd.
+    -> the names removed."""
+    sh = sh or run
+    out = []
+    for f in gone:
+        target = unit_target(f, dest)
+        if not target.exists():
+            continue
+        if target.parent == Path(dest) and target.suffix in (".timer", ".service"):
+            sh("systemctl", "--user", "disable", "--now", target.name)
+        target.unlink()
+        shutil.rmtree(target.with_name(target.name + ".d"), ignore_errors=True)    # its drop-ins (a schedule the app once set)
+        out.append(target.name)
+    return out
 
 
 def unit_target(f, dest):
@@ -234,7 +257,12 @@ def main(old, new):
         run("docker", "restart", "aistack-hermes-1")
         # the dashboard and its gate live in Hermes' network namespace: a restarted Hermes leaves them without network
         run("docker", "restart", "aistack-hermes-dashboard-1", "aistack-gate-hermes-dashboard-1")
+    gone = remove_units(gone_units(changed), Path.home() / ".config/systemd/user")
+    for n in gone:
+        print(f"unit {n} removed: the repository no longer has it", flush=True)
     units = [f for f in changed if f.startswith("ops/systemd/") and (R / f).exists()]
+    if gone and not units:
+        run("systemctl", "--user", "daemon-reload")
     if units:
         dest = Path.home() / ".config/systemd/user"
         fresh = new_timers(units, dest)
@@ -249,6 +277,9 @@ def main(old, new):
             n = Path(f).name
             if n != "missions.service" and subprocess.run(["systemctl", "--user", "is-active", "-q", n]).returncode == 0:
                 run("systemctl", "--user", "restart", n)
+    if any(f.startswith(("n8n/workflows/", "compose/")) for f in changed):    # WFL-08: the repository's workflows into n8n
+        healthy("http://127.0.0.1:5678/healthz")
+        run("python3", "ops/n8n_sync.py", "import")
     if runner_changed(changed):
         print("RESTART_RUNNER", flush=True)       # every module the runner may import (builds, cleanup, telemetry, ...)
     if any(f.startswith("ops/windows/") for f in changed):

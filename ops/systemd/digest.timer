@@ -1,8 +1,0 @@
-# feature: telegram
-[Unit]
-Description=Morning digest on Telegram
-[Timer]
-OnCalendar=*-*-* 07:30
-Persistent=true
-[Install]
-WantedBy=timers.target

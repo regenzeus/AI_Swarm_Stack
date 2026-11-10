@@ -1,0 +1,89 @@
+{
+  "active": true,
+  "connections": {
+    "On its schedule (30 4 * * 2)": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Crew: Test agent",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Run now": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Crew: Test agent",
+            "type": "main"
+          }
+        ]
+      ]
+    }
+  },
+  "id": "aisc5f110c2bd73f",
+  "name": "Crew: Test agent",
+  "nodes": [
+    {
+      "id": "ce9b5a06-dd20-7ada-0922-0753ad86ae5c",
+      "name": "On its schedule (30 4 * * 2)",
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "expression": "30 4 * * 2",
+              "field": "cronExpression"
+            }
+          ]
+        }
+      },
+      "position": [
+        0,
+        0
+      ],
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2
+    },
+    {
+      "id": "bbf13772-ace3-a385-26dd-43c7397803b5",
+      "name": "Crew: Test agent",
+      "notes": "The crew job tests (crew-tests.service), as Run now starts it (WFL-05).",
+      "parameters": {
+        "job": "tests",
+        "kind": "crew",
+        "title": "Crew: Test agent"
+      },
+      "position": [
+        260,
+        0
+      ],
+      "type": "CUSTOM.aistackStep",
+      "typeVersion": 1,
+      "webhookId": "a9353dea-bd8c-abac-eca0-de93f2a28270"
+    },
+    {
+      "id": "4d6ed540-7bc8-e015-daa6-e7502917ef00",
+      "name": "Run now",
+      "notes": "Starts the job now, as its schedule would (POST).",
+      "parameters": {
+        "httpMethod": "POST",
+        "options": {},
+        "path": "run/crew-test-agent"
+      },
+      "position": [
+        0,
+        160
+      ],
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "webhookId": "029de787-c3f8-8d4e-eb3e-101f63b97576"
+    }
+  ],
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Berlin"
+  }
+}

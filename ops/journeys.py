@@ -2,7 +2,7 @@
 """Journey checks (TSK-32): the owner's journeys followed end to end, because unit tests check parts and the owner uses
 journeys (six faults the tests missed: the e-mail headline, the weekly window, Chinese search, the Makefile, a card that
 was no link, a page wider than the phone). On demand (`make journeys`) and nightly (the Journey checks crew job,
-crew-journeys.timer); each failure is an alert on the health board (ops/crew.py journey_issues).
+its n8n workflow at 04:10); each failure is an alert on the health board (ops/crew.py journey_issues).
 
   python3 ops/journeys.py [all|make|task|decide|email|routes|tools|selftest]      exit 1 when a journey fails
 
@@ -163,7 +163,7 @@ def check_task(rec=None):
             x.row_factory = sqlite3.Row
             return x
         ns = types.SimpleNamespace(db=conn, event=lambda *a, **k: None, log=lambda *a, **k: None, paused=MM.paused, VAULT=d, PUBLIC=d / "public",
-                                   HOME=d, vault_commit=lambda paths, msg: None, stop=threading.Event(), next_due=MM.next_due, now=MM.now,
+                                   HOME=d, vault_commit=lambda paths, msg: None, stop=threading.Event(), now=MM.now,
                                    valid_schedule=MM.valid_schedule, X=types.SimpleNamespace(APP="https://app", clean_triggers=lambda t: t or []),
                                    notify_task=lambda tid, title, what: sent.append((f"Task #{tid} {what}", {})))
 

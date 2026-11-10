@@ -1,0 +1,56 @@
+{
+  "active": true,
+  "connections": {
+    "Self-test called": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Ask the scout",
+            "type": "main"
+          }
+        ]
+      ]
+    }
+  },
+  "id": "aistackSelfTest1",
+  "name": "Stack self-test",
+  "nodes": [
+    {
+      "id": "5e0c2d8e-2b77-4d0e-9a8f-0c6a1b7f2a01",
+      "name": "Ask the scout",
+      "parameters": {
+        "agent": "scout",
+        "brief": "This is a self-test of the n8n step service. Answer with exactly one word: ready",
+        "kind": "agent",
+        "title": "Stack self-test"
+      },
+      "position": [
+        260,
+        0
+      ],
+      "type": "CUSTOM.aistackStep",
+      "typeVersion": 1,
+      "webhookId": "5e0c2d8e-2b77-4d0e-9a8f-0c6a1b7f2a13"
+    },
+    {
+      "id": "5e0c2d8e-2b77-4d0e-9a8f-0c6a1b7f2a02",
+      "name": "Self-test called",
+      "parameters": {
+        "httpMethod": "POST",
+        "options": {},
+        "path": "stack-self-test"
+      },
+      "position": [
+        0,
+        0
+      ],
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "webhookId": "5e0c2d8e-2b77-4d0e-9a8f-0c6a1b7f2a12"
+    }
+  ],
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

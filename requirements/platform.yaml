@@ -75,7 +75,8 @@ items:
   - id: PLT-08
     title: Deploy rebuilds what changed
     statement: When a change is deployed, ops/deploy.py shall rebuild the changed images, recreate their services,
-      reconfigure the Hermes profiles, install changed units (enabling a timer it brings for the first time), restart the runner when one of its modules changed
+      reconfigure the Hermes profiles, install changed units (enabling a timer it brings for the first time, and stopping,
+      disabling and deleting a unit the repository dropped), restart the runner when one of its modules changed
       and the swarm service when the agent cards changed,
       and then run the health checks and the smoke test.
     type: functional
@@ -85,6 +86,7 @@ items:
     sources: [docs/MISSION-CONTROL.md]
     verify: {method: test, by: [tests/test_builds.py::test_approved_build_merges_deploys_or_rolls_back, tests/test_cleanup.py::test_deploy_restarts_the_runner_for_any_of_its_modules,
       tests/test_deploy.py::test_a_new_timer_is_enabled_with_its_first_deploy_and_a_known_one_keeps_its_state,
+      tests/test_deploy.py::test_a_unit_the_repository_dropped_goes_from_this_machine_with_the_next_deploy,
       tests/test_deploy.py::test_a_card_change_restarts_the_swarm_service_so_the_agents_get_it]}
     findings: [FND-37]
     trace: [ops/deploy.py]
@@ -212,7 +214,7 @@ items:
     parents: [SN-08, CST-08]
     sources: [UPGRADE.md]
     verify: {method: test, by: [tests/test_upgrade_check.py::test_every_pin_is_read_and_the_ones_it_missed_are_in, tests/test_upgrade_check.py::test_a_failed_lookup_is_a_row_and_part_of_the_message]}
-    trace: [ops/upgrade_check.py, ops/systemd/upgrade-check.timer]
+    trace: [ops/upgrade_check.py, n8n/workflows/crew-upgrade-check.json]
   - id: PLT-20
     title: The lock file matches what runs
     statement: versions.lock shall record, per container, the image and digest that runs (marking a container that runs
@@ -267,7 +269,7 @@ items:
   - id: PLT-24
     title: One kind of job
     statement: Missions, crew jobs and planned work shall all be tasks with a rhythm, a door, a definition of done and a
-      page; machine upkeep stays on system timers but reports each run as a task run, so that one list and one audit
+      page; upkeep that must run when n8n is down stays on system timers but reports each run as a task run, so that one list and one audit
       show everything that runs.
     type: functional
     priority: should
@@ -322,13 +324,14 @@ items:
     verify: {method: test, by: [tests/test_recycle.py::test_busy_names_what_runs_and_ignores_a_stale_task,
       tests/test_recycle.py::test_an_idle_night_restarts_the_three_and_logs_memory_before_and_after,
       tests/test_recycle.py::test_a_busy_hour_skips_the_night_without_restarting]}
-    trace: [ops/recycle.py, ops/systemd/recycle.timer, ops/systemd/recycle.service, ops/windows/host-setup.ps1]
+    trace: [ops/recycle.py, n8n/workflows/crew-nightly-restart.json, ops/systemd/recycle.service, ops/windows/host-setup.ps1]
   - id: PLT-28
     title: Nothing starts against a stack that is not up
     statement: The runner and every scheduled job shall first ask whether the stack is up (the boot check done, Docker
       answering, the services every job leans on running and not paused, the gateway live). Until it is, the runner shall
       start nothing and keep queued runs queued; a job shall wait or be skipped, not fail; a run the stack went away under
-      shall wait and run again; and jobs the PC slept through shall catch up one after the other. No health alert shall go
+      shall wait and run again; and the kept timers' jobs the PC slept through (the backup, the restore drill) shall
+      catch up one after the other. No health alert shall go
       out during a start or while the stack is down, and the hours the PC was off shall not make a job overdue. If the stack
       stays down for 10 minutes, one message shall name the cause, and one shall say when it is back.
     type: functional
@@ -389,6 +392,8 @@ items:
     sources: ['chat 2026-11-04: When I start PC everything should go online and working again.']
     verify: {method: test, by: [tests/test_boot.py::test_the_first_check_of_a_boot_restarts_hermes_opens_the_gate_logs_it_and_says_so_once,
       tests/test_boot.py::test_missing_tools_still_open_the_gate_say_what_is_missing_and_fail_the_unit,
+      tests/test_boot.py::test_the_check_waits_only_for_tools_the_main_key_is_granted,
+      tests/test_boot.py::test_set_up_jobs_that_ran_once_are_not_counted_as_down,
       tests/test_boot.py::test_the_message_names_services_that_did_not_come_up_and_a_slow_docker]}
     trace: [ops/stack_ready.py, ops/missions.py, images/mission-control/web/static/app.js]
   - id: PLT-31
@@ -477,15 +482,16 @@ items:
     trace: [ops/wsl-memory.sh, ops/bootstrap-wsl-1-root.sh]
   - id: PLT-36
     title: A full Windows disk never stops the stack unannounced
-    statement: "Every 20 s the runner shall read the free space on Windows C:, which holds WSL's whole disk; below 20 GB
+    statement: "Every 20 s the runner shall read the free space on Windows C:, which holds WSL's whole disk; below 10 GB
       it shall prune the unused Docker build cache (at most once an hour, never images in use, containers or volumes) and
-      tell the owner once per episode, and below 6 GB it shall alert the owner urgently, at most once an hour."
+      tell the owner once per episode, and below 5 GB it shall alert the owner urgently, at most once an hour."
     type: constraint
     priority: must
     status: implemented
     acceptance: 'Test: a low reading prunes the build cache and dangling images and tells the owner once; a nearly full
-      one also alerts urgently, paced to once an hour; enough space or no reading does nothing; recovery above 25 GB
-      ends the episode; the runner checks every host reading.'
+      one also alerts urgently, paced to once an hour; enough space or no reading does nothing; recovery above 13 GB
+      ends the episode; the runner checks every host reading. (10 Nov 2026: 20 GB wiped the cache every hour while C: sat near
+      14 GB, so every image build started from nothing.)'
     rationale: "10 Nov 2026, 03:36: a night of image builds grew the Docker build cache to 52 GB and the WSL disk file to
       135 GB; C: reached 0.2 GB free, WSL stopped and would not start (E_FAIL), and the owner's phone got HTTP 501. The
       Stack page showed C:'s free space, but nothing acted on it."
@@ -496,3 +502,17 @@ items:
       'tests/test_diskguard.py::test_enough_space_or_no_reading_does_nothing_and_recovery_ends_the_episode',
       'tests/test_diskguard.py::test_the_runner_checks_every_reading_of_the_host_probe']}
     trace: [ops/diskguard.py, ops/missions.py]
+  - id: PLT-37
+    title: The runner has its own pinned Python environment
+    statement: The host runner shall run in a Python environment of its own, outside the system Python, made by uv
+      (pinned by version and checksum, no sudo) from a lock with a hash for every package, and made again only when the
+      lock changes; the tests shall use the same pins.
+    type: constraint
+    priority: must
+    status: implemented
+    acceptance: 'Test: uv is pinned by version and checksum, the lock holds the pins with their hashes, the tests use the
+      same pins, and the runner unit runs in that environment.'
+    parents: [SN-13]
+    sources: [DEC-52]
+    verify: {method: test, by: ['tests/test_runner_env.py::test_the_runner_environment_is_pinned_checksummed_and_follows_its_lock']}
+    trace: [ops/runner_env.sh, ops/runner-requirements.txt, ops/runner-requirements.lock, tests/requirements.txt, ops/systemd/missions.service]

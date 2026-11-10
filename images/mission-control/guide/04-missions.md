@@ -136,7 +136,7 @@ note: Choose briefing or task, give it a title and a goal, pick a schedule and w
 | `every 6h` | every 6 hours (1 to 24) |
 | `manual` | only when you start it |
 
-If the PC was off at the scheduled time, the run catches up once when it's back (within 20 hours).
+A mission's schedule becomes its workflow in n8n, which starts each run; change the time there (Workflows) once it has one. If the PC was off at the scheduled time, that run does not happen; the next one comes at its next time.
 
 ## Running, pausing, archiving
 

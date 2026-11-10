@@ -18,23 +18,30 @@ items:
   - id: MIS-02
     title: Schedules
     statement: The runner shall accept the schedules daily HH:MM, weekdays HH:MM, weekly <days> HH:MM, every Nh (1 to 24)
-      and manual, refuse any other text, and compute each mission's next run from it.
+      and manual and refuse any other text; a mission's schedule shall become its task's n8n workflow (WFL-09), from
+      which its next run is read.
     type: functional
     priority: must
     status: implemented
     parents: [SN-01]
     sources: [images/mission-control/guide/04-missions.md]
-    verify: {method: test, by: [tests/test_runner.py::test_a_slot_keeps_its_own_days_offset_across_a_clock_change, tests/test_runner.py::test_one_bad_mission_file_stops_no_other, tests/test_runner.py::test_valid_schedule, tests/test_runner.py::test_due_times_and_next, tests/test_runner.py::test_schedule_text]}
+    verify: {method: test, by: [tests/test_runner.py::test_valid_schedule, tests/test_runner.py::test_schedule_text,
+      tests/test_n8n_move.py::test_a_jobs_schedule_and_next_run_come_from_its_workflows_cron,
+      tests/test_n8n_move.py::test_a_missions_schedule_goes_to_its_task_and_then_its_workflow_holds_it]}
+    trace: [ops/missions.py, ops/missions.requests.py, ops/n8n_jobs.py]
   - id: MIS-03
     title: A missed run catches up once
     statement: When the PC was off at a scheduled time, the runner shall run the mission once when it is back (within
       20 hours), never for a time before the mission was created, and not after a resume.
     type: functional
     priority: must
-    status: implemented
+    status: deprecated
+    superseded_by: WFL-09
+    reason: "DEC-51: n8n starts every scheduled run since 10 Nov 2026 and the runner's own schedule check is removed;
+      n8n's schedule trigger does not catch up a time the PC was off (WFL-09's gap)."
     parents: [SN-13]
     sources: [images/mission-control/guide/04-missions.md]
-    verify: {method: test, by: [tests/test_runner.py::test_check_schedules_catches_up_once_and_not_before_created, tests/test_runner.py::test_update_validates_and_resume_skips_catch_up]}
+    verify: {method: inspection, by: [docs/N8N-MIGRATION.md]}
   - id: MIS-04
     title: One run at a time
     statement: The runner shall run missions one at a time from a queue, drop a duplicate queued run of the same mission

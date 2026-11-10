@@ -1,0 +1,297 @@
+# Workflows: n8n as the stack's workflow pillar, deciding when work starts and in what order; the stack's services
+# do the work (docs/N8N-MIGRATION.md, DEC-51).
+area: Workflows
+prefix: WFL
+items:
+  - id: WFL-01
+    title: n8n is part of the core
+    statement: n8n shall run as a core service on every deployment, its image pinned by digest in versions.env, its
+      port published on 127.0.0.1 only and opened to the owner on the tailnet, never on the internet.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05]
+    sources: [DEC-51, docs/N8N-MIGRATION.md]
+    acceptance: 'Test: the compose core has n8n without a profile, after its database job; the image carries a digest;
+      every published port is on 127.0.0.1.'
+    verify: {method: test, by: ['tests/test_n8n_service.py::test_n8n_is_part_of_the_core_and_starts_after_its_database',
+      'tests/test_n8n_service.py::test_the_n8n_image_is_pinned_by_digest',
+      'tests/test_n8n_service.py::test_n8n_is_reached_only_from_this_machine']}
+    trace: [compose/core.yaml, versions.env]
+  - id: WFL-02
+    title: n8n keeps its data in the stack's Postgres
+    statement: n8n shall use its own role and database in the stack's Postgres, made by a one-shot job that is safe to
+      repeat, so the nightly backup holds its workflows, credentials and executions; its database password and the key
+      that encrypts its stored credentials shall come from the sops secrets.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05, SN-13]
+    sources: [DEC-51, docs/N8N-MIGRATION.md]
+    acceptance: 'Test: n8n-db runs the setup script with the admin and n8n passwords; n8n reads its database and
+      encryption key from variables that make up refuses to start without; the boot check counts n8n-db as a set-up job.'
+    verify: {method: test, by: ['tests/test_n8n_service.py::test_n8n_uses_its_own_role_database_and_secrets',
+      'tests/test_n8n_service.py::test_the_database_setup_is_safe_to_repeat',
+      'tests/test_n8n_service.py::test_the_boot_check_counts_the_database_job_as_set_up']}
+    trace: [config/n8n/db.sh, compose/core.yaml, ops/stack_ready.py]
+  - id: WFL-03
+    title: n8n sends nothing home and runs no shell command
+    statement: n8n shall send no telemetry, version pings or survey, and its Execute Command node shall stay off; a
+      command runs only at a place, approved by its fingerprint (GEN-22).
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-08]
+    sources: [DEC-51, docs/N8N-MIGRATION.md]
+    acceptance: 'Test: the service sets diagnostics, version notifications and personalisation off and lists the
+      Execute Command and local file nodes as excluded.'
+    verify: {method: test, by: ['tests/test_n8n_service.py::test_n8n_sends_nothing_home_and_keeps_its_command_node_off']}
+    trace: [compose/core.yaml]
+  - id: WFL-04
+    title: n8n's history stays small
+    statement: n8n shall prune execution data older than 30 days.
+    type: quality
+    priority: should
+    status: implemented
+    parents: [SN-13]
+    sources: [DEC-51]
+    acceptance: 'Test: pruning is on with a 720-hour age, tagged as a limit.'
+    verify: {method: test, by: ['tests/test_n8n_service.py::test_n8n_prunes_executions_after_30_days']}
+    trace: [compose/core.yaml]
+  - id: WFL-05
+    title: Steps run through one step service
+    statement: n8n shall start every step of the stack's own work through Mission Control's step service, which hands
+      it to the runner and returns at once; the runner calls n8n's resume URL with the result, also after a restart of
+      either side. The step kinds are agent, crew, task, ask, notify, build (a coding change in the builder sandbox),
+      recall (a memory search), remember (a note through the memory gate), command (a job kind at a place) and plan
+      (an improvised plan's steps in waves), each run through the stack's own code for that work. A crew job whose unit
+      is still running shall answer at once that the run in progress covers it, never start a second or wait behind it.
+    type: interface
+    priority: must
+    status: implemented
+    parents: [SN-05]
+    sources: [DEC-51, docs/N8N-MIGRATION.md]
+    acceptance: 'Test: a request is checked before anything runs; an agent step runs through the Conductor''s own step
+      runner on a row of its own and n8n gets the answer at this machine''s n8n only; the agent reads its brief as its
+      step; an answer n8n did not take is sent again after a restart without running the step again; a failed step
+      answers with its reason; a crew job runs as its unit; the app''s step port is on a network only n8n shares; a
+      coding change runs as the Conductor''s build step and answers with its build, branch, pull request and checks; a
+      memory search answers with its hits, each cut visibly; a note enters memory only through the memory tool''s gate;
+      a command runs at its place only once approved there and is submitted once, also across a restart; a plan runs
+      its steps in waves through the agent path and a step after a failed one does not run.'
+    verify: {method: test, by: ['tests/test_flows.py::test_a_request_is_checked_before_anything_runs',
+      'tests/test_flows.py::test_the_answer_only_ever_goes_to_n8n_on_this_machine',
+      'tests/test_flows.py::test_an_agent_step_runs_through_the_conductors_own_runner_and_n8n_gets_the_answer',
+      'tests/test_flows.py::test_an_answer_n8n_did_not_take_is_sent_again_after_a_restart_without_running_the_step_again',
+      'tests/test_flows.py::test_a_step_that_fails_twice_answers_failed_with_its_reason',
+      'tests/test_flows.py::test_a_refused_request_runs_nothing_and_says_why',
+      'tests/test_flows.py::test_a_crew_job_runs_as_its_own_unit_and_waits_for_it',
+      'tests/test_flows.py::test_a_crew_job_still_running_covers_the_next_run_at_once',
+      'tests/test_flows.py::test_the_runner_starts_the_step_worker_and_the_app_serves_the_step_port_on_its_own_network',
+      'tests/test_flows.py::test_the_step_port_drops_a_step_for_the_runner_and_answers_what_is_known',
+      'tests/test_flows.py::test_an_agent_reads_its_brief_as_its_step',
+      'tests/test_flows.py::test_the_new_kinds_are_checked_before_anything_runs',
+      'tests/test_flows.py::test_a_coding_change_runs_as_the_conductors_build_step_and_answers_with_its_build',
+      'tests/test_flows.py::test_a_memory_search_answers_with_its_hits_each_cut',
+      'tests/test_flows.py::test_a_note_enters_memory_only_through_the_memory_tools_gate',
+      'tests/test_flows.py::test_a_command_runs_at_its_place_only_once_approved_there_and_is_submitted_once',
+      'tests/test_flows.py::test_a_plan_runs_in_waves_through_the_agent_path_and_answers_every_steps_output']}
+    trace: [ops/flows.py, images/mission-control/server.flows.py, images/mission-control/server.py, ops/missions.py, compose/core.yaml, compose/apps.yaml,
+      ops/domain/packs.py, ops/domain/places.py, ops/memstack.py]
+  - id: WFL-06
+    title: The stack's own nodes on the canvas
+    statement: The canvas shall have the stack's own node, AI Stack step, whose kind makes it one block of the palette
+      (agent, build, crew, task, ask, notify, recall, remember, command, plan), which sends the step to the step service
+      and waits for its answer; its Agent, Crew job, Place and Repository pickers shall list the stack's own choices,
+      read live from the step service; an answer whose status is not done shall end the n8n run as an error; every
+      workflow of the repository uses it.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-05]
+    sources: [DEC-51, docs/N8N-MIGRATION.md]
+    acceptance: 'Test: the node posts with its execution''s resume URL, waits and gives the answer; it offers every kind
+      of the step service with its fields; its pickers load the agents, crew jobs, places and repositories from the
+      step service''s catalog, which the runner writes; an answer that is not done fails the node on resume with the
+      answer''s error and the whole answer kept; n8n loads it from the repository; every workflow''s work goes through
+      it. Shown on a throwaway n8n 2.44.7 with a stand-in step service on 10 Nov 2026: a workflow of plan, recall,
+      command, remember and coding change blocks waited, was resumed five times and ended in success; a failed answer
+      ended its run as an error; the pickers'' methods listed the stand-in''s agents, crew jobs, places and repositories.'
+    verify: {method: test, by: ['tests/test_n8n_sync.py::test_the_ai_stack_step_sends_the_step_waits_and_gives_the_answer',
+      'tests/test_n8n_sync.py::test_every_workflow_in_the_repository_is_a_whole_n8n_workflow',
+      'tests/test_n8n_ask.py::test_a_workflow_tells_the_owner_through_the_stacks_own_notifications',
+      'tests/test_flows.py::test_the_nodes_pickers_read_the_agents_crew_jobs_places_and_repositories_the_runner_writes',
+      'tests/test_n8n_sync.py::test_the_ai_stack_step_offers_every_block_with_the_stacks_live_lists',
+      'tests/test_n8n_sync.py::test_an_answer_that_is_not_done_ends_the_n8n_run_as_an_error']}
+    trace: [n8n/custom/AistackStep.node.js, compose/core.yaml, ops/n8n_gen.py, ops/flows.py, images/mission-control/server.flows.py]
+  - id: WFL-07
+    title: The owner decides in Needs you
+    statement: A workflow that needs the owner shall put one question into Needs you with the answers it offers and
+      wait; the owner is told once, and the owner's tap there shall resume it; nothing but one of the offered answers,
+      once, counts.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-03]
+    sources: [DEC-51, docs/N8N-MIGRATION.md]
+    acceptance: 'Test: a question waits in Needs you with its answers as buttons and the owner''s tap resumes the
+      workflow; only an offered answer counts, once; a question is checked before it is asked; the app and the runner
+      carry the answer.'
+    verify: {method: test, by: ['tests/test_n8n_ask.py::test_a_question_waits_in_needs_you_and_the_owners_tap_resumes_the_workflow',
+      'tests/test_n8n_ask.py::test_only_one_of_the_offered_answers_counts_and_only_once',
+      'tests/test_n8n_ask.py::test_a_question_is_checked_before_it_is_asked',
+      'tests/test_n8n_ask.py::test_the_app_lets_the_owner_answer_and_the_runner_hands_it_to_the_step_service']}
+    trace: [ops/flows.py, ops/decisions.py, ops/missions.requests.py, images/mission-control/server.py]
+  - id: WFL-08
+    title: Workflows live in git
+    statement: Every workflow of a deployment shall be a JSON file in its repository; a change made on the canvas shall
+      be exported and committed through the landing path, and a deploy shall import the repository's workflows.
+    type: process
+    priority: must
+    status: partial
+    parents: [SN-05]
+    sources: [DEC-51, docs/N8N-MIGRATION.md]
+    acceptance: 'Test: every workflow in the repository is a whole n8n workflow that reaches the step service and waits;
+      a deploy imports them, each active as its file says; an export is stable for git.'
+    gap: the export runs by hand in a session's worktree; no job commits canvas changes yet.
+    verify: {method: test, by: ['tests/test_n8n_sync.py::test_every_workflow_in_the_repository_is_a_whole_n8n_workflow',
+      'tests/test_n8n_sync.py::test_every_scheduled_job_runs_on_n8n',
+      'tests/test_n8n_sync.py::test_a_deploy_imports_the_repositorys_workflows_each_as_its_file_says',
+      'tests/test_n8n_sync.py::test_an_export_is_stable_for_git']}
+    trace: [ops/n8n_sync.py, n8n/workflows/stack-self-test.json, n8n/workflows/memory-keeper.json, ops/deploy.py, compose/core.yaml]
+  - id: WFL-09
+    title: One scheduler
+    statement: 'n8n shall be the one thing that decides when work starts on a schedule. Every scheduled job (a crew job, a
+      task on a schedule, the task of a mission on a schedule) shall run from its own n8n workflow, and its schedule,
+      next run and on/off switch shall be read from that workflow. The rule''s only exceptions are the systemd timers of
+      the units that must run when n8n is down: the boot check (it brings the stack, n8n included, up), the backup and
+      the restore drill (they hold n8n''s own database). A task that gets a schedule shall get its workflow once, made by
+      the runner; a task that is over shall have its workflow switched off; after that its schedule is changed on n8n''s
+      canvas. One switch shall publish or unpublish a workflow.'
+    type: constraint
+    priority: must
+    status: partial
+    parents: [SN-05]
+    sources: [DEC-51, docs/N8N-MIGRATION.md, ops/systemd/AGENTS.md]
+    acceptance: 'Test: a job''s schedule and next run come from its workflow''s cron, also across a clock change; a
+      generated workflow is inactive and goes through the step service; one switch publishes or unpublishes it; a task
+      that gets a schedule gets its workflow once, the app''s pages know it, and a cancelled task''s goes off (a
+      repository workflow too, and a deploy keeps it off); n8n starts one run of a plan task or of a mission''s task and
+      a cancelled task is refused; a mission''s schedule goes to its task, then its workflow holds it; the repository has
+      only the three kept timers and every crew job that ran on a timer has its workflow.'
+    gap: 'Since 10 Nov 2026 n8n starts every scheduled job, and the old schedulers are removed (WFL-12). Not on n8n yet:
+      the weekly self-review keeps its own clock inside the runner (ops/improve.py, a thread, no unit the step service
+      could start). A run the PC slept through is not caught up: n8n''s schedule trigger has no catch-up (the timers had
+      Persistent=true); only the backup and the restore drill keep it.'
+    verify: {method: test, by: ['tests/test_n8n_move.py::test_a_jobs_schedule_and_next_run_come_from_its_workflows_cron',
+      'tests/test_n8n_move.py::test_a_generated_workflow_is_inactive_and_goes_through_the_step_service',
+      'tests/test_n8n_move.py::test_one_switch_turns_a_job_on_and_off_on_n8n',
+      'tests/test_n8n_move.py::test_a_task_that_gets_a_schedule_gets_its_workflow_once_and_a_cancelled_ones_goes_off',
+      'tests/test_n8n_move.py::test_the_runners_word_wins_until_git_holds_it_and_a_deploy_keeps_it',
+      'tests/test_n8n_move.py::test_n8n_starts_one_occurrence_of_a_plan_task_and_gets_its_answer_when_it_has_finished',
+      'tests/test_n8n_move.py::test_n8n_starts_one_run_of_a_missions_task_and_waits_for_it',
+      'tests/test_n8n_move.py::test_a_missions_schedule_goes_to_its_task_and_then_its_workflow_holds_it',
+      'tests/test_n8n_move.py::test_nothing_but_n8n_and_the_kept_timers_starts_work_on_a_schedule',
+      'tests/test_crew.py::test_systemd_state_becomes_crew_cards']}
+    trace: [ops/n8n_jobs.py, ops/n8n_gen.py, ops/n8n_switch.py, ops/n8n_sync.py, ops/flows.py, ops/flows_view.py, ops/crew.py,
+      ops/tasks.py, ops/missions.py, ops/missions.requests.py, ops/systemd/AGENTS.md, n8n/workflows/AGENTS.md]
+  - id: WFL-10
+    title: Home shows every run
+    statement: Each step a workflow runs shall report how it ended to Home's feed, naming its n8n run; a failed or
+      refused one is pushed to the owner.
+    type: functional
+    priority: must
+    status: partial
+    parents: [SN-03]
+    sources: [DEC-51, docs/N8N-MIGRATION.md]
+    acceptance: 'Test: a finished step is said on Home''s feed with its n8n run; a refused one is pushed.'
+    gap: the feed names the n8n run by number; the run opens inside the app from its task's or crew job's page (Where it
+      runs, WFL-11), not yet from the feed item itself.
+    verify: {method: test, by: ['tests/test_flows.py::test_home_hears_how_each_step_of_a_workflow_ended']}
+    trace: [ops/flows.py]
+  - id: WFL-11
+    title: Workflows in the menu
+    statement: On the desk the app's menu shall open a Workflows page with n8n's editor inside the app, beside the app's
+      menu; on a phone that page shall list each workflow with whether n8n runs it, its schedule and its last run with
+      its state and time, and the phone's menu shall have no Workflows entry. A task or crew job that belongs to a
+      workflow shall show at the top of its page its workflow, the run, its state and the step it is on, with the run's
+      canvas on the desk and its steps as a list on a phone; an agent's and a crew job's page shall list every workflow
+      it is a step of, each opening inside the app.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-03]
+    sources: [DEC-51, docs/N8N-MIGRATION.md]
+    acceptance: 'Test: the desk menu opens #/workflows with n8n in a frame and the phone menu does not show it; the phone
+      lists the workflows from the runner''s view; task and crew pages show where they run; agent pages list their
+      workflows; the runner''s view has every workflow with its schedule, steps and recent runs; the Stack page''s tools
+      know n8n''s pages.'
+    verify: {method: test, by: ['tests/test_n8n_ux.py::test_the_desk_menu_opens_n8n_inside_the_app_and_the_phone_menu_does_not_show_it',
+      'tests/test_n8n_ux.py::test_the_phone_lists_each_workflow_with_its_schedule_and_last_run',
+      'tests/test_n8n_ux.py::test_task_and_crew_pages_show_where_they_run',
+      'tests/test_n8n_ux.py::test_an_agents_page_lists_every_workflow_it_is_in',
+      'tests/test_n8n_ux.py::test_the_stack_pages_tools_know_n8ns_pages_inside_the_app',
+      'tests/test_n8n_inapp.py::test_the_view_has_every_workflow_its_schedule_its_steps_and_its_recent_runs',
+      'tests/test_n8n_inapp.py::test_a_question_waits_for_the_owner_and_old_runs_leave_the_view',
+      'tests/test_n8n_inapp.py::test_a_schedule_reads_in_words',
+      'tests/test_n8n_inapp.py::test_the_runner_writes_the_view_beside_the_step_service']}
+    trace: [images/mission-control/web/static/app-workflows.js, images/mission-control/web/static/app-base.js, images/mission-control/web/static/tools.json,
+      images/mission-control/web/static/app-tasks.js, images/mission-control/web/static/task.js, images/mission-control/web/static/swarm.js,
+      images/mission-control/web/static/app.css, images/mission-control/web/index.html, images/mission-control/server.n8n.py, ops/flows_view.py, ops/missions.py]
+  - id: WFL-12
+    title: The old engines go
+    statement: Once no work runs on them, Temporal, the Conductor's scheduling, the block editor with its screens and
+      the crew's systemd timers shall be removed, with their requirements rewritten or retired.
+    type: process
+    priority: must
+    status: partial
+    gap: "Removed: Temporal and the block editor with their requirements (DEC-52, 10 Nov 2026); the crew's 23 timers
+      (a deploy deletes their installed copies), the Conductor's schedule path, the missions' own schedule check, the event
+      bus's time source, the crew's schedule form behind crew_schedule, and Temporal's two secrets (10 Nov 2026, WFL-09).
+      Left for the app's clean-up: the Engine, Runs and Templates screens and their codec and Runs proxy
+      (images/mission-control/server.engine.py)."
+    parents: [SN-05]
+    sources: [DEC-51, DEC-52, docs/N8N-MIGRATION.md]
+    verify: {method: test, by: ['tests/test_n8n_move.py::test_nothing_but_n8n_and_the_kept_timers_starts_work_on_a_schedule',
+      'tests/test_deploy.py::test_a_unit_the_repository_dropped_goes_from_this_machine_with_the_next_deploy']}
+    trace: [ops/deploy.py, ops/systemd/AGENTS.md, docs/N8N-MIGRATION.md]
+  - id: WFL-13
+    title: Run now through n8n
+    statement: Every scheduled workflow of the repository shall have a second trigger, a webhook Run now (POST, path
+      run/<its file's stem>, ids derived from the workflow's id) on the same AI Stack step, so a job can be started on
+      demand through n8n as its schedule would start it; generating the workflows again adds it once and keeps each
+      file's id, active state and canvas changes.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-05]
+    sources: [DEC-51, docs/N8N-MIGRATION.md]
+    acceptance: 'Test: every crew and task workflow and the Memory Keeper''s has Run now on its step with its fixed
+      path and ids, added once; regenerating adds it to an existing file and changes nothing else. Shown on a throwaway
+      n8n 2.44.7 on 10 Nov 2026: POST webhook/run/crew-checker and webhook/run/memory-keeper each started a run that
+      ended in success.'
+    verify: {method: test, by: ['tests/test_n8n_sync.py::test_every_scheduled_workflow_can_be_run_now_through_n8n',
+      'tests/test_n8n_move.py::test_regenerating_adds_run_now_once_and_keeps_each_files_id_and_active',
+      'tests/test_n8n_move.py::test_a_generated_workflow_is_inactive_and_goes_through_the_step_service']}
+    trace: [ops/n8n_gen.py, n8n/workflows/crew-checker.json, n8n/workflows/memory-keeper.json, n8n/workflows/AGENTS.md]
+  - id: WFL-14
+    title: n8n inside the app, behind its gate
+    statement: The app shall serve n8n's editor under its own address at /n8n/, reachable only with the owner's
+      Tailscale login and refusing a write from another site, passing methods, query strings, bodies, cookies and n8n's
+      live updates through as they stream, and letting only the app's own pages frame it; n8n's webhooks and resume
+      URLs stay at n8n's own root on its tailnet port.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-03]
+    sources: [DEC-51, docs/N8N-MIGRATION.md]
+    acceptance: 'Test: without the login n8n is never asked; with it the prefix is taken off, the query, body, cookies and
+      every Set-Cookie pass, X-Frame-Options gives way to frame-ancestors self, a write from another site is refused, n8n
+      down answers 502; live updates stream; compose sets N8N_PATH, the SSE push and the app''s address; a resume URL
+      under /n8n/ is refused.'
+    verify: {method: test, by: ['tests/test_n8n_inapp.py::test_n8n_is_served_under_the_apps_address_behind_its_gate',
+      'tests/test_n8n_inapp.py::test_n8ns_live_updates_stream_through_the_app',
+      'tests/test_n8n_inapp.py::test_compose_puts_n8n_under_n8n_with_live_updates_over_plain_http',
+      'tests/test_n8n_inapp.py::test_a_resume_url_stays_at_n8ns_root']}
+    trace: [images/mission-control/server.n8n.py, images/mission-control/server.py, images/mission-control/web/sw.js, compose/core.yaml,
+      compose/apps.yaml, ops/windows/host-setup.ps1]

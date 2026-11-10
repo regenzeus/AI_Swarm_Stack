@@ -7,7 +7,7 @@ FROM ${HERMES_IMAGE}
 USER root
 RUN apt-get update -qq && apt-get install -y -qq --no-install-recommends shellcheck jq ripgrep \
  && rm -rf /var/lib/apt/lists/* \
- && python3 -m venv /opt/tools && /opt/tools/bin/pip install --no-cache-dir ruff==0.14.2 pytest==8.3.4 pyyaml==6.0.3 httpx==0.28.1 mcp==2.3.0 \
+ && python3 -m venv /opt/tools && /opt/tools/bin/pip install --no-cache-dir ruff==0.14.2 pytest==8.3.4 pytest-xdist==3.6.1 pyyaml==6.0.3 httpx==0.28.1 mcp==2.3.0 \
  && python3 -m venv /opt/semgrep && /opt/semgrep/bin/pip install --no-cache-dir semgrep==1.181.1 \
  && ln -s /opt/tools/bin/ruff /usr/local/bin/ruff && ln -s /opt/tools/bin/pytest /usr/local/bin/pytest \
  && ln -s /opt/semgrep/bin/semgrep /usr/local/bin/semgrep \
@@ -41,12 +41,3 @@ RUN apt-get update -qq && apt-get install -y -qq --no-install-recommends golang-
  && npm install -g --no-fund --no-audit pnpm@10.18.0 && ln -sf "$(npm prefix -g)/bin/pnpm" /usr/local/bin/pnpm \
  && /opt/tools/bin/pip install --no-cache-dir playwright==1.55.0 \
  && go version && cargo --version && mvn --version | head -1 && pnpm --version && chromium --version
-
-# The engine (GEN-33, docs/AI-STACK-PLAN.md M4): the landing's checks run the engine's tests here, so the image carries
-# the Temporal SDK (pinned as ops/runner-requirements.txt) and Temporal's two test servers, fetched while the build has
-# internet.
-ENV TEMPORAL_DOWNLOAD_DIR=/opt/temporal-bin
-COPY temporal-test-bin.py /tmp/temporal-test-bin.py
-RUN /opt/tools/bin/pip install --no-cache-dir temporalio==1.34.0 cryptography==50.0.2 \
- && mkdir -p /opt/temporal-bin && /opt/tools/bin/python /tmp/temporal-test-bin.py \
- && chmod -R a+rX /opt/temporal-bin && rm /tmp/temporal-test-bin.py

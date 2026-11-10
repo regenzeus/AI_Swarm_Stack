@@ -324,7 +324,7 @@ items:
     verify: {method: test, by: [tests/test_keeper.py::test_each_change_is_logged_with_what_was_there_and_undone,
       tests/test_keeper.py::test_nothing_is_changed_while_the_trial_has_not_passed_three_times_on_the_current_prompt,
       tests/test_keeper.py::test_the_crew_saves_the_keeper_s_report_and_undoes_a_change_on_the_owner_s_tap]}
-    trace: [ops/keeper.py, ops/crew.py, ops/missions.py, config/agents.yaml, ops/systemd/crew-memory.timer, prompts/memory.md,
+    trace: [ops/keeper.py, ops/crew.py, ops/missions.py, config/agents.yaml, n8n/workflows/memory-keeper.json, prompts/memory.md,
       images/mission-control/server.py, images/mission-control/web/static/app-base.js, images/mission-control/guide/08-knowledge.md]
   - id: MEM-22
     title: One catalogue of memory collections

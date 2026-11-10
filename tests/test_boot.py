@@ -96,9 +96,10 @@ def test_the_cli_exits_1_when_the_stack_is_down_so_systemd_skips_the_job(stack, 
 
 
 def test_every_scheduled_job_waits_for_the_stack_except_the_job_that_brings_it_up():
-    timers = [t.stem for t in UNITS.glob("*.timer")]
-    assert len(timers) > 20
-    for name in timers:
+    import crew as CR                                 # n8n starts the crew's units (WFL-09); systemd the kept timers' units
+    jobs = {t.stem for t in UNITS.glob("*.timer")} | {a["unit"] for a in CR.CREW if a.get("unit") and not a.get("oneoff")}
+    assert len(jobs) > 20
+    for name in sorted(jobs):
         text = (UNITS / f"{name}.service").read_text()
         if name == "stack-ready":
             assert "ExecCondition" not in text
@@ -127,11 +128,12 @@ def test_jobs_that_run_every_few_minutes_skip_at_once_and_catch_ups_each_get_the
         assert "--wait" not in (UNITS / f"{n}.service").read_text(), n          # the next run is minutes away
     slots = {}
     for t in UNITS.glob("*.timer"):
-        if "Persistent=true" in t.read_text():
-            m = re.search(r"--slot (\d+)", (UNITS / f"{t.stem}.service").read_text())
-            if t.stem != "recycle":
-                assert m, t.stem
-                slots.setdefault(int(m[1]), []).append(t.stem)
+        if "Persistent=true" in t.read_text():                                   # a kept timer catches up after the PC was off
+            assert re.search(r"--slot (\d+)", (UNITS / f"{t.stem}.service").read_text()), t.stem
+    for f in UNITS.glob("*.service"):                                            # after a boot, each heavy job in its own slot
+        m = re.search(r"--slot (\d+)", f.read_text())
+        if m:
+            slots.setdefault(int(m[1]), []).append(f.stem)
     assert all(len(v) == 1 for v in slots.values()), slots                     # never two heavy jobs at one time
     order = sorted(slots, key=int)
     names = [slots[s][0] for s in order]
@@ -205,7 +207,7 @@ def test_a_skipped_job_does_not_show_as_failed(monkeypatch):
     import crew as CR
     monkeypatch.setattr(CR, "schedule_of", lambda unit: "every 1h")
     svc = {"LoadState": "loaded", "ActiveState": "inactive", "SubState": "dead", "Result": "exec-condition", "ExecMainStartTimestamp": "@100"}
-    assert CR.unit_status({"unit": "x"}, {"x.service": svc})["state"] == "ok"
+    assert CR.unit_status({"id": "x", "unit": "x"}, {"x.service": svc})["state"] == "ok"
 
 
 @pytest.fixture
@@ -322,12 +324,26 @@ def test_the_first_check_of_a_boot_restarts_hermes_opens_the_gate_logs_it_and_sa
 
 
 def test_missing_tools_still_open_the_gate_say_what_is_missing_and_fail_the_unit(ready_env, stack, monkeypatch):
-    monkeypatch.setattr(SR, "tools", lambda: {"qmd-query"})
+    monkeypatch.setattr(SR, "tools", lambda: {"research-research"})
     monkeypatch.setattr(SR, "WAIT_S", 0)
     with pytest.raises(SystemExit):
         SR.main()
     assert stack.exists() and ready_env["restarts"] == 0
-    assert "graphify-query_graph" in ready_env["said"][0] and ready_env["said"][0].startswith("⚠️")
+    assert "memory-search" in ready_env["said"][0] and ready_env["said"][0].startswith("⚠️")
+
+
+def test_the_check_waits_only_for_tools_the_main_key_is_granted():
+    """10 Nov 2026: it waited 20 min on every boot for qmd and graphify, which MEM-28 had replaced by the memory tools."""
+    keys = (Path(__file__).resolve().parents[1] / "ops" / "keys.sh").read_text()
+    main = next(ln for ln in keys.splitlines() if '"vk-main|' in ln).split("|")[3].rstrip('"').split(",")
+    assert {t.split("-")[0] for t in SR.EXPECTED} <= set(main)
+
+
+def test_set_up_jobs_that_ran_once_are_not_counted_as_down(ready_env, stack, monkeypatch):
+    monkeypatch.setattr(G, "states", lambda timeout=5: {**{s: "running" for s in G.NEEDED}, "n8n-db": "exited"})
+    SR.main()
+    row = json.loads(SR.BOOTS.read_text())
+    assert row["down"] == [] and row["running"] == row["total"] == len(G.NEEDED)
 
 
 def test_the_message_names_services_that_did_not_come_up_and_a_slow_docker():

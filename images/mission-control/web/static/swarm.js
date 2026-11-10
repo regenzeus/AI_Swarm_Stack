@@ -657,6 +657,7 @@ async function swAgentPanel(box, id, crew = false, tile = true) {    // crew: on
     return `<a href="#/live/${encodeURIComponent(r.run)}"><div class="grow" style="min-width:0"><div class="ttl wrap">${esc(r.name)}</div>
       <div class="sub">${swTime(r.started)} · ${swDur((r.ended || tl.now) - r.started)}${r.by ? ` · started by ${esc(swName(r.by))}` : ""}${r.tokens ? ` · ${tok(r.tokens)} tokens` : ""}</div></div>${swPill(r.state)}</a>`; };
   box.innerHTML = `${!tile ? "" : a ? `<div class="swteam one">${swTile(a, x, false)}</div>` : `<div class="card pad-l small muted">${esc(swName(id))} has no card in the team (config/agents.yaml): it is a tool or a service the agents use.</div>`}
+    ${crew ? "" : `<div id="swwfin" style="margin-top:12px"></div>`}
     ${crew ? "" : `<div class="card pad-l section"><h2>Health <span class="hcount">${issues.length}</span></h2>
       ${issues.length ? issues.map((x) => `<div class="banner ${x.severity === "alert" ? "" : "note"} agissue" style="margin-top:8px">${ic.alert}<span class="grow wrap">${esc(x.text)}${x.run ? ` · <a href="#/live/${encodeURIComponent(x.run)}">the run</a>` : ""}<span class="tiny faint"> · ${x.severity === "alert" ? "alert" : "note"}</span></span>${x.key ? `<button class="btn sm ghost" data-ack="${esc(x.key)}" title="Hides it here, from its count and from the Health doctor until it happens again. Nothing is fixed or deleted.">Seen</button>` : ""}</div>`).join("")
         : `<div class="small muted" style="margin-top:6px">No open issue on the health board.</div>`}</div>`}
@@ -681,6 +682,7 @@ async function swAgentPanel(box, id, crew = false, tile = true) {    // crew: on
         : `<div class="small muted" style="margin-top:6px">None in the last 30 days.</div>`}</div>`;
   swBindTiles(x.who);
   $$("[data-ack]", box).forEach((b) => (b.onclick = () => ackIssues(b.dataset.ack.split(" ").filter(Boolean), b)));
+  if (!crew) wfInInto($("#swwfin", box), "agent", id);   // WFL-11: every workflow the agent is a step of
 }
 
 // ---------- the Chatroom: the team room (SWM-107) ----------

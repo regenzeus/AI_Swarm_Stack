@@ -1,0 +1,89 @@
+{
+  "active": true,
+  "connections": {
+    "On its schedule (0 6 02 * *)": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Crew: Coach",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Run now": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Crew: Coach",
+            "type": "main"
+          }
+        ]
+      ]
+    }
+  },
+  "id": "aisc8ff11e7f1aa3",
+  "name": "Crew: Coach",
+  "nodes": [
+    {
+      "id": "b202dfe3-843b-6f89-22d4-893b02d742ae",
+      "name": "On its schedule (0 6 02 * *)",
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "expression": "0 6 02 * *",
+              "field": "cronExpression"
+            }
+          ]
+        }
+      },
+      "position": [
+        0,
+        0
+      ],
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2
+    },
+    {
+      "id": "6311f026-c427-f640-daf6-96b6cde55563",
+      "name": "Crew: Coach",
+      "notes": "The crew job coach (crew-coach.service), as Run now starts it (WFL-05).",
+      "parameters": {
+        "job": "coach",
+        "kind": "crew",
+        "title": "Crew: Coach"
+      },
+      "position": [
+        260,
+        0
+      ],
+      "type": "CUSTOM.aistackStep",
+      "typeVersion": 1,
+      "webhookId": "fde5589e-5da9-c71f-f00b-ee8652cb6162"
+    },
+    {
+      "id": "3fe478fe-921d-4d93-d561-8628597bd686",
+      "name": "Run now",
+      "notes": "Starts the job now, as its schedule would (POST).",
+      "parameters": {
+        "httpMethod": "POST",
+        "options": {},
+        "path": "run/crew-coach"
+      },
+      "position": [
+        0,
+        160
+      ],
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "webhookId": "40a5eeaa-66e2-dcbf-d064-65e865309475"
+    }
+  ],
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Berlin"
+  }
+}

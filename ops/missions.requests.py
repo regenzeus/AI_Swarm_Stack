@@ -149,10 +149,19 @@ def handle(req, missions, c):
         changed = []
         if "title" in f and 3 <= len(str(f["title"]).strip()) <= 80:
             m["title"] = str(f["title"]).strip(); changed.append("title")
-        if "schedule" in f:
+        if "schedule" in f and f["schedule"] != m.get("schedule"):
             if not valid_schedule(f["schedule"]):
                 raise ValueError(f"schedule '{f['schedule']}' invalid")
+            import n8n_jobs as NJ
+            import tasks as TK
+            TK.table(c)
+            tid = (c.execute("select id from tasks where door='mission' and ref=?", (slug,)).fetchone() or [None])[0]
+            if tid and NJ.of("task", tid):                  # WFL-09: after its start the schedule is n8n's, changed on its canvas
+                raise ValueError("its schedule is its workflow's in n8n now: open Workflows and change its schedule there")
             m["schedule"] = f["schedule"]; m["created"] = now().isoformat(timespec="seconds"); changed.append("schedule")
+            if tid:                                        # its task gets the schedule, and with it its workflow (ops/n8n_jobs.py)
+                c.execute("update tasks set rhythm=? where id=?", (json.dumps(TK.rhythm_of_mission({**m, **({"triggers": X.clean_triggers(f["triggers"])} if "triggers" in f else {})})), tid))
+                c.commit()
         if "triggers" in f:
             m["triggers"] = X.clean_triggers(f["triggers"]); changed.append("event triggers")
         if "depth" in f and m["type"] == "task":
@@ -356,6 +365,7 @@ BUILD_ACTIONS = {"build_assign", "build_revise", "build_approve", "build_approve
                  "build_switch_engine"}
 IMPROVE_ACTIONS = {"improve_scan", "proposal_accept", "proposal_dismiss"}
 REPO_ACTIONS = {"codemap", "repo_create", "repo_buildable", "repo_remove"}
+# crew_schedule answers only with where a schedule is changed now (n8n's canvas, WFL-09), until the app drops its form
 CREW_ACTIONS = {"crew_run", "crew_memory_forget", "crew_memory_undo", "crew_schedule", "health_ack", "phone_cleanup_do", "phone_cleanup_do_all", "phone_cleanup_dismiss", "phone_cleanup_undo"}
 creating = threading.Lock()            # one new mission at a time (drafting takes a minute or two)
 
@@ -418,7 +428,7 @@ def respond(rid, req):
     c = db()
     try:
         a = req.get("action")
-        res = (__import__("engine.bridge", fromlist=["decide"]).decide(req) if a == "engine_decide" else __import__("engine.templates", fromlist=["handle"]).handle(req) if a in ("template_save", "template_test", "template_describe") else __import__("engine.packs", fromlist=["handle"]).handle(req) if a in ("pack_approve", "pack_refuse") else __import__("engine.trackers", fromlist=["handle"]).handle(req) if a in ("tracker_shadow_approve", "tracker_shadow_reject", "tracker_live") else __import__("engine.places", fromlist=["handle"]).handle(req) if a == "command_approve" else CHG.handle(req, c) if a in CHG.ACTIONS else CT.handle(req, c) if a == "claude_task" else CT.cancel(c, req.get("id")) if a == "claude_cancel" else handle_forgejo_connect(req) if a == "forgejo_connect" else handle_memory(req) if a == "memory" else handle_stack(req) if a in STACK_ACTIONS
+        res = (__import__("flows").answer(req) if a == "flow_answer" else __import__("domain.packs", fromlist=["handle"]).handle(req) if a in ("pack_approve", "pack_refuse") else __import__("domain.trackers", fromlist=["handle"]).handle(req) if a in ("tracker_shadow_approve", "tracker_shadow_reject", "tracker_live") else __import__("domain.places", fromlist=["handle"]).handle(req) if a == "command_approve" else CHG.handle(req, c) if a in CHG.ACTIONS else CT.handle(req, c) if a == "claude_task" else CT.cancel(c, req.get("id")) if a == "claude_cancel" else handle_forgejo_connect(req) if a == "forgejo_connect" else handle_memory(req) if a == "memory" else handle_stack(req) if a in STACK_ACTIONS
                else B.handle(req, c) if a in BUILD_ACTIONS else I.handle(req, c) if a in IMPROVE_ACTIONS
                else R.handle(req, c) if a in REPO_ACTIONS else CR.handle(req, c) if a in CREW_ACTIONS else J.handle(req) if a in J.ACTIONS
                else WD.handle(req) if a in WD.ACTIONS else SH.handle(req, c) if a in SH.ACTIONS else W.handle(req) if a in W.ACTIONS else H.handle(req) if a in H.ACTIONS

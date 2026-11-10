@@ -1,8 +1,0 @@
-[Unit]
-Description=Crew: test agent: flaky, slow and untested code -> proposals (weekly, Tuesday)
-[Timer]
-OnCalendar=Tue *-*-* 04:30
-Persistent=true
-RandomizedDelaySec=10min
-[Install]
-WantedBy=timers.target

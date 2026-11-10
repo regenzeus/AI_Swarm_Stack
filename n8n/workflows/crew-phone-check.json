@@ -1,0 +1,89 @@
+{
+  "active": true,
+  "connections": {
+    "On its schedule (0 9 * * 1)": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Crew: Phone check",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Run now": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Crew: Phone check",
+            "type": "main"
+          }
+        ]
+      ]
+    }
+  },
+  "id": "aisc85193f7a4d55",
+  "name": "Crew: Phone check",
+  "nodes": [
+    {
+      "id": "ff88811a-336f-31c6-38b1-5c3600a0dc2d",
+      "name": "On its schedule (0 9 * * 1)",
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "expression": "0 9 * * 1",
+              "field": "cronExpression"
+            }
+          ]
+        }
+      },
+      "position": [
+        0,
+        0
+      ],
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2
+    },
+    {
+      "id": "f9d2b802-dba4-a996-9bb1-68077d80a024",
+      "name": "Crew: Phone check",
+      "notes": "The crew job phone-check (crew-phone-check.service), as Run now starts it (WFL-05).",
+      "parameters": {
+        "job": "phone-check",
+        "kind": "crew",
+        "title": "Crew: Phone check"
+      },
+      "position": [
+        260,
+        0
+      ],
+      "type": "CUSTOM.aistackStep",
+      "typeVersion": 1,
+      "webhookId": "8b21a0e1-b1d3-00c4-2cb7-2d25a6d36330"
+    },
+    {
+      "id": "1551952d-1dd4-df03-a578-7c3bf5446de4",
+      "name": "Run now",
+      "notes": "Starts the job now, as its schedule would (POST).",
+      "parameters": {
+        "httpMethod": "POST",
+        "options": {},
+        "path": "run/crew-phone-check"
+      },
+      "position": [
+        0,
+        160
+      ],
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "webhookId": "3a6f0931-67e0-8cb1-baf2-0077fb902838"
+    }
+  ],
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Berlin"
+  }
+}

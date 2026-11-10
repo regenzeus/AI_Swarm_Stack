@@ -122,10 +122,13 @@ def register(c, door, ref, goal, title="", *, done=None, rhythm=None, status="ru
 
 
 def rhythm_of_mission(m):
+    """A mission's rhythm as its task holds it: on a schedule (its alerts riding along, as a moved briefing's), on an
+    event, or once."""
+    sched = m.get("schedule") if m.get("schedule") and m["schedule"] != "manual" and not m.get("once") else None
+    if sched:
+        return {"type": "schedule", "schedule": sched, **({"triggers": m["triggers"]} if m.get("triggers") else {})}
     if m.get("triggers"):
         return {"type": "event", "triggers": m["triggers"]}
-    if m.get("schedule") and m["schedule"] != "manual" and not m.get("once"):
-        return {"type": "schedule", "schedule": m["schedule"]}
     return {"type": "once"}
 
 
@@ -168,18 +171,19 @@ def _has(c, name):
 
 
 def discover_crew(c):
-    """TSK-42: each crew duty is the stack's own repeating task: its plan fixed (the duty), its When the duty's timer,
-    shown under the Tasks tab's "The stack's" and on Team, never in your own list."""
+    """TSK-42: each crew duty is the stack's own repeating task: its plan fixed (the duty), its When the duty's schedule
+    (its n8n workflow's, WFL-09; the backup's and the restore drill's their timers), shown under the Tasks tab's "The
+    stack's" and on Team, never in your own list."""
     import crew as CR
     try:
         sched = {a["id"]: a.get("schedule") for a in CR.status()}
     except Exception as e:                             # no systemd (a test, a fresh machine): the duties are still tasks
-        print(f"tasks: the crew's timers not read ({type(e).__name__})", flush=True)
+        print(f"tasks: the crew's schedules not read ({type(e).__name__})", flush=True)
         sched = {}
     for a in CR.CREW:
         if a.get("oneoff"):
             continue
-        r = {"type": "schedule", "schedule": sched.get(a["id"]) or "on its timer"}
+        r = {"type": "schedule", "schedule": sched.get(a["id"]) or "on its workflow"}
         if register(c, "crew", a["id"], a["what"], a["name"], done=[DONE_OF["crew"]], rhythm=r, status="scheduled",
                     source="crew", owner="stack") is None and sched.get(a["id"]):
             c.execute("update tasks set rhythm=? where door='crew' and ref=? and rhythm<>?", (json.dumps(r), a["id"], json.dumps(r)))
@@ -919,8 +923,9 @@ def state(c):
                      (*OPEN, since)).fetchall()
     out = []
     import conductor as CD
+    import n8n_jobs as NJ
     stepped = CD.state(c, [r["id"] for r in rows if c.execute("select door from tasks where id=?", (r["id"],)).fetchone()["door"] == "plan"])
-    missions = None
+    when = NJ.index()                                 # WFL-09: a task's next run is its n8n workflow's
     for r in rows:
         t = row(c, r["id"])
         last = nxt = None
@@ -928,10 +933,8 @@ def state(c):
             run = c.execute("select id, status, summary, output, started, ended from runs where slug=? order by id desc limit 1",
                             (t["ref"],)).fetchone()
             last = dict(run) if run else None
-            missions = M.load_missions() if missions is None else missions
-            m = missions.get(t["ref"]) or {}
-            due = m.get("status") == "active" and M.next_due(m.get("schedule"), M.now())
-            nxt = due.isoformat(timespec="minutes") if due else None
+            if t["status"] in ("scheduled", "running"):
+                nxt = NJ.next_run("task", t["id"], idx=when)
         runs = []
         if t["door"] == "plan":                       # the Conductor's: its latest occurrence, and the next on its schedule
             runs = CD.occurrences(c, t["id"])
@@ -944,7 +947,7 @@ def state(c):
                                                                                          "found nothing new" if occ["verdict"] == "quiet" else
                                                                                          "done" if occ["status"] == "done" else occ["status"] or "")}
             if t["rhythm"].get("type") == "schedule" and t["status"] in ("scheduled", "running"):
-                nxt = CD.next_run(c, t)
+                nxt = NJ.next_run("task", t["id"], idx=when)
             runs = runs[:RUNS]                            # cap: list (the card's run history; every run stays in task_occ)
         out.append({k: t.get(k) for k in FIELDS} | {"judgement": t["spec"].get("judgement")}
                    | {"plan": t["spec"].get("plan") or [], "steps": stepped.get(t["id"], []), "result": t["spec"].get("result"),

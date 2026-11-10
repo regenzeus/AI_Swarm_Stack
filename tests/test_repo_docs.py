@@ -8,9 +8,9 @@ ROOT = Path(__file__).resolve().parent.parent
 # data or sub-parts covered by the parent directory's AGENTS.md
 COVERED_BY_PARENT = {"prompts/cases", "eval/results", "eval/qrels", "eval/fixtures", "spec/pilot", "images/mission-control/web/static", "nas/forgejo", "tests/semgrep",
                      "config/hermes/claude-hooks", "config/hermes/plugins/aistack-runtime",   # config/hermes/AGENTS.md
-                     "images/mission-control/flow/src", "tests/fixtures/packs/toy/.claude-plugin", "tests/fixtures/packs/toy/agents",
-                     "tests/fixtures/packs/toy/skills/triage", "tests/fixtures/packs/toy/jobs", "tests/fixtures/packs/toy/templates",
-                     "tests/fixtures/packs/toy/exams"}   # the editor's sources, and the toy pack's own folders (its AGENTS.md)
+                     "tests/fixtures/packs/toy/.claude-plugin", "tests/fixtures/packs/toy/agents",
+                     "tests/fixtures/packs/toy/skills/triage", "tests/fixtures/packs/toy/jobs", "tests/fixtures/packs/toy/workflows",
+                     "tests/fixtures/packs/toy/exams"}   # the toy pack's own folders (its AGENTS.md)
 SKIP_PARTS = {".git", "__pycache__", ".pytest_cache"}
 
 

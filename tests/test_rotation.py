@@ -17,8 +17,9 @@ def at(day, hour=1):
 def test_each_night_has_its_trial_and_sunday_rests():
     assert [RO.pick(at(d)) for d in range(2, 9)] == ["research-accuracy", "stack-trace", "semver", "research-accuracy", "mqtt-trace", "mustache", None]
     assert all((ROOT / "eval/trials" / f"{n}.yaml").exists() for n in RO.WEEK.values())   # every night's trial exists
-    timer = (ROOT / "ops/systemd/rotation.timer").read_text()
-    assert "OnCalendar=*-*-* 01:00" in timer and "Persistent=false" in timer           # a missed night is not run at boot
+    import n8n_jobs as NJ                                                             # n8n starts it at 01:00 (WFL-09); a missed night is not run
+    w = NJ.of("crew", "rotation", NJ.index(ROOT / "n8n/workflows", ROOT / "no-such-folder"))
+    assert w["cron"] == "0 1 * * *" and not (ROOT / "ops/systemd/rotation.timer").exists()
     assert "ExecStart=/usr/bin/python3 ops/rotation.py" in (ROOT / "ops/systemd/rotation.service").read_text()
 
 

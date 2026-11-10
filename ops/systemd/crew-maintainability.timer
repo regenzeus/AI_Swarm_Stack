@@ -1,8 +1,0 @@
-[Unit]
-Description=Crew: maintainability review (Claude Code, read-only) -> proposals (weekly, Monday)
-[Timer]
-OnCalendar=Mon *-*-* 04:30
-Persistent=true
-RandomizedDelaySec=10min
-[Install]
-WantedBy=timers.target

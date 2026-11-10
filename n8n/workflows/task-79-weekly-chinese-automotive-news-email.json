@@ -1,0 +1,89 @@
+{
+  "active": true,
+  "connections": {
+    "On its schedule (0 8 * * 1)": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Task #79: Weekly Chinese Automotive News Email",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Run now": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Task #79: Weekly Chinese Automotive News Email",
+            "type": "main"
+          }
+        ]
+      ]
+    }
+  },
+  "id": "aist291d979527a9",
+  "name": "Task #79: Weekly Chinese Automotive News Email",
+  "nodes": [
+    {
+      "id": "fec5c14f-5157-d818-0fa3-9f4b0d8c954d",
+      "name": "On its schedule (0 8 * * 1)",
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "expression": "0 8 * * 1",
+              "field": "cronExpression"
+            }
+          ]
+        }
+      },
+      "position": [
+        0,
+        0
+      ],
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2
+    },
+    {
+      "id": "51ad4393-c93d-fb49-b863-2defbdbcf1f5",
+      "name": "Task #79: Weekly Chinese Automotive News Email",
+      "notes": "One run of the task: an occurrence of its plan (WFL-05).",
+      "parameters": {
+        "kind": "task",
+        "task": 79,
+        "title": "Task #79: Weekly Chinese Automotive News Email"
+      },
+      "position": [
+        260,
+        0
+      ],
+      "type": "CUSTOM.aistackStep",
+      "typeVersion": 1,
+      "webhookId": "d7fa61ef-67c2-efb7-6494-a9094134f11b"
+    },
+    {
+      "id": "d7c83807-0651-b52a-1375-ae1398aa0927",
+      "name": "Run now",
+      "notes": "Starts the job now, as its schedule would (POST).",
+      "parameters": {
+        "httpMethod": "POST",
+        "options": {},
+        "path": "run/task-79-weekly-chinese-automotive-news-email"
+      },
+      "position": [
+        0,
+        160
+      ],
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "webhookId": "d6c2774c-f09d-1de3-b3c4-585bda383156"
+    }
+  ],
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Berlin"
+  }
+}

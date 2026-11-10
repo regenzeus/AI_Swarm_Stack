@@ -5,22 +5,27 @@ prefix: CRW
 items:
   - id: CRW-01
     title: Crew jobs are agents
-    statement: Each crew job shall appear as an agent with its schedule, last and next run, last result and health,
-      taken from its systemd unit.
+    statement: "Each crew job shall appear as an agent with its schedule, last and next run, last result and health:
+      its schedule, next run and on/off switch from its n8n workflow (WFL-09; the backup's and the restore drill's from
+      their timers), its runs from its systemd unit or, after a restart of WSL, from the step service's record."
     type: functional
     priority: must
     status: implemented
     parents: [SN-07, SN-08]
     sources: [images/mission-control/guide/18-crew.md]
-    verify: {method: test, by: [tests/test_crew.py::test_systemd_state_becomes_crew_cards]}
-    trace: [ops/crew.py]
+    verify: {method: test, by: [tests/test_crew.py::test_systemd_state_becomes_crew_cards, tests/test_crew.py::test_text_times_and_intervals,
+      tests/test_crew.py::test_crew_actions_are_validated, tests/test_n8n_move.py::test_a_jobs_schedule_and_next_run_come_from_its_workflows_cron]}
+    trace: [ops/crew.py, ops/n8n_jobs.py]
   - id: CRW-02
     title: Crew schedules are editable in the app
     statement: The owner shall be able to set a crew job's schedule (a preset, an interval or an OnCalendar time),
       switch it off or on, and run it now from its Settings, applied as a systemd drop-in.
     type: functional
     priority: must
-    status: implemented
+    status: deprecated
+    superseded_by: WFL-11
+    reason: "DEC-51: a crew job's schedule and switch are its n8n workflow's since 10 Nov 2026; the owner changes them on
+      n8n's canvas inside the app (Workflows, WFL-11), and crew_schedule refuses with that pointer. Run now stays."
     parents: [SN-02, SN-07]
     sources: [DEC-05]
     verify: {method: test, by: [tests/test_crew.py::test_text_times_and_intervals, tests/test_crew.py::test_crew_actions_are_validated]}
@@ -77,13 +82,16 @@ items:
   - id: CRW-07
     title: The maintainability review
     statement: Every Monday the maintainability review shall read the code read-only with Claude Code and propose at
-      most 2 changes, only where code changed often lately, caused a recent bug or where docs now mislead.
+      most 2 changes, only where code changed often lately, caused a recent bug or where docs now mislead. It shall read
+      origin's newest main from the builder's own clone, made from Forgejo when the machine has none yet (as every crew
+      answer and replay in the sandbox does).
     type: functional
     priority: should
     status: implemented
     parents: [SN-08, SN-15]
-    sources: [images/mission-control/guide/18-crew.md]
-    verify: {method: inspection, by: [ops/crew.py, ops/systemd/crew-maintainability.timer]}
+    sources: [images/mission-control/guide/18-crew.md, 'exercise through n8n, 10 Nov 2026: the review failed on a missing workbench clone']
+    verify: {method: test, by: [tests/test_crew.py::test_the_review_and_the_board_answers_get_the_builders_clone_first_also_on_a_fresh_machine]}
+    trace: [ops/crew.py, ops/evals.py, ops/builds.py, n8n/workflows/crew-maintainability-review.json]
   - id: CRW-08
     title: The test agent
     statement: Every Tuesday the test agent shall run the suite three times, report flaky, failing and slow tests and

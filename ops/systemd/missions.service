@@ -1,5 +1,5 @@
 [Unit]
-Description=Mission Control runner: schedules and runs missions (vault missions/*/MISSION.md), state for the app
+Description=Mission Control runner: runs missions, tasks and the steps n8n sends, state for the app
 After=docker.service
 [Service]
 Type=simple
@@ -8,7 +8,7 @@ RestartSec=10
 Environment=DOCKER_HOST=unix://%t/docker.sock
 Environment=PYTHONUNBUFFERED=1
 WorkingDirectory=%h/ai-stack
-# The runner's own environment (ops/runner_env.sh, GEN-33): the standard library, PyYAML and Temporal's SDK, pinned and hashed
+# The runner's own environment (ops/runner_env.sh, PLT-37): the standard library and PyYAML, pinned and hashed
 ExecStart=/usr/local/bin/sops exec-env secrets/secrets.enc.yaml "sops exec-env secrets/agent-keys.enc.yaml \"%h/.local/share/aistack/runner/bin/python ops/missions.py\""
 [Install]
 WantedBy=default.target

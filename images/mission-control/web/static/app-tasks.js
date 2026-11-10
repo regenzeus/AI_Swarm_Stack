@@ -925,6 +925,7 @@ function vAgent(kind, id) {
     ${!A.archived ? `<button class="btn ghost danger" data-a="archive">${ic.archive}Archive</button>` : ""}
     `
     : `<button class="btn primary" data-a="crew_run" ${A.live ? "disabled" : ""}>${ic.play}Run now</button>`;
+  const keepWf = kind === "crew" ? wfKeepFrame() : null;                // WFL-11: n8n's run view keeps its state across a redraw
   const pill = kind === "mission" ? statusPill(m) : (([cls, l]) => `<span class="pill ${cls}">${A.live ? '<span class="dot run"></span>' : ""}${l}</span>`)(CREW_STATE[c.state] || ["archived", c.state]);
   view.innerHTML = `<a class="back" href="${kind === "crew" ? "#/tasks?v=team&p=crew" : "#/tasks"}">${ic.back}${kind === "crew" ? "Crew" : "Tasks"}</a>
   <div class="aghead h-${agentHealth(A)}"><div class="agic lg">${A.icon}</div><div class="grow" style="min-width:0">
@@ -943,6 +944,7 @@ function vAgent(kind, id) {
       + (A.issues.length > 1 ? `<div class="row" style="justify-content:flex-end;margin-top:6px"><button class="linkbtn" data-ack="${esc(issueKeys([A]).join(" "))}" ${SEEN_TIP}>mark all ${A.issues.length} seen</button></div>` : "");
   })()}
   ${kind === "crew" && (S?.swarm?.cards || []).includes(c.id) ? `<div id="agcardbox" class="section"></div>` : ""}
+  ${kind === "crew" ? `<div id="wfwhere" style="margin-top:12px"></div>` : ""}
   <div class="actions">${acts}</div>
   <div class="seg agtabs">${tabs.map(([k, l]) => `<button data-t="${k}" class="${atab === k ? "on" : ""}">${l}</button>`).join("")}</div>
   <div id="tabbody" class="section" style="margin-top:14px"></div>`;
@@ -959,6 +961,7 @@ function vAgent(kind, id) {
       crew_run: "Started: it shows as running here until it is done" }[a]))) b.disabled = false;
   }));
   if (task) fillTaskIdeas($(`[data-tideas="${task.id}"]`), task.id);
+  if (kind === "crew") wfCrewInto($("#wfwhere"), id, keepWf);          // WFL-11: where it runs, and every workflow it is in
   if ($("#agcardbox")) swTeamData().then((x) => {    // the agent's card on its page, as every agent's own page has it
     const a = x.who.find((w) => w.id === c.id), box = $("#agcardbox");
     if (a && box) { box.innerHTML = `<div class="swteam one">${swTile(a, x, false)}</div>`; swBindTiles(x.who); }

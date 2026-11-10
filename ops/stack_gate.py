@@ -10,8 +10,8 @@ tmpfs, so each boot starts without it; once the PC has been on for SETTLED_S, a 
 
   stack_gate.py                       up now? exit 0, or 1 and the reason (jobs that run every few minutes)
   stack_gate.py --wait 1800           wait for it, then exit 0, or 1 and the reason
-  stack_gate.py --wait 1800 --slot 15 the same, not before 15 minutes after boot: the jobs the PC slept through
-                                      catch up one after the other, not all at once on a stack that has just started
+  stack_gate.py --wait 1800 --slot 15 the same, not before 15 minutes after boot: the heavy jobs after a boot
+                                      start one after the other, not all at once on a stack that has just started
 """
 import argparse
 import http.client

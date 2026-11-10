@@ -29,7 +29,7 @@ def K(tmp_path, monkeypatch):
     TK.table(c)
     import missions as MM
     TK.M = types.SimpleNamespace(event=lambda *a, **k: None, valid_schedule=MM.valid_schedule, load_missions=dict, stop=threading.Event(), log=print,
-                                 next_due=MM.next_due, now=MM.now)
+                                 now=MM.now)
     monkeypatch.setattr(TK, "CHATS", tmp_path / "chats")
     return c
 
@@ -75,9 +75,9 @@ def test_each_crew_duty_is_the_stack_s_repeating_task(K, monkeypatch):
     want = {a["id"] for a in CR.CREW if not a.get("oneoff")}
     assert set(rows) == want and all(r["owner"] == "stack" and r["status"] == "scheduled" and r["source"] == "crew" for r in rows.values())
     assert rows["memory"]["title"] == "Memory Keeper" and json.loads(rows["memory"]["rhythm"])["schedule"] == "daily 04:30"
-    assert json.loads(rows["backup"]["rhythm"])["schedule"] == "on its timer"          # a duty whose timer is not read yet
+    assert json.loads(rows["backup"]["rhythm"])["schedule"] == "on its workflow"       # a duty whose schedule is not read yet
     monkeypatch.setattr(CR, "status", lambda: [{"id": "memory", "schedule": "daily 03:30"}])
-    TK.discover_crew(K)                                                     # a changed timer follows
+    TK.discover_crew(K)                                                     # a changed schedule follows
     assert json.loads(K.execute("select rhythm from tasks where door='crew' and ref='memory'").fetchone()["rhythm"])["schedule"] == "daily 03:30"
 
 
@@ -130,7 +130,7 @@ def test_the_network_names_each_run_s_task_and_keeps_tools_and_the_conductor_apa
 
 def test_the_tasks_tab_has_five_views_and_the_old_addresses_go_there():
     nav = re.search(r"^const NAV = .*?;$", JS, re.M | re.S)[0]
-    assert '["tasks", "#/tasks", "Tasks", ic.tasks]' in nav and '"#/missions"' not in nav and len(re.findall(r'\["\w+", "#/', nav)) == 6
+    assert '["tasks", "#/tasks", "Tasks", ic.tasks]' in nav and '"#/missions"' not in nav and len(re.findall(r'\["\w+", "#/', nav)) == 7   # Workflows (n8n inside the app, WFL-11) is the seventh
     assert re.search(r'const TVIEWS = \[\["tasks", "Tasks"\], \["activity", "Activity"\], \["team", "Team"\], \["network", "Network"\], \["ideas", "Ideas"\]\];', JS)
     assert 'const TLISTS = [["active", "Active"], ["repeating", "Repeating"], ["done", "Done"]];' in JS and '[["you", "User"], ["stack", "Stack"], ["all", "All"]]' in JS and 'tasksOwner = "all"' in JS
     assert "missions: vMissionsGo" in JS and "new: vNewGo" in JS and "function vMissions()" not in JS and "function vNew()" not in JS

@@ -1,9 +1,11 @@
 """The crew: the stack's housekeeping agents in one place (Mission Control → Agents → Crew).
 
-Most of them are systemd user timers that existed before (memory review, skill sync, curator, backup, restore drill,
-upgrade check, digest, code graph); the self-review runs as a runner thread (ops/improve.py). This module reads
-their state from systemd and the journal for the app (the app container cannot), starts one on request ("Run now"),
-and adds agents of its own:
+Each job is a systemd user service (ops/systemd/<unit>.service). n8n starts it on its schedule (WFL-09: the job's
+workflow in n8n/workflows, through the step service's crew block, ops/flows.py); only the backup and the restore drill
+keep a systemd timer, because they must run when n8n is down (ops/systemd/AGENTS.md). The self-review runs as a runner
+thread (ops/improve.py). This module reads each job's schedule and next run from its workflow (ops/n8n_jobs.py), its
+runs from systemd and the journal for the app (the app container cannot), starts one on request ("Run now"), and adds
+agents of its own:
 
   maintainability  Claude Code, read-only, over a fresh copy of main in the builder sandbox: complexity hot spots,
                    duplicated logic, dead code, docs drift -> up to 5 ideas (Agents → Ideas)
@@ -95,6 +97,12 @@ CREW = [
      "what": "Weekly: restores the latest backup into a scratch area and checks it is complete."},
     {"id": "digest", "name": "Daily digest", "unit": "digest", "area": "ops",
      "what": "Every morning: what the stack did, what failed, what waits for you (Telegram)."},
+    {"id": "vault-ingest", "name": "Vault ingest", "unit": "vault-ingest", "area": "memory",
+     "what": "Every minute: converts the new files in your vault's inbox and adds them to the search index."},
+    {"id": "rotation", "name": "Trial rotation", "unit": "rotation", "area": "code",
+     "what": "Each night at 01:00 except Sunday: starts that night's trial of the weekly rotation once the stack is idle, or skips the night (TRL-14)."},
+    {"id": "recycle", "name": "Nightly restart", "unit": "recycle", "area": "ops",
+     "what": "Each night at 03:50: restarts the services that grow while idle (qmd, Phoenix, Open WebUI) once the stack is idle, so their memory does not pile up in swap (PLT-27)."},
     {"id": "token-probe", "name": "Token probe", "unit": "token-probe", "area": "ops", "oneoff": True,
      "what": "One-off: measures whether the ChatGPT prompt cache hits after the token fixes."},
 ]
@@ -139,14 +147,12 @@ def seconds_of(text):
 
 
 def schedule_of(unit):
-    """Human words for a timer's schedule, from its unit file."""
-    f = Path.home() / ".config/systemd/user" / f"{unit}.timer"
+    """Human words for a kept timer's schedule (the backup's, the restore drill's), from its unit file in the repository;
+    "on request" for a unit without one."""
+    f = Path(__file__).resolve().parent / "systemd" / f"{unit}.timer"
     if not f.exists():
         return "on request"
     s = f.read_text()
-    drop = DROPIN_DIR(unit) / DROPIN
-    if drop.exists():                                    # the owner's schedule from Mission Control wins
-        s = re.sub(r"^(OnCalendar|OnUnitInactiveSec|OnUnitActiveSec)=.*$", "", s, flags=re.M) + drop.read_text()
     cal = re.search(r"^OnCalendar=(.+)$", s, re.M)
     every = re.search(r"^OnUnitInactiveSec=(.+)$", s, re.M) or re.search(r"^OnUnitActiveSec=(.+)$", s, re.M)
     if cal:
@@ -154,37 +160,15 @@ def schedule_of(unit):
     return f"every {every[1].strip()}" if every else "on boot"
 
 
-DROPIN = "mission-control.conf"
-DROPIN_DIR = lambda unit: Path.home() / ".config/systemd/user" / f"{unit}.timer.d"     # noqa: E731
-EVERY = re.compile(r"^\d{1,4}\s*(s|min|h|d)$")
-
-
-def set_schedule(unit, kind, value):
-    """The owner's schedule for a crew timer as a systemd drop-in: kind calendar (OnCalendar) or every (interval);
-    kind reset removes it. Validated before anything is written."""
-    d, value = DROPIN_DIR(unit), str(value or "").strip()
-    if kind == "reset":
-        (d / DROPIN).unlink(missing_ok=True)
-    elif kind == "calendar":
-        if subprocess.run(["systemd-analyze", "calendar", value], capture_output=True, timeout=20).returncode:
-            raise ValueError(f"not a valid time: {value} (e.g. 'Mon *-*-* 04:30' or 'daily')")
-        d.mkdir(parents=True, exist_ok=True)
-        (d / DROPIN).write_text(f"[Timer]\nOnCalendar=\nOnUnitInactiveSec=\nOnUnitActiveSec=\nOnCalendar={value}\n")
-    elif kind == "every":
-        if not EVERY.match(value):
-            raise ValueError("an interval like 10min, 2h or 1d")
-        d.mkdir(parents=True, exist_ok=True)
-        (d / DROPIN).write_text(f"[Timer]\nOnCalendar=\nOnUnitInactiveSec=\nOnUnitActiveSec=\nOnUnitInactiveSec={value}\n")
-    else:
-        raise ValueError("kind: calendar, every or reset")
-    sh("systemctl", "--user", "daemon-reload")
-    sh("systemctl", "--user", "restart", f"{unit}.timer")
-
-
-def set_enabled(unit, on):
-    p = subprocess.run(["systemctl", "--user", "enable" if on else "disable", "--now", f"{unit}.timer"], capture_output=True, text=True, timeout=30)
-    if p.returncode:
-        raise ValueError(p.stderr.strip())
+def when(a, idx=None):
+    """WFL-09: what starts a crew job and when: (schedule in words, seconds between runs, whether it runs on its own,
+    its workflow or None). From its n8n workflow; a kept timer's from its unit file."""
+    import n8n_jobs as NJ
+    w = NJ.of("crew", a["id"], idx)
+    if w:
+        return NJ.schedule("crew", a["id"], idx), NJ.every(w["cron"], tz=w["tz"]) if w["active"] else None, w["active"], w
+    sched = schedule_of(a["unit"])
+    return sched, interval_of(sched), sched != "on request", None
 
 
 DAYS = {"Mon": "Mondays", "Tue": "Tuesdays", "Wed": "Wednesdays", "Thu": "Thursdays", "Fri": "Fridays", "Sat": "Saturdays", "Sun": "Sundays"}
@@ -192,29 +176,39 @@ DAYS = {"Mon": "Mondays", "Tue": "Tuesdays", "Wed": "Wednesdays", "Thu": "Thursd
 
 def plain_calendar(cal):
     """systemd OnCalendar -> words: 'Sun *-*-* 04:00:00' -> 'Sundays 04:00', '*-*-* 03:30' -> 'daily 03:30'."""
-    m = re.fullmatch(r"(?:(\w{3}) )?(\*|\d{4})-(\*|\d\d)-(\*|\d\d) (\d\d:\d\d)(?::\d\d)?", cal)
+    m = re.fullmatch(r"(?:(\w{3}) )?(?:(\*|\d{4})-(\*|\d\d)-(\*|\d\d) )?(\d\d:\d\d)(?::\d\d)?", cal)
     if not m:
         return cal
     day, _, _, dom, hm = m.groups()
+    dom = dom or "*"
     if day in DAYS:
         return f"{DAYS[day]} {hm}"
     return f"monthly on day {int(dom)}, {hm}" if dom != "*" else f"daily {hm}"
 
 
-def unit_status(a, units):
+def unit_status(a, units, idx=None, flow=None):
+    """A crew job's card. Its runs come from its service (the step service starts that unit, ops/flows.py run_crew); after
+    a restart of WSL, which forgets them, from the step service's record of its workflow's newest run (flow: {workflow
+    id: run}, ops/flows_view.py). Its schedule, next run and switch come from its n8n workflow, a kept timer's from
+    systemd."""
+    import n8n_jobs as NJ
     svc, tim = units.get(f"{a['unit']}.service", {}), units.get(f"{a['unit']}.timer", {})
     start, end = ts(svc.get("ExecMainStartTimestamp")), ts(svc.get("ExecMainExitTimestamp"))
-    trig = ts(tim.get("LastTriggerUSec"))         # survives a restart of WSL (the service's own times do not)
+    sched, _, on, w = when(a, idx)
+    seen = None
+    if w:
+        n = NJ.next_run("crew", a["id"], idx=idx)
+        nxt, trig = (dt.datetime.fromisoformat(n).timestamp() if n else None), None
+        r = (flow or {}).get(w["id"])
+        if not start and r:
+            trig, seen = dt.datetime.fromisoformat(r["started"]).timestamp(), {"done": "ok", "failed": "failed"}.get(r["state"], "running")
+    else:
+        trig, nxt = ts(tim.get("LastTriggerUSec")), ts(tim.get("NextElapseUSecRealtime"))     # a kept timer's: they survive a restart of WSL
     running = svc.get("ActiveState") in ("activating", "active") and svc.get("SubState") in ("start", "running")
-    result = "running" if running else ("ok" if trig else "never") if not start else "ok" if svc.get("Result") in ("success", "exec-condition") else "failed"   # exec-condition: the stack gate skipped it (PLT-28)
-    sched = schedule_of(a["unit"])
-    nxt = ts(tim.get("NextElapseUSecRealtime"))
-    if not nxt and sched.startswith("every ") and (start or trig):      # interval timers have no calendar time
-        nxt = (end or start or trig) + (seconds_of(sched[6:]) or 0)
+    result = "running" if running else (seen or ("ok" if trig else "never")) if not start else "ok" if svc.get("Result") in ("success", "exec-condition") else "failed"   # exec-condition: the stack gate skipped it (PLT-28)
     return {"state": result, "last": start or trig, "seconds": (end - start) if start and end and end >= start else None,
-            "next": nxt, "schedule": sched, "installed": svc.get("LoadState") == "loaded",
-            "enabled": tim.get("UnitFileState", "enabled") in ("enabled", "static", "linked") if tim else True,
-            "custom": (DROPIN_DIR(a["unit"]) / DROPIN).exists()}
+            "next": nxt, "schedule": sched, "installed": svc.get("LoadState") == "loaded", "enabled": on,
+            "workflow": w["id"] if w else None}
 
 
 def journal_tail(unit, n=8):
@@ -237,6 +231,8 @@ def status():
     units = parse_show(sh("systemctl", "--user", "show", "--timestamp=unix", "-p",
                           "Id,ActiveState,SubState,Result,ExecMainStartTimestamp,ExecMainExitTimestamp,LoadState,NextElapseUSecRealtime,LastTriggerUSec,UnitFileState",
                           *names))
+    import n8n_jobs as NJ
+    idx, flow = NJ.index(), last_flow_runs()
     out = []
     for a in CREW:
         item = {k: a[k] for k in ("id", "name", "what", "area", "unit") if k in a}    # unit: the app names jobs by it (APP-26)
@@ -247,7 +243,7 @@ def status():
                         next=(last + I.EVERY.total_seconds()) if last else None, schedule="weekly", result=s.get("result", ""),
                         installed=True, log=[])
         else:
-            item.update(unit_status(a, units))
+            item.update(unit_status(a, units, idx, flow))
             if not item["installed"]:
                 continue
             item["log"] = journal_tail(a["unit"])
@@ -278,13 +274,23 @@ def status():
     return out
 
 
+def last_flow_runs():
+    """{workflow id: its newest run} from the step service's record (ops/flows_view.py); {} when it cannot be read."""
+    try:
+        import flows_view as FV
+        return {w: rs[0] for w, rs in FV.runs(FV.load()).items() if rs}
+    except Exception as e:                                # the cards keep what systemd knows
+        print(f"crew: the step service's runs not read: {type(e).__name__}: {e}", file=sys.stderr)
+        return {}
+
+
 def state():
     return {"crew": status()}
 
 
 def set_cause(aid, kind, who="", why=""):
     """SWM-111: why the next run of this job starts: a unit started by hand or by an alert says so here (systemd passes
-    nothing on). A run that finds no word was started by its timer."""
+    nothing on). A run that finds no word was started by its schedule (its n8n workflow, or a kept timer)."""
     d = OUT / "cause"
     d.mkdir(parents=True, exist_ok=True)
     (d / f"{aid}.json").write_text(json.dumps({"kind": kind, "who": who, "why": why, "t": time.time()}, ensure_ascii=False))
@@ -318,17 +324,9 @@ def handle(req, c):
         _cache["t"] = 0
         M.event("crew", "", f"{ag['name']}: started on request", title="Crew")
         return {"started": ag["id"]}
-    if a == "crew_schedule":
-        ag = BY_ID.get(str(req.get("id", "")))
-        if not ag or not ag.get("unit"):
-            raise ValueError("this crew agent's schedule is set by the stack")
-        if "enabled" in req:
-            set_enabled(ag["unit"], bool(req["enabled"]))
-        if req.get("kind"):
-            set_schedule(ag["unit"], req["kind"], req.get("value"))
-        _cache["t"] = 0
-        M.event("crew", "", f"{ag['name']}: schedule now {schedule_of(ag['unit'])}" + ("" if req.get("enabled", True) else " (switched off)"), title="Crew")
-        return {"schedule": schedule_of(ag["unit"])}
+    if a == "crew_schedule":                              # WFL-09: n8n's canvas holds a job's schedule and its switch
+        raise ValueError("A crew job's schedule and its on/off switch are its workflow's: open Workflows, change its "
+                         "schedule trigger or its Active switch there.")
     if a == "crew_memory_forget":
         return forget(req.get("ids") or [], limit(str(req.get("why", "")), 2000, "the reason"))
     if a == "crew_memory_undo":                           # the owner's Undo of one Memory Keeper change (MEM-21)
@@ -393,8 +391,8 @@ def refresh_history(c):
         if runs and runs[0]["state"] != "running" and f.get("result", "").startswith("failed") and (runs[0]["state"] != "failed" or not runs[0].get("error")):   # a run still going (or waiting at the stack gate) has no result yet: the file is its last run's
             runs[0]["state"], runs[0]["error"] = "failed", f["result"]       # the reason, for the alert's text (FND-65)
         pay = payoff_of(c, a["id"])
-        sched = schedule_of(a["unit"])
-        j = O.judge(a["name"], "crew", runs, interval=interval_of(sched), enabled=True, up_since=SG.booted())
+        _, every, on, _ = when(a)
+        j = O.judge(a["name"], "crew", runs, interval=every, enabled=on, up_since=SG.booted())
         ok = [r["seconds"] for r in runs if r["state"] == "ok"]
         stats = {"runs": len(runs), "ok": sum(r["state"] == "ok" for r in runs), "failed": sum(r["state"] == "failed" for r in runs),
                  "avg_s": round(sum(ok) / len(ok), 1) if ok else None, "max_s": max(ok) if ok else None}
@@ -877,7 +875,8 @@ def call_doctor(lines, now=None):
         last = 0
     if not lines or now - last < DOCTOR_EVERY:
         return False
-    if sh("systemctl", "--user", "is-enabled", "crew-doctor.timer", timeout=20).strip() not in ("enabled", "static", "linked"):
+    import n8n_jobs as NJ
+    if not (NJ.of("crew", "doctor") or {}).get("active"):         # the owner switched its workflow off
         return False
     f.write_text(json.dumps({"t": now, "why": lines[:5]}))
     set_cause("doctor", "alert", "stack", "\n".join(lines[:5]))
@@ -939,10 +938,21 @@ def maint_context(c):
             + (f"\n\n{lessons}" if lessons else ""))
 
 
+def main_clone(fetch=True):
+    """The builder's main clone of the stack (/work/ai-stack in its sandbox), through the builder's own path
+    (ops/builds.py clone: cloned from Forgejo when missing, its permissions normalised, SEC-21 checked), so a crew job
+    that reads the code works on a fresh machine too; fetched from origin unless told not to. -> its host path."""
+    import builds as B                                  # clone() needs no runner (builds.M stays unset in a crew process)
+    path = B.clone("ai-stack")
+    if fetch:
+        B.git(path, "fetch", "-q", "origin", timeout=120)
+    return path
+
+
 def maintainability(c):
     t0 = time.time()
     save("maintainability", result="reviewing…", started=t0)
-    subprocess.run(["git", "-C", "/srv/ai/workbench/ai-stack", "fetch", "-q", "origin"], capture_output=True, timeout=120)
+    main_clone()
     prep = subprocess.run(["docker", "exec", "-u", "hermes", BUILDER, "sh", "-c",
                            "rm -rf /tmp/crew-review && mkdir -p /tmp/crew-review && git -C /work/ai-stack archive origin/main | tar -x -C /tmp/crew-review"],
                           capture_output=True, text=True, timeout=300)
@@ -1268,6 +1278,7 @@ def answer_requests(name, run, ask=None, send=None):
 
 def _ask_claude(prompt, name):
     import runtime as RTM
+    main_clone(fetch=False)                               # its working folder in the sandbox
     p = subprocess.run(["docker", "exec", "-u", "hermes", *MP.claude_args(), "-w", "/work/ai-stack", *RTM.env_args(),
                         "-e", f"AISTACK_AGENT=claude-{name}", "-e", f"AISTACK_TITLE={name}: answers on the Board", BUILDER,
                         # limit: stops, a crew agent's Board answer past 20 turns is reported as stopped

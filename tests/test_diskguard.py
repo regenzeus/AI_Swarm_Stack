@@ -15,11 +15,11 @@ def guard():
 
 def test_low_disk_prunes_the_build_cache_and_tells_the_owner_once():
     DG, ran, told, st, sh, notify = guard()
-    assert DG.check({"disk_c_free_gb": 12.0}, sh, notify, now=10_000, st=st) == "pruned"
+    assert DG.check({"disk_c_free_gb": 8.0}, sh, notify, now=10_000, st=st) == "pruned"
     assert ran == [("docker", "builder", "prune", "-af"), ("docker", "image", "prune", "-f")]
-    assert len(told) == 1 and "12.0 GB free" in told[0][0] and "Total:" in told[0][0] and told[0][1] == "system"
-    assert DG.check({"disk_c_free_gb": 12.0}, sh, notify, now=10_020, st=st) == ""          # paced: once an hour
-    assert DG.check({"disk_c_free_gb": 12.0}, sh, notify, now=10_000 + 3600, st=st) == "pruned"
+    assert len(told) == 1 and "8.0 GB free" in told[0][0] and "Total:" in told[0][0] and told[0][1] == "system"
+    assert DG.check({"disk_c_free_gb": 8.0}, sh, notify, now=10_020, st=st) == ""          # paced: once an hour
+    assert DG.check({"disk_c_free_gb": 8.0}, sh, notify, now=10_000 + 3600, st=st) == "pruned"
     assert len(told) == 1                                                                   # same episode: no new alert
 
 
@@ -33,12 +33,12 @@ def test_nearly_full_alerts_urgently_at_most_once_an_hour():
 
 def test_enough_space_or_no_reading_does_nothing_and_recovery_ends_the_episode():
     DG, ran, told, st, sh, notify = guard()
-    for h in ({"disk_c_free_gb": 80}, {"disk_c_free_gb": 22}, None, {}, {"disk_c_free_gb": "?"}):
+    for h in ({"disk_c_free_gb": 80}, {"disk_c_free_gb": 14.5}, {"disk_c_free_gb": 11}, None, {}, {"disk_c_free_gb": "?"}):
         assert DG.check(h, sh, notify, now=10_000, st=st) == ""
     assert ran == [] and told == []
-    DG.check({"disk_c_free_gb": 15}, sh, notify, now=10_000, st=st)
-    DG.check({"disk_c_free_gb": 30}, sh, notify, now=11_000, st=st)                        # recovered
-    DG.check({"disk_c_free_gb": 15}, sh, notify, now=20_000, st=st)                        # a new episode
+    DG.check({"disk_c_free_gb": 9}, sh, notify, now=10_000, st=st)
+    DG.check({"disk_c_free_gb": 14}, sh, notify, now=11_000, st=st)                        # recovered
+    DG.check({"disk_c_free_gb": 9}, sh, notify, now=20_000, st=st)                         # a new episode
     assert len(told) == 2
 
 

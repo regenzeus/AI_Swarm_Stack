@@ -14,6 +14,15 @@ for p in (ROOT / "ops", ROOT / "images" / "mission-control", ROOT / "images" / "
 os.environ.update(GIT_AUTHOR_NAME="test", GIT_AUTHOR_EMAIL="test@example.com",
                   GIT_COMMITTER_NAME="test", GIT_COMMITTER_EMAIL="test@example.com")
 
+# Each test process gets a temp folder of its own (QA, parallel tests): code that falls back to the system's temp folder
+# (journal.py's lock without a vault, repofacts' copies) never meets another worker's or another user's files there.
+# Before 10 Nov 2026 a lock left in /tmp by another user failed a landing with PermissionError.
+import tempfile  # noqa: E402
+_TMP = Path(tempfile.gettempdir()) / f"aistack-tests-{os.getuid()}-{os.environ.get('PYTEST_XDIST_WORKER', 'main')}-{os.getpid()}"
+_TMP.mkdir(parents=True, exist_ok=True)
+os.environ["TMPDIR"] = str(_TMP)
+tempfile.tempdir = str(_TMP)
+
 
 @pytest.fixture
 def runner(tmp_path, monkeypatch):
@@ -117,8 +126,7 @@ def no_steps_in_flight():
     yield
 
 
-# The Conductor's fixture: a task with test_conductor.PLAN started, fake adapters, a fake runner. Shared by the
-# Conductor's tests and the engine's activity tests, which prove the same plans run the same way on Temporal (WP5).
+# The Conductor's fixture: a task with test_conductor.PLAN started, fake adapters, a fake runner.
 @pytest.fixture
 def K(tmp_path, monkeypatch):
     import json

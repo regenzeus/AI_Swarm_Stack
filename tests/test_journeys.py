@@ -244,7 +244,8 @@ def test_a_failed_journey_is_an_alert_on_the_health_board_and_runs_nightly(tmp_p
     assert crew.journey_issues(tmp_path / "j.json", now=2.0) == []                      # a good night clears it
     job = next(a for a in crew.CREW if a["id"] == "journeys")
     assert job["unit"] == "crew-journeys" and "python3 ops/crew.py journeys" in (ROOT / "ops/systemd/crew-journeys.service").read_text()
-    assert re.search(r"OnCalendar=\*-\*-\* 04:10", (ROOT / "ops/systemd/crew-journeys.timer").read_text())
+    import n8n_jobs as NJ                                                       # nightly at 04:10, from its n8n workflow (WFL-09)
+    assert NJ.of("crew", "journeys", NJ.index(ROOT / "n8n/workflows", ROOT / "no-such-folder"))["cron"] == "10 4 * * *"
     assert "python3 ops/journeys.py all" in (ROOT / "Makefile").read_text()
 
 

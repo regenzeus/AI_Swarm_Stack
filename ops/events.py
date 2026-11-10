@@ -6,14 +6,15 @@ Sources (each one says when it last looked, what it found, or why it is off, on 
   a rule asks about: news on a query, breaking stories on a subject, RSS/Atom feeds, GitHub activity, prices, SEC filings
   local: Forgejo activity (the NAS) and new mail (only under the owner's Gmail read grant, every 5 minutes), both only
   while a rule asks for them; changes in the House (Home
-  Assistant), new files in C:\\AI\\exports, schedules, finished tasks, and the missions' own event triggers
+  Assistant), new files in C:\\AI\\exports, finished tasks, and the missions' own event triggers
   the calendar (TSK-33): the owner's ICS address (kept in /srv/ai/private, never shown whole), read every 15 minutes
   while a rule asks for it; a rule fires a given time before or after an event (ops/ics.py reads its repeats)
   (Forgejo and GitHub are read, not called back: nothing may reach the PC from outside, CST-04.)
 
 A source's first look at something only records what is there (a baseline), so a new rule never fires on old items.
+A time is no source here: n8n is the one scheduler (WFL-09); a workflow with a Schedule trigger starts work at a time.
 
-A rule: a source, its parameter (a query, a feed, a repository, a symbol, a schedule ...), words the event must hold,
+A rule: a source, its parameter (a query, a feed, a repository, a symbol ...), words the event must hold,
 a cooldown, the task to start (a sentence; {title}, {detail}, {url} and {source} are filled from the event), and an
 optional check a model answers ("is this the event the rule means?"). Each firing is recorded with its event and the
 task it started; the task goes through the intake like any other (ops/tasks.py).
@@ -43,7 +44,7 @@ CAL_PARAM = re.compile(r"^(?:(\d{1,4}) before|start|end|(\d{1,4}) after)$")
 SOURCES = {"news": "news on a search", "breaking": "a breaking story on a subject", "feed": "a new item in an RSS/Atom feed",
            "github": "activity on a GitHub repository", "price": "a price move of a symbol", "filing": "a new SEC filing of a ticker",
            "forgejo": "activity on a Forgejo repository", "mail": "new mail (Gmail, under its read grant)",
-           "house": "a change in the House", "file": "a new file in C:\\AI\\exports", "schedule": "a time",
+           "house": "a change in the House", "file": "a new file in C:\\AI\\exports",
            "task": "a task that finished", "mission": "a mission's own event trigger",
            "calendar": "a calendar event (your ICS address, read only)"}
 WEB = ("news", "breaking", "feed", "github", "price", "filing")
@@ -152,8 +153,6 @@ def save_rule(c, req):
         raise ValueError("give the price rule as SYMBOL:percent, e.g. ACME:8")
     if src == "filing" and not re.fullmatch(r"[A-Za-z.]{1,8}", param):
         raise ValueError("give the US ticker")
-    if src == "schedule" and not M.valid_schedule(param):
-        raise ValueError("a schedule is daily HH:MM, weekdays HH:MM, weekly mon,thu HH:MM or every Nh")
     if src == "calendar" and not CAL_PARAM.match(param):
         raise ValueError("say when, as minutes before its start (60 before), at its start (start), at its end (end) or "
                          "minutes after its end (15 after)")
@@ -172,7 +171,7 @@ def save_rule(c, req):
 def matches(rule, ev):
     if rule["source"] != ev["source"] or ev.get("baseline"):
         return False
-    if ev["source"] in ("schedule", "calendar"):       # a schedule's or a calendar rule's event belongs to the rule that set it
+    if ev["source"] == "calendar":                     # a calendar rule's event belongs to the rule that set it
         return ev.get("param") == f"rule {rule['id']}"
     if rule["param"] and rule["param"].lower() != (ev.get("param") or "").lower():
         if not (ev["source"] in ("forgejo", "house", "file", "task", "mission", "mail") and rule["param"].lower() in
@@ -513,30 +512,6 @@ def calendar_set(req):
     return {"calendar": calendar_host()}
 
 
-DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
-
-
-def due(sched, last, t):
-    """Is a schedule due at t, given when it last fired? (daily, weekdays, weekly <days>, every Nh)"""
-    m = re.match(r"^(?:(daily|weekdays) (\d\d):(\d\d)|weekly ((?:\w{3},?)+) (\d\d):(\d\d)|every (\d{1,2})h)$", sched)
-    if not m:
-        return False
-    if m.group(7):
-        return not last or (t - dt.datetime.fromisoformat(last)).total_seconds() >= int(m.group(7)) * 3600
-    hh, mm = (m.group(2), m.group(3)) if m.group(1) else (m.group(5), m.group(6))
-    days = DAYS if m.group(1) == "daily" else DAYS[:5] if m.group(1) == "weekdays" else m.group(4).split(",")
-    slot = t.replace(hour=int(hh), minute=int(mm), second=0, microsecond=0)
-    return DAYS[t.weekday()] in days and t >= slot and (not last or dt.datetime.fromisoformat(last) < slot)
-
-
-def schedules(c, t=None, ask=None, create=None):
-    t, n = t or now(), 0
-    for r in rules(c, "schedule"):
-        if due(r["param"], r["last_fired"], t):
-            n += bool(emit(c, "schedule", "time", f"{r['id']}|{t:%Y-%m-%dT%H:%M}", f"{r['name']}: {r['param']}", ask, create, param=f"rule {r['id']}")[0])
-    status("schedule", found=n, off=None if rules(c, "schedule") else "no rule asks for it")
-
-
 def task_done(c, t, state):
     """From ops/tasks.py: a task finished (done or failed). The bus's tables may not exist yet (its thread starts later)."""
     table(c)
@@ -566,11 +541,11 @@ def tick(c):
         mail_due = "mail" in asked and t - _last["mail"] >= MAIL_EVERY
         if mail_due:
             _last["mail"] = t
-        for f in [schedules, house, files] + ([forgejo] if "forgejo" in asked else []) + ([mail] if mail_due else []) + ([calendar] if "calendar" in asked else []):
+        for f in [house, files] + ([forgejo] if "forgejo" in asked else []) + ([mail] if mail_due else []) + ([calendar] if "calendar" in asked else []):
             try:
                 f(c)
             except Exception as e:                # one source's bug never stops the others; it is logged and shown
-                status(f.__name__.rstrip("s") if f.__name__ != "schedules" else "schedule", error=f"{type(e).__name__}: {e}")
+                status(f.__name__.rstrip("s"), error=f"{type(e).__name__}: {e}")
                 M.log(f"events {f.__name__}: {type(e).__name__}: {e}")
     if t - _last["web"] >= WEB_EVERY:
         _last["web"] = t

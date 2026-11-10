@@ -40,21 +40,7 @@ def check(repo, tag, signers):
     return None
 
 
-def temporal_with(repo):
-    """Moves Temporal when the new commit pins another version (ops/temporal_upgrade.py), on this machine."""
-    import temporal_upgrade as TU
-
-    def run(old, new):
-        at = lambda c: TU.pinned(git(repo, "show", f"{c}:versions.env", check=False).stdout)   # noqa: E731
-        was, will = at(old), at(new)
-        if not was or not will or was == will:
-            return {"ok": True, "why": "Temporal stays"}
-        import deploy as DP
-        return TU.run(was, will, TU.table(), **TU.real(repo, DP.COMPOSE))
-    return run
-
-
-def apply(repo, tag, signers, run_checks, deploy, temporal=lambda old, new: {"ok": True}):
+def apply(repo, tag, signers, run_checks, deploy):
     """Check the tag, run the whole check on its tree (run_checks(commit) -> bool), then move the stack to it and deploy
     (deploy(old, new) -> bool). -> what happened."""
     git(repo, "fetch", "-q", "--tags", "origin", check=False)
@@ -67,9 +53,6 @@ def apply(repo, tag, signers, run_checks, deploy, temporal=lambda old, new: {"ok
         return f"already at {tag}"
     if not run_checks(new):
         return f"NOT UPDATED: the checks failed on {tag}; the stack stays at {old[:8]}"
-    tu = temporal(old, new)                               # GEN-39: Temporal steps through each minor version first
-    if not tu["ok"]:
-        return f"NOT UPDATED: {tu['why']}; the stack stays at {old[:8]}"
     git(repo, "checkout", "-q", "--detach", new)
     if not deploy(old, new):
         git(repo, "checkout", "-q", "--detach", old)
@@ -108,7 +91,7 @@ if __name__ == "__main__":
     if len(a) == 2 and a[0] == "apply":
         if DEPLOY.FOLDER.name == "home":
             sys.exit("home updates by its own landings (ops/land.sh), not from tags")
-        said = apply(repo, a[1], signers, builder_checks(repo), deploy_with(repo), temporal_with(repo))
+        said = apply(repo, a[1], signers, builder_checks(repo), deploy_with(repo))
         print(said)
         sys.exit(0 if said.startswith(("UPDATED", "already")) else 1)
     sys.exit(__doc__)

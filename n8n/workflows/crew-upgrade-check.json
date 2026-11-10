@@ -1,0 +1,89 @@
+{
+  "active": true,
+  "connections": {
+    "On its schedule (0 9 01 * *)": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Crew: Upgrade check",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Run now": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Crew: Upgrade check",
+            "type": "main"
+          }
+        ]
+      ]
+    }
+  },
+  "id": "aisc6e2ebeeff0cc",
+  "name": "Crew: Upgrade check",
+  "nodes": [
+    {
+      "id": "6cd10d27-667f-8193-5616-34b9d19ea698",
+      "name": "On its schedule (0 9 01 * *)",
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "expression": "0 9 01 * *",
+              "field": "cronExpression"
+            }
+          ]
+        }
+      },
+      "position": [
+        0,
+        0
+      ],
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2
+    },
+    {
+      "id": "03d16fd8-965d-df9f-a50b-34e9db2635fd",
+      "name": "Crew: Upgrade check",
+      "notes": "The crew job upgrade-check (upgrade-check.service), as Run now starts it (WFL-05).",
+      "parameters": {
+        "job": "upgrade-check",
+        "kind": "crew",
+        "title": "Crew: Upgrade check"
+      },
+      "position": [
+        260,
+        0
+      ],
+      "type": "CUSTOM.aistackStep",
+      "typeVersion": 1,
+      "webhookId": "69909c51-1b8e-e00b-ecf1-22d48ce8793a"
+    },
+    {
+      "id": "48c35627-0995-2032-d332-b2333fd6c7f2",
+      "name": "Run now",
+      "notes": "Starts the job now, as its schedule would (POST).",
+      "parameters": {
+        "httpMethod": "POST",
+        "options": {},
+        "path": "run/crew-upgrade-check"
+      },
+      "position": [
+        0,
+        160
+      ],
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "webhookId": "5a72d589-2a01-3159-4384-cddd68e57ea0"
+    }
+  ],
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Berlin"
+  }
+}

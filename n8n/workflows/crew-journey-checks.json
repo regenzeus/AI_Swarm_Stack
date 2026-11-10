@@ -1,0 +1,89 @@
+{
+  "active": true,
+  "connections": {
+    "On its schedule (10 4 * * *)": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Crew: Journey checks",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Run now": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Crew: Journey checks",
+            "type": "main"
+          }
+        ]
+      ]
+    }
+  },
+  "id": "aisc02ba5fc96134",
+  "name": "Crew: Journey checks",
+  "nodes": [
+    {
+      "id": "e27b3cf3-bea9-35b0-4656-8264cdeaeef4",
+      "name": "On its schedule (10 4 * * *)",
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "expression": "10 4 * * *",
+              "field": "cronExpression"
+            }
+          ]
+        }
+      },
+      "position": [
+        0,
+        0
+      ],
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2
+    },
+    {
+      "id": "e79243af-a096-ef13-b0f0-a8ae36364171",
+      "name": "Crew: Journey checks",
+      "notes": "The crew job journeys (crew-journeys.service), as Run now starts it (WFL-05).",
+      "parameters": {
+        "job": "journeys",
+        "kind": "crew",
+        "title": "Crew: Journey checks"
+      },
+      "position": [
+        260,
+        0
+      ],
+      "type": "CUSTOM.aistackStep",
+      "typeVersion": 1,
+      "webhookId": "025d1d94-f6fe-1834-e881-db183fb85fe6"
+    },
+    {
+      "id": "ed6e44a6-330d-5759-00b6-bed3513a2b98",
+      "name": "Run now",
+      "notes": "Starts the job now, as its schedule would (POST).",
+      "parameters": {
+        "httpMethod": "POST",
+        "options": {},
+        "path": "run/crew-journey-checks"
+      },
+      "position": [
+        0,
+        160
+      ],
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "webhookId": "a12e6684-7a8e-34e7-3e58-9dc7d98edad6"
+    }
+  ],
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Berlin"
+  }
+}

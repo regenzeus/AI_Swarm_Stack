@@ -34,7 +34,7 @@ def K(tmp_path, monkeypatch):
     import missions as MM
     TK.M = types.SimpleNamespace(event=lambda *a, **k: events.append(a), valid_schedule=MM.valid_schedule, handle=handle, load_missions=lambda: made,
                                  X=types.SimpleNamespace(clean_triggers=lambda t: list(t or [])), notify_task=lambda *a: told.append(a),
-                                 paused=lambda s: False, stop=threading.Event(), log=print, next_due=MM.next_due, now=MM.now)
+                                 paused=lambda s: False, stop=threading.Event(), log=print, now=MM.now)
     import conductor as CD
     monkeypatch.setattr(CD, "M", TK.M)
     monkeypatch.setattr(TK, "B_repos", lambda: ["ai-stack", "testrepo"])

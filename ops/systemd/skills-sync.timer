@@ -1,8 +1,0 @@
-# feature: home
-[Unit]
-Description=Mirror Hermes skills every 5 minutes
-[Timer]
-OnBootSec=2min
-OnUnitActiveSec=5min
-[Install]
-WantedBy=timers.target

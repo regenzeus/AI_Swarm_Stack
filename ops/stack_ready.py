@@ -15,7 +15,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import stack_gate as G
 
-EXPECTED = {"qmd-query", "graphify-query_graph", "research-research"}
+EXPECTED = {"memory-search", "research-research"}   # vk-main's late servers (ops/keys.sh); since MEM-28 the memory tools
+                                                    # stand in for qmd and graphify, which the check waited for until 10 Nov 2026
+ONE_SHOT = {"n8n-db"}                                          # set-up jobs that run once at start and exit 0: done, not down
 URL = "http://127.0.0.1:4000/mcp/"
 HERMES = "http://127.0.0.1:8642/health"
 BOOTS = Path("/srv/ai/state/boots.jsonl")
@@ -109,9 +111,9 @@ def main():
         until(hermes_live, time.time() + 180)
     G.READY.write_text(str(time.time()))             # open the gate even when something is missing: the alert says what
     st = wait_states() or {}
-    down = sorted(s for s, v in st.items() if v != "running")
+    down = sorted(s for s, v in st.items() if v != "running" and s not in ONE_SHOT)
     row = {"ts": time.time(), "boot": G.booted(), "ready_s": round(G.uptime()), "docker_s": docker_s, "docker_tries": docker_tries(),
-           "running": len(st) - len(down), "total": len(st), "down": down, "missing": missing, "hermes_restarted": restarted}
+           "running": len(st) - len(down) - len(ONE_SHOT & set(st)), "total": len(st) - len(ONE_SHOT & set(st)), "down": down, "missing": missing, "hermes_restarted": restarted}
     print(json.dumps(row), flush=True)
     if first:
         BOOTS.parent.mkdir(parents=True, exist_ok=True)

@@ -1,0 +1,90 @@
+{
+  "active": true,
+  "connections": {
+    "On its schedule (*/5 * * * *)": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Crew: Skill keeper",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Run now": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Crew: Skill keeper",
+            "type": "main"
+          }
+        ]
+      ]
+    }
+  },
+  "id": "aisce0b4e399844e",
+  "name": "Crew: Skill keeper",
+  "nodes": [
+    {
+      "id": "5aac93c3-0eb7-64ca-390c-f37736d807ab",
+      "name": "On its schedule (*/5 * * * *)",
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "expression": "*/5 * * * *",
+              "field": "cronExpression"
+            }
+          ]
+        }
+      },
+      "position": [
+        0,
+        0
+      ],
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2
+    },
+    {
+      "id": "b721e994-e0a7-15a2-08a0-b5c32171a341",
+      "name": "Crew: Skill keeper",
+      "notes": "The crew job skills-sync (skills-sync.service), as Run now starts it (WFL-05).",
+      "parameters": {
+        "job": "skills-sync",
+        "kind": "crew",
+        "title": "Crew: Skill keeper"
+      },
+      "position": [
+        260,
+        0
+      ],
+      "type": "CUSTOM.aistackStep",
+      "typeVersion": 1,
+      "webhookId": "4a3fe10b-c4bb-b0c0-f82d-5deba8feeab7"
+    },
+    {
+      "id": "54b7e62a-8220-89f4-304b-bb64279c1f72",
+      "name": "Run now",
+      "notes": "Starts the job now, as its schedule would (POST).",
+      "parameters": {
+        "httpMethod": "POST",
+        "options": {},
+        "path": "run/crew-skill-keeper"
+      },
+      "position": [
+        0,
+        160
+      ],
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "webhookId": "f200a0ce-7d58-ca20-cb0f-699883b5008e"
+    }
+  ],
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "none",
+    "timezone": "Europe/Berlin"
+  }
+}

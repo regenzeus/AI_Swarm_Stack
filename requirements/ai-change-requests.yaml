@@ -37,6 +37,6 @@ items:
       tests/test_editor.py::test_a_pass_saves_its_sorting_and_changes_nothing,
       tests/test_editor.py::test_the_editor_is_a_crew_duty_with_its_card_units_and_prompt,
       tests/test_editor.py::test_each_idea_and_the_ideas_view_show_the_editor_s_sorting]}
-    trace: [ops/editor.py, prompts/editor.md, ops/systemd/crew-editor.service, ops/systemd/crew-editor.timer, config/agents.yaml, ops/crew.py,
+    trace: [ops/editor.py, prompts/editor.md, ops/systemd/crew-editor.service, n8n/workflows/crew-editor.json, config/agents.yaml, ops/crew.py,
       images/mission-control/server.py, images/mission-control/server.a2a.py]
 

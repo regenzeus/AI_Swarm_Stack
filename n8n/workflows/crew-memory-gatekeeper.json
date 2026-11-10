@@ -1,0 +1,90 @@
+{
+  "active": true,
+  "connections": {
+    "On its schedule (*/10 * * * *)": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Crew: Memory gatekeeper",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Run now": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Crew: Memory gatekeeper",
+            "type": "main"
+          }
+        ]
+      ]
+    }
+  },
+  "id": "aisc541809c0d8a7",
+  "name": "Crew: Memory gatekeeper",
+  "nodes": [
+    {
+      "id": "7dab3af2-76b5-8406-b046-df65356e19b7",
+      "name": "On its schedule (*/10 * * * *)",
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "expression": "*/10 * * * *",
+              "field": "cronExpression"
+            }
+          ]
+        }
+      },
+      "position": [
+        0,
+        0
+      ],
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2
+    },
+    {
+      "id": "28f99fd1-52b9-3263-a6c2-0ee8a71fce14",
+      "name": "Crew: Memory gatekeeper",
+      "notes": "The crew job memory-review (memory-review.service), as Run now starts it (WFL-05).",
+      "parameters": {
+        "job": "memory-review",
+        "kind": "crew",
+        "title": "Crew: Memory gatekeeper"
+      },
+      "position": [
+        260,
+        0
+      ],
+      "type": "CUSTOM.aistackStep",
+      "typeVersion": 1,
+      "webhookId": "3222c088-3ac8-43d4-6cd4-defad58ddcdb"
+    },
+    {
+      "id": "f9161b61-aa5a-8a78-29ec-0e4fa9d30108",
+      "name": "Run now",
+      "notes": "Starts the job now, as its schedule would (POST).",
+      "parameters": {
+        "httpMethod": "POST",
+        "options": {},
+        "path": "run/crew-memory-gatekeeper"
+      },
+      "position": [
+        0,
+        160
+      ],
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "webhookId": "b06e4d54-1c49-48a4-3940-452a6fab8009"
+    }
+  ],
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "none",
+    "timezone": "Europe/Berlin"
+  }
+}

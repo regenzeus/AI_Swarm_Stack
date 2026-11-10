@@ -1,7 +1,5 @@
-# The host runner's Python packages (ops/missions.py and everything it imports), pinned (docs/AI-STACK-PLAN.md §1).
-# Until the AI Stack, the runner used only the standard library and the system's PyYAML; the engine adds Temporal's SDK
-# and the codec's cryptography. ops/runner_env.sh installs exactly these into the runner's own environment with uv.
+# The host runner's Python packages (ops/missions.py and everything it imports), pinned. The runner uses the standard
+# library and PyYAML; ops/runner_env.sh installs exactly these into the runner's own environment with uv, so the
+# runner never depends on the system's Python packages.
 # Pin rule: the newest release at least 14 days old when it is set; tests/requirements.txt carries the same pins.
 pyyaml==6.0.3
-temporalio==1.34.0
-cryptography==50.0.2

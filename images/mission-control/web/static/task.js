@@ -92,7 +92,7 @@ function taskPage(t) {
     [`${a.memory.read.length} · ${a.memory.write.length}`, "memory read · kept"], [v ? v[0] : t.status === "done" ? "not judged yet" : "–", "against done when"]];
   const tabs = TTABS.filter(([k]) => (k !== "runs" || (t.runs || []).length > 1) && (k !== "sources" || t.prov));
   if (!tabs.some(([k]) => k === ttab)) ttab = "overview";
-  const many = (t.runs || []).length > 1;
+  const many = (t.runs || []).length > 1, wf = wfWhereOf(t), keepWf = wfKeepFrame();   // WFL-11: where it runs in n8n
   view.innerHTML = `<a class="back" href="#/tasks">${ic.back}Tasks</a><div id="taskpage">
   <div class="aghead h-${["failed", "cancelled"].includes(t.status) ? "bad" : t.status === "done" ? "ok" : "warn"}"><div class="agic lg">${ic.target}</div><div class="grow" style="min-width:0">
     <h1 class="agh1">${esc(t.title)}</h1>
@@ -102,6 +102,7 @@ function taskPage(t) {
     ${taskEngineLink(t, run)}
     <div data-tideas="${t.id}"></div>${(queueMicrotask(() => fillTaskIdeas($(`[data-tideas="${t.id}"]`), t.id)), "")}
   </div></div>
+  ${wf ? `<div id="wfwhere" style="margin-top:12px"></div>` : ""}
   ${many ? `<label class="row small" style="gap:8px;margin-top:12px"><span class="muted">Showing</span><select class="input sm" id="tocc" style="width:auto;max-width:100%;min-width:0;flex:1 1 auto">${t.runs.map((r) => `<option value="${r.occ}" ${r.occ === run.occ ? "selected" : ""}>Run ${r.occ} of ${t.runs.length} · ${esc(day(r.started))}${r.verdict ? ` · ${esc((VWORD[r.verdict] || [r.verdict])[0])}` : r.status ? ` · ${esc(r.status)}` : ""}</option>`).join("")}</select></label>` : ""}
   ${blocked ? `<div class="banner" style="margin-top:12px">${ic.alert}<span class="grow wrap"><b>Not done: step ${blocked.idx} (${esc(taskWho(blocked.agent))}) was blocked.</b> ${esc(blocked.error.slice(9))}</span></div>`
     : t.error ? `<div class="banner" style="margin-top:12px">${ic.alert}<span class="grow wrap">${esc(t.error)}</span></div>` : ""}
@@ -121,6 +122,7 @@ function taskPage(t) {
   if ($("#tocc")) $("#tocc").onchange = (e) => { taskOcc[t.id] = +e.target.value; vTask(); };
   if (typeof bindTasks === "function") bindTasks();
   changeBind(t);
+  if (wf) wfWhereInto($("#wfwhere"), wf.wid, wf.ex, null, keepWf); else keepWf?.remove();
   const body = $("#ttbody");
   ({ overview: taskOverview, timeline: taskTimeline, agents: taskAgents, sources: taskSources, memory: taskMemory, runs: taskRuns })[ttab](body, t, a, steps);
   $$("[data-tab-go]", body).forEach((b) => (b.onclick = (e) => { e.preventDefault(); go(b.dataset.tabGo); }));

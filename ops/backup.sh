@@ -16,10 +16,7 @@ STAGE=$(mktemp -d); trap "rm -rf $STAGE; docker unpause aistack-hermes-1 aistack
 
 # Databases: postgres as a dump (LiteLLM keys, budgets, spend); the SQLite files inside the volumes are copied
 # while their containers are paused, so each file is a consistent crash image.
-# The engine's databases hold run histories (GEN-36): references only, encrypted, and never in a backup that leaves the
-# machine when the deployment holds customer data. Home's data is personal, so home keeps them.
-PG_SKIP=(); if python3 "$(dirname "$0")/dataguard.py" customer; then PG_SKIP=(--exclude-database='temporal*'); fi
-docker exec aistack-postgres-1 pg_dumpall -U litellm "${PG_SKIP[@]}" > $STAGE/postgres.sql
+docker exec aistack-postgres-1 pg_dumpall -U litellm > $STAGE/postgres.sql
 docker exec aistack-hindsight-db-1 pg_dumpall -U hindsight > $STAGE/hindsight.sql      # long-term memory bank
 # /srv/ai, without what ops/backup-copy.sh names; a file the backup user cannot read is skipped and logged, not a failed
 # backup (PLT-13: one did that on 2026-10-29, the AI phone's key, and another on 2026-10-31, a container's file in workbench/)

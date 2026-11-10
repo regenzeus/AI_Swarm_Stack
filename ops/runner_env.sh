@@ -1,8 +1,7 @@
 #!/bin/bash
-# The host runner's own Python environment (GEN-33, docs/AI-STACK-PLAN.md WP0). Until the AI Stack the runner used only
-# the standard library and the system's PyYAML; the engine adds Temporal's SDK. This keeps those packages in one
-# environment of the runner's own, outside the system Python, set up by uv (a pinned, checksummed binary) and needing
-# no sudo, so a work machine whose user has none can run it too.
+# The host runner's own Python environment (PLT-37): its packages (ops/runner-requirements.txt) in one environment of
+# the runner's own, outside the system Python, set up by uv (a pinned, checksummed binary) and needing no sudo, so a
+# work machine whose user has none can run it too.
 #
 #   bash ops/runner_env.sh          make or refresh the environment; prints its python on success
 #   bash ops/runner_env.sh lock     write ops/runner-requirements.lock from ops/runner-requirements.txt (with hashes)
@@ -42,4 +41,4 @@ if [ "$(cat "$VENV/.lock-sha" 2>/dev/null || true)" != "$want" ]; then
   "$UV" pip sync -q --require-hashes --python "$VENV/bin/python" "$LOCK"
   echo "$want" > "$VENV/.lock-sha"
 fi
-"$VENV/bin/python" -c "import temporalio, yaml, cryptography" && echo "$VENV/bin/python"
+"$VENV/bin/python" -c "import yaml" && echo "$VENV/bin/python"

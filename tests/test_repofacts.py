@@ -290,7 +290,9 @@ def test_the_image_is_pinned_checked_and_built_the_way_the_others_are():
 def test_the_timer_keeps_them_current_the_way_the_graph_is_kept():
     svc = (ROOT / "ops/systemd/repofacts-sync.service").read_text()
     assert "stack_gate.py" in svc and "ops/repofacts.py sync" in svc and "docker.sock" in svc
-    assert "OnUnitInactiveSec" in (ROOT / "ops/systemd/repofacts-sync.timer").read_text()
+    import n8n_jobs as NJ                                                       # n8n starts it every 5 minutes, as the code graph's (WFL-09)
+    idx = NJ.index(ROOT / "n8n/workflows", ROOT / "no-such-folder")
+    assert NJ.schedule("crew", "repofacts-sync", idx) == "every 5 minutes" and NJ.schedule("crew", "graphify-sync", idx) == "every minute"
 
 
 def test_the_wiki_s_first_version_gets_the_facts_as_evidence():

@@ -1,7 +1,0 @@
-[Unit]
-Description=Poll the vault inbox every 60 s (no inotify across drvfs)
-[Timer]
-OnBootSec=2min
-OnUnitInactiveSec=60s
-[Install]
-WantedBy=timers.target

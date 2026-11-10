@@ -1,7 +1,0 @@
-[Unit]
-Description=Nightly restart of the services that grow while idle (after the backup, before the journeys)
-[Timer]
-OnCalendar=*-*-* 03:50
-Persistent=true
-[Install]
-WantedBy=timers.target

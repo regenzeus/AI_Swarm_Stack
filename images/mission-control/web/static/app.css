@@ -1700,3 +1700,23 @@ body:not(.chatmode) { overflow-y: auto; }
 .tk-item { border-top: 1px solid var(--border); padding-top: 8px; display: flex; flex-direction: column; gap: 6px; }
 /* §10 Runs: Temporal's UI inside the app, the window's height */
 .runs-frame { width: 100%; height: max(560px, calc((100dvh / var(--z, 1)) - 200px)); border: 1px solid var(--border); border-radius: var(--r); background: var(--surface); }
+/* WFL-11, WFL-13: n8n inside the app. On the desk the Workflows page gives n8n's frame the content area beside the menu and
+   the window's height; a task's or crew job's "Where it runs" shows the run's canvas; a phone gets lists */
+body[data-page="workflows"] .view { max-width: none; }
+.wf-head { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; margin-bottom: 12px; }
+.wf-head h1 { margin: 0 auto 0 0; }
+.wf-seg { flex: 0 1 auto; }
+.n8n-frame { display: block; width: 100%; height: max(560px, calc((100dvh / var(--z, 1)) - 130px)); border: 1px solid var(--border); border-radius: var(--r); background: var(--surface); }
+.n8n-frame.run { height: max(380px, calc((100dvh / var(--z, 1)) - 420px)); margin-top: 12px; }
+.wf-where h2 { margin: 0; }
+.wf-in { align-items: center; }
+.wf-in .tag { overflow-wrap: anywhere; }
+.wf-card > summary { list-style: none; cursor: pointer; padding: 14px 16px; }
+.wf-card > summary::-webkit-details-marker { display: none; }
+.wf-body { padding: 0 16px 14px; display: flex; flex-direction: column; gap: 10px; }
+.wf-run { border-top: 1px solid var(--border); padding-top: 10px; }
+.wf-steps { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.wf-steps li { border-left: 3px solid var(--border); padding: 4px 0 4px 10px; }
+.wf-steps li.st-done { border-left-color: var(--ok); }
+.wf-steps li.st-running, .wf-steps li.st-waiting { border-left-color: var(--accent); }
+.wf-steps li.st-failed, .wf-steps li.st-refused, .wf-steps li.st-cancelled { border-left-color: var(--err); }

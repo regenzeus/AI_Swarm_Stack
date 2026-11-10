@@ -21,6 +21,9 @@ Every `/api/` and `/share` route needs the `Tailscale-User-Login` header that `t
 | `/api/codec/decode` | POST | Temporal UI's codec protocol: {"payloads": [{"metadata": {k: base64}, "data": base64}]} -> the same, decrypted. |
 | `/runs` | GET | /runs/...: Temporal's UI, passed through as it is (its pages, its API, its assets). |
 | `/runs/{path:path}` | GET, POST, PUT, PATCH, DELETE | /runs/...: Temporal's UI, passed through as it is (its pages, its API, its assets). |
+| `/n8n` | GET | /n8n/... -> n8n's /...: the method, the query, the body, the cookies, and the answer as it comes, chunk by chunk. |
+| `/n8n/{path:path}` | GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS | /n8n/... -> n8n's /...: the method, the query, the body, the cookies, and the answer as it comes, chunk by chunk. |
+| `/api/workflows` | GET | WFL-14: every workflow in git with its schedule, its steps and its recent runs (public/workflows-runs.json). |
 | `/api/file` | GET | A vault file as text, for the reading view; only paths inside the vault. |
 | `/api/runlog/{rid}` | GET | The last 300 lines of a mission run's log (an earlier-lines marker says how many more there are). |
 | `/api/run/{rid}/timeline` | GET | A run's timeline (ops/telemetry.py writes it: model calls, tool calls, results, thinking, tokens). |

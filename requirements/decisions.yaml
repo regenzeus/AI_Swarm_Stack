@@ -317,3 +317,24 @@ items:
       or DBOS is your call. No experiment. Do research. Then decide.', 'owner 2026-11-09: Mostly yes. Temporal is the right
       engine, and the Lego approach is a good idea. All five sign-off questions are fine, but four of them need a condition.',
     docs/AI-STACK.md]}
+- {id: DEC-51, date: '2026-11-10', title: 'n8n is the stack''s workflow pillar; Temporal and our editor go', supersedes: [DEC-50],
+    decision: 'What the owner found: the new engine layer was hard to reach, half migrated (9 of about 35 recurring jobs)
+    and rough, and four mechanisms decided when work starts. So: n8n (self-hosted, Sustainable Use License, free for
+    personal and internal business use) becomes the one place that decides when work starts and in what order, with its
+    canvas and run history; the stack''s services stay the workers behind one step service; workflows live in git;
+    the owner decides in Needs you; packs, places, trackers and artifacts from DEC-50 stay; Temporal, the Conductor''s
+    scheduling, the block editor and the crew''s timers are removed once no work runs on them. Stability first: the disk
+    guard and the boot check before any move.', sources: ['owner 2026-11-10: Make a plan how to migrate to n8n. Make
+      the stack stable first: land the disk guard and fix the stalled startup check. Do this. Design the n8n migration.
+      Plan a full conversion to n8n as the pillar. Plan ux integration of n8n. Convert ai swarm stack to n8n.',
+    docs/N8N-MIGRATION.md]}
+- {id: DEC-52, date: '2026-11-10', title: 'Temporal is removed; n8n is the one orchestrator', supersedes: [DEC-50],
+    decision: 'What the owner asked: no technical debt, the repository in a clean state. So, after the runner went back to
+    the Conductor for plans (10 Nov 2026, 10:40) and Temporal stood idle: Temporal''s four services, its network, its
+    databases'' setup, its upgrade path, its SDK in the runner, the builder and the app, the graph runner, the bridge,
+    the cutover, the codec, the preview, the graph template format, the block editor and its build are removed. What
+    the n8n design keeps from DEC-50 stays, freed from Temporal, in ops/domain: packs (now bringing n8n workflows),
+    places, trackers and the forge, roles, saved files and a run''s record. The Conductor keeps its own plan checks and
+    runs plans until their move to n8n (WFL-09). The app''s Engine, Runs and Templates screens go in the app''s own
+    clean-up.', sources: ['owner 2026-11-10: We need to clean technical debt. I want the repo in clean state.',
+    docs/N8N-MIGRATION.md]}

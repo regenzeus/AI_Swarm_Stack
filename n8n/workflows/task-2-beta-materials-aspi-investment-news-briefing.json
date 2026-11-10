@@ -1,0 +1,89 @@
+{
+  "active": true,
+  "connections": {
+    "On its schedule (30 6 * * *)": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Task #2: Beta Materials (ASPI): investment news briefing",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Run now": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Task #2: Beta Materials (ASPI): investment news briefing",
+            "type": "main"
+          }
+        ]
+      ]
+    }
+  },
+  "id": "aistd5c4c993e4f9",
+  "name": "Task #2: Beta Materials (ASPI): investment news briefing",
+  "nodes": [
+    {
+      "id": "2dc73e4b-12c2-d44c-592f-d6cd1c9d4b39",
+      "name": "On its schedule (30 6 * * *)",
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "expression": "30 6 * * *",
+              "field": "cronExpression"
+            }
+          ]
+        }
+      },
+      "position": [
+        0,
+        0
+      ],
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2
+    },
+    {
+      "id": "1400566a-006b-15b3-08ba-24d3063d4d45",
+      "name": "Task #2: Beta Materials (ASPI): investment news briefing",
+      "notes": "One run of the task: an occurrence of its plan (WFL-05).",
+      "parameters": {
+        "kind": "task",
+        "task": 2,
+        "title": "Task #2: Beta Materials (ASPI): investment news briefing"
+      },
+      "position": [
+        260,
+        0
+      ],
+      "type": "CUSTOM.aistackStep",
+      "typeVersion": 1,
+      "webhookId": "b6101e74-ae8e-547c-a166-2db8dc1c4464"
+    },
+    {
+      "id": "55be4e4d-0d43-0066-7429-e524df66daa7",
+      "name": "Run now",
+      "notes": "Starts the job now, as its schedule would (POST).",
+      "parameters": {
+        "httpMethod": "POST",
+        "options": {},
+        "path": "run/task-2-beta-materials-aspi-investment-news-briefing"
+      },
+      "position": [
+        0,
+        160
+      ],
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "webhookId": "d24347a4-c7b3-0151-dccf-32235c5a4598"
+    }
+  ],
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Berlin"
+  }
+}

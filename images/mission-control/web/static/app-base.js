@@ -91,6 +91,7 @@ const ic = {
   repeat: I('<path d="M17 2l3 3-3 3"/><path d="M4 11V9a4 4 0 0 1 4-4h12M7 22l-3-3 3-3"/><path d="M20 13v2a4 4 0 0 1-4 4H4"/>'),
   trash: I('<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/>'),
   layers: I('<path d="M12 3 2 8l10 5 10-5Z"/><path d="M2 13l10 5 10-5"/>'),
+  flow: I('<circle cx="5" cy="6" r="2"/><circle cx="19" cy="6" r="2"/><circle cx="12" cy="18" r="2"/><path d="M7 6h10M6 8l5 8m13-8-5 8"/>'),
   radar: I('<circle cx="12" cy="12" r="9"/><path d="M12 12 18 6"/><circle cx="12" cy="12" r="4"/>'),
   search: I('<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>'),
   list: I('<path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/>'),
@@ -235,10 +236,11 @@ function bars(runs) {
 // the Memory tab's parts (APP-50); the wikis keep their route
 const MEM_ROUTES = ["memory", "howto", "longterm", "codemem", "skills", "journals", "memsearch", "sources"];
 const NAV = [["home", "#/", "Home", ic.home], ["tasks", "#/tasks", "Tasks", ic.tasks], ["wiki", "#/memory", "Memory", ic.wiki], ["build", "#/build", "Code", ic.code],
-  ["chat", "#/chat", "Chat", ic.chat], ["system", "#/system", "Stack", ic.layers]];
+  ["chat", "#/chat", "Chat", ic.chat], ["workflows", "#/workflows", "Workflows", ic.flow], ["system", "#/system", "Stack", ic.layers]];
 function navHtml(bottom) {
   const pend = S?.system?.pending_memory?.length || 0;
   return NAV.map(([k, href, label, icon]) => {
+    if (k === "workflows" && bottom) return "";       // WFL-11: n8n inside the app is the desk's; a phone reaches the list from Tasks and the pages
     const on = route.name === k || (k === "home" && route.name === "decide")
       || (k === "tasks" && ["task", "taskmap", "mission", "crew", "new", "swarm", "missions", "telemetry", "trials"].includes(route.name)) || (k === "system" && ["mail", "guide"].includes(route.name)) || (k === "wiki" && MEM_ROUTES.includes(route.name)) || (k === "build" && route.name === "repo");
     const toReview = (S?.builds || []).filter((b) => b.status === "review").length;        // the badge = what waits for you
@@ -335,12 +337,12 @@ function render(force = false) {
   if (!force && route.name === "repo") return repoLive();
   if (!force && !(LIVE.has(route.name) || (route.name === "files" && !$("#fplan")?.innerHTML && !typing()) || ((route.name === "mission" || route.name === "crew") && agentSigOf() !== agentSig && !typing() && !$(".tl:not([hidden])") && !$("#tabbody details[open]")) || (route.name === "build" && !typing() && !$("#chbox:not([hidden])") && !$("#view details[open]") && !$("#blogbox:not([hidden])") && !$("#nb:not([hidden])") && !$("#addrepo:not([hidden])")))) return;
   // views that load their own data draw at once; the others wait for the first state (they are drawn when it comes)
-  if (!S && !["missions", "new", "mail", "chat", "wiki", "read", "guide", "phone", "share", "live", "swarm", "skills", "memory", "howto", "longterm", "codemem", "journals", "memsearch", "sources", "taskmap", "telemetry", "task", "trials"].includes(route.name)) { view.innerHTML = noLink() ? offlineHtml() : `<div class="stack"><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div></div>`; return; }
+  if (!S && !["missions", "new", "mail", "chat", "wiki", "read", "guide", "phone", "share", "live", "swarm", "skills", "memory", "howto", "longterm", "codemem", "journals", "memsearch", "sources", "taskmap", "telemetry", "task", "trials", "workflows"].includes(route.name)) { view.innerHTML = noLink() ? offlineHtml() : `<div class="stack"><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div></div>`; return; }
   const y = window.scrollY;
   if (force) { document.body.classList.add("anim"); clearTimeout(render.anim); render.anim = setTimeout(() => document.body.classList.remove("anim"), 600); }
   const open = force ? [] : [...view.querySelectorAll("details[open][id], details[open][data-keep]")].map((d) => d.id || d.dataset.keep);
   document.body.dataset.page = route.name;          // APP-56: the stylesheet lays each page out for the width it has
-  const fn = { mail: vMail, decide: vDecide, tasks: vTasks, task: vTask, trials: vTrials, home: vHome, missions: vMissionsGo, mission: vMission, new: vNewGo, chat: vChat, system: vSystem, read: vRead, file: vFile, files: vFiles, wiki: vWiki, build: vBuild, repo: vRepo, guide: vGuide, share: vShare, phone: vPhone, house: vHouse, crew: vCrew, live: vLive, swarm: vSwarm, skills: vSkills, memory: vMemory, howto: vHowto, longterm: vLongTerm, codemem: vCodeMem, journals: vJournals, memsearch: vMemSearch, sources: vSources, taskmap: vTaskMap, telemetry: vTelemetry, engine: vEngine, templates: vTemplates, packs: vPacks, trackers: vTrackers, runs: vRuns }[route.name] || vHome;
+  const fn = { mail: vMail, decide: vDecide, tasks: vTasks, task: vTask, trials: vTrials, home: vHome, missions: vMissionsGo, mission: vMission, new: vNewGo, chat: vChat, system: vSystem, read: vRead, file: vFile, files: vFiles, wiki: vWiki, build: vBuild, repo: vRepo, guide: vGuide, share: vShare, phone: vPhone, house: vHouse, crew: vCrew, live: vLive, swarm: vSwarm, skills: vSkills, memory: vMemory, howto: vHowto, longterm: vLongTerm, codemem: vCodeMem, journals: vJournals, memsearch: vMemSearch, sources: vSources, taskmap: vTaskMap, telemetry: vTelemetry, engine: vEngine, templates: vTemplates, packs: vPacks, trackers: vTrackers, runs: vRuns, workflows: vWorkflows }[route.name] || vHome;
   if (force) {                                      // a page that loads for a moment: not the page you left under the new tab's name
     const was = view.firstChild, n = (render.nav = (render.nav || 0) + 1);
     setTimeout(() => { if (render.nav === n && view.firstChild === was) view.innerHTML = `<div class="stack"><div class="skeleton" style="height:96px"></div><div class="skeleton" style="height:280px"></div></div>`; }, 180);

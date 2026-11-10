@@ -1,0 +1,89 @@
+{
+  "active": true,
+  "connections": {
+    "On its schedule (0 */6 * * *)": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Crew: Health doctor",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Run now": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Crew: Health doctor",
+            "type": "main"
+          }
+        ]
+      ]
+    }
+  },
+  "id": "aisca246bc5f4e87",
+  "name": "Crew: Health doctor",
+  "nodes": [
+    {
+      "id": "005f52db-a837-03b4-fd4f-504e61748220",
+      "name": "On its schedule (0 */6 * * *)",
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "expression": "0 */6 * * *",
+              "field": "cronExpression"
+            }
+          ]
+        }
+      },
+      "position": [
+        0,
+        0
+      ],
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2
+    },
+    {
+      "id": "349c6c44-6aff-841d-0ac9-38906b1fbb9f",
+      "name": "Crew: Health doctor",
+      "notes": "The crew job doctor (crew-doctor.service), as Run now starts it (WFL-05).",
+      "parameters": {
+        "job": "doctor",
+        "kind": "crew",
+        "title": "Crew: Health doctor"
+      },
+      "position": [
+        260,
+        0
+      ],
+      "type": "CUSTOM.aistackStep",
+      "typeVersion": 1,
+      "webhookId": "c5717292-a0e5-e820-99dd-ea230e8872f6"
+    },
+    {
+      "id": "5d0d6cd3-68cc-0601-36ac-185ab5fba810",
+      "name": "Run now",
+      "notes": "Starts the job now, as its schedule would (POST).",
+      "parameters": {
+        "httpMethod": "POST",
+        "options": {},
+        "path": "run/crew-health-doctor"
+      },
+      "position": [
+        0,
+        160
+      ],
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "webhookId": "7482b176-c3be-cc29-1164-ef0391739404"
+    }
+  ],
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Berlin"
+  }
+}

@@ -7,6 +7,7 @@ Archivo and JetBrains Mono fonts are vendored by the Dockerfile into `static/ven
 |---|---|
 | `index.html` | the shell: side nav (desktop), tab bar (phone, Stack included, its dot = live state), no top bar (a `#livebar` shows only when offline or an update waits), and each page's **How this page works** link |
 | `static/app.js` | the app: router, live state, every view (`vHome`, `vMissions` = the Agents list, `vAgent` = the agent page behind `#/mission/<slug>` and `#/crew/<id>`, `vChat`, `vWiki`, `vBuild`, `vSystem`, …) |
+| `static/app-workflows.js` | n8n inside the app (WFL-11, WFL-14): `#/workflows` (`vWorkflows`: n8n's editor in a frame on the desk, a list of the workflows on a phone), a task's and crew job's **Where it runs** (`wfWhereInto`, `wfCrewInto`) and an agent's **In workflows** (`wfInInto`), all from `GET /api/workflows`. The frame's address is `/n8n/...` on the app's own origin; `sw.js` never caches it |
 | `static/guide.js` | the Guide, part of the Stack page: chapter reader (`#/guide/<id>`), live blocks, "Try it" cards, search, chapter index, progress, `how()` links (loaded before `app.js`) |
 | `static/app.css`, `static/guide.css` | styles. Design tokens are the CSS variables at the top of `app.css` |
 | `sw.js` | service worker: app shell offline (network first), push notifications. Bump `CACHE` when the shell's file list changes |

@@ -53,7 +53,11 @@ else
   missing "compose files valid" docker-compose
 fi
 step "requirements (ops/req.py: fields, links, tests, rendering)" python3 ops/req.py check
-step "unit tests (pytest)" "${PYTEST:-pytest}" -q -p no:cacheprovider tests
+# Parallel when pytest-xdist is there (the builder image and CI have it): PYTEST_WORKERS processes, 6 of the PC's 8
+# threads by default, leaving the stack room. Each worker gets a temp folder of its own (tests/conftest.py).
+PAR=()
+if "${PYTEST:-pytest}" -p xdist --version >/dev/null 2>&1; then PAR=(-n "${PYTEST_WORKERS:-6}"); fi   # limit: paces, 6 test workers so the running stack keeps two threads
+step "unit tests (pytest${PAR:+, ${PAR[1]} workers})" "${PYTEST:-pytest}" -q -p no:cacheprovider "${PAR[@]}" tests
 
 if [ "$fail" = 0 ]; then echo "ALL CHECKS PASSED${not_run:+, but not run here: $not_run}"; else echo "SOME CHECKS FAILED"; fi
 exit "$fail"

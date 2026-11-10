@@ -1,0 +1,89 @@
+{
+  "active": false,
+  "connections": {
+    "On its schedule (50 3 * * *)": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Crew: Nightly restart",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Run now": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Crew: Nightly restart",
+            "type": "main"
+          }
+        ]
+      ]
+    }
+  },
+  "id": "aisc492c3313fd67",
+  "name": "Crew: Nightly restart",
+  "nodes": [
+    {
+      "id": "10b38d99-9c5f-b876-d299-0b8aa36c649a",
+      "name": "On its schedule (50 3 * * *)",
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "expression": "50 3 * * *",
+              "field": "cronExpression"
+            }
+          ]
+        }
+      },
+      "position": [
+        0,
+        0
+      ],
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2
+    },
+    {
+      "id": "861bdcc0-5bcf-8bb6-edaa-bb8a0914a00a",
+      "name": "Crew: Nightly restart",
+      "notes": "The crew job recycle (recycle.service), as Run now starts it (WFL-05).",
+      "parameters": {
+        "job": "recycle",
+        "kind": "crew",
+        "title": "Crew: Nightly restart"
+      },
+      "position": [
+        260,
+        0
+      ],
+      "type": "CUSTOM.aistackStep",
+      "typeVersion": 1,
+      "webhookId": "17adf5e2-85a6-7fb6-3b10-ded63bb78207"
+    },
+    {
+      "id": "64ca93b8-7ca1-580d-7455-f6280ba05a04",
+      "name": "Run now",
+      "notes": "Starts the job now, as its schedule would (POST).",
+      "parameters": {
+        "httpMethod": "POST",
+        "options": {},
+        "path": "run/crew-nightly-restart"
+      },
+      "position": [
+        0,
+        160
+      ],
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "webhookId": "22873b3e-0e1b-e3a3-7145-bc17cc2b3ae5"
+    }
+  ],
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Berlin"
+  }
+}

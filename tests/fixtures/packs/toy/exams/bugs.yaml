@@ -1,5 +1,5 @@
-# Each case with its known outcome (docs/AI-STACK.md §11): run through toy/triage, its answer read at route.branch
-template: toy/triage
+# Each case with its known outcome (docs/AI-STACK.md): run through the workflow toy/triage, its answer read at route.branch
+workflow: toy/triage
 outcome: route.branch
 cases:
   - {ticket: "The export stops at 2 GB", outcome: bug}

@@ -1,8 +1,0 @@
-[Unit]
-Description=Crew: the Editor (daily, after the night's crew runs)
-[Timer]
-OnCalendar=*-*-* 07:15
-Persistent=true
-RandomizedDelaySec=10min
-[Install]
-WantedBy=timers.target

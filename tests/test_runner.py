@@ -1,4 +1,4 @@
-"""ops/missions.py: schedules, request validation, duplicate guard, pause detection, queueing."""
+"""ops/missions.py: schedule words, request validation, duplicate guard, pause detection, queueing."""
 import datetime as dt
 import json
 
@@ -13,57 +13,11 @@ def test_valid_schedule(runner, s, ok):
     assert runner.valid_schedule(s) is ok
 
 
-def test_due_times_and_next(runner, at):
-    days = runner.due_times("weekdays 07:00", at)
-    assert all(d.weekday() < 5 and d.hour == 7 for d in days)
-    assert runner.next_due("daily 06:30", at) == at.replace(day=28, hour=6, minute=30)
-    assert runner.next_due("weekly fri 09:00", at).weekday() == 4
-    assert runner.next_due("manual", at) is None
-    assert {d.hour for d in runner.due_times("every 6h", at)} == {0, 6, 12, 18}
-
-
-def test_a_slot_keeps_its_own_days_offset_across_a_clock_change(runner, monkeypatch):
-    """review RUN-R29: on 25 Oct the clocks go back; yesterday's 06:30 (+02:00) was rebuilt with today's +01:00, did not
-    match the run recorded for it, and was queued a second time."""
-    import sqlite3
-    import time
-    monkeypatch.setenv("TZ", "CET-1CEST,M3.5.0,M10.5.0/3")           # Europe/Berlin's rule, without tzdata
-    time.tzset()
-    try:
-        before = dt.datetime(2026, 10, 24, 23, 0).astimezone()         # +02:00
-        after = dt.datetime(2026, 10, 25, 9, 0).astimezone()           # +01:00
-        assert before.utcoffset() != after.utcoffset()
-        slot = lambda t: [d.isoformat() for d in runner.due_times("daily 06:30", t) if d.date() == dt.date(2026, 10, 24)]
-        assert slot(before) == slot(after) == ["2026-10-24T06:30:00+02:00"]
-        assert [d.isoformat() for d in runner.due_times("daily 06:30", after) if d.date() == dt.date(2026, 10, 25)] == \
-            ["2026-10-25T06:30:00+01:00"]
-        # a retry at 02:30+02:00 is due at 02:10+01:00 (an hour later in real time), which a string comparison denies
-        c = sqlite3.connect(":memory:")
-        assert c.execute("select julianday(?) <= julianday(?)", ("2026-10-25T02:30:00+02:00", "2026-10-25T02:10:00+01:00")).fetchone()[0] == 1
-        assert ("2026-10-25T02:30:00+02:00" <= "2026-10-25T02:10:00+01:00") is False
-    finally:
-        monkeypatch.undo()
-        time.tzset()
-
-
 @pytest.mark.parametrize("s,text", [("daily 06:30", "Daily 06:30"), ("weekdays 07:00", "Weekdays 07:00"),
                                     ("weekly mon,thu 08:00", "Mon, Thu 08:00"), ("every 4h", "Every 4 h"),
                                     ("manual", "On demand")])
 def test_schedule_text(runner, s, text):
     assert runner.schedule_text(s) == text
-
-
-def test_check_schedules_catches_up_once_and_not_before_created(runner, at, monkeypatch):
-    monkeypatch.setattr(runner, "now", lambda: at)
-    c = runner.db()
-    m = {"slug": "u", "status": "active", "schedule": "daily 06:30", "created": "2026-10-20T00:00:00+00:00"}
-    runner.check_schedules({"u": m}, c)
-    runner.check_schedules({"u": m}, c)                       # same due time: no second run
-    rows = c.execute("select trigger, due from runs").fetchall()
-    assert [r["trigger"] for r in rows] == ["schedule"]
-    new = dict(m, slug="n", created=at.isoformat())          # created after today's 06:30: nothing to catch up
-    runner.check_schedules({"n": new}, c)
-    assert c.execute("select count(*) from runs where slug='n'").fetchone()[0] == 0
 
 
 def test_enqueue_dedup_but_events_always_queue(runner):
@@ -173,20 +127,6 @@ def test_a_paused_agents_runs_are_skipped(runner, monkeypatch):
     monkeypatch.setattr(SW, "paused", lambda agent: agent == "mission")
     runner.execute(c, row, {"u": {"slug": "u", "title": "U", "type": "task"}})
     assert tuple(c.execute("select status, summary from runs where slug='u'").fetchone()) == ("skipped", "paused by the owner")
-
-
-def test_one_bad_mission_file_stops_no_other(runner, at, monkeypatch):
-    """Review RUN-R15: a hand-edited created: yesterday raised every 2 seconds; no schedule ran and state.json froze."""
-    monkeypatch.setattr(runner, "now", lambda: at)
-    told = []
-    monkeypatch.setattr(runner, "event", lambda *a, **k: told.append(a))
-    c = runner.db()
-    good = {"slug": "u", "status": "active", "schedule": "daily 06:30", "created": "2026-10-20T00:00:00+00:00"}
-    bad = dict(good, slug="b", created="yesterday")
-    runner.check_schedules({"b": bad, "u": good}, c)
-    runner.check_schedules({"b": bad, "u": good}, c)
-    assert [r["slug"] for r in c.execute("select slug from runs")] == ["u"]
-    assert len(told) == 1 and "b: its MISSION.md cannot be used" in told[0][2]      # said once, not every 2 seconds
 
 
 def test_a_briefing_that_hangs_is_stopped_at_its_deadline(runner, tmp_path, monkeypatch):

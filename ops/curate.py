@@ -1,6 +1,6 @@
 """Weekly learning run: curator pass on Hermes's skills, behind the benchmark gate, then the vault lint.
 
-  python3 ops/curate.py                    weekly run (systemd timer, Sunday 04:00)
+  python3 ops/curate.py                    weekly run (its n8n workflow, Sundays 04:00)
   python3 ops/curate.py --apply "CMD"      gate an arbitrary skills change instead of the curator (tests/demo)
   python3 ops/curate.py --no-lint          skip the vault lint
 Run with secrets: sops exec-env secrets/secrets.enc.yaml 'sops exec-env secrets/agent-keys.enc.yaml "python3 ops/curate.py"'

@@ -1,0 +1,89 @@
+{
+  "active": true,
+  "connections": {
+    "On its schedule (0 4 * * 0)": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Crew: Skill curator",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Run now": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Crew: Skill curator",
+            "type": "main"
+          }
+        ]
+      ]
+    }
+  },
+  "id": "aisc59aa71067c22",
+  "name": "Crew: Skill curator",
+  "nodes": [
+    {
+      "id": "fc3efbd1-9858-5d2f-f862-955122be0b2c",
+      "name": "On its schedule (0 4 * * 0)",
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "expression": "0 4 * * 0",
+              "field": "cronExpression"
+            }
+          ]
+        }
+      },
+      "position": [
+        0,
+        0
+      ],
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2
+    },
+    {
+      "id": "610a22e9-28ea-1ae9-2d58-ed41a64d950d",
+      "name": "Crew: Skill curator",
+      "notes": "The crew job curator (curate.service), as Run now starts it (WFL-05).",
+      "parameters": {
+        "job": "curator",
+        "kind": "crew",
+        "title": "Crew: Skill curator"
+      },
+      "position": [
+        260,
+        0
+      ],
+      "type": "CUSTOM.aistackStep",
+      "typeVersion": 1,
+      "webhookId": "153e807d-aaae-689c-4994-98f2d6536e11"
+    },
+    {
+      "id": "99094daa-dfe3-3df4-00ee-8aa36e1d7dfd",
+      "name": "Run now",
+      "notes": "Starts the job now, as its schedule would (POST).",
+      "parameters": {
+        "httpMethod": "POST",
+        "options": {},
+        "path": "run/crew-skill-curator"
+      },
+      "position": [
+        0,
+        160
+      ],
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "webhookId": "c89fd7e9-a3af-9ece-012c-65c5fa77a5ab"
+    }
+  ],
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Berlin"
+  }
+}

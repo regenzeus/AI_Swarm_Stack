@@ -15,7 +15,7 @@ def test_every_tool_has_its_menus_and_every_page_exists():
     ids = [t["id"] for t in j["tools"]]
     assert len(ids) == len(set(ids)) and {"homeassistant", "nas", "fritzbox", "forgejo", "hermes", "phoenix"} <= set(ids)
     for t in j["tools"]:
-        assert t["name"] and t["what"] and t["menus"] and (t["host"].startswith(("tailnet", "http://", "https://"))), t["id"]
+        assert t["name"] and t["what"] and t["menus"] and (t["host"] == "app" or t["host"].startswith(("tailnet", "http://", "https://"))), t["id"]   # app: a page of this app
         assert all(m["name"] and m["path"].startswith("/") for m in t["menus"]), t["id"]
     ha = next(t for t in j["tools"] if t["id"] == "homeassistant")
     assert {"Settings", "Integrations", "Voice assistants", "People"} <= {m["name"] for m in ha["menus"]}

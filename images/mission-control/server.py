@@ -38,7 +38,7 @@ HERMES = "http://hermes:8642/v1/chat/completions"
 PHOENIX = os.environ.get("PHOENIX_URL", "http://phoenix:6006")
 PHOENIX_PORT = 8443                                       # tailscale serve: https://<pc>.ts.net:8443 (tailnet only)
 HERMES_KEY = os.environ.get("API_SERVER_KEY", "")
-ACTIONS = {"engine_decide", "template_save", "template_test", "template_describe", "pack_approve", "pack_refuse", "tracker_shadow_approve", "tracker_shadow_reject", "tracker_live", "command_approve", "claude_task", "claude_cancel", "windows_ask", "forgejo_connect", "create", "run", "pause", "resume", "archive", "update", "memory", "email", "vault_add", "understand", "card_edit",
+ACTIONS = {"flow_answer", "engine_decide", "template_save", "template_test", "template_describe", "pack_approve", "pack_refuse", "tracker_shadow_approve", "tracker_shadow_reject", "tracker_live", "command_approve", "claude_task", "claude_cancel", "windows_ask", "forgejo_connect", "create", "run", "pause", "resume", "archive", "update", "memory", "email", "vault_add", "understand", "card_edit",
            "forget", "memory_search", "memory_browse", "memory_move", "build_assign", "build_revise", "build_approve", "build_approve_all", "build_reject", "build_revert",
            "improve_scan", "proposal_accept", "proposal_dismiss", "build_recheck", "build_switch_engine", "codemap", "repo_create", "repo_buildable", "repo_remove", "crew_run", "crew_memory_forget", "crew_memory_undo", "crew_schedule",
            "journal_note", "journal_edit", "health_ack", "swarm_pause", "swarm_confirm", "swarm_reopen", "swarm_autonomy", "swarm_post", "swarm_help_verdict", "swarm_agent_change", "phone_cleanup_do", "phone_cleanup_do_all", "phone_cleanup_undo", "phone_cleanup_dismiss",
@@ -107,12 +107,12 @@ def _part(name):
 # ---------- app API ----------
 class TailnetOnly(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
-        if request.url.path.startswith(("/api/", "/share", "/runs")) and not request.headers.get("tailscale-user-login"):
+        if request.url.path.startswith(("/api/", "/share", "/runs", "/n8n")) and not request.headers.get("tailscale-user-login"):
             return JSONResponse({"error": "only reachable through Tailscale"}, status_code=403)
         # SEC-20: tailscale serve adds the owner's login to whatever his browser sends, a page of another site included;
         # a browser names where a request comes from (Sec-Fetch-Site), so a write from anywhere but this app is refused.
         # /share is the phone's share sheet (its own reasoning, APP share inbox); programs send no Sec-Fetch-Site.
-        if (request.method not in ("GET", "HEAD", "OPTIONS") and request.url.path.startswith("/api/")
+        if (request.method not in ("GET", "HEAD", "OPTIONS") and request.url.path.startswith(("/api/", "/n8n"))
                 and request.headers.get("sec-fetch-site", "same-origin") not in ("same-origin", "none")):
             return JSONResponse({"error": "refused: a write request from another site (SEC-20)"}, status_code=403)
         response = await call_next(request)
@@ -162,6 +162,10 @@ async def api_state(request):
     s["viewer_name"] = display_name(request.headers.get("tailscale-user-name", ""), request.headers.get("tailscale-user-login", ""))
     s["decisions"] = owner_decisions(s)
     s["engine"] = engine_view()                          # GEN-34: the engine and its runs, for the Engine screen and the Canvas
+    try:                                                 # WFL-11: which job has which n8n workflow (ops/flows.py catalog)
+        s["workflows"] = json.loads((M / "public/workflows.json").read_text())
+    except (OSError, ValueError):
+        s["workflows"] = None
     s["from_chat"] = MADE_IDX["v"]                       # APP-39: an item made in a chat links back to it
     return JSONResponse(s)
 
@@ -591,6 +595,8 @@ _part("server.wiki.py")   # the wiki views (PLT-25)
 
 
 _part("server.engine.py")   # Temporal's UI behind the app's gate, and its codec (GEN-36, the Runs screen)
+_part("server.flows.py")   # the step service n8n calls (WFL-05, port 8099)
+_part("server.n8n.py")   # n8n's editor under /n8n/ behind the app's gate, and the workflows' runs (WFL-14)
 
 
 _part("server.a2a.py")   # outside agents over A2A (PLT-25)
@@ -1018,6 +1024,7 @@ app = Starlette(routes=[
     Route("/api/state", api_state), Route("/api/stream", api_stream), Route("/api/version", api_version),
     Route("/api/request", api_request, methods=["POST"]), Route("/api/result/{rid}", api_result),
     Route("/api/codec/decode", api_codec_decode, methods=["POST"]), Route("/runs", runs_proxy), Route("/runs/{path:path}", runs_proxy, methods=["GET", "POST", "PUT", "PATCH", "DELETE"]),
+    Route("/n8n", n8n_proxy), Route("/n8n/{path:path}", n8n_proxy, methods=["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]), Route("/api/workflows", api_workflows),   # WFL-13
     Route("/api/file", api_file), Route("/api/runlog/{rid}", api_runlog), Route("/api/run/{rid}/timeline", api_run_timeline), Route("/api/rt/runs", api_rt_runs), Route("/api/task/{tid:int}", api_task),
     Route("/api/agent/{aid}/tasks", api_agent_tasks), Route("/api/trials", api_trials), Route("/api/usage", api_usage), Route("/api/rt/run/{run}", api_rt_run),
     Route("/api/rt/run/{run}/stream", api_rt_stream), Route("/api/crew/{cid}", api_crew_one), Route("/api/swarm", api_swarm, methods=["POST"]), Route("/api/swarm/tokens", api_swarm_tokens), Route("/api/swarm/now", api_swarm_now), Route("/api/swarm/timeline", api_swarm_timeline), Route("/api/swarm/interactions", api_swarm_interactions), Route("/api/swarm/delegations", api_swarm_delegations), Route("/api/swarm/room", api_swarm_room), Route("/api/health/issues", api_health_issues), Route("/api/claude/{tid}", api_claude_task), Route("/api/phoenix", api_phoenix), Route("/api/build/{bid}/{kind}", api_build_file),
@@ -1233,6 +1240,7 @@ async def main():
         uvicorn.Server(uvicorn.Config(memory_public_mcp.streamable_http_app(transport_security=TransportSecuritySettings(
             allowed_hosts=["mission-control:8098"], allowed_origins=[])), host="0.0.0.0", port=8098, log_level="warning")).serve(),   # MEM-30
         uvicorn.Server(uvicorn.Config(rt_app, host="0.0.0.0", port=8093, log_level="warning")).serve(),   # runtime ingest
+        uvicorn.Server(uvicorn.Config(flows_app, host="0.0.0.0", port=8099, log_level="warning")).serve(),   # WFL-05: n8n only (stepnet)
         uvicorn.Server(uvicorn.Config(voice_app, host="0.0.0.0", port=8095, log_level="warning")).serve(),  # the voice gateway (VOI-03)
         push_events(), push_phone(), push_conn(), rt_housekeeping(), limit_retrier(), made_watcher())
 

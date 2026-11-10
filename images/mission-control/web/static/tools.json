@@ -24,6 +24,11 @@
     {"name": "Repositories", "path": "/{{FORGEJO_OWNER}}", "words": "repos git code"},
     {"name": "ai-stack Actions", "path": "/{{FORGEJO_OWNER}}/ai-stack/actions", "words": "ci builds"},
     {"name": "Access tokens", "path": "/user/settings/applications", "words": "token key"}]},
+  {"id": "n8n", "name": "n8n", "what": "Workflows: what runs when, in what order, and every run, inside the app (its own login)", "host": "app",
+   "menus": [
+    {"name": "Workflows", "path": "/#/workflows", "words": "workflow automation schedule trigger canvas n8n"},
+    {"name": "Runs", "path": "/#/workflows?open=executions", "words": "runs history execution n8n"},
+    {"name": "On its own", "path": "/n8n/home/workflows", "words": "n8n full page editor"}]},
   {"id": "hermes", "name": "Hermes admin", "what": "Skills, cron jobs, logs, sessions, settings", "host": "tailnet:8448",
    "menus": [{"name": "Open", "path": "/", "words": "skills cron logs sessions config"}]},
   {"id": "openwebui", "name": "Open WebUI", "what": "Chat with Hermes (classic)", "host": "tailnet",
@@ -41,7 +46,7 @@
   ["Home", "#/", "feed results"], ["Tasks", "#/tasks", "missions briefings plans repeating"], ["Activity", "#/tasks?v=activity", "chatroom timeline"],
   ["Team", "#/tasks?v=team", "agents cards roles crew duties"], ["Network", "#/tasks?v=network", "map who works which agents"], ["Ideas", "#/tasks?v=ideas", "proposals"],
   ["New task", "#/tasks?new=1", "create mission"], ["Chat", "#/chat", "hermes talk voice"], ["Wiki", "#/wiki", "knowledge vault"],
-  ["Code", "#/build", "builds deploy"], ["Stack", "#/system", "tools health resources"], ["House", "#/house", "alexa echo lights voice"],
+  ["Code", "#/build", "builds deploy"], ["Workflows", "#/workflows", "n8n workflow schedule runs executions canvas"], ["Stack", "#/system", "tools health resources"], ["House", "#/house", "alexa echo lights voice"],
   ["AI phone", "#/phone", "s22 android phone pair pairing connect wireless debugging approve allow job cleanup"], ["Telemetry", "#/telemetry", "tokens runs cost"], ["Guide", "#/guide", "help how"]
  ]
 }

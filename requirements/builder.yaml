@@ -212,7 +212,7 @@ items:
     status: implemented
     parents: [SN-14]
     sources: [images/graphify/AGENTS.md]
-    verify: {method: inspection, by: [ops/graphify-sync.sh, ops/systemd/graphify-sync.timer]}
+    verify: {method: inspection, by: [ops/graphify-sync.sh, n8n/workflows/crew-code-graph.json]}
   - id: BLD-20
     title: Supervised sessions land like builds
     statement: When an owner-supervised coding session (Claude Code outside the builder) lands a change on main, ops/land.sh
@@ -309,7 +309,7 @@ items:
     parents: [SN-05, SN-14]
     sources: [docs/REPO-KNOWLEDGE.md, images/mission-control/guide/11-code.md, images/repointel/AGENTS.md]
     verify: {method: test, by: [tests/test_repofacts.py::test_the_facts_have_one_shape_from_both_tools, tests/test_repofacts.py::test_a_repository_s_requirements_are_read_as_data_never_imported, tests/test_repofacts.py::test_a_tool_that_fails_leaves_the_other_s_results_and_says_what_is_unknown, tests/test_repofacts.py::test_neither_tool_can_touch_the_real_clone, tests/test_repofacts.py::test_what_a_tool_left_that_the_host_cannot_remove_goes_through_the_image, tests/test_repofacts.py::test_coupling_that_says_nothing_is_left_out, tests/test_repofacts.py::test_a_shallow_clone_gets_its_whole_history_and_a_fetch_that_fails_is_said, tests/test_repofacts.py::test_facts_follow_head_as_the_graph_does_and_a_failure_waits_for_the_next_commit, tests/test_repofacts.py::test_facts_with_an_unknown_part_are_tried_again_a_day_later, tests/test_repofacts.py::test_a_killed_tool_gets_more_room_once_and_a_hang_is_stopped_and_said, tests/test_repofacts.py::test_rows_past_the_top_are_said, tests/test_repofacts.py::test_the_image_is_pinned_checked_and_built_the_way_the_others_are, tests/test_repofacts.py::test_the_timer_keeps_them_current_the_way_the_graph_is_kept, tests/test_repofacts.py::test_the_wiki_s_first_version_gets_the_facts_as_evidence, tests/test_onboard.py::test_a_new_clone_has_its_whole_history_with_its_hooks_off, tests/test_onboard.py::test_the_facts_step_comes_after_the_graph_is_resumable_and_says_what_is_unknown, tests/test_onboard.py::test_the_facts_wait_for_memory_and_only_no_result_at_all_is_a_failed_try, tests/test_onboard.py::test_removing_a_repository_takes_its_facts, tests/test_repos.py::test_the_facts_route_has_one_shape_with_or_without_facts, tests/test_repowiki.py::test_the_first_version_is_seeded_from_the_measured_facts_too]}
-    trace: [ops/repofacts.py, ops/onboard.py, ops/repowiki.py, ops/crew.py, ops/upgrade_check.py, ops/systemd/repofacts-sync.service, ops/systemd/repofacts-sync.timer, images/repointel/Dockerfile, images/mission-control/server.py]
+    trace: [ops/repofacts.py, ops/onboard.py, ops/repowiki.py, ops/crew.py, ops/upgrade_check.py, ops/systemd/repofacts-sync.service, n8n/workflows/crew-repository-facts.json, images/repointel/Dockerfile, images/mission-control/server.py]
   - id: BLD-28
     title: Only the head the owner reviewed deploys
     statement: When a build goes back to work (changes requested, checks re-run, engine switched, sent back by the merge

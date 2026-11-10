@@ -1,6 +1,0 @@
-# The Temporal versions the update path may step through (GEN-39, ops/temporal_upgrade.py), each pinned by digest as
-# versions.env pins the one that runs. A new minor version is added here before versions.env moves to it.
-versions:
-  1.32.1:
-    server: temporalio/server:1.32.1@sha256:acecbab5b0b8ae9cf4012b508866ca97feda3709577bf157b537239f40029049
-    admin: temporalio/admin-tools:1.32.1@sha256:9ef0dc5b063bf4ffd5c1512de72e0e73e225bd2c7006a18ce69bd592a8862a83

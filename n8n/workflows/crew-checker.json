@@ -1,0 +1,89 @@
+{
+  "active": true,
+  "connections": {
+    "On its schedule (0 * * * *)": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Crew: Checker",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Run now": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Crew: Checker",
+            "type": "main"
+          }
+        ]
+      ]
+    }
+  },
+  "id": "aisc884734674816",
+  "name": "Crew: Checker",
+  "nodes": [
+    {
+      "id": "944f5dcb-825b-91c3-198f-53c1460da17c",
+      "name": "On its schedule (0 * * * *)",
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "expression": "0 * * * *",
+              "field": "cronExpression"
+            }
+          ]
+        }
+      },
+      "position": [
+        0,
+        0
+      ],
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2
+    },
+    {
+      "id": "ca1d4580-c025-efbf-4eb5-08ae3f64a607",
+      "name": "Crew: Checker",
+      "notes": "The crew job checker (crew-checker.service), as Run now starts it (WFL-05).",
+      "parameters": {
+        "job": "checker",
+        "kind": "crew",
+        "title": "Crew: Checker"
+      },
+      "position": [
+        260,
+        0
+      ],
+      "type": "CUSTOM.aistackStep",
+      "typeVersion": 1,
+      "webhookId": "fd0bf559-6a57-e194-6224-c1085eb13b40"
+    },
+    {
+      "id": "bc3eead3-01d5-851e-e285-f499c587bc29",
+      "name": "Run now",
+      "notes": "Starts the job now, as its schedule would (POST).",
+      "parameters": {
+        "httpMethod": "POST",
+        "options": {},
+        "path": "run/crew-checker"
+      },
+      "position": [
+        0,
+        160
+      ],
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "webhookId": "08fef8c4-4931-e6b6-c8f4-76115673e7f0"
+    }
+  ],
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Berlin"
+  }
+}

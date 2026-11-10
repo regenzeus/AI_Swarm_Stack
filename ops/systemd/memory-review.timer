@@ -1,8 +1,0 @@
-# feature: memory
-[Unit]
-Description=Review staged Hermes memory writes every 10 minutes
-[Timer]
-OnBootSec=3min
-OnUnitInactiveSec=10min
-[Install]
-WantedBy=timers.target

@@ -1,0 +1,89 @@
+{
+  "active": true,
+  "connections": {
+    "On its schedule (30 7 * * *)": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Crew: Daily digest",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Run now": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Crew: Daily digest",
+            "type": "main"
+          }
+        ]
+      ]
+    }
+  },
+  "id": "aisc9d06c9de1e37",
+  "name": "Crew: Daily digest",
+  "nodes": [
+    {
+      "id": "ac283170-c43c-f3f8-3b60-dfa589592a4c",
+      "name": "On its schedule (30 7 * * *)",
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "expression": "30 7 * * *",
+              "field": "cronExpression"
+            }
+          ]
+        }
+      },
+      "position": [
+        0,
+        0
+      ],
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2
+    },
+    {
+      "id": "652305be-b43c-6df2-a8f9-b25893847b5b",
+      "name": "Crew: Daily digest",
+      "notes": "The crew job digest (digest.service), as Run now starts it (WFL-05).",
+      "parameters": {
+        "job": "digest",
+        "kind": "crew",
+        "title": "Crew: Daily digest"
+      },
+      "position": [
+        260,
+        0
+      ],
+      "type": "CUSTOM.aistackStep",
+      "typeVersion": 1,
+      "webhookId": "40833ff8-4555-9b10-6677-440713ff34d6"
+    },
+    {
+      "id": "0320b935-dcd9-6ff4-1007-09530aacc0cd",
+      "name": "Run now",
+      "notes": "Starts the job now, as its schedule would (POST).",
+      "parameters": {
+        "httpMethod": "POST",
+        "options": {},
+        "path": "run/crew-daily-digest"
+      },
+      "position": [
+        0,
+        160
+      ],
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "webhookId": "05682da1-c21f-bac4-b276-867ecdf1a864"
+    }
+  ],
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Berlin"
+  }
+}

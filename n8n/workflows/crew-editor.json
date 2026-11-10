@@ -1,0 +1,89 @@
+{
+  "active": true,
+  "connections": {
+    "On its schedule (15 7 * * *)": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Crew: Editor",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Run now": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Crew: Editor",
+            "type": "main"
+          }
+        ]
+      ]
+    }
+  },
+  "id": "aisc96a4ea15a47b",
+  "name": "Crew: Editor",
+  "nodes": [
+    {
+      "id": "b32581a3-9d04-d2d7-ea96-ea0f9150104e",
+      "name": "On its schedule (15 7 * * *)",
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "expression": "15 7 * * *",
+              "field": "cronExpression"
+            }
+          ]
+        }
+      },
+      "position": [
+        0,
+        0
+      ],
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2
+    },
+    {
+      "id": "e3be8e56-8af4-0e36-b31e-a564d284c957",
+      "name": "Crew: Editor",
+      "notes": "The crew job editor (crew-editor.service), as Run now starts it (WFL-05).",
+      "parameters": {
+        "job": "editor",
+        "kind": "crew",
+        "title": "Crew: Editor"
+      },
+      "position": [
+        260,
+        0
+      ],
+      "type": "CUSTOM.aistackStep",
+      "typeVersion": 1,
+      "webhookId": "36cfe210-4faa-35e6-1218-92a1f9cb0c7d"
+    },
+    {
+      "id": "131d0fbe-24db-b7fd-a1f5-43444ba5723e",
+      "name": "Run now",
+      "notes": "Starts the job now, as its schedule would (POST).",
+      "parameters": {
+        "httpMethod": "POST",
+        "options": {},
+        "path": "run/crew-editor"
+      },
+      "position": [
+        0,
+        160
+      ],
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "webhookId": "756ac0da-29ae-69fb-dc7b-e7c7448099fa"
+    }
+  ],
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Berlin"
+  }
+}

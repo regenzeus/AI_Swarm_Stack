@@ -231,7 +231,9 @@ def tests(dest):
     tar = subprocess.run(["tar", "-C", str(dest), "-cf", "-", "."], check=True, capture_output=True).stdout
     r = subprocess.run(["docker", "exec", "-i", "-u", "hermes", BUILDER, "sh", "-c",            # not as root (review SEC-R12)
                         "rm -rf /tmp/pub-hermes && mkdir -p /tmp/pub-hermes && cd /tmp/pub-hermes && tar -xf - && "
-                        "PATH=/opt/tools/bin:$PATH /opt/tools/bin/pytest -q -p no:cacheprovider tests 2>&1 | tail -15"],
+                        # QA-27: over 6 workers when the builder has pytest-xdist, as the landing's checks do
+                        "PAR=; /opt/tools/bin/pytest -p xdist --version >/dev/null 2>&1 && PAR='-n 6'; "   # limit: paces, 6 test workers
+                        "PATH=/opt/tools/bin:$PATH /opt/tools/bin/pytest -q -p no:cacheprovider $PAR tests 2>&1 | tail -15"],
                        input=tar, capture_output=True, timeout=1800)
     lines = r.stdout.decode(errors="replace").strip().splitlines()
     summary = lines[-1] if lines else ""                 # pytest's last line: "585 passed in 160s" or "2 failed, 583 passed ..."

@@ -3,7 +3,7 @@
 Description=Morning digest on Telegram (no model calls)
 [Service]
 Type=oneshot
-# limit: stops (a run that hangs past 98 min is ended, so its timer fires again; the longest of 14 days was 469 s; review RUN-R27)
+# limit: stops (a run that hangs past 98 min is ended, so its n8n workflow starts it again; the longest of 14 days was 469 s; review RUN-R27)
 TimeoutStartSec=98min
 Environment=DOCKER_HOST=unix://%t/docker.sock
 WorkingDirectory=%h/ai-stack

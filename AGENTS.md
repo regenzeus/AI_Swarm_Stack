@@ -13,8 +13,10 @@ docs it points to. `README.md` is the product overview; `docs/` holds architectu
 |---|---|---|
 | `compose/` | Docker Compose: every service, network, volume and limit | [compose/AGENTS.md](compose/AGENTS.md) |
 | `config/` | Configuration applied to running services | [config/AGENTS.md](config/AGENTS.md) |
-| `config/temporal/` | The engine's database setup, schema and the versions an update steps through | [config/temporal/AGENTS.md](config/temporal/AGENTS.md) |
-| `config/templates/demo/` | The preview's demo templates, in canonical form | [config/templates/demo/AGENTS.md](config/templates/demo/AGENTS.md) |
+| `n8n/` | The deployment's n8n workflows, one JSON file each, imported by deploys | [n8n/AGENTS.md](n8n/AGENTS.md) |
+| `n8n/custom/` | The stack's own n8n node, AI Stack step (WFL-06) | [n8n/custom/AGENTS.md](n8n/custom/AGENTS.md) |
+| `n8n/workflows/` | One workflow per file | [n8n/workflows/AGENTS.md](n8n/workflows/AGENTS.md) |
+| `config/n8n/` | n8n's database setup (the workflow pillar, docs/N8N-MIGRATION.md) | [config/n8n/AGENTS.md](config/n8n/AGENTS.md) |
 | `deployments/` | One folder per deployment of the platform: home, and an example of a work deployment (DEC-45) | [deployments/AGENTS.md](deployments/AGENTS.md) |
 | `deployments/home/` | The home deployment: every feature on, subscriptions only | [deployments/home/AGENTS.md](deployments/home/AGENTS.md) |
 | `deployments/example-work/` | An example work deployment: the Windows worker, a company gateway, no home features | [deployments/example-work/AGENTS.md](deployments/example-work/AGENTS.md) |
@@ -26,7 +28,6 @@ docs it points to. `README.md` is the product overview; `docs/` holds architectu
 | `config/gate/` | Single sign-in: the tailnet gates in front of apps with their own login | [config/gate/AGENTS.md](config/gate/AGENTS.md) |
 | `images/` | One directory per custom container image | [images/AGENTS.md](images/AGENTS.md) |
 | `images/mission-control/` | The app (API, MCP tools, web front end, in-app guide) | [images/mission-control/AGENTS.md](images/mission-control/AGENTS.md) |
-| `images/mission-control/flow/` | The template editor: Workflow Builder's SDK with the stack's blocks | [images/mission-control/flow/AGENTS.md](images/mission-control/flow/AGENTS.md) |
 | `images/mission-control/web/` | Front end: vanilla JS PWA, no build step | [images/mission-control/web/AGENTS.md](images/mission-control/web/AGENTS.md) |
 | `images/mission-control/guide/` | The in-app guide's chapters | [images/mission-control/guide/AGENTS.md](images/mission-control/guide/AGENTS.md) |
 | `images/desk/` | Topic Desk: daily briefings | [images/desk/AGENTS.md](images/desk/AGENTS.md) |
@@ -39,7 +40,7 @@ docs it points to. `README.md` is the product overview; `docs/` holds architectu
 | `images/mail/` | The Gmail connector: search, read, organize, Trash for the agents, only while the owner grants it | [images/mail/AGENTS.md](images/mail/AGENTS.md) |
 | other images | the patched model gateway, Hermes, vault search, code graph, a repository's facts, OpenCode, package proxy, port forwarder, one-shot tools, CI runner | [litellm (patched)](images/litellm/AGENTS.md), [hermes](images/hermes/AGENTS.md), [qmd](images/qmd/AGENTS.md), [graphify](images/graphify/AGENTS.md), [repointel](images/repointel/AGENTS.md), [opencode](images/opencode/AGENTS.md), [pkgproxy](images/pkgproxy/AGENTS.md), [portfwd](images/portfwd/AGENTS.md), [tools](images/tools/AGENTS.md), [ci-runner](images/ci-runner/AGENTS.md) |
 | `ops/` | Host-side operations: Mission Control runner, deploy, backups, keys, jobs | [ops/AGENTS.md](ops/AGENTS.md) |
-| `ops/engine/` | The engine: Temporal's client, the graph runner, packs, trackers, places, the cutover | [ops/engine/AGENTS.md](ops/engine/AGENTS.md) |
+| `ops/domain/` | What a domain's work uses: packs, places, trackers and the forge, roles, saved files, a run's record | [ops/domain/AGENTS.md](ops/domain/AGENTS.md) |
 | `ops/git-hooks/` | the never-in-git guard's hooks (SEC-22) | [ops/git-hooks/AGENTS.md](ops/git-hooks/AGENTS.md) |
 | `ops/systemd/` | systemd user units and timers | [ops/systemd/AGENTS.md](ops/systemd/AGENTS.md) |
 | `ops/windows/` | PowerShell for the Windows host | [ops/windows/AGENTS.md](ops/windows/AGENTS.md) |

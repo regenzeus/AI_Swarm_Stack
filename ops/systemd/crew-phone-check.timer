@@ -1,9 +1,0 @@
-# feature: phone
-[Unit]
-Description=Crew: Phone check: battery, storage, patch, connection, screen awake (weekly, Monday)
-[Timer]
-OnCalendar=Mon *-*-* 09:00
-Persistent=true
-RandomizedDelaySec=10min
-[Install]
-WantedBy=timers.target

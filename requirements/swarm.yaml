@@ -15,7 +15,7 @@ items:
   group: Registry and identity
   phase: 1
   title: Every agent described in one place
-  statement: Every agent shall be described once, as an agent card in config/agents.yaml, and its crew unit and timer, its
+  statement: Every agent shall be described once, as an agent card in config/agents.yaml, and its crew unit and workflow, its
     gateway key with MCP grants, its Hermes profile settings, its Board contact and wake rules and its card under Tasks →
     Team shall be generated from that card.
   type: functional
@@ -138,7 +138,7 @@ items:
   status: implemented
   parents: [SN-05, SN-11]
   sources: [DEC-15, OWASP Top 10 for Agentic Applications 2026 ASI10 rogue agents]
-  acceptance: 'Test: after a pause, a swarm tool call from the agent is refused and a due timer run is skipped with the
+  acceptance: 'Test: after a pause, a swarm tool call from the agent is refused and a due scheduled run is skipped with the
     reason paused; demonstration on the phone.'
   verify:
     method: test
@@ -1373,7 +1373,7 @@ items:
   verify:
     method: test
     by: ['tests/test_swarm_client.py::test_ledger_changes_reach_the_activity_feed_once']
-  trace: [images/mission-control/web/static/app.js, ops/swarm_client.py, ops/systemd/swarm-sync.timer]
+  trace: [images/mission-control/web/static/app.js, ops/swarm_client.py, n8n/workflows/crew-swarm-sync.json]
 - id: SWM-79
   group: Observability
   phase: 1
@@ -1503,7 +1503,7 @@ items:
   verify:
     method: test
     by: ['tests/test_swarm_phase5.py::test_a_scorecard_with_40_percent_declined_ideas_yields_one_agent_change_naming_its_target']
-  trace: [ops/coach.py, config/agents.yaml, ops/systemd/crew-coach.timer]
+  trace: [ops/coach.py, config/agents.yaml, n8n/workflows/crew-coach.json]
   findings: [FND-34]
 - id: SWM-84
   group: Improvement loop
@@ -1961,7 +1961,7 @@ items:
   group: Observability
   phase: 5
   title: Every run has one cause
-  statement: 'Every run shall have exactly one cause (you, an agent, its timer, a rule, an alert, a test, or unknown), crew
+  statement: 'Every run shall have exactly one cause (you, an agent, its schedule, a rule, an alert, a test, or unknown), crew
     jobs recording theirs when they start; what is unknown or from before it was recorded shall be counted on
     screen, never hidden, and a lumped starter such as Hermes shall be settled to the real agent.'
   type: functional

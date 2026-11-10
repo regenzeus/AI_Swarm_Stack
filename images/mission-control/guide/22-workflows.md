@@ -1,0 +1,89 @@
+---
+title: "Workflows: n8n inside the app"
+kicker: What runs when, and in what order
+part: Under the hood
+icon: flow
+minutes: 4
+summary: n8n decides when each piece of work starts and in what order; the stack's agents do the work. Its editor opens inside the app, every task shows where it runs, and every agent the workflows it is in.
+views: [workflows, engine, runs, templates, packs, trackers]
+---
+**n8n** is the stack's workflow tool. A workflow says when work starts (a schedule, a call, an event) and in what
+order its steps run. Its **AI Stack steps** hand the work to the stack: an agent, a crew job, a plan task, a question
+for you or a message to you. The stack does the work the way it always does and hands the answer back.
+
+## The Workflows page
+
+On the desk, **Workflows** in the menu opens n8n's own editor inside the app, beside the app's menu. **Runs** shows
+every run. The first time, n8n asks you to sign in with its own account; the app's Tailscale login comes first, so
+nobody off your tailnet reaches it.
+
+On a phone, the page lists the workflows instead: whether n8n runs each one or its old schedule still does, when it
+runs, and its last runs with the steps the stack ran and how each ended. n8n's canvas is made for a big screen.
+
+```try
+label: See the workflows
+open: "#/workflows"
+note: On the desk n8n's editor opens here; on a phone each workflow's last run and its steps.
+```
+
+## Where it runs
+
+A task or a crew job that belongs to a workflow shows **Where it runs** at its top: the workflow, the run, its state
+and the step it is on. On the desk the run itself opens below it on n8n's canvas, with each node's input and output;
+on a phone you get its steps as a list.
+
+## In workflows
+
+An agent's page and a crew job's page list every workflow they are a step of. Each opens that workflow inside the app.
+
+## If the app is down
+
+n8n also answers on its own tailnet port, 8450, at `/n8n/`. Programs that call a workflow's webhook use that port too.
+
+## Workflows
+
+On the desk, **Workflows** in the menu opens n8n. Each workflow is a canvas of blocks: a trigger on the left (a
+schedule, a message, a webhook), then the steps in order.
+
+- **AI Stack step** is the stack's own block. It runs an agent with a brief, a crew job, a plan task, asks you
+  something, or tells you something.
+- **Executions** shows every run: when it started, how long each block took, and what came out.
+- A crew job's or a task's page has **In n8n**, which opens its workflow.
+
+```try
+label: Find a crew job's workflow
+open: "#/tasks?v=team&p=crew"
+note: Open a crew job. In n8n opens its workflow; not yet on means its old schedule still runs it.
+```
+
+> [!note] n8n is made for a wide screen. On the phone you keep Home and Needs you; nothing there needs n8n.
+
+## Questions from a workflow
+
+When a workflow needs you, its question appears in **Needs you** with its answers as buttons. Your tap is the answer,
+and the workflow goes on from there. A workflow can also just tell you something, through Telegram or the app, and
+quiet hours are respected.
+
+```try
+label: Look at what waits for you
+open: "#/decide"
+note: Questions from workflows sit here with everything else that needs your yes or no.
+```
+
+## Packs
+
+A pack is a domain kept outside the stack's repository: its agents with their prompts, skills, commands, workflows and
+exams. A new commit of a pack runs only after you approve it in **Needs you**, where you see its agents' prompts, its
+commands and what changed; until then the commit before keeps running. Each of its commands is approved again at the
+place it runs, by the hash of its file. A pack's workflow may never run a shell command of its own.
+
+## Trackers
+
+The stack can read an issue tracker and write back to it. Everything it would write starts **in shadow**: you see it in
+Needs you and nothing leaves the stack. Once you judged enough writes of one kind right, you may let that kind go live,
+and send it back to shadow at any time.
+
+## The old screens
+
+The **Engine**, **Runs** and **Templates** screens belonged to the stack's earlier engine. That engine is gone, so they
+show nothing now; n8n's canvas and executions took their place, and the screens go soon.

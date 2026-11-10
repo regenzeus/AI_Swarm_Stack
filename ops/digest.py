@@ -1,5 +1,5 @@
 """Morning digest on Telegram: what the stack did in the last 24 h, in a few lines. No model calls.
-Runs from digest.timer (07:30, catches up after the PC was off). Usage: python3 ops/digest.py [--print]
+Runs from its n8n workflow (daily 07:30, WFL-09). Usage: python3 ops/digest.py [--print]
 """
 import json, subprocess, sys, time, urllib.request
 from datetime import datetime

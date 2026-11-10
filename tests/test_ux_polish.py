@@ -58,7 +58,7 @@ def test_the_crew_rows_carry_their_unit_so_the_app_can_name_a_job(monkeypatch):
     import crew                                          # the app's lookups ran on a field state.json did not have
     monkeypatch.setattr(crew, "_cache", {"t": 0, "data": []})
     monkeypatch.setattr(crew, "sh", lambda *a, **k: "")
-    monkeypatch.setattr(crew, "unit_status", lambda a, units: {"installed": True, "state": "ok"})
+    monkeypatch.setattr(crew, "unit_status", lambda a, units, idx=None, flow=None: {"installed": True, "state": "ok"})
     monkeypatch.setattr(crew, "journal_tail", lambda unit: [])
     monkeypatch.setattr(crew, "agent_file", lambda cid: {})
     monkeypatch.setattr(crew, "I", types.SimpleNamespace(last_scan=lambda: {}, EVERY=datetime.timedelta(days=7)))   # the self-review

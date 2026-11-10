@@ -1,0 +1,90 @@
+{
+  "active": true,
+  "connections": {
+    "On its schedule (* * * * *)": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Crew: Code graph",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Run now": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Crew: Code graph",
+            "type": "main"
+          }
+        ]
+      ]
+    }
+  },
+  "id": "aisc0b7ea12b54d0",
+  "name": "Crew: Code graph",
+  "nodes": [
+    {
+      "id": "1c257ce6-77d0-18fe-88ac-53b6976b6cee",
+      "name": "On its schedule (* * * * *)",
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "expression": "* * * * *",
+              "field": "cronExpression"
+            }
+          ]
+        }
+      },
+      "position": [
+        0,
+        0
+      ],
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2
+    },
+    {
+      "id": "f94f63ef-3eb1-14e5-0980-87ceec807b77",
+      "name": "Crew: Code graph",
+      "notes": "The crew job graphify-sync (graphify-sync.service), as Run now starts it (WFL-05).",
+      "parameters": {
+        "job": "graphify-sync",
+        "kind": "crew",
+        "title": "Crew: Code graph"
+      },
+      "position": [
+        260,
+        0
+      ],
+      "type": "CUSTOM.aistackStep",
+      "typeVersion": 1,
+      "webhookId": "c4e7d06f-b95b-0dab-47cd-982060651c30"
+    },
+    {
+      "id": "7c8e10d9-76b2-e6b5-dfe5-0065d2b7f48f",
+      "name": "Run now",
+      "notes": "Starts the job now, as its schedule would (POST).",
+      "parameters": {
+        "httpMethod": "POST",
+        "options": {},
+        "path": "run/crew-code-graph"
+      },
+      "position": [
+        0,
+        160
+      ],
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "webhookId": "b50a561a-5067-3ed5-100a-bcb348fe6bc0"
+    }
+  ],
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "none",
+    "timezone": "Europe/Berlin"
+  }
+}

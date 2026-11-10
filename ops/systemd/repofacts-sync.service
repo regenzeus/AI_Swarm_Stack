@@ -3,7 +3,7 @@
 Description=Rebuild the facts of repositories whose HEAD moved
 [Service]
 Type=oneshot
-# limit: stops (a run that hangs past 180 min is ended, so its timer fires again; the longest of 14 days was 318 s; review RUN-R27)
+# limit: stops (a run that hangs past 180 min is ended, so its n8n workflow starts it again; the longest of 14 days was 318 s; review RUN-R27)
 TimeoutStartSec=180min
 Environment=DOCKER_HOST=unix://%t/docker.sock
 ExecCondition=/usr/bin/python3 %h/ai-stack/ops/stack_gate.py

@@ -1,0 +1,89 @@
+{
+  "active": true,
+  "connections": {
+    "On its schedule (0 8 * * *)": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Task #10: RAM upgrade to 32 GB",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Run now": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Task #10: RAM upgrade to 32 GB",
+            "type": "main"
+          }
+        ]
+      ]
+    }
+  },
+  "id": "aistee5542210225",
+  "name": "Task #10: RAM upgrade to 32 GB",
+  "nodes": [
+    {
+      "id": "ab41f21a-fda6-166a-47b9-e04e39b585d5",
+      "name": "On its schedule (0 8 * * *)",
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "expression": "0 8 * * *",
+              "field": "cronExpression"
+            }
+          ]
+        }
+      },
+      "position": [
+        0,
+        0
+      ],
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2
+    },
+    {
+      "id": "d4e9ac31-adc8-e998-481e-db39af5876f6",
+      "name": "Task #10: RAM upgrade to 32 GB",
+      "notes": "One run of the task: an occurrence of its plan (WFL-05).",
+      "parameters": {
+        "kind": "task",
+        "task": 10,
+        "title": "Task #10: RAM upgrade to 32 GB"
+      },
+      "position": [
+        260,
+        0
+      ],
+      "type": "CUSTOM.aistackStep",
+      "typeVersion": 1,
+      "webhookId": "ceae1fbf-c5e4-2712-5df5-05014498a2d1"
+    },
+    {
+      "id": "1bfc7c15-df0f-ce0d-5e5f-90c0e5e1ae4c",
+      "name": "Run now",
+      "notes": "Starts the job now, as its schedule would (POST).",
+      "parameters": {
+        "httpMethod": "POST",
+        "options": {},
+        "path": "run/task-10-ram-upgrade-to-32-gb"
+      },
+      "position": [
+        0,
+        160
+      ],
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "webhookId": "222d5657-ccff-7db7-ca46-24741b148a17"
+    }
+  ],
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Berlin"
+  }
+}
