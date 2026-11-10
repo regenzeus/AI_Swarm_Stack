@@ -33,6 +33,9 @@ The other blocks of the palette (WFL-06), each through the stack's own code:
               kind there by its fingerprint (Needs you); submitted once per request, waited for
     plan      an improvised plan: its steps are rows of one task, run in waves through the same path as an agent step;
               a step waits for the steps it names in "after", and the answer carries every step's output
+    An agent step that names a tracker item (tracker and key, WFL-25) reads it: the item's title, text and comments as
+    its tracker holds them when the step starts (trackers.item_text) follow its brief, the stack's own comments marked
+    as its own; an item that cannot be read fails the step with the reason.
     wait_item the run waits on its tracker item (WFL-20): the answer is done with outcome reply (and the new comments
               from others) or outcome timeout after timeout_hours (0: no timeout); a timeout is no failure, so the
               workflow branches to a reminder and waits again. The item's events reach it through ops/runreg.py
@@ -190,9 +193,10 @@ def _tracker_named(name):
 
 
 def item_problem(req):
-    """-> what is wrong with the item fields of a request (wait_item, tracker, a build for an item, a question's role), or ""."""
+    """-> what is wrong with the item fields of a request (wait_item, tracker, an agent step that reads its item, a build
+    for an item, a question's role), or ""."""
     kind = req.get("kind")
-    if kind in ("wait_item", "tracker"):
+    if kind in ("wait_item", "tracker") or (kind == "agent" and req.get("tracker") not in (None, "")):
         if not isinstance(req.get("tracker"), str) or not NAME.fullmatch(req["tracker"]) or not _tracker_named(req["tracker"]):
             return f"no tracker {req.get('tracker')!r} in this deployment's trackers.yaml"
         if not isinstance(req.get("key"), str) or not ITEM_KEY.fullmatch(req["key"]):
@@ -308,6 +312,25 @@ def open_task(c, rid, req, rows, text, spec=None):
     c.execute("insert into flow_steps (id, task, created) values (?,?,?)", (rid, tid, now))
     c.commit()
     return tid
+
+
+def opened(c, rid):
+    """Whether the request's task was made already (a step looked at again after a restart)."""
+    c.execute("create table if not exists flow_steps (id text primary key, task integer, created text)")
+    return c.execute("select task from flow_steps where id=?", (rid,)).fetchone() is not None
+
+
+def with_item(req):
+    """WFL-25: an agent step that names its item gets the item's title, text and comments after its brief, read once
+    when its task is made. -> the request to run, or an answer when the item cannot be read."""
+    import runreg as RR
+    from domain import trackers as TR
+    RR.learn(req)
+    try:
+        said = TR.item_text(req["tracker"], str(req["key"]))
+    except Exception as e:                           # the tracker away or the item gone: the step fails with the reason
+        return None, {"status": "failed", "error": f"the item {req['tracker']}/{req['key']} could not be read: {type(e).__name__}: {e}"}
+    return {**req, "brief": f"{req['brief']}\n\n{said}"}, None
 
 
 def open_step(c, rid, req, cards):
@@ -905,6 +928,10 @@ def work(rid, req, cards, crew, sleep):
     if k == "plan":
         return run_plan(M.db(), rid, req, cards, stop=M.stop, sleep=sleep)
     c = M.db()
+    if req.get("tracker") and not opened(c, rid):
+        req, failed = with_item(req)
+        if failed:
+            return failed
     task, _ = open_step(c, rid, req, cards)
     s = drive(c, task, stop=M.stop, sleep=sleep)
     if s["status"] not in SETTLED:

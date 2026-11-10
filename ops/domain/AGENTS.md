@@ -17,7 +17,10 @@ boundary is checked, GEN-44).
   or idle, and a job's run limit is its kind's own minutes (GEN-40).
 - `trackers.py`, `forgework.py`: trackers and the forge read with a cursor (Jira's in the token user's time zone,
   paged, GEN-41) and written through shadow mode; a change's branch from a tag and its draft pull request (GEN-25,
-  GEN-26). Jira goes through atlassian-python-api, pinned for the runner (ops/runner-requirements.txt).
+  GEN-26). Jira goes through atlassian-python-api, pinned for the runner (ops/runner-requirements.txt). A comment is
+  the stack's own by its author (`me`) or by the write mark it ends with (`trackers.own`, WFL-26), so a tracker where
+  the stack writes with the owner's account (home's Forgejo inbox, GEN-45) still tells the owner's replies from the
+  stack's comments; `trackers.item_text` is an item as an agent step that names it reads it (WFL-25).
 - `roles.py`: who decides for a role (GEN-27). `artifacts.py`: saved files by hash (GEN-29). `record.py`: a run's
   bundle (`export_run`, from the run register) and a pack's exams (GEN-31).
 
@@ -25,7 +28,8 @@ Nothing here starts a run or keeps a scheduler: a module hands events on (`track
 to a `hand` the run register gives before its cursor moves) or does one thing when asked. Which run an event starts or
 wakes is the run register's (`ops/runreg.py`, WFL-19); a run's zip is `record.export_run`, made from the register with
 only the workflow's shape from git or the pack cache (WFL-23). A tracker entry that cannot be used is refused with its
-reason at load (`trackers.refused`: a Jira query with its own ORDER BY, an unknown kind or restart).
+reason at load (`trackers.refused`: a Jira query with its own ORDER BY, an unknown kind or restart, a `${NAME}` the
+deployment.env beside it does not set).
 
 The outside-write rule: every write the stack makes to a system outside it (a tracker's comment, summary, attachment,
 link, transition, label) waits in shadow per kind until the owner lets that kind go live (GEN-25, WFL-21). The one

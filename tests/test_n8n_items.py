@@ -167,7 +167,7 @@ def test_the_poller_is_a_crew_job_on_n8ns_minute_and_asks_the_trackers_every_pol
     assert "ops/runreg.py poll" in unit and "[Install]" not in unit and not (ROOT / "ops/systemd/tracker-poll.timer").exists()
     wf = json.loads((ROOT / "n8n/workflows/crew-tracker-poll.json").read_text())
     step = next(n for n in wf["nodes"] if n["type"] == "CUSTOM.aistackStep")
-    assert wf["active"] is False and step["parameters"]["job"] == "tracker-poll" and "* * * * *" in json.dumps(wf)
+    assert step["parameters"]["job"] == "tracker-poll" and "* * * * *" in json.dumps(wf)     # published by a deployment with trackers (n8n_switch.py)
     cfg = TR.config()
     assert cfg["poll_minutes"] == 5 and RR.due(cfg, now=1000.0)
     RR._write(RR.ROOT / "poller.json", {"last": 1000.0})

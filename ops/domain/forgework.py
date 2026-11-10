@@ -83,10 +83,12 @@ def publish(clone, branch, push, forge, origin, target, title, body, run, key):
 
 def poll_prs(forge, me="ai-stack", hand=None):
     """Each watched pull request's new comments from someone else, as one event {run, key, ref, comments} for its run,
-    as a tracker comment is; each comment is handed on once: hand(events) takes them before they count as seen."""
+    as a tracker comment is (the stack's own by its author or its write mark, trackers.own); each comment is handed on
+    once: hand(events) takes them before they count as seen."""
+    from domain import trackers as TR
     prs, events = _prs(), []
     for p in prs:
-        new = [c for c in forge.comments(p["origin"], p["number"]) if c["author"] != me and str(c["id"]) not in p["seen"]]
+        new = [c for c in forge.comments(p["origin"], p["number"]) if not TR.own(c, me) and str(c["id"]) not in p["seen"]]
         if not new:
             continue
         events.append({"run": p["run"], "key": p["key"], "ref": f"pr:{p['number']}", "comments": [f"pr-comment:{p['number']}/{c['id']}" for c in new]})

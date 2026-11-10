@@ -13,6 +13,7 @@ second `--env-file`, and takes the feature list from it as `COMPOSE_PROFILES`.
 |---|---|
 | `deployment.env` | the hosts, paths and accounts, `DEPLOYMENT`, `FEATURES` and `COMPOSE_PROFILES=${FEATURES}`; never a secret |
 | `data.yaml` | the data class, personal or customer, per deployment and per repository (GEN-14) |
+| `trackers.yaml` | the trackers it watches, each starting its item workflow (GEN-25, WFL-19); a value may name one of `deployment.env` as `${NAME}` |
 
 Without the tailnet a deployment sets `APP_GATE=local` and n8n's two addresses on 127.0.0.1 (`N8N_EDITOR_URL`,
 `N8N_WEBHOOK_URL`); with customer data it also lists n8n's logic nodes in `N8N_NODES_INCLUDE` (docs/N8N-MIGRATION.md

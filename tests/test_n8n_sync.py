@@ -27,8 +27,8 @@ def test_every_workflow_in_the_repository_is_a_whole_n8n_workflow():
             assert src in names and all(c["node"] in names for o in outs["main"] for c in o), f.name
         steps = [n for n in wf["nodes"] if n["type"] == "CUSTOM.aistackStep"]
         assert steps, f"{f.name}: the stack's work goes through the AI Stack step"
-        for n in wf["nodes"]:
-            assert n["type"] in ("CUSTOM.aistackStep", "n8n-nodes-base.scheduleTrigger", "n8n-nodes-base.webhook"), f.name   # WFL-03
+        for n in wf["nodes"]:   # WFL-03; an IF node only branches on a step's answer (an item workflow's wait)
+            assert n["type"] in ("CUSTOM.aistackStep", "n8n-nodes-base.scheduleTrigger", "n8n-nodes-base.webhook", "n8n-nodes-base.if"), f.name
         for n in steps:
             assert n["parameters"]["kind"] in FW.KINDS and n["webhookId"], f.name
         hooks = [n["webhookId"] for n in wf["nodes"] if n.get("webhookId")]
@@ -41,9 +41,8 @@ def test_every_scheduled_job_runs_on_n8n():
     timers that day: vault ingest, the trial rotation, the nightly restart) runs on n8n. A file says what runs:
     "active"; ops/n8n_switch.py <file> off takes one back."""
     jobs = {f.name: json.loads(f.read_text()) for f in WF if f.name.startswith(("crew-", "task-")) or f.name == "memory-keeper.json"}
-    waiting = {"crew-tracker-poll.json"}                 # WFL-19: the tracker poller, published by a deployment that has trackers
+    waiting = {"crew-tracker-poll.json"}                 # WFL-19: the tracker poller, published by a deployment that has trackers (home since its inbox, GEN-45)
     assert len(jobs) == 29 and all(wf["active"] for n, wf in jobs.items() if n not in waiting)
-    assert not any(jobs[n]["active"] for n in waiting)
 
 
 def test_a_deploy_imports_the_repositorys_workflows_each_as_its_file_says(monkeypatch):

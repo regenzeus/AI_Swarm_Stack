@@ -217,3 +217,56 @@ def test_trackers_are_the_apps_and_the_queues():
     cls = __import__("yaml").safe_load((root / "config/autonomy.yaml").read_text())["classes"]
     assert all(f"tracker-{k}" in cls for k in TR.KINDS) and cls["tracker-transition"]["floor"] == "people" and cls["tracker-attach"]["floor"] == "people"
     assert [t["workflow"] for t in TR.view({"shadow_needed": 5, "trackers": [{"name": "t", "kind": "standin", "workflow": "toy/ticket"}]})["trackers"]] == ["toy/ticket"]
+
+
+# ---------- one account for the stack and the owner (home's Forgejo token is the owner's): WFL-26 ----------
+MARK = TR.WRITE_MARK.format(id="n8n/a1")
+
+
+def test_the_stacks_own_comment_is_known_by_its_write_mark_where_it_writes_with_the_owners_account(world):
+    """Where the stack writes with the owner's own account, author is no help: the stack's comment ends with its write
+    mark and is its own; the owner's reply (also one that quotes the stack's comment) is someone else's."""
+    world["item"]("T-6", "2026-11-09T10:00:00", [
+        ("owner", "Which backups ran last night?"),
+        ("owner", f"Three ran, all passed.\n{MARK}"),                                     # the stack's answer
+        ("owner", f"{TR.SUMMARY_MARK}\nDone.\n{TR.WRITE_MARK.format(id='n8n/s1')}"),   # its summary
+        ("owner", f"> Three ran, all passed.\n> {MARK}\n\nAnd the one before?"),          # a reply quoting it
+        ("owner", f"See above:\n> {MARK}")])                                              # a reply ending in the quoted mark
+    assert [e["comments"] for e in TR.poll()] == [["comment:test/T-6/1", "comment:test/T-6/4", "comment:test/T-6/5"]]
+    assert TR.own({"author": "ai-stack", "body": "no mark"}, "ai-stack")                   # by its author, where it has its own account
+    assert not TR.own({"author": "owner", "body": "<!-- ai-stack:write n8n/a1 --> in the middle\nof a text"}, "ai-stack")
+
+
+def test_jira_and_pull_request_comments_follow_the_same_rule_on_one_account(world):
+    fake = FakeJira([("DEMO-9", "2026-11-09T10:00:00.000+0000")])
+    fake.cs = [{"id": "1", "author": {"name": "owner"}, "body": f"Answered.\n{MARK}"}, {"id": "2", "author": {"name": "owner"}, "body": "Thanks, and?"}]
+    cfg = {"shadow_needed": 5, "poll_minutes": 5, "trackers": [{"name": "j", "kind": "jira", "query": "project = DEMO", "workflow": "demo/bug"}]}
+    assert [e["comments"] for e in TR.poll(cfg, ad={"j": TR.Jira({"query": "project = DEMO"}, client=fake)})] == [["comment:j/DEMO-9/2"]]
+    FW._save([{"run": "demo/bug:j/DEMO-9", "key": "j/DEMO-9", "origin": "forgejo:owner/repo", "number": 3, "seen": []}])
+    forge = type("F", (), {"comments": lambda self, o, n: [{"id": 1, "author": "owner", "body": f"Opened.\n{MARK}"},
+                                                           {"id": 2, "author": "owner", "body": "please add a test"}]})()
+    assert FW.poll_prs(forge) == [{"run": "demo/bug:j/DEMO-9", "key": "j/DEMO-9", "ref": "pr:3", "comments": ["pr-comment:3/2"]}]
+
+
+def test_an_agent_step_reads_its_item_with_the_stacks_own_comments_marked_as_its_own(world):
+    """WFL-25: the item's title, status, text and comments in order; the stack's own as yours, its marks left out."""
+    world["item"]("T-7", "2026-11-09T10:00:00", [("owner", "Which backups ran?"), ("owner", f"Three ran.\n{MARK}"), ("owner", "And before?")])
+    db = json.loads(world["store"].read_text())
+    db["items"]["T-7"].update(body="Please list last night's backups.", status="open")
+    world["store"].write_text(json.dumps(db))
+    text = TR.item_text("test", "T-7")
+    assert text.startswith("The item test/T-7, as its tracker holds it now:\n\nTitle: ticket T-7\nStatus: open\n\nPlease list last night's backups.")
+    assert "--- owner:\nWhich backups ran?\n\n--- You (the AI Stack):\nThree ran.\n\n--- owner:\nAnd before?" in text and "ai-stack:write" not in text
+    with pytest.raises(ValueError, match="no tracker 'nope'"):
+        TR.item_text("nope", "T-7")
+
+
+def test_a_trackers_entry_may_name_a_value_of_its_deployment_and_one_it_does_not_set_is_refused(tmp_path, monkeypatch):
+    monkeypatch.setenv("AISTACK_TRACKER_STATE", str(tmp_path / "state"))
+    (tmp_path / "deployment.env").write_text("FORGEJO_OWNER=someone\n")
+    (tmp_path / "trackers.yaml").write_text("trackers:\n  - {name: inbox, kind: forgejo, repo: '${FORGEJO_OWNER}/inbox', workflow: home/inbox}\n"
+                                            "  - {name: other, kind: forgejo, repo: '${NO_SUCH}/x', workflow: home/x}\n")
+    cfg = TR.config(tmp_path / "trackers.yaml")
+    assert cfg["trackers"][0]["repo"] == "someone/inbox" and TR.refused(cfg["trackers"][0]) == ""
+    assert TR.problems(cfg) == ["other: it names ${NO_SUCH}, which the deployment.env does not set"]
+    assert TR.poll(cfg, ad={"inbox": type("A", (), {"me": "x", "changes": lambda self, c: ([], c)})()}) == []   # the refused one is not asked

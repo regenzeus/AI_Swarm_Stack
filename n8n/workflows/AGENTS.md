@@ -9,6 +9,10 @@ workflow from the runner, once (`ops/n8n_jobs.py`, kept in `/srv/ai/missions/flo
 here). After that a schedule is changed on n8n's canvas (Workflows in the app) and exported (WFL-08); the app has no
 schedule form of its own.
 
+The stack's own **item workflows** (`item-home-<name>.json`, named `Item: home/<name>`) start from a tracker item: the
+run register posts `item/home/<name>` when a tracker of the deployment names `home/<name>` as its workflow
+(docs/N8N-MIGRATION.md §3.6). They have no Run now; no pack may be named `home`, so no pack listens there.
+
 Every scheduled workflow also has a **Run now** trigger (WFL-13): a POST to `<n8n>/webhook/run/<file stem>` starts it
 at once, as its schedule would (for example `http://127.0.0.1:5678/webhook/run/crew-checker`, under n8n's path prefix
 when it has one). n8n registers it only while the workflow is published (Active yes). `ops/n8n_gen.py` adds it to a
@@ -34,7 +38,8 @@ file that lacks it and changes nothing else in the file.
 | `crew-skill-curator.json` | Crew: Skill curator | `0 4 * * 0` | `run/crew-skill-curator` | yes |
 | `crew-skill-keeper.json` | Crew: Skill keeper | `*/5 * * * *` | `run/crew-skill-keeper` | yes |
 | `crew-swarm-sync.json` | Crew: Swarm sync | `* * * * *` | `run/crew-swarm-sync` | yes |
-| `crew-tracker-poll.json` | Crew: Tracker poll (WFL-19; it asks the trackers every `poll_minutes`, 5 by default) | `* * * * *` | `run/crew-tracker-poll` | no: a deployment with trackers publishes it |
+| `crew-tracker-poll.json` | Crew: Tracker poll (WFL-19; it asks the trackers every `poll_minutes`, 5 by default) | `* * * * *` | `run/crew-tracker-poll` | no: a deployment with trackers publishes it (home: the lead's switch, GEN-45) |
+| `item-home-inbox.json` | Item: home/inbox (GEN-45; an issue in the owner's inbox repository, answered on the issue) | webhook `item/home/inbox` | none: its item starts it | no: switched on with the poller |
 | `crew-test-agent.json` | Crew: Test agent | `30 4 * * 2` | `run/crew-test-agent` | yes |
 | `crew-trial-rotation.json` | Crew: Trial rotation | `0 1 * * *` | `run/crew-trial-rotation` | no: waits for its switch |
 | `crew-upgrade-check.json` | Crew: Upgrade check | `0 9 01 * *` | `run/crew-upgrade-check` | yes |

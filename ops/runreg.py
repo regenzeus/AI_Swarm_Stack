@@ -20,7 +20,10 @@ identity), also across a restart:
     - otherwise the event is recorded; its new comments wait for the run's next wait_item, which takes them at once. A
       run that has ended is not started again, except that a new comment starts a new run when the tracker says
       restart: on_comment (default never). A run has ended when n8n's database says its execution finished.
-An event without new comments (the stack's own write changes the item too) never wakes a wait for a reply.
+An event without new comments (the stack's own write changes the item too) never wakes a wait for a reply. The
+comments an event brings are others' only: the trackers leave out the stack's own, by their author or by the write mark
+every write of the stack ends with (trackers.own, WFL-26), so the owner's reply wakes a run also where the stack writes
+with the owner's account.
 
     python3 ops/runreg.py poll                        one pass of the tracker poller (the crew job tracker-poll)
     python3 ops/runreg.py export <execution> <zip>    a run's one zip (ops/domain/record.py export_run)

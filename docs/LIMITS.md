@@ -122,7 +122,7 @@ left out, and the reason says where that is shown.
 | `ops/winjobs.py` | `MINUTES_MAX` | a job kind's time limit: a day at most; its own minutes stop it sooner |
 | `ops/winworker.py` | `FILES_KB` | a request's files (a patch) stay small: a patch past this is no change a person reviews |
 
-## stops (40)
+## stops (41)
 
 | Where | Limit | Why |
 |---|---|---|
@@ -147,6 +147,7 @@ left out, and the reason says where that is shown.
 | `ops/crew.py` | `--max-turns` | a crew agent's Board answer past 20 turns is reported as stopped |
 | `ops/domain/packs.py` | `GIT_S` | a clone or fetch of a pack that takes longer fails with the reason |
 | `ops/domain/trackers.py` | `JIRA_PAGES` | a pass that asked for 1,000 pages (50,000 changed items) stops there; the cursor keeps what was handed on and the next pass goes on |
+| `ops/domain/trackers.py` | `FORGEJO_PAGES` | a pass that asked for 1,000 pages (50,000 changed issues) stops there; the cursor keeps what was handed on and the next pass goes on |
 | `ops/evals.py` | `--max-turns` | a replay is one answer, no tools |
 | `ops/flows.py` | `DELIVER_FOR_S` | after a day without n8n taking it the answer stays in done/ and the owner is told |
 | `ops/journeys.py` | `DECIDE_TIMEOUT` | the decide journey gives the runner and the app this many seconds at each step; past it the journey fails and says which step |

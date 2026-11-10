@@ -108,12 +108,14 @@ def entries(path=None):
 
 
 def core_names():
-    """What a pack may not be named: the core's agents and the core's own names."""
+    """What a pack may not be named: the core's agents and the core's own names. home is the stack's own item
+    workflows' (their webhooks item/home/<name>, n8n/workflows/item-home-<name>.json); item and run are n8n's webhook
+    roots (item/<pack>/<name>, run/<file>), which a pack's own namespace <pack>/ would otherwise cover."""
     try:
         reg = yaml.safe_load((ROOT / "config/agents.yaml").read_text()) or {}
     except OSError:
         reg = {}
-    return {str(a.get("id")) for a in reg.get("agents") or []} | {"core", "home", "stack"}
+    return {str(a.get("id")) for a in reg.get("agents") or []} | {"core", "home", "stack", "item", "run"}
 
 
 # ---------- approvals ----------

@@ -1,0 +1,20 @@
+# deployments/home/trackers.yaml: home's tracker (GEN-25, GEN-45, ops/domain/trackers.py). The owner's private
+# repository <owner>/inbox on home's Forgejo is a front door: an issue written there starts the stack's own item
+# workflow home/inbox (n8n/workflows/item-home-inbox.json, webhook item/home/inbox), which answers on the issue, waits
+# for the owner's reply, answers that and closes the issue. The crew job tracker-poll asks it every poll_minutes.
+#
+# The Forgejo token (FORGEJO_TOKEN, sops) is the owner's own account, so the stack's comments and the owner's replies
+# have the same author. "me" stays unset on purpose: the stack knows its own comments by the write mark every one of
+# them ends with (trackers.own), and the owner's replies still wake the run. Setting me to the owner's account would
+# make every reply of the owner count as the stack's.
+#
+# Every kind of write starts in shadow (shadow_needed, 5 by default): the answers wait in the app's queue until the
+# owner lets comment, summary and transition go live (Stack > Connections > Packs and trackers, or the action
+# tracker_live).
+poll_minutes: 5
+trackers:
+  - name: inbox
+    kind: forgejo
+    repo: ${FORGEJO_OWNER}/inbox      # the deployment.env's FORGEJO_OWNER, so the owner's name is in one place
+    workflow: home/inbox
+    restart: on_comment               # a comment on an issue whose run has ended starts a new run

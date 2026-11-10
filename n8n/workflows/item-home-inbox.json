@@ -1,0 +1,296 @@
+{
+  "active": true,
+  "connections": {
+    "An issue arrives": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Answer the issue",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Answer the issue": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Post the answer",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Answer the reply": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Post the second answer",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "No reply in 7 days?": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Write the summary",
+            "type": "main"
+          }
+        ],
+        [
+          {
+            "index": 0,
+            "node": "Answer the reply",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Post the answer": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Wait for the owner's reply",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Post the second answer": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Write the summary",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Wait for the owner's reply": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "No reply in 7 days?",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Write the summary": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Close the issue",
+            "type": "main"
+          }
+        ]
+      ]
+    }
+  },
+  "id": "aisItemHomeInbox",
+  "name": "Item: home/inbox",
+  "nodes": [
+    {
+      "id": "f90ea895-d95e-5d6f-f0ec-8be88e443cc4",
+      "name": "An issue arrives",
+      "notes": "The tracker poller starts a run here for each new issue in the inbox repository, with {tracker, key, run, ref, comments}. It answers with the run's execution, so the stack knows the run from its start.",
+      "parameters": {
+        "httpMethod": "POST",
+        "options": {
+          "responseData": "={{ JSON.stringify({execution: $execution.id}) }}"
+        },
+        "path": "item/home/inbox"
+      },
+      "position": [
+        0,
+        0
+      ],
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "webhookId": "39f911c0-fe88-21c5-93a7-3f24d6a6388c"
+    },
+    {
+      "id": "769a413d-287e-8f6c-bd90-e470a516cde2",
+      "name": "Answer the issue",
+      "notes": "The main assistant reads the issue's title, text and comments, then answers it or does it.",
+      "parameters": {
+        "agent": "main",
+        "brief": "The owner wrote this issue in their inbox repository on the forge; it follows below. Answer it, or do what it asks and then say what you did. Your answer is posted on the issue exactly as you write it: write to the owner directly, in plain words, without a preamble. If something is unclear, ask in your answer; the owner's reply comes back to you.",
+        "key": "={{ $('An issue arrives').item.json.body.key }}",
+        "kind": "agent",
+        "title": "Answer the issue",
+        "tracker": "={{ $('An issue arrives').item.json.body.tracker }}"
+      },
+      "position": [
+        260,
+        0
+      ],
+      "type": "CUSTOM.aistackStep",
+      "typeVersion": 1,
+      "webhookId": "d53b009c-c9c5-1a29-7e8e-6909ab98ac44"
+    },
+    {
+      "id": "84d2ad25-8bc9-2964-8eb1-8474dd681a33",
+      "name": "Answer the reply",
+      "parameters": {
+        "agent": "main",
+        "brief": "The owner replied on this issue: the last comment below. With the whole conversation in mind, answer the reply, or do what it asks and then say what you did. Your answer is posted on the issue exactly as you write it: write to the owner directly, in plain words, without a preamble. After it the issue is closed; a new comment of the owner's takes it up again.",
+        "key": "={{ $('An issue arrives').item.json.body.key }}",
+        "kind": "agent",
+        "title": "Answer the reply",
+        "tracker": "={{ $('An issue arrives').item.json.body.tracker }}"
+      },
+      "position": [
+        1300,
+        220
+      ],
+      "type": "CUSTOM.aistackStep",
+      "typeVersion": 1,
+      "webhookId": "40c12556-ae8a-735f-df9a-520464eba8a8"
+    },
+    {
+      "id": "5dbe2d7c-c0e3-b9bb-2b64-c2d67fb48913",
+      "name": "Close the issue",
+      "parameters": {
+        "body": "closed",
+        "key": "={{ $('An issue arrives').item.json.body.key }}",
+        "kind": "tracker",
+        "title": "Close the issue",
+        "tracker": "={{ $('An issue arrives').item.json.body.tracker }}",
+        "write": "transition"
+      },
+      "position": [
+        2080,
+        0
+      ],
+      "type": "CUSTOM.aistackStep",
+      "typeVersion": 1,
+      "webhookId": "8263eec3-aea2-9d1f-2d9d-d9b491476cee"
+    },
+    {
+      "id": "1d1d9c55-8635-f87c-eba8-eb308f62f18c",
+      "name": "No reply in 7 days?",
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "63b1e58e-0bdf-26e2-b7b7-aa899df886eb",
+              "leftValue": "={{ $json.outcome }}",
+              "operator": {
+                "operation": "equals",
+                "type": "string"
+              },
+              "rightValue": "timeout"
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          }
+        },
+        "options": {}
+      },
+      "position": [
+        1040,
+        0
+      ],
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2
+    },
+    {
+      "id": "84d4e621-192a-401c-9955-70b6868a1786",
+      "name": "Post the answer",
+      "notes": "The whole answer goes on the issue as a comment (held for the owner while comments are in shadow).",
+      "parameters": {
+        "body": "",
+        "from_step": "Answer the issue",
+        "key": "={{ $('An issue arrives').item.json.body.key }}",
+        "kind": "tracker",
+        "title": "Post the answer",
+        "tracker": "={{ $('An issue arrives').item.json.body.tracker }}",
+        "write": "comment"
+      },
+      "position": [
+        520,
+        0
+      ],
+      "type": "CUSTOM.aistackStep",
+      "typeVersion": 1,
+      "webhookId": "437778bf-a58d-2fe5-a8ee-0e51e82d97ed"
+    },
+    {
+      "id": "bf2b4ecd-9eda-3776-fc35-77b444ecf665",
+      "name": "Post the second answer",
+      "parameters": {
+        "body": "",
+        "from_step": "Answer the reply",
+        "key": "={{ $('An issue arrives').item.json.body.key }}",
+        "kind": "tracker",
+        "title": "Post the second answer",
+        "tracker": "={{ $('An issue arrives').item.json.body.tracker }}",
+        "write": "comment"
+      },
+      "position": [
+        1560,
+        220
+      ],
+      "type": "CUSTOM.aistackStep",
+      "typeVersion": 1,
+      "webhookId": "73216a0b-835c-333b-0774-acb5664e41ec"
+    },
+    {
+      "id": "b8829482-3ec8-bff8-9537-06f9590c0741",
+      "name": "Wait for the owner's reply",
+      "notes": "Waits up to 7 days for a comment of the owner's. The stack's own comments never wake it.",
+      "parameters": {
+        "key": "={{ $('An issue arrives').item.json.body.key }}",
+        "kind": "wait_item",
+        "timeout_hours": 168,
+        "title": "Wait for the owner's reply",
+        "tracker": "={{ $('An issue arrives').item.json.body.tracker }}"
+      },
+      "position": [
+        780,
+        0
+      ],
+      "type": "CUSTOM.aistackStep",
+      "typeVersion": 1,
+      "webhookId": "a20841fe-d47e-6892-6107-33454a898536"
+    },
+    {
+      "id": "f169d5e7-4845-97bb-17eb-6bbf0ac483c7",
+      "name": "Write the summary",
+      "parameters": {
+        "body": "The AI Stack's work on this issue is done, so it closes the issue. A new comment takes it up again.",
+        "key": "={{ $('An issue arrives').item.json.body.key }}",
+        "kind": "tracker",
+        "title": "Write the summary",
+        "tracker": "={{ $('An issue arrives').item.json.body.tracker }}",
+        "write": "summary"
+      },
+      "position": [
+        1820,
+        0
+      ],
+      "type": "CUSTOM.aistackStep",
+      "typeVersion": 1,
+      "webhookId": "5eb36c92-3848-717f-e619-237c5d4d209d"
+    }
+  ],
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

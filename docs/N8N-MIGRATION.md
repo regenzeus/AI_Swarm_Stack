@@ -135,7 +135,7 @@ item's runs (with their executions) and the wait registered on it; and the ledge
 order only.
 
 **Routing** (WFL-19). The crew job **tracker-poll** runs on n8n's minute (`crew-tracker-poll.json`, inactive until a
-deployment with trackers publishes it) and asks the trackers every `poll_minutes` of the deployment's trackers.yaml (5
+deployment with trackers publishes it: home since its inbox) and asks the trackers every `poll_minutes` of the deployment's trackers.yaml (5
 by default). `trackers.poll()` and `forgework.poll_prs()` hand their events to the register's outbox before their
 cursors move; each event is then placed once by (tracker, key, the change's identity), also across a restart:
 
@@ -146,6 +146,19 @@ cursors move; each event is then placed once by (tracker, key, the change's iden
 | its run goes on, busy elsewhere | brings comments | recorded; the run's next `wait_item` takes them at once |
 | its run has ended (n8n's execution finished) | brings a new comment | a new run only when the tracker says `restart: on_comment` (default `never`) |
 | any | brings no new comments (the stack's own write changes the item too) | recorded; it never wakes a wait |
+
+**The stack's own comments** (WFL-26). A comment is the stack's own when its author is the tracker's account for the
+stack (`me` in trackers.yaml, default `ai-stack`) or when its last line is the stack's write mark
+(`<!-- ai-stack:write <id> -->`), which every write of the stack ends with (`trackers.own`). The poll hands on only the
+others' comments, for every kind of tracker and for pull requests, so only they wake a run. This is what makes a
+single-account tracker work: home's Forgejo token is the owner's own account, so the stack's comments and the owner's
+replies have the same author; the mark tells them apart, also when the owner quotes the stack's comment. Such a
+tracker leaves `me` unset.
+
+**An agent step that reads its item** (WFL-25). An agent step may name its item (`tracker` and `key`, on the canvas
+"Read the item of"): the step service then adds the item as its tracker holds it to the brief, once, when the step's
+task is made: its title, status and text and every comment in order, the stack's own marked as the agent's, without
+the marks (`trackers.item_text`). An item that cannot be read fails the step with the reason.
 
 An event n8n does not take (n8n down, the workflow not published) stays in the outbox for the next pass. A pull
 request's review comments come back the same way: its key is the item's (`<tracker>/<key>`).
@@ -162,6 +175,21 @@ outcome, the ids and references (task, step, build, pull request, artifacts, tra
 relaxes it. A step's brief still travels in n8n's execution as the workflow wrote it. A tracker write that should carry
 an earlier step's text names that step (`from_step`): the step service takes the whole answer from the register, so
 the text goes to the tracker (in shadow first) without passing through n8n.
+
+**Home's inbox: the work flow every day** (GEN-45). Home watches the owner's private repository `<FORGEJO_OWNER>/inbox`
+on its Forgejo as its one tracker (`deployments/home/trackers.yaml`: `repo: ${FORGEJO_OWNER}/inbox`, a value of the
+deployment.env beside it; `restart: on_comment`; asked every 5 minutes). An issue there is a front door: it starts the
+stack's own item workflow `home/inbox` (`n8n/workflows/item-home-inbox.json`, webhook `item/home/inbox`). The main
+agent reads the issue and answers it or does it; the whole answer is commented (`from_step`); the run waits up to 7
+days for the owner's reply; a reply gets a second answer; then the summary and the close. With no reply the run sums up
+and closes. So the path a work deployment's item takes (poll, route, start, agent, tracker writes in shadow, wait,
+wake, summary, transition) runs at home every day on real issues. The stack's own item workflows are named
+`Item: home/<name>` (file `item-home-<name>.json`, webhook `item/home/<name>`, no Run now: an item starts them); no
+pack may be named `home`, `item` or `run` (`packs.core_names`), so no pack listens on these webhooks or on n8n's
+webhook roots. Going live: the lead switches on `crew-tracker-poll.json` and `item-home-inbox.json`
+(`ops/n8n_switch.py <file> on` in a worktree, and lands the files' `active`, or the next deploy unpublishes them), and
+the owner lets comment, summary and transition go live (Stack > Connections > Packs and trackers, the action
+`tracker_live`); until then every answer waits in Needs you.
 
 **A run's record** (GEN-31, WFL-23): `python3 ops/runreg.py export <execution> <zip>` (record.export_run): each step in
 order with its request and whole answer, its task's record, the files by artifact id and hash, the tracker writes with

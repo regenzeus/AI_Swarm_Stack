@@ -8,3 +8,8 @@ follow (DEC-45, docs/PLATFORM.md).
 |---|---|
 | `deployment.env` | the hosts, paths, accounts and features (PLT-33) |
 | `models.yaml` | the model policy: subscription_only, and what serves each alias (GEN-05) |
+| `trackers.yaml` | its one tracker: the owner's private repository `${FORGEJO_OWNER}/inbox` on Forgejo, a front door to the stack's item workflow `home/inbox` (GEN-45) |
+
+An issue in the inbox repository is answered on the issue by the main agent, which waits for the owner's reply,
+answers that and closes the issue (docs/N8N-MIGRATION.md §3.6). The Forgejo token is the owner's own account, so the
+entry leaves `me` unset: the stack knows its own comments by their write mark (WFL-26).

@@ -61,7 +61,7 @@ class AistackStep {
       properties: [
         { displayName: 'Kind', name: 'kind', type: 'options', default: 'agent', noDataExpression: true,
           options: [
-            { name: 'Agent step', value: 'agent', description: 'An agent of the stack does one piece of work' },
+            { name: 'Agent step', value: 'agent', description: 'An agent of the stack does one piece of work; it may read a tracker item first' },
             { name: 'Coding change', value: 'build', description: 'The coder works in the sandbox on a repository: a branch or pull request, checks and your review included' },
             { name: 'Crew job', value: 'crew', description: 'A housekeeping job, as Run now starts it' },
             { name: 'Plan task', value: 'task', description: 'One run of a plan task (a briefing, a price watch)' },
@@ -117,7 +117,10 @@ class AistackStep {
           description: 'Each step: an agent, its brief, a title, and the numbers of the steps it waits for' },
         { displayName: 'Tracker', name: 'tracker', type: 'options', default: '', displayOptions: show('wait_item', 'tracker'),
           typeOptions: { loadOptionsMethod: 'getTrackers' }, description: 'The tracker of this deployment (trackers.yaml)' },
-        { displayName: 'Item', name: 'key', type: 'string', default: '={{ $json.body ? $json.body.key : $json.key }}', displayOptions: show('wait_item', 'tracker'),
+        { displayName: 'Read the item of', name: 'tracker', type: 'options', default: '', displayOptions: show('agent'),
+          typeOptions: { loadOptionsMethod: 'getItemTrackers' },
+          description: "The agent reads the item first: its title, text and every comment, the stack's own marked as its own" },
+        { displayName: 'Item', name: 'key', type: 'string', default: '={{ $json.body ? $json.body.key : $json.key }}', displayOptions: show('wait_item', 'tracker', 'agent'),
           description: 'The key of the item; the workflow of an item gets it from its start' },
         { displayName: 'Wait at most (hours)', name: 'timeout_hours', type: 'number', default: 72, typeOptions: { minValue: 0, numberPrecision: 2 },
           displayOptions: show('wait_item'), description: 'Then the answer is outcome timeout, so the workflow can remind and wait again; 0 waits without end' },
@@ -149,6 +152,7 @@ class AistackStep {
         async getPlaces() { return pick(this, 'places'); },
         async getRepos() { return pick(this, 'repos'); },
         async getTrackers() { return pick(this, 'trackers'); },
+        async getItemTrackers() { return [{ name: 'No item', value: '' }, ...(await pick(this, 'trackers'))]; },
         async getRoles() { return [{ name: 'The owner', value: '' }, ...(await pick(this, 'roles'))]; },
       },
     };
@@ -167,6 +171,7 @@ class AistackStep {
       resume_url: this.evaluateExpression('{{ $execution.resumeUrl }}', 0),
     };
     if (kind === 'agent') Object.assign(body, { agent: p('agent'), brief: p('brief') });
+    if (kind === 'agent' && p('tracker', '')) Object.assign(body, { tracker: p('tracker'), key: String(p('key')) });
     if (kind === 'build') Object.assign(body, { repo: p('repo'), brief: p('brief') });
     if (kind === 'build' && p('item', '')) Object.assign(body, { item: p('item'), base: p('base', ''), target: p('target', ''), forge: p('forge', '') || undefined });
     if (kind === 'crew') body.job = p('job');

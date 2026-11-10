@@ -493,3 +493,46 @@ items:
     verify: {method: test, by: ['tests/test_domain_packs.py::test_a_new_commit_replaces_its_workflows_in_place_and_a_refusal_unpublishes_them',
       'tests/test_n8n_service.py::test_n8n_prunes_executions_after_30_days']}
     trace: [ops/n8n_sync.py, docs/N8N-MIGRATION.md]
+  - id: WFL-25
+    title: An agent step reads its tracker item
+    statement: An agent step that names a tracker item (tracker and key) shall get, after its brief, the item as its
+      tracker holds it when the step's task is made (its title, status and text, and every comment in order, the
+      stack's own comments marked as its own and the others by their author, without the stack's write marks), its text
+      kept from the start and its comments from the newest within the prompt's caps; an item that cannot be read shall
+      fail the step with the reason, and a tracker the deployment does not have shall be refused before anything runs.
+      The AI Stack step node shall offer the item for an agent step (Read the item of, Item).
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-05]
+    sources: [docs/N8N-MIGRATION.md, docs/AI-STACK.md]
+    acceptance: 'Test: a stand-in item reads as its title, status, text and comments with the stack''s own marked as
+      yours and no write mark; an issue''s agent steps get its title and text, then the whole conversation with the
+      owner''s reply; an item the forge does not have fails the step with the reason; an unknown tracker is refused;
+      the node sends the item of an agent step.'
+    verify: {method: test, by: ['tests/test_domain_trackers.py::test_an_agent_step_reads_its_item_with_the_stacks_own_comments_marked_as_its_own',
+      'tests/test_home_inbox.py::test_an_agent_step_whose_item_cannot_be_read_fails_with_the_reason_and_an_unknown_tracker_is_refused',
+      'tests/test_home_inbox.py::test_the_node_lets_an_agent_step_read_its_item',
+      'tests/test_home_inbox.py::test_an_issue_in_the_inbox_is_answered_waits_for_the_owners_reply_and_is_closed']}
+    trace: [ops/flows.py, ops/domain/trackers.py, n8n/custom/AistackStep.node.js]
+  - id: WFL-26
+    title: The stack knows its own comments on one account
+    statement: A comment on a tracker item or a watched pull request shall count as the stack's own when its author is
+      the tracker's account for the stack (me) or when its last line is the stack's write mark, which every write of the
+      stack ends with; this shall decide which comments a poll hands on, and so which events wake a waiting run, for
+      every kind of tracker (Forgejo, Jira, the stand-in) and for pull requests. Where the stack writes with the owner's
+      own account (home's Forgejo), the owner's reply, also one that quotes the stack's comment, shall wake the run,
+      and the stack's own comment shall not.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-05]
+    sources: [docs/N8N-MIGRATION.md]
+    acceptance: 'Test: on one account the stack''s marked answer and summary are its own and the owner''s replies
+      (plain, quoting it, ending in the quoted mark) are handed on; a Jira item and a pull request with one author hand
+      on only the unmarked comment; end to end on home''s inbox the stack''s comment by the owner''s account is
+      recorded and the owner''s unmarked reply wakes the run.'
+    verify: {method: test, by: ['tests/test_domain_trackers.py::test_the_stacks_own_comment_is_known_by_its_write_mark_where_it_writes_with_the_owners_account',
+      'tests/test_domain_trackers.py::test_jira_and_pull_request_comments_follow_the_same_rule_on_one_account',
+      'tests/test_home_inbox.py::test_an_issue_in_the_inbox_is_answered_waits_for_the_owners_reply_and_is_closed']}
+    trace: [ops/domain/trackers.py, ops/domain/forgework.py, ops/runreg.py]

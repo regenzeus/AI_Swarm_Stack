@@ -6,17 +6,26 @@ The deployment lists its trackers in trackers.yaml beside its deployment.env:
     poll_minutes: 5                  # how often the poller asks the trackers (the crew job tracker-poll, ops/runreg.py)
     trackers:
       - {name: bugs, kind: jira, url: https://jira.example, query: 'project = DEMO', workflow: demo/bug}
-      - {name: home, kind: forgejo, repo: owner/repo, workflow: home/triage, restart: on_comment}
+      - {name: inbox, kind: forgejo, repo: '${FORGEJO_OWNER}/inbox', workflow: home/inbox, restart: on_comment}
       - {name: test, kind: standin, path: /tmp/standin.json, workflow: demo/bug}
-Tokens are secrets (sops), never in the file: JIRA_TOKEN, FORGEJO_TOKEN. "workflow" is the pack's workflow an item
-starts (through n8n's webhook item/<pack>/<name>); "restart" says whether a new comment on an item whose run has ended
-starts a new run (on_comment) or not (never, the default). An entry that cannot be used is refused with its reason
-(refused(): an unknown kind or restart, a Jira query with its own ORDER BY) and not asked.
+Tokens are secrets (sops), never in the file: JIRA_TOKEN, FORGEJO_TOKEN. "workflow" is the workflow an item starts
+(through n8n's webhook item/<workflow>): a pack's <pack>/<name>, or the stack's own home/<name> (n8n/workflows/
+item-home-<name>.json; no pack may be named home, ops/domain/packs.py core_names). "restart" says whether a new comment
+on an item whose run has ended starts a new run (on_comment) or not (never, the default). A value may name a value of
+the deployment.env beside the file as ${NAME} (home's repository is ${FORGEJO_OWNER}/inbox). "me" is the tracker
+account the stack writes with when it has one of its own (default ai-stack); leave it out where the stack writes with
+the owner's account (home's Forgejo token), or the owner's replies would count as the stack's. An entry that cannot be
+used is refused with its reason (refused(): an unknown kind or restart, a Jira query with its own ORDER BY, a ${NAME}
+the deployment does not set) and not asked.
 
 Reading. poll() asks each tracker for the items changed since its cursor and hands each change on as one event for
 the run named after its item (<workflow>:<tracker>/<key>), with the comments from someone other than the stack that it
-has not handed on before. The cursor and the comments seen are kept on disk, so a restart hands nothing on twice.
-Which run an event starts or wakes is the run register's business (ops/runreg.py), never this module's.
+has not handed on before. A comment is the stack's own (own()) when its author is the tracker's "me" or when it ends
+with the stack's write mark, which every write of the stack ends with; so where the stack and the owner write with the
+same account, the owner's replies still wake the run and the stack's own comments do not. The cursor and the comments
+seen are kept on disk, so a restart hands nothing on twice. Which run an event starts or wakes is the run register's
+business (ops/runreg.py), never this module's. item_text() is the item as an agent step that names it reads it: its
+title, its text and every comment in order, each marked as the stack's own or by its author (WFL-25).
 
 Writing. A write is one call with a write id, so a retry is harmless. The kinds: comment, summary (the stack's one
 summary comment, edited, never duplicated), attach, link, transition, label. Each kind starts in shadow: the write goes
@@ -24,7 +33,9 @@ to the shadow log and the owner's queue, never outward. Once the owner approved 
 queue asks whether that kind may go live; a live kind writes outward.
 
     adapter(cfg)               a tracker's adapter: StandIn, Forgejo, Jira
+    own(comment, me)           whether a comment is the stack's own write
     poll(cfg, hand=None)       one pass over every tracker -> the events it hands on (to hand() before a cursor moves)
+    item_text(tracker, key)    the item's title, text and comments, as an agent step reads them
     problems(cfg)              the tracker entries refused at load, each with its reason
     write(d)                   one write, in shadow or live
     decisions(make)            the queue's items: shadow writes to approve, kinds ready to go live
@@ -34,6 +45,7 @@ import datetime as dt
 import os
 import re
 import sys
+import urllib.parse
 from pathlib import Path
 
 import yaml
@@ -52,6 +64,12 @@ RESTART = ("never", "on_comment")              # a new comment on an item whose 
 ORDER_BY = re.compile(r"\border\s+by\b", re.I)
 JIRA_PAGE = 50                                 # issues per request; the pass pages on until Jira has given every one
 JIRA_PAGES = 1000                              # limit: stops, a pass that asked for 1,000 pages (50,000 changed items) stops there; the cursor keeps what was handed on and the next pass goes on
+FORGEJO_PAGE = 50                              # issues per request; the pass pages on until Forgejo has given every one
+FORGEJO_PAGES = 1000                           # limit: stops, a pass that asked for 1,000 pages (50,000 changed issues) stops there; the cursor keeps what was handed on and the next pass goes on
+WRITTEN = re.compile(r"<!-- ai-stack:write \S+ -->")   # WRITE_MARK as it ends every write of the stack
+ITEM_HEAD = 6000                               # cap: prompt, an item's title and text as an agent step reads them
+ITEM_TALK = 10000                              # cap: prompt, its comments as an agent step reads them, the newest kept
+VAR = re.compile(r"\$\{(\w+)\}")
 
 
 def _deployment():
@@ -59,18 +77,33 @@ def _deployment():
     return D.chosen()
 
 
-def config(path=None):
+def _values(folder):
+    """The values a trackers.yaml may name as ${NAME}: those of the deployment.env beside it, else this deployment's."""
+    import deployment as D
+    env = folder / "deployment.env"
+    return D.load(env) if env.is_file() else D.VALUES
+
+
+def config(path=None, values=None):
     p = Path(path or os.environ.get("AISTACK_TRACKERS") or _deployment() / "trackers.yaml")
     try:
         d = yaml.safe_load(p.read_text(encoding="utf-8")) or {}
     except OSError:
         d = {}
-    return {"shadow_needed": int(d.get("shadow_needed") or SHADOW_NEEDED), "trackers": list(d.get("trackers") or []),
+    trackers = list(d.get("trackers") or [])
+    if any(isinstance(v, str) and VAR.search(v) for t in trackers if isinstance(t, dict) for v in t.values()):
+        vals = values if values is not None else _values(p.parent)
+        trackers = [{k: VAR.sub(lambda m: vals.get(m.group(1), m.group(0)), v) if isinstance(v, str) else v for k, v in t.items()}
+                    if isinstance(t, dict) else t for t in trackers]
+    return {"shadow_needed": int(d.get("shadow_needed") or SHADOW_NEEDED), "trackers": trackers,
             "poll_minutes": float(d.get("poll_minutes") or POLL_MINUTES)}
 
 
 def refused(t):
     """Why a tracker's entry cannot be used, or "": it is read at load and refused with the reason, never half used."""
+    unset = sorted({m for v in t.values() if isinstance(v, str) for m in VAR.findall(v)})
+    if unset:
+        return f"{t.get('name')}: it names ${{{unset[0]}}}, which the deployment.env does not set"
     if t.get("kind") not in ADAPTERS:
         return f"{t.get('name')}: kind is one of {', '.join(ADAPTERS)}, not {t.get('kind')!r}"
     if t.get("restart", "never") not in RESTART:
@@ -101,6 +134,23 @@ def _write_json(p, d):
     SF.save(p, d, indent=1)                          # whole or not at all: a cursor, the seen comments, the shadow writes
 
 
+# ---------- the stack's own comments ----------
+def own(c, me):
+    """A comment is the stack's own when its author is the tracker's account for the stack (me), or when its last line
+    is the stack's write mark: every write of the stack ends with it, so where the stack writes with the owner's own
+    account (home's Forgejo) the owner's replies still count as someone else's. A reply that quotes the stack's comment
+    ends with the owner's words or with the quoted mark ("> <!-- ... -->"), so it is the owner's."""
+    if str(c.get("author") or "") == str(me):
+        return True
+    lines = str(c.get("body") or "").strip().splitlines()
+    return bool(lines) and bool(WRITTEN.fullmatch(lines[-1].strip()))
+
+
+def unmarked(body):
+    """A comment's text without the stack's marks (they are for the stack, not for the reader)."""
+    return "\n".join(x for x in str(body or "").splitlines() if not (WRITTEN.fullmatch(x.strip()) or x.strip() == SUMMARY_MARK)).strip()
+
+
 # ---------- adapters ----------
 class StandIn:
     """A tracker in one JSON file: what the tests and the preview poll and write. Same answers as a real one."""
@@ -120,6 +170,10 @@ class StandIn:
     def comments(self, key):
         return self._db()["items"].get(key, {}).get("comments", [])
 
+    def item(self, key):
+        it = self._db()["items"].get(key, {})
+        return {"title": it.get("title", ""), "body": it.get("body", ""), "status": it.get("status", "")}
+
     def put(self, key, kind, body, write_id):
         db = self._db()
         it = db["items"].setdefault(key, {"updated": _now(), "comments": []})
@@ -128,7 +182,7 @@ class StandIn:
         if any(mark in c["body"] for c in cs) or any(mark in str(x) for x in it.get("log", [])):
             return {"done": True, "again": True}                 # this write was done before: a retry changes nothing
         if kind == "summary":
-            old = next((c for c in cs if SUMMARY_MARK in c["body"] and c["author"] == self.me), None)
+            old = next((c for c in cs if SUMMARY_MARK in c["body"] and own(c, self.me)), None)
             text = f"{SUMMARY_MARK}\n{body}\n{mark}"
             if old:
                 old["body"], old["edited"] = text, _now()
@@ -155,16 +209,27 @@ class Forgejo:
         self.me = cfg.get("me") or "ai-stack"
 
     def changes(self, cursor):
-        q = f"/repos/{self.repo}/issues?type=issues&state=all&sort=updated&limit=50" + (f"&since={cursor}" if cursor else "")
-        got = self.f.call("GET", q) or []
+        """The issues changed since the cursor (Forgejo's own time, its offset kept), page by page; the time goes into
+        the query encoded, since a raw + of an offset reads as a space there."""
+        since = f"&since={urllib.parse.quote(cursor)}" if cursor else ""
+        got = []
+        for page in range(1, FORGEJO_PAGES + 1):                 # limit: stops, FORGEJO_PAGES above
+            batch = self.f.call("GET", f"/repos/{self.repo}/issues?type=issues&state=all&limit={FORGEJO_PAGE}&page={page}{since}") or []
+            got += batch
+            if len(batch) < FORGEJO_PAGE:
+                break
         items = [{"key": str(i["number"]), "updated": i["updated_at"], "title": i["title"], "status": i["state"],
-                  "labels": [x["name"] for x in i.get("labels") or []]} for i in got if i.get("updated_at", "") > (cursor or "")]
-        items.sort(key=lambda i: i["updated"])
+                  "labels": [x["name"] for x in i.get("labels") or []]} for i in got if not cursor or _when(i.get("updated_at") or cursor) > _when(cursor)]
+        items = sorted({i["key"]: i for i in items}.values(), key=lambda i: _when(i["updated"]))
         return items, (items[-1]["updated"] if items else cursor)
 
     def comments(self, key):
         return [{"id": c["id"], "author": c["user"]["login"], "body": c["body"], "at": c["created_at"]}
                 for c in self.f.call("GET", f"/repos/{self.repo}/issues/{key}/comments") or []]
+
+    def item(self, key):
+        i = self.f.call("GET", f"/repos/{self.repo}/issues/{key}") or {}
+        return {"title": i.get("title", ""), "body": i.get("body") or "", "status": i.get("state", "")}
 
     def put(self, key, kind, body, write_id):
         mark = WRITE_MARK.format(id=write_id)
@@ -172,7 +237,7 @@ class Forgejo:
         if any(mark in c["body"] for c in cs):
             return {"done": True, "again": True}
         if kind == "summary":
-            old = next((c for c in cs if SUMMARY_MARK in c["body"]), None)
+            old = next((c for c in cs if SUMMARY_MARK in c["body"] and own(c, self.me)), None)
             text = f"{SUMMARY_MARK}\n{body}\n{mark}"
             if old:
                 self.f.call("PATCH", f"/repos/{self.repo}/issues/comments/{old['id']}", {"body": text})
@@ -190,7 +255,8 @@ class Forgejo:
 
 
 def _when(s):
-    """A Jira time (2026-11-09T10:05:10.000+0100) or an older cursor without an offset, as a datetime."""
+    """A Jira time (2026-11-09T10:05:10.000+0100), a Forgejo time (2026-11-09T10:05:10+01:00 or ...Z) or an older cursor
+    without an offset, as a datetime."""
     return dt.datetime.fromisoformat(re.sub(r"([+-]\d\d)(\d\d)$", r"\1:\2", str(s)))
 
 
@@ -256,13 +322,17 @@ class Jira:
         return [{"id": c["id"], "author": (c.get("author") or {}).get("name", ""), "body": c.get("body", ""), "at": c.get("created", "")}
                 for c in got.get("comments") or []]
 
+    def item(self, key):
+        f = (self.j.issue(key, fields="summary,description,status") or {}).get("fields") or {}
+        return {"title": f.get("summary") or "", "body": f.get("description") or "", "status": (f.get("status") or {}).get("name", "")}
+
     def put(self, key, kind, body, write_id):
         mark = WRITE_MARK.format(id=write_id)
         cs = self.comments(key)
         if any(mark in c["body"] for c in cs):
             return {"done": True, "again": True}
         if kind == "summary":
-            old = next((c for c in cs if SUMMARY_MARK in c["body"]), None)
+            old = next((c for c in cs if SUMMARY_MARK in c["body"] and own(c, self.me)), None)
             text = f"{SUMMARY_MARK}\n{body}\n{mark}"
             if old:
                 self.j.issue_edit_comment(key, old["id"], text)
@@ -314,7 +384,7 @@ def poll(cfg=None, ad=None, hand=None):
         mine = []
         for it in items:
             key = it["key"]
-            ext = [c for c in a.comments(key) if c["author"] != a.me and str(c["id"]) not in st["seen"].get(key, [])]
+            ext = [c for c in a.comments(key) if not own(c, a.me) and str(c["id"]) not in st["seen"].get(key, [])]
             mine.append({"tracker": t["name"], "key": key, "run": run_id(t, key), "ref": f"item:{t['name']}/{key}@{it['updated']}",
                          "comments": [f"comment:{t['name']}/{key}/{c['id']}" for c in ext]})
             st["seen"].setdefault(key, []).extend(str(c["id"]) for c in ext)
@@ -324,6 +394,25 @@ def poll(cfg=None, ad=None, hand=None):
         st["cursor"] = cursor
         _write_json(state_dir() / f"{t['name']}.json", st)
     return events
+
+
+def item_text(tracker, key, cfg=None, ad=None):
+    """WFL-25: the item as an agent step that names it reads it: its title and status, its text, and every comment in
+    order, the stack's own marked as yours and the others by their author, without the stack's marks. A long text
+    keeps its start; long comments keep the newest."""
+    cfg = cfg or config()
+    t = find(tracker, cfg)
+    if not t or refused(t):
+        raise ValueError(f"no tracker {tracker!r} in this deployment's trackers.yaml" if not t else refused(t))
+    a = (ad or {}).get(tracker) or adapter(t)
+    it = a.item(key)
+    whole = f"Title: {it.get('title') or ''}\nStatus: {it.get('status') or 'unknown'}\n\n{it.get('body') or '(no text)'}"
+    head = TC.cut(whole, ITEM_HEAD, "the whole text is on the item")   # cap: prompt, ITEM_HEAD above
+    talk = [f"--- {'You (the AI Stack)' if own(c, a.me) else c.get('author') or 'someone'}{', ' + str(c['at']) if c.get('at') else ''}:\n"
+            f"{unmarked(c.get('body'))}" for c in a.comments(key)]
+    said = TC.tail("\n\n".join(talk), ITEM_TALK, "the oldest comments are on the item")   # cap: prompt, ITEM_TALK above
+    return (f"The item {tracker}/{key}, as its tracker holds it now:\n\n{head}\n\n"
+            + (f"Its comments, oldest first:\n\n{said}" if talk else "It has no comments yet."))
 
 
 # ---------- writing ----------

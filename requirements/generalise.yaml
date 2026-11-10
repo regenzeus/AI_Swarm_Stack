@@ -289,7 +289,7 @@ items:
     type: functional
     priority: should
     status: partial
-    gap: "Reading with a cursor, written in shadow and going live are built and tested; the poller (WFL-19) and the tracker step (WFL-21) are built; no deployment has published its poller's workflow yet."
+    gap: "Reading with a cursor, written in shadow and going live are built and tested; the poller (WFL-19) and the tracker step (WFL-21) are built; home has its first tracker (its inbox repository, GEN-45), and its poller's workflow waits for the lead's switch."
     acceptance: 'Test: on a stand-in a changed item is handed on once across a restart under one run name, the summary comment is edited across three updates, and shadow mode writes nothing outward.'
     parents: [SN-05]
     sources: [docs/AI-STACK.md]
@@ -299,6 +299,7 @@ items:
       'tests/test_domain_trackers.py::test_the_one_summary_comment_is_edited_across_three_updates',
       'tests/test_domain_trackers.py::test_a_write_to_an_unknown_tracker_or_of_an_unknown_kind_is_refused_with_the_reason',
       'tests/test_domain_trackers.py::test_jira_reads_by_jql_with_its_cursor_and_edits_its_one_summary',
+      'tests/test_home_inbox.py::test_forgejos_changes_are_asked_with_the_cursor_encoded_and_page_by_page',
       'tests/test_domain_trackers.py::test_trackers_are_the_apps_and_the_queues']}
     trace: [ops/domain/trackers.py, images/mission-control/web/static/app.js]
   - id: GEN-26
@@ -561,3 +562,37 @@ items:
       'tests/test_work_deployment.py::test_the_core_names_nothing_of_the_stand_in_domain']}
     trace: [ops/flows.py, ops/runreg.py, ops/domain/trackers.py, ops/domain/forgework.py, ops/domain/places.py, ops/domain/packs.py,
       ops/domain/record.py, tests/fixtures/packs/toy/workflows/ticket.json]
+  - id: GEN-45
+    title: "Home's inbox repository is a front door"
+    statement: "The home deployment shall watch the owner's private repository <FORGEJO_OWNER>/inbox on its Forgejo as
+      its tracker (deployments/home/trackers.yaml, the owner named once in deployment.env as ${FORGEJO_OWNER}; restart
+      on_comment; asked every 5 minutes), so the work deployment's item flow runs at home every day: an issue starts the
+      stack's own item workflow home/inbox (n8n/workflows/item-home-inbox.json, webhook item/home/inbox, inactive until
+      the lead switches it on), whose main agent reads the issue and answers it or does it, the whole answer is
+      commented on the issue, the run waits up to 7 days for the owner's reply, answers that in a second comment, writes
+      the summary and closes the issue; with no reply it writes the summary and closes. Its writes start in shadow like
+      every tracker's. No pack may take the names home, item or run, so no pack can listen on the stack's own item
+      webhooks or n8n's webhook roots."
+    type: functional
+    priority: should
+    status: partial
+    gap: "Built and tested against a stand-in Forgejo and a stand-in n8n; live once the lead switches on the poller's and
+      the inbox's workflows and the owner lets comment, summary and transition go live."
+    parents: [SN-05]
+    sources: [docs/N8N-MIGRATION.md, docs/PLATFORM.md, DEC-54]
+    acceptance: 'Test: home''s trackers.yaml loads with no refused entry, its repository from FORGEJO_OWNER; the inbox
+      workflow listens on item/<the tracker''s workflow> and is made of the real kinds; against a stand-in Forgejo
+      where every write has the owner''s account and a stand-in n8n running the workflow, an issue starts one run (also
+      when its change comes twice), the main agent''s answer is commented whole, the stack''s own comment does not wake
+      the run, the owner''s unmarked reply does, the second answer, the summary and the close follow, the run ends, and
+      a later comment starts a new run; with nothing live and no reply in 7 days every write waits in shadow and the run
+      ends; a value a trackers.yaml names that its deployment does not set is refused; a pack named home or item is
+      refused.'
+    verify: {method: test, by: ['tests/test_home_inbox.py::test_homes_tracker_is_its_inbox_repository_and_its_entry_is_valid',
+      'tests/test_home_inbox.py::test_the_inbox_workflow_listens_where_the_run_register_starts_it_and_is_built_from_the_real_kinds',
+      'tests/test_home_inbox.py::test_an_issue_in_the_inbox_is_answered_waits_for_the_owners_reply_and_is_closed',
+      'tests/test_home_inbox.py::test_with_nothing_live_and_no_reply_in_seven_days_the_inbox_run_holds_its_writes_and_ends',
+      'tests/test_domain_trackers.py::test_a_trackers_entry_may_name_a_value_of_its_deployment_and_one_it_does_not_set_is_refused',
+      'tests/test_domain_packs.py::test_a_pack_that_clashes_or_names_no_commit_of_its_source_is_refused_with_the_reason']}
+    trace: [deployments/home/trackers.yaml, n8n/workflows/item-home-inbox.json, ops/domain/trackers.py, ops/domain/packs.py,
+      ops/flows.py, ops/runreg.py, images/mission-control/guide/22-workflows.md]

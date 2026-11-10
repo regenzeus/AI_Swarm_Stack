@@ -166,10 +166,12 @@ class N8n:
     def request(self, ex, node, cur):
         p = lambda k, d=None: self.value(ex, node["parameters"].get(k, d), cur)   # noqa: E731
         kind = p("kind")
-        body = {"kind": kind, "title": p("title", "") or None, "workflow": "packtoyticket01", "workflow_name": self.wf["name"],
+        body = {"kind": kind, "title": p("title", "") or None, "workflow": self.wf.get("id") or "packtoyticket01", "workflow_name": self.wf["name"],
                 "node": node["name"], "execution": ex["id"], "resume_url": f"{N8N}/webhook-waiting/{ex['id']}/{ex['resume']}"}
         if kind == "agent":
             body.update(agent=p("agent"), brief=p("brief"))
+            if p("tracker", ""):                     # an agent step that reads its item
+                body.update(tracker=p("tracker"), key=str(p("key")))
         if kind == "build":
             body.update(repo=p("repo"), brief=p("brief"), item=p("item"), base=p("base", ""), target=p("target", ""))
         if kind == "command":

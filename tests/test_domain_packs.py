@@ -101,6 +101,8 @@ def test_a_new_commit_leaves_the_old_one_running_and_puts_one_decision_in_the_qu
 @pytest.mark.parametrize("line, words", [
     ("analyst {src} {head}", "a core agent or a name of the core has that name"),
     ("stack {src} {head}", "a core agent or a name of the core has that name"),
+    ("home {src} {head}", "a core agent or a name of the core has that name"),     # the stack's own item workflows (item/home/...)
+    ("item {src} {head}", "a core agent or a name of the core has that name"),     # n8n's webhook root of every item workflow
     ("Toy {src} {head}", "its name is letters, digits and dashes"),
     ("toy {src} 0000000000000000000000000000000000000000", "is not in"),
     ("toy {src} not-a-commit", "the commit is 7 to 40 hex digits"),
