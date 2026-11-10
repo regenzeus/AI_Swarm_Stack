@@ -37,7 +37,7 @@ Method, statuses and rules: [README.md](README.md). Names of the parts: [glossar
 | [Workflows](#wfl-workflows) (WFL) | 34 | 31 | 3 | 0 | 0 | 0 | 0 |
 | **All** | **731** | **643** | **47** | **1** | **4** | **17** | **19** |
 
-Unit tests claimed by a requirement: 1541 of 1541.
+Unit tests claimed by a requirement: 1542 of 1542.
 
 ## Findings
 
@@ -6896,8 +6896,8 @@ Each agent shall call the gateway with its own virtual key, limited to its own m
 
 - Parents: [SN-05](#sn-05), [SN-07](#sn-07)
 - Sources: `AGENTS.md`, `docs/SECURITY.md`
-- Verified by: test: `tests/test_keys_policy.py::test_only_the_creation_script_writes_the_keys_table`, `tests/test_keys_policy.py::test_update_keys_only_reads_the_table`, `tests/test_keys_policy.py::test_background_jobs_use_their_own_keys`
-- Trace: `ops/keys.sh`, `ops/update-keys.py`
+- Verified by: test: `tests/test_keys_policy.py::test_only_the_creation_script_writes_the_keys_table`, `tests/test_keys_policy.py::test_update_keys_only_reads_the_table`, `tests/test_keys_policy.py::test_background_jobs_use_their_own_keys`, `tests/test_deploy.py::test_a_change_of_the_agents_keys_sets_every_hermes_profile_up_again`
+- Trace: `ops/keys.sh`, `ops/update-keys.py`, `ops/deploy.py`
 - Gap: Every background job has its own key since 2026-10-29; mission runs of every type (task, shopping, cleanup) still share vk-mission, so two runs at the same time mix in cost attribution. The swarm registry gives every card its own key (SWM-23).
 - Findings: [FND-03](#fnd-03)
 - Refined by: [SWM-23](#swm-23), [SWM-24](#swm-24)
@@ -10662,6 +10662,7 @@ The step service shall post an answer to n8n's resume URL only while n8n's readi
 | `tests/test_decisions.py::test_the_test_item_is_marked_and_changes_nothing_but_itself` | [TSK-32](#tsk-32) |
 | `tests/test_decisions.py::test_what_the_owner_must_answer_reaches_the_queue_and_a_state_does_not` | [AUT-05](#aut-05), [GEN-02](#gen-02) |
 | `tests/test_deploy.py::test_a_card_change_restarts_the_swarm_service_so_the_agents_get_it` | [PLT-08](#plt-08), [SWM-102](#swm-102) |
+| `tests/test_deploy.py::test_a_change_of_the_agents_keys_sets_every_hermes_profile_up_again` | [SEC-07](#sec-07) |
 | `tests/test_deploy.py::test_a_deploy_is_recorded_with_its_source` | [BLD-20](#bld-20) |
 | `tests/test_deploy.py::test_a_new_timer_is_enabled_with_its_first_deploy_and_a_known_one_keeps_its_state` | [PLT-08](#plt-08) |
 | `tests/test_deploy.py::test_a_second_deploy_waits_and_then_gives_up` | [PLT-10](#plt-10) |

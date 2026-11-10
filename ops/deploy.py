@@ -46,10 +46,16 @@ def soul(script):
 
 
 def configure_scripts(changed):
-    """The configure scripts to re-run: those that changed, and those whose prompts file changed."""
+    """The configure scripts to re-run: those that changed, those whose prompts file changed, and all of them when the
+    agents' keys changed (a new or rotated key reaches its profile only through its script: on 10 Nov 2026 the tax
+    desk's new vk-tax landed without reaching the tax profile, and its first run was refused for want of a key)."""
+    keys = KEYS_FILE in changed
     return [s for s in ["config/hermes/configure.sh", "config/hermes/configure-scout.sh", "config/hermes/configure-curator.sh",
                         "config/hermes/configure-mission.sh", "config/hermes/configure-builder.sh", "config/hermes/configure-tax.sh"]
-            if s in changed or (s in SOUL_OF and f"prompts/{SOUL_OF[s][0]}.md" in changed)]
+            if keys or s in changed or (s in SOUL_OF and f"prompts/{SOUL_OF[s][0]}.md" in changed)]
+
+
+KEYS_FILE = "secrets/agent-keys.enc.yaml"            # the agents' gateway keys, sops-encrypted; made by `make keys`
 
 
 def lock(path=LOCK, wait=LOCK_WAIT):

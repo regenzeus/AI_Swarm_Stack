@@ -81,8 +81,9 @@ items:
     gap: Every background job has its own key since 2026-10-29; mission runs of every type (task, shopping,
       cleanup) still share vk-mission, so two runs at the same time mix in cost attribution. The swarm registry
       gives every card its own key (SWM-23).
-    verify: {method: test, by: [tests/test_keys_policy.py::test_only_the_creation_script_writes_the_keys_table, tests/test_keys_policy.py::test_update_keys_only_reads_the_table, tests/test_keys_policy.py::test_background_jobs_use_their_own_keys]}
-    trace: [ops/keys.sh, ops/update-keys.py]
+    verify: {method: test, by: [tests/test_keys_policy.py::test_only_the_creation_script_writes_the_keys_table, tests/test_keys_policy.py::test_update_keys_only_reads_the_table, tests/test_keys_policy.py::test_background_jobs_use_their_own_keys,
+      tests/test_deploy.py::test_a_change_of_the_agents_keys_sets_every_hermes_profile_up_again]}
+    trace: [ops/keys.sh, ops/update-keys.py, ops/deploy.py]
     findings: [FND-03]
   - id: SEC-08
     title: The builder is sealed

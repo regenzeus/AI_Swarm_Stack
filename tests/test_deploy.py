@@ -96,3 +96,12 @@ def test_an_image_is_built_after_the_image_it_is_built_from():
     order = deploy.build_order(["builder", "desk", "hermes"])
     assert sorted(order) == ["builder", "desk", "hermes"] and order.index("hermes") < order.index("builder")
     assert deploy.pinned_by(["ops/deploy.py"], "HEAD", "HEAD") == set()     # versions.env unchanged: nothing extra to build
+
+
+def test_a_change_of_the_agents_keys_sets_every_hermes_profile_up_again():
+    """10 Nov 2026: the tax desk's new key landed in secrets/agent-keys.enc.yaml, but only a changed configure script was
+    run again, so the tax profile had no key and its first run was refused. A change of the keys file re-runs them all."""
+    import deploy as D
+    every = D.configure_scripts([D.KEYS_FILE])
+    assert "config/hermes/configure-tax.sh" in every and "config/hermes/configure.sh" in every and len(every) == 6
+    assert D.configure_scripts(["ops/flows.py"]) == []
