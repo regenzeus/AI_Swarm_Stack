@@ -25,7 +25,7 @@ left out, and the reason says where that is shown.
 | `ops/onboard.py` | `NEED_GB` | the PC's available memory before the code map's container starts (= conductor NEED_GB opencode) |
 | `ops/repofacts.py` | `NEED_GB` | the PC's available memory before a facts run starts (measured: 736 MiB at peak on click; its container is capped at 2 GB) |
 
-## paces (26)
+## paces (27)
 
 | Where | Limit | Why |
 |---|---|---|
@@ -37,6 +37,7 @@ left out, and the reason says where that is shown.
 | `ops/checker.py` | `n >= REFUSED_WAKES` | only raises a health alert (SWM-80) |
 | `ops/claude_tasks.py` | `PARALLEL` | Claude tasks side by side unless the deployment says CLAUDE_PARALLEL (home: one subscription) |
 | `ops/claude_tasks.py` | `PARALLEL_MAX` | at most this many whatever the deployment says |
+| `ops/diskguard.py` | `RELIEF_EVERY_S` | at most one prune an hour (a second prune of an empty cache frees nothing) |
 | `ops/doctor.py` | `MAX_ISSUES` | issues one doctor pass looks at; the rest the next |
 | `ops/editor.py` | `MAX_IDEAS` | open ideas one pass sorts (the oldest first); the rest the next pass, and the result says how many waited |
 | `ops/engine/activities.py` | `HEADROOM_AGAIN_S` | a step without memory headroom asks again after 30 s (the tick looked every 5 s) |
@@ -162,7 +163,7 @@ left out, and the reason says where that is shown.
 | `ops/staffing.py` | `TEMP_BUDGET` | a temporary agent key's daily budget; subscription models cost nothing, so it only bites if a paid model appears |
 | `ops/ua_map_in.py` | `NODE_TIMEOUT` | s for one plugin script (the structure of one batch, the merge of all); counts as a failed try |
 
-## drops (45)
+## drops (46)
 
 | Where | Limit | Why |
 |---|---|---|
@@ -192,6 +193,7 @@ left out, and the reason says where that is shown.
 | `ops/conductor.py` | `CHECKPOINTS` | the Orchestrator's looks at one run's plan between waves; the run goes on as planned (TRL-08) |
 | `ops/conductor.py` | `ADDS` | steps one look may add (its prompt says so); a run's plan stays within MAX_STEPS |
 | `ops/conductor.py` | `MAX_STEPS` | steps a checkpoint adds past this; the run's plan changes say so |
+| `ops/diskguard.py` | `ALERT_EVERY_S` | at most one urgent alert an hour (the reading repeats every 20 s) |
 | `ops/engine/artifacts.py` | `RETAIN_DAYS` | an artifact past this many days is removed (the deployment may say otherwise: ARTIFACT_DAYS) |
 | `ops/engine/client.py` | `RETENTION_DAYS` | Temporal keeps a closed run's history this long; the record export (GEN-31) keeps a journey for good |
 | `ops/engine/projector.py` | `DAYS` | the runs of the last 7 days are shown; Temporal's own UI keeps every run for its retention |

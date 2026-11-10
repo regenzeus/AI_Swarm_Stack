@@ -46,6 +46,7 @@ import staffing as ST                             # TSK-13 to TSK-17: judged tas
 import provenance as PV                           # TSK-23, TSK-24: what each step used and made, each run's swarm map
 import history as HI                              # TSK-25: the daily telemetry history per agent, model, harness, kind
 import prune as PN                                 # PLT-21: growing files pruned once a day
+import diskguard as DG                             # PLT-36: C: low, the build cache goes and the owner hears
 import prices as PR                               # TSK-27: tokens at list price
 import deployment as DEPLOY                        # this deployment's hosts and paths (deployments/<name>/deployment.env)
 import a2a as A2                                  # TSK-19: outside agents over A2A, off until the owner switches it on
@@ -1133,6 +1134,7 @@ def resmon():
             hp = Path("/srv/win-exports/.host/host.json")
             if hp.exists() and time.time() - hp.stat().st_mtime < 180:
                 host = json.loads(hp.read_text(encoding="utf-8-sig"))
+                DG.check(host, sh, notify)              # PLT-36: C: holds WSL's disk; low, the build cache goes
             RES.update(services=sorted(svcs, key=lambda x: -x["mem_mb"]), ts=now().isoformat(timespec="seconds"), host=host,
                        wsl={"mem_total_gb": round(mi["MemTotal"] / 1048576, 2), "mem_used_gb": round((mi["MemTotal"] - mi["MemAvailable"]) / 1048576, 2),
                             "cpu_pct": round(busy * 100), "cores": os.cpu_count(),

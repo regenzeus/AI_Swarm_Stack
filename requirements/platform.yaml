@@ -475,3 +475,24 @@ items:
       'tests/test_wsl_memory.py::test_the_file_cache_goes_back_to_windows_every_30_minutes',
       'tests/test_wsl_memory.py::test_a_new_machine_gets_it_from_the_root_bootstrap']}
     trace: [ops/wsl-memory.sh, ops/bootstrap-wsl-1-root.sh]
+  - id: PLT-36
+    title: A full Windows disk never stops the stack unannounced
+    statement: "Every 20 s the runner shall read the free space on Windows C:, which holds WSL's whole disk; below 20 GB
+      it shall prune the unused Docker build cache (at most once an hour, never images in use, containers or volumes) and
+      tell the owner once per episode, and below 6 GB it shall alert the owner urgently, at most once an hour."
+    type: constraint
+    priority: must
+    status: implemented
+    acceptance: 'Test: a low reading prunes the build cache and dangling images and tells the owner once; a nearly full
+      one also alerts urgently, paced to once an hour; enough space or no reading does nothing; recovery above 25 GB
+      ends the episode; the runner checks every host reading.'
+    rationale: "10 Nov 2026, 03:36: a night of image builds grew the Docker build cache to 52 GB and the WSL disk file to
+      135 GB; C: reached 0.2 GB free, WSL stopped and would not start (E_FAIL), and the owner's phone got HTTP 501. The
+      Stack page showed C:'s free space, but nothing acted on it."
+    parents: [SN-13]
+    sources: ['owner 2026-11-10: Cant reach stack from mobile']
+    verify: {method: test, by: ['tests/test_diskguard.py::test_low_disk_prunes_the_build_cache_and_tells_the_owner_once',
+      'tests/test_diskguard.py::test_nearly_full_alerts_urgently_at_most_once_an_hour',
+      'tests/test_diskguard.py::test_enough_space_or_no_reading_does_nothing_and_recovery_ends_the_episode',
+      'tests/test_diskguard.py::test_the_runner_checks_every_reading_of_the_host_probe']}
+    trace: [ops/diskguard.py, ops/missions.py]
