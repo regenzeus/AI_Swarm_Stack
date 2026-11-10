@@ -20,6 +20,7 @@ The names requirements use for the parts of the stack. A requirement's subject i
 | the runtime record | one event stream for every agent run, with end states and the watchdog | `images/mission-control/runrecord.py` |
 | the AI phone | a spare Android phone on the tailnet | |
 | the AI phone service | the container that drives the AI phone over ADB, with approvals, block list and Stop | `images/phone/` |
+| the tax desk | the owner's German income tax papers from the mail copy: found, read by Hermes with ChatGPT, copied into the NAS share Steuern, prepared as a draft per year | `ops/tax.py`, `config/tax.yaml` |
 | the mail connector | the Gmail connector (IMAP), grants, Trash only | `images/mail/` |
 | the House service | the stack's side of Home Assistant: status, switching, Alexa, the voice bridge | `ops/house.py` |
 | the vault | the Obsidian vault in git (`C:\AI\vault`, `/srv/vault`) | `vault-template/` |

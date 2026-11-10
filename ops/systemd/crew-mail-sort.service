@@ -1,0 +1,12 @@
+# feature: mail
+# The first sort of a large mailbox takes hours (batches of 200, paced: ops/mailsort.py); a run cut short by the timeout
+# loses nothing (each batch is recorded) and the next run goes on where it stopped.
+[Unit]
+Description=Crew: Mail sorter: the worthless bulk mail of the senders you approved under its label (weekly, and after your tap)
+[Service]
+Type=oneshot
+TimeoutStartSec=6h
+Environment=DOCKER_HOST=unix://%t/docker.sock
+WorkingDirectory=%h/ai-stack
+ExecCondition=/usr/bin/python3 %h/ai-stack/ops/stack_gate.py --wait 1800 --slot 40
+ExecStart=/usr/local/bin/sops exec-env secrets/secrets.enc.yaml "sops exec-env secrets/agent-keys.enc.yaml \"python3 ops/crew.py mail-sort\""

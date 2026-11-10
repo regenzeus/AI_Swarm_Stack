@@ -86,6 +86,8 @@ The step service is the seam: nothing in the stack's agents depends on n8n, and 
   a card in `config/agents.yaml` and its prompts in `prompts/`.
 - **The coding sandbox** (`images/builder/`): Claude Code and Hermes build and check on a branch, with Serena and the
   code graph; the owner approves before anything lands.
+- **The tax desk** (`ops/tax.py`, docs/TAX-DESK.md): one workflow, find (no model), read (the tax card: Hermes on
+  ChatGPT only), file and prepare (no model), into the NAS share Steuern.
 - **The crew**: housekeeping jobs (the Checker, the Memory Keeper, the Health doctor, the Librarian, …), each a command
   the step service can run (`ops/crew.py`).
 - **Places** (`ops/domain/places.py`, GEN-22): a command runs at `wsl` (the runner), `wsl-host` (the user who owns the

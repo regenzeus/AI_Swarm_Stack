@@ -17,6 +17,9 @@ V=/srv/vault; ONLY=${1:-}; DATE=$(date +%F)
 [ "${2:-}" = "--date" ] && DATE=$3
 MODE=${DESK_MODE:-full}
 case "$MODE" in collect) ARGS=(--collect) ;; write) ARGS=(--write) ;; *) ARGS=() ;; esac
+# TSK-49: a scheduled task's run gives its window (DESK_SINCE, DESK_UNTIL, DESK_PERIOD from ops/desk_steps.py): the desk
+# reads and writes exactly it; without one, the brief's window_hours back from now
+if [ -n "${DESK_SINCE:-}" ]; then ARGS+=(--since "$DESK_SINCE" --until "${DESK_UNTIL:-}" --period "${DESK_PERIOD:-}"); fi
 notify() { [ "${DESK_TELEGRAM:-1}" = 0 ] || NOTIFY_CATEGORY=result NOTIFY_BY=desk "$(dirname "$0")/notify.sh" "$1" >/dev/null 2>&1 || true; }
 
 for t in "$V"/topics/*/TOPIC.md; do

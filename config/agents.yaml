@@ -7,7 +7,7 @@ version: 1
 harnesses: [hermes, claude-code, opencode, python, script]
 models: [gpt-sub, gpt-sub-fast, claude-subscription, none]       # CST-02: subscriptions only (ollama:<name> also allowed)
 kinds: [idea, finding, report, wiki, purchase, build, agent_change, requirement, task]
-roles: [assistant, research, knowledge, missions, code, reviewers, health, tests, memory, mail, phone, briefings]
+roles: [assistant, research, knowledge, missions, code, reviewers, health, tests, memory, mail, phone, briefings, tax]
 rooms: [all, health, code, research, house, shopping, ops]
 wake: [never, digest, on_request, always]
 
@@ -92,6 +92,24 @@ agents:
     budgets: {wakes_per_day: 6, messages_per_hour: 20}
     memory: {wikis: [own, vault, related]}  # MEM-04: what its runs read, its own wiki first
     tools: [memory, research, claude, mail, swarm, files]   # files: MIS-24, file_save
+    autonomy: {}
+  - id: tax
+    purpose: Reads the owner's tax papers from the mail copy and their earlier returns, one at a time, for the tax desk.
+    responsibilities: [sort each paper by form and year as JSON, say when it is unsure, never guess a figure]
+    owns: {}
+    harness: hermes
+    model: gpt-sub                    # the ChatGPT engine (ops/swarm_client.py ENGINE): the owner's one reader of tax content (TAX-02)
+    key: vk-tax
+    prompts: prompts/tax.md           # MEM-11: its prompts, each change replay-tested
+    step_kind: tax-read               # an n8n step on this card runs the tax desk's reader (ops/tax.py run_read), one Hermes turn per paper
+    jobs: [crew-tax-find, crew-tax-file]   # the desk's two steps without a model, before and after it
+    schedule: monthly while a year is open, and on Run now (n8n/workflows/tax-desk.json)
+    roles: [tax]
+    rooms: []
+    contact: []
+    wake: never                       # nothing wakes it: only its workflow's step runs it
+    budgets: {wakes_per_day: 0, messages_per_hour: 0}
+    tools: []                         # no tools: it reads the text it is given (config/hermes/configure-tax.sh)
     autonomy: {}
   - id: desk
     purpose: Writes the Topic Desk briefings.
@@ -302,13 +320,13 @@ agents:
     tools: [mail]
     autonomy: {}
   - id: postmaster
-    purpose: Looks after the owner's Gmail, carefully. Files the stack's own mail under its label and watches the copy on the NAS.
-    responsibilities: [file only the stack's own mail by its exact sender, report the mail copy's problems, read no message text, remove nothing]
+    purpose: Looks after the owner's Gmail, carefully. Files the stack's own mail under its label, watches the copy on the NAS, and sorts out the worthless bulk mail of the senders the owner approved.
+    responsibilities: [file only the stack's own mail by its exact sender, report the mail copy's problems, sort out only the mail of senders the owner approved and that every guard lets go, read no message text, remove nothing]
     owns: {}
     harness: python
     model: none
     key: vk-postmaster
-    jobs: [crew-postmaster]
+    jobs: [crew-postmaster, crew-mail-sort]
     schedule: hourly
     roles: [mail]
     rooms: [all]

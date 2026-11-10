@@ -116,7 +116,7 @@ def test_a_weekly_briefing_task_gets_its_content_not_the_plan_email_when_asked_a
     assert [p["step"] for p in t["spec"]["intake_plan"]] == ["search the shops", "write the report"]           # kept, not run
     assert [(s["harness"], s["item"]) for s in CD.steps(K.c, tid)] == [("desk-collect", None), ("hermes", "Sales and exports?"),
                                                                      ("hermes", "Batteries?"), ("desk-write", None), ("deliver", None)]
-    assert CD.steps(K.c, tid)[1]["title"] == "Research the last 8 days — Sales and exports?"
+    assert CD.steps(K.c, tid)[1]["title"] == "Research the run's window — Sales and exports?"      # TSK-49: its dates are the run's
 
 
 def test_a_one_off_task_with_several_agents_goes_to_the_conductor_as_a_plan_graph(K):
@@ -448,3 +448,17 @@ def test_cancelling_a_task_stops_its_work_at_its_door(K, monkeypatch):
     with pytest.raises(ValueError, match="cannot be stopped from here"):
         TK.handle({"action": "task_cancel", "id": tid3}, K.c)
 
+
+def test_a_briefing_planned_with_a_number_of_days_names_its_run_s_window_instead(K):
+    """TSK-49: task 79's plan said "Research the last 8 days" (its topic's 180 hours) while its runs covered other
+    spans; a briefing's research step names the run's window, whose dates every step's prompt has."""
+    import desk_steps as DS
+    plan = DS.briefing_plan({"goal": "Car news"}, {"key_questions": ["Sales?"]})
+    old = [{**p, "step": "Research the last 8 days"} if p["agent"] == "scout" else p for p in plan]
+    t0 = TK.now()
+    ids = [K.c.execute("insert into tasks (text, title, goal, kind, door, done, effort, autonomy, rhythm, spec, questions, answers, status, source, created, updated) "
+                       "values ('x','Car Weekly','Car news',?,'plan','[]','standard','auto','{\"type\":\"once\"}',?,'[]','[]','scheduled','app',?,?)",
+                       (kind, json.dumps({"plan": old}), t0, t0)).lastrowid for kind in ("briefing", "research")]
+    assert TK.research_titles(K.c) == [ids[0]] and TK.research_titles(K.c) == []
+    assert [p["step"] for p in TK.row(K.c, ids[0])["spec"]["plan"]] == [p["step"] for p in plan]
+    assert TK.row(K.c, ids[1])["spec"]["plan"][1]["step"] == "Research the last 8 days"       # not a briefing: left alone

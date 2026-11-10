@@ -1,0 +1,146 @@
+{
+  "active": false,
+  "connections": {
+    "Find tax papers": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Read them (Hermes, ChatGPT)",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "On its schedule (0 7 3 * *)": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Find tax papers",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Read them (Hermes, ChatGPT)": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "File copies and prepare the drafts",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Run now": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Find tax papers",
+            "type": "main"
+          }
+        ]
+      ]
+    }
+  },
+  "id": "aiscaf4e4e143a94",
+  "name": "Tax desk",
+  "nodes": [
+    {
+      "id": "9328f323-77f3-43eb-34ae-6029ac264f1c",
+      "name": "On its schedule (0 7 3 * *)",
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "expression": "0 7 3 * *",
+              "field": "cronExpression"
+            }
+          ]
+        }
+      },
+      "position": [
+        0,
+        0
+      ],
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2
+    },
+    {
+      "id": "09026664-2984-57cb-ae48-1c2a8de8e253",
+      "name": "Find tax papers",
+      "notes": "The crew job tax-find (crew-tax-find.service), waited for.",
+      "parameters": {
+        "job": "tax-find",
+        "kind": "crew",
+        "title": "Find tax papers"
+      },
+      "position": [
+        260,
+        0
+      ],
+      "type": "CUSTOM.aistackStep",
+      "typeVersion": 1,
+      "webhookId": "18b9af54-e1db-4444-86a7-b728c0e5e400"
+    },
+    {
+      "id": "7ad16bc9-9978-4f9b-96dd-b64af32e3444",
+      "name": "Read them (Hermes, ChatGPT)",
+      "notes": "The agent tax (hermes, gpt-sub) through the step service.",
+      "parameters": {
+        "agent": "tax",
+        "brief": "Reads the owner's tax papers from the mail copy and their earlier returns, one at a time, for the tax desk.",
+        "kind": "agent",
+        "title": "Read them (Hermes, ChatGPT)"
+      },
+      "position": [
+        520,
+        0
+      ],
+      "type": "CUSTOM.aistackStep",
+      "typeVersion": 1,
+      "webhookId": "dde092ee-57bb-1049-bc6a-02fabe2be765"
+    },
+    {
+      "id": "66f2bf69-6632-2321-c19d-41bcc2e98554",
+      "name": "File copies and prepare the drafts",
+      "notes": "The crew job tax-file (crew-tax-file.service), waited for.",
+      "parameters": {
+        "job": "tax-file",
+        "kind": "crew",
+        "title": "File copies and prepare the drafts"
+      },
+      "position": [
+        780,
+        0
+      ],
+      "type": "CUSTOM.aistackStep",
+      "typeVersion": 1,
+      "webhookId": "a200b271-bfc4-8ff1-2a9f-3051fc294a04"
+    },
+    {
+      "id": "73bbaef5-f986-8637-0821-799e49b8dd33",
+      "name": "Run now",
+      "notes": "Starts the job now, as its schedule would (POST).",
+      "parameters": {
+        "httpMethod": "POST",
+        "options": {},
+        "path": "run/tax-desk"
+      },
+      "position": [
+        0,
+        160
+      ],
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "webhookId": "2367663d-e3f2-5ce1-9b30-4ad8c13bbc53"
+    }
+  ],
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Berlin"
+  }
+}

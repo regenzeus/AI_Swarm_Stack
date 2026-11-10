@@ -8,7 +8,7 @@ The engineered requirements of the AI stack (method: [README.md](README.md)). YA
 | `stakeholder-needs.yaml` | `SN-*`: what the owner wants, in his terms |
 | `constraints.yaml` | `CST-*`: limits nothing may break |
 | `decisions.yaml` | `DEC-*`: dated owner decisions, the "why" behind requirements |
-| `<area>.yaml` | system requirements per subsystem (`PLT`, `SEC`, `GW`, `AST`, `KNW`, `RES`, `MIS`, `APP`, `BLD`, `CRW`, `OBS`, `PHN`, `CNX`, `SHP`, `HSE`, `QA`, `SWM`, `AUT`, `CHG`, `GEN`, `MEM`, `TSK`, `TRL`, `VOI`) |
+| `<area>.yaml` | system requirements per subsystem (`PLT`, `SEC`, `GW`, `AST`, `KNW`, `RES`, `MIS`, `APP`, `BLD`, `CRW`, `OBS`, `PHN`, `CNX`, `SHP`, `HSE`, `QA`, `SWM`, `AUT`, `CHG`, `GEN`, `MEM`, `TSK`, `TRL`, `VOI`, `TAX`) |
 | `findings.yaml` | `FND-*`: contradictions and incoherent parts, with evidence |
 | `swarm.yaml` | the agent swarm, built in phases 0 to 5 (status per requirement): grouped, with rollout `phases` and an `acceptance` criterion per requirement |
 | `glossary.md` | the names of the parts a requirement may use as its subject |

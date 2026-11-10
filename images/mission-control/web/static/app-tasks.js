@@ -447,7 +447,7 @@ const toIso = (x) => (x == null ? "" : typeof x === "number" ? new Date(x > 1e12
 // the one list; these are its rows in its order. A kind with many items is one row with its count, so Home stays short and
 // nothing is hidden: the rows always add up to the list.
 const HOME_ICON = { coding: "code", "coding-low-risk": "code", "shopping-buy": "coin", "phone-routine": "trash", memory: "brain", setup: "house", access: "lock",
-  "task-start": "target", "task-questions": "target", research: "target", "agent-request": "chat", ideas: "rocket", "agent-change": "rocket", "owner-confirm": "check" };
+  "task-start": "target", "task-questions": "target", research: "target", "agent-request": "chat", ideas: "rocket", "agent-change": "rocket", "owner-confirm": "check", "mail-sort": "trash" };
 const homeMany = (kin) => kin.length > 3 || (kin.length > 1 && kin.every((d) => d.routine));
 // the stack's ideas about itself wait in the one list (AUT-05) as one quiet row; the count says what is yours (DEC-46 on DEC-09)
 const IDEA_CLS = new Set(["ideas", "agent-change"]);

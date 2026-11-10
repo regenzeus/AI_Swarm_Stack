@@ -283,7 +283,7 @@ def test_a_briefing_runs_collect_scouts_write_and_deliver_and_each_desk_step_han
     (K.tmp / "desk" / slug / "out").mkdir(parents=True)
     calls, delivered = [], []
 
-    def desk_run(s, mode, d, findings=None):
+    def desk_run(s, mode, d, findings=None, window=None):
         calls.append((mode, d, findings))
         if mode == "collect":
             (K.tmp / "desk" / slug / "out" / f"{d}.collected.json").write_text(json.dumps({"stats": {"items": 627, "new": 406, "events": 327},
@@ -296,7 +296,7 @@ def test_a_briefing_runs_collect_scouts_write_and_deliver_and_each_desk_step_han
     monkeypatch.setattr(DS, "desk_run", desk_run)
     monkeypatch.setattr(CD, "ADAPTERS", {**CD.ADAPTERS, "desk-collect": DS.run_desk_collect, "desk-write": DS.run_desk_write, "deliver": DS.run_deliver})
     CD.M.X = types.SimpleNamespace(APP="https://x", briefing_empty=lambda text: False,
-                                   deliver=lambda m, title, short, rel, kicker, text, empty=False: delivered.append((m, title, kicker)) or True)
+                                   deliver=lambda m, title, short, rel, kicker, text, empty=False, outcome=None: delivered.append((m, title, kicker)) or True)
     CD.M.period, CD.M.now = MM.period, MM.now
     plan = DS.briefing_plan({"goal": "China car news"}, {"key_questions": ["Sales?", "Batteries?"], "window_hours": 180})
     K.c.execute("update tasks set kind='briefing', rhythm=?, spec=? where id=?", (json.dumps({"type": "schedule", "schedule": "weekly mon 08:00"}),
@@ -310,7 +310,7 @@ def test_a_briefing_runs_collect_scouts_write_and_deliver_and_each_desk_step_han
     assert "627 items collected" in ss[0]["output"] and "VW profit falls 99% · 财新 · https://caixin.com/1" in ss[0]["output"]
     assert calls[1][1] == date and [f["question"] for f in calls[1][2]] == ["Sales?", "Batteries?"] and calls[1][2][0]["text"] == "result of step 2"
     m, title, kicker = delivered[0]
-    assert m == {"slug": slug, "title": "RAM check", "deliver": ["telegram", "app", "email"]} and title == "Battery Recycling Weekly"
+    assert m == {"slug": slug, "title": "RAM check", "deliver": ["telegram", "app", "email"]} and title.startswith("Battery Recycling Weekly · ")   # TSK-49: its period
     assert kicker.startswith("Weekly briefing · ") and ss[4]["output"].startswith("Delivered by Telegram and e-mail and kept in the app")
     t = TK.row(K.c, K.tid)
     assert t["status"] == "scheduled" and "VW [1]" in (K.tmp / t["spec"]["result"]).read_text()
@@ -488,7 +488,7 @@ def test_an_event_triggered_briefing_writes_the_desk_s_alert_and_delivers_it(K, 
     (K.tmp / rel).write_text("# Acme Mining signs\n\nWhat it means [1]")
     CD.M.X = types.SimpleNamespace(APP="https://x", alert_of=lambda topic, ev: ({"title": "Acme Mining signs", "markdown": "# Acme Mining signs", "short": "A deal"}, ""),
                                    file_alert=lambda topic, a, ev: rel,
-                                   deliver=lambda m, title, short, r, kicker, text, empty=False: delivered.append((title, short, r, kicker)) or True)
+                                   deliver=lambda m, title, short, r, kicker, text, empty=False, outcome=None: delivered.append((title, short, r, kicker)) or True)
     monkeypatch.setattr(CD, "ADAPTERS", {**CD.ADAPTERS, "desk-alert": DS.run_desk_alert, "deliver": DS.run_deliver})
     on_event(K, DS.alert_plan({}), kind="briefing")
     K.c.execute("update tasks set spec=? where id=?", (json.dumps({"plan": DS.alert_plan({}), "topic": "acme-mining", "deliver": ["telegram", "app"]}), K.tid))
@@ -902,11 +902,11 @@ def test_the_conductor_s_tables_keep_their_names_and_values_from_the_declaration
     assert CD.NEED_GB == {"python": 0.25, "temp": 0.25, "hermes": 0.5, "claude-code": 0.75, "build": 0.25, "desk-collect": 0.4, "desk-write": 0.3,
                           "desk-alert": 0.3, "deliver": 0.1, "shop": 0.5, "wiki": 0.25, "opencode": 1.0, "check": 0.3,
                           "change-baseline": 0.75, "change-red": 0.5, "change-judge": 0.75, "change-review": 0.25, "change-probe": 1.0, "change-deliver": 0.1,
-                          "change-profile": 0.75, "change-split": 0.1, "change-scribe": 0.25}
+                          "change-profile": 0.75, "change-split": 0.1, "change-scribe": 0.25, "tax-read": 0.5}
     assert set(CD.ADAPTERS) == set(CD.NEED_GB) and all(callable(f) for f in CD.ADAPTERS.values())
     assert {a: set(k) for a, k in CD.OWN_STEPS.items()} == {
         "desk": {"desk-collect", "desk-write", "desk-alert", "deliver"}, "mission": {"shop", "wiki"}, "judge": {"change-baseline", "change-red", "change-judge"},
-        "reviewer": {"change-review"}, "prober": {"change-probe"}, "presenter": {"change-deliver"}, "scribe": {"change-profile", "change-split", "change-scribe"}}
+        "reviewer": {"change-review"}, "prober": {"change-probe"}, "presenter": {"change-deliver"}, "scribe": {"change-profile", "change-split", "change-scribe"}, "tax": {"tax-read"}}
     assert set(CD.WAITS) == {"claude-code", "build", "change-profile", "change-deliver"}
     assert set(CD.KINDS.even_spent) == {"change-deliver", "change-scribe"}
     assert set(CD.KINDS.fixed_plan) == {"desk-collect", "desk-write", "desk-alert", "deliver", "shop", "wiki"}
@@ -968,3 +968,73 @@ def test_the_moved_shopping_and_desk_steps_keep_their_place_in_the_plan_and_the_
     assert all(hasattr(d, "M") for d in CD.DOMAINS)
     main = Path(CD.__file__).with_name("missions.py").read_text().partition("def main():")[2]
     assert "for domain in CD.DOMAINS:" in main and "domain.M = sys.modules[__name__]" in main
+
+
+def test_every_research_and_writing_step_of_a_scheduled_run_gets_one_exact_window(K, monkeypatch):
+    """TSK-49: task 79's run of 10 Nov 2026 gave its scouts no dates (one researched 25 Oct to 1 Nov, the others 2 to 10
+    Nov) and its report named 3 to 10 Nov. A scheduled run's window is its schedule's gap back from its start, in its
+    workflow's time zone; every step's prompt, the desk's collect and write steps and the delivery's subject carry it,
+    and a delivery says which way failed (TSK-50)."""
+    import datetime as dt
+    from zoneinfo import ZoneInfo
+    import missions as MM
+    import n8n_jobs as NJ
+    berlin = ZoneInfo("Europe/Berlin")
+
+    def at(*a):
+        return dt.datetime(*a, tzinfo=berlin)
+    assert NJ.window("0 8 * * 1", at(2026, 11, 9, 8, 0, 4), "Europe/Berlin") == (at(2026, 11, 2, 8, 0), at(2026, 11, 9, 8, 0))    # on schedule
+    assert NJ.window("0 8 * * 1", at(2026, 11, 10, 15, 41, 18), "Europe/Berlin") == (at(2026, 11, 3, 15, 41), at(2026, 11, 10, 15, 41))   # Run now
+    assert NJ.window("0 8 * * 1,4", at(2026, 11, 9, 8, 0), "Europe/Berlin")[0] == at(2026, 11, 5, 8, 0)     # mon,thu: Monday's run four days
+    assert NJ.window("0 8 * * 1,4", at(2026, 11, 12, 8, 0), "Europe/Berlin")[0] == at(2026, 11, 9, 8, 0)    # and Thursday's three
+    assert NJ.window("0 8 * * 1", at(2026, 10, 26, 8, 0), "Europe/Berlin")[0] == at(2026, 10, 19, 8, 0)      # across the clock change
+    assert NJ.window("", at(2026, 11, 9, 8, 0)) is None
+    monkeypatch.setattr(NJ, "of", lambda kind, key, idx=None: {"cron": "0 8 * * 1", "tz": "Europe/Berlin", "active": True})
+    win = CD.window_for({"id": K.tid, "rhythm": {"type": "schedule", "schedule": "daily 07:00"}}, at(2026, 11, 9, 8, 0, 4))
+    assert win == {"start": "2026-11-02T08:00+01:00", "end": "2026-11-09T08:00+01:00", "tz": "Europe/Berlin"}   # the workflow's schedule wins
+    assert CD.period_text(win) == "Mon 2 Nov 2026 08:00 to Mon 9 Nov 2026 08:00 (Europe/Berlin)"
+    assert CD.window_for({"id": K.tid, "rhythm": {"type": "once"}}, at(2026, 11, 9, 8, 0)) is None
+    assert DS.desk_env(win) == {"DESK_SINCE": win["start"], "DESK_UNTIL": win["end"], "DESK_PERIOD": CD.period_text(win)}
+
+    slug, prompts, desk, delivered, events = "car-weekly", [], [], [], []
+    monkeypatch.setattr(CD, "DESK", K.tmp / "desk")
+    monkeypatch.setattr(CD, "window_for", lambda t, when: win)            # the run starts on 9 Nov 2026 at 08:00
+    (K.tmp / "desk" / slug / "out").mkdir(parents=True)
+
+    def desk_run(s, mode, d, findings=None, window=None):
+        desk.append((mode, window))
+        if mode == "collect":
+            (K.tmp / "desk" / slug / "out" / f"{d}.collected.json").write_text(json.dumps({"stats": {"items": 3, "new": 2, "events": 2}, "chosen": []}))
+            return "collected"
+        rel = f"topics/{slug}/r.md"
+        (K.tmp / rel).parent.mkdir(parents=True, exist_ok=True)
+        (K.tmp / rel).write_text('---\nheadline: "Car Weekly"\nstats: {"chosen": 2}\n---\n\n# Car Weekly\n')
+        return f"filed: {rel}"
+
+    def deliver(m, title, short, rel, kicker, text, empty=False, outcome=None):
+        outcome.update(telegram={"ok": True, "said": "sent"}, email={"ok": False, "subject": f"{m['title']}: {title}"})
+        return delivered.append(title) or True
+    monkeypatch.setattr(DS, "desk_run", desk_run)
+    monkeypatch.setattr(CD, "ADAPTERS", {**CD.ADAPTERS, "hermes": lambda c, t, s, prompt, card: prompts.append(str(prompt)) or "found",
+                                         "desk-collect": DS.run_desk_collect, "desk-write": DS.run_desk_write, "deliver": DS.run_deliver})
+    CD.M.X = types.SimpleNamespace(APP="https://x", briefing_empty=lambda text: False, deliver=deliver)
+    CD.M.period, CD.M.now, CD.M.load_missions = MM.period, MM.now, lambda: {}
+    CD.M.event = lambda *a, **k: events.append((a, k))
+    plan = DS.briefing_plan({"goal": "Car news"}, {"key_questions": ["Sales?", "Batteries?"], "window_hours": 180})
+    K.c.execute("update tasks set kind='briefing', rhythm=?, spec=? where id=?", (json.dumps({"type": "schedule", "schedule": "weekly mon 08:00"}),
+                json.dumps({"plan": plan, "topic": slug, "deliver": ["telegram", "app", "email"]}), K.tid))
+    K.c.execute("delete from task_steps"); K.c.commit()
+    CD.start(K.c, TK.row(K.c, K.tid))
+    for _ in range(5):
+        tick(K)
+    ss = CD.steps(K.c, K.tid)
+    assert [s["status"] for s in ss] == ["done"] * 5 and CD.occurrences(K.c, K.tid)[0]["window"] == win
+    assert ss[1]["title"] == "Research the run's window — Sales?" and len(prompts) == 2
+    assert all("This run covers exactly Mon 2 Nov 2026 08:00 to Mon 9 Nov 2026 08:00 (Europe/Berlin)" in p for p in prompts)
+    assert desk == [("collect", win), ("write", win)] and delivered == ["Car Weekly · 2 Nov – 9 Nov 2026"]
+    assert ss[4]["output"].startswith("Delivered by Telegram and kept in the app; the e-mail failed (topics/car-weekly/r.md).")
+    assert ss[4]["resume"]["sent"]["email"] == {"ok": False, "subject": "RAM check: Car Weekly · 2 Nov – 9 Nov 2026"}
+    assert any("the e-mail of topics/car-weekly/r.md did not go out" in a[2] and k.get("push") for a, k in events)
+    assert DS.delivered(["telegram", "app"], {"telegram": {"ok": None, "said": "held"}}) == \
+        "Kept in the app; the Telegram message waits for the end of quiet hours"
+    assert '--since "$DESK_SINCE" --until "${DESK_UNTIL:-}"' in (CD.ROOT / "ops/desk.sh").read_text()

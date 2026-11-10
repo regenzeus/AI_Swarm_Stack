@@ -6,6 +6,7 @@
 | `configure-scout.sh` | scout | the only web reader: search + page reader, no private data |
 | `configure-curator.sh` | curator | weekly tidy-up of vault, wiki and skills (behind the benchmark gate) |
 | `configure-mission.sh` | mission | runs long-term mission tasks on its own key (`vk-mission`) |
+| `configure-tax.sh` | tax | the tax desk's reader on its own key (`vk-tax`): ChatGPT only, every toolset off, no MCP server (TAX-02) |
 | `configure-builder.sh` | builder | the coding sandbox (`builder` container) |
 
 Each script runs **inside** its container (`docker exec -u hermes aistack-hermes-1 sh /config/<script>`) and is

@@ -1,0 +1,10 @@
+# feature: mail
+[Unit]
+Description=Crew: Tax desk: copy the papers into Steuern, Belege, workbooks, questions (no model)
+[Service]
+Type=oneshot
+TimeoutStartSec=60min
+Environment=DOCKER_HOST=unix://%t/docker.sock
+WorkingDirectory=%h/ai-stack
+ExecCondition=/usr/bin/python3 %h/ai-stack/ops/stack_gate.py
+ExecStart=/usr/local/bin/sops exec-env secrets/secrets.enc.yaml "sops exec-env secrets/agent-keys.enc.yaml \"python3 ops/crew.py tax-file\""

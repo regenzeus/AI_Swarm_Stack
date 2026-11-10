@@ -3,7 +3,8 @@
 /topic holds TOPIC.md (the brief) and reports/ (earlier briefings, read-only). /state keeps seen.sqlite (what was
 already reported). /out receives <date>.md (the report) and <date>.telegram.txt (the short version).
 Steps: collect (feeds, Google News, GDELT) -> keep new items of the brief's window (window_hours: 36 h for a daily
-briefing, a week for a weekly one) -> group duplicates into events ->
+briefing, a week for a weekly one; a scheduled task's run gives its own exact one, --since/--until, TSK-49) -> group
+duplicates into events ->
 triage against the key questions (gpt-sub-fast) -> read the chosen articles (trafilatura, private addresses refused)
 -> prices (Yahoo chart data; deterministic, never written by the model) -> write the report (gpt-sub, in the brief's
 language, citing only numbered sources) -> check citations. A newsletter handed to the topic by the Inbox digest
@@ -23,6 +24,8 @@ import yaml
 UA = "Mozilla/5.0 (X11; Linux x86_64) ai-stack-desk/1.0 (personal research)"
 NOW = dt.datetime.now(dt.timezone.utc)
 WINDOW_H = 36                                    # the brief's window_hours: what counts as recent (set by main)
+SINCE = UNTIL = None                             # TSK-49: a scheduled run's exact window (aware, UTC), when it has one
+PERIOD = ""                                      # ... and its words, the same in the report as in every step of the run
 
 
 def gnews_url(q, hours=36):
@@ -204,7 +207,7 @@ def from_sec(tickers):
             desc = r.get("primaryDocDescription", [""] * 99)[i] or r["form"][i]
             url = f"https://www.sec.gov/Archives/edgar/data/{c['cik_str']}/{acc}/{r['primaryDocument'][i]}"
             summary = f"SEC filing, form {r['form'][i]}"
-            if p and (NOW - p).total_seconds() < WINDOW_H * 3600:  # recent: read it, so triage sees what it is about
+            if p and in_window(p):                          # recent: read it, so triage sees what it is about
                 try:
                     text = ""
                     if r["form"][i] in ("6-K", "8-K"):       # the cover page is boilerplate; the news is in exhibit 99.x
@@ -316,12 +319,20 @@ def words(t):
     return {w for w in re.findall(r"[a-z0-9äöüß]+", t.lower()) if len(w) > 2}
 
 
+def in_window(published):
+    """Inside the run's window when it has one (TSK-49: from its start, before its end), else within the brief's
+    window_hours of now."""
+    if SINCE:
+        return SINCE <= published < (UNTIL or NOW)
+    return (NOW - published).total_seconds() < WINDOW_H * 3600
+
+
 def events(items, db):
     seen = {r[0] for r in db.execute("select id from seen")}
     fresh, keys = [], set()
     for it in items:
         k = key(it)
-        recent = it["published"] is None or (NOW - it["published"]).total_seconds() < WINDOW_H * 3600
+        recent = it["published"] is None or in_window(it["published"])
         if k in seen or k in keys or not recent or not it["title"]:
             continue
         keys.add(k)
@@ -482,7 +493,10 @@ def write(b, chosen, rows, prev, date):
     text, ref, fills = prompt("BRIEFING", topic=b["topic"], mission=b["mission"], questions=json.dumps(b["key_questions"], ensure_ascii=False),
                               notes=b["notes"], previous=prev or "(none, this is the first briefing)", events="\n\n".join(blocks),
                               language="English",                          # every briefing is English (DEC-02, FND-21)
-                              style="" if WINDOW_H <= 36 else f"This briefing covers the last {round(WINDOW_H / 24)} days, not one day; "
+                              style=(f"This briefing covers exactly {PERIOD}: only what was published or happened in it, anything "
+                                     "older marked as background with its date; where the briefing names its period, use these words. "
+                                     "The previous briefing is the last one, not yesterday's. ") if PERIOD else
+                                    "" if WINDOW_H <= 36 else f"This briefing covers the last {round(WINDOW_H / 24)} days, not one day; "
                                     "the previous briefing is the last one, not yesterday's. ",
                               source_titles=json.dumps({n: it["title"] for n, it in enumerate(sources, 1)}, ensure_ascii=False),
                               sections=", ".join(json.dumps(s, ensure_ascii=False) + ": markdown" for s in sections),
@@ -491,7 +505,8 @@ def write(b, chosen, rows, prev, date):
     valid = set(range(1, len(sources) + 1))
     fix = lambda s: re.sub(r"\[(\d+)\]", lambda m: m.group(0) if int(m.group(1)) in valid else "", s or "")
     r["headline"] = re.sub(r"\s*\[\d+\]", "", r.get("headline") or b["topic"]).strip()
-    md = [f"# {r['headline']}", "", f"**In 60 seconds:** {fix(r.get('sixty_seconds', ''))}", "",
+    md = [f"# {r['headline']}", "", *([f"**Period:** {PERIOD}", ""] if PERIOD else []),   # TSK-49: stated by the desk, not the model
+          f"**In 60 seconds:** {fix(r.get('sixty_seconds', ''))}", "",
           "## Prices", "", price_table(rows), ""]
     for s in sections:
         body = fix(r.get("sections", {}).get(s, "")).strip()
@@ -696,6 +711,7 @@ def main():
     ap.add_argument("--date", default=dt.date.today().isoformat()); ap.add_argument("--dry", action="store_true")
     ap.add_argument("--collect", action="store_true")   # TSK-22: the briefing's first step: collect, choose, read; no writing
     ap.add_argument("--write", action="store_true")     # its writing step: the collected events and the scouts' findings
+    ap.add_argument("--since"); ap.add_argument("--until"); ap.add_argument("--period", default="")   # TSK-49: the run's window
     a = ap.parse_args()
     global CASE_FILE
     if a.out and not a.dry:
@@ -704,15 +720,17 @@ def main():
     b = brief(a.topic)
     global WINDOW_H
     WINDOW_H = int(b.get("window_hours") or 36)
+    window(a.since, a.until, a.period)
     out = Path(a.out or ".")
     if a.write:
         saved = json.loads((out / f"{a.date}.collected.json").read_text())
         fp = Path("/in/findings.json")             # the runner's, read-only here (review IMG-R13)
         chosen = thaw(saved["chosen"]) + research_events(json.loads(fp.read_text()) if fp.exists() else [])
         file_report(b, a, out, chosen, saved["prices"], saved["stats"])
+        reported(sqlite3.connect(Path(a.state) / "seen.sqlite"), chosen)
         return
     db = sqlite3.connect(Path(a.state) / "seen.sqlite")
-    db.execute("create table if not exists seen (id text primary key, first_seen text, title text)")
+    seen_table(db)
     items = collect(b)
     fresh, groups = events(items, db)
     log(f"{len(items)} items collected, {len(fresh)} new in {WINDOW_H} h, {len(groups)} events")
@@ -735,7 +753,31 @@ def main():
         log(f"collected: {json.dumps(stats)}")
     else:
         file_report(b, a, out, chosen, rows, stats)
-    db.executemany("insert or ignore into seen values (?,?,?)", [(it["id"], NOW.isoformat(), it["title"]) for it in fresh])
+        reported(db, chosen)
+
+
+def window(since, until, period):
+    """TSK-49: the run's window from the runner, or none (the brief's window_hours). The searches reach back to its start."""
+    global SINCE, UNTIL, PERIOD, WINDOW_H
+    if not since:
+        return
+    SINCE = dt.datetime.fromisoformat(since).astimezone(dt.timezone.utc)
+    UNTIL = dt.datetime.fromisoformat(until).astimezone(dt.timezone.utc) if until else None
+    PERIOD = period or f"{since} to {until or 'now'}"
+    WINDOW_H = max(1, -(-int((NOW - SINCE).total_seconds()) // 3600))     # rounded up: the whole window, never less
+
+
+def seen_table(db):
+    db.execute("create table if not exists seen (id text primary key, first_seen text, title text)")
+
+
+def reported(db, chosen):
+    """What a written report used is seen: a later run leaves it out. Only that, and only once it is written: an item
+    collected and not chosen, or a collection whose run stopped before its report (a restart), stays new (task 79's run
+    of 10 Nov 2026 found 2 new items because an interrupted collection had marked 252)."""
+    seen_table(db)
+    db.executemany("insert or ignore into seen values (?,?,?)",
+                   [(it["id"], NOW.isoformat(), it["title"]) for g, _ in chosen for it in g["items"] if it.get("id")])
     db.commit()
 
 
@@ -744,7 +786,8 @@ def file_report(b, a, out, chosen, rows, stats):
     stats = {**stats, "chosen": len(chosen), "sources": report.count("](http")}
     mail = mail_used(report)
     front = (f"---\ntopic: {b['slug']}\ndate: {a.date}\ntype: daily-briefing\nheadline: {json.dumps(headline, ensure_ascii=False)}\n"
-             f"stats: {json.dumps(stats)}\n" + (f"mail: {json.dumps(mail, ensure_ascii=False)}\n" if mail else "") + "---\n\n")
+             + (f"period: {json.dumps(PERIOD, ensure_ascii=False)}\n" if PERIOD else "")
+             + f"stats: {json.dumps(stats)}\n" + (f"mail: {json.dumps(mail, ensure_ascii=False)}\n" if mail else "") + "---\n\n")
     (out / f"{a.date}.md").write_text(front + report)
     (out / f"{a.date}.telegram.txt").write_text(telegram)
     log(f"report written: {stats}")

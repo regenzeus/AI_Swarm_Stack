@@ -180,6 +180,20 @@ def every(cron, after=None, tz=""):
     return round((b - a).total_seconds()) if a and b else None
 
 
+def window(cron, end, tz=""):
+    """TSK-49: the period one scheduled run covers: from `end` (the run's start) back by its schedule's own gap, the time
+    between the last two fires at or before `end` (a week for weekly mon 08:00; Monday's run of mon,thu four days,
+    Thursday's three). -> (start, end), aware in the schedule's time zone, to the minute; None when the cron never fired
+    twice in the 15 days before `end` (no cron, or one rarer than the rhythms a task can have)."""
+    zone = _zone(tz, end)
+    end = end.astimezone(zone).replace(second=0, microsecond=0)
+    fires, t = [], next_fire(cron, end - dt.timedelta(days=15), tz)   # every rhythm a task can have fires within a week
+    while t and t <= end:
+        fires = [*fires[-1:], t]
+        t = next_fire(cron, t, tz)
+    return (end - (fires[1] - fires[0]), end) if len(fires) == 2 else None
+
+
 def words(cron):
     """A cron expression in the owner's words ("daily 04:30", "every 5 minutes", "Mondays 04:30")."""
     import flows_view as FV

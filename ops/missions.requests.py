@@ -427,12 +427,13 @@ def respond(rid, req):
     c = db()
     try:
         a = req.get("action")
-        res = (__import__("flows").answer(req) if a == "flow_answer" else __import__("domain.packs", fromlist=["handle"]).handle(req) if a in ("pack_approve", "pack_refuse") else __import__("domain.trackers", fromlist=["handle"]).handle(req) if a in ("tracker_shadow_approve", "tracker_shadow_reject", "tracker_live") else __import__("domain.places", fromlist=["handle"]).handle(req) if a == "command_approve" else CHG.handle(req, c) if a in CHG.ACTIONS else CT.handle(req, c) if a == "claude_task" else CT.cancel(c, req.get("id")) if a == "claude_cancel" else handle_forgejo_connect(req) if a == "forgejo_connect" else handle_memory(req) if a == "memory" else handle_stack(req) if a in STACK_ACTIONS
+        res = (__import__("flows").answer(req) if a == "flow_answer" else __import__("tax").answer(req) if a == "tax_answer" else __import__("domain.packs", fromlist=["handle"]).handle(req) if a in ("pack_approve", "pack_refuse") else __import__("domain.trackers", fromlist=["handle"]).handle(req) if a in ("tracker_shadow_approve", "tracker_shadow_reject", "tracker_live") else __import__("domain.places", fromlist=["handle"]).handle(req) if a == "command_approve" else CHG.handle(req, c) if a in CHG.ACTIONS else CT.handle(req, c) if a == "claude_task" else CT.cancel(c, req.get("id")) if a == "claude_cancel" else handle_forgejo_connect(req) if a == "forgejo_connect" else handle_memory(req) if a == "memory" else handle_stack(req) if a in STACK_ACTIONS
                else B.handle(req, c) if a in BUILD_ACTIONS else I.handle(req, c) if a in IMPROVE_ACTIONS
                else R.handle(req, c) if a in REPO_ACTIONS else CR.handle(req, c) if a in CREW_ACTIONS else J.handle(req) if a in J.ACTIONS
                else WD.handle(req) if a in WD.ACTIONS else SH.handle(req, c) if a in SH.ACTIONS else W.handle(req) if a in W.ACTIONS else H.handle(req) if a in H.ACTIONS
                else SW.handle(req, c) if a in SW.ACTIONS else FL.handle(req) if a in FL.ACTIONS else handle_notify(req) if a in ("notify_prefs", "chat_ready") else TK.handle(req, c) if a in TK.ACTIONS else EV.handle(req, c) if a in EV.ACTIONS else A2.handle(req) if a in A2.ACTIONS
-               else DQ.handle(req) if a in DQ.ACTIONS else MS.handle(req) if a in MS.ACTIONS else handle(req, load_missions(), c))
+               else DQ.handle(req) if a in DQ.ACTIONS else MS.handle(req) if a in MS.ACTIONS else MSORT.handle(req) if a in MSORT.ACTIONS
+               else handle(req, load_missions(), c))
         res = {"ok": True, **res}
     except Exception as e:
         res = {"ok": False, "error": str(e)}

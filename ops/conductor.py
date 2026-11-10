@@ -25,6 +25,7 @@ Other modules add their own (TSK-36, DOMAINS, loaded by ops/stepkinds.py, which 
   shop_steps   shop: a check of a price watch's shopping agent (ops/shopping.py research: offers, a proposal or watching)
   desk_steps   desk-collect, desk-write, desk-alert, deliver: the Topic Desk's steps of a briefing (ops/desk.sh, the desk's
                container) and its delivery
+  tax          tax-read: the tax desk's reader, each paper one turn of the tax card's Hermes profile on ChatGPT (TAX-02)
 A step starts only with headroom (TSK-08): the memory its harness needs available on the PC (NEED_GB) and its
 subscription below its usage limit; otherwise it waits and the board says why.
 
@@ -57,6 +58,7 @@ import changes                                   # TSK-36: the modules that add 
 import desk_steps
 import shop_steps
 import stepkinds
+import tax
 import textcap
 import textcap as TC
 import deployment as DEPLOY                        # this deployment's hosts and paths (deployments/<name>/deployment.env)
@@ -129,8 +131,9 @@ def table(c):
     c.execute("""create table if not exists task_occ (task integer, occ integer, trigger text, started text, ended text, status text,
                  result text, primary key (task, occ))""")
     cols = {r[1] for r in c.execute("pragma table_info(task_occ)")}
-    for col, decl in (("event", "text"), ("verdict", "text"), ("judged", "text"), ("tokens", "integer"), ("judgement", "text"), ("cost", "real")):
-        if col not in cols:                               # TSK-21: the event that started it; TSK-22: its own verdict
+    for col, decl in (("event", "text"), ("verdict", "text"), ("judged", "text"), ("tokens", "integer"), ("judgement", "text"), ("cost", "real"),
+                      ("window", "text")):
+        if col not in cols:                               # TSK-21: the event that started it; TSK-22: its own verdict; TSK-49: its window
             c.execute(f"alter table task_occ add column {col} {decl}")
     c.execute("create table if not exists task_events (id integer primary key, task integer, at text, event text, occ integer)")
     c.execute("create table if not exists step_refs (kind text, ref text, task integer, primary key (kind, ref))")   # FND-91
@@ -297,14 +300,16 @@ def start(c, t, trigger="start", event=None):
         import desk_steps as DS
         plan = DS.alert_plan(t)
     plan = graph(plan)
+    win = None if event else window_for(t, dt.datetime.now().astimezone())
     with lock:
         occ = occ_of(c, t["id"]) + 1
         for s in plan:
             c.execute("insert into task_steps (task, occ, idx, title, item, agent, harness, model, after, why, status, attempts, loop) "
                       "values (?,?,?,?,?,?,?,?,?,?,?,0,?)", (t["id"], occ, s["idx"], s["title"], s["item"], s["agent"], s["harness"], s["model"],
                                                              json.dumps(s["after"]), s["why"], "pending", json.dumps(s["loop"]) if s["loop"] else None))
-        c.execute("insert or replace into task_occ (task, occ, trigger, started, status, event) values (?,?,?,?,?,?)",
-                  (t["id"], occ, trigger, now(), "running", json.dumps(event, ensure_ascii=False) if event else None))
+        c.execute("insert or replace into task_occ (task, occ, trigger, started, status, event, window) values (?,?,?,?,?,?,?)",
+                  (t["id"], occ, trigger, now(), "running", json.dumps(event, ensure_ascii=False) if event else None,
+                   json.dumps(win) if win else None))
         c.commit()
     RTM.start(run_of(t["id"], occ), "conductor", f"Task #{t['id']}: {t['title']}" + (f" · run {occ}" if occ > 1 else "")
               + (f" · {event.get('trigger', 'an event')}" if event else ""), detail=t["goal"] + (f"\n\n{event_text(event)}" if event else ""),
@@ -328,6 +333,48 @@ def fire(c, task, ev):
 def event_of(c, task, occ):
     r = c.execute("select event from task_occ where task=? and occ=?", (task, occ or 1)).fetchone()
     return json.loads(r["event"]) if r and r["event"] else None
+
+
+# ---------- a scheduled run's window (TSK-49) ----------
+def window_for(t, at):
+    """The period an occurrence of a scheduled task covers, when it starts at `at`: back from `at` by its schedule's gap
+    (ops/n8n_jobs.py window), in its n8n workflow's time zone, else the runner's. The workflow's schedule wins over the
+    task's words, as n8n starts the runs. -> {"start", "end", "tz"} (ISO, to the minute) or None (not on a schedule)."""
+    import n8n_jobs as NJ
+    if (t.get("rhythm") or {}).get("type") != "schedule":
+        return None
+    try:
+        w = NJ.of("task", t["id"]) or {}
+    except Exception:                                     # the workflows cannot be read now: the task's own words
+        w = {}
+    cron, tz = w.get("cron") or NJ.cron_of_rhythm(t["rhythm"].get("schedule")), w.get("tz") or ""
+    span = NJ.window(cron, at, tz) if cron else None
+    if not span:
+        return None
+    return {"start": span[0].isoformat(timespec="minutes"), "end": span[1].isoformat(timespec="minutes"),
+            "tz": tz or span[1].tzname() or span[1].strftime("UTC%z")}
+
+
+def window_of(c, task, occ):
+    r = c.execute("select window from task_occ where task=? and occ=?", (task, occ or 1)).fetchone()
+    return json.loads(r["window"]) if r and r["window"] else None
+
+
+def when(iso):
+    d = dt.datetime.fromisoformat(iso)
+    return f"{d:%a} {d.day} {d:%b %Y %H:%M}"
+
+
+def period_text(w):
+    """The window in the owner's words, the same in every step, the report and the e-mail: "Mon 2 Nov 2026 08:00 to Mon
+    9 Nov 2026 08:00 (Europe/Berlin)"."""
+    return f"{when(w['start'])} to {when(w['end'])} ({w['tz']})"
+
+
+def window_text(w):
+    """The window in a step's prompt: every research and writing step of the run covers the same one."""
+    return (f"This run covers exactly {period_text(w)}, the end being when the run started. Use only what was published or "
+            "happened inside this window (mark anything older as background, with its date), and name this window in your answer.")
 
 
 def event_text(ev):
@@ -725,7 +772,7 @@ OWN_KINDS = {"hermes": {"run": run_hermes, "gb": 0.5},
              "check": {"run": run_check, "gb": 0.3},                                                  # the builder's tests
              "opencode": {"run": run_opencode, "gb": 1.0},                                            # its container
              "wiki": {"run": run_wiki, "owners": ("mission",), "gb": 0.25, "fixed_plan": True}}       # a wiki write (TSK-34): a model call
-DOMAINS = (changes, shop_steps, desk_steps)        # what else runs as steps; missions.main wires its M onto each
+DOMAINS = (changes, shop_steps, desk_steps, tax)        # what else runs as steps; missions.main wires its M onto each
 KINDS = stepkinds.load(DOMAINS, OWN_KINDS)         # a clash or a kind without its function stops the import here, with the reason
 ADAPTERS, OWN_STEPS, NEED_GB, WAITS = KINDS.adapters, KINDS.own_steps, KINDS.need_gb, KINDS.waits
 
@@ -764,6 +811,9 @@ def _run_step(c, t, s, all_steps, agents):
     ev = event_of(c, t["id"], s.get("occ") or 1)
     if ev:                                                # TSK-21: every step of an event's run knows the event
         t = {**t, "event": ev, "goal": f"{t['goal']}\n\n{event_text(ev)}"}
+    win = window_of(c, t["id"], s.get("occ") or 1)
+    if win:                                               # TSK-49: and every step of a scheduled run the one window it covers
+        t = {**t, "window": win, "goal": f"{t['goal']}\n\n{window_text(win)}"}
     if t["spec"].get("wiki") and s["harness"] != "wiki":  # TSK-34: a refinement's research knows the wiki as it is
         t = {**t, "goal": f"{t['goal']}\n\n{wiki_context(t['spec']['wiki'])}"}
     first = s["status"] != "waiting"
@@ -1129,8 +1179,8 @@ def occurrences(c, tid):
     """A task's occurrences, newest first: each run's number, how it started, its state and its result."""
     table(c)
     return [dict(r) | {"live": run_of(tid, r["occ"]), "event": json.loads(r["event"]) if r["event"] else None,
-                       "judgement": json.loads(r["judgement"]) if r["judgement"] else None}
-            for r in c.execute("select occ, trigger, started, ended, status, result, event, verdict, judged, tokens, cost, judgement from task_occ "
+                       "judgement": json.loads(r["judgement"]) if r["judgement"] else None, "window": json.loads(r["window"]) if r["window"] else None}
+            for r in c.execute("select occ, trigger, started, ended, status, result, event, verdict, judged, tokens, cost, judgement, window from task_occ "
                                "where task=? order by occ desc", (tid,)).fetchall()]
 
 

@@ -16,6 +16,11 @@ the `vk-desk` key.
 - A newsletter in `/topic/mail` (the Inbox digest's, MIS-28) is one more event, framed as untrusted e-mail. It skips triage, so a
   mail's text never steers what is fetched, and its links are never opened. Its source line names the mail; a filed report
   lists its mails in its front matter (`mail:`) and `ops/inbox.py settle` marks them, so each is read once.
+- What is new: an item inside the run's window that no written report used yet. A scheduled task's run passes its exact
+  window (`--since`, `--until`, `--period`, from `ops/desk_steps.py` through `ops/desk.sh`); the report's second line
+  states it (`**Period:**`) and its front matter has `period:`. Without one, the brief's `window_hours` back from now.
+  `/state/seen.sqlite` gets only the items a written report used, when it is written (TSK-49): a collection that a
+  restart cut off, or an item not chosen, stays new for the next run.
 - Network-free helpers (`german()`, `release_text()`, `public_url()`) have tests in `tests/test_desk.py`. Add tests
   for new pure functions there. Feed and article parsers are stubbed in tests.
 - Pins are in the `Dockerfile` (`feedparser`, `trafilatura`, `markdown`, …).

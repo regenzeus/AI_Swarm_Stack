@@ -2,8 +2,9 @@
 
 | Path | Applies to | Applied by |
 |---|---|---|
-| `hermes/` | The Hermes profiles (main, scout, curator, mission) and the builder | `ops/deploy.py` and `make up` run the scripts inside the containers |
+| `hermes/` | The Hermes profiles (main, scout, curator, mission, tax) and the builder | `ops/deploy.py` and `make up` run the scripts inside the containers |
 | `litellm/` | The model gateway | mounted into the `litellm` container; `make restart` or a deploy reloads it |
+| `tax.yaml` | The tax desk's generic rules: the years, the mail window, the forms and their folders, the header words and sender classes (no names of the owner's employer, places or providers; the owner's own rules are in /srv/ai/tax/rules.yaml) | read by `ops/tax.py` |
 | `agents.yaml` | The agent registry: one card per agent (job, harness, model, key, roles, rooms, policies) | checked by `ops/registry.py`; mounted read-only into the `swarm` container |
 | `gate/` | The sign-in gates (Caddy) for the Hermes dashboard and the code map | mounted read-only into the gate containers |
 

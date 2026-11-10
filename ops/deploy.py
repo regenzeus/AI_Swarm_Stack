@@ -6,7 +6,7 @@ What changed -> what happens:
   images/<x>/...            build the image tag that compose/versions.env use for it
   compose/, images, deployments/   docker compose up -d (recreates only services whose config or image changed)
   config/litellm/           restart LiteLLM          config/hermes/configure*.sh   re-run that profile's configure script
-  prompts/<main|mission|builder>.md                  re-run the configure script that writes that SOUL text (SOUL_OF)
+  prompts/<main|mission|builder|tax>.md              re-run the configure script that writes that SOUL text (SOUL_OF)
   ops/systemd/              install units, daemon-reload, restart changed services/timers
   ops/keys.sh, agents.yaml  swarm identities (swarm_setup.py agents), key models/budgets/grants (update-keys.py), restart Hermes
   ops/missions.py etc., deployments/   restart the runner (RESTART_RUNNER)
@@ -30,7 +30,8 @@ ok = True
 # section is handed in as (by name, so run() never prints the text)
 SOUL_OF = {"config/hermes/configure.sh": ("main", {f"SOUL_{r}": f"{r}_RULE" for r in ("WEB", "MISSIONS", "SHOPPING", "LANGUAGE", "PHONE", "CLAUDE")}),
            "config/hermes/configure-mission.sh": ("mission", {"SOUL_TEXT": "SOUL"}),
-           "config/hermes/configure-builder.sh": ("builder", {"SOUL_TEXT": "SOUL"})}
+           "config/hermes/configure-builder.sh": ("builder", {"SOUL_TEXT": "SOUL"}),
+           "config/hermes/configure-tax.sh": ("tax", {"SOUL_TEXT": "SOUL"})}
 
 
 def soul(script):
@@ -47,7 +48,7 @@ def soul(script):
 def configure_scripts(changed):
     """The configure scripts to re-run: those that changed, and those whose prompts file changed."""
     return [s for s in ["config/hermes/configure.sh", "config/hermes/configure-scout.sh", "config/hermes/configure-curator.sh",
-                        "config/hermes/configure-mission.sh", "config/hermes/configure-builder.sh"]
+                        "config/hermes/configure-mission.sh", "config/hermes/configure-builder.sh", "config/hermes/configure-tax.sh"]
             if s in changed or (s in SOUL_OF and f"prompts/{SOUL_OF[s][0]}.md" in changed)]
 
 
@@ -274,8 +275,11 @@ def main(old, new):
                 "sh", "/config/configure-mission.sh", env={**os.environ, **env, "LITELLM_MISSION_KEY": os.environ.get("VK_MISSION", "")}); hermes_restart = True
         elif f == "config/hermes/configure-builder.sh":
             run("docker", "exec", *args, "aistack-builder-1", "sh", "/config/configure-builder.sh", env={**os.environ, **env})
+        elif f == "config/hermes/configure-tax.sh":                  # TAX-02: the tax desk's reader, ChatGPT only, no tools
+            run("docker", "exec", "-e", "LITELLM_TAX_KEY", *args, "-u", "hermes", "aistack-hermes-1",
+                "sh", "/config/configure-tax.sh", env={**os.environ, **env, "LITELLM_TAX_KEY": os.environ.get("VK_TAX", "")}); hermes_restart = True
     if any(f.startswith("config/hermes/plugins/") or f == "config/hermes/install-runtime-plugin.sh" for f in changed):
-        for prof in ("", "mission", "scout", "curator"):     # the runtime plugin, every Hermes profile (+ the builder's home)
+        for prof in ("", "mission", "scout", "curator", "tax"):     # the runtime plugin, every Hermes profile (+ the builder's home)
             run("docker", "exec", "-u", "hermes", "aistack-hermes-1", "sh", "/config/install-runtime-plugin.sh", *([prof] if prof else []))
         run("docker", "exec", "-u", "hermes", "aistack-builder-1", "sh", "/config/install-runtime-plugin.sh")
         hermes_restart = True

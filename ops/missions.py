@@ -62,6 +62,7 @@ import files as FL                                # MIS-23: the files a mission 
 import decisions as DQ                            # AUT-05: everything that waits for the owner, one ranked list, and its shadow
 import memstack as MS                             # MEM-22 to MEM-34: the memory stack (catalogue, openings, the memory tools)
 import memwrite as MW                             # MEM-35 to MEM-37: what enters memory, and how
+import mailsort as MSORT                          # CNX-10 to CNX-13: the owner's choices of senders whose mail is sorted out
 import stack_gate as G                            # PLT-28: is the stack up; nothing starts against one that is not
 
 OPS = Path(__file__).resolve().parent
@@ -1306,6 +1307,7 @@ def main():
                     TK.conduct_all(c, missions)        # TSK-21: one engine for repeating tasks
                     if TK.alerts_to_tasks(c, missions):   # ... and for a briefing's alerts
                         missions = load_missions()
+                    TK.research_titles(c)              # TSK-49: a briefing's research names its run's window
                 elif part == "state" and time.time() - last_state > 4:
                     last_state = time.time()
                     write_state(c, missions)

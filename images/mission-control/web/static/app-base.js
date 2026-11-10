@@ -467,6 +467,81 @@ function bindMailMore() {
   const m = $("#mailmore");
   if (m) m.onclick = () => { mailShown += 100; $("#maillist").innerHTML = mailListHtml(); bindMailMore(); };
 }
+// ---------- the mail sorter: senders whose mail you could delete, chosen once per sender (CNX-10 to CNX-13) ----------
+let sortAt = null, sortTick = new Map(), sortOpen = new Set();   // the proposal the ticks belong to, addr -> ticked, rows opened
+const sortDefault = (x) => x.tier === "high" || !!x.approved;
+function sortTicks(p) {
+  if (sortAt !== p.at) { sortAt = p.at; sortTick = new Map((p.senders || []).map((x) => [x.addr, sortDefault(x)])); }
+  return (p.senders || []).filter((x) => sortTick.get(x.addr));
+}
+function sortBarHtml(p) {
+  const on = sortTicks(p), mails = on.reduce((a, x) => a + x.movable, 0), inbox = on.reduce((a, x) => a + x.inbox, 0);
+  return `<div class="small wrap">${nf(on.length)} of ${nf((p.senders || []).length)} senders ticked · ${nf(mails)} mails · ${nf(inbox)} in the inbox</div>
+    <button class="btn primary" id="msgo" style="margin-top:10px"${on.length ? "" : " disabled"}>${ic.check}Sort out ${nf(mails)} mails of ${nf(on.length)} sender${on.length === 1 ? "" : "s"}</button>`;
+}
+// one compact row per sender (tick, name, what could go); its reason, samples, what stays and Keep open on a tap of the row
+function sortRowHtml(x) {
+  const kept = Object.entries(x.kept || {}).sort((a, b) => b[1] - a[1]), keptN = kept.reduce((a, [, n]) => a + n, 0);
+  return `<div class="mailrow sortrow"><input type="checkbox" data-mst="${esc(x.addr)}"${sortTick.get(x.addr) ? " checked" : ""} aria-label="Sort out the mail of ${esc(x.name || x.addr)}">
+    <details class="grow sortd" data-msd="${esc(x.addr)}"${sortOpen.has(x.addr) ? " open" : ""}><summary class="wrap"><b>${esc(x.name || x.addr)}</b>${x.approved ? ` <span class="pill ok" style="padding:1px 7px">sorted every week</span>` : x.new ? ` <span class="pill warn" style="padding:1px 7px">new</span>` : ""}
+      <span class="small muted"> · ${nf(x.movable)} could go · ${nf(x.inbox)} in the inbox</span></summary>
+      <div class="sortmore"><div class="tiny muted wrap">${esc(x.addr)} · ${nf(x.n)} mails in all · ${mailMb(x.bytes)}${x.first ? ` · since ${new Date(x.first * 1000).getFullYear()}` : ""}</div>
+      <div class="small wrap">${esc((x.why || []).join("; "))}</div>
+      ${(x.samples || []).length ? `<ul class="tiny faint sortsamples">${x.samples.map((t) => `<li class="wrap">${esc(t)}</li>`).join("")}</ul>` : ""}
+      ${keptN ? `<div class="tiny faint wrap">Stays: ${nf(keptN)} (${kept.map(([g, n]) => `${esc(g)} ${nf(n)}`).join(", ")})</div>` : ""}
+      <button class="btn sm ghost" data-mskeep="${esc(x.addr)}" style="margin-top:6px">Keep this sender</button></div></details></div>`;
+}
+function sortGroupHtml(key, title, list) {
+  if (!list.length) return "";
+  return `<div class="row between wrap sortgh"><h3 class="small wrap">${title} · ${nf(list.length)}</h3><span class="row wrap" style="gap:6px"><button class="btn sm ghost" data-msall="${key}" data-on="1">Tick all</button><button class="btn sm ghost" data-msall="${key}" data-on="0">Untick all</button></span></div>
+    <div class="card list">${list.map(sortRowHtml).join("")}</div>`;
+}
+function sortRunsHtml(rs) {
+  if (!rs.length) return "";
+  return `<div class="section-h" style="margin-top:14px"><h2>Sorted out</h2></div><div class="card list">${rs.map((r) => `<div class="mailrow"><div class="grow wrap"><b>${nf(r.mails)} mails of ${nf((r.senders || []).length)} sender${(r.senders || []).length === 1 ? "" : "s"}</b>
+      <div class="tiny muted wrap">${dt(new Date(r.at * 1000))} · ${nf(r.inbox)} were in the inbox · under ${esc(r.label)}${r.protected ? ` · ${nf(r.protected)} bank or security mails left alone` : ""}</div></div>
+      ${r.undone ? `<span class="pill paused">undone</span>` : `<button class="btn sm ghost" data-msundo="${esc(r.run)}">${ic.back}Undo</button>`}</div>`).join("")}</div>`;
+}
+function sortHtml() {
+  const s = mailData.sort || {}, p = s.proposal, rs = s.runs || [];
+  const how = `From the headers alone, the mail sorter proposes senders whose mail you could delete: mailing lists and Gmail's Promotions and Social that you never wrote to and never starred. Sure ones are ticked; likely ones wait for your tick. A site that passes on messages from people is never sure. Every mail of a chosen sender is checked again, and it stays where it is when it is starred, important, has an attachment or one of your labels, passes on someone's message, names money, orders, health, the state, travel or accounts, is in a thread you wrote in, is younger than 30 days, or is bank or security mail. Sort out puts the rest under the label ${esc(p?.label || "AI Stack/Deletable")} and takes it out of the inbox, in batches; each run can be undone here. Nothing is deleted: you delete the label's mail in Gmail when you want, and the copy on the NAS keeps every mail. Every week, new mail of the senders you chose is sorted the same way, and new senders wait for your look.`;
+  const head = `<div class="section-h"><h2>Mail you could delete</h2>${explain("mail-sort-how", how, "How the mail sorter works")}</div>`;
+  if (!p) return `${head}<div class="card empty small">The proposal appears after the mail sorter's first look at the copy on the NAS.${s.result ? ` ${esc(s.result)}` : ""}</div>${sortRunsHtml(rs)}`;
+  const ss = p.senders || [], high = ss.filter((x) => x.tier === "high"), likely = ss.filter((x) => x.tier !== "high");
+  return `${head}<div class="card pad" id="msbar">${sortBarHtml(p)}</div>${s.result ? `<div class="tiny muted wrap" style="margin-top:8px">Last run: ${esc(s.result)}</div>` : ""}
+    ${sortGroupHtml("high", "Sure: bulk you never answer", high)}
+    ${sortGroupHtml("likely", "Likely: look before you tick", likely)}
+    ${!ss.length ? `<div class="card empty small">Nothing to sort out now.</div>` : ""}${sortRunsHtml(rs)}`;
+}
+function bindSort() {
+  const p = mailData.sort?.proposal, redraw = () => { $("#mailsort").innerHTML = sortHtml(); bindSort(); };
+  $$("[data-mst]").forEach((b) => (b.onchange = () => { sortTick.set(b.dataset.mst, b.checked); $("#msbar").innerHTML = sortBarHtml(p); bindSort(); }));
+  $$("[data-msd]").forEach((d) => (d.ontoggle = () => (d.open ? sortOpen.add(d.dataset.msd) : sortOpen.delete(d.dataset.msd))));
+  $$("[data-msall]").forEach((b) => (b.onclick = () => {
+    const on = b.dataset.on === "1";
+    for (const x of p.senders || []) if ((x.tier === "high") === (b.dataset.msall === "high")) sortTick.set(x.addr, on);
+    $$("[data-mst]").forEach((c) => (c.checked = !!sortTick.get(c.dataset.mst)));
+    $("#msbar").innerHTML = sortBarHtml(p); bindSort();
+  }));
+  $$("[data-mskeep]").forEach((b) => (b.onclick = async () => {
+    b.disabled = true;
+    if (!(await act({ action: "mailsort_keep", addr: b.dataset.mskeep }, "Kept: this sender is never proposed again"))) { b.disabled = false; return; }
+    p.senders = p.senders.filter((x) => x.addr !== b.dataset.mskeep); redraw();
+  }));
+  $$("[data-msundo]").forEach((b) => (b.onclick = async () => {
+    b.disabled = true;
+    if (!(await act({ action: "mailsort_undo", run: b.dataset.msundo }, "Undo starts: the label comes off, and what was in the inbox goes back"))) b.disabled = false;
+  }));
+  const go = $("#msgo");
+  if (go && p) go.onclick = async () => {
+    const ss = p.senders || [], tick = (x) => !!sortTick.get(x.addr);
+    const req = { action: "mailsort_go", at: p.at, except: ss.filter((x) => sortDefault(x) && !tick(x)).map((x) => x.addr), also: ss.filter((x) => !sortDefault(x) && tick(x)).map((x) => x.addr) };
+    go.disabled = true;
+    if (!(await act(req, `Sorting starts: the mail goes under ${p.label} in batches; each run can be undone here`))) { go.disabled = false; return; }
+    for (const x of ss) { x.approved = tick(x); x.new = false; }
+    sortAt = null; redraw();
+  };
+}
 async function vMail() {
   view.innerHTML = `<a class="back" href="#/system?tab=connections">${ic.back}Connections</a><h1 style="font-size:26px">Your mail</h1><div class="skeleton" style="height:200px;margin-top:14px"></div>`;
   let got, why = "";
@@ -478,11 +553,13 @@ async function vMail() {
   view.innerHTML = `<a class="back" href="#/system?tab=connections">${ic.back}Connections</a><div class="row between"><h1 style="font-size:26px">Your mail</h1>${explain("this-page-is-made-from", "This page is made from the headers of your mail: who wrote, how much, whether you read it, whether you answer. No message text is read, and nothing here changes Gmail. The copy on the NAS only reads Gmail and keeps a mail even after it leaves Gmail.", "About this")}</div>
     <div class="grid g2 section"><div class="card kpi"><div class="kpi-l">Copy on the NAS</div>${mailCopyHtml(mailData.status)}</div>
       <div class="card kpi"><div class="kpi-l">AI Stack label</div><div class="kpi-v" style="font-size:20px">${nf(p.total_filed || 0)}</div><div class="kpi-s wrap">${esc(p.result || "The Postmaster has not run yet.")}</div></div></div>
+    <div class="section" id="mailsort">${sortHtml()}</div>
     <div class="section"><div class="section-h"><h2>Who writes to you</h2></div>${c ? `
       <input id="mailfind" class="input" placeholder="Find a sender" value="${esc(mailFind)}" style="width:100%;margin-bottom:10px">
       <div class="row wrap" style="gap:6px;margin-bottom:10px">${MAIL_FILTERS.map(([k, t]) => `<button class="chip ${mailFilter === k ? "on" : ""}" data-mf="${k}">${t}</button>`).join("")}</div>
       <div id="maillist">${mailListHtml()}</div>` : `<div class="card empty small">The report appears when the copy has read the headers.</div>`}</div>`;
   bindMail();
+  bindSort();
 }
 
 // ---------- app connections (Gmail first): time-limited grants, first-Trash approvals, log ----------

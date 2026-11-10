@@ -8,7 +8,7 @@ on this page being out of date (QA-22). Text cut for length is a different list:
 the asker is told at once with the limit named. **stops**: a run past this ends and is reported. **drops**: something is
 left out, and the reason says where that is shown.
 
-## waits (12)
+## waits (13)
 
 | Where | Limit | Why |
 |---|---|---|
@@ -21,11 +21,12 @@ left out, and the reason says where that is shown.
 | `ops/conductor.py` | `LIMIT_REST_S` | (a step at a usage limit tries again after 30 minutes, as missions do) |
 | `ops/conductor.py` | `WINDOWS_FLOOR_GB` | Windows itself this short: nothing starts, whatever WSL holds (the owner's PC comes first) |
 | `ops/domain/trackers.py` | `SHADOW_NEEDED` | approved shadow items a kind of write needs before it may go live (the deployment may set more) |
+| `ops/mailsort_nas.py` | `YOUNG_S` | a mail younger than this stays where it is; a later run sorts it once it is older |
 | `ops/memtrials.py` | `MAX_AGE_DAYS` | a trial result older than this keeps the memory agent's structural changes waiting until the trials run again |
 | `ops/onboard.py` | `NEED_GB` | the PC's available memory before the code map's container starts (= conductor NEED_GB opencode) |
 | `ops/repofacts.py` | `NEED_GB` | the PC's available memory before a facts run starts (measured: 736 MiB at peak on click; its container is capped at 2 GB) |
 
-## paces (24)
+## paces (27)
 
 | Where | Limit | Why |
 |---|---|---|
@@ -46,15 +47,18 @@ left out, and the reason says where that is shown.
 | `ops/flows.py` | `DELIVER_EVERY_S` | an undelivered answer is sent again every minute |
 | `ops/keeper.py` | `AUTO_MAX` | automatic memory changes a pass; the rest are listed and follow |
 | `ops/librarian.py` | `LIMIT` | a wiki over this is flagged as an issue; nothing is removed |
+| `ops/mailsort.py` | `BATCH` | the mail connector takes at most 200 mails a call (its MAX_BATCH); the rest goes in the next batch |
+| `ops/mailsort.py` | `PAUSE_S` | a pause between batches keeps the sorter well under Gmail's IMAP allowance, which the NAS's copy shares |
 | `ops/planner.py` | `MAX_TASKS` | a planner's answer with more falls back to one build, which does all of it |
 | `ops/postmaster.py` | `STALE_S` | a copy silent this long is said once a day |
 | `ops/repofacts.py` | `RETRY` | facts with an unknown part are tried again a day later, or at the next commit |
 | `ops/runtime.py` | `BATCH_BYTES` | (a batch of events sent at once; the app reads 4 MB) |
+| `ops/tax.py` | `PACE_S` | between two papers the reader waits 2 s, so the subscription's other users keep their turn |
 | `ops/ua_enrich.py` | `WORKERS` | calls side by side unless the deployment says UA_ENRICH_WORKERS (home: the subscription's pace) |
 | `ops/ua_enrich.py` | `WORKERS_MAX` | at most this many whatever the deployment says |
 | `ops/wikis.py` | `len(done) >= PER_PASS` | wiki summaries a pass; the rest the next pass |
 
-## refuses (68)
+## refuses (70)
 
 | Where | Limit | Why |
 |---|---|---|
@@ -122,12 +126,14 @@ left out, and the reason says where that is shown.
 | `ops/swarm_client.py` | `MAX_INSTRUCTIONS` | a card's standing instructions: more is a prompt change |
 | `ops/swarm_client.py` | `len(ins) > MAX_INSTRUCTIONS` | as MAX_INSTRUCTIONS |
 | `ops/tasks.py` | `len(text) > 4000` | a task given in a sentence, with its size: the rest goes in a document |
+| `ops/tax.py` | `ANSWER_MAX` | an answer typed in Needs you is a number or a short word, not a text |
+| `ops/tax_nas.py` | `TEXT_MAX` | a document's text past 400,000 characters is no paper; it is marked, not sent |
 | `ops/windows_desk.py` | `QUESTION_MAX` | a question for the Windows desk, with its size |
 | `ops/winjobs.py` | `VALUE_MAX` | a request's values are short scalars: a value past this is no commit, name or number (GEN-11) |
 | `ops/winjobs.py` | `MINUTES_MAX` | a job kind's time limit: a day at most; its own minutes stop it sooner |
 | `ops/winworker.py` | `FILES_KB` | a request's files (a patch) stay small: a patch past this is no change a person reviews |
 
-## stops (42)
+## stops (43)
 
 | Where | Limit | Why |
 |---|---|---|
@@ -172,9 +178,10 @@ left out, and the reason says where that is shown.
 | `ops/repofacts.py` | `TOOL_TIMEOUT` | one tool that hangs: its results are unknown, which errors says |
 | `ops/repofacts.py` | `HISTORY_TIMEOUT` | fetching a shallow clone's history: the facts say the history is truncated |
 | `ops/staffing.py` | `TEMP_BUDGET` | a temporary agent key's daily budget; subscription models cost nothing, so it only bites if a paid model appears |
+| `ops/tax.py` | `NAS_TIMEOUT_S` | one call on the NAS gets 15 minutes; the run reports it and the next run goes on |
 | `ops/ua_map_in.py` | `NODE_TIMEOUT` | s for one plugin script (the structure of one batch, the merge of all); counts as a failed try |
 
-## drops (47)
+## drops (48)
 
 | Where | Limit | Why |
 |---|---|---|
@@ -215,6 +222,7 @@ left out, and the reason says where that is shown.
 | `ops/localworker.py` | `LOG_MAX` | a job's log past this comes back as its end, with a marker saying how much was cut |
 | `ops/localworker.py` | `ARTIFACTS_MB` | artifacts past this many MB are not copied back; the result names them as left out |
 | `ops/localworker.py` | `size > ARTIFACTS_MB` | as ARTIFACTS_MB above (named in left_out) |
+| `ops/mailsort_nas.py` | `MIN_MAILS` | a sender with fewer mails is never proposed; Your mail's list of senders still shows it |
 | `ops/missions.py` | `STACKS_EVERY_S` | at most one stack dump an hour (a diagnosis, never a stop) |
 | `ops/notify.py` | `TELEGRAM_MAX` | Telegram's own limit on a message; the text is cut visibly |
 | `ops/phone_agents.py` | `MAX_APPS` | the biggest unused apps offered at a time; the next scan offers more |

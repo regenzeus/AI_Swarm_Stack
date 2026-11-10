@@ -75,7 +75,7 @@ Every `/api/` and `/share` route needs the `Tailscale-User-Login` header that `t
 | `/api/shares` | GET | APP-15: the shared items, for the Share page's list. |
 | `/api/share/{sid}` | GET | One shared item, for its page with the one-tap choices. |
 | `/api/share/{sid}/save` | POST | Save a shared item into the knowledge base: the link's page, the text, and every document or picture. |
-| `/api/mail` | GET | The mail copy on the NAS and the sender report from its headers (CNX-07, CNX-08): no message text. |
+| `/api/mail` | GET | The mail copy on the NAS, the sender report from its headers (CNX-07, CNX-08) and the mail sorter's proposal and runs (CNX-10 to CNX-13): no message text. |
 | `/api/repo/{name}/graph` | GET | The repo's Graphify graph, reduced for drawing: the best-connected nodes (max 200, so phones keep up), their links, communities. |
 | `/api/repo/{name}/overview` | GET | What the repo is: the code map digest (Understand Anything) if there is one, else its README; and the written analysis of its onboarding. |
 | `/api/repo/{name}/node` | GET | Everything about one code graph node: what it is, where it lives, its source, what it calls and what calls it, and what the code map (Understand Anything) says about it and its file. |

@@ -92,3 +92,34 @@ def test_a_weekly_brief_keeps_a_week_of_news_and_a_daily_one_36_hours(desk):
     assert len(desk.events([dict(i) for i in old], db)[0]) == 1
     desk.WINDOW_H = 180
     assert len(desk.events([dict(i) for i in old], db)[0]) == 3
+
+
+def test_a_run_s_window_decides_what_is_new_and_the_report_states_it(desk, monkeypatch):
+    """TSK-49: a scheduled run's exact window (--since, --until, --period from the runner) decides what is new, the
+    searches reach back to its start and the report states it in the desk's words; only what a written report used is
+    marked seen, so a collection a restart cut off leaves its items new (task 79's run of 10 Nov 2026: 2 new of 595)."""
+    import datetime as dt, sqlite3
+    from pathlib import Path
+    period = "Mon 2 Nov 2026 08:00 to Mon 9 Nov 2026 08:00 (Europe/Berlin)"
+    desk.window((desk.NOW - dt.timedelta(days=8)).isoformat(), (desk.NOW - dt.timedelta(days=1)).isoformat(), period)
+    assert desk.WINDOW_H == 8 * 24 and desk.PERIOD == period
+    titles = {0: "Geely opens a plant", 3: "BYD exports record", 7: "Recall of Chery cars", 9: "Old news on Seres"}
+    items = [{"title": titles[d], "url": f"https://x.cn/{d}", "source": "x", "summary": "", "via": "gnews",
+              "published": desk.NOW - dt.timedelta(days=d, hours=1)} for d in titles]
+    db = sqlite3.connect(":memory:")
+    desk.seen_table(db)
+    fresh, groups = desk.events([dict(i) for i in items], db)
+    assert [i["url"] for i in fresh] == ["https://x.cn/3", "https://x.cn/7"]          # after the window and before it: out
+    groups[0]["text"] = "BYD exported a record number of cars."
+    chosen = [(groups[0], {"questions": [1]})]
+    desk.reported(db, chosen)
+    assert [i["url"] for i in desk.events([dict(i) for i in items], db)[0]] == ["https://x.cn/7"]   # what no report used stays new
+    monkeypatch.setattr(desk, "PROMPTS", Path("prompts"))
+    asked = []
+    monkeypatch.setattr(desk, "ask", lambda text, model, **k: asked.append(text) or {"headline": "Car Weekly", "sixty_seconds": "Exports rose [1].",
+                                                                                     "sections": {"Sales": "Record [1]."}, "telegram": "t"})
+    b = {"topic": "Cars", "mission": "m", "key_questions": ["Sales?"], "notes": "", "sources": {},
+         "report": {"sections": ["Headline", "In 60 seconds", "Prices", "Sales"]}}
+    md, _, _ = desk.write(b, chosen, [], "", "2026-11-09")
+    assert md.startswith(f"# Car Weekly\n\n**Period:** {period}\n\n**In 60 seconds:** Exports rose [1].")
+    assert f"This briefing covers exactly {period}" in asked[0]

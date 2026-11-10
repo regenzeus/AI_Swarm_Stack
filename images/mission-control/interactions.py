@@ -36,9 +36,10 @@ OWNER_ACTS = {"build_approve": ("approved a build of", "builder"), "build_approv
               "build_revise": ("asked for changes from", "builder"), "build_assign": ("gave a build to", "builder"), "phone_cleanup_do": ("approved a step of", "phone-cleanup"),
               "phone_cleanup_do_all": ("approved the steps of", "phone-cleanup"), "phone_cleanup_undo": ("undid a step of", "phone-cleanup"), "phone_cleanup_dismiss": ("set aside a step of", "phone-cleanup"),
               "task_answer": ("answered", "conductor"), "task_approve": ("approved a plan of", "conductor"), "task_cancel": ("cancelled a task of", "conductor"), "task_retry": ("retried a task of", "conductor"),
-              "health_ack": ("acknowledged a finding of", "doctor"), "pause": ("paused", "mission"), "resume": ("resumed", "mission"), "shop_decide": ("decided on a purchase of", "mission"), "phone_decide": ("decided on a request of", "phone")}
+              "health_ack": ("acknowledged a finding of", "doctor"), "pause": ("paused", "mission"), "resume": ("resumed", "mission"), "shop_decide": ("decided on a purchase of", "mission"), "phone_decide": ("decided on a request of", "phone"),
+              "mailsort_go": ("chose the senders to sort out for", "postmaster"), "mailsort_keep": ("kept a sender from", "postmaster"), "mailsort_undo": ("undid a sort of", "postmaster")}
 STACK_TITLES = {"Agent health", "Crew", "Trials", "Triggers", "System", "Swarm", "Autonomy"}
-SENDERS = {"Health doctor": "doctor", "Inbox digest": "inbox", "Postmaster": "postmaster", "Checker": "checker", "Coach": "coach", "Librarian": "memory", "Memory Keeper": "memory",
+SENDERS = {"Health doctor": "doctor", "Inbox digest": "inbox", "Postmaster": "postmaster", "Mail sorter": "postmaster", "Checker": "checker", "Coach": "coach", "Librarian": "memory", "Memory Keeper": "memory",
            "Test agent": "tests", "Phone cleanup": "phone-cleanup", "Phone check": "phone-check", "Journey checks": "journeys", "Maintainability review": "maintainability"}
 
 

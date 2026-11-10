@@ -48,3 +48,28 @@ note: The mission page then shows "Needs access" with grant buttons. Grant read 
 - **Who writes to you.** One line per sender: how many mails, how many unread, how much space, whether it is a mailing list, and whether you ever wrote back.
 
 The **Postmaster** files the stack's own mail under the label **AI Stack**, out of the inbox. It knows that mail by its exact sender, so what you mail yourself stays where it is. It removes nothing.
+
+### Mail you could delete
+
+The **mail sorter** looks at the same headers and proposes the senders whose mail you could delete: mailing lists and
+Gmail's Promotions and Social that you never wrote to and never starred, with at least 5 mails. **Sure** ones come
+ticked; **likely** ones (Updates, a few attachments, or a site that passes on messages from people) wait for your tick. Each sender shows how many mails would go, how
+many are in the inbox, the space, three sample subjects and why it counts as worthless.
+
+- **Every mail is checked again.** It stays where it is when it is starred, important, has an attachment or one of your
+  labels, passes on someone's message (sent you a message, replied, commented, mentioned you), names money, orders,
+  health, the state, travel or accounts in its subject, is in a thread you wrote in, is
+  younger than 30 days, or is bank or security mail. Each sender says how many stayed and why.
+- **You decide once per sender.** *Keep this sender* takes it out of every later proposal. *Sort out* moves the mail
+  of the ticked senders under the label **AI Stack/Deletable** and out of the inbox, in batches. Nothing moves before
+  that tap, and it needs the **organize** grant.
+- **Nothing is deleted.** Deleting the label's mail is your own act in Gmail, when you want; the copy on the NAS keeps
+  every mail anyway. Each run has an **Undo** on the page: the label comes off, and what was in the inbox goes back.
+- **It keeps sorting.** Every week new mail of the senders you chose is sorted the same way. New senders appear in
+  **Needs you** once; a sender you have not chosen never moves. Its run says what it did in one line on Home.
+
+```try
+label: Sort out the mail you could delete
+open: "#/mail"
+note: Under Mail you could delete, untick any sender you want to keep in the inbox, tap Keep this sender for one you never want proposed again, then tap Sort out. Grant organize first (Stack, Connections).
+```

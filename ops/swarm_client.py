@@ -665,7 +665,7 @@ def run_finish(agent, run, summary, send=None, signal=None):
 
 # ---------------------------------------------------------------- wakes (SWM-13, SWM-28, SWM-53)
 HERMES = "aistack-hermes-1"
-PROFILE = {"main": None, "scout": "scout", "curator": "curator", "mission": "mission"}       # Hermes profiles by card
+PROFILE = {"main": None, "scout": "scout", "curator": "curator", "mission": "mission", "tax": "tax"}       # Hermes profiles by card
 WAKE_PROMPT = P.text("shared", "WAKE")
 ENGINE = {"claude-subscription": "claude", "gpt-sub": "chatgpt", "gpt-sub-fast": "chatgpt"}
 PUBLIC = Path(os.environ.get("MISSIONS_PUBLIC", "/srv/ai/missions/public"))

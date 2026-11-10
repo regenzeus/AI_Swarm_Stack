@@ -102,3 +102,66 @@ items:
       commands of its own past the Trash grant and the protected-mail filter (review CNX-R1); umlauts raised an error (CNX-R2).
     verify: {method: test, by: [tests/test_mail.py::test_a_search_or_label_with_a_line_break_is_refused_and_nothing_is_sent]}
     trace: [images/mail/mail.py]
+  - id: CNX-10
+    title: The mail sorter proposes worthless senders from the headers alone
+    statement: The mail sorter shall read the mail copy's index on the NAS read-only, over ssh, with no message text, no model and
+      nothing written on the NAS, and propose two tiers of senders. High confidence is a sender with at least 5 mails, 80 % of them
+      with an unsubscribe link or filed by Gmail under Promotions or Social, at most 2 % with attachments, filed under Promotions or
+      Social, whom the owner never wrote to and never starred, and whose name names no bank, security, money, order, contract, health,
+      state, travel or account word, and that does not relay people's messages (message, inmail, chat or Nachricht in its name or
+      address, or 5 % or more of its subjects saying someone sent, wrote, replied, commented or mentioned). Likely is the same with
+      any category, at most 5 % with attachments, and relayed messages allowed. Every mail of a proposed
+      sender shall be checked again and kept when it is starred, important, has an attachment or one of the owner's labels, relays a
+      person's message in its subject, names a
+      keep or protected word in its subject, is in a thread the owner wrote in, is younger than 30 days, is the stack's own mail or is
+      protected mail of the mail connector; the proposal shall count what each guard kept and why each sender counts as worthless.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-05]
+    sources: ["the owner, 10 Nov 2026: an agent that moves high confidence useless emails into a dedicated folder, carefully"]
+    verify: {method: test, by: [tests/test_mailsort.py::test_the_look_proposes_bulk_senders_the_owner_never_answered_in_two_tiers, tests/test_mailsort.py::test_every_mail_of_a_chosen_sender_is_checked_again_and_each_guard_counted, tests/test_mailsort.py::test_a_sender_that_relays_people_s_messages_is_never_sure_and_such_a_mail_stays, tests/test_mailsort.py::test_the_look_reads_the_copy_read_only_on_the_nas_python_and_writes_nothing, tests/test_mailsort.py::test_an_asleep_nas_is_said_and_never_taken_for_nothing_to_sort]}
+    trace: [ops/mailsort.py, ops/mailsort_nas.py]
+  - id: CNX-11
+    title: The owner decides per sender, once, on Your mail
+    statement: Your mail shall show each proposed sender with its name, address, mails, mails in the inbox, size, three sample
+      subjects cut and marked, why it counts as worthless and what the guards keep, with a tick (high confidence ticked, likely not),
+      a Keep this sender button that keeps the sender out of every later proposal, and one button that sorts out the ticked senders.
+      No mail shall move before that tap. Senders no decision has seen shall be one item in Needs you that links to Your mail.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-05]
+    sources: [images/mission-control/guide/18-connections.md]
+    verify: {method: test, by: [tests/test_mailsort.py::test_nothing_moves_before_the_owner_s_tap, tests/test_mailsort.py::test_a_long_sample_subject_is_cut_and_marked, tests/test_mailsort.py::test_the_owner_s_tap_approves_the_ticked_senders_and_starts_the_sorter, tests/test_mailsort.py::test_keep_this_sender_is_for_good, tests/test_mailsort.py::test_needs_you_asks_once_for_new_senders, tests/test_mailsort.py::test_your_mail_shows_the_proposal_with_ticks_and_one_button]}
+    trace: [ops/mailsort.py, ops/decisions.py, ops/missions.py, ops/missions.requests.py, images/mission-control/server.py, images/mission-control/interactions.py, images/mission-control/web/static/app-base.js, images/mission-control/web/static/app-tasks.js, images/mission-control/web/static/app.css, config/autonomy.yaml]
+  - id: CNX-12
+    title: The sorter moves only approved mail, in recorded batches, undoable, and keeps sorting weekly
+    statement: After the owner's tap the mail sorter shall put the approved senders' mails that passed every guard under the label
+      set in ops/mailsort.py (AI Stack/Deletable) and out of the inbox, through the mail connector's organize scope, in batches of
+      at most 200 with a pause between them, record each batch (ids, sender, subject, whether it was in the inbox), never sort a
+      mail twice, and undo a run on the owner's tap (the label off, back into the inbox what was there, the run's senders no longer
+      approved). It shall trash or delete nothing. Each week, from its n8n workflow, it shall sort new mail of approved senders the
+      same way, add new candidates to the proposal, move nothing for a sender the owner has not approved, and say what it did in one
+      line on Home without a push. Without the organize grant, or with the NAS unread, nothing moves and the run says why.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-05]
+    sources: [images/mission-control/guide/18-connections.md]
+    verify: {method: test, by: [tests/test_mailsort.py::test_the_move_goes_in_recorded_paced_batches_and_never_twice, tests/test_mailsort.py::test_new_mail_of_an_approved_sender_is_sorted_weekly_and_an_unapproved_one_never, tests/test_mailsort.py::test_undo_puts_the_mail_back_and_withdraws_the_approval, tests/test_mailsort.py::test_without_organize_nothing_moves_and_it_says_so, tests/test_mailsort.py::test_a_refusal_by_the_connector_stops_the_run_and_is_said, tests/test_mailsort.py::test_the_sorter_is_a_weekly_crew_job_on_n8n_and_the_runner_takes_the_taps]}
+    trace: [ops/mailsort.py, ops/crew.py, ops/systemd/crew-mail-sort.service, n8n/workflows/crew-mail-sorter.json, deployments/home/workflows.yaml, config/agents.yaml]
+  - id: CNX-13
+    title: The connector sorts out in one step and leaves protected mail alone
+    statement: The mail connector shall offer mail_sort_out, which under the organize grant gives each mail the label and takes it
+      out of the inbox in one session, leaves protected mail (bank, payment, security) without the label and in place, and answers
+      which mails it sorted, which were in the inbox, which were protected and which were not found; and mail_sort_back, which takes
+      the label off and puts back into the inbox the mails it is given. Both refuse without the grant and refuse a label with a line
+      break.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-05]
+    sources: [images/mail/AGENTS.md]
+    verify: {method: test, by: [tests/test_mailsort.py::test_the_connector_sorts_out_in_one_step_and_leaves_protected_mail_alone, tests/test_mail.py::test_mail_tools_cannot_send]}
+    trace: [images/mail/mail.py]

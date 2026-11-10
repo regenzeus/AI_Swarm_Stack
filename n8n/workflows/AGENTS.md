@@ -33,6 +33,7 @@ file that lacks it and changes nothing else in the file.
 | `crew-inbox-digest.json` | Crew: Inbox digest | `15 7 * * *` | `run/crew-inbox-digest` | yes |
 | `crew-journey-checks.json` | Crew: Journey checks | `10 4 * * *` | `run/crew-journey-checks` | yes |
 | `crew-maintainability-review.json` | Crew: Maintainability review | `30 4 * * 1` | `run/crew-maintainability-review` | yes |
+| `crew-mail-sorter.json` | Crew: Mail sorter (CNX-12; it moves only the mail of senders the owner approved) | `0 5 * * 6` | `run/crew-mail-sorter` | yes |
 | `crew-memory-gatekeeper.json` | Crew: Memory gatekeeper | `*/10 * * * *` | `run/crew-memory-gatekeeper` | yes |
 | `crew-nightly-restart.json` | Crew: Nightly restart | `50 3 * * *` | `run/crew-nightly-restart` | yes |
 | `crew-phone-check.json` | Crew: Phone check | `0 9 * * 1` | `run/crew-phone-check` | yes |
@@ -50,6 +51,7 @@ file that lacks it and changes nothing else in the file.
 | `crew-vault-ingest.json` | Crew: Vault ingest | `* * * * *` | `run/crew-vault-ingest` | yes |
 | `memory-keeper.json` | Memory Keeper | `30 4 * * *` | `run/memory-keeper` | yes |
 | `stack-self-test.json` | Stack self-test | webhook | `stack-self-test` | yes |
+| `tax-desk.json` | Tax desk (TAX-08: find, read with Hermes on ChatGPT, file and prepare; `ops/n8n_gen.py chain`) | `0 7 3 * *` | `run/tax-desk` | no: the lead switches it on after the first live run |
 | `task-10-ram-upgrade-to-32-gb.json` | Task #10: RAM upgrade to 32 GB | `0 8 * * *` | `run/task-10-ram-upgrade-to-32-gb` | yes |
 | `task-11-copper-mining.json` | Task #11: Copper mining | `30 6 * * *` | `run/task-11-copper-mining` | yes |
 | `task-2-beta-materials-aspi-investment-news-briefing.json` | Task #2: Beta Materials (ASPI): investment news briefing | `30 6 * * *` | `run/task-2-beta-materials-aspi-investment-news-briefing` | yes |

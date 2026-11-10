@@ -30,6 +30,11 @@ def telegram(text, buttons=(), category="result"):
     return N.send(text, category, by="mission", buttons=buttons, is_html=True).get("telegram") == "sent"
 
 
+def telegram_said(text, buttons=(), category="result"):
+    """The same message -> what the notification path did with it: sent, held (quiet hours), off, duplicate or failed."""
+    return N.send(text, category, by="mission", buttons=buttons, is_html=True).get("telegram") or "off"
+
+
 def links(slug, path=None):
     row = []
     if path:
@@ -103,9 +108,12 @@ def quiet_file():
     return M.HOME / "quiet-runs.json"           # per mission, the dates of runs that found nothing new (FND-60)
 
 
-def deliver(m, title, short, path, kicker, markdown_text=None, empty=False):
+def deliver(m, title, short, path, kicker, markdown_text=None, empty=False, outcome=None):
     """Telegram and e-mail for a finished run. An empty run (a briefing with no news chosen) stays in the app: its date
-    is kept and named in the kicker of the next full delivery instead (MIS-15, FND-60)."""
+    is kept and named in the kicker of the next full delivery instead (MIS-15, FND-60). `outcome`, when given, receives
+    each way's own result ({"telegram": {"ok", "said"}, "email": {"ok", "subject"}}; ok None: held or off, no failure),
+    the delivery's record for the judge (TSK-50)."""
+    outcome = {} if outcome is None else outcome
     d = m.get("deliver") or []
     f = quiet_file()
     try:
@@ -126,8 +134,10 @@ def deliver(m, title, short, path, kicker, markdown_text=None, empty=False):
     note = (f"Files: {', '.join(chk['saved'])}" if chk["saved"] else "") + \
            (f"{' · ' if chk['saved'] else ''}Not delivered: {', '.join(chk['missing'])}" if chk["missing"] else "")
     if "telegram" in d:
-        ok = telegram(f"<b>{html.escape(title)}</b>\n<i>{html.escape(kicker)}</i>\n\n{html.escape(short)}"
-                      + (f"\n\n{html.escape(note)}" if note else ""), links(m["slug"], path))
+        said = telegram_said(f"<b>{html.escape(title)}</b>\n<i>{html.escape(kicker)}</i>\n\n{html.escape(short)}"
+                             + (f"\n\n{html.escape(note)}" if note else ""), links(m["slug"], path))
+        ok = said == "sent"
+        outcome["telegram"] = {"ok": True if ok else False if said == "failed" else None, "said": said}
         if chk["attach"]:                              # the files follow the message only when it went out now
             done = [n for n, data, mime in chk["attach"] if ok and N.telegram_document(n, data, m["title"], mime)]
             M.FL.record_delivery(m["slug"], done, "telegram", True)
@@ -138,6 +148,7 @@ def deliver(m, title, short, path, kicker, markdown_text=None, empty=False):
             + (f"\n\n**Not delivered:** {', '.join(chk['missing'])} (asked for, not saved by the run)" if chk["missing"] else "")
         ok = email(f"{m['title']}: {title}", text, kicker, f"{APP}/#/read?path={urllib.parse.quote(path)}&m={m['slug']}",
                    **({"files": chk["attach"]} if chk["attach"] else {}))
+        outcome["email"] = {"ok": ok, "subject": f"{m['title']}: {title}"}
         M.FL.record_delivery(m["slug"], [n for n, _, _ in chk["attach"]], "email", ok)
     return True
 

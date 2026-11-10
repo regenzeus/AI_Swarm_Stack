@@ -46,6 +46,7 @@ def runner(tmp_path, monkeypatch):
     monkeypatch.setattr(M, "reindex", lambda *a, **k: None)
     monkeypatch.setattr(M, "notify", lambda *a, **k: None)
     monkeypatch.setattr(X, "telegram", lambda *a, **k: True)
+    monkeypatch.setattr(X, "telegram_said", lambda *a, **k: "sent")   # what deliver() asks (TSK-50)
     return M
 
 

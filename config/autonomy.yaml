@@ -17,10 +17,12 @@ classes:
   coding:          {title: Code,               level: 0, highest: 0, exam: null, floor: security, what: "deploy a change outside the low-risk rule"}
   phone-routine:   {title: Phone routine,      level: 0, highest: 1, exam: phone-routine,   what: "the listed routines: storage cleanup steps, app updates, reading a screen"}
   phone:           {title: The AI phone,       level: 0, highest: 0, exam: null, floor: people, what: "anything on the phone outside the routines"}
+  mail-sort:       {title: Sorting out mail,   level: 0, highest: 0, exam: null,            what: "which senders' mail goes under the label for mail you could delete (undoable; nothing deleted)"}
   delete:          {title: Deleting,           level: 0, highest: 0, exam: null, floor: irreversible, what: "delete data that has no undo (Gmail Trash)"}
   access:          {title: Access,             level: 0, highest: 0, exam: null, floor: security, what: "grant an agent access to an account"}
   agent-change:    {title: Agent change,       level: 0, highest: 1, exam: replay,          what: "take an agent change whose experiment passed"}
   ideas:           {title: Ideas,              level: 0, highest: 1, exam: null,            what: "turn an agent's idea into a task"}
+  tax:             {title: Your taxes,         level: 0, highest: 0, exam: null,            what: "what only the owner knows for the tax desk's draft", words: true}
   agent-request:   {title: An agent asks,      level: 0, highest: 0, exam: null,            what: "what an agent asks of the owner", words: true}
   owner-confirm:   {title: "Does it work?",    level: 0, highest: 0, exam: null,            what: "say whether a shipped idea works, when the owner's word is its check"}
   tracker-comment: {title: Tracker comments,   level: 0, highest: 1, exam: null,            what: "a comment on a tracker item, in shadow until its measure is met"}

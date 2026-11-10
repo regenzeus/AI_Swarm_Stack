@@ -22,8 +22,12 @@ agents of its own:
   inbox            daily, under the owner's Gmail read grant: newsletters worth keeping -> vault raw/_inbox (ops/inbox.py)
 
   postmaster       hourly: the stack's own mail under its label, and the mail copy on the NAS (ops/postmaster.py)
+  mail-sort        weekly, and at once after the owner's tap: the approved senders' worthless bulk mail under its label,
+                   out of the inbox, with the per-mail guards; the proposal on Your mail (ops/mailsort.py)
+  tax-find         the tax desk's first step: candidates from the mail copy's headers, their text from the NAS (ops/tax.py)
+  tax-file         the tax desk's last step: copies into Steuern, Belege, workbooks and questions (ops/tax.py)
 
-  python3 ops/crew.py maintainability|tests|memory|doctor|phone-cleanup|phone-check|inbox|postmaster|checker      (the crew-*.service units)
+  python3 ops/crew.py maintainability|tests|memory|doctor|phone-cleanup|phone-check|inbox|postmaster|mail-sort|checker|tax-find|tax-file      (the crew-*.service units)
 Each agent writes /srv/ai/missions/crew/<id>.json (last run, duration, result, findings) for the app.
 """
 import datetime as dt
@@ -77,6 +81,12 @@ CREW = [
      "what": "Daily, while you grant Gmail read: files the newsletters and updates worth keeping into your vault (the curator makes wiki pages). Never archives or deletes mail."},
     {"id": "postmaster", "name": "Postmaster", "unit": "crew-postmaster", "area": "memory", "agent": True,
      "what": "Hourly: files the stack's own mail under the AI Stack label, and watches the copy of your Gmail on the NAS. Reads no message text, removes nothing."},
+    {"id": "mail-sort", "name": "Mail sorter", "unit": "crew-mail-sort", "area": "memory", "agent": True,
+     "what": "Weekly, and at once after your tap on Your mail: proposes the senders whose mail you could delete, from the headers alone, and sorts out the mail of the senders you approved under one label, out of the inbox. Starred, important, labelled, with attachments, in a thread you wrote in, younger than 30 days, bank and security mail stays. Nothing is deleted; every batch has an Undo."},
+    {"id": "tax-find", "name": "Tax desk: find papers", "unit": "crew-tax-find", "area": "memory", "agent": True,
+     "what": "Monthly while a tax year is open, and on Run now: finds the tax papers in the copy of your mail by their headers and takes their text from the NAS for the tax desk's reader. No model; changes no mail."},
+    {"id": "tax-file", "name": "Tax desk: file and prepare", "unit": "crew-tax-file", "area": "memory", "agent": True,
+     "what": "After the reader: copies each tax paper into Steuern on the NAS by year and form, keeps Belege and a draft workbook per year, and asks you what only you know. No model; never submits anything."},
     {"id": "coach", "name": "Coach", "unit": "crew-coach", "area": "ops", "agent": True,
      "what": "Monthly: reads every agent's scorecard and turns a real problem (many declined ideas, duplicates, refused writes) into an agent change with its evidence and a target score. Each change is replayed on the agent's past runs first; you tap Build it only after it passed."},
     {"id": "journeys", "name": "Journey checks", "unit": "crew-journeys", "area": "ops", "agent": True,
@@ -1192,16 +1202,21 @@ def run(name):
     import inbox as INB
     import postmaster as PM
     import phone_agents as PA
+    import tax as TX
     D.C, D.M = sys.modules[__name__], M
     PA.C, PA.M = INB.C, INB.M = sys.modules[__name__], M
     PM.C, PM.M = sys.modules[__name__], M
+    import mailsort as MSORT
+    MSORT.C, MSORT.M = sys.modules[__name__], M
+    TX.C, TX.M = sys.modules[__name__], M
     import checker as CK
     CK.M = M
     import coach as COACH
     import editor as ED
     ED.C, ED.M = sys.modules[__name__], M
     fn = {"maintainability": maintainability, "tests": tests, "memory": memory, "doctor": D.doctor, "editor": ED.run,
-          "phone-cleanup": PA.cleanup, "phone-check": PA.check, "inbox": INB.digest, "postmaster": PM.run, "checker": CK.run, "coach": COACH.run, "journeys": journeys}[name]
+          "phone-cleanup": PA.cleanup, "phone-check": PA.check, "inbox": INB.digest, "postmaster": PM.run, "mail-sort": MSORT.run, "checker": CK.run, "coach": COACH.run, "journeys": journeys,
+          "tax-find": TX.find, "tax-file": TX.file}[name]
     import registry as REG
     import swarm_client as SW
     if SW.paused(name):                                   # SWM-26: the owner paused this agent (or all) in the app

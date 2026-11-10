@@ -30,6 +30,7 @@ drop-ins; `ops/deploy.py` remove_units).
 | `skills-sync` | mirrors Hermes' skills into git |
 | `curate` | the weekly learning run |
 | `crew-*` | the crew's own jobs (`ops/crew.py`: the Checker, the Coach, the Editor, the Health doctor, ...) |
+| `crew-tax-find`, `crew-tax-file` | the tax desk's steps without a model, before and after its reader (`ops/tax.py`, TAX-01, TAX-03) |
 | `swarm-sync` | the app's view of the Ledger and its events on the activity feed (`ops/swarm_client.py feed`) |
 | `graphify-sync` | refreshes code graphs |
 | `repofacts-sync` | refreshes the facts of repositories whose HEAD moved, one at a time (`ops/repofacts.py`) |

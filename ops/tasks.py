@@ -794,6 +794,21 @@ def alerts_to_tasks(c, missions):
     return moved
 
 
+def research_titles(c):
+    """TSK-49: a briefing planned before 10 Nov 2026 named its research "the last 8 days", a span its runs never kept;
+    its plan names the run's window now, as a new one does (each step's prompt has the dates). -> [task ids]."""
+    import desk_steps as DS
+    old = lambda p: p.get("agent") == "scout" and p.get("each") and str(p.get("step", "")).startswith("Research the last")   # noqa: E731
+    out = []
+    for r in c.execute("select id from tasks where kind='briefing' and door='plan'").fetchall():
+        t = row(c, r["id"])
+        plan = t["spec"].get("plan") or []
+        if any(old(p) for p in plan):
+            put(c, t["id"], spec={**t["spec"], "plan": [{**p, "step": DS.RESEARCH} if old(p) else p for p in plan]})
+            out.append(t["id"])
+    return out
+
+
 def handle(req, c):
     table(c)
     a = req["action"]

@@ -33,6 +33,7 @@ KEYS=(
   "vk-journal|gpt-sub-fast|0.05|"              # agent journals: entries and the curator's folds (ops/journal.py)
   "vk-wikis|gpt-sub-fast|0.02|"                # wiki summaries for the Wiki tab (ops/wikis.py)
   "vk-eval|gpt-sub,gpt-sub-fast|0.05|"         # agent-change experiments: replays of past runs, no tools (ops/evals.py, SWM-18)
+  "vk-tax|gpt-sub|0.05|"                       # the tax desk's reader: Hermes profile tax, ChatGPT only, no tools (ops/tax.py, TAX-02)
   "vk-smoke|smoke|0.001|"
 )
 

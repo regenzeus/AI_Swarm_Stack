@@ -29,3 +29,5 @@ workflows:
   - crew-upgrade-check
   - crew-vault-ingest
   - task-*
+  - crew-mail-sorter
+  - tax-desk

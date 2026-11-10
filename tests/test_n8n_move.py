@@ -228,7 +228,10 @@ def test_nothing_but_n8n_and_the_kept_timers_starts_work_on_a_schedule():
     assert not hasattr(MM, "check_schedules") and not hasattr(MM, "next_due") and "schedule" not in EV.SOURCES
     idx = NJ.index(ROOT / "n8n/workflows", ROOT / "no-such-folder")
     timed = {a["id"] for a in CR.CREW if a.get("unit") and not a.get("oneoff")} - {"backup", "restore-drill"}
-    assert {key for kind, key in idx if kind == "crew"} == timed
+    later = {n["parameters"]["job"] for p in (ROOT / "n8n/workflows").glob("*.json") for n in json.loads(p.read_text())["nodes"]
+             if n["parameters"].get("kind") == "crew"} - {key for kind, key in idx if kind == "crew"}
+    assert later == {"tax-file"}                     # TAX-08: a crew job that runs as a later step of the tax desk's workflow
+    assert {key for kind, key in idx if kind == "crew"} | later == timed
     assert all((ROOT / "ops/systemd" / f"{CR.BY_ID[j]['unit']}.service").exists() for j in timed)   # the step service starts each unit
     assert not any("timer" in (w.get("notes") or "") for p in (ROOT / "n8n/workflows").glob("*.json") for w in json.loads(p.read_text())["nodes"])
 

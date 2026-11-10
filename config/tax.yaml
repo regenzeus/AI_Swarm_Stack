@@ -1,0 +1,60 @@
+# config/tax.yaml: the tax desk's generic rules (TAX-01 to TAX-08, ops/tax.py, docs/TAX-DESK.md).
+# Which years it prepares and which earlier returns are its base, which mails it looks at (by their headers only), and
+# the forms its folders are named after. Generic words only: nothing here names the owner's employer, places or
+# providers (SEC-22). The owner's own additions (senders and words to keep or to ignore) live in /srv/ai/tax/rules.yaml,
+# which is in no repository:
+#   keep: [<regex>, ...]     a mail whose sender, address or subject matches is a candidate
+#   ignore: [<regex>, ...]   a mail that matches is never one (ignore wins)
+
+years:
+  prepare: [2025, 2026]        # the returns the desk prepares; a year is open until the end of the next year
+  prior: [2023, 2024]          # the owner's own earlier returns (Steuern/<year>/), read as the base; never summed
+# Mail from this day on is looked at: a year's papers come from three months before it (premium notices for the next
+# year) to the end of the year after it (annual certificates arrive January to May).
+window_from: "2024-10-01"
+
+# The forms, by the key the reader answers with, and the folder each one's copies go to (Steuern/<year>/<folder>/).
+forms:
+  mantel: {name: Mantelbogen, folder: Mantelbogen}
+  n: {name: Anlage N (Arbeitnehmer), folder: Anlage-N}
+  vorsorge: {name: Anlage Vorsorgeaufwand, folder: Vorsorgeaufwand}
+  sonder: {name: Sonderausgaben (Spenden, Kirchensteuer), folder: Sonderausgaben}
+  kap: {name: Anlage KAP (Kapitalerträge), folder: Anlage-KAP}
+  haushalt: {name: Haushaltsnahe Aufwendungen und Handwerker (§ 35a), folder: Haushaltsnahe-Aufwendungen}
+  agb: {name: Außergewöhnliche Belastungen, folder: Aussergewoehnliche-Belastungen}
+  kind: {name: Anlage Kind, folder: Anlage-Kind}
+  sonstige: {name: Sonstiges, folder: Sonstiges}
+
+# A word in the subject or the sender's name makes a mail a candidate for its form (regular expressions, any case).
+words:
+  n: ['lohnsteuerbescheinigung', 'entgelt-?abrechnung', 'gehalts-?abrechnung', 'lohn-?abrechnung', 'verdienst-?abrechnung',
+      'payslip', 'payroll', 'salary statement', 'fortbildung', 'weiterbildung', 'seminar', 'fachliteratur', 'fachbuch', 'bewerbung',
+      'umzug', 'gewerkschaft', 'arbeitsmittel', 'berufsverband', 'jobticket', 'deutschlandticket']
+  vorsorge: ['beitragsbescheinigung', 'krankenversicherung', 'krankenkasse', 'pflegeversicherung', 'rentenversicherung',
+             'haftpflicht', 'berufsunf', 'unfallversicherung', 'riester', 'r(ü|ue)rup', 'basisrente', 'risikolebensversicherung',
+             'beitragsrechnung', 'versicherungsschein']
+  sonder: ['zuwendungsbest(ä|ae)tigung', 'spendenbest(ä|ae)tigung', 'spendenquittung', 'spende', 'kirchensteuer', 'kirchgeld']
+  kap: ['jahressteuerbescheinigung', 'steuerbescheinigung', 'kapitalertr', 'ertragsaufstellung', 'verlustbescheinigung',
+        'freistellungsauftrag', 'jahresdepotauszug', 'ertr(ä|ae)gnisaufstellung']
+  haushalt: ['handwerker', 'nebenkostenabrechnung', 'betriebskostenabrechnung', 'haushaltsnah', 'hausmeister', 'schornsteinfeger',
+             'gartenpflege', 'treppenhausreinigung', 'wartung']
+  agb: ['arztrechnung', 'zahnarzt', 'apotheke', 'brille', 'kontaktlinse', 'heilpraktiker', 'physiotherap', 'krankengymnastik',
+        'krankenhaus', 'h(ö|oe)rger(ä|ae)t', 'zuzahlung', 'privatrechnung', 'liquidation']
+  kind: ['kinderbetreuung', 'kita', 'kindergarten', 'tagesmutter', 'schulgeld', 'kindergeld', 'hortgeb(ü|ue)hr']
+  mantel: ['finanzamt', 'elster', 'steuerbescheid', 'einkommensteuer', 'steuerberat', 'lohnsteuerhilfe']
+# With an attachment only: a receipt or an invoice may be work equipment or a household cost; the reader decides.
+receipts: ['rechnung', 'invoice', 'receipt', 'quittung', 'beleg', 'kaufbest(ä|ae)tigung']
+
+# A sender of this class who sends an attachment makes the mail a candidate (sender name or address).
+senders:
+  n: ['payroll', 'lohnb(ü|ue)ro', 'gehalt', 'personalabteilung', '\bhr\b', 'entgelt']
+  kap: ['\bbank\b', 'sparkasse', 'volksbank', 'raiffeisen', 'broker', 'depot', 'wertpapier', 'invest']
+  vorsorge: ['versicherung', 'insurance', 'krankenkasse', '\bbkk\b', '\bikk\b', 'pensionskasse', 'versorgungswerk']
+  haushalt: ['hausverwaltung', 'immobilien', 'vermietung', 'wohnungsbau', 'wohnungsgenossenschaft', 'handwerk', 'sanit(ä|ae)r',
+             'elektro', 'heizung', 'malerbetrieb', 'dachdeck', 'schornstein']
+  agb: ['praxis', '\barzt\b', 'zahnarzt', 'klinik', 'apotheke', 'labor', 'optik', 'physio']
+  mantel: ['finanzamt', 'elster']
+
+# Gmail's tabs a candidate rarely comes from: a mail there counts only with one of the strong words below.
+skip_categories: [promotions, social, forums]
+strong: ['bescheinigung', 'steuer', 'finanzamt', 'elster', 'zuwendung']

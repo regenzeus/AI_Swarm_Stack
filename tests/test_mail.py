@@ -125,7 +125,7 @@ def test_trash_asks_first_keeps_bank_mail_and_can_be_undone(mail):
 
 def test_mail_tools_cannot_send(mail):
     tools = {t.name for t in asyncio.run(mail.mcp.list_tools())}
-    assert tools == {"mail_access", "mail_search", "mail_read", "mail_label", "mail_archive", "mail_mark", "mail_trash", "mail_untrash"}
+    assert tools == {"mail_access", "mail_search", "mail_read", "mail_label", "mail_archive", "mail_mark", "mail_sort_out", "mail_sort_back", "mail_trash", "mail_untrash"}
 
 
 def test_a_card_left_by_a_restart_is_dropped_with_its_late_answer_and_a_waited_card_stays(mail):

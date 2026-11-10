@@ -245,7 +245,27 @@ def _flows(st):
                  answers=[{"label": a, "act": {"action": "flow_answer", "id": q["id"], "answer": a}} for a in q["answers"]])
 
 
-SOURCES = (_builds, _purchases, _phone_steps, _memory, _tasks, _swarm, _keeper, _memory_move, _house, _test_item, _packs, _trackers, _commands, _flows)
+def _mail_sort(st):
+    """CNX-11: senders whose mail could be deleted, new since the owner last chose, wait for a look on Your mail; nothing
+    moves before the owner's tap there."""
+    import mailsort as MSORT
+    new = MSORT.pending()
+    if new:
+        n, mails, inbox = len(new), sum(s.get("movable") or 0 for s in new), sum(s.get("inbox") or 0 for s in new)
+        yield _d("mail-sort", "mail-sort", f"{n} sender{'s' if n != 1 else ''} send mail you could delete: sort it out?",
+                 f"{mails:,} mails, {inbox:,} of them in the inbox, from the headers alone. You choose per sender; nothing moves before your tap, and nothing is deleted.",
+                 "#/mail", unanswered="the mail stays where it is", answers=[{"label": "Look and choose", "href": "#/mail"}])
+
+
+def _tax(st):
+    """The tax desk's open questions (TAX-07): what only the owner knows for a year's draft, a paper it could not sort, an
+    expected paper that never came. Buttons, or a typed number; the text names no amount and no paper's content."""
+    import tax as TX
+    yield from TX.decisions(_d)
+
+
+SOURCES = (_builds, _purchases, _phone_steps, _memory, _tasks, _swarm, _keeper, _memory_move, _house, _test_item, _packs, _trackers, _commands, _flows,
+           _mail_sort, _tax)
 
 
 def rank(items, now=None):

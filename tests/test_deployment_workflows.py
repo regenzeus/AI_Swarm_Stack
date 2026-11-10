@@ -24,11 +24,13 @@ def chosen(name):
 
 
 def test_home_runs_every_workflow_it_ran_before_the_list():
-    """Home ran every file of n8n/workflows/ (all published: 28 jobs, the self-test, the inbox's item workflow and the
-    tracker poller); its list and its tracker select exactly those, so a deploy changes nothing at home."""
+    """Home ran every file of n8n/workflows/ (all published: 29 jobs with the mail sorter of 10 Nov 2026, the self-test, the
+    inbox's item workflow and the tracker poller); its list and its tracker select exactly those, so a deploy changes nothing
+    at home. The tax desk (TAX-08) joined on 10 Nov 2026, unpublished until its first live run."""
     every = sorted(p.name for p in REPO.glob("*.json"))
-    assert chosen("home") == every and len(every) == 31
-    assert all(json.loads((REPO / f).read_text())["active"] for f in every)
+    assert chosen("home") == every and len(every) == 33
+    assert all(json.loads((REPO / f).read_text())["active"] for f in every if f != "tax-desk.json")
+    assert json.loads((REPO / "tax-desk.json").read_text())["active"] is False
     names = DEPLOY.workflow_names(ROOT / "deployments/home")
     assert "crew-tracker-poll" in names and "item-home-inbox" in names          # from trackers.yaml, not listed
     assert DEPLOY.workflow_problems(ROOT / "deployments/home") == []
@@ -92,7 +94,7 @@ def test_the_app_and_the_runner_see_only_the_deployments_workflows(tmp_path, mon
     ids = {w["file"] for w in NJ.workflows(NJ.REPO, tmp_path).values()}
     assert ids == {"stack-self-test.json", "crew-tracker-poll.json"}
     assert set(FW.catalog(made=tmp_path)["jobs"]) == {"crew:tracker-poll"}
-    assert len(NJ.workflows(NJ.REPO, tmp_path, ["*"])) == 31                  # every file, for the import's unpublishing
+    assert len(NJ.workflows(NJ.REPO, tmp_path, ["*"])) == 33                  # every file, for the import's unpublishing
 
 
 def test_a_switch_publishes_only_a_workflow_the_deployment_runs(monkeypatch):

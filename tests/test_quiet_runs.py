@@ -25,7 +25,7 @@ def test_a_briefing_with_no_news_chosen_is_empty_and_prices_alone_do_not_count(r
 def test_an_empty_run_is_not_sent_and_the_next_full_one_names_its_day(runner, monkeypatch):
     import mission_extras as X
     sent = []
-    monkeypatch.setattr(X, "telegram", lambda text, buttons=(): sent.append(("telegram", text)) or True)
+    monkeypatch.setattr(X, "telegram_said", lambda text, buttons=(): sent.append(("telegram", text)) or "sent")
     monkeypatch.setattr(X, "email", lambda subject, md, kicker, url: sent.append(("email", kicker)))
     m = {"slug": "job-report", "title": "Job report", "deliver": ["app", "telegram", "email"]}
     assert X.deliver(m, "No vacancies", "short", "topics/job-report/2026-10-30.md", "Daily briefing · 30 Oct 2026", EMPTY, empty=True) is False

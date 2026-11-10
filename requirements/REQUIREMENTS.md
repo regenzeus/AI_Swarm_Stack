@@ -13,7 +13,7 @@ Method, statuses and rules: [README.md](README.md). Names of the parts: [glossar
 | [Autonomy](#aut-autonomy) (AUT) | 8 | 2 | 2 | 0 | 0 | 4 | 0 |
 | [Builder](#bld-builder) (BLD) | 39 | 38 | 0 | 0 | 0 | 1 | 0 |
 | [Change requests](#chg-change-requests) (CHG) | 20 | 18 | 2 | 0 | 0 | 0 | 0 |
-| [Connections](#cnx-connections) (CNX) | 9 | 9 | 0 | 0 | 0 | 0 | 0 |
+| [Connections](#cnx-connections) (CNX) | 13 | 13 | 0 | 0 | 0 | 0 | 0 |
 | [Constraints](#cst-constraints) (CST) | 15 | 11 | 2 | 1 | 0 | 1 | 0 |
 | [Crew](#crw-crew) (CRW) | 13 | 11 | 0 | 0 | 0 | 0 | 2 |
 | [Gateway](#gw-gateway) (GW) | 9 | 8 | 0 | 0 | 0 | 1 | 0 |
@@ -30,13 +30,14 @@ Method, statuses and rules: [README.md](README.md). Names of the parts: [glossar
 | [Security](#sec-security) (SEC) | 22 | 20 | 2 | 0 | 0 | 0 | 0 |
 | [Shopping](#shp-shopping) (SHP) | 13 | 12 | 0 | 0 | 0 | 1 | 0 |
 | [Agent swarm](#swm-agent-swarm) (SWM) | 115 | 103 | 8 | 0 | 2 | 0 | 2 |
-| [Task engine](#tsk-task-engine) (TSK) | 45 | 39 | 6 | 0 | 0 | 0 | 0 |
+| [Task engine](#tsk-task-engine) (TSK) | 47 | 41 | 6 | 0 | 0 | 0 | 0 |
+| [Tax desk](#tax-tax-desk) (TAX) | 8 | 8 | 0 | 0 | 0 | 0 | 0 |
 | [Trials](#trl-trials) (TRL) | 17 | 13 | 2 | 0 | 0 | 2 | 0 |
 | [Voice](#voi-voice) (VOI) | 9 | 8 | 0 | 0 | 0 | 1 | 0 |
 | [Workflows](#wfl-workflows) (WFL) | 34 | 31 | 3 | 0 | 0 | 0 | 0 |
-| **All** | **717** | **629** | **47** | **1** | **4** | **17** | **19** |
+| **All** | **731** | **643** | **47** | **1** | **4** | **17** | **19** |
 
-Unit tests claimed by a requirement: 1501 of 1501.
+Unit tests claimed by a requirement: 1541 of 1541.
 
 ## Findings
 
@@ -1536,13 +1537,13 @@ The trial's build #11 appeared on the Tasks board as task #89 (source door) besi
 | <a id="sn-02"></a>**SN-02** Out of the loop except for real decisions: the owner is asked only for decisions that are really his (approvals of spending, deploys, deletions, settings, grants), each one tap away with enough context to decide; no scripts to run, no busywork, nothing shown as needing him that does not. | must | [APP-04](#app-04), [APP-05](#app-05), [APP-06](#app-06), [APP-07](#app-07), [APP-13](#app-13), [APP-14](#app-14), [APP-21](#app-21), [APP-25](#app-25), [APP-26](#app-26), [APP-30](#app-30), [APP-31](#app-31), [APP-54](#app-54), [APP-68](#app-68), [AST-06](#ast-06), [AST-12](#ast-12), [AUT-01](#aut-01), [AUT-02](#aut-02), [AUT-05](#aut-05), [AUT-07](#aut-07), [AUT-08](#aut-08), [CHG-02](#chg-02), [CHG-03](#chg-03), [CNX-02](#cnx-02), [CRW-02](#crw-02), [CRW-05](#crw-05), [CRW-06](#crw-06), [CST-03](#cst-03), [MEM-42](#mem-42), [MIS-07](#mis-07), [MIS-20](#mis-20), [PHN-02](#phn-02), [PHN-11](#phn-11), [PHN-12](#phn-12), [PHN-18](#phn-18), [PHN-20](#phn-20), [PHN-21](#phn-21), [PHN-22](#phn-22), [PHN-24](#phn-24), [PHN-25](#phn-25), [PHN-26](#phn-26), [SHP-01](#shp-01), [SHP-03](#shp-03), [SHP-08](#shp-08), [SWM-05](#swm-05), [SWM-06](#swm-06), [SWM-08](#swm-08), [SWM-33](#swm-33), [SWM-38](#swm-38), [SWM-39](#swm-39), [SWM-40](#swm-40), [SWM-42](#swm-42), [SWM-43](#swm-43), [SWM-44](#swm-44), [SWM-54](#swm-54), [SWM-55](#swm-55), [SWM-61](#swm-61), [SWM-87](#swm-87), [TRL-15](#trl-15), [TSK-03](#tsk-03), [TSK-20](#tsk-20), [TSK-40](#tsk-40), [VOI-08](#voi-08) |
 | <a id="sn-03"></a>**SN-03** Costs nothing to run: Running the stack costs $0 beyond the subscriptions the owner already pays; nothing can spend money by accident. | must | [APP-40](#app-40), [APP-41](#app-41), [APP-42](#app-42), [APP-43](#app-43), [APP-44](#app-44), [APP-45](#app-45), [AST-02](#ast-02), [AST-08](#ast-08), [BLD-06](#bld-06), [CST-02](#cst-02), [CST-15](#cst-15), [GW-02](#gw-02), [GW-04](#gw-04), [GW-09](#gw-09), [MEM-26](#mem-26), [MEM-44](#mem-44), [MIS-04](#mis-04), [MIS-16](#mis-16), [PHN-27](#phn-27), [PLT-11](#plt-11), [PLT-26](#plt-26), [PLT-27](#plt-27), [RES-07](#res-07), [SHP-05](#shp-05), [SWM-13](#swm-13), [SWM-14](#swm-14), [SWM-29](#swm-29), [SWM-40](#swm-40), [SWM-53](#swm-53), [SWM-60](#swm-60), [SWM-62](#swm-62), [SWM-81](#swm-81), [WFL-07](#wfl-07), [WFL-10](#wfl-10), [WFL-11](#wfl-11), [WFL-14](#wfl-14) |
 | <a id="sn-04"></a>**SN-04** Private data stays home: Notes, reports, memory, chats, mail and files stay on the PC and the NAS; only the model calls leave, and The owner knows which provider sees what. | must | [AUT-03](#aut-03), [CST-04](#cst-04), [CST-06](#cst-06), [GEN-14](#gen-14), [HSE-07](#hse-07), [KNW-05](#knw-05), [KNW-07](#knw-07), [MEM-06](#mem-06), [MEM-18](#mem-18), [MEM-30](#mem-30), [PHN-16](#phn-16), [PHN-19](#phn-19), [RES-01](#res-01), [SEC-03](#sec-03), [SEC-04](#sec-04), [SEC-06](#sec-06), [SEC-17](#sec-17), [SEC-18](#sec-18), [SEC-19](#sec-19), [SEC-22](#sec-22), [SWM-67](#swm-67), [WFL-15](#wfl-15), [WFL-16](#wfl-16), [WFL-17](#wfl-17), [WFL-18](#wfl-18) |
-| <a id="sn-05"></a>**SN-05** Agents cannot do damage: No agent can spend money, delete data for good, leak private data, change the NAS, the router or phone and PC security settings, or deploy code without the owner's approval; prompt injection from the web or mail cannot steer an agent into any of it. | must | [APP-10](#app-10), [APP-20](#app-20), [APP-61](#app-61), [AST-08](#ast-08), [AST-09](#ast-09), [AST-10](#ast-10), [AST-14](#ast-14), [AUT-01](#aut-01), [AUT-03](#aut-03), [BLD-02](#bld-02), [BLD-07](#bld-07), [BLD-10](#bld-10), [BLD-13](#bld-13), [BLD-16](#bld-16), [BLD-18](#bld-18), [BLD-27](#bld-27), [BLD-28](#bld-28), [BLD-39](#bld-39), [CHG-05](#chg-05), [CHG-12](#chg-12), [CHG-13](#chg-13), [CHG-15](#chg-15), [CNX-01](#cnx-01), [CNX-03](#cnx-03), [CNX-04](#cnx-04), [CNX-05](#cnx-05), [CNX-07](#cnx-07), [CNX-08](#cnx-08), [CNX-09](#cnx-09), [CRW-04](#crw-04), [CRW-10](#crw-10), [CRW-11](#crw-11), [CRW-13](#crw-13), [CST-04](#cst-04), [CST-05](#cst-05), [CST-06](#cst-06), [CST-07](#cst-07), [CST-10](#cst-10), [CST-11](#cst-11), [CST-12](#cst-12), [GEN-01](#gen-01), [GEN-02](#gen-02), [GEN-03](#gen-03), [GEN-04](#gen-04), [GEN-05](#gen-05), [GEN-06](#gen-06), [GEN-07](#gen-07), [GEN-08](#gen-08), [GEN-09](#gen-09), [GEN-10](#gen-10), [GEN-11](#gen-11), [GEN-12](#gen-12), [GEN-13](#gen-13), [GEN-14](#gen-14), [GEN-15](#gen-15), [GEN-16](#gen-16), [GEN-17](#gen-17), [GEN-18](#gen-18), [GEN-19](#gen-19), [GEN-20](#gen-20), [GEN-21](#gen-21), [GEN-22](#gen-22), [GEN-23](#gen-23), [GEN-24](#gen-24), [GEN-25](#gen-25), [GEN-26](#gen-26), [GEN-27](#gen-27), [GEN-28](#gen-28), [GEN-29](#gen-29), [GEN-30](#gen-30), [GEN-31](#gen-31), [GEN-32](#gen-32), [GEN-33](#gen-33), [GEN-34](#gen-34), [GEN-35](#gen-35), [GEN-36](#gen-36), [GEN-37](#gen-37), [GEN-38](#gen-38), [GEN-39](#gen-39), [GEN-40](#gen-40), [GEN-41](#gen-41), [GEN-42](#gen-42), [GEN-43](#gen-43), [GEN-44](#gen-44), [GEN-45](#gen-45), [GEN-46](#gen-46), [GW-05](#gw-05), [HSE-04](#hse-04), [HSE-05](#hse-05), [HSE-08](#hse-08), [HSE-09](#hse-09), [KNW-04](#knw-04), [KNW-06](#knw-06), [KNW-11](#knw-11), [MEM-04](#mem-04), [MEM-29](#mem-29), [MEM-30](#mem-30), [MEM-39](#mem-39), [MEM-49](#mem-49), [MIS-17](#mis-17), [MIS-28](#mis-28), [PHN-01](#phn-01), [PHN-03](#phn-03), [PHN-04](#phn-04), [PHN-05](#phn-05), [PHN-06](#phn-06), [PHN-07](#phn-07), [PHN-08](#phn-08), [PHN-15](#phn-15), [PLT-02](#plt-02), [PLT-03](#plt-03), [PLT-09](#plt-09), [PLT-39](#plt-39), [QA-23](#qa-23), [QA-24](#qa-24), [QA-25](#qa-25), [QA-26](#qa-26), [RES-01](#res-01), [RES-03](#res-03), [RES-04](#res-04), [RES-06](#res-06), [SEC-01](#sec-01), [SEC-02](#sec-02), [SEC-03](#sec-03), [SEC-04](#sec-04), [SEC-05](#sec-05), [SEC-06](#sec-06), [SEC-07](#sec-07), [SEC-08](#sec-08), [SEC-09](#sec-09), [SEC-10](#sec-10), [SEC-11](#sec-11), [SEC-12](#sec-12), [SEC-13](#sec-13), [SEC-14](#sec-14), [SEC-15](#sec-15), [SEC-16](#sec-16), [SEC-20](#sec-20), [SEC-21](#sec-21), [SEC-22](#sec-22), [SHP-05](#shp-05), [SHP-06](#shp-06), [SHP-07](#shp-07), [SHP-09](#shp-09), [SHP-10](#shp-10), [SWM-06](#swm-06), [SWM-109](#swm-109), [SWM-11](#swm-11), [SWM-15](#swm-15), [SWM-23](#swm-23), [SWM-24](#swm-24), [SWM-26](#swm-26), [SWM-42](#swm-42), [SWM-43](#swm-43), [SWM-46](#swm-46), [SWM-51](#swm-51), [SWM-58](#swm-58), [SWM-66](#swm-66), [SWM-67](#swm-67), [SWM-68](#swm-68), [SWM-69](#swm-69), [SWM-70](#swm-70), [SWM-77](#swm-77), [SWM-89](#swm-89), [TRL-05](#trl-05), [TSK-15](#tsk-15), [TSK-20](#tsk-20), [VOI-01](#voi-01), [VOI-03](#voi-03), [VOI-07](#voi-07), [WFL-01](#wfl-01), [WFL-02](#wfl-02), [WFL-05](#wfl-05), [WFL-06](#wfl-06), [WFL-08](#wfl-08), [WFL-09](#wfl-09), [WFL-12](#wfl-12), [WFL-13](#wfl-13), [WFL-15](#wfl-15), [WFL-17](#wfl-17), [WFL-19](#wfl-19), [WFL-20](#wfl-20), [WFL-21](#wfl-21), [WFL-22](#wfl-22), [WFL-23](#wfl-23), [WFL-24](#wfl-24), [WFL-25](#wfl-25), [WFL-26](#wfl-26), [WFL-27](#wfl-27), [WFL-28](#wfl-28), [WFL-29](#wfl-29), [WFL-30](#wfl-30), [WFL-31](#wfl-31), [WFL-32](#wfl-32), [WFL-33](#wfl-33), [WFL-34](#wfl-34) |
+| <a id="sn-05"></a>**SN-05** Agents cannot do damage: No agent can spend money, delete data for good, leak private data, change the NAS, the router or phone and PC security settings, or deploy code without the owner's approval; prompt injection from the web or mail cannot steer an agent into any of it. | must | [APP-10](#app-10), [APP-20](#app-20), [APP-61](#app-61), [AST-08](#ast-08), [AST-09](#ast-09), [AST-10](#ast-10), [AST-14](#ast-14), [AUT-01](#aut-01), [AUT-03](#aut-03), [BLD-02](#bld-02), [BLD-07](#bld-07), [BLD-10](#bld-10), [BLD-13](#bld-13), [BLD-16](#bld-16), [BLD-18](#bld-18), [BLD-27](#bld-27), [BLD-28](#bld-28), [BLD-39](#bld-39), [CHG-05](#chg-05), [CHG-12](#chg-12), [CHG-13](#chg-13), [CHG-15](#chg-15), [CNX-01](#cnx-01), [CNX-03](#cnx-03), [CNX-04](#cnx-04), [CNX-05](#cnx-05), [CNX-07](#cnx-07), [CNX-08](#cnx-08), [CNX-09](#cnx-09), [CNX-10](#cnx-10), [CNX-11](#cnx-11), [CNX-12](#cnx-12), [CNX-13](#cnx-13), [CRW-04](#crw-04), [CRW-10](#crw-10), [CRW-11](#crw-11), [CRW-13](#crw-13), [CST-04](#cst-04), [CST-05](#cst-05), [CST-06](#cst-06), [CST-07](#cst-07), [CST-10](#cst-10), [CST-11](#cst-11), [CST-12](#cst-12), [GEN-01](#gen-01), [GEN-02](#gen-02), [GEN-03](#gen-03), [GEN-04](#gen-04), [GEN-05](#gen-05), [GEN-06](#gen-06), [GEN-07](#gen-07), [GEN-08](#gen-08), [GEN-09](#gen-09), [GEN-10](#gen-10), [GEN-11](#gen-11), [GEN-12](#gen-12), [GEN-13](#gen-13), [GEN-14](#gen-14), [GEN-15](#gen-15), [GEN-16](#gen-16), [GEN-17](#gen-17), [GEN-18](#gen-18), [GEN-19](#gen-19), [GEN-20](#gen-20), [GEN-21](#gen-21), [GEN-22](#gen-22), [GEN-23](#gen-23), [GEN-24](#gen-24), [GEN-25](#gen-25), [GEN-26](#gen-26), [GEN-27](#gen-27), [GEN-28](#gen-28), [GEN-29](#gen-29), [GEN-30](#gen-30), [GEN-31](#gen-31), [GEN-32](#gen-32), [GEN-33](#gen-33), [GEN-34](#gen-34), [GEN-35](#gen-35), [GEN-36](#gen-36), [GEN-37](#gen-37), [GEN-38](#gen-38), [GEN-39](#gen-39), [GEN-40](#gen-40), [GEN-41](#gen-41), [GEN-42](#gen-42), [GEN-43](#gen-43), [GEN-44](#gen-44), [GEN-45](#gen-45), [GEN-46](#gen-46), [GW-05](#gw-05), [HSE-04](#hse-04), [HSE-05](#hse-05), [HSE-08](#hse-08), [HSE-09](#hse-09), [KNW-04](#knw-04), [KNW-06](#knw-06), [KNW-11](#knw-11), [MEM-04](#mem-04), [MEM-29](#mem-29), [MEM-30](#mem-30), [MEM-39](#mem-39), [MEM-49](#mem-49), [MIS-17](#mis-17), [MIS-28](#mis-28), [PHN-01](#phn-01), [PHN-03](#phn-03), [PHN-04](#phn-04), [PHN-05](#phn-05), [PHN-06](#phn-06), [PHN-07](#phn-07), [PHN-08](#phn-08), [PHN-15](#phn-15), [PLT-02](#plt-02), [PLT-03](#plt-03), [PLT-09](#plt-09), [PLT-39](#plt-39), [QA-23](#qa-23), [QA-24](#qa-24), [QA-25](#qa-25), [QA-26](#qa-26), [RES-01](#res-01), [RES-03](#res-03), [RES-04](#res-04), [RES-06](#res-06), [SEC-01](#sec-01), [SEC-02](#sec-02), [SEC-03](#sec-03), [SEC-04](#sec-04), [SEC-05](#sec-05), [SEC-06](#sec-06), [SEC-07](#sec-07), [SEC-08](#sec-08), [SEC-09](#sec-09), [SEC-10](#sec-10), [SEC-11](#sec-11), [SEC-12](#sec-12), [SEC-13](#sec-13), [SEC-14](#sec-14), [SEC-15](#sec-15), [SEC-16](#sec-16), [SEC-20](#sec-20), [SEC-21](#sec-21), [SEC-22](#sec-22), [SHP-05](#shp-05), [SHP-06](#shp-06), [SHP-07](#shp-07), [SHP-09](#shp-09), [SHP-10](#shp-10), [SWM-06](#swm-06), [SWM-109](#swm-109), [SWM-11](#swm-11), [SWM-15](#swm-15), [SWM-23](#swm-23), [SWM-24](#swm-24), [SWM-26](#swm-26), [SWM-42](#swm-42), [SWM-43](#swm-43), [SWM-46](#swm-46), [SWM-51](#swm-51), [SWM-58](#swm-58), [SWM-66](#swm-66), [SWM-67](#swm-67), [SWM-68](#swm-68), [SWM-69](#swm-69), [SWM-70](#swm-70), [SWM-77](#swm-77), [SWM-89](#swm-89), [TAX-01](#tax-01), [TAX-02](#tax-02), [TAX-03](#tax-03), [TAX-04](#tax-04), [TAX-05](#tax-05), [TAX-06](#tax-06), [TAX-07](#tax-07), [TRL-05](#trl-05), [TSK-15](#tsk-15), [TSK-20](#tsk-20), [VOI-01](#voi-01), [VOI-03](#voi-03), [VOI-07](#voi-07), [WFL-01](#wfl-01), [WFL-02](#wfl-02), [WFL-05](#wfl-05), [WFL-06](#wfl-06), [WFL-08](#wfl-08), [WFL-09](#wfl-09), [WFL-12](#wfl-12), [WFL-13](#wfl-13), [WFL-15](#wfl-15), [WFL-17](#wfl-17), [WFL-19](#wfl-19), [WFL-20](#wfl-20), [WFL-21](#wfl-21), [WFL-22](#wfl-22), [WFL-23](#wfl-23), [WFL-24](#wfl-24), [WFL-25](#wfl-25), [WFL-26](#wfl-26), [WFL-27](#wfl-27), [WFL-28](#wfl-28), [WFL-29](#wfl-29), [WFL-30](#wfl-30), [WFL-31](#wfl-31), [WFL-32](#wfl-32), [WFL-33](#wfl-33), [WFL-34](#wfl-34) |
 | <a id="sn-06"></a>**SN-06** Usable from the phone, anywhere, one sign-in: Everything is usable and decidable from the owner's phone (installable app, push, Telegram), from anywhere on his tailnet, with his Tailscale login as the only sign-in. | must | [APP-01](#app-01), [APP-02](#app-02), [APP-03](#app-03), [APP-04](#app-04), [APP-08](#app-08), [APP-09](#app-09), [APP-15](#app-15), [APP-17](#app-17), [APP-19](#app-19), [APP-20](#app-20), [APP-37](#app-37), [APP-38](#app-38), [APP-39](#app-39), [APP-62](#app-62), [APP-64](#app-64), [APP-65](#app-65), [APP-66](#app-66), [AST-01](#ast-01), [AST-03](#ast-03), [AUT-05](#aut-05), [AUT-06](#aut-06), [MIS-15](#mis-15), [MIS-23](#mis-23), [QA-16](#qa-16), [QA-21](#qa-21), [QA-22](#qa-22), [SEC-01](#sec-01), [SEC-02](#sec-02), [SEC-20](#sec-20), [SWM-11](#swm-11), [SWM-57](#swm-57), [SWM-93](#swm-93), [SWM-95](#swm-95), [TSK-02](#tsk-02), [VOI-09](#voi-09) |
-| <a id="sn-07"></a>**SN-07** See what every agent does: For every agent, mission, crew job, build and tool the owner can see what it did step by step, what it read and changed, what it produced, what it cost and when something went wrong, without having to look for it. | must | [APP-07](#app-07), [APP-11](#app-11), [APP-12](#app-12), [APP-16](#app-16), [APP-19](#app-19), [APP-22](#app-22), [APP-23](#app-23), [APP-24](#app-24), [APP-35](#app-35), [APP-36](#app-36), [APP-53](#app-53), [AST-04](#ast-04), [AUT-04](#aut-04), [AUT-07](#aut-07), [BLD-14](#bld-14), [BLD-20](#bld-20), [CHG-16](#chg-16), [CHG-20](#chg-20), [CRW-01](#crw-01), [CRW-02](#crw-02), [CRW-09](#crw-09), [CRW-12](#crw-12), [GW-01](#gw-01), [GW-07](#gw-07), [HSE-02](#hse-02), [MEM-01](#mem-01), [MEM-07](#mem-07), [MEM-09](#mem-09), [MEM-10](#mem-10), [MEM-19](#mem-19), [MEM-22](#mem-22), [MEM-27](#mem-27), [MEM-44](#mem-44), [MEM-45](#mem-45), [MEM-46](#mem-46), [MIS-16](#mis-16), [OBS-01](#obs-01), [OBS-02](#obs-02), [OBS-03](#obs-03), [OBS-04](#obs-04), [OBS-05](#obs-05), [OBS-06](#obs-06), [OBS-07](#obs-07), [OBS-08](#obs-08), [OBS-09](#obs-09), [OBS-10](#obs-10), [OBS-14](#obs-14), [OBS-15](#obs-15), [OBS-18](#obs-18), [PLT-24](#plt-24), [PLT-30](#plt-30), [QA-17](#qa-17), [RES-05](#res-05), [SEC-07](#sec-07), [SHP-11](#shp-11), [SWM-103](#swm-103), [SWM-104](#swm-104), [SWM-105](#swm-105), [SWM-106](#swm-106), [SWM-107](#swm-107), [SWM-110](#swm-110), [SWM-111](#swm-111), [SWM-112](#swm-112), [SWM-113](#swm-113), [SWM-114](#swm-114), [SWM-115](#swm-115), [SWM-17](#swm-17), [SWM-23](#swm-23), [SWM-25](#swm-25), [SWM-30](#swm-30), [SWM-57](#swm-57), [SWM-58](#swm-58), [SWM-64](#swm-64), [SWM-78](#swm-78), [SWM-79](#swm-79), [SWM-80](#swm-80), [SWM-81](#swm-81), [SWM-82](#swm-82), [SWM-84](#swm-84), [SWM-90](#swm-90), [SWM-96](#swm-96), [SWM-99](#swm-99), [TSK-04](#tsk-04), [TSK-09](#tsk-09), [TSK-17](#tsk-17), [TSK-35](#tsk-35), [TSK-42](#tsk-42), [TSK-43](#tsk-43) |
-| <a id="sn-08"></a>**SN-08** The stack maintains and improves itself: Housekeeping agents keep the stack healthy, and the stack proposes and builds its own improvements; the owner approves what ships. | must | [APP-21](#app-21), [AST-11](#ast-11), [AUT-02](#aut-02), [BLD-01](#bld-01), [BLD-03](#bld-03), [BLD-04](#bld-04), [BLD-05](#bld-05), [BLD-08](#bld-08), [BLD-10](#bld-10), [BLD-21](#bld-21), [BLD-22](#bld-22), [BLD-24](#bld-24), [CHG-11](#chg-11), [CHG-15](#chg-15), [CHG-17](#chg-17), [CHG-18](#chg-18), [CHG-19](#chg-19), [CRW-01](#crw-01), [CRW-03](#crw-03), [CRW-04](#crw-04), [CRW-07](#crw-07), [CRW-08](#crw-08), [CRW-09](#crw-09), [CRW-10](#crw-10), [CST-07](#cst-07), [GW-09](#gw-09), [KNW-08](#knw-08), [MEM-11](#mem-11), [MEM-13](#mem-13), [MEM-20](#mem-20), [MEM-38](#mem-38), [MEM-39](#mem-39), [MEM-42](#mem-42), [MEM-43](#mem-43), [MEM-47](#mem-47), [MEM-50](#mem-50), [OBS-13](#obs-13), [PLT-08](#plt-08), [PLT-19](#plt-19), [QA-07](#qa-07), [SEC-08](#sec-08), [SWM-07](#swm-07), [SWM-102](#swm-102), [SWM-18](#swm-18), [SWM-38](#swm-38), [SWM-44](#swm-44), [SWM-45](#swm-45), [SWM-46](#swm-46), [SWM-47](#swm-47), [SWM-61](#swm-61), [SWM-70](#swm-70), [SWM-82](#swm-82), [SWM-83](#swm-83), [SWM-84](#swm-84), [SWM-91](#swm-91), [SWM-92](#swm-92), [SWM-93](#swm-93), [SWM-94](#swm-94), [SWM-95](#swm-95), [SWM-96](#swm-96), [TRL-14](#trl-14), [TRL-15](#trl-15), [TRL-16](#trl-16), [TRL-17](#trl-17), [TSK-13](#tsk-13), [TSK-16](#tsk-16), [TSK-17](#tsk-17), [TSK-42](#tsk-42), [WFL-03](#wfl-03) |
-| <a id="sn-09"></a>**SN-09** Nothing is ever lost: Data and configuration are backed up, the backups are proven to restore, and the whole stack can move to a new PC. | must | [AST-10](#ast-10), [AUT-04](#aut-04), [CNX-03](#cnx-03), [CST-05](#cst-05), [KNW-01](#knw-01), [KNW-11](#knw-11), [MEM-08](#mem-08), [MEM-12](#mem-12), [MEM-14](#mem-14), [MEM-17](#mem-17), [MEM-21](#mem-21), [MEM-35](#mem-35), [MEM-48](#mem-48), [PLT-12](#plt-12), [PLT-13](#plt-13), [PLT-14](#plt-14), [PLT-15](#plt-15), [PLT-16](#plt-16), [PLT-17](#plt-17), [PLT-33](#plt-33), [PLT-34](#plt-34), [PLT-38](#plt-38), [SWM-30](#swm-30), [SWM-35](#swm-35), [SWM-36](#swm-36), [SWM-73](#swm-73), [SWM-76](#swm-76) |
+| <a id="sn-07"></a>**SN-07** See what every agent does: For every agent, mission, crew job, build and tool the owner can see what it did step by step, what it read and changed, what it produced, what it cost and when something went wrong, without having to look for it. | must | [APP-07](#app-07), [APP-11](#app-11), [APP-12](#app-12), [APP-16](#app-16), [APP-19](#app-19), [APP-22](#app-22), [APP-23](#app-23), [APP-24](#app-24), [APP-35](#app-35), [APP-36](#app-36), [APP-53](#app-53), [AST-04](#ast-04), [AUT-04](#aut-04), [AUT-07](#aut-07), [BLD-14](#bld-14), [BLD-20](#bld-20), [CHG-16](#chg-16), [CHG-20](#chg-20), [CRW-01](#crw-01), [CRW-02](#crw-02), [CRW-09](#crw-09), [CRW-12](#crw-12), [GW-01](#gw-01), [GW-07](#gw-07), [HSE-02](#hse-02), [MEM-01](#mem-01), [MEM-07](#mem-07), [MEM-09](#mem-09), [MEM-10](#mem-10), [MEM-19](#mem-19), [MEM-22](#mem-22), [MEM-27](#mem-27), [MEM-44](#mem-44), [MEM-45](#mem-45), [MEM-46](#mem-46), [MIS-16](#mis-16), [OBS-01](#obs-01), [OBS-02](#obs-02), [OBS-03](#obs-03), [OBS-04](#obs-04), [OBS-05](#obs-05), [OBS-06](#obs-06), [OBS-07](#obs-07), [OBS-08](#obs-08), [OBS-09](#obs-09), [OBS-10](#obs-10), [OBS-14](#obs-14), [OBS-15](#obs-15), [OBS-18](#obs-18), [PLT-24](#plt-24), [PLT-30](#plt-30), [QA-17](#qa-17), [RES-05](#res-05), [SEC-07](#sec-07), [SHP-11](#shp-11), [SWM-103](#swm-103), [SWM-104](#swm-104), [SWM-105](#swm-105), [SWM-106](#swm-106), [SWM-107](#swm-107), [SWM-110](#swm-110), [SWM-111](#swm-111), [SWM-112](#swm-112), [SWM-113](#swm-113), [SWM-114](#swm-114), [SWM-115](#swm-115), [SWM-17](#swm-17), [SWM-23](#swm-23), [SWM-25](#swm-25), [SWM-30](#swm-30), [SWM-57](#swm-57), [SWM-58](#swm-58), [SWM-64](#swm-64), [SWM-78](#swm-78), [SWM-79](#swm-79), [SWM-80](#swm-80), [SWM-81](#swm-81), [SWM-82](#swm-82), [SWM-84](#swm-84), [SWM-90](#swm-90), [SWM-96](#swm-96), [SWM-99](#swm-99), [TSK-04](#tsk-04), [TSK-09](#tsk-09), [TSK-17](#tsk-17), [TSK-35](#tsk-35), [TSK-42](#tsk-42), [TSK-43](#tsk-43), [TSK-50](#tsk-50) |
+| <a id="sn-08"></a>**SN-08** The stack maintains and improves itself: Housekeeping agents keep the stack healthy, and the stack proposes and builds its own improvements; the owner approves what ships. | must | [APP-21](#app-21), [AST-11](#ast-11), [AUT-02](#aut-02), [BLD-01](#bld-01), [BLD-03](#bld-03), [BLD-04](#bld-04), [BLD-05](#bld-05), [BLD-08](#bld-08), [BLD-10](#bld-10), [BLD-21](#bld-21), [BLD-22](#bld-22), [BLD-24](#bld-24), [CHG-11](#chg-11), [CHG-15](#chg-15), [CHG-17](#chg-17), [CHG-18](#chg-18), [CHG-19](#chg-19), [CRW-01](#crw-01), [CRW-03](#crw-03), [CRW-04](#crw-04), [CRW-07](#crw-07), [CRW-08](#crw-08), [CRW-09](#crw-09), [CRW-10](#crw-10), [CST-07](#cst-07), [GW-09](#gw-09), [KNW-08](#knw-08), [MEM-11](#mem-11), [MEM-13](#mem-13), [MEM-20](#mem-20), [MEM-38](#mem-38), [MEM-39](#mem-39), [MEM-42](#mem-42), [MEM-43](#mem-43), [MEM-47](#mem-47), [MEM-50](#mem-50), [OBS-13](#obs-13), [PLT-08](#plt-08), [PLT-19](#plt-19), [QA-07](#qa-07), [SEC-08](#sec-08), [SWM-07](#swm-07), [SWM-102](#swm-102), [SWM-18](#swm-18), [SWM-38](#swm-38), [SWM-44](#swm-44), [SWM-45](#swm-45), [SWM-46](#swm-46), [SWM-47](#swm-47), [SWM-61](#swm-61), [SWM-70](#swm-70), [SWM-82](#swm-82), [SWM-83](#swm-83), [SWM-84](#swm-84), [SWM-91](#swm-91), [SWM-92](#swm-92), [SWM-93](#swm-93), [SWM-94](#swm-94), [SWM-95](#swm-95), [SWM-96](#swm-96), [TRL-14](#trl-14), [TRL-15](#trl-15), [TRL-16](#trl-16), [TRL-17](#trl-17), [TSK-13](#tsk-13), [TSK-16](#tsk-16), [TSK-17](#tsk-17), [TSK-42](#tsk-42), [TSK-50](#tsk-50), [WFL-03](#wfl-03) |
+| <a id="sn-09"></a>**SN-09** Nothing is ever lost: Data and configuration are backed up, the backups are proven to restore, and the whole stack can move to a new PC. | must | [AST-10](#ast-10), [AUT-04](#aut-04), [CNX-03](#cnx-03), [CST-05](#cst-05), [KNW-01](#knw-01), [KNW-11](#knw-11), [MEM-08](#mem-08), [MEM-12](#mem-12), [MEM-14](#mem-14), [MEM-17](#mem-17), [MEM-21](#mem-21), [MEM-35](#mem-35), [MEM-48](#mem-48), [PLT-12](#plt-12), [PLT-13](#plt-13), [PLT-14](#plt-14), [PLT-15](#plt-15), [PLT-16](#plt-16), [PLT-17](#plt-17), [PLT-33](#plt-33), [PLT-34](#plt-34), [PLT-38](#plt-38), [SWM-30](#swm-30), [SWM-35](#swm-35), [SWM-36](#swm-36), [SWM-73](#swm-73), [SWM-76](#swm-76), [TAX-03](#tax-03) |
 | <a id="sn-10"></a>**SN-10** Knowledge that grows and answers with sources: Everything the owner and his agents write becomes a searchable, linked knowledge base (vault, wikis, long-term memory) that answers questions with citations. | must | [APP-15](#app-15), [CHG-08](#chg-08), [CHG-09](#chg-09), [CRW-13](#crw-13), [KNW-01](#knw-01), [KNW-02](#knw-02), [KNW-03](#knw-03), [KNW-04](#knw-04), [KNW-05](#knw-05), [KNW-06](#knw-06), [KNW-08](#knw-08), [KNW-09](#knw-09), [KNW-10](#knw-10), [KNW-12](#knw-12), [KNW-13](#knw-13), [KNW-14](#knw-14), [KNW-15](#knw-15), [MEM-01](#mem-01), [MEM-02](#mem-02), [MEM-03](#mem-03), [MEM-04](#mem-04), [MEM-05](#mem-05), [MEM-06](#mem-06), [MEM-09](#mem-09), [MEM-10](#mem-10), [MEM-12](#mem-12), [MEM-14](#mem-14), [MEM-15](#mem-15), [MEM-16](#mem-16), [MEM-17](#mem-17), [MEM-18](#mem-18), [MEM-19](#mem-19), [MEM-20](#mem-20), [MEM-21](#mem-21), [MEM-22](#mem-22), [MEM-23](#mem-23), [MEM-24](#mem-24), [MEM-25](#mem-25), [MEM-26](#mem-26), [MEM-27](#mem-27), [MEM-28](#mem-28), [MEM-29](#mem-29), [MEM-33](#mem-33), [MEM-34](#mem-34), [MEM-35](#mem-35), [MEM-36](#mem-36), [MEM-37](#mem-37), [MEM-38](#mem-38), [MEM-40](#mem-40), [MEM-41](#mem-41), [MEM-45](#mem-45), [MEM-46](#mem-46), [MEM-48](#mem-48), [MEM-49](#mem-49), [MEM-50](#mem-50), [MEM-51](#mem-51), [MIS-01](#mis-01), [MIS-11](#mis-11), [MIS-18](#mis-18), [MIS-19](#mis-19), [MIS-21](#mis-21), [MIS-28](#mis-28), [SWM-66](#swm-66), [TSK-34](#tsk-34) |
-| <a id="sn-11"></a>**SN-11** Hands in the real world, under control: Agents can act through the AI phone, Gmail, shopping and the House (lights, plugs, Echos), each only within grants and approvals the owner controls, with Stop and a log. | should | [CNX-01](#cnx-01), [CNX-02](#cnx-02), [CRW-11](#crw-11), [CST-12](#cst-12), [HSE-01](#hse-01), [HSE-02](#hse-02), [HSE-03](#hse-03), [HSE-05](#hse-05), [HSE-06](#hse-06), [HSE-07](#hse-07), [MIS-17](#mis-17), [PHN-01](#phn-01), [PHN-02](#phn-02), [PHN-05](#phn-05), [PHN-13](#phn-13), [PHN-14](#phn-14), [PHN-17](#phn-17), [PHN-18](#phn-18), [PHN-19](#phn-19), [PHN-22](#phn-22), [PHN-23](#phn-23), [PLT-22](#plt-22), [SHP-01](#shp-01), [SHP-02](#shp-02), [SHP-03](#shp-03), [SHP-04](#shp-04), [SHP-11](#shp-11), [SHP-13](#shp-13), [SWM-26](#swm-26), [TRL-16](#trl-16), [VOI-01](#voi-01), [VOI-02](#voi-02), [VOI-03](#voi-03), [VOI-04](#voi-04), [VOI-05](#voi-05), [VOI-06](#voi-06), [VOI-08](#voi-08) |
+| <a id="sn-11"></a>**SN-11** Hands in the real world, under control: Agents can act through the AI phone, Gmail, shopping and the House (lights, plugs, Echos), each only within grants and approvals the owner controls, with Stop and a log. | should | [CNX-01](#cnx-01), [CNX-02](#cnx-02), [CRW-11](#crw-11), [CST-12](#cst-12), [HSE-01](#hse-01), [HSE-02](#hse-02), [HSE-03](#hse-03), [HSE-05](#hse-05), [HSE-06](#hse-06), [HSE-07](#hse-07), [MIS-17](#mis-17), [PHN-01](#phn-01), [PHN-02](#phn-02), [PHN-05](#phn-05), [PHN-13](#phn-13), [PHN-14](#phn-14), [PHN-17](#phn-17), [PHN-18](#phn-18), [PHN-19](#phn-19), [PHN-22](#phn-22), [PHN-23](#phn-23), [PLT-22](#plt-22), [SHP-01](#shp-01), [SHP-02](#shp-02), [SHP-03](#shp-03), [SHP-04](#shp-04), [SHP-11](#shp-11), [SHP-13](#shp-13), [SWM-26](#swm-26), [TAX-02](#tax-02), [TRL-16](#trl-16), [VOI-01](#voi-01), [VOI-02](#voi-02), [VOI-03](#voi-03), [VOI-04](#voi-04), [VOI-05](#voi-05), [VOI-06](#voi-06), [VOI-08](#voi-08) |
 | <a id="sn-12"></a>**SN-12** English everywhere: Chat, app, reports, wikis, Telegram, code, docs and commit messages are in English. | must | [CST-09](#cst-09), [MIS-12](#mis-12), [TSK-35](#tsk-35) |
 | <a id="sn-13"></a>**SN-13** Runs unattended for months: The stack keeps working through usage-limit pauses, restarts, deploys, reboots and power cuts, and recovers by itself; no work, approval or message is lost on a restart. | must | [APP-23](#app-23), [APP-24](#app-24), [AST-03](#ast-03), [AST-12](#ast-12), [BLD-03](#bld-03), [BLD-06](#bld-06), [BLD-09](#bld-09), [BLD-12](#bld-12), [CNX-06](#cnx-06), [CST-03](#cst-03), [CST-08](#cst-08), [CST-14](#cst-14), [GW-03](#gw-03), [GW-04](#gw-04), [GW-06](#gw-06), [GW-08](#gw-08), [MEM-05](#mem-05), [MEM-07](#mem-07), [MEM-08](#mem-08), [MEM-15](#mem-15), [MEM-16](#mem-16), [MEM-21](#mem-21), [MEM-34](#mem-34), [MEM-40](#mem-40), [MEM-41](#mem-41), [MEM-43](#mem-43), [MEM-51](#mem-51), [MIS-03](#mis-03), [MIS-04](#mis-04), [MIS-05](#mis-05), [MIS-10](#mis-10), [OBS-03](#obs-03), [OBS-04](#obs-04), [PHN-09](#phn-09), [PHN-10](#phn-10), [PHN-11](#phn-11), [PHN-14](#phn-14), [PHN-25](#phn-25), [PLT-04](#plt-04), [PLT-05](#plt-05), [PLT-06](#plt-06), [PLT-07](#plt-07), [PLT-08](#plt-08), [PLT-09](#plt-09), [PLT-10](#plt-10), [PLT-11](#plt-11), [PLT-13](#plt-13), [PLT-18](#plt-18), [PLT-21](#plt-21), [PLT-23](#plt-23), [PLT-27](#plt-27), [PLT-28](#plt-28), [PLT-29](#plt-29), [PLT-30](#plt-30), [PLT-31](#plt-31), [PLT-32](#plt-32), [PLT-35](#plt-35), [PLT-36](#plt-36), [PLT-37](#plt-37), [PLT-39](#plt-39), [PLT-40](#plt-40), [QA-17](#qa-17), [QA-27](#qa-27), [SHP-12](#shp-12), [SWM-12](#swm-12), [SWM-19](#swm-19), [SWM-31](#swm-31), [SWM-47](#swm-47), [SWM-52](#swm-52), [SWM-53](#swm-53), [SWM-63](#swm-63), [SWM-71](#swm-71), [SWM-72](#swm-72), [SWM-73](#swm-73), [SWM-76](#swm-76), [SWM-85](#swm-85), [SWM-87](#swm-87), [TSK-06](#tsk-06), [TSK-08](#tsk-08), [WFL-02](#wfl-02), [WFL-04](#wfl-04) |
 | <a id="sn-14"></a>**SN-14** Understand and change any codebase: The stack can study any repository (code graph, code map), answer questions about it, change the owner's own repositories through the builder, and check code against large specifications. | should | [APP-57](#app-57), [APP-58](#app-58), [APP-59](#app-59), [APP-60](#app-60), [APP-61](#app-61), [AST-09](#ast-09), [BLD-01](#bld-01), [BLD-11](#bld-11), [BLD-15](#bld-15), [BLD-17](#bld-17), [BLD-18](#bld-18), [BLD-19](#bld-19), [BLD-23](#bld-23), [BLD-25](#bld-25), [BLD-26](#bld-26), [BLD-27](#bld-27), [CHG-01](#chg-01), [CHG-02](#chg-02), [CHG-03](#chg-03), [CHG-04](#chg-04), [CHG-05](#chg-05), [CHG-06](#chg-06), [CHG-07](#chg-07), [CHG-08](#chg-08), [CHG-09](#chg-09), [CHG-10](#chg-10), [CHG-12](#chg-12), [CHG-13](#chg-13), [CHG-14](#chg-14), [CHG-16](#chg-16), [CHG-17](#chg-17), [CHG-18](#chg-18), [CHG-19](#chg-19), [CHG-20](#chg-20), [MEM-31](#mem-31), [MEM-32](#mem-32), [MEM-37](#mem-37), [QA-14](#qa-14) |
@@ -1550,8 +1551,8 @@ The trial's build #11 appeared on the Tasks board as task #89 (source door) besi
 | <a id="sn-16"></a>**SN-16** Known, current and checkable requirements: What the stack must do is written down properly, kept current with every change, and contradictions between the parts are found and shown. | must | [APP-14](#app-14), [APP-18](#app-18), [MEM-02](#mem-02), [MEM-11](#mem-11), [MEM-13](#mem-13), [MEM-23](#mem-23), [MEM-47](#mem-47), [QA-06](#qa-06), [QA-08](#qa-08), [QA-09](#qa-09), [QA-10](#qa-10), [QA-11](#qa-11), [QA-12](#qa-12), [QA-13](#qa-13), [QA-14](#qa-14), [QA-15](#qa-15), [SWM-03](#swm-03), [SWM-20](#swm-20), [SWM-35](#swm-35), [SWM-55](#swm-55), [SWM-88](#swm-88), [TRL-02](#trl-02), [TRL-14](#trl-14), [TRL-17](#trl-17) |
 | <a id="sn-17"></a>**SN-17** Agents that work together over time: Agents keep working on the same topics over many runs, refine and reopen each other's work, see each other's artifacts and talk to each other directly, to groups or to all, with the owner reading along. | should | [APP-53](#app-53), [CHG-08](#chg-08), [CHG-10](#chg-10), [CHG-11](#chg-11), [CRW-05](#crw-05), [MEM-03](#mem-03), [MEM-24](#mem-24), [MEM-25](#mem-25), [MEM-28](#mem-28), [MEM-36](#mem-36), [MIS-18](#mis-18), [MIS-19](#mis-19), [MIS-20](#mis-20), [OBS-13](#obs-13), [SWM-01](#swm-01), [SWM-02](#swm-02), [SWM-03](#swm-03), [SWM-04](#swm-04), [SWM-05](#swm-05), [SWM-07](#swm-07), [SWM-08](#swm-08), [SWM-09](#swm-09), [SWM-10](#swm-10), [SWM-100](#swm-100), [SWM-101](#swm-101), [SWM-102](#swm-102), [SWM-103](#swm-103), [SWM-104](#swm-104), [SWM-105](#swm-105), [SWM-106](#swm-106), [SWM-107](#swm-107), [SWM-108](#swm-108), [SWM-109](#swm-109), [SWM-11](#swm-11), [SWM-110](#swm-110), [SWM-111](#swm-111), [SWM-112](#swm-112), [SWM-113](#swm-113), [SWM-114](#swm-114), [SWM-115](#swm-115), [SWM-12](#swm-12), [SWM-13](#swm-13), [SWM-16](#swm-16), [SWM-17](#swm-17), [SWM-18](#swm-18), [SWM-20](#swm-20), [SWM-21](#swm-21), [SWM-22](#swm-22), [SWM-27](#swm-27), [SWM-28](#swm-28), [SWM-32](#swm-32), [SWM-33](#swm-33), [SWM-34](#swm-34), [SWM-37](#swm-37), [SWM-41](#swm-41), [SWM-48](#swm-48), [SWM-49](#swm-49), [SWM-50](#swm-50), [SWM-51](#swm-51), [SWM-52](#swm-52), [SWM-54](#swm-54), [SWM-56](#swm-56), [SWM-60](#swm-60), [SWM-62](#swm-62), [SWM-63](#swm-63), [SWM-64](#swm-64), [SWM-65](#swm-65), [SWM-75](#swm-75), [SWM-86](#swm-86), [SWM-90](#swm-90), [SWM-97](#swm-97), [SWM-98](#swm-98), [SWM-99](#swm-99), [TRL-01](#trl-01), [TRL-07](#trl-07), [TSK-05](#tsk-05), [TSK-07](#tsk-07), [TSK-18](#tsk-18), [TSK-19](#tsk-19), [TSK-43](#tsk-43) |
 | <a id="sn-18"></a>**SN-18** Told once, not spammed: the owner hears about what needs him or went wrong once, on his phone, and is not flooded with repeats or noise. | should | [ACR-01](#acr-01), [APP-38](#app-38), [APP-54](#app-54), [AUT-05](#aut-05), [AUT-06](#aut-06), [CRW-12](#crw-12), [MIS-22](#mis-22), [OBS-10](#obs-10), [OBS-11](#obs-11), [OBS-12](#obs-12), [OBS-16](#obs-16), [OBS-17](#obs-17), [SHP-04](#shp-04), [SWM-100](#swm-100), [SWM-14](#swm-14), [SWM-39](#swm-39), [SWM-50](#swm-50), [SWM-56](#swm-56), [SWM-59](#swm-59), [SWM-71](#swm-71), [SWM-80](#swm-80) |
-| <a id="sn-19"></a>**SN-19** Give a task, the stack does the rest: The owner gives any task (coding, research, analysis, watching, errands) in one sentence, or with details preset when wanted; the stack works out what done means, plans it, chooses or creates the agents, models and harnesses, runs it once, on a schedule, on an event or after other work, for minutes or for months, and asks only the real decisions. | must | [APP-52](#app-52), [APP-63](#app-63), [CHG-01](#chg-01), [CHG-04](#chg-04), [MEM-33](#mem-33), [TRL-01](#trl-01), [TRL-02](#trl-02), [TRL-03](#trl-03), [TRL-04](#trl-04), [TRL-05](#trl-05), [TRL-06](#trl-06), [TRL-07](#trl-07), [TRL-08](#trl-08), [TRL-09](#trl-09), [TRL-10](#trl-10), [TRL-11](#trl-11), [TRL-12](#trl-12), [TRL-13](#trl-13), [TSK-01](#tsk-01), [TSK-02](#tsk-02), [TSK-03](#tsk-03), [TSK-04](#tsk-04), [TSK-05](#tsk-05), [TSK-06](#tsk-06), [TSK-07](#tsk-07), [TSK-11](#tsk-11), [TSK-13](#tsk-13), [TSK-14](#tsk-14), [TSK-15](#tsk-15), [TSK-16](#tsk-16), [TSK-21](#tsk-21), [TSK-22](#tsk-22), [TSK-23](#tsk-23), [TSK-24](#tsk-24), [TSK-25](#tsk-25), [TSK-26](#tsk-26), [TSK-27](#tsk-27), [TSK-28](#tsk-28), [TSK-29](#tsk-29), [TSK-30](#tsk-30), [TSK-31](#tsk-31), [TSK-32](#tsk-32), [TSK-33](#tsk-33), [TSK-34](#tsk-34), [TSK-36](#tsk-36), [TSK-40](#tsk-40), [TSK-41](#tsk-41), [TSK-44](#tsk-44), [TSK-45](#tsk-45), [TSK-46](#tsk-46), [TSK-47](#tsk-47), [TSK-48](#tsk-48) |
-| <a id="sn-20"></a>**SN-20** Work that starts when the world changes: Tasks start by themselves when something happens, such as a news story breaking, mail arriving, code changing, a price moving, a device changing state or another task finishing. | should | [TSK-10](#tsk-10), [TSK-11](#tsk-11), [TSK-12](#tsk-12), [TSK-21](#tsk-21), [TSK-22](#tsk-22), [TSK-23](#tsk-23), [TSK-24](#tsk-24), [TSK-25](#tsk-25), [TSK-26](#tsk-26), [TSK-27](#tsk-27), [TSK-28](#tsk-28), [TSK-29](#tsk-29), [TSK-30](#tsk-30), [TSK-31](#tsk-31), [TSK-32](#tsk-32), [TSK-33](#tsk-33), [TSK-44](#tsk-44) |
+| <a id="sn-19"></a>**SN-19** Give a task, the stack does the rest: The owner gives any task (coding, research, analysis, watching, errands) in one sentence, or with details preset when wanted; the stack works out what done means, plans it, chooses or creates the agents, models and harnesses, runs it once, on a schedule, on an event or after other work, for minutes or for months, and asks only the real decisions. | must | [APP-52](#app-52), [APP-63](#app-63), [CHG-01](#chg-01), [CHG-04](#chg-04), [MEM-33](#mem-33), [TAX-01](#tax-01), [TAX-07](#tax-07), [TAX-08](#tax-08), [TRL-01](#trl-01), [TRL-02](#trl-02), [TRL-03](#trl-03), [TRL-04](#trl-04), [TRL-05](#trl-05), [TRL-06](#trl-06), [TRL-07](#trl-07), [TRL-08](#trl-08), [TRL-09](#trl-09), [TRL-10](#trl-10), [TRL-11](#trl-11), [TRL-12](#trl-12), [TRL-13](#trl-13), [TSK-01](#tsk-01), [TSK-02](#tsk-02), [TSK-03](#tsk-03), [TSK-04](#tsk-04), [TSK-05](#tsk-05), [TSK-06](#tsk-06), [TSK-07](#tsk-07), [TSK-11](#tsk-11), [TSK-13](#tsk-13), [TSK-14](#tsk-14), [TSK-15](#tsk-15), [TSK-16](#tsk-16), [TSK-21](#tsk-21), [TSK-22](#tsk-22), [TSK-23](#tsk-23), [TSK-24](#tsk-24), [TSK-25](#tsk-25), [TSK-26](#tsk-26), [TSK-27](#tsk-27), [TSK-28](#tsk-28), [TSK-29](#tsk-29), [TSK-30](#tsk-30), [TSK-31](#tsk-31), [TSK-32](#tsk-32), [TSK-33](#tsk-33), [TSK-34](#tsk-34), [TSK-36](#tsk-36), [TSK-40](#tsk-40), [TSK-41](#tsk-41), [TSK-44](#tsk-44), [TSK-45](#tsk-45), [TSK-46](#tsk-46), [TSK-47](#tsk-47), [TSK-48](#tsk-48), [TSK-49](#tsk-49) |
+| <a id="sn-20"></a>**SN-20** Work that starts when the world changes: Tasks start by themselves when something happens, such as a news story breaking, mail arriving, code changing, a price moving, a device changing state or another task finishing. | should | [TSK-10](#tsk-10), [TSK-11](#tsk-11), [TSK-12](#tsk-12), [TSK-21](#tsk-21), [TSK-22](#tsk-22), [TSK-23](#tsk-23), [TSK-24](#tsk-24), [TSK-25](#tsk-25), [TSK-26](#tsk-26), [TSK-27](#tsk-27), [TSK-28](#tsk-28), [TSK-29](#tsk-29), [TSK-30](#tsk-30), [TSK-31](#tsk-31), [TSK-32](#tsk-32), [TSK-33](#tsk-33), [TSK-44](#tsk-44), [TSK-49](#tsk-49) |
 
 ## ACR AI change requests
 
@@ -3301,6 +3302,50 @@ The mail connector shall refuse a search or a label that holds a line break or a
 - Verified by: test: `tests/test_mail.py::test_a_search_or_label_with_a_line_break_is_refused_and_nothing_is_sent`
 - Trace: `images/mail/mail.py`
 - Rationale: imaplib sends a line break inside an argument as it is, so model text steered by a mail could add IMAP commands of its own past the Trash grant and the protected-mail filter (review CNX-R1); umlauts raised an error (CNX-R2).
+
+### CNX-10
+
+**The mail sorter proposes worthless senders from the headers alone** · must · functional · **implemented**
+
+The mail sorter shall read the mail copy's index on the NAS read-only, over ssh, with no message text, no model and nothing written on the NAS, and propose two tiers of senders. High confidence is a sender with at least 5 mails, 80 % of them with an unsubscribe link or filed by Gmail under Promotions or Social, at most 2 % with attachments, filed under Promotions or Social, whom the owner never wrote to and never starred, and whose name names no bank, security, money, order, contract, health, state, travel or account word, and that does not relay people's messages (message, inmail, chat or Nachricht in its name or address, or 5 % or more of its subjects saying someone sent, wrote, replied, commented or mentioned). Likely is the same with any category, at most 5 % with attachments, and relayed messages allowed. Every mail of a proposed sender shall be checked again and kept when it is starred, important, has an attachment or one of the owner's labels, relays a person's message in its subject, names a keep or protected word in its subject, is in a thread the owner wrote in, is younger than 30 days, is the stack's own mail or is protected mail of the mail connector; the proposal shall count what each guard kept and why each sender counts as worthless.
+
+- Parents: [SN-05](#sn-05)
+- Sources: `the owner, 10 Nov 2026: an agent that moves high confidence useless emails into a dedicated folder, carefully`
+- Verified by: test: `tests/test_mailsort.py::test_the_look_proposes_bulk_senders_the_owner_never_answered_in_two_tiers`, `tests/test_mailsort.py::test_every_mail_of_a_chosen_sender_is_checked_again_and_each_guard_counted`, `tests/test_mailsort.py::test_a_sender_that_relays_people_s_messages_is_never_sure_and_such_a_mail_stays`, `tests/test_mailsort.py::test_the_look_reads_the_copy_read_only_on_the_nas_python_and_writes_nothing`, `tests/test_mailsort.py::test_an_asleep_nas_is_said_and_never_taken_for_nothing_to_sort`
+- Trace: `ops/mailsort.py`, `ops/mailsort_nas.py`
+
+### CNX-11
+
+**The owner decides per sender, once, on Your mail** · must · functional · **implemented**
+
+Your mail shall show each proposed sender with its name, address, mails, mails in the inbox, size, three sample subjects cut and marked, why it counts as worthless and what the guards keep, with a tick (high confidence ticked, likely not), a Keep this sender button that keeps the sender out of every later proposal, and one button that sorts out the ticked senders. No mail shall move before that tap. Senders no decision has seen shall be one item in Needs you that links to Your mail.
+
+- Parents: [SN-05](#sn-05)
+- Sources: `images/mission-control/guide/18-connections.md`
+- Verified by: test: `tests/test_mailsort.py::test_nothing_moves_before_the_owner_s_tap`, `tests/test_mailsort.py::test_a_long_sample_subject_is_cut_and_marked`, `tests/test_mailsort.py::test_the_owner_s_tap_approves_the_ticked_senders_and_starts_the_sorter`, `tests/test_mailsort.py::test_keep_this_sender_is_for_good`, `tests/test_mailsort.py::test_needs_you_asks_once_for_new_senders`, `tests/test_mailsort.py::test_your_mail_shows_the_proposal_with_ticks_and_one_button`
+- Trace: `ops/mailsort.py`, `ops/decisions.py`, `ops/missions.py`, `ops/missions.requests.py`, `images/mission-control/server.py`, `images/mission-control/interactions.py`, `images/mission-control/web/static/app-base.js`, `images/mission-control/web/static/app-tasks.js`, `images/mission-control/web/static/app.css`, `config/autonomy.yaml`
+
+### CNX-12
+
+**The sorter moves only approved mail, in recorded batches, undoable, and keeps sorting weekly** · must · functional · **implemented**
+
+After the owner's tap the mail sorter shall put the approved senders' mails that passed every guard under the label set in ops/mailsort.py (AI Stack/Deletable) and out of the inbox, through the mail connector's organize scope, in batches of at most 200 with a pause between them, record each batch (ids, sender, subject, whether it was in the inbox), never sort a mail twice, and undo a run on the owner's tap (the label off, back into the inbox what was there, the run's senders no longer approved). It shall trash or delete nothing. Each week, from its n8n workflow, it shall sort new mail of approved senders the same way, add new candidates to the proposal, move nothing for a sender the owner has not approved, and say what it did in one line on Home without a push. Without the organize grant, or with the NAS unread, nothing moves and the run says why.
+
+- Parents: [SN-05](#sn-05)
+- Sources: `images/mission-control/guide/18-connections.md`
+- Verified by: test: `tests/test_mailsort.py::test_the_move_goes_in_recorded_paced_batches_and_never_twice`, `tests/test_mailsort.py::test_new_mail_of_an_approved_sender_is_sorted_weekly_and_an_unapproved_one_never`, `tests/test_mailsort.py::test_undo_puts_the_mail_back_and_withdraws_the_approval`, `tests/test_mailsort.py::test_without_organize_nothing_moves_and_it_says_so`, `tests/test_mailsort.py::test_a_refusal_by_the_connector_stops_the_run_and_is_said`, `tests/test_mailsort.py::test_the_sorter_is_a_weekly_crew_job_on_n8n_and_the_runner_takes_the_taps`
+- Trace: `ops/mailsort.py`, `ops/crew.py`, `ops/systemd/crew-mail-sort.service`, `n8n/workflows/crew-mail-sorter.json`, `deployments/home/workflows.yaml`, `config/agents.yaml`
+
+### CNX-13
+
+**The connector sorts out in one step and leaves protected mail alone** · must · functional · **implemented**
+
+The mail connector shall offer mail_sort_out, which under the organize grant gives each mail the label and takes it out of the inbox in one session, leaves protected mail (bank, payment, security) without the label and in place, and answers which mails it sorted, which were in the inbox, which were protected and which were not found; and mail_sort_back, which takes the label off and puts back into the inbox the mails it is given. Both refuse without the grant and refuse a label with a line break.
+
+- Parents: [SN-05](#sn-05)
+- Sources: `images/mail/AGENTS.md`
+- Verified by: test: `tests/test_mailsort.py::test_the_connector_sorts_out_in_one_step_and_leaves_protected_mail_alone`, `tests/test_mail.py::test_mail_tools_cannot_send`
+- Trace: `images/mail/mail.py`
 
 ## CST Constraints
 
@@ -8773,7 +8818,7 @@ Every tool server of the gateway shall say what a call to it means for the map, 
 | 6 | Every task a plan graph | [TSK-21](#tsk-21), [TSK-22](#tsk-22), [TSK-34](#tsk-34), [TSK-35](#tsk-35), [TSK-36](#tsk-36) |
 | 7 | Artifacts, map and telemetry | [TSK-23](#tsk-23), [TSK-24](#tsk-24), [TSK-25](#tsk-25), [TSK-26](#tsk-26), [TSK-27](#tsk-27) |
 | 8 | Customisation and UX | [TSK-28](#tsk-28), [TSK-29](#tsk-29), [TSK-30](#tsk-30), [TSK-31](#tsk-31), [TSK-32](#tsk-32) |
-| 9 | More reach | [TSK-33](#tsk-33), [TSK-40](#tsk-40), [TSK-41](#tsk-41), [TSK-42](#tsk-42), [TSK-43](#tsk-43), [TSK-44](#tsk-44), [TSK-46](#tsk-46), [TSK-47](#tsk-47), [TSK-48](#tsk-48) |
+| 9 | More reach | [TSK-33](#tsk-33), [TSK-40](#tsk-40), [TSK-41](#tsk-41), [TSK-42](#tsk-42), [TSK-43](#tsk-43), [TSK-44](#tsk-44), [TSK-46](#tsk-46), [TSK-47](#tsk-47), [TSK-48](#tsk-48), [TSK-49](#tsk-49), [TSK-50](#tsk-50) |
 
 ### Task kernel
 
@@ -9406,6 +9451,126 @@ A code question may name a commit, tag or branch to read instead of main, and as
 - Phase: 9 More reach
 - Acceptance: Test: a copy at an older commit with two commits of history shows exactly those two commits and no remote.
 - Trace: `ops/claude_tasks.py`, `ops/tasks.py`
+
+### Plan graph and durable steps
+
+#### TSK-49
+
+**Every step of a scheduled run covers one exact window** · must · functional · **implemented**
+
+When the Conductor starts an occurrence of a task on a schedule, it shall give the occurrence one window, from its start back by the schedule's gap between its last two fires, in the time zone of the task's n8n workflow (else the runner's), and every step of that occurrence shall get the window in its prompt; the Topic Desk shall collect only what was published inside the window, state the window in the report, and put the reporting period in the e-mail's subject; an item shall count as seen only once a written report used it.
+
+- Parents: [SN-19](#sn-19), [SN-20](#sn-20)
+- Sources: `docs/SWARM-DESIGN.md`
+- Verified by: test: `tests/test_conductor.py::test_every_research_and_writing_step_of_a_scheduled_run_gets_one_exact_window`, `tests/test_desk.py::test_a_run_s_window_decides_what_is_new_and_the_report_states_it`, `tests/test_tasks.py::test_a_briefing_planned_with_a_number_of_days_names_its_run_s_window_instead`
+- Phase: 9 More reach
+- Acceptance: Test: a weekly mon 08:00 run started at 08:00:04 on 9 Nov 2026 covers 2 Nov 08:00 to 9 Nov 08:00 (Europe/Berlin) in both scouts' prompts, the desk's collect and write steps and the subject; a Run now on Tuesday 15:41 covers the seven days before it; the desk keeps items inside the window only, marks seen only what the report used, and the report's second line is the period.
+- Trace: `ops/conductor.py`, `ops/n8n_jobs.py`, `ops/desk_steps.py`, `ops/desk.sh`, `images/desk/desk.py`, `ops/tasks.py`, `ops/missions.py`
+
+### Self-staffing
+
+#### TSK-50
+
+**The judge reads only what a report can show** · must · quality · **implemented**
+
+When the Checker judges a run, it shall check a point of the definition of done that names only when the task runs against the task's schedule (its n8n workflow, its switch and its runs) instead of the run's report, give the remaining points to the judge with the run's window, and show the judge the delivery's own record of each way (sent, failed, held or off, and the e-mail's subject); a delivery step shall say which way failed and tell the owner.
+
+- Parents: [SN-07](#sn-07), [SN-08](#sn-08)
+- Sources: [MIS-16](#mis-16), `docs/SWARM-ROADMAP.md`
+- Verified by: test: `tests/test_staffing.py::test_a_point_about_when_a_task_runs_is_checked_against_its_schedule_not_its_report`, `tests/test_conductor.py::test_every_research_and_writing_step_of_a_scheduled_run_gets_one_exact_window`
+- Phase: 9 More reach
+- Acceptance: Test: "runs every Monday at 08:00, starting November 2, 2026" is met from a Monday 08:00 workflow whose first run started on 2 Nov, never sent to the judge; Friday 09:00 on a switched-off workflow is not met with each reason; the judge's prompt holds the run's window and the e-mail's subject; a failed e-mail is said in the step's answer and pushed.
+- Trace: `ops/staffing.py`, `ops/desk_steps.py`, `ops/mission_extras.py`
+
+## TAX Tax desk
+
+### TAX-01
+
+**Tax papers are found by their headers alone** · must · functional · **implemented**
+
+The tax desk shall pick its candidates from the mail copy's index on the NAS, opened read-only, by the subject and sender of each mail from the start of its window on (config/tax.yaml), against generic word and sender rules and the owner's own keep and ignore rules kept outside git, and shall take each candidate's text and its attachments' text from the NAS once; a PDF without a text layer shall be marked as needing OCR, never guessed. It shall change nothing in Gmail or the mail copy.
+
+- Parents: [SN-05](#sn-05), [SN-19](#sn-19)
+- Sources: `owner 2026-11-10: Could you make an agent that prepares my taxes by looking through my email for last year and this year`, `docs/TAX-DESK.md`
+- Verified by: test: `tests/test_tax.py::test_the_header_rules_find_tax_papers_and_leave_the_rest`, `tests/test_tax.py::test_the_owner_s_own_rules_keep_and_ignore`, `tests/test_tax.py::test_find_takes_each_new_candidate_s_text_once_and_the_earlier_return`, `tests/test_tax.py::test_the_nas_helper_reads_the_index_read_only_and_never_a_body`
+- Trace: `ops/tax.py`, `ops/tax_nas.py`, `config/tax.yaml`, `ops/crew.py`, `ops/systemd/crew-tax-find.service`, `deployments/home/deployment.env`
+
+### TAX-02
+
+**Only Hermes with ChatGPT reads tax content** · must · constraint · **implemented**
+
+The tax desk shall send each candidate mail with its attachments' text, and each earlier return, as one turn of the tax card's Hermes profile on the ChatGPT engine (model gpt-sub, key vk-tax, no tools), marked as data and never as instructions, and shall refuse to read through any other card, profile or engine. An answer that is no such JSON, a refusal, or a relevant paper read with a confidence under 0.5 shall become a question for the owner. A usage limit shall keep every answer read before it, and the next attempt shall read only what is left.
+
+- Parents: [SN-05](#sn-05), [SN-11](#sn-11)
+- Sources: `owner 2026-11-10: the reader is Hermes with ChatGPT; no other model reads tax content`, `docs/TAX-DESK.md`
+- Verified by: test: `tests/test_tax.py::test_only_the_tax_card_s_hermes_profile_on_chatgpt_reads`, `tests/test_tax.py::test_each_paper_is_one_hermes_turn_marked_as_data`, `tests/test_tax.py::test_an_unreadable_refused_or_unsure_answer_is_a_question_never_a_guess`, `tests/test_tax.py::test_a_usage_limit_keeps_what_was_read_and_the_next_attempt_goes_on`
+- Trace: `ops/tax.py`, `config/agents.yaml`, `ops/keys.sh`, `config/hermes/configure-tax.sh`, `ops/swarm_client.py`, `ops/conductor.py`, `prompts/tax.md`, `ops/deploy.py`
+
+### TAX-03
+
+**Copies only, by year and form, never over a file** · must · functional · **implemented**
+
+The tax desk shall copy each relevant attachment, and the mail it came with as .eml, on the NAS into Steuern/<year>/<form>/ as <date>_<issuer>_<kind>.<ext>, the year being the one the paper concerns; a name that is taken shall get a number, and nothing shall be written outside the Steuern share. A file the owner changed shall stay, and the desk's new version shall go next to it under a numbered name. Log lines, Home lines and the steps' answers shall name counts and forms, never an amount or a paper's content.
+
+- Parents: [SN-05](#sn-05), [SN-09](#sn-09)
+- Sources: `owner 2026-11-10: the copies go to the NAS share Shared_Data/Steuern`, `docs/TAX-DESK.md`
+- Verified by: test: `tests/test_tax.py::test_filing_copies_each_paper_by_year_and_form_and_never_twice`, `tests/test_tax.py::test_a_name_that_is_taken_gets_a_number_and_nothing_is_written_outside_the_share`
+- Trace: `ops/tax.py`, `ops/tax_nas.py`, `ops/systemd/crew-tax-file.service`
+
+### TAX-04
+
+**The owner's corrections win** · must · functional · **implemented**
+
+The tax desk shall keep a list of each year's papers in Steuern/<year>/Belege.csv and Belege.md (file, form, kind, amount, date, issuer, source mail, confidence, checked), and on every later run shall keep each value the owner changed in Belege.csv and leave out each row the owner removed, in the workbook too.
+
+- Parents: [SN-05](#sn-05)
+- Sources: `docs/TAX-DESK.md`
+- Verified by: test: `tests/test_tax.py::test_the_owner_s_corrections_in_belege_csv_win_on_every_run`
+- Trace: `ops/tax.py`, `ops/tax_book.py`
+
+### TAX-05
+
+**A draft workbook per year with the figures the law sets** · must · functional · **implemented**
+
+The tax desk shall write per year it prepares Steuer-<year>.md and one CSV per form with each form's lines, their sums and their papers, and compare them with the figures the law sets for that year from one table with its sources (Arbeitnehmer-Pauschbetrag, Homeoffice-Pauschale, Entfernungspauschale, Sonderausgaben-Pauschbetrag, Sparer-Pauschbetrag, zumutbare Belastung in steps, 20 percent of labour costs under § 35a); a year missing from the table shall be said, never guessed. The workbook shall say at its top that it is a draft for the owner's own ELSTER return and not tax advice, and the desk shall submit nothing anywhere.
+
+- Parents: [SN-05](#sn-05)
+- Sources: `docs/TAX-DESK.md`
+- Verified by: test: `tests/test_tax.py::test_the_figures_the_law_sets_for_2025_and_2026`, `tests/test_tax.py::test_the_workbook_starts_from_the_earlier_returns`, `tests/test_tax.py::test_filing_copies_each_paper_by_year_and_form_and_never_twice`
+- Trace: `ops/tax_book.py`, `ops/tax_law.py`
+
+### TAX-06
+
+**The owner's earlier returns are the base** · must · functional · **implemented**
+
+The tax desk shall read each earlier return the owner put into Steuern/<year>/ (an ELSTER protocol as HTML, or a PDF) through the same reader as TAX-02, keep the extraction under /srv/ai/tax and as Erklaerung-<year>.json and .md in that folder, and prepare each later year from it - each recurring item expected, marked found, missing, none this year by the owner's word, or moved by more than half and more than 100 EUR - with the items no earlier return had marked new. A paper of a year before the prepared ones shall be filed under its own year and never summed into them.
+
+- Parents: [SN-05](#sn-05)
+- Sources: `owner 2026-11-10, through the lead: Based on this it should prepare 2025 and 2026.`, `docs/TAX-DESK.md`
+- Verified by: test: `tests/test_tax.py::test_an_earlier_return_is_read_by_the_reader_and_kept_as_the_base`, `tests/test_tax.py::test_the_workbook_starts_from_the_earlier_returns`, `tests/test_tax.py::test_find_takes_each_new_candidate_s_text_once_and_the_earlier_return`
+- Trace: `ops/tax.py`, `ops/tax_book.py`, `prompts/tax.md`
+
+### TAX-07
+
+**What only the owner knows is asked in Needs you** · must · functional · **implemented**
+
+The tax desk shall put each open question of a year into Needs you (assessment, church tax, commute km and days, home-office days, children, a paper it could not sort, an expected paper that did not come after 31 May of the next year) with its answers as buttons or a typed number, naming no amount and no paper's content; the runner shall refuse an answer that is not one of the offered ones, not a number of 0 or more, or over 200 characters, and the next run shall use each answer.
+
+- Parents: [SN-05](#sn-05), [SN-19](#sn-19)
+- Sources: `docs/TAX-DESK.md`
+- Verified by: test: `tests/test_tax.py::test_questions_reach_needs_you_without_amounts_and_answers_are_checked`, `tests/test_tax.py::test_the_workbook_starts_from_the_earlier_returns`
+- Trace: `ops/tax.py`, `ops/decisions.py`, `config/autonomy.yaml`, `images/mission-control/server.py`, `ops/missions.requests.py`
+
+### TAX-08
+
+**One workflow runs the desk** · must · functional · **implemented**
+
+The tax desk's n8n workflow (n8n/workflows/tax-desk.json, made by ops/n8n_gen.py chain and listed in home's workflows.yaml) shall run its find step, its reader and its filing step in that order, on Run now and on the 3rd of each month at 07:00 once switched on; a run in which no year is open shall find nothing.
+
+- Parents: [SN-19](#sn-19)
+- Sources: `docs/TAX-DESK.md`
+- Verified by: test: `tests/test_tax.py::test_the_tax_desk_workflow_finds_reads_and_files_in_that_order`, `tests/test_tax.py::test_n8n_gen_makes_a_chain_of_steps`, `tests/test_tax.py::test_a_run_with_no_open_year_finds_nothing`
+- Trace: `ops/n8n_gen.py`, `deployments/home/workflows.yaml`, `ops/tax.py`
 
 ## TRL Trials
 
@@ -10454,6 +10619,7 @@ The step service shall post an answer to n8n's resume URL only while n8n's readi
 | `tests/test_conductor.py::test_branches_run_together_the_join_after_both_and_a_cycle_is_refused` | [TSK-05](#tsk-05) |
 | `tests/test_conductor.py::test_consecutive_builder_steps_become_one_build_with_stages` | [TRL-10](#trl-10) |
 | `tests/test_conductor.py::test_each_step_s_prompt_carries_the_results_it_waits_for` | [TSK-07](#tsk-07) |
+| `tests/test_conductor.py::test_every_research_and_writing_step_of_a_scheduled_run_gets_one_exact_window` | [TSK-49](#tsk-49), [TSK-50](#tsk-50) |
 | `tests/test_conductor.py::test_one_trace_the_task_s_run_holds_each_step_s_run` | [TSK-09](#tsk-09) |
 | `tests/test_conductor.py::test_only_a_check_loops_and_only_back_and_a_fold_keeps_the_loop_on_its_build` | [TRL-08](#trl-08) |
 | `tests/test_conductor.py::test_the_checkpoint_reads_a_long_result_s_start_and_knows_it_is_cut` | [TRL-08](#trl-08) |
@@ -10525,6 +10691,7 @@ The step service shall post an answer to n8n's resume URL only while n8n's readi
 | `tests/test_deployment_workflows.py::test_the_app_and_the_runner_see_only_the_deployments_workflows` | [PLT-38](#plt-38) |
 | `tests/test_deployment_workflows.py::test_the_tracker_poller_and_the_stacks_item_workflows_come_with_the_trackers` | [PLT-38](#plt-38) |
 | `tests/test_desk.py::test_a_redirect_to_a_private_address_is_refused` | [SEC-06](#sec-06) |
+| `tests/test_desk.py::test_a_run_s_window_decides_what_is_new_and_the_report_states_it` | [TSK-49](#tsk-49) |
 | `tests/test_desk.py::test_a_weekly_brief_keeps_a_week_of_news_and_a_daily_one_36_hours` | [MIS-11](#mis-11) |
 | `tests/test_desk.py::test_every_briefing_is_english_even_for_a_topic_once_marked_german` | [CST-09](#cst-09) |
 | `tests/test_desk.py::test_google_news_searches_in_the_query_s_language_over_the_brief_s_window` | [MIS-11](#mis-11) |
@@ -10824,10 +10991,28 @@ The step service shall post an answer to n8n's resume URL only while n8n's readi
 | `tests/test_litellm_patch.py::test_patch_is_idempotent_and_refuses_changed_code` | [GW-03](#gw-03) |
 | `tests/test_mail.py::test_a_card_left_by_a_restart_is_dropped_with_its_late_answer_and_a_waited_card_stays` | [CNX-06](#cnx-06) |
 | `tests/test_mail.py::test_a_search_or_label_with_a_line_break_is_refused_and_nothing_is_sent` | [CNX-09](#cnx-09) |
-| `tests/test_mail.py::test_mail_tools_cannot_send` | [CNX-04](#cnx-04) |
+| `tests/test_mail.py::test_mail_tools_cannot_send` | [CNX-04](#cnx-04), [CNX-13](#cnx-13) |
 | `tests/test_mail.py::test_nothing_without_a_grant` | [CNX-01](#cnx-01) |
 | `tests/test_mail.py::test_search_is_marked_untrusted_and_flags_protected` | [SEC-05](#sec-05) |
 | `tests/test_mail.py::test_trash_asks_first_keeps_bank_mail_and_can_be_undone` | [CNX-03](#cnx-03) |
+| `tests/test_mailsort.py::test_a_long_sample_subject_is_cut_and_marked` | [CNX-11](#cnx-11) |
+| `tests/test_mailsort.py::test_a_refusal_by_the_connector_stops_the_run_and_is_said` | [CNX-12](#cnx-12) |
+| `tests/test_mailsort.py::test_a_sender_that_relays_people_s_messages_is_never_sure_and_such_a_mail_stays` | [CNX-10](#cnx-10) |
+| `tests/test_mailsort.py::test_an_asleep_nas_is_said_and_never_taken_for_nothing_to_sort` | [CNX-10](#cnx-10) |
+| `tests/test_mailsort.py::test_every_mail_of_a_chosen_sender_is_checked_again_and_each_guard_counted` | [CNX-10](#cnx-10) |
+| `tests/test_mailsort.py::test_keep_this_sender_is_for_good` | [CNX-11](#cnx-11) |
+| `tests/test_mailsort.py::test_needs_you_asks_once_for_new_senders` | [CNX-11](#cnx-11) |
+| `tests/test_mailsort.py::test_new_mail_of_an_approved_sender_is_sorted_weekly_and_an_unapproved_one_never` | [CNX-12](#cnx-12) |
+| `tests/test_mailsort.py::test_nothing_moves_before_the_owner_s_tap` | [CNX-11](#cnx-11) |
+| `tests/test_mailsort.py::test_the_connector_sorts_out_in_one_step_and_leaves_protected_mail_alone` | [CNX-13](#cnx-13) |
+| `tests/test_mailsort.py::test_the_look_proposes_bulk_senders_the_owner_never_answered_in_two_tiers` | [CNX-10](#cnx-10) |
+| `tests/test_mailsort.py::test_the_look_reads_the_copy_read_only_on_the_nas_python_and_writes_nothing` | [CNX-10](#cnx-10) |
+| `tests/test_mailsort.py::test_the_move_goes_in_recorded_paced_batches_and_never_twice` | [CNX-12](#cnx-12) |
+| `tests/test_mailsort.py::test_the_owner_s_tap_approves_the_ticked_senders_and_starts_the_sorter` | [CNX-11](#cnx-11) |
+| `tests/test_mailsort.py::test_the_sorter_is_a_weekly_crew_job_on_n8n_and_the_runner_takes_the_taps` | [CNX-12](#cnx-12) |
+| `tests/test_mailsort.py::test_undo_puts_the_mail_back_and_withdraws_the_approval` | [CNX-12](#cnx-12) |
+| `tests/test_mailsort.py::test_without_organize_nothing_moves_and_it_says_so` | [CNX-12](#cnx-12) |
+| `tests/test_mailsort.py::test_your_mail_shows_the_proposal_with_ticks_and_one_button` | [CNX-11](#cnx-11) |
 | `tests/test_mailvault.py::test_a_bad_copy_is_never_kept` | [CNX-07](#cnx-07) |
 | `tests/test_mailvault.py::test_a_broken_answer_marks_nothing_as_gone` | [CNX-07](#cnx-07) |
 | `tests/test_mailvault.py::test_a_mail_that_leaves_gmail_stays_on_the_nas_marked_as_gone` | [CNX-07](#cnx-07) |
@@ -11396,6 +11581,7 @@ The step service shall post an answer to n8n's resume URL only while n8n's readi
 | `tests/test_shopping.py::test_wait_verdict_keeps_watching` | [SHP-03](#shp-03) |
 | `tests/test_staffing.py::test_a_design_is_archived_reused_by_name_and_proposed_after_three_met_tasks` | [TSK-16](#tsk-16) |
 | `tests/test_staffing.py::test_a_finished_task_is_judged_point_by_point_and_a_build_by_what_happened` | [TSK-17](#tsk-17) |
+| `tests/test_staffing.py::test_a_point_about_when_a_task_runs_is_checked_against_its_schedule_not_its_report` | [TSK-50](#tsk-50) |
 | `tests/test_staffing.py::test_a_step_goes_to_the_agent_that_did_that_kind_best_or_away_from_a_limit` | [TSK-14](#tsk-14) |
 | `tests/test_staffing.py::test_a_step_no_agent_fits_gets_a_temporary_agent_that_ends_with_the_task` | [TSK-15](#tsk-15) |
 | `tests/test_staffing.py::test_a_temporary_agent_stays_within_its_grants_and_ends_with_its_task` | [TSK-15](#tsk-15) |
@@ -11507,6 +11693,7 @@ The step service shall post an answer to n8n's resume URL only while n8n's readi
 | `tests/test_task_page.py::test_the_page_says_where_each_memory_call_went_who_started_whom_and_what_failed` | [APP-36](#app-36) |
 | `tests/test_task_page.py::test_the_page_shows_one_run_s_answer_its_sources_and_what_it_made` | [APP-36](#app-36) |
 | `tests/test_task_page.py::test_the_runner_writes_each_task_s_page_with_every_run_and_its_steps` | [APP-35](#app-35) |
+| `tests/test_tasks.py::test_a_briefing_planned_with_a_number_of_days_names_its_run_s_window_instead` | [TSK-49](#tsk-49) |
 | `tests/test_tasks.py::test_a_briefing_s_alerts_move_with_it_and_an_alert_runs_the_desk_s_short_alert` | [TSK-21](#tsk-21) |
 | `tests/test_tasks.py::test_a_briefing_that_runs_as_its_mission_moves_under_the_conductor_and_its_mission_keeps_the_topic` | [TSK-21](#tsk-21) |
 | `tests/test_tasks.py::test_a_code_questions_steps_go_to_agents_that_read_the_repository` | [TSK-45](#tsk-45) |
@@ -11547,6 +11734,24 @@ The step service shall post an answer to n8n's resume URL only while n8n's readi
 | `tests/test_tasks_tab.py::test_the_stack_s_own_browsers_are_not_counted_as_visits` | [PLT-26](#plt-26) |
 | `tests/test_tasks_tab.py::test_the_tasks_tab_has_five_views_and_the_old_addresses_go_there` | [APP-52](#app-52) |
 | `tests/test_tasks_tab.py::test_who_worked_on_a_mission_s_task_names_the_agent_not_the_task` | [APP-35](#app-35) |
+| `tests/test_tax.py::test_a_name_that_is_taken_gets_a_number_and_nothing_is_written_outside_the_share` | [TAX-03](#tax-03) |
+| `tests/test_tax.py::test_a_run_with_no_open_year_finds_nothing` | [TAX-08](#tax-08) |
+| `tests/test_tax.py::test_a_usage_limit_keeps_what_was_read_and_the_next_attempt_goes_on` | [TAX-02](#tax-02) |
+| `tests/test_tax.py::test_an_earlier_return_is_read_by_the_reader_and_kept_as_the_base` | [TAX-06](#tax-06) |
+| `tests/test_tax.py::test_an_unreadable_refused_or_unsure_answer_is_a_question_never_a_guess` | [TAX-02](#tax-02) |
+| `tests/test_tax.py::test_each_paper_is_one_hermes_turn_marked_as_data` | [TAX-02](#tax-02) |
+| `tests/test_tax.py::test_filing_copies_each_paper_by_year_and_form_and_never_twice` | [TAX-03](#tax-03), [TAX-05](#tax-05) |
+| `tests/test_tax.py::test_find_takes_each_new_candidate_s_text_once_and_the_earlier_return` | [TAX-01](#tax-01), [TAX-06](#tax-06) |
+| `tests/test_tax.py::test_n8n_gen_makes_a_chain_of_steps` | [TAX-08](#tax-08) |
+| `tests/test_tax.py::test_only_the_tax_card_s_hermes_profile_on_chatgpt_reads` | [TAX-02](#tax-02) |
+| `tests/test_tax.py::test_questions_reach_needs_you_without_amounts_and_answers_are_checked` | [TAX-07](#tax-07) |
+| `tests/test_tax.py::test_the_figures_the_law_sets_for_2025_and_2026` | [TAX-05](#tax-05) |
+| `tests/test_tax.py::test_the_header_rules_find_tax_papers_and_leave_the_rest` | [TAX-01](#tax-01) |
+| `tests/test_tax.py::test_the_nas_helper_reads_the_index_read_only_and_never_a_body` | [TAX-01](#tax-01) |
+| `tests/test_tax.py::test_the_owner_s_corrections_in_belege_csv_win_on_every_run` | [TAX-04](#tax-04) |
+| `tests/test_tax.py::test_the_owner_s_own_rules_keep_and_ignore` | [TAX-01](#tax-01) |
+| `tests/test_tax.py::test_the_tax_desk_workflow_finds_reads_and_files_in_that_order` | [TAX-08](#tax-08) |
+| `tests/test_tax.py::test_the_workbook_starts_from_the_earlier_returns` | [TAX-05](#tax-05), [TAX-06](#tax-06), [TAX-07](#tax-07) |
 | `tests/test_team_room.py::test_lines_mark_help_in_another_agent_s_lane_and_keep_every_text_whole` | [SWM-107](#swm-107) |
 | `tests/test_team_room.py::test_the_chatroom_is_the_team_room_with_its_filters` | [SWM-107](#swm-107) |
 | `tests/test_team_room.py::test_the_ledger_feed_has_events_and_messages_but_not_the_requirements_mirror` | [SWM-107](#swm-107) |

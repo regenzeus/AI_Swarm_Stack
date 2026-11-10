@@ -16,14 +16,16 @@ M = None                                          # ops/missions.py (set by its 
 
 
 # ---------- a briefing as a plan (TSK-22): collect, research per key question, write, deliver ----------
+RESEARCH = "Research the run's window"            # TSK-49: its dates are the occurrence's, in every step's prompt
+
+
 def briefing_plan(t, topic):
-    """The plan of every occurrence of a briefing task, from its topic (topics/<slug>/TOPIC.md)."""
+    """The plan of every occurrence of a briefing task, from its topic (topics/<slug>/TOPIC.md). The research step names
+    no number of days: each occurrence has its own window (TSK-49), and a briefing's run once reads the topic's own."""
     qs = [str(q).strip() for q in topic.get("key_questions") or [] if str(q).strip()][:6] or [t["goal"]]   # cap: list (scouts per run)
-    days = max(1, round(int(topic.get("window_hours") or 36) / 24))
-    span = "the last day" if days <= 1 else f"the last {days} days"
     return [{"step": "Collect the news, feeds, filings, job openings and prices", "agent": "desk", "harness": "desk-collect", "after": [],
              "why": "the Topic Desk reads the brief's sources on its isolated network and keeps what is new and on topic"},
-            {"step": f"Research {span}", "agent": "scout", "each": qs, "after": [1],
+            {"step": RESEARCH, "agent": "scout", "each": qs, "after": [1],
              "why": "one scout per key question, at the same time: the web and the job board beyond what the desk collected"},
             {"step": "Write the briefing, every claim cited", "agent": "desk", "harness": "desk-write", "after": [2],
              "why": "the Topic Desk writes from the collected events and the scouts' findings and checks each citation"},
@@ -38,14 +40,20 @@ def alert_plan(t):
             {"step": "Deliver it", "agent": "desk", "harness": "deliver", "after": [1], "why": "sends it the ways the task asked"}]
 
 
-def desk_run(slug, mode, date, findings=None):
+def desk_env(window):
+    """TSK-49: the run's window for ops/desk.sh (the desk reads and writes exactly it), or nothing: its brief's own."""
+    import conductor as CD
+    return {"DESK_SINCE": window["start"], "DESK_UNTIL": window["end"], "DESK_PERIOD": CD.period_text(window)} if window else {}
+
+
+def desk_run(slug, mode, date, findings=None, window=None):
     """One step of the Topic Desk through ops/desk.sh -> its last line (collected: ..., filed: <path>)."""
     import conductor as CD
     if findings is not None:     # into the runner's own in/, read-only for the desk (review IMG-R13: out/ is the container's)
         (CD.DESK / slug / "in").mkdir(parents=True, exist_ok=True)
         (CD.DESK / slug / "in/findings.json").write_text(json.dumps(findings, ensure_ascii=False))
     p = subprocess.run(["bash", str(CD.ROOT / "ops/desk.sh"), slug, "--date", date], capture_output=True, text=True, timeout=CD.STEP_TIMEOUT,
-                       env=dict(os.environ, DESK_TELEGRAM="0", DESK_MODE=mode))
+                       env=dict(os.environ, DESK_TELEGRAM="0", DESK_MODE=mode, **desk_env(window)))
     lines = p.stdout.strip().splitlines()
     last = lines[-1] if lines else ""
     if p.returncode or not last or " failed: " in last or " NOT filed: " in last:
@@ -56,7 +64,7 @@ def desk_run(slug, mode, date, findings=None):
 def run_desk_collect(c, t, s, prompt, card):
     import conductor as CD
     slug, date = t["spec"]["topic"], s["resume"].get("date") or dt.date.today().isoformat()
-    desk_run(slug, "collect", date)
+    desk_run(slug, "collect", date, window=t.get("window"))
     CD.put(c, s["id"], resume={"date": date})           # the writing step files under the same date, also after midnight
     saved = json.loads((CD.DESK / slug / "out" / f"{date}.collected.json").read_text())
     st, chosen = saved["stats"], saved["chosen"]
@@ -70,7 +78,7 @@ def run_desk_write(c, t, s, prompt, card):
     col = next(x for x in ss if x["harness"] == "desk-collect")
     date = col["resume"].get("date") or dt.date.today().isoformat()
     findings = [{"question": x["item"] or x["title"], "text": x["output"] or ""} for x in ss if x["idx"] in s["after"]]
-    out = desk_run(t["spec"]["topic"], "write", date, findings)
+    out = desk_run(t["spec"]["topic"], "write", date, findings, window=t.get("window"))
     m = re.search(r"(?<!NOT )filed: (\S+)", out)              # desk.sh's "NOT filed: <path>" is no report (review RUN-R5)
     if not m or "NOT filed:" in out:
         raise RuntimeError("Topic Desk (write): the report was not filed" + (" (the vault refused it)" if "NOT filed:" in out else ""))
@@ -117,22 +125,53 @@ def run_deliver(c, t, s, prompt, card):
     rel, slug = w["resume"]["report"], t["spec"]["topic"]
     text = (M.VAULT / rel).read_text()
     ways = t["spec"].get("deliver") or ["telegram", "app"]
+    outcome = {}                                          # each way's own result, filled by the delivery (TSK-50)
     if w["harness"] == "desk-alert":
         sent = M.X.deliver({"slug": slug, "title": t["title"], "deliver": ways}, w["resume"].get("title") or t["title"], w["resume"].get("short", ""),
-                           rel, f"Alert · {(t.get('event') or {}).get('trigger', 'an event')}", text)
+                           rel, f"Alert · {(t.get('event') or {}).get('trigger', 'an event')}", text, outcome=outcome)
     else:
         head = re.search(r'^headline: "?(.*?)"?$', text, re.M)
         title = json.loads(f'"{head.group(1)}"') if head else t["title"]
+        win = t.get("window")
+        if win:                                           # TSK-49: the reporting period in the subject, as the report states it
+            title = f"{title} · {span(win)}"
         tg = CD.DESK / slug / "out" / f"{w['resume']['date']}.telegram.txt"
         sent = M.X.deliver({"slug": slug, "title": t["title"], "deliver": ways}, title, tg.read_text() if tg.exists() else "", rel,
-                           f"{M.period({'schedule': t['rhythm'].get('schedule')})} briefing · {M.now():%d %b %Y}", text, empty=M.X.briefing_empty(text))
+                           f"{M.period({'schedule': t['rhythm'].get('schedule')})} briefing · {M.now():%d %b %Y}", text, empty=M.X.briefing_empty(text),
+                           outcome=outcome)
     pages = topic_wiki(t, slug, rel, text, card) if sent and w["harness"] != "desk-alert" else []
-    how = " and ".join({"telegram": "Telegram", "email": "e-mail"}[x] for x in ways if x in ("telegram", "email"))
     body = re.sub(r"^---\n.*?\n---\n", "", text, flags=re.S).strip()
-    said = ("Nothing new was chosen: kept in the app, not sent" if not sent else
-            f"Delivered by {how} and kept in the app" if how else "Kept in the app")
+    CD.put(c, s["id"], resume={"sent": outcome, "ways": ways})    # the delivery's own record, for the judge (TSK-50)
+    said = "Nothing new was chosen: kept in the app, not sent" if not sent else delivered(ways, outcome)
+    failed = [WAY[k] for k, v in outcome.items() if k in WAY and v.get("ok") is False]
+    if failed:                                            # a delivery that did not go out is said, never passed as one
+        M.event("task", slug, f"Task #{t['id']}: the {' and the '.join(failed)} of {rel} did not go out", push=True, title="Tasks")
     wiki = f" Topic wiki pages updated: {', '.join(pages)}." if pages else ""
     return f"{said} ({rel}).{wiki}\n\n{body}"
+
+
+WAY = {"telegram": "Telegram message", "email": "e-mail"}
+
+
+def span(w):
+    """A window as a reporting period for a subject: "2 Nov – 9 Nov 2026" (its whole wording is in the report)."""
+    a, b = (dt.datetime.fromisoformat(w[k]) for k in ("start", "end"))
+    return f"{a.day} {a:%b}{f' {a.year}' if a.year != b.year else ''} – {b.day} {b:%b %Y}"
+
+
+HELD = {"held": "waits for the end of quiet hours", "off": "is off in your notification settings", "duplicate": "had gone out already"}
+
+
+def delivered(ways, outcome):
+    """What went out, as it went: "Delivered by Telegram and e-mail and kept in the app", and each way that did not, why.
+    A way with no record (a delivery made before TSK-50) counts as it was said then."""
+    names = {"telegram": "Telegram", "email": "e-mail"}
+    went = [names[x] for x in ways if x in WAY and (outcome.get(x) or {"ok": True})["ok"]]
+    out = f"Delivered by {' and '.join(went)} and kept in the app" if went else "Kept in the app"
+    for x in (x for x in ways if x in WAY and outcome.get(x)):
+        o = outcome[x]
+        out += f"; the {WAY[x]} failed" if o["ok"] is False else f"; the {WAY[x]} {HELD.get(o.get('said'), o.get('said'))}" if o["ok"] is None else ""
+    return out
 
 
 # gb: the desk's container; a delivery

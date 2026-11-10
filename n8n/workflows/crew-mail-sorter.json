@@ -1,0 +1,89 @@
+{
+  "active": true,
+  "connections": {
+    "On its schedule (0 5 * * 6)": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Crew: Mail sorter",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Run now": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Crew: Mail sorter",
+            "type": "main"
+          }
+        ]
+      ]
+    }
+  },
+  "id": "aisc7adc0f5bc5b0",
+  "name": "Crew: Mail sorter",
+  "nodes": [
+    {
+      "id": "a624b4f8-c4ba-8b02-10c8-fa9fc55b70ff",
+      "name": "On its schedule (0 5 * * 6)",
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "expression": "0 5 * * 6",
+              "field": "cronExpression"
+            }
+          ]
+        }
+      },
+      "position": [
+        0,
+        0
+      ],
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2
+    },
+    {
+      "id": "1d9c525e-c4d0-153d-bbbe-aa8ae1637832",
+      "name": "Crew: Mail sorter",
+      "notes": "The crew job mail-sort (crew-mail-sort.service), as Run now starts it (WFL-05).",
+      "parameters": {
+        "job": "mail-sort",
+        "kind": "crew",
+        "title": "Crew: Mail sorter"
+      },
+      "position": [
+        260,
+        0
+      ],
+      "type": "CUSTOM.aistackStep",
+      "typeVersion": 1,
+      "webhookId": "d8e429dc-bed8-244f-c623-1633ce0bae6e"
+    },
+    {
+      "id": "e1aaafc5-6687-0603-f029-e7db1b160bb6",
+      "name": "Run now",
+      "notes": "Starts the job now, as its schedule would (POST).",
+      "parameters": {
+        "httpMethod": "POST",
+        "options": {},
+        "path": "run/crew-mail-sorter"
+      },
+      "position": [
+        0,
+        160
+      ],
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "webhookId": "58aec4fa-b4fa-d484-69cf-3421e7fb537b"
+    }
+  ],
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Berlin"
+  }
+}

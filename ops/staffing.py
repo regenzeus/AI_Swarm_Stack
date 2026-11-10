@@ -6,7 +6,9 @@ agent fits gets a temporary agent written for it; one that keeps doing well is p
 Judging (TSK-17): a Conductor task's answer, a mission's report or a Claude answer is read by a model (vk-eval) against
 each point of the definition of done; a build counts by what happened to it (deployed or merged: met). A Conductor task
 is judged per occurrence (TSK-22): every run of a scheduled or event-triggered task gets its own verdict, and the
-task shows its latest; a run that found nothing to send (a quiet briefing, no price drop) is not judged. Chats and work
+task shows its latest; a run that found nothing to send (a quiet briefing, no price drop) is not judged. A point about
+when the task runs ("every Monday at 08:00, starting 2 November") is no point a report can show: it is checked against
+the task's schedule instead, and the run's window and its delivery's own record go to the judge (TSK-50). Chats and work
 found at a door (without the owner's definition of done) are not judged.
 
 Temporary agents (TSK-15), within the grants of a task that starts by itself (DEC-34): one model call per step on the
@@ -183,6 +185,7 @@ def evidence_of(c, t, occ=None):
                                              "where p.task=? and a.uri like 'http%' order by a.uri", (t["id"],))]
     except Exception:                                  # no provenance tables yet (a fresh database)
         pages = []
+    out += [x for x in (run_record(c, t, occ),) if x]
     calls = calls_of(CD.run_of(t["id"], occ or 1))       # what the agents ran and read: a clean room is shown, not claimed
     if out or pages or calls:
         out.append(f"### Web pages the agents opened ({len(pages)})\n" + ("\n".join(f"- {u}" for u in pages[:PAGES]) or "none")  # cap: list (the next line says how many more)
@@ -195,22 +198,109 @@ def evidence_of(c, t, occ=None):
     return f"{MEASURED}\n\n" + "\n\n".join(out) if out else ""
 
 
+def run_record(c, t, occ):
+    """TSK-50: what the stack itself recorded about one run of a plan task that its report cannot show: the window it
+    covered and when it started (TSK-49), and each way its delivery went out or not (the delivery's own result)."""
+    import conductor as CD
+    if t["door"] != "plan" or not occ:
+        return ""
+    o = c.execute("select trigger, started from task_occ where task=? and occ=?", (t["id"], occ)).fetchone()
+    win = CD.window_of(c, t["id"], occ)
+    lines = ([f"- This run started {o['started']} ({o['trigger']})" + (f" and covered exactly {CD.period_text(win)}" if win else "")] if o else [])
+    for s in CD.steps(c, t["id"], occ):
+        sent = (s.get("resume") or {}).get("sent") if s["harness"] == "deliver" else None
+        for way, r in (sent or {}).items():
+            state = "sent" if r.get("ok") else "failed" if r.get("ok") is False else str(r.get("said") or "not sent")
+            lines.append(f"- Delivery by {'e-mail' if way == 'email' else way}: {state}"
+                         + (f", subject “{r['subject']}”, to the owner's address the stack's e-mail is set up with" if r.get("subject") else ""))
+    return "### This run, as the stack recorded it\n" + "\n".join(lines) if lines else ""
+
+
+# ---------- points no report can show (TSK-50) ----------
+DAYS = ("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday")
+WHEN = re.compile(r"\bevery\s+(?:day|week|month|hour|weekday|(?:mon|tues|wednes|thurs|fri|satur|sun)day)s?\b|\bat\s+\d{1,2}:\d{2}\b"
+                  r"|\b(?:runs?|scheduled?|activity|recurring)\b[^.;]*\b(?:daily|weekly|monthly|hourly|weekdays|(?:mon|tues|wednes|thurs|fri|satur|sun)days?)\b", re.I)
+MADE = re.compile(r"\b(?:report|briefing|summary|items?|sources?|covers?|includes?|contains?|lists?|e-?mail|sent|sends?|deliver\w*|answer|result)\b", re.I)
+START = re.compile(r"\b(?:starting|from|beginning)\s+(?:on\s+)?(\d{4}-\d{2}-\d{2}|[A-Z][a-z]+ \d{1,2},? \d{4}|\d{1,2} [A-Z][a-z]+ \d{4})")
+
+
+def about_schedule(point):
+    """A point about when the task runs (its rhythm), with nothing about what a run makes: "An enabled weekly activity
+    runs every Monday at 08:00, starting November 2, 2026"."""
+    return bool(WHEN.search(point)) and not MADE.search(point)
+
+
+def day_of(text):
+    for f in ("%Y-%m-%d", "%B %d, %Y", "%B %d %Y", "%b %d, %Y", "%b %d %Y", "%d %B %Y", "%d %b %Y"):
+        try:
+            return dt.datetime.strptime(text, f).date()
+        except ValueError:
+            continue
+    return None
+
+
+def schedule_point(c, t, point, now=None):
+    """TSK-50: a point about when the task runs, checked against its schedule (its n8n workflow's, else its rhythm's), its
+    switch and its runs: the days and times it names, "enabled", and the day it starts. -> {point, met, why}."""
+    import n8n_jobs as NJ
+    try:
+        w = NJ.of("task", t["id"]) or {}
+    except Exception:                                  # the workflows cannot be read now: the task's own words
+        w = {}
+    cron = w.get("cron") or (NJ.cron_of_rhythm(t["rhythm"].get("schedule")) if t["rhythm"].get("type") == "schedule" else "")
+    head = "Checked against the task's schedule, not the report (a report cannot show when its task runs): "
+    p = NJ.parse(cron)
+    if not p:
+        return {"point": point, "met": False, "why": head + "the task has no schedule."}
+    mins, hours, _, _, dows, _, dow_any = p
+    tz = w.get("tz") or ""
+    wrong, low = [], point.lower()
+    named = {(i + 1) % 7 for i, d in enumerate(DAYS) if re.search(rf"\b{d}s?\b", low)}
+    if named and (dow_any or named != dows):
+        wrong.append(f"it does not run on {' and '.join(d.title() for i, d in enumerate(DAYS) if (i + 1) % 7 in named)} only")
+    if re.search(r"\b(?:daily|every day)\b", low) and not dow_any:
+        wrong.append("it does not run every day")
+    wrong += [f"it does not run at {h}:{m}" for h, m in re.findall(r"\b(\d{1,2}):(\d{2})\b", point) if int(h) not in hours or int(m) not in mins]
+    if re.search(r"\b(?:enabled|active|switched on)\b", low) and (w and not w.get("active") or t["status"] not in ("scheduled", "running")):
+        wrong.append("its schedule is switched off" if w and not w.get("active") else f"the task is {t['status']}")
+    runs = [r["started"] for r in c.execute("select started from task_occ where task=? and started is not null order by occ", (t["id"],))]
+    m = START.search(point)
+    first = day_of(m.group(1)) if m else None
+    days = [r[:10] for r in runs]                      # cap: parse (the day of each run's ISO start, in the runner's zone)
+    if first and days and first.isoformat() not in days and days[0] > first.isoformat():
+        wrong.append(f"its first run started {days[0]}, after {first.isoformat()}")
+    said = (f"{'its n8n workflow' if w.get('cron') else 'its rhythm'} runs it {NJ.words(cron)} ({tz or 'the runner’s time zone'})"
+            + (", published in n8n" if w.get("active") else "") + f"; the task is {t['status']}"
+            + (f"; its first run started {runs[0]}" if runs else "; it has not run yet"))
+    return {"point": point, "met": not wrong, "why": head + said + "".join(f"; but {x}" for x in wrong) + "."}
+
+
 def judge(c, t, ask=None, text=None, occ=None):
     """The task's result (or one run's, `text`) against each point of its definition of done -> {verdict, points:
-    [{point, met, why}]}. What the stack measured itself (evidence_of) goes in after the result."""
+    [{point, met, why}]}. What the stack measured itself (evidence_of) goes in after the result; a point about when the
+    task runs is checked against its schedule, not read in the result (TSK-50); one run is judged with its window."""
+    import conductor as CD
     import prompts as P
     text, truth = (text, None) if text is not None else result_of(c, t)
     if truth:
         return {"verdict": truth, "points": [{"point": d, "met": truth == "met", "why": "what happened to the build"} for d in t["done"]]}
     if not text:
         return {"verdict": "not judged", "points": [], "why": "no result to read"}
-    ev = evidence_of(c, t, occ)
-    p = P.text("shared", "TASK_JUDGE").format(goal=t["goal"], done="\n".join(f"{i + 1}. {d}" for i, d in enumerate(t["done"])),
-                                              result=TC.cut(text, 30000) + (f"\n\n{ev}" if ev else ""))  # cap: prompt (the answer; the vault keeps all of it)
-    raw = (ask or (lambda q: __import__("evals").ask({"id": "eval", "model": "gpt-sub"}, q, ref=f"judge task {t['id']}")))(p)
-    d = json.loads(re.search(r"\{.*\}", raw, re.S).group(0)) if isinstance(raw, str) else raw
-    pts = [{"point": t["done"][i] if i < len(t["done"]) else str(x.get("point", "")), "met": bool(x.get("met")), "why": str(x.get("why", ""))}
-           for i, x in enumerate(d.get("points") or [])]
+    fixed = {i: schedule_point(c, t, d) for i, d in enumerate(t["done"]) if about_schedule(d)}
+    asked = [d for i, d in enumerate(t["done"]) if i not in fixed]
+    got = []
+    if asked:
+        win = CD.window_of(c, t["id"], occ) if t["door"] == "plan" and occ else None
+        goal = t["goal"] + (f"\n\nThis run covered exactly {CD.period_text(win)}, the end being when it started." if win else "")
+        ev = evidence_of(c, t, occ)
+        p = P.text("shared", "TASK_JUDGE").format(goal=goal, done="\n".join(f"{i + 1}. {d}" for i, d in enumerate(asked)),
+                                                  result=TC.cut(text, 30000) + (f"\n\n{ev}" if ev else ""))  # cap: prompt (the answer; the vault keeps all of it)
+        raw = (ask or (lambda q: __import__("evals").ask({"id": "eval", "model": "gpt-sub"}, q, ref=f"judge task {t['id']}")))(p)
+        d = json.loads(re.search(r"\{.*\}", raw, re.S).group(0)) if isinstance(raw, str) else raw
+        got = [{"point": asked[i] if i < len(asked) else str(x.get("point", "")), "met": bool(x.get("met")), "why": str(x.get("why", ""))}
+               for i, x in enumerate(d.get("points") or [])]
+    rest = iter(got)
+    pts = [p for p in (fixed[i] if i in fixed else next(rest, None) for i in range(len(t["done"]))) if p] + list(rest)
     n = sum(x["met"] for x in pts)
     verdict = "met" if pts and n == len(pts) else "partly" if n else "not met"
     return {"verdict": verdict, "points": pts}

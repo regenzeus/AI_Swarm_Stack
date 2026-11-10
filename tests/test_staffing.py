@@ -240,3 +240,42 @@ def test_the_judge_reads_what_the_stack_measured_not_only_the_summary(tmp_path, 
     assert "- builder: Read /work/x/semverlib/__init__.py" in p and "pip install semver" not in p     # another task's call is not its
     assert ST.evidence_of(c, {**t, "id": 5}, 1) == ""                 # nothing measured: nothing added
 
+
+def test_a_point_about_when_a_task_runs_is_checked_against_its_schedule_not_its_report(K, monkeypatch):
+    """TSK-50: every run of task 79 failed "runs every Monday at 08:00 ... starting November 2", which no report can
+    show. Such a point is checked against the task's schedule (its n8n workflow, its switch, its runs); the judge reads
+    the other points with the run's window and the delivery's own record."""
+    import n8n_jobs as NJ
+    wf = {"cron": "0 8 * * 1", "tz": "Europe/Berlin", "active": True}
+    monkeypatch.setattr(NJ, "of", lambda kind, key, idx=None: wf)
+    when = "An enabled weekly activity runs every Monday at 08:00 in the owner's time zone, starting November 2, 2026."
+    covers = "Each briefing covers the preceding seven days and names sales and exports."
+    mailed = "Each report is emailed with the reporting period in its subject; its delivery is recorded."
+    tid = task(K, status="scheduled", done=(when, covers, mailed))
+    K.c.execute("update tasks set kind='briefing', rhythm=? where id=?", (json.dumps({"type": "schedule", "schedule": "weekly mon 08:00"}), tid))
+    win = {"start": "2026-11-02T08:00+01:00", "end": "2026-11-09T08:00+01:00", "tz": "Europe/Berlin"}
+    for occ, started, w in ((1, "2026-11-02T08:00:01+01:00", None), (2, "2026-11-09T08:00:04+01:00", win)):
+        K.c.execute("insert into task_occ (task, occ, trigger, started, status, window) values (?,?,?,?,?,?)",
+                    (tid, occ, "schedule", started, "done", json.dumps(w) if w else None))
+    sent = {"telegram": {"ok": True, "said": "sent"}, "email": {"ok": True, "subject": "Cars: Car Weekly · 2 Nov – 9 Nov 2026"}}
+    K.c.execute("insert into task_steps (task, occ, idx, title, agent, harness, after, status, resume) values (?,2,4,'Deliver it','desk','deliver','[3]','done',?)",
+                (tid, json.dumps({"sent": sent, "ways": ["telegram", "app", "email"]})))
+    K.c.commit()
+    assert ST.about_schedule(when) and not ST.about_schedule(covers) and not ST.about_schedule(mailed)
+    seen = []
+    j = ST.judge(K.c, TK.row(K.c, tid), ask=lambda p: seen.append(p) or {"points": [{"met": True, "why": "seven days"}, {"met": True, "why": "recorded"}]},
+                 text="# Car Weekly", occ=2)
+    assert [p["point"] for p in j["points"]] == [when, covers, mailed] and j["verdict"] == "met"
+    why = j["points"][0]["why"]
+    assert why.startswith("Checked against the task's schedule, not the report") and "Mondays 08:00 (Europe/Berlin), published in n8n" in why
+    assert "its first run started 2026-11-02T08:00:01+01:00" in why and "but" not in why
+    p = seen[0]
+    assert f"1. {covers}" in p and f"2. {mailed}" in p and when not in p              # the model reads only what a report can show
+    assert "This run covered exactly Mon 2 Nov 2026 08:00 to Mon 9 Nov 2026 08:00 (Europe/Berlin)" in p
+    assert "- Delivery by e-mail: sent, subject “Cars: Car Weekly · 2 Nov – 9 Nov 2026”" in p and "- Delivery by telegram: sent" in p
+    wf["active"] = False
+    bad = ST.schedule_point(K.c, TK.row(K.c, tid), "An enabled activity runs every Friday at 09:00.")
+    assert not bad["met"] and "but it does not run on Friday only" in bad["why"] and "but it does not run at 09:00" in bad["why"]
+    assert "but its schedule is switched off" in bad["why"]
+    late = ST.schedule_point(K.c, TK.row(K.c, tid), "The schedule runs every Monday at 08:00, starting 26 October 2026.")
+    assert not late["met"] and "its first run started 2026-11-02, after 2026-10-26" in late["why"]

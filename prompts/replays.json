@@ -1051,6 +1051,27 @@
    "sha": "409c2f9f141e"
   }
  ],
+ "tax/PRIOR": [
+  {
+   "at": "2026-11-10",
+   "baseline": "new prompt: the owner's own earlier return extracted as the base (TAX-06)",
+   "sha": "c6972b5404f0"
+  }
+ ],
+ "tax/READ": [
+  {
+   "at": "2026-11-10",
+   "baseline": "new prompt: one mail and its attachments sorted for the tax return as JSON (TAX-02)",
+   "sha": "a1023a632f6e"
+  }
+ ],
+ "tax/SOUL": [
+  {
+   "at": "2026-11-10",
+   "baseline": "new prompt: the tax profile's standing rules, ChatGPT only, no tools (TAX-02)",
+   "sha": "de5b9a5a68cd"
+  }
+ ],
  "wikis/SUMMARY": [
   {
    "at": "2026-10-30",

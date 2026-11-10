@@ -825,3 +825,46 @@ items:
   verify: {method: test, by: ['tests/test_claude_tasks.py::test_a_claude_task_may_copy_an_older_commit_and_bring_recent_history']}
   trace: [ops/claude_tasks.py, ops/tasks.py]
 
+- id: TSK-49
+  group: Plan graph and durable steps
+  phase: 9
+  title: Every step of a scheduled run covers one exact window
+  statement: When the Conductor starts an occurrence of a task on a schedule, it shall give the occurrence one window, from
+    its start back by the schedule's gap between its last two fires, in the time zone of the task's n8n workflow (else the
+    runner's), and every step of that occurrence shall get the window in its prompt; the Topic Desk shall collect only what
+    was published inside the window, state the window in the report, and put the reporting period in the e-mail's subject;
+    an item shall count as seen only once a written report used it.
+  type: functional
+  priority: must
+  status: implemented
+  parents: [SN-19, SN-20]
+  sources: [docs/SWARM-DESIGN.md]
+  acceptance: 'Test: a weekly mon 08:00 run started at 08:00:04 on 9 Nov 2026 covers 2 Nov 08:00 to 9 Nov 08:00 (Europe/Berlin)
+    in both scouts'' prompts, the desk''s collect and write steps and the subject; a Run now on Tuesday 15:41 covers the
+    seven days before it; the desk keeps items inside the window only, marks seen only what the report used, and the
+    report''s second line is the period.'
+  verify: {method: test, by: ['tests/test_conductor.py::test_every_research_and_writing_step_of_a_scheduled_run_gets_one_exact_window',
+    'tests/test_desk.py::test_a_run_s_window_decides_what_is_new_and_the_report_states_it',
+    'tests/test_tasks.py::test_a_briefing_planned_with_a_number_of_days_names_its_run_s_window_instead']}
+  trace: [ops/conductor.py, ops/n8n_jobs.py, ops/desk_steps.py, ops/desk.sh, images/desk/desk.py, ops/tasks.py, ops/missions.py]
+
+- id: TSK-50
+  group: Self-staffing
+  phase: 9
+  title: The judge reads only what a report can show
+  statement: When the Checker judges a run, it shall check a point of the definition of done that names only when the
+    task runs against the task's schedule (its n8n workflow, its switch and its runs) instead of the run's report, give
+    the remaining points to the judge with the run's window, and show the judge the delivery's own record of each way
+    (sent, failed, held or off, and the e-mail's subject); a delivery step shall say which way failed and tell the owner.
+  type: quality
+  priority: must
+  status: implemented
+  parents: [SN-07, SN-08]
+  sources: [MIS-16, docs/SWARM-ROADMAP.md]
+  acceptance: 'Test: "runs every Monday at 08:00, starting November 2, 2026" is met from a Monday 08:00 workflow whose first
+    run started on 2 Nov, never sent to the judge; Friday 09:00 on a switched-off workflow is not met with each reason;
+    the judge''s prompt holds the run''s window and the e-mail''s subject; a failed e-mail is said in the step''s answer
+    and pushed.'
+  verify: {method: test, by: ['tests/test_staffing.py::test_a_point_about_when_a_task_runs_is_checked_against_its_schedule_not_its_report',
+    'tests/test_conductor.py::test_every_research_and_writing_step_of_a_scheduled_run_gets_one_exact_window']}
+  trace: [ops/staffing.py, ops/desk_steps.py, ops/mission_extras.py]

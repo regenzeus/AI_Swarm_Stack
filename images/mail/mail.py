@@ -1,7 +1,8 @@
 """Gmail for the stack's agents: search, read, organize and move to Trash, only while the owner has granted it.
 
 MCP tools (via LiteLLM, keys vk-main and vk-mission): mail_search, mail_read, mail_label, mail_archive, mail_mark,
-mail_trash, mail_untrash, mail_access. IMAP over TLS to imap.gmail.com with the Gmail app password (env, never logged).
+mail_sort_out, mail_sort_back (the mail sorter's label-and-archive and its undo, ops/mailsort.py), mail_trash,
+mail_untrash, mail_access. IMAP over TLS to imap.gmail.com with the Gmail app password (env, never logged).
 
 Permissions (ops: images/mail/AGENTS.md): the owner grants scopes for a time window in Mission Control (Stack →
 Connections, or on a mission that needs them): `read` (search, read), `organize` (labels, archive, read/unread),
@@ -296,6 +297,76 @@ def do_organize(ids, op, label=""):
         m.logout()
 
 
+def asked(ids):
+    """The ids of one call, as text, at most MAX_BATCH (the tool's description names it; the rest is the next call's)."""
+    return [str(i) for i in TC.first(ids, MAX_BATCH, "mail ids in one call")]  # cap: untrusted
+
+
+def find(m, f, ids):
+    """Gmail message ids -> [(id, uid)] in All Mail, in one selected folder (one SEARCH each; Trash and Spam are not in it)."""
+    m.select(q(f["all"]))
+    out = []
+    for i in ids:
+        if i.isdigit():
+            uids = (m.uid("SEARCH", "X-GM-MSGID", str(int(i)))[1][0] or b"").split()
+            if uids:
+                out.append((str(i), uids[-1].decode()))
+    return out
+
+
+def do_sort_out(ids, label):
+    """CNX-13: each mail gets the label and leaves the inbox, in one session; a protected mail is left alone entirely, the
+    label too. -> a sentence, then one JSON line: done, inbox (those that were in it), protected, missing."""
+    m = imap()
+    try:
+        f, ids = folders(m), asked(ids)
+        found = find(m, f, ids)
+        info = fetch_headers(m, [u for _, u in found])
+        done, inbox, kept = [], [], []
+        for i, u in found:
+            it = info.get(u) or {"id": i}
+            if protected(it):
+                kept.append(i)
+                continue
+            done.append((i, u, it))
+            if "\\Inbox" in it.get("labels", ""):
+                inbox.append(i)
+        if done:
+            uids = ",".join(u for _, u, _ in done)
+            m.uid("STORE", uids, "+X-GM-LABELS", q(label))
+            m.uid("STORE", uids, "-X-GM-LABELS", "(\\Inbox)")
+        missing = [i for i in ids if i not in {x for x, _ in found}]
+        log(action="sort-out", label=label, ids=[i for i, _, _ in done], inbox=inbox, skipped=kept, missing=missing,
+            sample=[f"{it.get('from', '')} · {it.get('subject', '')}" for _, _, it in done[:10]])
+        return (f"sort-out: {len(done)} under {label}, {len(inbox)} of them taken out of the inbox"
+                + (f", {len(kept)} protected (bank/security mail) left alone" if kept else "")
+                + (f", {len(missing)} not found" if missing else "") + ".\n"
+                + json.dumps({"done": [i for i, _, _ in done], "inbox": inbox, "protected": kept, "missing": missing}))
+    finally:
+        m.logout()
+
+
+def do_sort_back(ids, label, to_inbox):
+    """CNX-13, the undo of a sort-out: the label off every mail, and back into the inbox those that were in it."""
+    m = imap()
+    try:
+        f, ids = folders(m), asked(ids)
+        found = find(m, f, ids)
+        back = {str(i) for i in to_inbox or []}
+        if found:
+            m.uid("STORE", ",".join(u for _, u in found), "-X-GM-LABELS", q(label))
+        inbox = [(i, u) for i, u in found if i in back]
+        if inbox:
+            m.uid("STORE", ",".join(u for _, u in inbox), "+X-GM-LABELS", "(\\Inbox)")
+        missing = [i for i in ids if i not in {x for x, _ in found}]
+        log(action="sort-back", label=label, ids=[i for i, _ in found], inbox=[i for i, _ in inbox], missing=missing)
+        return (f"sort-back: {len(found)} without {label}, {len(inbox)} of them back in the inbox"
+                + (f", {len(missing)} not found (moved to Trash or Spam since?)" if missing else "") + ".\n"
+                + json.dumps({"done": [i for i, _ in found], "inbox": [i for i, _ in inbox], "missing": missing}))
+    finally:
+        m.logout()
+
+
 def first_ok_key():
     g = granted("trash") or {}
     return str(g.get("at", ""))
@@ -487,6 +558,28 @@ async def mail_archive(ids: list[str]) -> str:
     if not granted("organize"):
         return refuse("organize")
     return await asyncio.to_thread(do_organize, ids, "archive")
+
+
+@mcp.tool(description=f"Sort mail out under a label in one step: each message gets the label and leaves the inbox (ids from "
+                      f"mail_search, up to {MAX_BATCH} per call; nothing is deleted). Needs 'organize'. Bank, payment and "
+                      "security mails are left alone, without the label. Answers a sentence and a JSON line: done, inbox "
+                      "(those that were in the inbox), protected, missing. mail_sort_back undoes it.")
+async def mail_sort_out(ids: list[str], label: str) -> str:
+    if not granted("organize"):
+        return refuse("organize")
+    if (why := not_plain(label, "label")):
+        return why
+    return await asyncio.to_thread(do_sort_out, ids, label[:60])  # cap: api (a Gmail label name; a marker would rename it)
+
+
+@mcp.tool(description="Undo mail_sort_out: the label comes off these messages, and those in to_inbox go back into the "
+                      "inbox. Needs 'organize'. Answers a sentence and a JSON line: done, inbox, missing.")
+async def mail_sort_back(ids: list[str], label: str, to_inbox: list[str] | None = None) -> str:
+    if not granted("organize"):
+        return refuse("organize")
+    if (why := not_plain(label, "label")):
+        return why
+    return await asyncio.to_thread(do_sort_back, ids, label[:60], to_inbox or [])  # cap: api (a Gmail label name; a marker would rename it)
 
 
 @mcp.tool(description="Mark messages read (read=true) or unread. Needs 'organize'.")

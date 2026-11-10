@@ -42,7 +42,7 @@ def test_every_scheduled_job_runs_on_n8n():
     "active"; ops/n8n_switch.py <file> off takes one back."""
     jobs = {f.name: json.loads(f.read_text()) for f in WF if f.name.startswith(("crew-", "task-")) or f.name == "memory-keeper.json"}
     waiting = {"crew-tracker-poll.json"}                 # WFL-19: the tracker poller, published by a deployment that has trackers (home since its inbox, GEN-45)
-    assert len(jobs) == 29 and all(wf["active"] for n, wf in jobs.items() if n not in waiting)
+    assert len(jobs) == 30 and all(wf["active"] for n, wf in jobs.items() if n not in waiting)      # 30 with the mail sorter (CNX-12)
 
 
 def test_a_deploy_imports_the_repositorys_workflows_each_as_its_file_says(monkeypatch):

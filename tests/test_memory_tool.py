@@ -48,7 +48,7 @@ def test_memory_replaces_qmd_graphify_and_agent_note_in_every_grant():
     cards = yaml.safe_load((ROOT / "config/agents.yaml").read_text())["agents"]
     for c in cards:
         if c.get("harness") in ("hermes", "opencode") or c["id"] == "builder":
-            assert {"memory", "memorypublic"} & set(c.get("tools") or []) or c["id"] == "desk", c["id"]
+            assert {"memory", "memorypublic"} & set(c.get("tools") or []) or c["id"] in ("desk", "tax"), c["id"]   # tax: no tools (TAX-02)
     assert "async def agent_note" not in SERVER
     assert "graphify" not in (ROOT / "config/hermes/configure-builder.sh").read_text().split("mcp_servers.memory")[0].split("hermes config unset")[1]
 

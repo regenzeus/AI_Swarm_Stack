@@ -39,7 +39,7 @@ WEB = Path(__file__).parent / "web"
 HERMES = "http://hermes:8642/v1/chat/completions"
 PHOENIX = os.environ.get("PHOENIX_URL", "http://phoenix:6006")
 HERMES_KEY = os.environ.get("API_SERVER_KEY", "")
-ACTIONS = {"flow_answer", "pack_approve", "pack_refuse", "tracker_shadow_approve", "tracker_shadow_reject", "tracker_live", "command_approve", "claude_task","claude_cancel", "windows_ask", "forgejo_connect", "create", "run", "pause", "resume", "archive", "update", "memory", "email", "vault_add", "understand", "card_edit",
+ACTIONS = {"flow_answer", "tax_answer", "pack_approve", "pack_refuse", "tracker_shadow_approve", "tracker_shadow_reject", "tracker_live", "command_approve", "claude_task","claude_cancel", "windows_ask", "forgejo_connect", "create", "run", "pause", "resume", "archive", "update", "memory", "email", "vault_add", "understand", "card_edit",
            "forget", "memory_search", "memory_browse", "memory_move", "build_assign", "build_revise", "build_approve", "build_approve_all", "build_reject", "build_revert",
            "improve_scan", "proposal_accept", "proposal_dismiss", "build_recheck", "build_switch_engine", "codemap", "repo_create", "repo_buildable", "repo_remove", "crew_run", "crew_memory_forget", "crew_memory_undo",
            "journal_note", "journal_edit", "health_ack", "swarm_pause", "swarm_confirm", "swarm_reopen", "swarm_autonomy", "swarm_post", "swarm_help_verdict", "swarm_agent_change", "phone_cleanup_do", "phone_cleanup_do_all", "phone_cleanup_undo", "phone_cleanup_dismiss",
@@ -52,6 +52,7 @@ ACTIONS = {"flow_answer", "pack_approve", "pack_refuse", "tracker_shadow_approve
            "rule_save", "rule_toggle", "rule_delete", "event_rate", "calendar_set", "calendar_clear",   # the event bus's rules and ratings (TSK-10 to TSK-12)
            "a2a_settings", "a2a_token", "a2a_revoke",   # TSK-19: outside agents (A2A)
            "wiki_delete",                          # ops/wikis.py: from the app only (refused from the AI phone above)
+           "mailsort_go", "mailsort_keep", "mailsort_undo",   # CNX-10 to CNX-13: the owner's choice of senders whose mail is sorted out (ops/mailsort.py)
            "file_save", "file_delete", "file_restore", "file_pin", "files_cleanup", "files_asked",   # MIS-23 to MIS-26: mission files (ops/files.py)
            "mem_search", "mem_open", "mem_subscribe", "mem_note", "mem_undo", "mem_chat"}   # mem_*: the memory MCP servers (MEM-28), the app's Undo (MEM-35) and a chat turn's memory (MEM-46)
 BUILDS = M / "builds"
@@ -279,7 +280,7 @@ async def api_request(request):
     if body.get("action") == "chat_ready":                                 # sent by the app itself when a waiting chat is answered
         return JSONResponse({"ok": False, "error": "not a request the app's screens make"}, status_code=403)
     body["source"] = "app"
-    if body.get("action") == "flow_answer":                                 # GEN-27: who answered, from the sign-in, never from the page
+    if body.get("action") in ("flow_answer", "tax_answer"):                 # GEN-27: who answered, from the sign-in, never from the page
         body["who"] = request.headers.get("tailscale-user-login") or "owner"
     note_owner(str(body.get("action", "")))
     return JSONResponse(await submit(body))
@@ -684,15 +685,18 @@ async def api_version(request):
 
 
 async def api_mail(request):
-    """The mail copy on the NAS and the sender report from its headers (CNX-07, CNX-08): no message text."""
+    """The mail copy on the NAS, the sender report from its headers (CNX-07, CNX-08) and the mail sorter's proposal and runs
+    (CNX-10 to CNX-13): no message text."""
     d = M / "mail"
     def read(name):
         try:
             return json.loads((d / name).read_text())
         except (OSError, ValueError):
             return None
-    crew = read_crew_file("postmaster")
-    return JSONResponse({"status": read("status.json"), "census": read("census.json"), "postmaster": {k: crew.get(k) for k in ("result", "last", "total_filed", "since")}})
+    crew, sorter = read_crew_file("postmaster"), read_crew_file("mail-sort")
+    return JSONResponse({"status": read("status.json"), "census": read("census.json"), "postmaster": {k: crew.get(k) for k in ("result", "last", "total_filed", "since")},
+                         "sort": {"proposal": read("sort/proposal.json"), "runs": read("sort/runs.json") or [],    # CNX-10 to CNX-13 (ops/mailsort.py)
+                                  "result": sorter.get("result"), "last": sorter.get("last")}})
 
 
 def read_crew_file(aid):

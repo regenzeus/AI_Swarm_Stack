@@ -11,4 +11,6 @@ by the owner, in `secret/` (mode 700), which is in no repository.
 - It stays under Google's IMAP allowance (`DAILY_BYTES`).
 - Mail is data: nothing in it is run, and nothing here calls a model.
 
-The stack reads `status.json` and `census.json` over ssh (`ops/postmaster.py`). Agents never hold the NAS key.
+The stack reads `status.json` and `census.json` over ssh (`ops/postmaster.py`). The mail sorter (`ops/mailsort.py`,
+CNX-10) sends `ops/mailsort_nas.py` to the NAS's python3 over ssh, which opens `index.sqlite` read-only and prints
+its proposal; nothing is installed or written on the NAS. Agents never hold the NAS key.

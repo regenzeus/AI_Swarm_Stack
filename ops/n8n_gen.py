@@ -5,6 +5,10 @@ its switch (ops/n8n_switch.py). n8n starts every scheduled job of the stack; thi
     python3 ops/n8n_gen.py crew <job> '<cron>'   write n8n/workflows/crew-<name>.json for a crew job of ops/crew.py
                                                  (an existing file stays as it is) and list it in this deployment's
                                                  workflows.yaml (PLT-38)
+    python3 ops/n8n_gen.py chain '<name>' '<cron>' crew:<job>=<title> agent:<card>=<title> ...
+                                                 write n8n/workflows/<name>.json: the steps in that order, each waiting
+                                                 for the one before (an existing file stays as it is), listed in this
+                                                 deployment's workflows.yaml; the tax desk's is one (TAX-08)
     python3 ops/n8n_gen.py --run-now             Run now for every crew-* and task-* file that lacks it (its id,
                                                  "active" and canvas changes kept)
 
@@ -115,6 +119,53 @@ def crew(job, cron, out=None, folder=None):
     return p
 
 
+def chain(name, cron, steps, out=None, folder=None):
+    """A workflow of AI Stack steps in a row (crew jobs and agent steps), behind a Schedule and a Run now trigger,
+    inactive until its switch, in n8n/workflows and listed in the deployment's workflows.yaml (folder, default this
+    deployment's). steps: ["crew:<job>=<title>" | "agent:<card>=<title>"]; an agent step's brief is its card's purpose.
+    -> the file, or None when it exists."""
+    import crew as CR
+    import n8n_jobs as NJ
+    import n8n_sync as NS
+    import registry as REG
+    if not NJ.parse(cron):
+        raise SystemExit(f"not a five-field cron expression: {cron!r}")
+    cards = {c["id"]: c for c in REG.load().get("agents") or []}
+    nodes = []
+    for spec in steps:
+        kind, _, rest = spec.partition(":")
+        ref, _, title = rest.partition("=")
+        if not title:
+            raise SystemExit(f"a step needs its title: {spec!r} (crew:<job>=<title> or agent:<card>=<title>)")
+        if kind == "crew" and (CR.BY_ID.get(ref) or {}).get("unit"):
+            nodes.append((title, {"kind": "crew", "job": ref}, f"The crew job {ref} ({CR.BY_ID[ref]['unit']}.service), waited for."))
+        elif kind == "agent" and ref in cards:
+            nodes.append((title, {"kind": "agent", "agent": ref, "brief": cards[ref]["purpose"]},
+                          f"The agent {ref} ({cards[ref]['harness']}, {cards[ref]['model']}) through the step service."))
+        else:
+            raise SystemExit(f"no crew job with a unit or agent card for {spec!r}")
+    w = wid("chain", name)
+    trig = f"On its schedule ({cron})"
+    wf = {"active": False, "id": w, "name": name, "settings": settings(cron), "connections": {}, "nodes": [
+        {"id": node_id(w, trig), "name": trig, "parameters": {"rule": {"interval": [{"expression": cron, "field": "cronExpression"}]}},
+         "position": [0, 0], "type": "n8n-nodes-base.scheduleTrigger", "typeVersion": 1.2}]}
+    before = trig
+    for i, (title, params, note) in enumerate(nodes):
+        wf["nodes"].append({"id": node_id(w, title), "name": title, "notes": note, "parameters": {**params, "title": title},
+                            "position": [260 * (i + 1), 0], "type": STEP, "typeVersion": 1, "webhookId": node_id(w, title + "/hook")})
+        wf["connections"][before] = {"main": [[{"index": 0, "node": title, "type": "main"}]]}
+        before = title
+    wf = run_now(wf, NS.file_name(wf)[:-len(".json")])
+    p = Path(out or OUT) / NS.file_name(wf)
+    if p.exists():
+        return None
+    p.write_text(json.dumps(wf, indent=2, ensure_ascii=False, sort_keys=True) + "\n")
+    if out is None or folder is not None:            # PLT-38: made for this deployment, so its workflows.yaml lists it
+        import deployment as DEPLOY
+        DEPLOY.add_workflow(p, folder)
+    return p
+
+
 def main(argv):
     if argv[1:2] == ["--run-now"]:
         for name in add_run_now():
@@ -122,6 +173,11 @@ def main(argv):
         return 0
     if len(argv) == 4 and argv[1] == "crew":
         p = crew(argv[2], argv[3])
+        print(f"wrote {p.relative_to(R)}, listed in this deployment's workflows.yaml (inactive: ops/n8n_switch.py "
+              f"{p.relative_to(R)} on)" if p else "it has a workflow already")
+        return 0
+    if len(argv) >= 5 and argv[1] == "chain":
+        p = chain(argv[2], argv[3], argv[4:])
         print(f"wrote {p.relative_to(R)}, listed in this deployment's workflows.yaml (inactive: ops/n8n_switch.py "
               f"{p.relative_to(R)} on)" if p else "it has a workflow already")
         return 0
