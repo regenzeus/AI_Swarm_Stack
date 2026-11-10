@@ -210,7 +210,7 @@ def test_health_shows_given_and_used_per_run_kind(MS):
     h = MS.health(30, now)
     assert h == {"code": {"runs": 2, "given_per_run": 8000, "used_share": 0.3, "done_share": 0.5, "budget": MS.budget_of("code")}}
     app = webjs.app_js()
-    assert "function memStatusHtml(st)" in app and "S.memory?.stack" in app and "of it used" in app
+    assert "function memStatusHtml(st)" in app and "${memStatusHtml(st)}" in app and "of it used" in app   # Memory's first page (DEC-53: no longer twice, on Stack too)
 
 
 def test_the_catalogue_lists_every_collection_with_its_card(MS, monkeypatch):

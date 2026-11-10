@@ -22,7 +22,7 @@ from mcp.server.transport_security import TransportSecuritySettings
 from starlette.applications import Starlette
 from starlette.middleware import Middleware
 from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse, Response, StreamingResponse
+from starlette.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse, StreamingResponse
 from starlette.routing import Mount, Route
 from starlette.staticfiles import StaticFiles
 from textcap import cut, tail                    # visible caps and input limits (AGENTS.md, truncation)
@@ -36,9 +36,8 @@ VAULT = Path("/vault")
 WEB = Path(__file__).parent / "web"
 HERMES = "http://hermes:8642/v1/chat/completions"
 PHOENIX = os.environ.get("PHOENIX_URL", "http://phoenix:6006")
-PHOENIX_PORT = 8443                                       # tailscale serve: https://<pc>.ts.net:8443 (tailnet only)
 HERMES_KEY = os.environ.get("API_SERVER_KEY", "")
-ACTIONS = {"flow_answer", "engine_decide", "template_save", "template_test", "template_describe", "pack_approve", "pack_refuse", "tracker_shadow_approve", "tracker_shadow_reject", "tracker_live", "command_approve", "claude_task", "claude_cancel", "windows_ask", "forgejo_connect", "create", "run", "pause", "resume", "archive", "update", "memory", "email", "vault_add", "understand", "card_edit",
+ACTIONS = {"flow_answer", "pack_approve", "pack_refuse", "tracker_shadow_approve", "tracker_shadow_reject", "tracker_live", "command_approve", "claude_task","claude_cancel", "windows_ask", "forgejo_connect", "create", "run", "pause", "resume", "archive", "update", "memory", "email", "vault_add", "understand", "card_edit",
            "forget", "memory_search", "memory_browse", "memory_move", "build_assign", "build_revise", "build_approve", "build_approve_all", "build_reject", "build_revert",
            "improve_scan", "proposal_accept", "proposal_dismiss", "build_recheck", "build_switch_engine", "codemap", "repo_create", "repo_buildable", "repo_remove", "crew_run", "crew_memory_forget", "crew_memory_undo", "crew_schedule",
            "journal_note", "journal_edit", "health_ack", "swarm_pause", "swarm_confirm", "swarm_reopen", "swarm_autonomy", "swarm_post", "swarm_help_verdict", "swarm_agent_change", "phone_cleanup_do", "phone_cleanup_do_all", "phone_cleanup_undo", "phone_cleanup_dismiss",
@@ -48,11 +47,11 @@ ACTIONS = {"flow_answer", "engine_decide", "template_save", "template_test", "te
            "task_create", "task_answer", "task_approve", "task_cancel", "task_retry", "task_run", "task_conduct",   # task_*: the task kernel (TSK-01 to TSK-04, TSK-21, TSK-22)
            "change_request", "change_go", "change_resume", "change_leave", "change_rule",   # change_*: change requests (CHG-01, ops/changes.py)
            "decision_test_answer",                 # GEN-03: the tap on the nightly journey's test item; it changes only that item (ops/decisions.py)
-           "rule_save", "rule_toggle", "rule_delete", "event_rate", "calendar_set", "calendar_clear",
-           "a2a_settings", "a2a_token", "a2a_revoke",
-           "wiki_delete",
-           "file_save", "file_delete", "file_restore", "file_pin", "files_cleanup", "files_asked",
-           "mem_search", "mem_open", "mem_subscribe", "mem_note", "mem_undo", "mem_chat"}   # mem_*: the memory MCP servers (MEM-28), the app's Undo (MEM-35) and a chat turn's memory (MEM-46)   # MIS-23 to MIS-26: mission files (ops/files.py)                                  # ops/wikis.py: from the app only (refused from the AI phone above)                                    # TSK-19: outside agents (A2A)                      # the event bus's rules and ratings (TSK-10 to TSK-12)
+           "rule_save", "rule_toggle", "rule_delete", "event_rate", "calendar_set", "calendar_clear",   # the event bus's rules and ratings (TSK-10 to TSK-12)
+           "a2a_settings", "a2a_token", "a2a_revoke",   # TSK-19: outside agents (A2A)
+           "wiki_delete",                          # ops/wikis.py: from the app only (refused from the AI phone above)
+           "file_save", "file_delete", "file_restore", "file_pin", "files_cleanup", "files_asked",   # MIS-23 to MIS-26: mission files (ops/files.py)
+           "mem_search", "mem_open", "mem_subscribe", "mem_note", "mem_undo", "mem_chat"}   # mem_*: the memory MCP servers (MEM-28), the app's Undo (MEM-35) and a chat turn's memory (MEM-46)
 BUILDS = M / "builds"
 MAPS = M / "public/maps"                          # TSK-24: each task run's swarm map (ops/provenance.py)
 TASK_PAGES = M / "public/tasks"                        # APP-35: each task page's data, written by the runner (ops/tasks.py publish)
@@ -64,15 +63,6 @@ def state():
         return json.loads(STATE.read_text())
     except Exception:
         return {"missions": [], "activity": [], "calls": [], "system": {}, "running": None, "queue": []}
-
-
-def engine_view():
-    """The engine's state and its recent runs, as the runner's bridge writes them (ops/engine/projector.py), or None while
-    the deployment runs the Conductor (ENGINE=conductor: no engine.json)."""
-    try:
-        return json.loads((M / "public/engine.json").read_text())
-    except (OSError, ValueError):
-        return None
 
 
 def mission(slug):
@@ -107,12 +97,12 @@ def _part(name):
 # ---------- app API ----------
 class TailnetOnly(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
-        if request.url.path.startswith(("/api/", "/share", "/runs", "/n8n")) and not request.headers.get("tailscale-user-login"):
+        if request.url.path.startswith(("/api/", "/share", *(f"/{n}" for n in FRAMES))) and not request.headers.get("tailscale-user-login"):
             return JSONResponse({"error": "only reachable through Tailscale"}, status_code=403)
         # SEC-20: tailscale serve adds the owner's login to whatever his browser sends, a page of another site included;
         # a browser names where a request comes from (Sec-Fetch-Site), so a write from anywhere but this app is refused.
         # /share is the phone's share sheet (its own reasoning, APP share inbox); programs send no Sec-Fetch-Site.
-        if (request.method not in ("GET", "HEAD", "OPTIONS") and request.url.path.startswith(("/api/", "/n8n"))
+        if (request.method not in ("GET", "HEAD", "OPTIONS") and request.url.path.startswith(("/api/", *(f"/{n}" for n in FRAMES)))
                 and request.headers.get("sec-fetch-site", "same-origin") not in ("same-origin", "none")):
             return JSONResponse({"error": "refused: a write request from another site (SEC-20)"}, status_code=403)
         response = await call_next(request)
@@ -142,8 +132,8 @@ def owner_decisions(s):
                     "answers": [{"label": "Look", "href": "#/phone"}], "created": None, "weight": 2, "routine": False})
     if cs.get("pending"):
         out.append({"id": "gmail-trash", "cls": "delete", "what": "Gmail: a Trash batch waits for your OK", "why": "nothing is moved without it",
-                    "href": "#/system?conn=1", "recommend": None, "unanswered": "the mail stays where it is", "expires": None,
-                    "answers": [{"label": "Look", "href": "#/system?conn=1"}], "created": None, "weight": 1, "routine": False})
+                    "href": "#/system?tab=connections", "recommend": None, "unanswered": "the mail stays where it is", "expires": None,
+                    "answers": [{"label": "Look", "href": "#/system?tab=connections"}], "created": None, "weight": 1, "routine": False})
     for m in s.get("missions") or []:
         missing = [n for n in m.get("needs") or [] if not ((cs.get(n.split(":")[0]) or {}).get("grants") or {}).get(n.partition(":")[2])]
         if m.get("status") == "active" and missing:
@@ -153,27 +143,70 @@ def owner_decisions(s):
     return out + list(s.get("decisions") or [])
 
 
-async def api_state(request):
-    """The runner's whole state (missions, runs, builds, crew, health, system …) plus the phone, the connections and who is viewing."""
+# APP-65: what is true when the runner's state is old. The app knows when its own machine started (the kernel's uptime,
+# which a container shares with its host) and when the runner last wrote; the last boot record (ops/stack_ready.py, in
+# the runner's state) says how long the stack took to come up then.
+LINK_STALE_S = 60      # limit: waits, the runner writes its state every few seconds; none for a minute means it stopped
+LINK_START_S = 1500    # limit: waits, the boot check gives the stack up to 20 min (ops/stack_ready.py WAIT_S), then the runner starts
+
+
+def _uptime():
+    try:
+        return float(Path("/proc/uptime").read_text().split()[0])
+    except (OSError, ValueError, IndexError):
+        return None
+
+
+def link_state(s=None, now=None):
+    """-> {state, age_s, up_s, ready_s}: ok (the runner wrote within a minute), starting (the machine started after the
+    runner's last state, within the time the boot check allows), not_started (it started longer ago and the runner has
+    not written since), stopped (the runner wrote this boot and then stopped). Ages in seconds, so a device's clock
+    does not matter. Whether the app itself answers is the browser's to tell."""
+    now = time.time() if now is None else now
+    up = _uptime()
+    try:
+        at = STATE.stat().st_mtime
+    except OSError:
+        at = None
+    age = None if at is None else max(0, now - at)
+    if age is not None and age < LINK_STALE_S:
+        st = "ok"
+    elif up is not None and (age is None or age > up):
+        st = "starting" if up < LINK_START_S else "not_started"
+    else:
+        st = "stopped"
+    ready = (((s or {}).get("system") or {}).get("boot") or {}).get("ready_s")
+    return {"state": st, "age_s": None if age is None else round(age), "up_s": None if up is None else round(up), "ready_s": ready}
+
+
+def full_state(request, ph=None, cs=None):
+    """The runner's whole state (missions, runs, builds, crew, health, system …) plus the phone, the connections, which
+    job has which n8n workflow and who is viewing: one shape for GET /api/state and every message of /api/stream."""
     s = state()
-    s["phone"] = phone_summary()
-    s["connections"] = conn_summary()
+    s["phone"] = phone_summary() if ph is None else ph
+    s["connections"] = conn_summary() if cs is None else cs
     s["viewer"] = request.headers.get("tailscale-user-name") or request.headers.get("tailscale-user-login", "")
     s["viewer_name"] = display_name(request.headers.get("tailscale-user-name", ""), request.headers.get("tailscale-user-login", ""))
     s["decisions"] = owner_decisions(s)
-    s["engine"] = engine_view()                          # GEN-34: the engine and its runs, for the Engine screen and the Canvas
     try:                                                 # WFL-11: which job has which n8n workflow (ops/flows.py catalog)
-        s["workflows"] = json.loads((M / "public/workflows.json").read_text())
+        s["workflows"] = json.loads((STATE.parent / "workflows.json").read_text())
     except (OSError, ValueError):
         s["workflows"] = None
+    s["link"] = link_state(s)                            # APP-65: starting, stopped or fine, in the app's words
+    s["shared"] = len(list(SHARES.glob("*.json"))) if SHARES.exists() else 0   # APP-15: Home says when the phone shared something
     s["from_chat"] = MADE_IDX["v"]                       # APP-39: an item made in a chat links back to it
-    return JSONResponse(s)
+    return s
+
+
+async def api_state(request):
+    """The runner's whole state, as full_state makes it."""
+    return JSONResponse(full_state(request))
 
 
 async def api_stream(request):
     """Server-sent events: a new state whenever the runner writes one, so screens update without polling (APP-17)."""
     async def gen():
-        last = 0
+        last, beat = 0, 0
         yield "retry: 3000\n\n"
         while not await request.is_disconnected():
             try:
@@ -182,14 +215,13 @@ async def api_stream(request):
                 mt = 0
             ph = phone_summary()                      # the AI phone changes on its own clock: part of the stream too
             cs = conn_summary()                       # and so do the app connections (grants, approvals)
-            eng = engine_view()                       # GEN-34: the engine's runs change on their own clock too
-            sig = (mt, json.dumps(ph, sort_keys=True, default=str), json.dumps(cs, sort_keys=True, default=str), json.dumps(eng, sort_keys=True, default=str))
+            link = link_state()
+            sig = (mt, link["state"], json.dumps(ph, sort_keys=True, default=str), json.dumps(cs, sort_keys=True, default=str))
             if sig != last:
-                last = sig
-                full = {**state(), 'phone': ph, 'connections': cs, 'engine': eng}
-                full["decisions"] = owner_decisions(full)
-                full["from_chat"] = MADE_IDX["v"]
-                yield f"data: {json.dumps(full, ensure_ascii=False)}\n\n"
+                last, beat = sig, 0
+                yield f"data: {json.dumps(full_state(request, ph, cs), ensure_ascii=False)}\n\n"
+            elif (beat := beat + 1) % 10 == 0:        # APP-65: every 15 s the app says it is there, and how the runner is
+                yield f"event: alive\ndata: {json.dumps(link)}\n\n"
             else:
                 yield ": ping\n\n"
             await asyncio.sleep(1.5)
@@ -594,9 +626,9 @@ _part("server.share.py")   # the phone's Share menu (PLT-25)
 _part("server.wiki.py")   # the wiki views (PLT-25)
 
 
-_part("server.engine.py")   # Temporal's UI behind the app's gate, and its codec (GEN-36, the Runs screen)
 _part("server.flows.py")   # the step service n8n calls (WFL-05, port 8099)
-_part("server.n8n.py")   # n8n's editor under /n8n/ behind the app's gate, and the workflows' runs (WFL-14)
+_part("server.n8n.py")   # the workflows' runs for the app's pages (WFL-14)
+_part("server.frames.py")   # the stack's tools inside the app: n8n under /n8n/, Phoenix under /phoenix/ (WFL-14, APP-66)
 
 
 _part("server.a2a.py")   # outside agents over A2A (PLT-25)
@@ -992,16 +1024,18 @@ def phoenix_pick(spans, ts, ms=0, model=""):
 
 
 async def api_phoenix(request):
-    """Open in Phoenix: ?ts=<epoch>&ms=<duration>&model=<name> -> that call's trace; ?from=&to= -> the project's traces."""
+    """Open in Phoenix: ?ts=<epoch>&ms=<duration>&model=<name> -> that call's trace; none -> the project's traces. Both
+    open on the app's Traces page, Phoenix inside the app (APP-66)."""
     q = request.query_params
-    host = (request.headers.get("host") or "localhost").split(":")[0]
-    base = f"https://{host}:{PHOENIX_PORT}" if host.endswith(".ts.net") else f"http://{host}:6006"
+
+    def go(path):
+        return RedirectResponse(f"/#/traces?open={urllib.parse.quote(path, safe='')}", status_code=302)
     try:
         async with httpx.AsyncClient(timeout=10) as h:
             proj = (await h.get(f"{PHOENIX}/v1/projects")).json()["data"]
             pid = next((p["id"] for p in proj if p["name"] == "default"), proj[0]["id"])
             if not q.get("ts"):
-                return RedirectResponse(f"{base}/projects/{pid}", status_code=302)
+                return go(f"/projects/{pid}")
             from datetime import datetime, timezone
             ts, ms = float(q["ts"]), float(q.get("ms") or 0)
             iso = lambda x: datetime.fromtimestamp(x, timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -1010,8 +1044,8 @@ async def api_phoenix(request):
     except Exception as e:
         return PlainTextResponse(f"Phoenix is not reachable: {type(e).__name__}", status_code=502)
     if not span:
-        return RedirectResponse(f"{base}/projects/{pid}", status_code=302)
-    return RedirectResponse(f"{base}/projects/{pid}/traces/{span['context']['trace_id']}", status_code=302)
+        return go(f"/projects/{pid}")
+    return go(f"/projects/{pid}/traces/{span['context']['trace_id']}")
 
 
 async def health(request):
@@ -1023,8 +1057,7 @@ app = Starlette(routes=[
     Route("/", index), Route("/sw.js", sw), Route("/manifest.webmanifest", manifest), Route("/healthz", health),
     Route("/api/state", api_state), Route("/api/stream", api_stream), Route("/api/version", api_version),
     Route("/api/request", api_request, methods=["POST"]), Route("/api/result/{rid}", api_result),
-    Route("/api/codec/decode", api_codec_decode, methods=["POST"]), Route("/runs", runs_proxy), Route("/runs/{path:path}", runs_proxy, methods=["GET", "POST", "PUT", "PATCH", "DELETE"]),
-    Route("/n8n", n8n_proxy), Route("/n8n/{path:path}", n8n_proxy, methods=["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]), Route("/api/workflows", api_workflows),   # WFL-13
+    *FRAME_ROUTES, Route("/api/workflows", api_workflows),   # WFL-13
     Route("/api/file", api_file), Route("/api/runlog/{rid}", api_runlog), Route("/api/run/{rid}/timeline", api_run_timeline), Route("/api/rt/runs", api_rt_runs), Route("/api/task/{tid:int}", api_task),
     Route("/api/agent/{aid}/tasks", api_agent_tasks), Route("/api/trials", api_trials), Route("/api/usage", api_usage), Route("/api/rt/run/{run}", api_rt_run),
     Route("/api/rt/run/{run}/stream", api_rt_stream), Route("/api/crew/{cid}", api_crew_one), Route("/api/swarm", api_swarm, methods=["POST"]), Route("/api/swarm/tokens", api_swarm_tokens), Route("/api/swarm/now", api_swarm_now), Route("/api/swarm/timeline", api_swarm_timeline), Route("/api/swarm/interactions", api_swarm_interactions), Route("/api/swarm/delegations", api_swarm_delegations), Route("/api/swarm/room", api_swarm_room), Route("/api/health/issues", api_health_issues), Route("/api/claude/{tid}", api_claude_task), Route("/api/phoenix", api_phoenix), Route("/api/build/{bid}/{kind}", api_build_file),
@@ -1041,7 +1074,7 @@ app = Starlette(routes=[
     Route("/api/phone", api_phone), Route("/api/whoami", api_whoami), Route("/api/forgejo/connect", api_forgejo_connect, methods=["POST"]),
     Route("/api/house/connect", api_house_connect), Route("/api/house/callback", api_house_callback), Route("/api/house", api_house, methods=["POST"]),
     Route("/api/shop/decide", api_shop_decide, methods=["POST"]), Route("/api/shop/limits", api_shop_limits, methods=["POST"]), Route("/api/clienterror", api_clienterror, methods=["POST"]), Route("/api/view", api_view, methods=["POST"]), Route("/api/views", api_views), Route("/api/phone/decide", api_phone_decide, methods=["POST"]),
-    Route("/api/phone/control", api_phone_control, methods=["POST"]), Route("/api/phone/shot/{sid}", api_phone_shot), Route("/api/share/{sid}", api_share),
+    Route("/api/phone/control", api_phone_control, methods=["POST"]), Route("/api/phone/shot/{sid}", api_phone_shot), Route("/api/shares", api_shares), Route("/api/share/{sid}", api_share),
     Route("/api/share/{sid}/save", api_share_save, methods=["POST"]),
     Route("/api/mail", api_mail),
     Route("/api/repo/{name}/graph", api_repo_graph), Route("/api/repo/{name}/overview", api_repo_overview),

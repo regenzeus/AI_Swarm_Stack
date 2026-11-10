@@ -1,4 +1,4 @@
-// The app, part of app-base.js, app-tasks.js, app-runs.js, app-devices.js, app-wiki-code.js, app-memory.js, app.js (PLT-25): the run log and run view, schedule controls and the chat. Loaded in that order; one global scope.
+// The app, part of app-base.js, app-tasks.js, app-runs.js, app-devices.js, app-wiki-code.js, app-memory.js, app-workflows.js, app.js (PLT-25): the run log and run view, schedule controls and the chat. Loaded in that order; one global scope.
 // ---------- run telemetry (ops/telemetry.py): every model call, tool call, result and thought of a run ----------
 const TL_LEVEL = { summary: "Summary", steps: "Steps", all: "Everything" };
 let tlLevel = "";
@@ -149,7 +149,7 @@ function logLine(l, i, t0) {
     !l.res && !argsTxt && l.kind !== "say" && l.kind !== "think" && full.length > 160 ? `<pre class="lgpre">${esc(full)}</pre>` : "",
     l.tok ? `<div class="tiny faint">model before this step: ${l.tok.calls} call${l.tok.calls > 1 ? "s" : ""}${l.tok.ms ? " · " + fmtMs(l.tok.ms) : ""} · ${esc(tokLine(l.tok))}</div>` : "",
     l.model && l.data?.finish ? `<div class="tiny faint">finish: ${esc(l.data.finish)}</div>` : "",
-    l.model && l.ts ? `<a class="btn sm" target="_blank" rel="noopener" href="${phoenixHref(l)}">${ic.search}Open in Phoenix · the full prompt and response</a>` : "",
+    l.model && l.ts ? `<a class="btn sm" href="${phoenixHref(l)}">${ic.search}Open in Phoenix · the full prompt and answer</a>` : "",
   ].filter(Boolean).join("");
   const nested = l.agent && l.rootAgent && l.agent !== l.rootAgent;
   const cls = `lg lk-${l.lk.toLowerCase()}${nested ? " nested" : ""}${l.failed ? " fail" : ""}${l.model || l.gateway ? " minor" : ""}${tm ? "" : " notime"}`;
@@ -320,7 +320,7 @@ function liveHtml(V, opts = {}) {
   const title = V.name || V.title || agentName(V.agent) || V.run;
   const parent = V.ref && /^(mission-run|build|claude-task|crew):/.test(V.ref) ? `<a class="tiny" href="#/live/${encodeURIComponent(V.ref)}">part of ${esc(V.ref)}</a>` : "";
   const priced = llm.filter((e) => costOf(e.title, e.tokens) != null), paid = priced.reduce((n, e) => n + costOf(e.title, e.tokens), 0);
-  const nums = `<span>${dur(V.seconds)}</span><span>${k.calls} model calls · ${tok(sum("in"))} in${k.cache_pct ? ` · ${k.cache_pct}% cached` : ""}${priced.length ? ` · ${ifPaid(paid)}` : ""}${sum("reasoning") ? ` · ${tok(sum("reasoning"))} thinking` : ""}</span><span>${V.stats.tools.reduce((n, t) => n + t.calls, 0)} tool calls</span>${llm.length ? `<a target="_blank" rel="noopener" href="/api/phoenix" title="Every model call with its full prompt and response (open a model call in the log for its own trace)">traces in Phoenix ↗</a>` : ""}`;
+  const nums = `<span>${dur(V.seconds)}</span><span>${k.calls} model calls · ${tok(sum("in"))} in${k.cache_pct ? ` · ${k.cache_pct}% cached` : ""}${priced.length ? ` · ${ifPaid(paid)}` : ""}${sum("reasoning") ? ` · ${tok(sum("reasoning"))} thinking` : ""}</span><span>${V.stats.tools.reduce((n, t) => n + t.calls, 0)} tool calls</span>${llm.length ? `<a href="#/traces" title="Every model call with its full prompt and answer (a model call in the log opens its own trace)">Traces</a>` : ""}`;
   const head = opts.compact
     ? `<div class="row between wrap" style="gap:6px;align-items:center"><div class="row wrap" style="gap:6px;align-items:center"><span class="pill ${st[0]}">${V.live ? `<span class="dot run"></span>` : ""}${st[1]}</span><b class="small">${V.live ? "Now" : "Latest run"} · ${dt(V.started)}</b></div><a class="tiny" href="#/live/${encodeURIComponent(V.run)}">full view →</a></div>
        <div class="row wrap tiny muted" style="gap:2px 10px;margin-top:4px">${nums}</div>`

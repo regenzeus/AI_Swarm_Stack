@@ -65,6 +65,20 @@ def test_an_approved_pack_adds_its_agents_skill_workflow_and_job_kind_from_a_rea
     assert sorted(flows) == ["toy/bug", "toy/triage"] and flows["toy/bug"]["path"].startswith(p["dir"]) and flows["toy/bug"]["nodes"] == 3
 
 
+def test_the_app_sees_each_pack_s_workflows_and_agents_but_no_folder_or_file_path(home):
+    """The runner publishes the packs for the Stack page (ops/missions.py domain_state): what a pack brings, by name."""
+    head = home["head"]()
+    home["pin"](f"toy {home['src']} {head}")
+    PK.approve("toy", head, "owner")
+    v = PK.view()
+    p = v["packs"][0]
+    assert p["workflows"] == ["toy/bug", "toy/triage"] and p["skills"] == ["toy:triage"] and p["jobs"][0]["kind"] == "toy.reproduce"
+    assert [a["id"] for a in p["agents"]] == ["toy:intake", "toy:reproducer"] and p["agents"][0]["prompt"]
+    assert str(home["tmp"]) not in json.dumps(v) and v["pending"] == [] and v["refused"] == []
+    import missions as MS
+    assert set(MS.domain_state()) == {"packs", "trackers"} and MS.domain_state()["packs"]["packs"][0]["name"] == "toy"
+
+
 def test_a_new_commit_leaves_the_old_one_running_and_puts_one_decision_in_the_queue_and_a_refusal_keeps_it_out(home):
     old = home["head"]()
     PK.approve("toy", old, "owner")
@@ -131,8 +145,9 @@ def test_a_pack_workflow_that_is_no_n8n_workflow_or_runs_a_shell_command_is_refu
 
 
 def test_packs_are_the_apps_and_the_queues():
-    js = (ROOT / "images/mission-control/web/static/app-packs.js").read_text()
-    assert "function vPacks(" in js and 'data-pk="pack_approve"' in js and 'data-pk="pack_refuse"' in js and "action: b.dataset.pk" in js
+    js = (ROOT / "images/mission-control/web/static/app.js").read_text()          # the Stack page's Packs and trackers
+    assert "function packsHtml(" in js and 'data-pk="pack_approve"' in js and 'data-pk="pack_refuse"' in js and "action: b.dataset.pk" in js
+    assert 'S?.packs ||' in js and "p.workflows" in js and "templates" not in js
     assert '"pack_approve", "pack_refuse"' in (ROOT / "images/mission-control/server.py").read_text()
     import decisions as DQ
     assert DQ._packs in DQ.SOURCES

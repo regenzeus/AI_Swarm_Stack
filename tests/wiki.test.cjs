@@ -24,7 +24,7 @@ function setup(clipboard) {
     history: { state: null, replaceState() {} },
     navigator: { clipboard },
     URLSearchParams,
-    EventSource: class {},
+    EventSource: class { addEventListener() {} },
     setTimeout() {}, clearTimeout() {}, setInterval() {},
     DOMPurify: { sanitize: (html) => html },
     marked: { parse: () => "<p>Rendered content, not markdown</p>" },

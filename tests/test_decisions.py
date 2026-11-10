@@ -182,7 +182,7 @@ def test_every_item_in_the_queue_has_a_working_way_to_act(DQ):
 
 def test_a_link_to_an_agent_s_question_keeps_its_context(DQ):
     got = DQ.gather({"swarm": {"owner_requests": [{"id": 1, "sender": "coach", "context": "calls:mission+scout"}]}}, now=T0)[0]
-    assert got["href"] == "#/swarm?tab=chat&ctx=calls%3Amission%2Bscout" == got["answers"][0]["href"]
+    assert got["href"] == "#/tasks?v=activity&ctx=calls%3Amission%2Bscout" == got["answers"][0]["href"]
 
 
 def test_the_test_item_is_marked_and_changes_nothing_but_itself(DQ, tmp_path, monkeypatch):
@@ -247,7 +247,7 @@ def test_the_server_adds_the_waits_only_it_sees_and_the_app_draws_the_list():
     exec(fn, ns)
     out = ns["owner_decisions"]({"phone": {"pending": 2}, "connections": {"pending": 1}, "decisions": [{"id": "build:4"}]})
     assert [d["id"] for d in out] == ["phone-ask", "gmail-trash", "build:4"] and out[0]["what"] == "The AI phone asks for 2 approvals"
-    assert src.count('["decisions"] = owner_decisions(') == 2                    # the state and the stream
+    assert src.count('["decisions"] = owner_decisions(') == 1 and "full_state(request, ph, cs)" in src   # one shape for the state and the stream
     js = "\n".join([re.search(rf"^function {n}\(.*?^\}}", APP_JS, re.M | re.S)[0] for n in ("decideGroups",)]) + """
 const g = decideGroups([{ id: "a", cls: "phone-routine", routine: true }, { id: "b", cls: "coding" }, { id: "c", cls: "phone-routine", routine: true },
   { id: "d", cls: "memory", routine: true }]);
@@ -258,4 +258,4 @@ process.stdout.write(JSON.stringify([g.map((x) => x.one ? x.one.id : x.items.map
     grouped, together = json.loads(subprocess.run(["node", "-e", js], check=True, capture_output=True, text=True).stdout)
     assert grouped == [["a", "c"], "b", "d"]
     assert together == [{"label": "Approve", "act": {"action": "phone_cleanup_do_all", "ids": ["a", "b"]}}, None, None]   # a mixed group is answered one by one
-    assert "decide: vDecide" in APP_JS and 'const LIVE = new Set(["home", "decide", "engine"])' in APP_JS and 'href="#/decide"' in APP_JS
+    assert "decide: vDecide" in APP_JS and 'const LIVE = new Set(["home", "decide"])' in APP_JS and 'href="#/decide"' in APP_JS

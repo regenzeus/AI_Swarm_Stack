@@ -6,9 +6,9 @@ Archivo and JetBrains Mono fonts are vendored by the Dockerfile into `static/ven
 | File | What it is |
 |---|---|
 | `index.html` | the shell: side nav (desktop), tab bar (phone, Stack included, its dot = live state), no top bar (a `#livebar` shows only when offline or an update waits), and each page's **How this page works** link |
-| `static/app.js` | the app: router, live state, every view (`vHome`, `vMissions` = the Agents list, `vAgent` = the agent page behind `#/mission/<slug>` and `#/crew/<id>`, `vChat`, `vWiki`, `vBuild`, `vSystem`, …) |
-| `static/app-workflows.js` | n8n inside the app (WFL-11, WFL-14): `#/workflows` (`vWorkflows`: n8n's editor in a frame on the desk, a list of the workflows on a phone), a task's and crew job's **Where it runs** (`wfWhereInto`, `wfCrewInto`) and an agent's **In workflows** (`wfInInto`), all from `GET /api/workflows`. The frame's address is `/n8n/...` on the app's own origin; `sw.js` never caches it |
-| `static/guide.js` | the Guide, part of the Stack page: chapter reader (`#/guide/<id>`), live blocks, "Try it" cards, search, chapter index, progress, `how()` links (loaded before `app.js`) |
+| `static/app-base.js`, `app-tasks.js`, `app-runs.js`, `app-devices.js`, `app-wiki-code.js`, `app-memory.js`, `app-workflows.js`, `app.js` | the app in parts (PLT-25), loaded in that order into one scope: the base (helpers, icons, formatting, the menu, the connection state, the router and its `MOVED` old addresses), Tasks and Home, the run log, devices and Share, the wiki and Code, Memory, the tools inside the app, and last the Stack page, live data and the start |
+| `static/app-workflows.js` | the tools inside the app (WFL-11, WFL-14, APP-66): `toolPage()`, the one page for a tool in a frame; `#/traces` (`vTraces`: Phoenix); n8n: `#/workflows` (`vWorkflows`: n8n's editor in a frame on the desk, a list of the workflows on a phone), a task's and crew job's **Where it runs** (`wfWhereInto`, `wfCrewInto`) and an agent's **In workflows** (`wfInInto`), all from `GET /api/workflows`. The frame's address is `/n8n/...` on the app's own origin; `sw.js` never caches it |
+| `static/guide.js` | the Guide (`#/guide`, one tap from the Stack page): search, chapter index, chapter reader (`#/guide/<id>`), live blocks, "Try it" cards, progress, `how()` and `explain()` (loaded before `app.js`) |
 | `static/app.css`, `static/guide.css` | styles. Design tokens are the CSS variables at the top of `app.css` |
 | `sw.js` | service worker: app shell offline (network first), push notifications. Bump `CACHE` when the shell's file list changes |
 | `manifest.webmanifest` | install metadata (PWA) |
@@ -29,8 +29,9 @@ Archivo and JetBrains Mono fonts are vendored by the Dockerfile into `static/ven
   (sanitized with DOMPurify), `esc()` for **every** value put into HTML, `toast()`, icons from `ic`.
 - **Live updates**: only the views in `LIVE` re-render on state changes. Forms, chat and reading views don't, so
   nothing is lost while the user types or reads.
-- **Colours** only through the CSS variables (dark and light themes both define them). No hex in component CSS
-  except the wiki folder colours.
+- **Colours** only through the CSS variables (dark and light themes both define them), **font sizes** only through the
+  type scale (`--fs-*`), spacing on the 4 px rhythm (`--s-*`): [docs/UX.md](../../../docs/UX.md) is the visual system.
+  No hex in component CSS except the wiki folder colours.
 - **Phone first**: check every change at 375 px width with no horizontal scroll, and on desktop (side nav ≥ 960 px).
   `make journeys` opens every route at 375 px in a browser, on the live data and with none (ops/journeys.py).
 - **One look and wording (TSK-31)**, checked by tests/test_ux_standards.py and the journey checks:

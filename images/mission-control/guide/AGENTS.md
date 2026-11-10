@@ -1,7 +1,7 @@
 # images/mission-control/guide/: the in-app guide
 
 One Markdown file per chapter, `NN-id.md`. `NN` sets the order and `id` is the URL (`#/guide/<id>`). The app shows
-them on the **Stack** page (search, chapter index, a "How it works" link on every status section), and each screen's **How this page works** link (at its end) opens the chapter that lists that screen in `views:`.
+them on the guide's own page (`#/guide`: search, chapter index; one tap from the **Stack** page's title row), behind a "How it works" link on every status section, and each screen's **How this page works** link (at its end) opens the chapter that lists that screen in `views:`.
 The reader is the owner, not a developer: plain language, second person, short paragraphs, examples first.
 
 ## Front matter (all keys required)

@@ -5,7 +5,7 @@ part: Get started
 icon: play
 minutes: 10
 summary: Five small things to try that show you most of what the stack can do.
-views: []
+views: [share]
 ---
 Do these in order. Each one takes a minute or two and leaves nothing behind that you'd need to clean up.
 Every **Try it** card opens the right place for you. Chat examples are typed in for you but not sent, so you can
@@ -58,8 +58,8 @@ note: Hermes creates a one-off mission. You'll see it under Missions while it ru
 
 ```try
 label: Set up this device
-open: "#/system"
-note: Scroll to "This device". On iPhone, first use Share → Add to Home Screen, open the app from there, then switch on push.
+open: "#/system?tab=settings"
+note: Under "This device": On iPhone, first use Share → Add to Home Screen, open the app from there, then switch on push.
 ```
 
 ### Share anything to your stack

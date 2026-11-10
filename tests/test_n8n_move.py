@@ -43,7 +43,9 @@ def test_a_jobs_schedule_and_next_run_come_from_its_workflows_cron():
     idx = NJ.index(ROOT / "n8n/workflows", ROOT / "no-such-folder")
     assert NJ.schedule("crew", "memory", idx) == "daily 04:30" and NJ.of("crew", "memory", idx)["file"] == "memory-keeper.json"
     assert NJ.next_run("crew", "memory", at, idx) == "2026-11-11T04:30+01:00"
-    assert NJ.schedule("crew", "vault-ingest", idx) == "switched off" and NJ.next_run("crew", "vault-ingest", at, idx) is None
+    assert NJ.schedule("crew", "vault-ingest", idx) not in (None, "switched off")                    # on n8n since 10 Nov 2026
+    off = {**idx, ("crew", "vault-ingest"): {**idx[("crew", "vault-ingest")], "active": False}}     # a job taken back
+    assert NJ.schedule("crew", "vault-ingest", off) == "switched off" and NJ.next_run("crew", "vault-ingest", at, off) is None
     assert NJ.schedule("crew", "backup", idx) is None                                     # a kept timer's job has no workflow
 
 

@@ -1,5 +1,5 @@
 {
-  "active": false,
+  "active": true,
   "connections": {
     "On its schedule (* * * * *)": {
       "main": [

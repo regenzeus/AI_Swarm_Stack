@@ -3,7 +3,8 @@
 | Path | What it is |
 |---|---|
 | `server.py` | Starlette app: the API for the front end (port 8090) and the MCP tools for Hermes (port 8091); the runtime ingest (port 8093, `POST /ingest`, `GET /problems`, `GET /view/<run>` for the runner's journal entries) |
-| `server.n8n.py` | part of `server.py` (WFL-14): n8n's editor under `/n8n/`, behind the `TailnetOnly` gate, the prefix taken off for n8n (`http://n8n:5678` on `stepnet`), everything streamed (n8n's live updates are SSE), framing for the app's own pages only; `GET /api/workflows` serves the runner's `public/workflows-runs.json` |
+| `server.frames.py` | part of `server.py` (WFL-14, APP-66): the stack's tools inside the app, each under the app's own address behind the `TailnetOnly` gate: n8n's editor at `/n8n/` (`http://n8n:5678` on `stepnet`), Phoenix at `/phoenix/` (`http://phoenix:6006` on `obs`); the prefix taken off for the tool, everything streamed (n8n's live updates are SSE), framing for the app's own pages only |
+| `server.n8n.py` | part of `server.py` (WFL-14): `GET /api/workflows` serves the runner's `public/workflows-runs.json` |
 | `runrecord.py` | the agent runtime record: SQLite `/missions/app/runtime.db`, ingest, the closed-run rule, watchdog, drift, what each run touched, retention (docs/OBSERVABILITY.md) |
 | `obs_core.py` | pure observability helpers shared with the runner (`ops/observe.py` re-exports them): files, stats, ledger, problems, health |
 | `web/` | the front end (vanilla JS PWA), see [web/AGENTS.md](web/AGENTS.md) |
@@ -20,8 +21,8 @@ the app talks to Hermes directly (server-side task + resumable SSE), and chats l
 
 ## Rules
 
-- Every `/api/*` route needs the `Tailscale-User-Login` header (middleware `TailnetOnly`), and so do `/share`, `/runs`
-  and `/n8n/` (n8n inside the app, WFL-14). Don't add exceptions.
+- Every `/api/*` route needs the `Tailscale-User-Login` header (middleware `TailnetOnly`), and so do `/share` and
+  each tool inside the app (`/n8n/`, `/phoenix/`: `FRAMES` in `server.frames.py`). Don't add exceptions.
 - New request actions go into `ACTIONS` **and** are validated in the runner (`ops/missions.py` `handle`). Never
   trust the request here.
 - New MCP tools: a clear description (Hermes reads it), a mention in a guide chapter, and a plain-language line in

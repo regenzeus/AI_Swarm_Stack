@@ -72,6 +72,10 @@ services:
     restart: unless-stopped
     environment:
       PHOENIX_WORKING_DIR: /data
+      # APP-66: Phoenix inside the app, under its address at /phoenix/ (images/mission-control/server.frames.py, behind
+      # the app's gate): its pages ask for /phoenix/...; it still answers at its root, where the gateway sends its traces
+      PHOENIX_HOST_ROOT_PATH: /phoenix
+      PHOENIX_TELEMETRY_ENABLED: "false"   # no usage pixel from the owner's browser to Phoenix's makers
     volumes: [phoenix:/data]
     ports: ["127.0.0.1:6006:6006"]
     networks: [backend, obs]      # no longer on edge: Phoenix holds traces with prompt content
@@ -118,7 +122,7 @@ services:
       DB_POSTGRESDB_USER: n8n
       DB_POSTGRESDB_PASSWORD: ${N8N_DB_PASSWORD:?run via make up}
       N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY:?run via make up}   # encrypts the credentials n8n stores
-      N8N_PATH: /n8n/                     # WFL-14: the editor lives inside the app, under its address (images/mission-control/server.n8n.py)
+      N8N_PATH: /n8n/                     # WFL-14: the editor lives inside the app, under its address (images/mission-control/server.frames.py)
       N8N_PUSH_BACKEND: sse               # live updates as one plain HTTP answer, which the app passes through
       N8N_EDITOR_BASE_URL: https://${PC_TAILNET_HOST:-localhost}:8447/n8n/   # the app's tailnet address (tailscale serve --https=8447)
       # webhooks and resume URLs stay at n8n's root on its own tailnet port: programs have no Tailscale login for the

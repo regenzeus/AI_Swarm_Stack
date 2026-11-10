@@ -71,7 +71,7 @@ Object.defineProperty(globalThis, "navigator", { configurable: true,            
 
 
 def test_the_stack_page_names_each_failed_job_and_links_it_and_the_crawl_is_kept():
-    sysv = fn("vSystem")
-    assert "failed: ${sy.failed.map((u)" in sysv and 'href="#/crew/${encodeURIComponent(c.id)}"' in sysv
+    sysv = fn("stackLine")                                                            # the Stack page's title line
+    assert "failed: ${failed.join(\", \")}" in sysv and "(sy.failed || []).map((u)" in sysv and 'href="#/crew/${encodeURIComponent(c.id)}"' in sysv
     crawl = (ROOT / "ops/ui_crawl.js").read_text()
     assert "RECORDED, NOT SENT" in crawl and 'u === "/api/swarm" && m === "POST"' in crawl and "navigator.sendBeacon = () => true" in crawl

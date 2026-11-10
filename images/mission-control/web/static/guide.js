@@ -62,7 +62,7 @@ const ARCH = [
   ["You", [
     ["Phone & PC", `${(window.DEPLOY && DEPLOY.APP_NAME) || "AI Stack"} app, push`, null, "first-ten-minutes", "5. Put it on your phone", "This app, installed on your phone and PC. Everything here is reachable only from your own devices over Tailscale."],
     ["Telegram", "chat, briefings, digest", null, "delivery", "Telegram", "Hermes on Telegram: chat with it there, get briefings with buttons into this app, and the morning digest."]]],
-  ["Front doors", [
+  ["What you open", [
     [(window.DEPLOY && DEPLOY.APP_NAME) || "AI Stack", "this app + its tools", "mission-control", "welcome", "The app at a glance", "This app and its API, plus the tools Hermes uses to manage missions, builds and repositories. It never runs jobs itself: the runner does.", "#/"],
     ["Open WebUI", "classic chat", "openwebui", "technology", "Tools you can open", "A classic chat interface to Hermes. You are signed in through your Tailscale login.", "443"],
     ["Hermes admin", "skills, sessions, logs", "hermes-dashboard", "technology", "Tools you can open", "Hermes' own dashboard: its skills, sessions, logs and settings. No password: your Tailscale login lets you in.", "8448"],
@@ -75,7 +75,7 @@ const ARCH = [
     ["Builder", "codes in a sandbox", "builder", "builder", "The flow", "The coding agent (ChatGPT via Hermes, or Claude Code) in a sandbox: no secrets, no deploy rights. You review and tap to deploy.", "#/build"]]],
   ["Gateway", [
     ["LiteLLM", "every model call, keys, tools", "litellm", "technology", "The layers", "Every model call of every agent goes through here: per-agent keys and limits, tool access, cost tracking. Subscription models only."],
-    ["Phoenix", "traces", "phoenix", "technology", "Tools you can open", "A trace of every model call: what was asked, which tools ran, how long it took.", "8443"]]],
+    ["Phoenix", "traces", "phoenix", "technology", "Tools you can open", "A trace of every model call: what was asked, which tools ran, how long it took. It opens inside the app.", "#/traces"]]],
   ["Knowledge & tools", [
     ["Vault search", "qmd", "qmd", "knowledge", "The vault", "Searches your vault, reports, wikis and code summaries by keywords and by meaning. Hermes uses it before answering.", "#/wiki"],
     ["Memory", "Hindsight", "hindsight", "knowledge", "Long-term memory", "Remembers lasting facts about you from conversations, with your approval for the important ones. Runs local models."],
@@ -191,10 +191,9 @@ function fillLive(root = document) {
     requestAnimationFrame(() => el.classList.add("settled"));        // entrance animation only the first time
   });
 }
-function guideOnState() { if (route.name === "guide" || route.name === "system") fillLive(); }
+function guideOnState() { if (route.name === "guide") fillLive(); }
 
-// ---------- the guide inside the Stack page ----------
-let scrollToLearn = false;
+// ---------- the guide: its own page (#/guide, one tap from the Stack page's title row; DEC-53) and its chapters ----------
 const how = (id) => `<a class="howto" href="#/guide/${id}" title="How this works">${ic.doc}<span>How it works</span></a>`;
 // APP-31: an explanation is there for who needs it and folded for who knows: one small line opens it, and it stays open
 // through every live redraw (the page's and a card's own) until closed
@@ -203,12 +202,22 @@ const explain = (key, html, label = "About this") => `<details class="explain" d
 document.addEventListener("toggle", (e) => { const k = e.target?.dataset?.x; if (k) e.target.open ? EXPLAIN_OPEN.add(k) : EXPLAIN_OPEN.delete(k); }, true);
 
 async function vGuide() {
-  if (!route.args[0]) { scrollToLearn = true; location.replace("#/system"); return; }   // the guide's home is the Stack page
   if (!GUIDE) view.innerHTML = `<div class="stack"><div class="skeleton"></div><div class="skeleton"></div></div>`;
   await loadGuide();
   if (route.name !== "guide") return;
   if (!GUIDE?.length) { view.innerHTML = `<div class="card empty">${ic.doc}<div>The guide could not be loaded.</div></div>`; return; }
-  return vGuideChapter(route.args[0]);
+  return route.args[0] ? vGuideChapter(route.args[0]) : vGuideIndex();
+}
+function vGuideIndex() {                                // search, where to start, how it fits together, every chapter
+  view.innerHTML = `<div class="hero"><div class="grow"><h1>Guide</h1></div></div>
+  <div class="wsearch gsearch">${ic.search}<input class="input" id="gq" placeholder="How do I…? Search the guide: triggers, memory, deploy…" value="${esc(guideQuery)}"></div>
+  <div id="gresults"></div>
+  ${startHereHtml()}
+  <div class="section"><div class="section-h"><h2>How it fits together</h2></div>
+    <div class="card pad-l"><div class="glive" data-live="architecture"></div></div></div>
+  <div class="section" id="learn">${learnHtml()}</div>`;
+  bindLearn();
+  fillLive();
 }
 
 function progressRing(frac, size = 34) {
@@ -245,7 +254,7 @@ function startHereHtml() {
   return `<a class="card gstart fadein section" href="#/guide/first-ten-minutes"><div class="gs-ic">${ic.play}</div><div class="grow"><div class="tiny gc-k">New here? Start here</div><h3>Your first ten minutes</h3><div class="small muted">Five quick things to try that show you most of the stack. Nothing to clean up afterwards.</div></div>${ic.next}</a>`;
 }
 
-// The chapter index at the bottom of the Stack page: every chapter by part, with progress
+// The chapter index: every chapter by part, with progress
 function learnHtml() {
   if (!GUIDE?.length) return `<div class="section-h"><h2>Learn your stack</h2></div><div class="skeleton" style="height:120px"></div>`;
   const read = GUIDE.filter((c) => gp.read[c.id]).length, tried = Object.keys(gp.tried).length, T = totalTries();
@@ -272,7 +281,7 @@ function bindLearn() {
 
 function vGuideChapter(id) {
   const i = GUIDE.findIndex((c) => c.id === id), c = GUIDE[i];
-  if (!c) { location.replace("#/system"); return; }
+  if (!c) { location.replace("#/guide"); return; }
   const { html, tries } = guideHtml(c), prev = GUIDE[i - 1], next = GUIDE[i + 1];
   const VNAMES = { home: "Home", tasks: "Tasks", task: "A task", mission: "A repeating task", new: "New task", read: "Reports", wiki: "Wiki", build: "Build", chat: "Chat", system: "Stack" };
   const views = [...new Set((c.views || []).map((v) => VNAMES[v]).filter(Boolean))];
@@ -281,7 +290,7 @@ function vGuideChapter(id) {
 
   <div class="gchap">
     <article class="gart fadein">
-      <a class="small muted gback" href="#/system">${ic.back}Stack</a>
+      <a class="small muted gback" href="#/guide">${ic.back}Guide</a>
       <header class="ghead">
         <div class="gh-ic">${gicon(c.icon)}</div>
         <div class="tiny gc-k">${esc(c.part)} · ${esc(c.kicker)}</div>
@@ -293,7 +302,7 @@ function vGuideChapter(id) {
       <footer class="gfoot" id="gfoot">
         <div class="gdone small">${gp.read[c.id] ? `${ic.check}You've read this chapter` : `Reach the end to mark it read`}</div>
         <div class="gnav">${prev ? `<a class="card pad" href="#/guide/${prev.id}"><span class="tiny faint">${ic.back}Previous</span><b>${esc(prev.title)}</b></a>` : "<span></span>"}
-          ${next ? `<a class="card pad nx" href="#/guide/${next.id}"><span class="tiny faint">Next${ic.next}</span><b>${esc(next.title)}</b></a>` : `<a class="card pad nx" href="#/system"><span class="tiny faint">Done${ic.next}</span><b>Back to Stack</b></a>`}</div>
+          ${next ? `<a class="card pad nx" href="#/guide/${next.id}"><span class="tiny faint">Next${ic.next}</span><b>${esc(next.title)}</b></a>` : `<a class="card pad nx" href="#/guide"><span class="tiny faint">Done${ic.next}</span><b>All chapters</b></a>`}</div>
       </footer>
     </article>
     <aside class="gtoc">

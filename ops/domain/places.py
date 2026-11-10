@@ -186,7 +186,7 @@ def decisions(make, cfg=None):
                 continue
             what = f"Approve the command {kind} at {name}?" if kind not in appr else f"Approve the changed command {kind} at {name}?"
             yield make(f"command:{name}:{kind}:{sha[:12]}", "command", what,
-                       f"{k.get('about', '')}; runs: {' && '.join(' '.join(s) for s in k.get('steps') or [])}", "#/packs",
+                       f"{k.get('about', '')}; runs: {' && '.join(' '.join(s) for s in k.get('steps') or [])}", "#/system?tab=connections&at=packs",
                        unanswered=f"{kind} does not run at {name}",
                        answers=[{"label": "Approve", "act": {"action": "command_approve", "place": name, "kind": kind, "sha": sha}}])
 

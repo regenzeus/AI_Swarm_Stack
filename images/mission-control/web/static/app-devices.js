@@ -1,4 +1,4 @@
-// The app, part of app-base.js, app-tasks.js, app-runs.js, app-devices.js, app-wiki-code.js, app-memory.js, app.js (PLT-25): the AI phone, the House and what the phone shared. Loaded in that order; one global scope.
+// The app, part of app-base.js, app-tasks.js, app-runs.js, app-devices.js, app-wiki-code.js, app-memory.js, app-workflows.js, app.js (PLT-25): the AI phone, the House and what the phone shared. Loaded in that order; one global scope.
 // ---------- the AI phone (images/phone): approvals, Stop, pairing, log ----------
 let phoneTimer = null;
 const PHONE_NOT_TAKEN = "The AI phone did not pick this up (its service may be restarting). It asks again if still needed.";
@@ -34,7 +34,7 @@ function phoneHtml(P) {
   const st = P.state, trust = st.trust_until > Date.now() / 1000, forever = st.trust_until > Date.now() / 1000 + 365 * 86400;
   const status = P.stopped ? `<span class="pill failed">Stopped</span>` : st.connected ? `<span class="pill ok">Connected</span>` : `<span class="pill paused">Not connected</span>`;
   return `<div class="stack">
-    ${!P.push_devices ? `<a class="banner" href="#/system">${ic.bell}<span class="grow">No device gets notifications, so approval requests only reach you on Telegram. Switch notifications on under <b>This device</b>.</span>${ic.next}</a>` : ""}
+    ${!P.push_devices ? `<a class="banner" href="#/system?tab=settings">${ic.bell}<span class="grow">No device gets notifications, so approval requests only reach you on Telegram. Switch notifications on under <b>This device</b>.</span>${ic.next}</a>` : ""}
     <div class="card pad-l"><div class="row between wrap" style="gap:10px;align-items:center">
       <div><div class="row" style="gap:8px;align-items:center">${status}<b>${esc(st.model || "Phone")}</b>${st.android ? `<span class="small muted">Android ${esc(st.android)}</span>` : ""}</div>
         <div class="small muted" style="margin-top:4px">${st.connected ? `In front: <span class="mono">${esc(st.foreground || "home screen")}</span>` : esc(st.error || "")}${forever ? " · <b>actions allowed until you stop it</b>" : trust ? ` · <b>actions allowed until ${dt(st.trust_until)}</b>` : ""}</div></div>
@@ -237,10 +237,21 @@ function bindHouse() {
 }
 
 // ---------- share: what the phone's Share menu sent (server.py share) ----------
+// APP-15: what the phone's Share menu sent, kept two weeks; #/share lists it (Home → Overview says when there is any)
+async function shareList() {
+  const d = await api("/api/shares").catch(() => ({ shares: [] }));
+  if (route.name !== "share" || route.args[0]) return;
+  const xs = d.shares || [];
+  view.innerHTML = `<div class="hero"><div class="grow"><h1>Shared with ${esc(APPNAME())}</h1>${xs.length ? `<p>${nf(xs.length)} in the last two weeks</p>` : ""}</div></div>
+    ${xs.length ? `<div class="card list">${xs.map((s) => `<a href="#/share/${esc(s.id)}"><div class="ic">${s.files.length ? ic.clip : s.url ? ic.next : ic.doc}</div><div class="grow" style="min-width:0">
+      <div class="ttl wrap">${esc(s.title || (s.url ? s.url : s.files[0] || "Shared text"))}</div><div class="sub wrap">${esc(when(s.at))}${s.files.length ? ` · ${nf(s.files.length)} file${s.files.length === 1 ? "" : "s"}` : ""}</div></div>${ic.next}</a>`).join("")}</div>`
+      : emptyState(`Nothing shared in the last two weeks. On the phone, pick ${esc(APPNAME())} in any app's Share menu.`, `<a class="btn sm" href="#/guide/first-ten-minutes">${ic.doc}How sharing works</a>`, "card pad-l")}`;
+}
 async function vShare() {
+  if (!route.args[0]) return shareList();
   const s = await api(`/api/share/${route.args[0]}`).catch(() => null);
   if (route.name !== "share") return;
-  if (!s || s.error) { view.innerHTML = emptyState("This shared item is gone (they are kept two weeks).", `<a class="btn sm" href="#/">${ic.home || ""}Go to Home</a>`, "card pad-l"); return; }
+  if (!s || s.error) { view.innerHTML = emptyState("This shared item is gone (they are kept two weeks).", `<a class="btn sm" href="#/share">${ic.clip}What you shared</a>`, "card pad-l"); return; }
   const about = clipped([s.title, s.url, s.text && s.text !== s.url ? s.text : ""].filter(Boolean).join("\n"), 4000);   // cap: prompt: what a new mission or chat starts from
   const ctx = about ? `\n\n${about}` : "";
   const ask = (q, send) => `#/chat?share=${s.id}&prompt=${encodeURIComponent(q + ctx)}${send ? "&send=1" : ""}`;

@@ -50,11 +50,6 @@ const taskMemHref = (p) => (/^[\w.-]+(\/[\w.-]+)*\.md$/.test(p || "") ? `#/read?
 const taskSrcHref = (s) => (/^https?:/.test(s.uri) ? s.uri : s.uri.startsWith("vault:") ? taskMemHref(s.uri.slice(6)) : "");
 const taskLink = (href, html) => (!href ? html : /^https?:/.test(href) ? `<a href="${esc(href)}" target="_blank" rel="noopener noreferrer">${html}</a>` : `<a href="${esc(href)}">${html}</a>`);
 
-function taskEngineLink(t, run) {                    // §10: a plan run on the engine is drawn as its blocks, live, on the Engine screen
-  const wid = `task:${t.id}:${run?.occ || 1}`;
-  return (S?.engine?.runs || []).some((r) => r.id === wid) ? `<a class="btn sm" style="margin-top:8px" href="#/engine/${encodeURIComponent(wid)}">${ic.flow || ic.doc}See it run as blocks</a>` : "";
-}
-
 async function vTask() {
   clearTimeout(taskTimer);
   const id = +route.args[0];
@@ -67,7 +62,7 @@ async function vTask() {
   if (d.error && !d.id) {                                 // the API's error; a failed task has an error of its own and is drawn
     view.innerHTML = `<a class="back" href="#/tasks">${ic.back}Tasks</a><div class="card empty">${esc(d.error)} <a href="#/tasks">All tasks</a></div>`; return;
   }
-  const sig = JSON.stringify([d.status, d.updated, d.occ, d.activity?.actions_total, d.prov?.numbers, (d.runs || []).map((r) => [r.status, r.verdict]), ttab, taskAgent, taskSrc]);
+  const sig = JSON.stringify([d.status, d.updated, d.occ, d.activity?.actions_total, d.prov?.numbers, (d.runs || []).map((r) => [r.status, r.verdict]), ttab, taskAgent, taskSrc, wfWhereOf(d)]);   // its workflow is known once the state came
   if (taskData[id]?.sig !== sig || !$("#taskpage")) {
     taskData[id] = { ...d, sig };
     const y = window.scrollY, redraw = !!$("#taskpage");
@@ -99,7 +94,6 @@ function taskPage(t) {
     <div class="row wrap small muted" style="gap:4px 8px;margin-top:6px"><span class="pill ${TPILL[t.status] || ""}">${LIVE_T.includes(t.status) && t.status !== "needs_answer" ? '<span class="dot run"></span>' : ""}${esc(tstat(t))}</span>
       <span>#${t.id} · ${t.owner === "stack" ? "the stack's task" : "your task"}${t.kind ? ` · ${esc(TKINDS[t.kind] || t.kind)}` : ""} · ${esc(rhythmText(t.rhythm, t.after))}</span><span>${ic.clock}given ${rel(t.created)}${t.source === "app" ? " by you" : t.source ? ` · from ${esc(t.source)}` : ""}</span></div>
     ${t.goal && t.goal !== t.title ? `<div class="small muted agwhat">${prose(t.goal)}</div>` : ""}
-    ${taskEngineLink(t, run)}
     <div data-tideas="${t.id}"></div>${(queueMicrotask(() => fillTaskIdeas($(`[data-tideas="${t.id}"]`), t.id)), "")}
   </div></div>
   ${wf ? `<div id="wfwhere" style="margin-top:12px"></div>` : ""}
@@ -109,7 +103,7 @@ function taskPage(t) {
   ${changeHtml(t)}
   ${t.status === "needs_answer" ? `<form class="card pad tans" data-tans="${t.id}" style="margin-top:12px"><b>It asks you</b>${(t.questions || []).map((q, i) => `<label><span>${esc(q)}</span><input class="input" name="a${i}" required></label>`).join("")}<div class="row" style="justify-content:flex-end"><button class="btn sm primary">${ic.check}Answer</button></div></form>` : ""}
   <div class="actions">${String(t.source || "").startsWith("trial:") ? `<a class="btn" href="#/trials?t=${encodeURIComponent(t.source.slice(6))}">${ic.target}Trial scoreboard</a>` : ""}
-    ${t.door === "plan" && (t.runs || []).length ? `<a class="btn" href="#/taskmap?t=${t.id}${many ? `&o=${run.occ}` : ""}">${ic.wiki}Swarm map</a><a class="btn" href="#/live/${encodeURIComponent(`task:${t.id}${run && run.occ > 1 ? `.${run.occ}` : ""}`)}">${ic.pulse}Live trace</a>` : ""}
+    ${t.door === "plan" && (t.runs || []).length ? `<a class="btn" href="#/live/${encodeURIComponent(`task:${t.id}${run && run.occ > 1 ? `.${run.occ}` : ""}`)}">${ic.pulse}The run's log</a>` : ""}
     ${t.door && t.ref && TDOOR[t.door] && t.door !== "plan" ? (([h, l]) => `<a class="btn" href="${h}">${ic.next}${esc(l)}</a>`)(TDOOR[t.door](t.ref)) : ""}
     ${t.status === "waiting_approval" && t.kind !== "change" ? `<button class="btn primary" data-tok="${t.id}">${ic.check}Start it</button>` : ""}
     ${t.door === "plan" && t.kind !== "change" && ["scheduled", "done", "failed"].includes(t.status) && (t.runs || []).length ? `<button class="btn" data-trun="${t.id}">${ic.play}Run again now</button>` : ""}
@@ -406,18 +400,35 @@ function taskAgents(box, t, a, steps) {
   taskBindSee(box, t);
 }
 
+// TSK-24: the run from what it read to what came out (it was the swarm map's own page until DEC-53), then every source
 function taskSources(box, t) {
-  const all = t.prov?.sources || [], sites = taskSites(all);
+  const sites = taskSites(t.prov?.sources || []);
+  box.innerHTML = `<div class="card pad section"><div class="row between wrap" style="gap:8px"><h2>From what it read to the answer${(t.runs || []).length > 1 ? ` · run ${t.occ}` : ""}</h2>${explain("tflow", "What was read, who worked, what they found and what came out. Tap a box: where it came from and what it fed. A dashed source was read but not cited; a site with many pages is one box with its count.", "How to read this")}</div>
+      <div id="tflow"><div class="skeleton" style="height:200px"></div></div><div id="tminfo" style="margin-top:10px"></div></div>
+    <div id="tsrccard">${taskSourceList(t)}</div>
+    ${sites.length ? `<div class="card pad section"><h2>By site · ${sites.length}</h2>${taskBars(sites.map(([s, x]) => [esc(s), x]), (x) => `${x} read`)}</div>` : ""}`;
+  taskBindSources(box, t);
+  taskFlowInto($("#tflow", box), t);
+}
+function taskSourceList(t) {
+  const all = t.prov?.sources || [];
   const F = [["all", "Everything", () => true], ["cited", "Cited in the answer", (s) => s.cited], ["unused", "Read, not cited", (s) => !s.cited && s.kind !== "search"], ["search", "Searches", (s) => s.kind === "search"]];
   const xs = all.filter((F.find(([k]) => k === taskSrc) || F[0])[2]).sort((x, y) => y.cited - x.cited || y.steps.length - x.steps.length || String(x.title).localeCompare(String(y.title)));
-  box.innerHTML = `<div class="card pad section"><h2>Its sources · ${nf(all.filter((s) => s.kind !== "search").length)}</h2>
-      <div class="tiny faint">every web page, news item, job ad, note and memory its agents read, and every search they made${(t.runs || []).length > 1 ? `, in run ${t.occ}` : ""}; cited: the answer links to it</div>
+  return `<div class="card pad section"><div class="row between wrap" style="gap:8px"><h2>Its sources · ${nf(all.filter((s) => s.kind !== "search").length)}</h2>${explain("tsrc", "Every web page, news item, job ad, note and memory its agents read, and every search they made; cited: the answer links to it.", "What is listed")}</div>
       <div class="chips" style="margin:8px 0">${F.map(([k, l, f]) => `<button class="tag${taskSrc === k ? " on" : ""}" data-tsf="${k}">${l} ${all.filter(f).length}</button>`).join("")}</div>
       <div class="tacts-list tsrc">${xs.map((s) => { const h = taskSrcHref(s);
         return `<div class="tact"><div class="tact-h"><span class="tag">${esc(TSKIND[s.kind] || s.kind)}</span>${s.cited ? `<span class="tag ok">cited</span>` : ""}<b>${taskLink(h, esc(s.title || s.uri))}</b></div>
-          <div class="tact-d tiny faint wrap">${[s.site && s.site !== s.kind ? s.site : "", s.steps.length ? `step ${s.steps.join(", ")}` : "", s.agents.map(taskWho).join(", ")].filter(Boolean).map(esc).join(" · ")}</div></div>`; }).join("") || `<div class="small muted">None of this kind.</div>`}</div></div>
-    ${sites.length ? `<div class="card pad section"><h2>By site · ${sites.length}</h2>${taskBars(sites.map(([s, x]) => [esc(s), x]), (x) => `${x} read`)}</div>` : ""}`;
-  $$("[data-tsf]", box).forEach((b) => (b.onclick = () => { taskSrc = b.dataset.tsf; taskSources(box, t); }));
+          <div class="tact-d tiny faint wrap">${[s.site && s.site !== s.kind ? s.site : "", s.steps.length ? `step ${s.steps.join(", ")}` : "", s.agents.map(taskWho).join(", ")].filter(Boolean).map(esc).join(" · ")}</div></div>`; }).join("") || `<div class="small muted">None of this kind.</div>`}</div></div>`;
+}
+function taskBindSources(box, t) {                      // a filter redraws the list only: the flow above keeps its place and pick
+  $$("[data-tsf]", box).forEach((b) => (b.onclick = () => { taskSrc = b.dataset.tsf; $("#tsrccard", box).innerHTML = taskSourceList(t); taskBindSources(box, t); }));
+}
+async function taskFlowInto(el, t) {
+  if (!el) return;
+  const d = await api(`/api/task/map?t=${t.id}${t.occ ? `&o=${t.occ}` : ""}`).catch((e) => ({ error: e.message }));
+  if (!el.isConnected) return;
+  if (d.error) { el.innerHTML = `<div class="small muted">${esc(d.error)}</div>`; return; }
+  tmapFlow(el, d, tmapGraph(d));
 }
 
 function taskMemory(box, t, a) {
@@ -437,7 +448,7 @@ function taskRuns(box, t) {
     return `<details class="card pad"${r.occ === t.occ ? " open" : ""}><summary><b>Run ${r.occ}</b>${r.occ === t.occ ? ` <span class="tag on">shown</span>` : ""} <span class="tiny faint">${esc(HOW?.[r.trigger] || r.trigger || "")} · ${rel(r.started)} · ${esc(r.status || "")}${v ? ` · <span class="${v[1]}">${esc(v[0])}</span>` : ""}${r.tokens ? ` · ${tok(r.tokens)} tokens` : ""}</span></summary>
       ${r.event ? `<div class="small faint">${esc(r.event.trigger || "an event")}: ${esc(r.event.summary || "")}</div>` : ""}
       ${taskStepList(((t.steps || {})[String(r.occ)] || []).map((s) => ({ ...s, task: t.id })))}
-      <div class="row wrap" style="gap:6px">${r.occ !== t.occ ? `<button class="btn sm primary" data-tocc="${r.occ}">${ic.target}Show this run</button>` : ""}${r.result?.startsWith?.("tasks/") ? `<a class="btn sm" href="#/read?path=${encodeURIComponent(r.result)}">${ic.doc}Its answer</a>` : ""}<a class="btn sm ghost" href="#/taskmap?t=${t.id}&o=${r.occ}">${ic.wiki}Its swarm map</a></div></details>`; }).join("")}</div>`;
+      <div class="row wrap" style="gap:6px">${r.occ !== t.occ ? `<button class="btn sm primary" data-tocc="${r.occ}">${ic.target}Show this run</button>` : ""}${r.result?.startsWith?.("tasks/") ? `<a class="btn sm" href="#/read?path=${encodeURIComponent(r.result)}">${ic.doc}Its answer</a>` : ""}${t.prov ? `<a class="btn sm ghost" href="#/task/${t.id}?tab=sources&o=${r.occ}">${ic.wiki}What it read</a>` : ""}</div></details>`; }).join("")}</div>`;
   $$("[data-tocc]", box).forEach((b) => (b.onclick = () => { taskOcc[t.id] = +b.dataset.tocc; ttab = "overview"; vTask(); }));
 }
 
@@ -462,7 +473,7 @@ async function vTrials() {
       ${Object.keys(r.areas || {}).length ? `<div class="chips" style="margin-top:8px">${Object.entries(r.areas).sort().map(([a, [p, n]]) => `<span class="tag${p === n ? "" : " warn"}">${esc(a)} ${p}/${n}</span>`).join("")}</div>` : ""}
       <div class="tiny faint" style="margin-top:6px">${[r.agents != null && `${r.agents} agent${r.agents === 1 ? "" : "s"}, ${r.parallel} at once at most`, r.read ? `${r.read} sources read, ${r.cited} cited` : "", r.steps != null && `${r.steps} step${r.steps === 1 ? "" : "s"}`, r.builds && `${r.builds} build${r.builds === 1 ? "" : "s"}`, r.asked && `${r.asked} question${r.asked === 1 ? "" : "s"} asked`, r.over_budget && "stopped at its budget", r.review && `${r.review} gap${r.review === 1 ? "" : "s"} beyond the key, for review`, r.rescored && `rescored ${r.rescored}`, judgeOff && "the model judge disagrees with the answer key"].filter(Boolean).map(esc).join(" · ")}</div>
       <div class="row wrap" style="gap:6px;margin-top:8px"><a class="btn sm" href="#/read?path=${encodeURIComponent(r.report)}">${ic.doc}The report</a>${r.task ? `<a class="btn sm ghost" href="#/task/${r.task}">${ic.target}Its task</a>` : ""}</div></div>`; };
-  view.innerHTML = `<a class="back" href="#/telemetry">${ic.back}Telemetry</a>
+  view.innerHTML = `<a class="back" href="#/system?tab=costs">${ic.back}Costs</a>
   <div class="hero heading"><h1>Trials</h1><p>Practice runs for the swarm: each trial gives it a real job and scores the result against an answer key no agent can read. Runs of a trial stand side by side, so a change to an agent or to the code shows as a better or worse run.</p></div>
   ${d.error ? `<div class="card pad small muted">${esc(d.error)}</div>` : ""}
   ${pick ? `<div class="chips" style="margin-bottom:10px"><a class="tag" href="#/trials">All trials</a></div>` : ""}

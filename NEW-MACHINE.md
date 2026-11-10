@@ -38,7 +38,6 @@ it the backups cannot be opened.
    | tailnet port | local | what |
    |---|---|---|
    | 443 | 3080 | Open WebUI |
-   | 8443 | 6006 | Phoenix |
    | 8445 | 4096 | OpenCode |
    | 8446 | 5173 | Understand Anything code map |
    | 8447 | 8090 | Mission Control |

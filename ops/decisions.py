@@ -122,7 +122,7 @@ def _phone_steps(st):
 
 def _memory(st):
     for m in (st.get("system") or {}).get("pending_memory") or []:
-        yield _d(f"memory:{m['id']}", "memory", "Remember this?", m.get("text") or "", "#/system", would="yes",
+        yield _d(f"memory:{m['id']}", "memory", "Remember this?", m.get("text") or "", "#/decide", would="yes",
                  because="Hermes asked to remember it", unanswered="Hermes does not remember it",
                  answers=[{"label": "Remember", "act": {"action": "memory", "id": m["id"], "decision": "approve"}},
                           {"label": "Discard", "act": {"action": "memory", "id": m["id"], "decision": "reject"}}], routine=True)
@@ -153,21 +153,21 @@ def _tasks(st):
 def _swarm(st):
     sw = st.get("swarm") or {}
     for m in sw.get("owner_requests") or []:
-        room = f"#/swarm?tab=chat&ctx={quote(str(m.get('context') or ''), safe='')}"     # a context holds ":" and "+": a link must keep them
+        room = f"#/tasks?v=activity&ctx={quote(str(m.get('context') or ''), safe='')}"     # a context holds ":" and "+": a link must keep them
         yield _d(f"ask:{m.get('id') or m.get('context')}", "agent-request", f"{m.get('sender')} asks you", m.get("text") or "",
                  room, unanswered="the agent waits", created=m.get("ts"), answers=[{"label": "Answer", "href": room}])
     for i in (sw.get("board") or {}).get("open") or []:
         dispute = i.get("kind") == "dispute"
         good = (i.get("priority") or 0) >= 4 and i.get("effort") in ("small", None)
         yield _d(f"idea:{i['id']}", "memory" if dispute else "ideas", ("Which is true? " if dispute else "Take this idea? ") + (i.get("title") or ""),
-                 (i.get("signal") or i.get("owner") or ""), "#/swarm?tab=improve", would=None if dispute else "yes" if good else "no",
+                 (i.get("signal") or i.get("owner") or ""), "#/tasks?v=ideas", would=None if dispute else "yes" if good else "no",
                  because="" if dispute else "high priority and small" if good else "low priority or not small",
-                 unanswered="it stays on the board", created=i.get("created"), answers=[{"label": "Decide", "href": "#/swarm?tab=improve"}], weight=0)
+                 unanswered="it stays on the board", created=i.get("created"), answers=[{"label": "Decide", "href": "#/tasks?v=ideas"}], weight=0)
     for a in sw.get("changes") or []:
         if a.get("state") == "ready" and (a.get("experiment") or {}).get("passed") and a["experiment"].get("version") == a.get("version"):
             yield _d(f"change:{a.get('id')}:{a.get('version')}", "agent-change", f"Take the change to {a.get('agent') or a.get('id')}?",
-                     a.get("summary") or a.get("why") or "its experiment passed", "#/swarm?tab=improve", would="yes", because="its experiment passed",
-                     unanswered="the agent stays as it is", created=a.get("updated"), answers=[{"label": "Decide", "href": "#/swarm?tab=improve"}], weight=0)
+                     a.get("summary") or a.get("why") or "its experiment passed", "#/tasks?v=ideas", would="yes", because="its experiment passed",
+                     unanswered="the agent stays as it is", created=a.get("updated"), answers=[{"label": "Decide", "href": "#/tasks?v=ideas"}], weight=0)
     for a in sw.get("to_confirm") or []:
         yield _d(f"confirm:{a['id']}", "owner-confirm", f"Does it work? {a.get('title') or ''}", (sw.get("checks") or {}).get(str(a["id"])) or "it shipped, and its check is your word",
                  f"#/swarm/artifact/{a['id']}", unanswered="it stays unproved: the Checker waits for your word", created=a.get("state_since"),
@@ -218,7 +218,7 @@ def _test_item(st):
 def _packs(st):
     """A pack commit waiting for the owner (GEN-21): it always asks, and the old commit runs meanwhile."""
     from domain import packs as PK
-    yield from PK.decisions(_d)
+    yield from PK.decisions(_d, st.get("packs"))          # the runner's state already holds them (ops/missions.py domain_state)
 
 
 def _trackers(st):

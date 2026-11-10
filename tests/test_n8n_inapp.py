@@ -35,7 +35,7 @@ def n8n(monkeypatch):
         if answer.get("raise"):
             raise httpx.ConnectError("n8n is down", request=req)
         return answer.get("response") or answer_of(200, {"content-type": "application/json"}, b'{"data": {}}')
-    monkeypatch.setattr(S, "_n8n_transport", httpx.MockTransport(handle))
+    monkeypatch.setattr(S, "_frame_transport", httpx.MockTransport(handle))
     return TestClient(S.app, base_url="https://pc.example.ts.net:8447"), seen, answer
 
 
@@ -54,7 +54,7 @@ def test_n8n_is_served_under_the_apps_address_behind_its_gate(n8n):
     import types
     import server as S
     from starlette.datastructures import Headers
-    assert ("accept-encoding", "identity") in S.n8n_headers_in(types.SimpleNamespace(headers=Headers({"host": "h"})))   # never httpx's own gzip
+    assert ("accept-encoding", "identity") in S.frame_headers_in(types.SimpleNamespace(headers=Headers({"host": "h"})))   # never httpx's own gzip
     assert r.headers.get_list("set-cookie") == ["n8n-auth=a; Path=/; HttpOnly", "n8n-browser=b; Path=/"]
     assert "x-frame-options" not in r.headers and r.headers["content-security-policy"] == "frame-ancestors 'self'"   # only the app frames it
     answer["response"] = answer_of(302, {"location": "/signin?redirect=%2F"})
@@ -92,11 +92,11 @@ def test_compose_puts_n8n_under_n8n_with_live_updates_over_plain_http():
     assert env["WEBHOOK_URL"] == "https://${PC_TAILNET_HOST:-localhost}:8450/"                   # webhooks and resume URLs at n8n's root
     assert "stepnet" in core["services"]["n8n"]["networks"] and "stepnet" in apps["services"]["mission-control"]["networks"]
     server = (ROOT / "images/mission-control/server.py").read_text()
-    assert '"/runs", "/n8n")) and not request.headers.get("tailscale-user-login")' in server
-    assert 'Route("/n8n/{path:path}", n8n_proxy' in server and '_part("server.n8n.py")' in server
-    assert 'N8N_URL = os.environ.get("N8N_URL", "http://n8n:5678")' in (ROOT / "images/mission-control/server.n8n.py").read_text()
+    assert '"/share", *(f"/{n}" for n in FRAMES))) and not request.headers.get("tailscale-user-login")' in server
+    assert "*FRAME_ROUTES," in server and '_part("server.frames.py")' in server and '_part("server.n8n.py")' in server
+    assert '"n8n": os.environ.get("N8N_URL", "http://n8n:5678")' in (ROOT / "images/mission-control/server.frames.py").read_text()
     sw = (ROOT / "images/mission-control/web/sw.js").read_text()
-    assert 'url.pathname.startsWith("/n8n")) return;' in sw                                    # never cached by the app's worker
+    assert 'url.pathname.startsWith("/n8n") || url.pathname.startsWith("/phoenix")) return;' in sw                                    # never cached by the app's worker
 
 
 def test_a_resume_url_stays_at_n8ns_root():
@@ -196,3 +196,32 @@ def test_the_runner_writes_the_view_beside_the_step_service(tmp_path):
     from starlette.testclient import TestClient
     cl = TestClient(S.app)
     assert cl.get("/api/workflows").status_code == 403
+
+
+def test_phoenix_is_served_inside_the_app_like_n8n_and_a_step_s_call_opens_on_the_traces_page(n8n, monkeypatch):
+    """APP-66: Phoenix (PHOENIX_HOST_ROOT_PATH=/phoenix) under the app's address, behind its gate, framed by the app only;
+    "Open in Phoenix" lands on the app's Traces page with the call's trace."""
+    cl, seen, answer = n8n
+    assert cl.get("/phoenix/projects").status_code == 403 and not seen                 # no Tailscale login: Phoenix is never asked
+    answer["response"] = answer_of(200, [("content-type", "text/html"), ("x-frame-options", "DENY")], b"<html>phoenix</html>")
+    r = cl.get("/phoenix/projects/UHJ", headers=GATE)
+    assert r.status_code == 200 and seen[-1].url.host == "phoenix" and seen[-1].url.path == "/projects/UHJ"
+    assert "x-frame-options" not in r.headers and r.headers["content-security-policy"] == "frame-ancestors 'self'"
+    assert cl.get("/phoenix", headers=GATE, follow_redirects=False).headers["location"] == "/phoenix/"
+    import server as S
+    real = httpx.AsyncClient
+
+    def fake(req):
+        if req.url.path == "/v1/projects":
+            return httpx.Response(200, json={"data": [{"name": "default", "id": "P1"}]})
+        return httpx.Response(200, json={"data": [{"name": "litellm_request", "start_time": "2026-11-10T10:00:00+00:00", "end_time": "2026-11-10T10:00:02+00:00", "context": {"trace_id": "T9"}, "attributes": {}}]})
+    monkeypatch.setattr(S.httpx, "AsyncClient", lambda **k: real(transport=httpx.MockTransport(fake), **k))
+    ts = __import__("datetime").datetime(2026, 11, 10, 10, 0, 2, tzinfo=__import__("datetime").timezone.utc).timestamp()
+    r = cl.get(f"/api/phoenix?ts={ts}&ms=2000", headers=GATE, follow_redirects=False)
+    assert r.headers["location"] == "/#/traces?open=%2Fprojects%2FP1%2Ftraces%2FT9"
+    assert cl.get("/api/phoenix", headers=GATE, follow_redirects=False).headers["location"] == "/#/traces?open=%2Fprojects%2FP1"
+    core = yaml.safe_load((ROOT / "compose/core.yaml").read_text())["services"]["phoenix"]
+    assert core["environment"]["PHOENIX_HOST_ROOT_PATH"] == "/phoenix" and "obs" in core["networks"]
+    wf = (ROOT / "images/mission-control/web/static/app-workflows.js").read_text()
+    assert 'toolPage("Traces", `/phoenix${path}`' in wf and "traces: vTraces" in (ROOT / "images/mission-control/web/static/app-base.js").read_text()
+    assert next(t for t in json.loads((ROOT / "images/mission-control/web/static/tools.json").read_text())["tools"] if t["id"] == "phoenix")["host"] == "app"

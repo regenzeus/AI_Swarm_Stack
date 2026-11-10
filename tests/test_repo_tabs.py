@@ -80,7 +80,7 @@ def test_the_repo_page_has_seven_tabs_one_question_each():
 
 
 def test_six_labels_fit_a_phone_and_nothing_is_ellipsed():
-    assert re.search(r"@media \(max-width: 480px\) \{[^}]*\}? *\.repotabs a \{ padding: 8px 3px; font-size: 12\.5px; \}", CSS)
+    assert re.search(r"@media \(max-width: 480px\) \{[^}]*\}? *\.repotabs a \{ padding: 8px 3px; font-size: var\(--fs-2\); \}", CSS)
     assert ".rflist:not(.all)" not in CSS                                            # every row shows from the start (APP-57)
     assert not re.search(r"text-overflow:\s*ellipsis|line-clamp", CSS)
 

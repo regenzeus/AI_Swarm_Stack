@@ -8,10 +8,12 @@ on this page being out of date (QA-22). Text cut for length is a different list:
 the asker is told at once with the limit named. **stops**: a run past this ends and is reported. **drops**: something is
 left out, and the reason says where that is shown.
 
-## waits (10)
+## waits (12)
 
 | Where | Limit | Why |
 |---|---|---|
+| `images/mission-control/server.py` | `LINK_STALE_S` | the runner writes its state every few seconds; none for a minute means it stopped |
+| `images/mission-control/server.py` | `LINK_START_S` | the boot check gives the stack up to 20 min (ops/stack_ready.py WAIT_S), then the runner starts |
 | `images/mission-control/server.share.py` | `LIMIT_RETRY` | a chat that met a usage limit is tried again this often (AST-12) |
 | `images/swarm/ledger.py` | `n >= WIP` | work in progress per kind: it stays ready at its rank (SWM-40) |
 | `images/swarm/swarm.py` | `REPEAT` | a pack asked again this soon is the same run asking twice; the cursor stays, nothing is lost (FND-63) |
@@ -124,7 +126,7 @@ left out, and the reason says where that is shown.
 
 | Where | Limit | Why |
 |---|---|---|
-| `images/mission-control/server.n8n.py` | `N8N_CONNECT_TIMEOUT` | n8n that does not take the connection within 10 s is reported as not reachable |
+| `images/mission-control/server.frames.py` | `FRAME_CONNECT_TIMEOUT` | a tool that does not take the connection within 10 s is reported as not reachable |
 | `images/mission-control/server.share.py` | `LIMIT_GIVE_UP` | a chat still limited after a day stops waiting and says so (AST-12) |
 | `images/phone/phone.py` | `SCREEN_WAIT_MAX` | the AI phone's screen stays on at most this while an action waits for the owner's OK |
 | `images/phone/phone.py` | `TASK_MAX` | one task approval on the AI phone lasts at most this; the card names it |

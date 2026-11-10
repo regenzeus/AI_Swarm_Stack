@@ -48,17 +48,34 @@ function wfRunLine(r) {
   return `${wfStatePill(r.state)} <span>run ${esc(r.execution)} · started ${esc(dt(r.started))}${r.ended ? ` · ended ${esc(clock(r.ended))}` : ` · at “${esc(r.on)}”`}</span>`;
 }
 
+// ---------- a tool's page: its own UI in a frame on the app's address, beside the app's menu (server.frames.py) ----------
+// One component for every tool inside the app: the title row (its name, its views as one segmented control, what it is
+// behind the (i), "On its own"), then the frame filling the rest of the window. A tool keeps its own state: the page is
+// never redrawn under you while the same view is open.
+function toolPage(title, src, segs, about) {
+  if (view.querySelector("iframe.tool-frame")?.dataset.src === src) return;
+  view.innerHTML = `<div class="tool-head"><h1>${esc(title)}</h1>
+    ${segs.length ? `<div class="seg sm">${segs.map(([href, label, on]) => `<a href="${href}" class="${on ? "on" : ""}">${esc(label)}</a>`).join("")}</div>` : ""}
+    ${about}<a class="btn sm ghost" href="${esc(src)}" target="_blank" rel="noopener">${ic.next}On its own</a></div>
+  <iframe class="tool-frame" data-src="${esc(src)}" src="${esc(src)}" title="${esc(title)}"></iframe>`;
+}
+
 // ---------- the Workflows page ----------
 function vWorkflows() {
   const open = route.q.get("open") || "";
   if (!wfDesk()) return wfList(open);
-  const src = n8nPath(open);
-  if (view.querySelector("iframe.n8n-frame")?.dataset.src === src) return;     // n8n keeps its own state: never redrawn under you
-  view.innerHTML = `<div class="wf-head"><h1>Workflows</h1>
-    <div class="seg sm wf-seg"><a href="#/workflows" class="${open === "executions" ? "" : "on"}">Workflows</a><a href="#/workflows?open=executions" class="${open === "executions" ? "on" : ""}">Runs</a></div>
-    ${explain("wf-what", `n8n decides when each piece of work starts and in what order; the stack's agents do the work. This is n8n's own editor, inside the app: sign in to it once with its own account. Its AI Stack steps hand work to the stack and wait for the answer. ${how("workflows")}`, "About n8n")}
-    <a class="btn sm ghost" href="${esc(src)}" target="_blank" rel="noopener">${ic.doc}On its own</a></div>
-  <iframe class="n8n-frame" data-src="${esc(src)}" src="${esc(src)}" title="n8n: the workflows"></iframe>`;
+  toolPage("Workflows", n8nPath(open), [["#/workflows", "Workflows", open !== "executions"], ["#/workflows?open=executions", "Runs", open === "executions"]],
+    explain("wf-what", `n8n decides when each piece of work starts and in what order; the stack's agents do the work. This is n8n's own editor, inside the app: sign in to it once with its own account. Its AI Stack steps hand work to the stack and wait for the answer. ${how("workflows")}`, "About n8n"));
+}
+
+// ---------- the Traces page (APP-66): Phoenix inside the app, every model call with its prompt and answer ----------
+// #/traces?open=<a Phoenix path> opens that view (a step log's "Open in Phoenix" goes through /api/phoenix, which finds
+// the call's trace). On a phone too: Phoenix's lists work at 375 px, its trace view scrolls inside the frame.
+function vTraces() {
+  const open = route.q.get("open") || "";
+  const path = /^\/[\w\-/.=?&%]*$/.test(open) ? open : "/projects";          // only a path inside Phoenix
+  toolPage("Traces", `/phoenix${path}`, [],
+    explain("traces-what", `Phoenix keeps every model call the stack made through its gateway: the whole prompt, the answer, the tokens and the time, grouped into traces (a task's run is one trace). Open in Phoenix on a step's log jumps to that call. ${how("telemetry")}`, "About traces"));
 }
 
 async function wfList(open) {
@@ -68,7 +85,7 @@ async function wfList(open) {
   const last = (w) => w.runs?.[0]?.started || "";
   const ws = [...(v.workflows || [])].sort((a, b) => (b.active - a.active) || last(b).localeCompare(last(a)) || a.name.localeCompare(b.name));
   const on = ws.filter((w) => w.active).length;
-  view.innerHTML = `<div class="hero"><div class="grow"><h1>Workflows</h1><p>${nf(on)} of ${nf(ws.length)} on n8n · ${explain("wf-phone", `n8n decides when each piece of work starts; the stack's agents do it. Each workflow shows its schedule and its last runs, with the steps the stack ran. Its canvas opens on the desk. ${how("workflows")}`, "About workflows")}</p></div></div>
+  view.innerHTML = `<div class="hero"><div class="grow"><h1>Workflows</h1><p>${nf(on)} of ${nf(ws.length)} on n8n</p></div>${explain("wf-phone", `n8n decides when each piece of work starts; the stack's agents do it. Each workflow shows its schedule and its last runs, with the steps the stack ran. Its canvas opens on the desk. ${how("workflows")}`, "About workflows")}</div>
     ${ws.length ? `<div class="stack wf-list">${ws.map((w) => wfCard(w, w.id === open)).join("")}</div>` : emptyState("Workflows come from the repository's n8n folder: each deploy brings them in.", `<a class="btn sm" href="#/guide/workflows">${ic.doc}How workflows come in</a>`)}`;
   if (open) $(`[data-wf="${CSS.escape(open)}"]`)?.scrollIntoView({ block: "start" });
 }
@@ -93,7 +110,7 @@ function wfWhereOf(t) {                                // a task the step servic
 // n8n's run view keeps its own state: a redraw of the page moves the frame instead of loading it again (where the
 // browser can move a frame without reloading it)
 function wfKeepFrame() {
-  const f = $(".wf-where iframe.n8n-frame");
+  const f = $(".wf-where iframe.tool-frame");
   if (!f || !document.body.moveBefore) return null;
   f.hidden = true;
   document.body.moveBefore(f, null);
@@ -110,8 +127,8 @@ async function wfWhereInto(el, wid, ex = "", inList = null, keep = null) {
   el.innerHTML = `<div class="card pad wf-where"><div class="row between wrap" style="gap:6px"><h2>Where it runs</h2>${explain("wf-where", `n8n starts it and the stack does the work. ${wfDesk() ? "Below is the run on n8n's canvas: each node's state, its input and its output." : "On the desk the run opens on n8n's canvas."} ${how("workflows")}`, "About where it runs")}</div>
     <div class="chips wf-in" style="margin-top:6px">${inList ? `<span class="small muted">In workflows</span>` : ""}${names}${w && !inList ? wfOnPill(w) : ""}</div>
     <div class="small row wrap" style="gap:4px 8px;margin-top:8px">${r ? wfRunLine(r) : run ? `<span>run ${esc(run)}</span>` : `<span class="muted">No run yet${w ? ` · ${esc(w.schedule)}` : ""}</span>`}</div>
-    ${wfDesk() ? `<iframe class="n8n-frame run" data-src="${esc(src)}" src="${esc(src)}" loading="lazy" title="n8n: ${run ? "this run" : "its workflow"}"></iframe>` : r || w ? wfStepsHtml(w, r) : ""}</div>`;
-  const slot = el.querySelector("iframe.n8n-frame");
+    ${wfDesk() ? `<iframe class="tool-frame run" data-src="${esc(src)}" src="${esc(src)}" loading="lazy" title="n8n: ${run ? "this run" : "its workflow"}"></iframe>` : r || w ? wfStepsHtml(w, r) : ""}</div>`;
+  const slot = el.querySelector("iframe.tool-frame");
   if (keep && slot && keep.dataset.src === slot.dataset.src) { slot.parentNode.moveBefore(keep, slot); slot.remove(); keep.hidden = false; }
   else keep?.remove();
 }

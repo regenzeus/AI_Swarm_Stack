@@ -10,7 +10,7 @@ designs ("Atlas Agent Platform", "ITCG Mode D V2.1 data flow" artifacts on claud
 | Tool | What it records | How we use it |
 |---|---|---|
 | **LiteLLM** (gateway, `LiteLLM_SpendLogs`) | every model call (model, tokens in/out, cached and reasoning tokens, duration, status, the real error message) and every MCP tool call through the gateway (tool, duration, status), per key | the backbone of every run timeline (`ops/telemetry.py`) |
-| **Phoenix** (`:8443`, OTEL traces from LiteLLM) | the full prompt and response of every model call | every model call in a log (run view, agent log) has **Open in Phoenix**: `/api/phoenix?ts=&ms=&model=` finds the closest `litellm_request` span (start or end within 20 s, duration and model break ties) and opens its trace; the run head links to all traces. Mission Control reaches Phoenix on the `obs` network only |
+| **Phoenix** (inside the app at `/phoenix/`, the Traces page; OTEL traces from LiteLLM) | the full prompt and response of every model call | every model call in a log (run view, agent log) has **Open in Phoenix**: `/api/phoenix?ts=&ms=&model=` finds the closest `litellm_request` span (start or end within 20 s, duration and model break ties) and opens its trace; the run head links to all traces. Mission Control reaches Phoenix on the `obs` network only |
 | **Hermes** (`state.db` per profile; dashboard `:8448`) | sessions (model, system-prompt hash, tool-list hash, token and tool counts, cost), messages with tool calls, arguments, results, and reasoning fields (empty on the ChatGPT path: its reasoning arrives encrypted) | tool calls/results in timelines, the run manifest; the dashboard for live sessions |
 | **The runtime record** (Mission Control `runrecord.py`, below) | one event stream for every agent, live: Hermes (all profiles, via a plugin), Claude Code (hooks), the AI phone, Gmail, the runner's missions, builds, Claude tasks and crew jobs; one honest end state per run | the run view (`#/live/<run>`), Live now, runtime problems on the health board |
 | **Claude Code** | `-p --output-format stream-json`: every tool use and result, token usage incl. cache, the final result (turns, usage); thinking blocks when it sends them (2.1.305 headless sends none here). Hooks (SessionStart, Pre/PostToolUse, Stop) feed the runtime record. Native OpenTelemetry (`CLAUDE_CODE_ENABLE_TELEMETRY=1` + OTLP exporters): metrics (tokens, cost, lines changed, commits, active time) and events (tool results with duration and success, API requests and errors) | stream-json for builds and Claude tasks. OTEL **not enabled**: Phoenix only takes traces, Claude Code exports metrics and logs, so it would need an extra collector; stream-json already gives the per-run detail |
@@ -141,7 +141,7 @@ vault, memory; a helper agent's calls count for the step that called it in), the
 step's own answer (a finding, derived from the pages it names and from the findings it waited for), the report, the
 wiki pages and the deliveries. When the run ends, the steps are recorded again (tool events arrive late) and every
 source whose address the report or the answer links is marked `cited`. Each change writes the run's map,
-`public/maps/<task>.<occ>.json`, which the app draws (Tasks → Swarm map) and `/api/task/map` serves.
+`public/maps/<task>.<occ>.json`, which the app draws (a task's Sources) and `/api/task/map` serves.
 `python3 ops/provenance.py backfill` records and draws the runs that finished before.
 
 ## Telemetry history, list prices and task traces (TSK-25 to TSK-27)

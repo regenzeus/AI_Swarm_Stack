@@ -244,17 +244,13 @@ items:
       the crew's systemd timers shall be removed, with their requirements rewritten or retired.
     type: process
     priority: must
-    status: partial
-    gap: "Removed: Temporal and the block editor with their requirements (DEC-52, 10 Nov 2026); the crew's 23 timers
-      (a deploy deletes their installed copies), the Conductor's schedule path, the missions' own schedule check, the event
-      bus's time source, the crew's schedule form behind crew_schedule, and Temporal's two secrets (10 Nov 2026, WFL-09).
-      Left for the app's clean-up: the Engine, Runs and Templates screens and their codec and Runs proxy
-      (images/mission-control/server.engine.py)."
+    status: implemented
     parents: [SN-05]
-    sources: [DEC-51, DEC-52, docs/N8N-MIGRATION.md]
+    sources: [DEC-51, DEC-52, DEC-53, docs/N8N-MIGRATION.md]
     verify: {method: test, by: ['tests/test_n8n_move.py::test_nothing_but_n8n_and_the_kept_timers_starts_work_on_a_schedule',
-      'tests/test_deploy.py::test_a_unit_the_repository_dropped_goes_from_this_machine_with_the_next_deploy']}
-    trace: [ops/deploy.py, ops/systemd/AGENTS.md, docs/N8N-MIGRATION.md]
+      'tests/test_deploy.py::test_a_unit_the_repository_dropped_goes_from_this_machine_with_the_next_deploy',
+      'tests/test_app_after_n8n.py::test_the_engine_runs_and_templates_screens_are_gone_and_their_links_land_on_workflows']}
+    trace: [ops/deploy.py, ops/systemd/AGENTS.md, docs/N8N-MIGRATION.md, images/mission-control/web/static/app-base.js, images/mission-control/server.py]
   - id: WFL-13
     title: Run now through n8n
     statement: Every scheduled workflow of the repository shall have a second trigger, a webhook Run now (POST, path
@@ -293,5 +289,5 @@ items:
       'tests/test_n8n_inapp.py::test_n8ns_live_updates_stream_through_the_app',
       'tests/test_n8n_inapp.py::test_compose_puts_n8n_under_n8n_with_live_updates_over_plain_http',
       'tests/test_n8n_inapp.py::test_a_resume_url_stays_at_n8ns_root']}
-    trace: [images/mission-control/server.n8n.py, images/mission-control/server.py, images/mission-control/web/sw.js, compose/core.yaml,
+    trace: [images/mission-control/server.frames.py, images/mission-control/server.n8n.py, images/mission-control/server.py, images/mission-control/web/sw.js, compose/core.yaml,
       compose/apps.yaml, ops/windows/host-setup.ps1]

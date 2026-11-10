@@ -37,16 +37,16 @@
    "menus": [{"name": "Open", "path": "/", "words": "code editor"}]},
   {"id": "codemap", "name": "Code map", "what": "Understand Anything dashboard", "host": "tailnet:8446",
    "menus": [{"name": "Open", "path": "/", "words": "understand graph"}]},
-  {"id": "phoenix", "name": "Phoenix", "what": "Traces of every model call", "host": "tailnet:8443",
-   "menus": [{"name": "Projects", "path": "/projects", "words": "traces spans observability"}]},
+  {"id": "phoenix", "name": "Phoenix", "what": "Traces of every model call: its prompt, answer, tokens and time, inside the app", "host": "app",
+   "menus": [{"name": "Traces", "path": "/#/traces", "words": "traces spans observability prompt model calls phoenix"}, {"name": "On its own", "path": "/phoenix/projects", "words": "phoenix full page"}]},
   {"id": "tailscale", "name": "Tailscale", "what": "Your private network: devices and access", "host": "https://login.tailscale.com",
    "menus": [{"name": "Machines", "path": "/admin/machines", "words": "devices vpn network"}]}
  ],
  "pages": [
   ["Home", "#/", "feed results"], ["Tasks", "#/tasks", "missions briefings plans repeating"], ["Activity", "#/tasks?v=activity", "chatroom timeline"],
   ["Team", "#/tasks?v=team", "agents cards roles crew duties"], ["Network", "#/tasks?v=network", "map who works which agents"], ["Ideas", "#/tasks?v=ideas", "proposals"],
-  ["New task", "#/tasks?new=1", "create mission"], ["Chat", "#/chat", "hermes talk voice"], ["Wiki", "#/wiki", "knowledge vault"],
-  ["Code", "#/build", "builds deploy"], ["Workflows", "#/workflows", "n8n workflow schedule runs executions canvas"], ["Stack", "#/system", "tools health resources"], ["House", "#/house", "alexa echo lights voice"],
-  ["AI phone", "#/phone", "s22 android phone pair pairing connect wireless debugging approve allow job cleanup"], ["Telemetry", "#/telemetry", "tokens runs cost"], ["Guide", "#/guide", "help how"]
+  ["New task", "#/tasks?new=1", "create mission"], ["Chat", "#/chat", "hermes talk voice"], ["Memory", "#/memory", "knowledge vault wiki facts skills journals"],
+  ["Code", "#/build", "builds deploy"], ["Workflows", "#/workflows", "n8n workflow schedule runs executions canvas"], ["Stack", "#/system", "health services resources jobs backup"], ["Costs", "#/system?tab=costs", "paid subscriptions tokens telemetry agents day"], ["Connections", "#/system?tab=connections", "gmail mail a2a outside agents packs trackers"], ["Settings", "#/system?tab=settings", "theme notifications quiet hours device push"], ["House", "#/house", "alexa echo lights voice"],
+  ["AI phone", "#/phone", "s22 android phone pair pairing connect wireless debugging approve allow job cleanup"], ["Traces", "#/traces", "phoenix model calls prompts spans observability"], ["Guide", "#/guide", "help how"]
  ]
 }

@@ -765,3 +765,115 @@ items:
     verify: {method: test, by: [tests/test_app_name.py::test_the_name_comes_from_the_deployment_and_defaults_to_ai_stack, tests/test_app_name.py::test_nothing_the_owner_sees_says_the_old_name]}
     trace: [ops/deployment.py, images/mission-control/server.py, images/mission-control/web/index.html, images/mission-control/web/manifest.webmanifest, deployments/home/deployment.env]
 
+  - id: APP-62
+    title: The Stack page is the stack's own
+    statement: The Stack page shall hold the stack itself, one part at a time - Health (resources, services, scheduled jobs,
+      checks, the last backup), Costs (what was paid, the subscriptions, the agents today and day by day), Tools,
+      Connections (Gmail, outside agents, packs and trackers) and Settings - with the guide one tap from its title row;
+      what belongs elsewhere shall be there and stay within two taps of the menu - the House beside the AI phone on
+      Home's Overview, each memory store's figures and the weekly wiki tidy on Memory, a memory to approve in Needs
+      you - and an old address of a part that moved shall open where it is now.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-01, SN-06]
+    sources: [DEC-53, docs/N8N-MIGRATION.md]
+    rationale: 'The owner, 10 Nov 2026: "I want the UX polished and updated and no trace of technical debt." The design''s
+      section 4: the Stack page was a drawer of 15 things.'
+    verify: {method: test, by: [tests/test_app_after_n8n.py::test_the_stack_page_holds_the_stack_and_the_rest_is_where_it_belongs_two_taps_from_the_menu,
+      tests/test_ux_polish.py::test_the_stack_page_shows_one_part_at_a_time_and_jobs_carry_their_names]}
+    trace: [images/mission-control/web/static/app.js, images/mission-control/web/static/app-base.js, images/mission-control/web/static/app-memory.js,
+      images/mission-control/web/static/guide.js, images/mission-control/web/static/tools.json, ops/decisions.py]
+  - id: APP-63
+    title: One place to follow a run
+    statement: A run shall be followed on its task's page - Where it runs (its workflow, run, state and step), its steps
+      each with its own log, the flow from what it read to the answer under Sources, and each agent's lane under
+      Timeline - and on Workflows (n8n's runs); no other screen shall list runs of its own, except the agents' history on
+      the Stack page's Costs, which opens each run's log; an old address of the task map, Telemetry or a run list shall
+      open where the run is now.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-01, SN-19]
+    sources: [DEC-53, docs/N8N-MIGRATION.md]
+    rationale: 'The design''s section 4: runs showed on seven screens (Live, Swarm, Engine, Runs, Telemetry, a crew page,
+      the task map); the target is one place, the task page''s Where it runs, plus n8n''s runs.'
+    verify: {method: test, by: [tests/test_app_after_n8n.py::test_a_run_is_followed_on_its_task_page_and_the_old_run_screens_land_there,
+      tests/test_n8n_ux.py::test_task_and_crew_pages_show_where_they_run]}
+    trace: [images/mission-control/web/static/task.js, images/mission-control/web/static/app-base.js, images/mission-control/web/static/app-workflows.js,
+      ops/decisions.py, ops/journeys.py]
+  - id: APP-64
+    title: One menu with the stack's seven parts
+    statement: The menu shall be Home, Tasks, Workflows (on the desk), Memory, Code, Chat and Stack; the phone's bar shall
+      hold the same in the same order without Workflows, which a phone reaches from Tasks; Home shall have its own
+      address apart from the page the app opens on, the choice of that page shall offer the menu's names and read a
+      choice made under an old name, Home's entry shall count what needs the owner, and what the phone shared shall
+      have its list, one tap from Home's Overview while there is any.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-01, SN-06]
+    sources: [DEC-53, docs/N8N-MIGRATION.md]
+    rationale: 'The design''s section 4: 6 entries plus 33 more screens behind banners and links; the start page still
+      offered "Agents" and "Wiki"; the Home route and Share were linked from nowhere.'
+    verify: {method: test, by: [tests/test_app_after_n8n.py::test_the_menu_names_the_seven_parts_and_every_part_is_reachable,
+      tests/test_server.py::test_the_shared_items_are_listed_newest_first_and_home_counts_them,
+      tests/test_n8n_ux.py::test_the_desk_menu_opens_n8n_inside_the_app_and_the_phone_menu_does_not_show_it]}
+    trace: [images/mission-control/web/static/app-base.js, images/mission-control/web/static/app.js, images/mission-control/web/static/app-devices.js,
+      images/mission-control/web/static/app-tasks.js, images/mission-control/web/index.html, images/mission-control/server.share.py]
+  - id: APP-65
+    title: The connection state says what is true
+    statement: The app shall say "Not connected" only when the device gets no answer from the app itself; when the app
+      answers but the runner's state is old it shall say "The stack is starting" (with the runner's expected time to come
+      up from the last boot record) while the machine started after the runner's last state and within the boot check's
+      wait, "The runner did not start" with the machine's time since then after that wait, and "The runner stopped" with
+      how long ago when the runner wrote during this boot and then stopped; the app shall tell the device it is there
+      every 15 seconds also while the runner writes nothing.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-01, SN-06]
+    sources: [DEC-53, docs/N8N-MIGRATION.md]
+    rationale: 'docs/N8N-MIGRATION.md §4.2: "Not connected" meant that the runner''s file was old, not that the app was
+      down; after a reboot it showed 03:36 for 20 minutes.'
+    verify: {method: test, by: [tests/test_server.py::test_the_link_says_starting_stopped_or_not_started_from_the_boot_and_the_runner_s_last_state,
+      tests/test_app_after_n8n.py::test_the_app_says_what_is_true_when_the_runner_s_state_is_old,
+      tests/test_app_layout.py::test_an_app_no_runner_ever_wrote_to_is_not_connected, tests/test_app_layout.py::test_a_screen_without_a_connection_claims_nothing]}
+    trace: [images/mission-control/server.py, images/mission-control/web/static/app-base.js, images/mission-control/web/static/app.js,
+      images/mission-control/web/static/app-tasks.js]
+  - id: APP-66
+    title: The stack's tools inside the app
+    statement: A tool of the stack whose web UI can live under a sub-path shall be served under the app's own address
+      behind the app's Tailscale-login gate, framed only by the app's own pages, its own login kept, and shown in a
+      page of the app (a title row and the tool filling the window), not in a tab of its own - n8n at /n8n/ on
+      Workflows and Phoenix at /phoenix/ on Traces, which a step's "Open in Phoenix" opens at that call's trace; a tool
+      that cannot (its pages ask for /assets at the root) shall keep opening in its own tab, behind its own gate.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-01, SN-06]
+    sources: [DEC-53, docs/UX.md]
+    rationale: 'The owner, 10 Nov 2026: "Embed Phoenix and whatever inside the UX itself when possible, and n8n. Ensure
+      our UX is coherent, a professional premium feel."'
+    verify: {method: test, by: [tests/test_n8n_inapp.py::test_phoenix_is_served_inside_the_app_like_n8n_and_a_step_s_call_opens_on_the_traces_page,
+      tests/test_n8n_inapp.py::test_n8n_is_served_under_the_apps_address_behind_its_gate]}
+    trace: [images/mission-control/server.frames.py, images/mission-control/server.py, images/mission-control/web/static/app-workflows.js,
+      images/mission-control/web/static/tools.json, images/mission-control/web/sw.js, compose/core.yaml]
+  - id: APP-67
+    title: One visual system
+    statement: The app shall follow one written design (docs/UX.md) - what the owner does daily, where each part and tool
+      lives, the colour tokens defined for both themes, one type scale every font size is on, one spacing rhythm, one
+      component for each job (title row, section, card, list, button, pill, tag, segmented control, banner, KPI tile,
+      empty state, explanation, a tool's page and its frame) and the rules every screen follows.
+    type: quality
+    priority: should
+    status: partial
+    gap: "About 875 inline style attributes in the view code still name pixels instead of the spacing tokens; they move
+      to classes as each screen is next touched (docs/UX.md §5)."
+    parents: [SN-01]
+    sources: [DEC-53, docs/UX.md]
+    rationale: 'The owner, 10 Nov 2026: "Ensure our UX is coherent, a professional premium feel. Ensure it works on desktop
+      widescreen browser as well as on mobile."'
+    verify: {method: test, by: [tests/test_app_after_n8n.py::test_one_visual_system_every_font_size_is_on_the_type_scale_and_docs_ux_names_the_tokens,
+      tests/test_app_layout.py::test_the_desk_uses_the_width_it_has]}
+    trace: [images/mission-control/web/static/app.css, images/mission-control/web/static/guide.css, docs/UX.md]

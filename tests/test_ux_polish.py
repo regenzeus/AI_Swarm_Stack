@@ -22,11 +22,13 @@ def test_the_greeting_uses_a_display_name_and_never_an_e_mail_address():
 
 def test_the_stack_page_shows_one_part_at_a_time_and_jobs_carry_their_names():
     v = re.search(r"^function vSystem\(\).*?^\}$", APP, re.M | re.S)[0]
-    for part in ("tools", "health", "guide", "settings"):
-        assert f'data-sp="{part}"' in v
-    assert '(S.crew || []).find((c) => c.unit === t.unit)?.name || t.unit' in v
-    for moved in ("Notifications", "Scheduled jobs", "Connections", "How it fits together", "Health and costs", "Appearance"):
-        assert f"<h2>{moved}</h2>" in v                       # nothing left the page
+    assert "data-sp=\"${k}\"" in v and 'const STACK_TABS = [["health", "Health"], ["costs", "Costs"], ["tools", "Tools"], ["connections", "Connections"], ["settings", "Settings"]];' in APP
+    for part in ("health", "costs", "tools", "connections", "settings"):
+        assert f'part("{part}", ' in v
+    page = v + re.search(r"^function stackHealthHtml\(.*?^\}$", APP, re.M | re.S)[0] + re.search(r"^function stackCostsHtml\(.*?^\}$", APP, re.M | re.S)[0]
+    assert '(S.crew || []).find((c) => c.unit === t.unit)?.name || t.unit' in page
+    for kept in ("Notifications", "Scheduled jobs", "Services", "Resources", "Agents today", "Accounts and agents", "Appearance"):
+        assert f"<h2>{kept}</h2>" in page, kept                # what the stack is stays on the page
 
 
 def test_the_agents_and_wiki_pages_lead_with_their_lists():

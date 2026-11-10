@@ -84,9 +84,9 @@ process.stdout.write(JSON.stringify([named({ type: "image/png" }).name, named({ 
 def test_the_chat_puts_reading_first():
     head = re.search(r'<div class="chathead">.*?\n      </div>', V, re.S)[0]
     assert 'id="cmenubtn"' in head and "#/live/" not in head and 'class="chatmenu card"' in V   # Activity, rename, pin and delete are in the menu
-    assert 'cd.hidden = !updateReady && liveState() !== "off";' in JS                   # the state, only while something is off
+    assert 'cd.hidden = !updateReady && !notConnected();' in JS                   # the state, only while something is off
     assert "Working on it" not in JS and "This is Hermes, your assistant" not in V and "What can I do for you?" in V
     assert ".macts { display: none;" in CSS and ".mrow:last-child .macts, .mrow.show .macts { display: flex; }" in CSS and 'row.classList.toggle("show", !was);' in V
     assert '${live ? "Working" : "Worked"} through' in JS
     assert 'id="tobottom"' in V and '$("#tobottom").hidden = atEnd;' in V
-    assert "font-size: 16px" in CSS[CSS.index(".composer2 textarea { font-size"):][:60]  # a phone browser zooms into anything smaller
+    assert "font-size: var(--fs-6)" in CSS[CSS.index(".composer2 textarea { font-size"):][:60] and "--fs-6: 16px;" in CSS  # a phone browser zooms into anything smaller

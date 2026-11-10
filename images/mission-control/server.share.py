@@ -68,6 +68,24 @@ async def api_share_save(request):
     return JSONResponse({"saved": len(ok), "of": len(done), "errors": [d.get("error") for d in done if d.get("error")]})
 
 
+def shares_recent():
+    """What the phone shared in the last two weeks (they are kept that long), newest first: the list behind #/share."""
+    out = []
+    for p in SHARES.glob("*.json") if SHARES.exists() else []:
+        try:
+            r = json.loads(p.read_text())
+        except (OSError, ValueError):
+            continue
+        out.append({"id": r["id"], "at": r.get("at", ""), "title": r.get("title", ""), "url": r.get("url", ""),
+                    "text": bool(r.get("text")), "files": [f.get("name", "") for f in r.get("files") or []]})
+    return sorted(out, key=lambda x: x["at"], reverse=True)
+
+
+async def api_shares(request):
+    """APP-15: the shared items, for the Share page's list."""
+    return JSONResponse({"shares": await asyncio.to_thread(shares_recent)})
+
+
 def file_of(fid):
     if not re.fullmatch(r"[a-f0-9]{16}", fid or ""):
         return None

@@ -158,8 +158,8 @@ def test_a_change_starts_at_a_tag_opens_a_draft_into_a_release_branch_and_a_revi
 def test_trackers_are_the_apps_and_the_queues():
     from pathlib import Path
     root = Path(__file__).resolve().parents[1]
-    js = (root / "images/mission-control/web/static/app-trackers.js").read_text()
-    assert "function vTrackers(" in js and 'data-tk="tracker_shadow_approve"' in js and 'action: "tracker_live"' in js
+    js = (root / "images/mission-control/web/static/app.js").read_text()          # the Stack page's Packs and trackers
+    assert "function trackersHtml(" in js and 'data-tk="tracker_shadow_approve"' in js and 'action: "tracker_live"' in js and "t.workflow" in js
     assert '"tracker_shadow_approve", "tracker_shadow_reject", "tracker_live"' in (root / "images/mission-control/server.py").read_text()
     import decisions as DQ
     assert DQ._trackers in DQ.SOURCES

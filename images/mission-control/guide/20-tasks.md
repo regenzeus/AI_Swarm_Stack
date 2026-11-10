@@ -5,7 +5,7 @@ part: Everyday use
 icon: tasks
 minutes: 5
 summary: Every piece of work is a task, once or repeating. The Tasks tab shows your tasks, what happens now, the team, which agents work on which task, and the stack's ideas.
-views: [tasks, task, taskmap, missions, new]
+views: [tasks, task, missions, new]
 ---
 Every piece of work in the stack is a **task**: a briefing, a long research job, a price watch, a cleanup, a build, a
 question to Claude, a chat. A task is *what* needs to be done; an **agent** is *who* does it. One task can have many
@@ -191,26 +191,27 @@ in a throwaway container on the internal network, the repository read-only, no s
 The task's page lists its **steps**, each with its agent, its state and its result. A step that waits says why: the
 steps before it, Claude still working, the subscription's usage limit, or too little memory available on the PC (a
 step asks for what it starts: a quarter of a GB for a writing step, half a GB for a Hermes step, three quarters for
-Claude Code). **Live trace** opens the whole task as one run, with every step and every agent inside
-it. When the task is done, **Read the answer** opens it; it is also kept in the vault under `tasks/`.
+Claude Code). **The run's log** opens the whole task as one run, with every step and every agent
+inside it; **how it ran** beside a step opens that step's own log. When the task is done, **Read the answer** opens it; it is also kept in the vault under `tasks/`.
 
 If the PC restarts in the middle, the task goes on where it stopped: finished steps are never done again, and a step
 that was running starts once more.
 
-## The swarm map
+## From what it read to the answer
 
-**Swarm map** on a task (and **map** beside each of its runs) shows how the run went:
+A task's **Sources** shows how a run went from what it read to what came out (**What it read** beside each of its
+runs opens that run's):
 
-- **Flow**: four columns, *what was read* (pages, searches, job ads, vault notes, memories, the news the Topic Desk
+- Four columns, *what was read* (pages, searches, job ads, vault notes, memories, the news the Topic Desk
   chose), *who worked* (each step and its agent), *what they found* and *what came out* (the report, the answer, the
   wiki pages, the deliveries). Tap a box to see where it came from and what it fed, and to open it. A source drawn
   dashed was read but never cited in the answer, so you see which reading paid off. A site with many pages is one box
   with its count; tap it for the list.
-- **Timeline**: one lane per agent at work (indented: an agent another one called in), ● for what it read and ■ for
-  what it made, so you see what ran at the same time.
-- On top: sources read → cited, how many agents and how many at once, the time from start to end, the tokens.
+- Below it, every source with a filter: cited, read but not cited, searches; and how many came from each site.
+- **Timeline** on the task page has one lane per agent at work (indented: an agent another one called in), so you see
+  what ran at the same time; the numbers under the answer say how many agents, how many at once, the time and tokens.
 
-While a run goes on, the map redraws itself every few seconds. On a phone it moves sideways instead of shrinking.
+While a run goes on, the page redraws itself every few seconds. On a phone the flow moves sideways instead of shrinking.
 
 ## Improve a wiki or a page
 

@@ -615,7 +615,7 @@ function swDaysHtml(rows, all = rows) {             // telemetry rows (ops/histo
   return `<div class="card pad-l section"><h2>${young ? `Since ${day(first)}` : "Last 30 days"} <span class="hcount">${dayRows.reduce((s, [, d]) => s + d.runs, 0)} runs</span></h2>
     ${dayRows.length ? `<div style="overflow-x:auto;margin-top:6px"><table class="swflow"><thead><tr><th>Day</th><th>Runs</th><th>Failed</th><th>Judged met</th><th>Tokens</th><th>Typical time</th><th>If paid</th></tr></thead><tbody>
       ${dayRows.map(([dd, d]) => `<tr><td>${day(dd)}</td><td>${d.runs}</td><td class="${d.failed ? "err-t" : ""}">${d.failed}</td><td>${d.met + d.partly + d.not_met ? `${d.met} of ${d.met + d.partly + d.not_met}` : "–"}</td><td>${tok(d.tokens)}</td><td>${d.p50.length ? dur(d.p50.sort((p, q) => p - q)[Math.floor(d.p50.length / 2)]) : "–"}</td><td>${d.cost ? ifPaid(d.cost) : "–"}</td></tr>`).join("")}</tbody></table></div>
-      <div class="tiny faint" style="margin-top:4px">From the telemetry history (<a href="#/telemetry">Stack → Telemetry</a>), one row a day${young ? `; it began on ${day(first)}, so earlier runs are not in it` : ""}.</div>`
+      <div class="tiny faint" style="margin-top:4px">From the agents' history (<a href="#/system?tab=costs">Stack → Costs</a>), one row a day${young ? `; it began on ${day(first)}, so earlier runs are not in it` : ""}.</div>`
       : `<div class="small muted" style="margin-top:6px">No runs in the telemetry history yet: it adds a row for each day this runs.</div>`}</div>`;
 }
 async function swTelemetry() { return (typeof telData !== "undefined" && telData) || (telData = await api("/api/telemetry").catch(() => ({ rows: [] }))); }

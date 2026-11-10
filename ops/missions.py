@@ -976,6 +976,19 @@ def tail(path, n=14):
         return []
 
 
+def domain_state():
+    """GEN-21, GEN-25: the packs and the trackers for the Stack page's Packs and trackers (the app reads no host folder);
+    the queue's pack decisions use the same load. A part that cannot be read is left out, said once in the log."""
+    from domain import packs as PK, trackers as TR
+    out = {}
+    for key, fn in (("packs", PK.view), ("trackers", TR.view)):
+        try:
+            out[key] = fn()
+        except Exception as e:
+            log(f"{key}: {type(e).__name__}: {e}")
+    return out
+
+
 def write_state(c, missions):
     import n8n_jobs as NJ
     t = now()
@@ -1052,7 +1065,7 @@ def write_state(c, missions):
         ev = []
     state = {"generated": t.isoformat(timespec="seconds"), "missions": out, "running": run or None, "queue": queue,
              "activity": ev, "calls": recent_calls(), "system": system_info(), "resources": RES, **B.state(c), **I.state(c), **R.state(), **CT.state(c), **CR.state(), **SH.state(), **H.state(), **SW.state(), **MEM.state(CR.status()), **N.state(), **TK.state(c), **EV.state(c), **ST.state(c), **FL.state(), "health": health,
-             "prices": PR.load().get("models", {}), **A2.state()}                  # TSK-27: the app prices tokens with the same table
+             "prices": PR.load().get("models", {}), **A2.state(), **domain_state()}   # TSK-27: the app prices tokens with the same table
     try:
         state.update(DQ.state(state))
     except Exception as e:
@@ -1136,7 +1149,7 @@ def phone_watch():
                     p = json.loads(f.read_text())
                     sample = "\n".join("· " + html.escape(x) for x in p.get("sample", [])[:8])  # cap: top
                     X.telegram(f"📧 <b>Gmail: move {p.get('count')} mails to Trash?</b>\n<i>{html.escape(p.get('reason', ''))}</i>\n{sample}\n"
-                               "(Trash only, undo possible; waits 15 min)", [[("🔍 Review", f"{X.APP}/#/system?conn=1")]], category="approval")
+                               "(Trash only, undo possible; waits 15 min)", [[("🔍 Review", f"{X.APP}/#/system?tab=connections")]], category="approval")
             for f in sorted(PHONE_DONE.glob("*.json")) if PHONE_DONE.exists() else []:     # a finished phone task
                 d = json.loads(f.read_text())
                 X.telegram(f"📱 <b>AI phone: done</b>\n{html.escape(d.get('summary', ''))}", [[("Phone page", f"{X.APP}/#/phone")]], category="result")

@@ -22,7 +22,7 @@ def test_an_icon_in_text_is_one_line_high_and_no_page_has_an_app_top_bar():
     assert ".ico { width: 1.15em; height: 1.15em;" in CSS                               # (the run page's tune icon filled the card)
     assert '<header class="top">' not in HTML and 'class="top-r"' not in HTML and "stackbtn" not in HTML
     assert '<div id="livebar" class="livebar" hidden><div id="live-chip" class="chip"></div></div>' in HTML
-    assert "if (bar) bar.hidden = !updateReady && liveState() !== \"off\";" in JS          # only while offline or an update waits
+    assert "if (bar) bar.hidden = !updateReady && !notConnected();" in JS          # only while offline or an update waits
     nav = re.search(r"^const NAV = .*?;$", JS, re.M | re.S)[0]
     assert '["system", "#/system", "Stack", ic.layers]' in nav and "NAV.map(" in JS and "k === \"swarm\"))" not in JS
     assert '`<span class="tab-dot ${liveState()}"' in JS and ".tab-dot.run" in CSS     # the live state is the dot on Stack
@@ -35,7 +35,7 @@ def test_the_swarm_s_views_are_under_agents_on_every_screen():
     """Since 8 Nov 2026 (DEC-46) the agents' views are views of the Tasks tab, which lights up on every page of a task,
     a mission, a crew duty, an agent and the old addresses."""
     assert '["swarm", "#/swarm"' not in JS                                              # no section of its own, hidden on a phone
-    assert '(k === "tasks" && ["task", "taskmap", "mission", "crew", "new", "swarm", "missions", "telemetry", "trials"].includes(route.name))' in JS
+    assert '(k === "tasks" && ["task", "mission", "crew", "new", "swarm", "missions", "trials"].includes(route.name))' in JS
     assert '(k === "home" && route.name === "decide")' in JS                             # decided on Home (AUT-05)
     assert '"read", "swarm"' not in JS                    # a result opened from the Wiki or Home is no Agents page (FND-95)
     views = re.search(r"^const TVIEWS = .*?;$", JS, re.M | re.S)[0]
@@ -119,10 +119,10 @@ def test_a_screen_without_a_connection_claims_nothing():
     """QA-23 in the app: the same photos said Offline beside Ready, all services running and all quiet."""
     assert "function footState()" in JS and "footState();" in JS
     assert "Ready\"} · updated" not in JS and "Offline ·" not in JS
-    for where in ("function homeHeadHtml", "function needsHtml", "function vSystem"):
+    for where in ("function homeHeadHtml", "function needsHtml", "function stackLine"):
         body = JS[JS.index(where):]
         assert "notConnected()" in body[:body.index("\n}")], where
-    assert "<b class=\"err-t\">Not connected</b>" in JS
+    assert "<b class=\"err-t\">${esc(linkWords())}</b>" in JS
 
 
 def test_a_fresh_install_sees_no_one_else_s_topics():
@@ -139,7 +139,7 @@ def test_a_page_that_loads_shows_it_is_coming_and_a_tool_without_an_address_has_
 
 def test_an_app_no_runner_ever_wrote_to_is_not_connected():
     """Seen by running the image alone with empty data: it said Ready and all quiet while Stack said not connected."""
-    assert "!S || !S.generated ||" in JS and "the runner has written nothing here" in JS
+    assert "LINK && LINK.state !== \"ok\" ? \"wait\"" in JS and "s.link || LINK" in JS
     assert 'notConnected() ? "not known" : "all quiet"' in JS
 
 

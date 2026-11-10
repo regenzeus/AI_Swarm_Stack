@@ -68,8 +68,8 @@ apps
 
 ```try
 label: Look at a trace in Phoenix
-app: 8443
-note: Opens Phoenix. Pick the latest trace to see every step of a recent answer.
+open: "#/traces"
+note: Opens Phoenix inside the app (Stack → Health → Traces). Pick the latest trace to see every step of a recent answer.
 ```
 
 ```try

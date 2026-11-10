@@ -259,8 +259,16 @@ def test_forgejo_token_goes_to_the_runner_only(app, monkeypatch):
 
 
 def test_the_live_stream_carries_the_ai_phone(app):
+    """Home's AI phone card needs it live; every message of the stream has the shape of GET /api/state (the workflows'
+    jobs too: a task's Where it runs went missing after the first live update, 10 Nov 2026)."""
     import inspect
-    assert "'phone': ph" in inspect.getsource(app.api_stream)          # Home's AI phone card needs it live
+    import types
+    assert "full_state(request, ph, cs)" in inspect.getsource(app.api_stream)
+    (app.STATE.parent / "workflows.json").write_text('{"jobs": {"crew:checker": {"id": "w1"}}}')
+    monkey = types.SimpleNamespace(headers={"tailscale-user-login": "owner@test"})
+    s = app.full_state(monkey, ph={"connected": True}, cs={})
+    assert s["phone"] == {"connected": True} and s["workflows"]["jobs"]["crew:checker"]["id"] == "w1" and s["viewer"] == "owner@test"
+    assert TestClient(app.app).get("/api/state", headers=H).json()["workflows"]["jobs"] == s["workflows"]["jobs"]
 
 
 def test_connection_grants_and_the_ai_phone(app, monkeypatch, tmp_path):
@@ -387,3 +395,37 @@ def test_the_ai_phone_is_known_by_the_address_the_proxy_wrote(app):
     spoofed = {**H, "X-Forwarded-For": f"100.64.0.9, {app.AI_PHONE_IP}"}
     r = c.post("/api/request", headers=spoofed, json={"action": "run", "slug": "u"})
     assert r.status_code == 403 and "Stop" in r.json()["error"]
+
+
+def test_the_shared_items_are_listed_newest_first_and_home_counts_them(app, monkeypatch, tmp_path):
+    """APP-15: what the phone's Share menu sent has a list (#/share), and the state says how many there are."""
+    monkeypatch.setattr(app, "SHARES", tmp_path / "shares")
+    c = TestClient(app.app)
+    assert c.get("/api/shares", headers=H).json() == {"shares": []} and c.get("/api/state", headers=H).json()["shared"] == 0
+    (tmp_path / "shares").mkdir()
+    for sid, at in (("a" * 16, "2026-11-09T10:00:00+0100"), ("b" * 16, "2026-11-10T10:00:00+0100")):
+        (tmp_path / "shares" / f"{sid}.json").write_text(json.dumps({"id": sid, "at": at, "title": "t", "url": "", "text": "x", "files": [{"name": "f.pdf"}]}))
+    got = c.get("/api/shares", headers=H).json()["shares"]
+    assert [s["id"] for s in got] == ["b" * 16, "a" * 16] and got[0]["files"] == ["f.pdf"] and got[0]["text"] is True
+    assert c.get("/api/state", headers=H).json()["shared"] == 2 and c.get("/api/shares").status_code == 403
+
+
+def test_the_link_says_starting_stopped_or_not_started_from_the_boot_and_the_runner_s_last_state(app, monkeypatch):
+    """APP-65: the app said "Not connected" whenever the runner's state file was old (after a reboot it showed 03:36
+    for 20 minutes). Its own machine's uptime and the state's age tell what is true."""
+    import os
+    now = 1_800_000_000
+    def at(age, up):
+        os.utime(app.STATE, (now - age, now - age))
+        monkeypatch.setattr(app, "_uptime", lambda: up)
+        return app.link_state({"system": {"boot": {"ready_s": 240}}}, now=now)
+    assert at(5, 9000) == {"state": "ok", "age_s": 5, "up_s": 9000, "ready_s": 240}
+    assert at(4000, 120)["state"] == "starting"                  # written before this boot, the stack is coming up
+    assert at(9000, 3000)["state"] == "not_started"              # before this boot, and long after the boot check gave up
+    assert at(600, 9000) == {"state": "stopped", "age_s": 600, "up_s": 9000, "ready_s": 240}   # written this boot, then nothing
+    monkeypatch.setattr(app, "STATE", app.STATE.parent / "none.json")
+    monkeypatch.setattr(app, "_uptime", lambda: 60)
+    assert app.link_state(now=now)["state"] == "starting"        # nothing written yet, the machine just started
+    assert TestClient(app.app).get("/api/state", headers=H).json()["link"]["state"] in ("starting", "not_started")
+    import inspect
+    assert "event: alive" in inspect.getsource(app.api_stream) and "json.dumps(link)" in inspect.getsource(app.api_stream)

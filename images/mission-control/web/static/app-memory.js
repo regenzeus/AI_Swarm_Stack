@@ -1,4 +1,4 @@
-// The app, part of app-base.js, app-tasks.js, app-runs.js, app-devices.js, app-wiki-code.js, app-memory.js, app.js (PLT-25): Memory, skills, Claude tasks and the repository page. Loaded in that order; one global scope.
+// The app, part of app-base.js, app-tasks.js, app-runs.js, app-devices.js, app-wiki-code.js, app-memory.js, app-workflows.js, app.js (PLT-25): Memory, skills, Claude tasks and the repository page. Loaded in that order; one global scope.
 // ---------- Memory (APP-50): what the stack knows and can look up. Each kind of knowledge has one home ----------
 const MEM_TABS = [["memory", "#/memory", "All"], ["wiki", "#/wiki", "Wikis"], ["longterm", "#/longterm", "Long-term"], ["codemem", "#/codemem", "Code"], ["howto", "#/howto", "How-to"], ["journals", "#/journals", "Journals"]];
 const MEM_HOW = `<ol class="memflow">${[["Before a run", "An agent is subscribed to the memory its role needs. Its opening is chosen for its task from those, within a budget; what does not fit is listed so it can open it, and other memory that matches is offered."],
@@ -74,7 +74,7 @@ const SECTOR_HREF = (c) => {
   if (id === "howto:skills") return "#/skills";
   if (id.startsWith("howto:lessons/")) return `#/howto?role=${encodeURIComponent(id.slice(14))}`;
   if (id.startsWith("agent:")) return journalHref(id.slice(6));
-  if (id === "work:ledger") return "#/swarm";
+  if (id === "work:ledger") return "#/tasks?v=ideas";
   return "#/memory";
 };
 const TRUST_WORD = { exact: "exact record", compiled: "compiled from sources", extracted: "extracted by a model" };
@@ -108,6 +108,52 @@ function memMapHtml(cs, sectors) {
   };
   return `<div class="memprobs" id="memprobs">${memProbsHtml()}</div><div class="memmap">${sectors.map(box).join("")}</div>`;
 }
+// MEM-01, MEM-07: each store's size, growth and limit, and who keeps it (ops/memory.py, hourly); MEM-08: the Librarian's
+// last weekly pass over the wikis and the search index. Both fold at the end of Memory's first page (DEC-53: they were
+// on the Stack page, away from what they measure).
+function memUse(m) {                                          // how full it is against its limit: [value, limit, label]
+  const [n, unit] = m.limit || [];
+  const v = unit === "MB" ? m.bytes / 1e6 : unit === "orphaned share" ? m.orphaned_share || 0 : /per wiki|per journal|lines each/.test(unit || "") ? m.largest || 0 : m.count;
+  return n ? [v, n, unit === "orphaned share" ? `${Math.round(100 * v)} % orphaned of ${Math.round(100 * n)} %` : `${nf(Math.round(v))} of ${nf(n)} ${unit}`] : null;
+}
+function memoryHtml() {
+  const st = S?.memory?.stores || [];
+  if (!st.length) return `<div class="small muted">The figures come within the hour.</div>`;
+  const row = (m) => {
+    const u = m.error ? null : memUse(m), g = m.growth_7d, pct = u ? Math.min(100, (100 * u[0]) / u[1]) : 0;
+    const count = m.error ? "" : `${nf(m.count)} ${esc(m.count_label ? `${m.unit} in ${m.count_label}` : m.unit)}`;
+    const moved = g?.count ? ` · ${g.count > 0 ? "+" : ""}${nf(g.count)} in 7 days` : "";
+    return `<div class="memrow"><div class="row between wrap" style="gap:6px"><b class="small">${esc(m.name)}</b><span class="small num">${count}${moved}${m.used?.n ? ` · ${esc(m.used.verb)} ${nf(m.used.n)} times in ${m.used.days} days` : ""}</span></div>
+      ${u && pct >= 70 ? `<div class="meter" title="${esc(u[2])}"><i style="width:${pct}%;${pct > 90 ? "background:var(--err)" : "background:var(--warn)"}"></i></div><div class="tiny faint">${esc(u[2])}</div>` : ""}
+      ${m.over_since ? `<div class="tiny warn-t wrap">Over its limit since ${day(m.over_since)}; after 8 days its curator gets an alert</div>` : ""}
+      ${(m.problems || []).map((p) => `<div class="tiny err-t wrap">${ic.alert} ${esc(p)}</div>`).join("")}</div>`;
+  };
+  return `<div class="card memlist">${st.map(row).join("")}</div>`;
+}
+const LIB_KIND = { "broken-link": ["broken link", "broken links"], orphan: ["page no other page links to", "pages no other page links to"], duplicate: ["possible duplicate", "possible duplicates"],
+  contradiction: ["page with a marked contradiction", "pages with a marked contradiction"], stale: ["page not confirmed for 90 days", "pages not confirmed for 90 days"], "over-limit": ["over the page limit", "over the page limit"] };
+function librarianHtml(lib) {
+  if (!lib) return `<div class="small muted" style="margin-top:10px">The Librarian tidies every wiki and the search index once a week (Wednesdays). Its first pass has not run yet.</div>`;
+  const ws = lib.wikis || [], ix = lib.index || {}, h = lib.hubs || {};
+  const n = (k) => ws.reduce((a, w) => a + (w[k] || []).length, 0);
+  const wrow = (w) => {
+    const kinds = {};
+    (w.issues || []).forEach((i) => (kinds[i.kind] = (kinds[i.kind] || 0) + 1));
+    const did = [["merged", "merged"], ["contradictions", "contradictions marked"], ["stale", "marked stale"]].filter(([k]) => (w[k] || []).length).map(([k, t]) => `${w[k].length} ${t}`);
+    return `<div class="memrow"><div class="row between wrap" style="gap:6px"><b>${esc(w.title)}</b><span class="tiny faint">${nf(w.pages || 0)} pages</span></div>
+      ${did.length ? `<div class="small">${esc(did.join(" · "))}</div>` : ""}
+      <div class="tiny faint wrap">${Object.keys(kinds).length ? Object.entries(kinds).map(([k, c]) => `${c} ${esc((LIB_KIND[k] || [k, k])[c === 1 ? 0 : 1])}`).join(" · ") : "nothing to report"}${w.waits ? ` · ${nf(w.waits)} wait for the next pass` : ""}</div>
+      ${(w.merged || []).map((x) => `<div class="tiny wrap">${ic.check} ${esc(x.drop)} merged into ${esc(x.keep)}: ${esc(x.why)}</div>`).join("")}
+      ${(w.refused || []).map((x) => `<div class="tiny warn-t wrap">Kept apart ${esc(x.drop)} and ${esc(x.keep)}: ${esc(x.why)}</div>`).join("")}
+      ${w.error || w.not_judged ? `<div class="tiny err-t wrap">${ic.alert} ${esc(w.error || `not judged: ${w.not_judged}`)}</div>` : ""}</div>`;
+  };
+  return `<div class="section-h memgroup"><h3>The weekly wiki tidy</h3>${explain("weekly-merges-duplicate-", `Weekly: merges duplicate pages, marks contradictions and stale pages, writes the hub pages that join the wikis, cleans the search index. It adds no facts, and everything it changes can be restored from the vault's history.
+      ${n("merged")} merged · ${n("contradictions")} contradictions marked · ${n("stale")} marked stale · ${nf(h.hubs || 0)} hub pages${ix.before ? ` · search index: ${nf(ix.before.orphaned)} → ${nf(ix.after.orphaned)} orphaned chunks` : ix.error ? ` · <span class="err-t">search index cleanup failed: ${esc(ix.error)}</span>` : ""}`, "About the tidy")}</div>
+    <div class="tiny faint" style="margin-bottom:6px">last pass ${rel(new Date(lib.at * 1000).toISOString())} · ${nf(lib.seconds || 0)} s${lib.commit ? ` · vault commit ${esc(lib.commit)}` : " · nothing changed"}</div>
+    <div class="card memlist">${ws.map(wrow).join("")}</div>`;
+}
+const memUpkeepHtml = () => `<details class="card pad section memuse" data-keep="memupkeep"><summary class="small"><b>Sizes, limits and the weekly tidy</b> <span class="faint">each store against its limit, and what the Librarian did</span></summary>
+  <div style="margin-top:10px">${memoryHtml()}${S?.memory?.stores?.length ? librarianHtml(S.memory.librarian) : ""}</div></details>`;
 async function vMemory() {
   view.innerHTML = `${memFrame("memory")}<div class="skeleton" style="height:240px"></div>`;
   bindMemFrame();
@@ -128,7 +174,8 @@ async function vMemory() {
     ${cs.length ? `<details class="card pad section memuse"><summary class="small"><b>How much runs get from memory</b> <span class="faint">per kind of step, the last 30 days</span></summary><div style="margin-top:10px">${memStatusHtml(st)}</div></details>` : ""}
     ${sectors.map(([k, l]) => { const xs = cs.filter((c) => c.sector === k && !c.parent); return xs.length ? `<div class="section-h memgroup" id="memsec-${k}"><h3>${esc(l)} · ${nf(xs.length)}</h3></div>
       <div class="card list skills">${xs.map((c) => row(c) + cs.filter((p) => p.parent === c.id).map((p) => row(p).replace("<a ", `<a class="mempart" `)).join("")).join("")}</div>` : ""; }).join("")
-      || emptyState(`${ic.wiki}<div>The catalogue comes within the hour.</div>`, `<a class="btn sm" href="#/wiki">See the wikis</a>`)}`;
+      || emptyState(`${ic.wiki}<div>The catalogue comes within the hour.</div>`, `<a class="btn sm" href="#/wiki">See the wikis</a>`)}
+    ${memUpkeepHtml()}`;
   bindMemFrame();
 }
 

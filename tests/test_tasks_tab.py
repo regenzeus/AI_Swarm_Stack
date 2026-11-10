@@ -228,9 +228,8 @@ def test_no_map_cuts_a_name():
     assert "tmShort" not in allj and allj.count("function wrapWords(text, fits) {") == 1 and "function svgTextWidth(text, cls, host) {" in allj
     flow = allj.split("function tmapFlow(box, d, g) {", 1)[1].split("\n}", 1)[0]
     assert "n.h = Math.max(NH," in flow and 'height="${n.h}"' in flow and '"… tap for all"' in flow and "cap: preview" in flow
-    lanes = allj.split("function tmapTimeline(box, d) {", 1)[1].split("\n}", 1)[0]
-    tline = allj.split("function taskTimeline(box, t, a) {", 1)[1].split("\n}", 1)[0]
-    assert "svgTspans(LL[i]" in lanes and "svgTspans(LL[i]" in tline and "RT[i] + (RH[i] - LH) / 2" in lanes + tline
+    tline = allj.split("function taskTimeline(box, t, a) {", 1)[1].split("\n}", 1)[0]     # the lanes: the task page's Timeline (DEC-53)
+    assert "svgTspans(LL[i]" in tline and "RT[i] + (RH[i] - LH) / 2" in tline
 
 
 def test_each_idea_is_tied_to_the_task_whose_run_first_saw_it(tmp_path, monkeypatch):

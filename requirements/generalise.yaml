@@ -244,8 +244,10 @@ items:
       'tests/test_domain_packs.py::test_two_packs_of_one_name_and_a_manifest_naming_another_pack_are_refused',
       'tests/test_domain_packs.py::test_home_without_packs_is_unchanged',
       'tests/test_domain_packs.py::test_a_pack_workflow_that_is_no_n8n_workflow_or_runs_a_shell_command_is_refused_with_the_reason',
-      'tests/test_domain_packs.py::test_packs_are_the_apps_and_the_queues']}
-    trace: [ops/domain/packs.py, ops/domain/__init__.py, ops/decisions.py, images/mission-control/web/static/app-packs.js, tests/fixtures/packs/toy/stack.yaml, tests/fixtures/packs/toy/workflows/bug.json]
+      'tests/test_domain_packs.py::test_packs_are_the_apps_and_the_queues',
+      'tests/test_domain_packs.py::test_the_app_sees_each_pack_s_workflows_and_agents_but_no_folder_or_file_path',
+      'tests/test_app_after_n8n.py::test_packs_and_trackers_are_one_section_of_the_stack_page_and_their_old_links_open_it']}
+    trace: [ops/domain/packs.py, ops/domain/__init__.py, ops/decisions.py, ops/missions.py, images/mission-control/web/static/app.js, tests/fixtures/packs/toy/stack.yaml, tests/fixtures/packs/toy/workflows/bug.json]
   - id: GEN-22
     title: 'Commands run at places through the worker protocol'
     statement: "A pack's command shall be a job kind of the worker protocol, run at wsl, windows or wsl-host (the same worker, as the Linux user the deployment names as owner of its tools and repositories), each kind approved at its place by its hash, with Windows staying pull-only; per-change values arrive as typed parameters, and the coder can run a check during its loop."
@@ -298,7 +300,7 @@ items:
       'tests/test_domain_trackers.py::test_a_write_to_an_unknown_tracker_or_of_an_unknown_kind_is_refused_with_the_reason',
       'tests/test_domain_trackers.py::test_jira_reads_by_jql_with_its_cursor_and_edits_its_one_summary',
       'tests/test_domain_trackers.py::test_trackers_are_the_apps_and_the_queues']}
-    trace: [ops/domain/trackers.py, images/mission-control/web/static/app-trackers.js]
+    trace: [ops/domain/trackers.py, images/mission-control/web/static/app.js]
   - id: GEN-26
     title: 'A branch from a named tag'
     statement: "A change shall start from the base ref its workflow names, push its branch through FORGE_PUSH, open a draft pull request into the workflow's target branch, and hand on each pull-request comment from someone else once to its run."
@@ -401,11 +403,10 @@ items:
     priority: should
     status: deprecated
     superseded_by: WFL-06
-    reason: "DEC-51, DEC-52: n8n's canvas, with the stack's own node (WFL-06), replaced the block editor, which was removed on 10 Nov 2026; the app's Engine, Runs and Templates screens show no data since and go in the app's own clean-up."
+    reason: "DEC-51, DEC-52: n8n's canvas, with the stack's own node (WFL-06), replaced the block editor, which was removed on 10 Nov 2026; the app's Engine, Runs and Templates screens went in the app's clean-up the same day (DEC-53), their old links landing on Workflows."
     parents: [SN-05]
     sources: [docs/N8N-MIGRATION.md]
     verify: {method: inspection, by: [docs/N8N-MIGRATION.md]}
-    trace: [images/mission-control/web/static/app-engine.js, images/mission-control/web/static/app-templates.js]
   - id: GEN-35
     title: 'One engine after the move'
     statement: "Home's fixed plans and the planner's free plans shall move to Temporal in one cutover, with the Conductor kept as the rollback."
@@ -428,7 +429,6 @@ items:
     parents: [SN-05]
     sources: [docs/N8N-MIGRATION.md]
     verify: {method: inspection, by: [docs/N8N-MIGRATION.md]}
-    trace: [images/mission-control/server.engine.py]
   - id: GEN-37
     title: 'A run pins its template; the runner changes by versioning'
     statement: "A run shall load its template's graph from the pack commit approved when it starts, and the graph runner's own changes shall use Temporal's versioning."

@@ -152,6 +152,20 @@ Menu: **Home** (results, Needs you), **Tasks** (what you asked, each with its pa
 Telemetry and the task map fold into n8n's executions, the task page or Stack. Each fold is its own change, with the
 owner's look at the result before the old screen goes.
 
+### 4.4 Status (10 Nov 2026, DEC-53)
+Built on `feat/n8n-ux`, each fold its own commit with its tests; [UX.md](UX.md) is the app's design now.
+
+| §4.2 finding | What became of it |
+|---|---|
+| 39 screens behind 6 menu entries | The menu above (APP-64); Engine, Runs and Templates are gone, their old links land on Workflows; Packs and Trackers are one section of Stack → Connections; Share has its list (`#/share`) and Home links it; Home has its own address (`#/home`) |
+| Runs on seven screens | One place: the task page (Where it runs, its steps and each step's log, Sources, Timeline) and Workflows → Runs (APP-63). The task map is the task page's Sources; Telemetry is Stack → Costs (the agents, day by day); `#/swarm` was already the Tasks views; `#/live/<run>` stays as a step's log |
+| The Stack page is a drawer | Health, Costs, Tools, Connections, Settings (APP-62); the House is on Home's Overview, memory figures and the tidy on Memory, a memory to approve in Needs you, the guide on its own page (`#/guide`) one tap from Stack |
+| Old names in the start-page picker | The menu's names; an old choice still opens the right page |
+| "Not connected" meant an old file | It says the stack is starting, the runner stopped (and since when) or did not start; "Not connected" only when the app does not answer (APP-65) |
+| The desk's CSS zoom | Kept for the app; undone on a tool's frame, where it misplaced clicks |
+| Jargon on screens | Plain words on the screens touched; the type scale and one set of components (APP-67) |
+| (new) Tools in separate tabs | Phoenix is inside the app at `/phoenix/` (Traces), like n8n (APP-66); Hermes admin, OpenCode, the code map dashboard and Open WebUI take no sub-path and keep their own tab |
+
 ## 5. Requirements: what changes
 
 Of 858 requirement items, about 160 trace to code n8n touches. Most keep their intent and change their mechanism.
@@ -171,7 +185,7 @@ Of 858 requirement items, about 160 trace to code n8n touches. Most keep their i
 | Temporal runner, bridge, cutover, preview, projector, client, worker, converter, graph, templates, activities | about 2,600 | removed (DEC-52); the step service's runner side is `ops/flows.py` |
 | The Temporal upgrade path, its configuration, compose's four Temporal services, its SDK in the runner, the builder and the app | about 500 | removed (DEC-52) |
 | Block editor (its sources and Node build stage), the graph template format and its demo templates | about 3,000 | removed (DEC-52) |
-| The codec and Runs proxy (`server.engine.py`), the Engine, Runs and Templates screens | | removed in the app's clean-up |
+| The codec and Runs proxy (`server.engine.py`), the Engine, Runs and Templates screens | | removed in the app's clean-up (DEC-53) |
 | Packs, trackers, places, artifacts, record, roles, draft pull requests | about 1,300 | kept, in `ops/domain/` |
 | `ops/conductor.py` (1,215) | | its step runners stay behind the step service; its schedule path went on 10 Nov 2026 (WFL-12); graph walking and fan-out stay for the runs n8n starts |
 | `ops/crew.py` (1,285) | | each job stays a command the step service runs; its timers went on 10 Nov 2026, its schedule is read from its workflow |
@@ -206,7 +220,7 @@ look at each phase's result.
 | 1. n8n in the core | Done: n8n 2.44.7 runs in the core, its data in Postgres, on the tailnet at port 8450; the owner's account is the one step left |
 | 2. Foundation | Done: n8n inside the app at /n8n/ behind the app's gate (WFL-14), the Workflows page, Where it runs and In workflows (WFL-11); the step service with the whole block palette (§3.3: agent, coding change, crew job, plan task, ask, notify, recall, remember, run command, run a plan), the stack's own node with live pickers (WFL-06), Run now on every scheduled workflow (WFL-13), workflows in git imported by deploys, Home's feed, Workflows in the desk menu |
 | 3. Move | Done: 25 of 25 scheduled jobs moved on 10 Nov 2026 (20 crew jobs, 5 plan tasks). Three more jobs left their timers for workflows the same day (vault ingest, the trial rotation, the nightly restart), inactive until their switch. Missions on a schedule and new scheduled tasks get their workflows from the runner (`ops/n8n_jobs.py`) |
-| 4. Remove | Mostly done: Temporal, the graph runner and the block editor with their requirements (DEC-52); the crew's 23 timers (a deploy deletes their installed copies), the Conductor's schedule path, the missions' own schedule check, the event bus's time source, the crew's schedule form and Temporal's two secrets (WFL-12). Left: the app's Engine, Runs and Templates screens and their proxy (the app's clean-up) |
+| 4. Remove | Done: Temporal, the graph runner and the block editor with their requirements (DEC-52); the crew's 23 timers (a deploy deletes their installed copies), the Conductor's schedule path, the missions' own schedule check, the event bus's time source, the crew's schedule form and Temporal's two secrets (WFL-12), and the app's Engine, Runs and Templates screens with their codec and Runs proxy (DEC-53) |
 
 **The scheduler, now:** n8n starts every scheduled job. systemd keeps three timers, for what must run when n8n is down:
 the boot check, the backup and the restore drill (ops/systemd/AGENTS.md). The event bus keeps the sources n8n cannot

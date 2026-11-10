@@ -13,16 +13,11 @@ Every `/api/` and `/share` route needs the `Tailscale-User-Login` header that `t
 | `/sw.js` | GET | The service worker (offline shell, push, self-update), always revalidated. |
 | `/manifest.webmanifest` | GET | The PWA manifest that makes the app installable. |
 | `/healthz` | GET | Liveness for the deploy's smoke test: whether the runner's state file exists and how old it is. |
-| `/api/state` | GET | The runner's whole state (missions, runs, builds, crew, health, system …) plus the phone, the connections and who is viewing. |
+| `/api/state` | GET | The runner's whole state, as full_state makes it. |
 | `/api/stream` | GET | Server-sent events: a new state whenever the runner writes one, so screens update without polling (APP-17). |
 | `/api/version` | GET | The deployed app version; the app reloads itself when it changes (APP-03). |
 | `/api/request` | POST | Drops an owner's action into the runner's inbox (the only way the app acts, SEC-12); the runner validates and answers under /api/result. |
 | `/api/result/{rid}` | GET | The runner's answer to one request, or {pending: true} while it works. |
-| `/api/codec/decode` | POST | Temporal UI's codec protocol: {"payloads": [{"metadata": {k: base64}, "data": base64}]} -> the same, decrypted. |
-| `/runs` | GET | /runs/...: Temporal's UI, passed through as it is (its pages, its API, its assets). |
-| `/runs/{path:path}` | GET, POST, PUT, PATCH, DELETE | /runs/...: Temporal's UI, passed through as it is (its pages, its API, its assets). |
-| `/n8n` | GET | /n8n/... -> n8n's /...: the method, the query, the body, the cookies, and the answer as it comes, chunk by chunk. |
-| `/n8n/{path:path}` | GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS | /n8n/... -> n8n's /...: the method, the query, the body, the cookies, and the answer as it comes, chunk by chunk. |
 | `/api/workflows` | GET | WFL-14: every workflow in git with its schedule, its steps and its recent runs (public/workflows-runs.json). |
 | `/api/file` | GET | A vault file as text, for the reading view; only paths inside the vault. |
 | `/api/runlog/{rid}` | GET | The last 300 lines of a mission run's log (an earlier-lines marker says how many more there are). |
@@ -44,7 +39,7 @@ Every `/api/` and `/share` route needs the `Tailscale-User-Login` header that `t
 | `/api/swarm/room` | GET | SWM-107, SWM-110: one timeline of what the agents do together and with you, at most 7 days, the rows the map counts: the Ledger's events and the Board's messages (Swarm service), asks and tool use between agents, hand-overs, what you said and what you were told. A record that can't be read is named instead of showing nothing (SWM-115). |
 | `/api/health/issues` | GET | The open health-board issues, each with the run that shows it (OBS-13). |
 | `/api/claude/{tid}` | GET | A Claude task (ops/claude_tasks.py): question, answer, status and its steps (with Claude's thinking). |
-| `/api/phoenix` | GET | Open in Phoenix: ?ts=<epoch>&ms=<duration>&model=<name> -> that call's trace; ?from=&to= -> the project's traces. |
+| `/api/phoenix` | GET | Open in Phoenix: ?ts=<epoch>&ms=<duration>&model=<name> -> that call's trace; none -> the project's traces. Both open on the app's Traces page, Phoenix inside the app (APP-66). |
 | `/api/build/{bid}/{kind}` | GET | One file of a build (diff, log, steps, files or context) as text. |
 | `/api/change/{tid:int}/{name}` | GET | CHG-14: what the Prober kept of trying a change for real: a log or a screenshot. |
 | `/api/files/{slug}/{name}` | GET | MIS-23: a mission's file: as text for the reader, or with ?download=1 as the file itself (its own name). |
@@ -77,6 +72,7 @@ Every `/api/` and `/share` route needs the `Tailscale-User-Login` header that `t
 | `/api/phone/decide` | POST | The owner's answer to the AI phone's approval card (a documented exception, SEC-12); never from the AI phone itself. |
 | `/api/phone/control` | POST | Stop, resume, open the free mode, end a task or keep the screen on for the AI phone (a documented exception, SEC-12); the phone may only stop itself. |
 | `/api/phone/shot/{sid}` | GET | A screenshot the AI phone took, for the owner. |
+| `/api/shares` | GET | APP-15: the shared items, for the Share page's list. |
 | `/api/share/{sid}` | GET | One shared item, for its page with the one-tap choices. |
 | `/api/share/{sid}/save` | POST | Save a shared item into the knowledge base: the link's page, the text, and every document or picture. |
 | `/api/mail` | GET | The mail copy on the NAS and the sender report from its headers (CNX-07, CNX-08): no message text. |

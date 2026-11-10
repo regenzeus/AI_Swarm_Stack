@@ -292,13 +292,13 @@ def decisions(make, cfg=None):
         for i in k["items"]:
             if i["status"] == "pending":
                 yield make(f"shadow:{kind}:{i['id']}", f"tracker-{kind}", f"Would the stack's {kind} on {i['tracker']}/{i['key']} be right?",
-                           TC.cut(i["body"], 400), "#/trackers",                                   # cap: preview, the whole is on the page
+                           TC.cut(i["body"], 400), "#/system?tab=connections&at=packs",   # cap: preview, the whole is on the page
                            unanswered="nothing leaves the stack: this kind of write is in shadow",
                            answers=[{"label": "Right", "act": {"action": "tracker_shadow_approve", "kind": kind, "id": i["id"]}},
                                     {"label": "Wrong", "act": {"action": "tracker_shadow_reject", "kind": kind, "id": i["id"]}}])
         if not k["live"] and k["approved"] >= need:
             yield make(f"tracker-live:{kind}", f"tracker-{kind}", f"Let the stack's {kind} writes go live?",
-                       f"you approved {k['approved']} of its shadow writes (the measure is {need})", "#/trackers",
+                       f"you approved {k['approved']} of its shadow writes (the measure is {need})", "#/system?tab=connections&at=packs",
                        unanswered=f"{kind} writes stay in shadow",
                        answers=[{"label": "Go live", "act": {"action": "tracker_live", "kind": kind, "live": True}}])
 

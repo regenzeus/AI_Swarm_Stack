@@ -22,7 +22,7 @@ that has news says which days found nothing ("nothing new on 30 Oct").
 ## What reaches you, and when
 
 Everything the stack tells you, on Telegram or as a push, goes through one path with your settings, under
-**Stack → Notifications**:
+**Stack → Settings → Notifications**:
 
 - **Per kind of message, per channel.** Results, event alerts, agent health, builds, the swarm and stack upkeep each
   have a Telegram and a Push switch. Approvals (the AI phone, Gmail, purchases) always reach you: they expire when
@@ -35,19 +35,19 @@ Everything the stack tells you, on Telegram or as a push, goes through one path 
 
 ```try
 label: Set quiet hours
-open: "#/system"
-note: Scroll to "Notifications", tick "Quiet hours", set the times, and tap Save.
+open: "#/system?tab=settings"
+note: Under "Notifications", tick "Quiet hours", set the times, and tap Save.
 ```
 
 ## Push notifications
 
-Push works once the app is installed on the device and you switch it on under **Stack → This device**. You'll
-get finished runs, triggered events, new missions and errors.
+Push works once the app is installed on the device and you switch it on under **Stack → Settings → This device**.
+You'll get finished runs, triggered events, new tasks and errors.
 
 ```try
 label: Switch on push and send a test
-open: "#/system"
-note: Scroll to "This device", switch on Push notifications, then tap "Send a test".
+open: "#/system?tab=settings"
+note: Under "This device", switch on Push notifications, then tap "Send a test".
 ```
 
 ## E-mail

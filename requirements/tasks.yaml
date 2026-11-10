@@ -452,9 +452,9 @@ items:
   group: Observability of the swarm
   phase: 7
   title: The swarm map
-  statement: Each task occurrence shall show its swarm as a flow of sources, agents, findings, writer and outputs,
-    and as a timeline with one lane per agent run, live while it runs; a tap on any part shall show what it came
-    from and what it fed, and sources read but not cited shall be told apart.
+  statement: Each task occurrence shall show on its task page its swarm as a flow of sources, agents, findings, writer
+    and outputs (Sources) and a timeline with one lane per agent run (Timeline), live while it runs; a tap on any part
+    of the flow shall show what it came from and what it fed, and sources read but not cited shall be told apart.
   type: interface
   priority: must
   status: implemented
@@ -463,15 +463,16 @@ items:
   acceptance: 'Test: the map of a recorded occurrence has every artifact and run of its record, and its lineage of
     the report reaches every cited source; checked on screen at 375 px.'
   verify: {method: test, by: ['tests/test_provenance.py::test_the_run_s_answer_is_derived_from_the_last_findings_and_marks_what_it_cites',
-    'tests/test_server.py::test_a_task_run_s_map_is_served_as_the_runner_wrote_it_and_the_newest_run_without_a_number']}
-  trace: [ops/provenance.py, images/mission-control/server.py, images/mission-control/web/static/app-base.js]
+    'tests/test_server.py::test_a_task_run_s_map_is_served_as_the_runner_wrote_it_and_the_newest_run_without_a_number',
+    'tests/test_app_after_n8n.py::test_a_run_is_followed_on_its_task_page_and_the_old_run_screens_land_there']}
+  trace: [ops/provenance.py, images/mission-control/server.py, images/mission-control/web/static/app-base.js, images/mission-control/web/static/task.js]
 - id: TSK-25
   group: Observability of the swarm
   phase: 7
   title: Telemetry history and dashboard
   statement: The stack shall keep a daily history per agent, model, harness and kind of task of runs, successes, the
-    judge's verdicts, tokens, median and 95th-percentile time and cost for a year, and show it on one dashboard with
-    filters, each number opening its runs.
+    judge's verdicts, tokens, median and 95th-percentile time and cost for a year, and show it on the Stack page's
+    Costs with filters, each agent opening its runs.
   type: functional
   priority: should
   status: implemented
@@ -479,8 +480,9 @@ items:
   sources: [docs/SWARM-DESIGN.md]
   acceptance: 'Test: a day of recorded runs gives the expected rows, and the dashboard''s numbers match them.'
   verify: {method: test, by: ['tests/test_history.py::test_a_day_of_recorded_runs_gives_one_row_per_agent_model_harness_and_kind',
-    'tests/test_server.py::test_the_telemetry_history_is_served_and_says_when_there_is_none_yet']}
-  trace: [ops/history.py, images/mission-control/runrecord.py, images/mission-control/server.py, images/mission-control/web/static/app-base.js]
+    'tests/test_server.py::test_the_telemetry_history_is_served_and_says_when_there_is_none_yet',
+    'tests/test_app_after_n8n.py::test_the_stack_page_holds_the_stack_and_the_rest_is_where_it_belongs_two_taps_from_the_menu']}
+  trace: [ops/history.py, images/mission-control/runrecord.py, images/mission-control/server.py, images/mission-control/web/static/app-base.js, images/mission-control/web/static/app.js]
 - id: TSK-26
   group: Observability of the swarm
   phase: 7

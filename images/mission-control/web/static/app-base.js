@@ -56,7 +56,6 @@ const view = $("#view");
 let S = null;                    // latest state
 let route = { name: "home", args: [], q: new URLSearchParams() };
 let tab = "overview";            // mission detail tab
-let missionFilter = "active";
 
 // ---------- icons (inline, stroke) ----------
 const I = (d) => `<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;   // .ico: one line of text high unless its place sizes it
@@ -235,17 +234,20 @@ function bars(runs) {
 // one navigation on every screen (no top bar): the agents' views live under Tasks (DEC-46), the live state is a dot on Stack
 // the Memory tab's parts (APP-50); the wikis keep their route
 const MEM_ROUTES = ["memory", "howto", "longterm", "codemem", "skills", "journals", "memsearch", "sources"];
-const NAV = [["home", "#/", "Home", ic.home], ["tasks", "#/tasks", "Tasks", ic.tasks], ["wiki", "#/memory", "Memory", ic.wiki], ["build", "#/build", "Code", ic.code],
-  ["chat", "#/chat", "Chat", ic.chat], ["workflows", "#/workflows", "Workflows", ic.flow], ["system", "#/system", "Stack", ic.layers]];
+// DEC-53: Home, Tasks, Workflows (the desk's: n8n's canvas is not made for a phone), Memory, Code, Chat, Stack. The phone's
+// bar keeps the other six, in the same order as the desk's menu, each a thumb-wide target (62 px at 375 px). Home is
+// #/home: #/ is the page the app opens on, which may be another one (Settings → Opens on).
+const NAV = [["home", "#/home", "Home", ic.home], ["tasks", "#/tasks", "Tasks", ic.tasks], ["workflows", "#/workflows", "Workflows", ic.flow],
+  ["wiki", "#/memory", "Memory", ic.wiki], ["build", "#/build", "Code", ic.code], ["chat", "#/chat", "Chat", ic.chat], ["system", "#/system", "Stack", ic.layers]];
 function navHtml(bottom) {
-  const pend = S?.system?.pending_memory?.length || 0;
+  const needs = S?.decisions && typeof yoursN === "function" ? yoursN() : 0;
   return NAV.map(([k, href, label, icon]) => {
     if (k === "workflows" && bottom) return "";       // WFL-11: n8n inside the app is the desk's; a phone reaches the list from Tasks and the pages
     const on = route.name === k || (k === "home" && route.name === "decide")
-      || (k === "tasks" && ["task", "taskmap", "mission", "crew", "new", "swarm", "missions", "telemetry", "trials"].includes(route.name)) || (k === "system" && ["mail", "guide"].includes(route.name)) || (k === "wiki" && MEM_ROUTES.includes(route.name)) || (k === "build" && route.name === "repo");
+      || (k === "tasks" && ["task", "mission", "crew", "new", "swarm", "missions", "trials"].includes(route.name)) || (k === "system" && ["mail", "guide", "traces"].includes(route.name)) || (k === "wiki" && MEM_ROUTES.includes(route.name)) || (k === "build" && route.name === "repo");
     const toReview = (S?.builds || []).filter((b) => b.status === "review").length;        // the badge = what waits for you
-    const n = k === "system" && pend ? `<span class="tab-n">${pend}</span>` : k === "build" && toReview ? `<span class="tab-n">${toReview}</span>`
-      : k === "system" ? `<span class="tab-dot ${liveState()}" title="${liveState() === "run" ? "An agent is running" : liveState() === "ok" ? "Ready" : "Not connected"}"></span>` : "";
+    const n = k === "home" && needs ? `<span class="tab-n" title="${needs} need you">${needs}</span>` : k === "build" && toReview ? `<span class="tab-n">${toReview}</span>`
+      : k === "system" ? `<span class="tab-dot ${liveState()}" title="${esc(linkWords())}"></span>` : "";
     return `<a href="${href}" class="${on ? "on" : ""}">${icon}<span>${label}</span>${n}</a>`;
   }).join("");
 }
@@ -260,27 +262,43 @@ function chrome() {
 }
 function mirrorChip() {                                   // on a phone the chat's bar is the only top bar: it shows the same state
   const chip = $("#live-chip"), cd = $("#chatchip");
-  if (cd && chip) { cd.className = chip.className + " chatchip"; cd.innerHTML = chip.innerHTML; cd.title = chip.title; cd.onclick = chip.onclick; cd.hidden = !updateReady && liveState() !== "off"; }   // APP-45: said only while something is off; the Stack tab's dot has the rest
+  if (cd && chip) { cd.className = chip.className + " chatchip"; cd.innerHTML = chip.innerHTML; cd.title = chip.title; cd.onclick = chip.onclick; cd.hidden = !updateReady && !notConnected(); }   // APP-45: said only while something is off; the Stack tab's dot has the rest
 }
-// ok (Ready), run (an agent works), off (connecting, offline, no link): the dot on Stack and the sidebar's foot
-const liveState = () => (!S || !S.generated || Date.now() - lastState > 60000 ? "off" : S.running ? "run" : "ok");   // the app answers, but no runner ever wrote: not connected
-const notConnected = () => liveState() === "off";           // then "all quiet" and "nothing needs you" would be guesses
+// APP-65: what is true, in plain words. off: this device gets no answer from the app (or none yet); wait: the app
+// answers, but the runner's state is old: the stack is starting, the runner stopped, or it never started after the PC
+// did (server.py link_state); run: an agent works; ok: ready. The dot on Stack, the rail's foot and the bar say it.
+const linkUp = () => !!S && Date.now() - lastAlive < 45000;      // the stream says it is there every 15 s
+const liveState = () => (!linkUp() ? "off" : LINK && LINK.state !== "ok" ? "wait" : S.running ? "run" : "ok");
+const notConnected = () => liveState() === "off" || liveState() === "wait";   // then "all quiet" and "nothing needs you" would be guesses
+const LIVE_DOT = { off: "err", wait: "warn", run: "run", ok: "ok" };
+function linkWords() {
+  const st = liveState();
+  if (st === "off") return S || noLink() ? "Not connected" : "Connecting…";
+  if (st === "run") return "Running";
+  if (st === "ok") return "Ready";
+  const since = (Date.now() - lastAlive) / 1000, L = LINK;
+  if (L.state === "starting") {
+    const left = L.ready_s != null && L.up_s != null ? L.ready_s - (L.up_s + since) : null;
+    return `The stack is starting${left == null ? "" : left > 90 ? ` (runner up in about ${Math.round(left / 60)} min)` : left > 0 ? " (runner up in about a minute)" : " (runner up any moment)"}`;
+  }
+  if (L.state === "not_started") return `The runner did not start: the PC started ${dur((L.up_s || 0) + since)} ago`;
+  return `The runner stopped${L.age_s == null ? "" : ` ${dur(L.age_s + since)} ago`}`;
+}
 function footState() {                                       // the rail's foot: the one place that always says how the stack is
-  const st = liveState(), word = st === "off" ? (S || noLink() ? "Not connected" : "Connecting…") : S.running ? "Running" : "Ready";
+  const st = liveState();
   const f = $("#side-foot");
-  if (f) f.innerHTML = `<span class="dot ${st === "off" ? "err" : st}"></span><b>${word}</b><span class="when">${S?.generated ? `updated ${clock(S.generated, true)}` : "no data yet"}</span>`;
+  if (f) f.innerHTML = `<span class="dot ${LIVE_DOT[st]}"></span><b>${esc(linkWords())}</b><span class="when">${S?.generated ? `updated ${clock(S.generated, true)}` : "no data yet"}</span>`;
 }
 function liveChip(chip) {
   footState();
-  const bar = $("#livebar");                                // shown only when something is off: an update, no link, offline
-  if (bar) bar.hidden = !updateReady && liveState() !== "off";
+  const bar = $("#livebar");                                // shown only when something is off: an update, no link, the runner
+  if (bar) bar.hidden = !updateReady && !notConnected();
   chip.onclick = updateReady ? () => location.reload() : null;
   if (updateReady) { chip.className = "chip live upd"; chip.innerHTML = `${ic.repeat}Update ready · tap`; return; }
-  if (!S) { chip.innerHTML = noLink() ? `<span class="dot err"></span>No connection` : `<span class="dot"></span>Connecting…`; chip.className = "chip"; return; }
-  if (!S.generated) { chip.className = "chip"; chip.innerHTML = `<span class="dot err"></span>Not connected · the runner has written nothing here`; return; }
-  if (Date.now() - lastState > 60000) { chip.className = "chip"; chip.innerHTML = `<span class="dot err"></span>Not connected${S.generated ? ` · last update ${clock(S.generated)}` : " · no data yet"}`; return; }
-  if (S.running) { chip.className = "chip live"; chip.title = S.running.title; chip.innerHTML = `<span class="dot run"></span>Running`; }   // a title does not fit the header: Home's Now has it whole
-  else { chip.className = "chip"; chip.title = ""; chip.innerHTML = `<span class="dot ok"></span>Ready`; }
+  const st = liveState();
+  chip.className = st === "run" ? "chip live" : "chip";
+  chip.title = st === "run" ? S.running.title : "";       // a title does not fit the header: Home's Now has it whole
+  chip.innerHTML = `<span class="dot ${S || noLink() ? LIVE_DOT[st] : ""}"></span>${esc(linkWords())}`;
 }
 
 function parseRoute() {
@@ -329,20 +347,31 @@ function countView() {
 }
 
 // views that re-render on every state update (forms, chat and wiki do not, so nothing is lost while you work)
-const LIVE = new Set(["home", "decide", "engine"]);
+const LIVE = new Set(["home", "decide"]);
 const typing = () => document.activeElement && ["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement.tagName);
+// Screens that went, and where their old links (notifications, Telegram buttons, the phone's history) land now
+// (DEC-51 to DEC-53: n8n's editor and runs took the engine's screens; packs, trackers and the agents day by day are parts of Stack)
+const MOVED = {
+  engine: () => "#/workflows?open=executions", runs: () => "#/workflows?open=executions", templates: () => "#/workflows",
+  packs: (a) => `#/system?tab=connections&at=packs${a[0] ? `&pack=${encodeURIComponent(a[0])}` : ""}`, trackers: () => "#/system?tab=connections&at=packs",
+  telemetry: () => "#/system?tab=costs",
+  taskmap: (a, q) => `#/task/${encodeURIComponent(q.get("t") || "")}?tab=sources${q.get("o") ? `&o=${encodeURIComponent(q.get("o"))}` : ""}`,   // the swarm map is the task page's Sources
+  live: (a) => (a[0] ? "" : "#/tasks?v=activity"),   // a run's log needs its run; a bare #/live goes to the agents' work
+};
 function render(force = false) {
+  const moved = MOVED[route.name]?.(route.args, route.q);
+  if (moved) { location.replace(moved); return; }
   chrome();
   if (!force && route.name === "live") return;
   if (!force && route.name === "repo") return repoLive();
   if (!force && !(LIVE.has(route.name) || (route.name === "files" && !$("#fplan")?.innerHTML && !typing()) || ((route.name === "mission" || route.name === "crew") && agentSigOf() !== agentSig && !typing() && !$(".tl:not([hidden])") && !$("#tabbody details[open]")) || (route.name === "build" && !typing() && !$("#chbox:not([hidden])") && !$("#view details[open]") && !$("#blogbox:not([hidden])") && !$("#nb:not([hidden])") && !$("#addrepo:not([hidden])")))) return;
   // views that load their own data draw at once; the others wait for the first state (they are drawn when it comes)
-  if (!S && !["missions", "new", "mail", "chat", "wiki", "read", "guide", "phone", "share", "live", "swarm", "skills", "memory", "howto", "longterm", "codemem", "journals", "memsearch", "sources", "taskmap", "telemetry", "task", "trials", "workflows"].includes(route.name)) { view.innerHTML = noLink() ? offlineHtml() : `<div class="stack"><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div></div>`; return; }
+  if (!S && !["missions", "new", "mail", "chat", "wiki", "read", "guide", "phone", "share", "live", "swarm", "skills", "memory", "howto", "longterm", "codemem", "journals", "memsearch", "sources", "task", "trials", "workflows", "traces"].includes(route.name)) { view.innerHTML = noLink() ? offlineHtml() : `<div class="stack"><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div></div>`; return; }
   const y = window.scrollY;
   if (force) { document.body.classList.add("anim"); clearTimeout(render.anim); render.anim = setTimeout(() => document.body.classList.remove("anim"), 600); }
   const open = force ? [] : [...view.querySelectorAll("details[open][id], details[open][data-keep]")].map((d) => d.id || d.dataset.keep);
   document.body.dataset.page = route.name;          // APP-56: the stylesheet lays each page out for the width it has
-  const fn = { mail: vMail, decide: vDecide, tasks: vTasks, task: vTask, trials: vTrials, home: vHome, missions: vMissionsGo, mission: vMission, new: vNewGo, chat: vChat, system: vSystem, read: vRead, file: vFile, files: vFiles, wiki: vWiki, build: vBuild, repo: vRepo, guide: vGuide, share: vShare, phone: vPhone, house: vHouse, crew: vCrew, live: vLive, swarm: vSwarm, skills: vSkills, memory: vMemory, howto: vHowto, longterm: vLongTerm, codemem: vCodeMem, journals: vJournals, memsearch: vMemSearch, sources: vSources, taskmap: vTaskMap, telemetry: vTelemetry, engine: vEngine, templates: vTemplates, packs: vPacks, trackers: vTrackers, runs: vRuns, workflows: vWorkflows }[route.name] || vHome;
+  const fn = { mail: vMail, decide: vDecide, tasks: vTasks, task: vTask, trials: vTrials, home: vHome, missions: vMissionsGo, mission: vMission, new: vNewGo, chat: vChat, system: vSystem, read: vRead, file: vFile, files: vFiles, wiki: vWiki, build: vBuild, repo: vRepo, guide: vGuide, share: vShare, phone: vPhone, house: vHouse, crew: vCrew, live: vLive, swarm: vSwarm, skills: vSkills, memory: vMemory, howto: vHowto, longterm: vLongTerm, codemem: vCodeMem, journals: vJournals, memsearch: vMemSearch, sources: vSources, workflows: vWorkflows, traces: vTraces }[route.name] || vHome;
   if (force) {                                      // a page that loads for a moment: not the page you left under the new tab's name
     const was = view.firstChild, n = (render.nav = (render.nav || 0) + 1);
     setTimeout(() => { if (render.nav === n && view.firstChild === was) view.innerHTML = `<div class="stack"><div class="skeleton" style="height:96px"></div><div class="skeleton" style="height:280px"></div></div>`; }, 180);
@@ -439,14 +468,14 @@ function bindMailMore() {
   if (m) m.onclick = () => { mailShown += 100; $("#maillist").innerHTML = mailListHtml(); bindMailMore(); };
 }
 async function vMail() {
-  view.innerHTML = `<a class="back" href="#/system?conn=1">${ic.back}Connections</a><h1 style="font-size:26px">Your mail</h1><div class="skeleton" style="height:200px;margin-top:14px"></div>`;
+  view.innerHTML = `<a class="back" href="#/system?tab=connections">${ic.back}Connections</a><h1 style="font-size:26px">Your mail</h1><div class="skeleton" style="height:200px;margin-top:14px"></div>`;
   let got, why = "";
   try { got = await api("/api/mail"); } catch (e) { why = e.message; }
   if (route.name !== "mail") return;                          // FND-95: you moved on while it loaded
-  if (!got) { view.innerHTML = `<a class="back" href="#/system?conn=1">${ic.back}Connections</a><div class="card empty">${esc(why)}</div>`; return; }
+  if (!got) { view.innerHTML = `<a class="back" href="#/system?tab=connections">${ic.back}Connections</a><div class="card empty">${esc(why)}</div>`; return; }
   mailData = got;
   const p = mailData.postmaster || {}, c = mailData.census;
-  view.innerHTML = `<a class="back" href="#/system?conn=1">${ic.back}Connections</a><div class="row between"><h1 style="font-size:26px">Your mail</h1>${explain("this-page-is-made-from", "This page is made from the headers of your mail: who wrote, how much, whether you read it, whether you answer. No message text is read, and nothing here changes Gmail. The copy on the NAS only reads Gmail and keeps a mail even after it leaves Gmail.", "About this")}</div>
+  view.innerHTML = `<a class="back" href="#/system?tab=connections">${ic.back}Connections</a><div class="row between"><h1 style="font-size:26px">Your mail</h1>${explain("this-page-is-made-from", "This page is made from the headers of your mail: who wrote, how much, whether you read it, whether you answer. No message text is read, and nothing here changes Gmail. The copy on the NAS only reads Gmail and keeps a mail even after it leaves Gmail.", "About this")}</div>
     <div class="grid g2 section"><div class="card kpi"><div class="kpi-l">Copy on the NAS</div>${mailCopyHtml(mailData.status)}</div>
       <div class="card kpi"><div class="kpi-l">AI Stack label</div><div class="kpi-v" style="font-size:20px">${nf(p.total_filed || 0)}</div><div class="kpi-s wrap">${esc(p.result || "The Postmaster has not run yet.")}</div></div></div>
     <div class="section"><div class="section-h"><h2>Who writes to you</h2></div>${c ? `
@@ -508,7 +537,7 @@ document.addEventListener("click", async (e) => {                     // grant b
 });
 
 // the way to the AI phone's page, on Agents and Stack too (PHN-27)
-const phoneBanner = () => (S.phone ? `<a class="banner info" href="#/phone" style="margin-bottom:14px">${ic.bolt}<span class="grow"><b>AI phone</b> · ${S.phone.stopped ? "stopped" : S.phone.connected ? "connected" : "not connected"}${S.phone.pending ? ` · ${S.phone.pending} waiting for your OK` : ""}</span>${ic.next}</a>` : "");
+const phoneBanner = () => (S.phone ? `<a class="banner info mb-3" href="#/phone">${ic.bolt}<span class="grow"><b>AI phone</b> · ${S.phone.stopped ? "stopped" : S.phone.connected ? "connected" : "not connected"}${S.phone.pending ? ` · ${S.phone.pending} waiting for your OK` : ""}</span>${ic.next}</a>` : "");
 // ---------- your devices on Home: the AI phone's state and its allowance in one tap ----------
 function devicesHtml() {
   const p = S.phone;
@@ -527,6 +556,10 @@ function devicesHtml() {
       <div class="tiny faint" style="margin-top:6px">Then just tell Hermes in Chat what to do on the AI phone. Spending money always asks you.</div>` : ""}
   </div>`;
 }
+// the House on Home, beside the AI phone (DEC-53: it was a banner on Stack): its state in one line, one tap to its page
+const houseCardHtml = () => (!S?.house ? '<div id="homehouse" hidden></div>' : `<a id="homehouse" class="banner info mb-3" href="#/house">${ic.house}<span class="grow"><b>House</b> · ${S.house.connected ? `${nf((S.house.things || []).length)} things, ${nf((S.house.echos || []).length)} Echos` : S.house.reachable ? "setup not finished" : "Home Assistant not reachable"}</span>${ic.next}</a>`);
+// APP-15: what the phone shared, one tap away while there is any (kept two weeks)
+const sharedCardHtml = () => (!S?.shared ? '<div id="homeshared" hidden></div>' : `<a id="homeshared" class="banner info mb-3" href="#/share">${ic.clip}<span class="grow"><b>Shared from your phone</b> · ${nf(S.shared)}</span>${ic.next}</a>`);
 // a card that stands for a page opens it on a tap anywhere, except on its own links, buttons, folds and selected text
 document.addEventListener("click", (e) => {
   const card = e.target.closest("[data-href]");
@@ -549,7 +582,6 @@ const TDOOR = { mission: (r) => [`#/mission/${encodeURIComponent(r)}`, "Open the
   claude: (r) => [`#/live/claude-task:${r}`, `Open Claude task #${r}`], chat: (r) => [`#/chat?c=${r}`, "Open the chat"] };
 const rhythmText = (r, after) => r?.type === "schedule" ? r.schedule + (r.triggers?.length ? ` · ${rhythmText({ type: "event", triggers: r.triggers })}` : "") : r?.type === "event" ? `on ${(r.triggers || []).map((x) => x.type === "news" ? `news on “${x.query}”` : x.type === "price_move" ? `a ${x.pct} % move of ${x.symbol}` : `SEC filings of ${(x.tickers || []).join(", ")}`).join(", ")}`
   : r?.type === "after" || after ? `after task #${r?.task || after}` : "once";
-let taskOpen = null;
 // FND-77: a scheduled task says what its last run did and when the next one comes, so "scheduled" never reads as "waiting";
 // the date in English like the rest of the app (DEC-02), in the browser's time zone
 const nextText = dt;
@@ -564,12 +596,11 @@ const SSTATE = { pending: "waits", running: "running", waiting: "waits for its a
 // TSK-22: each run of a recurring task with how it started, its own verdict against the definition of done and its answer
 const VWORD = { met: ["met", ""], partly: ["partly met", "warn-t"], "not met": ["not met", "err-t"], failed: ["failed", "err-t"], quiet: ["nothing new", "faint"], "not judged": ["not judged", "faint"] };
 const HOW = { start: "at once", schedule: "on its schedule", owner: "you ran it" };
-// ---------- TSK-24: the swarm map of a task's run ----------
-// Flow: what was read (sources, by site), who worked (each step and its agent), what they found, what came out; a tap
-// shows where a part came from and what it fed. Sources read but never cited are dashed. Timeline: one lane per agent
-// run, dots for what it read, squares for what it made. Drawn from public/maps/<task>.<occ>.json (ops/provenance.py),
-// redrawn every 5 s while the run goes on. On a phone the map pans sideways instead of shrinking.
-let tmapMode = "flow", tmapTimer = null, tmapPick = null;
+// ---------- TSK-24: a task run from what it read to what came out (the task page's Sources, task.js taskFlowInto) ----------
+// What was read (sources, by site), who worked (each step and its agent), what they found, what came out; a tap shows
+// where a part came from and what it fed. Sources read but never cited are dashed. Drawn from public/maps/<task>.<occ>.json
+// (ops/provenance.py), again with each live update of the task page. On a phone the map pans sideways instead of shrinking.
+let tmapPick = null;
 const TM_KIND = { page: "Page", item: "News item", job: "Job ad", note: "Vault note", memory: "Memory", search: "Search", finding: "Finding",
   report: "Report", result: "The answer", delivery: "Delivery", wiki: "Wiki page", file: "File" };
 const TM_OUT = new Set(["report", "result", "delivery", "wiki"]);
@@ -742,57 +773,10 @@ function tmapInfo(d, g) {
   $$("[data-tm]", el).forEach((b) => (b.onclick = () => { tmapPick = b.dataset.tm; tmapInfo(d, g); }));
 }
 
-function tmapTimeline(box, d) {
-  const lanes = (d.lanes.length ? d.lanes : d.steps.filter((s) => s.started).map((s) => ({ run: `step:${s.idx}`, agent: s.agent, step: s.idx, own: true,
-    started: Date.parse(s.started) / 1000, ended: s.ended ? Date.parse(s.ended) / 1000 : null, state: s.status })))
-    .slice().sort((a, b) => a.step - b.step || !b.own - !a.own || a.started - b.started);
-  if (!lanes.length) { box.innerHTML = `<div class="card pad small muted">No step has started yet.</div>`; return; }
-  const nowS = Date.now() / 1000, t0 = Math.min(...lanes.map((l) => l.started)), t1 = Math.max(...lanes.map((l) => l.ended || nowS), t0 + 1);
-  const LW = 118, W = Math.max((box.clientWidth || 340) - 20, 300), LH = 26;
-  const LL = lanes.map((l) => wrapWords(`${l.own ? `${l.step}. ` : "↳ "}${l.agent}`, (s) => svgTextWidth(s, l.own ? "tml" : "tms", box) <= LW - (l.own ? 0 : 12) - 6));
-  const RH = LL.map((ls) => Math.max(LH, ls.length * 13 + 6)), RT = RH.reduce((o, h, i) => (o.push(i ? o[i - 1] + RH[i - 1] : 20), o), []), H = 22 + RH.reduce((s, h) => s + h, 0);
-  const x = (s) => LW + (s - t0) / (t1 - t0) * (W - LW - 10);
-  const A = Object.fromEntries(d.artifacts.map((a) => [a.id, a]));
-  const marks = d.links.filter((l) => (l.rel === "used" || l.rel === "generated") && A[l.artifact]);
-  const fmt = (s) => s < 90 ? `${Math.round(s)} s` : `${Math.round(s / 60)} min`;
-  box.innerHTML = `<div class="tmap-wrap"><svg class="tmapsvg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="When each agent worked">
-    <text x="${LW}" y="12" class="tmcol">0</text><text x="${W - 10}" y="12" class="tmcol" text-anchor="end">${fmt(t1 - t0)}</text>
-    ${lanes.map((l, i) => { const y = RT[i] + (RH[i] - LH) / 2, end = l.ended || nowS, mine = marks.filter((m) => m.run === l.run || (l.own && m.step === l.step && !m.at));
-      return `<g><title>${esc(`${l.agent} · step ${l.step} · ${fmt(end - l.started)}${l.tokens ? ` · ${tok(l.tokens)} tokens${l.cost != null ? `, ${ifPaid(l.cost)}` : ""}${l.models?.length ? ` (${l.models.join(", ")})` : ""}` : ""}`)}</title><text class="${l.own ? "tml" : "tms"}">${svgTspans(LL[i], l.own ? 0 : 12, y + 15 - (LL[i].length - 1) * 6.5, 13)}</text>
-        <rect x="${x(l.started)}" y="${y + 4}" width="${Math.max(3, x(end) - x(l.started))}" height="${LH - 10}" rx="4" class="tmbar ${l.state === "failed" ? "bad" : l.ended ? "" : "live"}"/>
-        ${mine.map((m) => m.rel === "used" ? `<circle cx="${x(m.at || l.started)}" cy="${y + LH / 2}" r="3" class="tmdot"><title>${esc(A[m.artifact].title || A[m.artifact].uri)}</title></circle>`
-          : `<rect x="${x(end) - 4}" y="${y + LH / 2 - 4}" width="8" height="8" class="tmsq"><title>${esc(A[m.artifact].title || A[m.artifact].uri)}</title></rect>`).join("")}</g>`; }).join("")}
-  </svg></div><div class="tiny faint" style="margin-top:6px">A bar is an agent at work; ● what it read, ■ what it made. Indented: an agent another one called in.</div>`;
-}
-
-async function vTaskMap() {
-  clearTimeout(tmapTimer);
-  const t = +route.q.get("t"), o = route.q.get("o");
-  if (!view.querySelector("#tmap")) view.innerHTML = `<a class="back" href="#/task/${t}">${ic.back}Task #${t}</a><div id="tmap"><div class="skeleton" style="height:320px"></div></div>`;
-  const d = await api(`/api/task/map?t=${t}${o ? `&o=${encodeURIComponent(o)}` : ""}`).catch((e) => ({ error: e.message }));
-  if (route.name !== "taskmap" || +route.q.get("t") !== t) return;
-  const box = $("#tmap");
-  if (!box) return;
-  if (d.error) { box.innerHTML = `<div class="card empty">${esc(d.error)}</div>`; return; }
-  const task = (S?.tasks || []).find((x) => x.id === t), n = d.numbers, r = d.run || {};
-  const g = tmapGraph(d);
-  box.innerHTML = `<div class="hero heading" style="margin-bottom:10px"><h1 class="wh1">${esc(d.title)}</h1>
-      <p>${esc([`Run ${d.occ}`, r.trigger === "event" ? "started by an event" : HOW[r.trigger] || r.trigger, r.status === "running" ? "running now" : r.status, r.verdict && (VWORD[r.verdict] || [r.verdict])[0]].filter(Boolean).join(" · "))}</p></div>
-    ${(task?.runs || []).length > 1 ? `<div class="chips" style="margin-bottom:10px">${task.runs.map((x) => `<a class="tag${x.occ === d.occ ? " on" : ""}" href="#/taskmap?t=${t}&o=${x.occ}">Run ${x.occ}</a>`).join("")}</div>` : ""}
-    <div class="tmnums">${[[`${n.read} → ${n.cited}`, "sources read → cited"], [`${n.agents}`, `agents, ${n.parallel} at once at most`], [n.wall_s != null ? (n.wall_s < 90 ? `${n.wall_s} s` : `${Math.round(n.wall_s / 60)} min`) : "–", "from start to end"], [n.tokens != null ? tok(n.tokens) : "–", n.cost != null ? `tokens · ${ifPaid(n.cost)}` : "tokens"]]
-      .map(([v, l]) => `<div class="card pad tmnum"><b>${esc(v)}</b><span class="tiny faint">${esc(l)}</span></div>`).join("")}</div>
-    <div class="seg" style="margin:12px 0">${[["flow", "Flow"], ["time", "Timeline"]].map(([k, l]) => `<button data-tmm="${k}" class="${tmapMode === k ? "on" : ""}">${l}</button>`).join("")}</div>
-    <div id="tmbody"></div><div id="tminfo" style="margin-top:10px"></div>
-    ${explain("tmapmode-flow-tap-a-box-", `${tmapMode === "flow" ? "Tap a box: where it came from and what it fed. A dashed source was read but not cited; a site with many pages is one box with its count." : ""}`, "How to read this")}`;
-  $$("[data-tmm]").forEach((b) => (b.onclick = () => { tmapMode = b.dataset.tmm; vTaskMap(); }));
-  if (tmapMode === "flow") tmapFlow($("#tmbody"), d, g); else tmapTimeline($("#tmbody"), d);
-  if (r.status === "running") tmapTimer = setTimeout(() => route.name === "taskmap" && vTaskMap(), 5000);   // live while it runs
-}
-
 // ---------- TSK-19: outside agents over A2A: off until you switch it on; each with its own token; their tasks wait for you ----------
 function a2aCardHtml() {
   const a = S?.a2a || { enabled: false, agents: [] };
-  return `<div class="card pad" id="a2acard" style="margin-bottom:14px"><div class="row between wrap" style="gap:8px"><b>Outside agents (A2A)</b>
+  return `<div class="card pad" id="a2acard"><div class="row between wrap" style="gap:8px;padding-right:32px"><b>Outside agents (A2A)</b>
       <label class="tag"><input type="checkbox" data-a2aon${a.enabled ? " checked" : ""}> ${a.enabled ? "on" : "off"}</label></div>
     ${explain("agents-on-your-tailnet-c", `Agents on your tailnet can give the stack a task over A2A, each with its own token; every task from outside waits for your OK on Tasks. Nothing outside the tailnet reaches it.`, "About this")}
     ${a.agents.length ? `<div class="list" style="margin-top:8px">${a.agents.map((x) => `<div><b class="grow">${esc(x.name)}</b><span class="tiny faint">added ${rel(x.created)}</span><button class="btn sm ghost danger" data-a2arevoke="${esc(x.name)}">Revoke</button></div>`).join("")}</div>` : ""}
@@ -815,9 +799,10 @@ function bindA2a() {
   };
 }
 
-// ---------- TSK-25: telemetry, one row a day per agent, model, harness and kind (ops/history.py) ----------
-// Stat tiles on top, runs and tokens per day (one series each, so no legend: the title names it; hover any bar), and
-// the agents' table (the table view of it all). Every number opens its runs. Filters in one row above.
+// ---------- TSK-25: the agents day by day, one row a day per agent, model, harness and kind (ops/history.py) ----------
+// Part of the Stack page's Costs (DEC-53; it was the Telemetry screen): stat tiles on top, runs and tokens per day (one
+// series each, so no legend: the title names it; hover any bar), and the agents' table. An agent opens its runs, each
+// opening its log. Filters in one row above.
 let telData = null, telF = { days: 30, agent: "", model: "", kind: "" }, telOpen = null;
 const pct = (a, b) => (b ? Math.round((100 * a) / b) + " %" : "–");
 function telRows() {
@@ -843,9 +828,10 @@ function telBars(rows, value, label, fmt) {
       <text x="0" y="${H + 13}" class="tms">${v[0].d.slice(5)}</text><text x="${W}" y="${H + 13}" class="tms" text-anchor="end">today</text>
     </svg></div>`;
 }
-async function vTelemetry() {
-  if (!telData || route.q.get("reload")) telData = await api("/api/telemetry").catch((e) => ({ rows: [], error: e.message }));
-  if (route.name !== "telemetry") return;
+async function telInto(box) {
+  if (!box) return;
+  if (!telData) telData = await api("/api/telemetry").catch((e) => ({ rows: [], error: e.message }));
+  if (!box.isConnected) return;
   const all = telData.rows || [], rows = telRows(), s = telSum(rows);
   const opts = (k) => [...new Set(all.map((r) => r[k]).filter(Boolean))].sort();
   const sel = (k, l) => `<label class="tiny faint">${l}<select class="input" data-tf="${k}"><option value="">All</option>${opts(k).map((v) => `<option${telF[k] === v ? " selected" : ""}>${esc(v)}</option>`).join("")}</select></label>`;
@@ -853,8 +839,7 @@ async function vTelemetry() {
   for (const r of rows) (byAgent[r.agent] ??= []).push(r);
   const agents = Object.entries(byAgent).map(([a, rs]) => [a, telSum(rs), rs]).sort((x, y) => y[1].runs - x[1].runs);
   const judged = s.met + s.partly + s.not_met;
-  view.innerHTML = `<a class="back" href="#/system">${ic.back}Stack</a>
-  <div class="hero heading"><div class="row between" style="gap:10px"><h1>Telemetry</h1><a class="btn sm" href="#/trials">${ic.target}Trials</a></div>${explain("telemetry-numbers", `Runs, how many ended well, the judge's verdicts, tokens, time, and what the tokens would cost at list price (the subscriptions cost $0 a call).${telData.prices?.date ? ` Prices of ${esc(telData.prices.date)}, from the gateway's table.` : ""}`, "What these numbers are")}</div>
+  box.innerHTML = `<div class="section-h section"><h2>The agents, day by day</h2>${explain("telemetry-numbers", `Runs, how many ended well, the judge's verdicts, tokens, time, and what the tokens would cost at list price (the subscriptions cost $0 a call).${telData.prices?.date ? ` Prices of ${esc(telData.prices.date)}, from the gateway's table.` : ""} A row is one day of one agent on one model, harness and kind of work, kept for a year; a verdict counts on the day its task was judged. ${how("telemetry")}`, "What these numbers are")}<a class="btn sm ghost" href="#/trials">${ic.target}Trials</a></div>
   ${telData.error ? `<div class="card pad small muted">${esc(telData.error)}</div>` : ""}
   <div class="row wrap telf"><div class="seg">${[7, 30, 90, 365].map((d) => `<button data-td="${d}" class="${telF.days === d ? "on" : ""}">${d === 365 ? "Year" : d + " days"}</button>`).join("")}</div>${sel("agent", "Agent")}${sel("model", "Model")}${sel("kind", "Kind")}</div>
   <div class="tmnums" style="margin-top:12px">${[[nf(s.runs), "runs", ""], [pct(s.ok, s.runs), `ended well (${nf(s.failed)} failed)`, ""], [judged ? pct(s.met + 0.5 * s.partly, judged) : "–", `of ${nf(judged)} judged tasks met`, ""],
@@ -865,11 +850,10 @@ async function vTelemetry() {
   <div class="card list telag">${agents.map(([a, x, rs]) => `<details data-ta="${esc(a)}"${telOpen === a ? " open" : ""}><summary><div class="grow" style="min-width:0"><div class="ttl wrap">${esc(agentName(a) || a)}${x.runs >= 3 && x.ok / x.runs < 0.7 ? ` <span class="pill failed" style="padding:1px 7px">fails often</span>` : ""}</div>
       <div class="sub wrap">${nf(x.runs)} runs · ${pct(x.ok, x.runs)} well${x.met + x.partly + x.not_met ? ` · judged ${x.met} met, ${x.partly} partly, ${x.not_met} not` : ""} · ${tok(x.tin + x.tout)} tokens${x.cost ? ` · ${ifPaid(x.cost)}` : ""} · median ${dur(x.p50)}, p95 ${dur(x.p95)}</div></div></summary>
       <div class="telruns" data-truns="${esc(a)}"><div class="tiny faint">${[...new Set(rs.map((r) => `${r.model || "no model"} · ${r.harness} · ${r.kind}`))].map(esc).join(" · ")}</div><div class="skeleton" style="height:60px;margin-top:8px"></div></div></details>`).join("")
-    || `<div class="pad small muted">No runs in these days${telF.agent || telF.model || telF.kind ? " with these filters" : ""}.</div>`}</div>
-  <div class="tiny faint section">A row is one day of one agent on one model, harness and kind of work (ops/history.py), kept for a year; a verdict counts on the day its task was judged. ${how("telemetry")}</div>`;
-  $$("[data-td]").forEach((b) => (b.onclick = () => { telF.days = +b.dataset.td; vTelemetry(); }));
-  $$("[data-tf]").forEach((x) => (x.onchange = () => { telF[x.dataset.tf] = x.value; vTelemetry(); }));
-  $$("[data-ta]").forEach((d) => (d.ontoggle = async () => {
+    || `<div class="pad small muted">No runs in these days${telF.agent || telF.model || telF.kind ? " with these filters" : ""}.</div>`}</div>`;
+  $$("[data-td]", box).forEach((b) => (b.onclick = () => { telF.days = +b.dataset.td; telInto(box); }));
+  $$("[data-tf]", box).forEach((x) => (x.onchange = () => { telF[x.dataset.tf] = x.value; telInto(box); }));
+  $$("[data-ta]", box).forEach((d) => (d.ontoggle = async () => {
     if (!d.open) { if (telOpen === d.dataset.ta) telOpen = null; return; }
     telOpen = d.dataset.ta;
     const box = $("[data-truns]", d), since = Date.now() / 1000 - telF.days * 86400;
@@ -877,7 +861,7 @@ async function vTelemetry() {
     box.lastElementChild.outerHTML = `<div class="stack" style="margin-top:8px">${(list.length ? list : []).map((r) => `<a class="witem" href="#/live/${encodeURIComponent(r.run)}">${esc(r.name || r.title || r.run)} <span class="tiny faint">· ${esc(r.end_state || "live")} · ${r.ended ? rel(new Date(r.ended * 1000).toISOString()) : "now"}</span></a>`).join("")
       || `<div class="small muted">Its runs of these days are no longer in the run record (it keeps them 90 days).</div>`}${list.length === 200 ? `<div class="tiny faint">the newest 200</div>` : ""}</div>`;
   }));
-  if (telOpen) $(`[data-ta="${CSS.escape(telOpen)}"]`)?.dispatchEvent(new Event("toggle"));
+  if (telOpen) $(`[data-ta="${CSS.escape(telOpen)}"]`, box)?.dispatchEvent(new Event("toggle"));
 }
 
 // TSK-30: the agents the owner may pick for a task: those that can do a step (their harness has an adapter)

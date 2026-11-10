@@ -8,8 +8,8 @@ summary: Home Assistant on the NAS connects the stack to your Echos, the lights 
 views: [house]
 ---
 **Home Assistant** runs on the NAS (always on, on your home network) and is the stack's hub for the flat. The stack
-talks to it; it talks to your devices. Open **House** (Home → *Needs you* while it isn't set up, or the banner on
-the Stack page).
+talks to it; it talks to your devices. Open **House** (Home → *Needs you* while it isn't set up, or its card under
+Home → *Overview*).
 
 ## Setting it up (once)
 

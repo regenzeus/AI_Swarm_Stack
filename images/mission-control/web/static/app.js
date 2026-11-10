@@ -1,4 +1,4 @@
-// The app, part of app-base.js, app-tasks.js, app-runs.js, app-devices.js, app-wiki-code.js, app-memory.js, app.js (PLT-25): the Stack tab, tools, live data, offline and updates, and the start. Loaded in that order; one global scope.
+// The app, part of app-base.js, app-tasks.js, app-runs.js, app-devices.js, app-wiki-code.js, app-memory.js, app-workflows.js, app.js (PLT-25): the Stack page (health, costs, tools, connections with packs and trackers, settings), live data, offline and updates, and the start. Loaded in that order; one global scope.
 // ---------- stack (system) ----------
 // ---------- tools: every tool the stack runs on, its menus one tap away (APP-30; web/static/tools.json is the one list) ----------
 let TOOLS = null, toolQuery = "";
@@ -98,57 +98,6 @@ function bindAddVault() {
   };
 }
 
-// The Stack tab is one page: how the stack works (live map, guide chapters, search) and how it is doing (status),
-// each status section linked to the chapter that explains it. Chapters open as #/guide/<id> (guide.js).
-// MEM-01, MEM-07: every memory the stack keeps (ops/memory.py, refreshed hourly): kind, size, growth, limit, who tidies it, problems
-function memUse(m) {                                          // how full it is against its limit: [value, limit, label]
-  const [n, unit] = m.limit || [];
-  const v = unit === "MB" ? m.bytes / 1e6 : unit === "orphaned share" ? m.orphaned_share || 0 : /per wiki|per journal|lines each/.test(unit || "") ? m.largest || 0 : m.count;
-  return n ? [v, n, unit === "orphaned share" ? `${Math.round(100 * v)} % orphaned of ${Math.round(100 * n)} %` : `${nf(Math.round(v))} of ${nf(n)} ${unit}`] : null;
-}
-// Stack → Health: each memory store's figures; reading them is the Memory tab's (APP-50)
-function memoryHtml() {
-  const st = S.memory?.stores || [];
-  if (!st.length) return `<div class="section-h section"><h2>Memory</h2></div><div class="card pad small muted">The figures come within the hour.</div>`;
-  const row = (m) => {
-    const u = m.error ? null : memUse(m), g = m.growth_7d, pct = u ? Math.min(100, (100 * u[0]) / u[1]) : 0;
-    const count = m.error ? "" : `${nf(m.count)} ${esc(m.count_label ? `${m.unit} in ${m.count_label}` : m.unit)}`;
-    const moved = g?.count ? ` · ${g.count > 0 ? "+" : ""}${nf(g.count)} in 7 days` : "";
-    return `<div class="memrow"><div class="row between wrap" style="gap:6px"><b class="small">${esc(m.name)}</b><span class="small num">${count}${moved}${m.used?.n ? ` · ${esc(m.used.verb)} ${nf(m.used.n)} times in ${m.used.days} days` : ""}</span></div>
-      ${u && pct >= 70 ? `<div class="meter" title="${esc(u[2])}"><i style="width:${pct}%;${pct > 90 ? "background:var(--err)" : "background:var(--warn)"}"></i></div><div class="tiny faint">${esc(u[2])}</div>` : ""}
-      ${m.over_since ? `<div class="tiny warn-t wrap">Over its limit since ${day(m.over_since)}; after 8 days its curator gets an alert</div>` : ""}
-      ${(m.problems || []).map((p) => `<div class="tiny err-t wrap">${ic.alert} ${esc(p)}</div>`).join("")}</div>`;
-  };
-  const ms = S.memory?.stack || {};
-  const stack = `<div class="section-h memgroup"><h3>Memory given to runs</h3><span class="tiny faint">budgets in config/memory.yaml</span></div>${memStatusHtml(ms)}
-    ${ms.gate ? `<div class="tiny ${ms.gate.open ? "faint" : "warn-t"} wrap" style="margin-bottom:8px">${ms.gate.open ? ic.check : ic.alert} ${esc(ms.gate.why)}</div>` : ""}${ms.error ? `<div class="tiny err-t wrap">${ic.alert} ${esc(ms.error)}</div>` : ""}`;
-  return `<div class="section-h section"><h2>Memory</h2><a class="tiny" href="#/memory">Open Memory</a></div>${stack}<div class="card memlist">${st.map(row).join("")}</div>`;
-}
-
-// MEM-08: the Librarian's last pass over the wikis and the search index (public/librarian.json, via memory.json)
-const LIB_KIND = { "broken-link": ["broken link", "broken links"], orphan: ["page no other page links to", "pages no other page links to"], duplicate: ["possible duplicate", "possible duplicates"],
-  contradiction: ["page with a marked contradiction", "pages with a marked contradiction"], stale: ["page not confirmed for 90 days", "pages not confirmed for 90 days"], "over-limit": ["over the page limit", "over the page limit"] };
-function librarianHtml(lib) {
-  if (!lib) return `<div class="card pad small muted" style="margin-top:10px"><b>The Librarian</b> tidies every wiki and the search index once a week (Wednesdays). Its first pass has not run yet.</div>`;
-  const ws = lib.wikis || [], ix = lib.index || {}, h = lib.hubs || {};
-  const n = (k) => ws.reduce((a, w) => a + (w[k] || []).length, 0);
-  const wrow = (w) => {
-    const kinds = {};
-    (w.issues || []).forEach((i) => (kinds[i.kind] = (kinds[i.kind] || 0) + 1));
-    const did = [["merged", "merged"], ["contradictions", "contradictions marked"], ["stale", "marked stale"]].filter(([k]) => (w[k] || []).length).map(([k, t]) => `${w[k].length} ${t}`);
-    return `<div class="memrow"><div class="row between wrap" style="gap:6px"><b>${esc(w.title)}</b><span class="tiny faint">${nf(w.pages || 0)} pages</span></div>
-      ${did.length ? `<div class="small">${esc(did.join(" · "))}</div>` : ""}
-      <div class="tiny faint wrap">${Object.keys(kinds).length ? Object.entries(kinds).map(([k, c]) => `${c} ${esc((LIB_KIND[k] || [k, k])[c === 1 ? 0 : 1])}`).join(" · ") : "nothing to report"}${w.waits ? ` · ${nf(w.waits)} wait for the next pass` : ""}</div>
-      ${(w.merged || []).map((x) => `<div class="tiny wrap">${ic.check} ${esc(x.drop)} merged into ${esc(x.keep)}: ${esc(x.why)}</div>`).join("")}
-      ${(w.refused || []).map((x) => `<div class="tiny warn-t wrap">Kept apart ${esc(x.drop)} and ${esc(x.keep)}: ${esc(x.why)}</div>`).join("")}
-      ${w.error || w.not_judged ? `<div class="tiny err-t wrap">${ic.alert} ${esc(w.error || `not judged: ${w.not_judged}`)}</div>` : ""}</div>`;
-  };
-  return `<div class="section-h section"><h2>The Memory Keeper's wiki tidy</h2><span class="tiny faint">last pass ${rel(new Date(lib.at * 1000).toISOString())} · ${nf(lib.seconds || 0)} s${lib.commit ? ` · vault commit ${esc(lib.commit)}` : " · nothing changed"}</span></div>
-    ${explain("weekly-merges-duplicate-", `Weekly: merges duplicate pages, marks contradictions and stale pages, writes the hub pages that join the wikis, cleans the search index. It adds no facts, and everything it changes can be restored from the vault's history.
-      ${n("merged")} merged · ${n("contradictions")} contradictions marked · ${n("stale")} marked stale · ${nf(h.hubs || 0)} hub pages${ix.before ? ` · search index: ${nf(ix.before.orphaned)} → ${nf(ix.after.orphaned)} orphaned chunks` : ix.error ? ` · <span class="err-t">search index cleanup failed: ${esc(ix.error)}</span>` : ""}`, "About this")}
-    <div class="card memlist">${ws.map(wrow).join("")}</div>`;
-}
-
 // OBS-16: the one notification path: what goes where, quiet hours, and what it did lately (Stack → Notifications)
 const NDOT = { sent: "ok", held: "warn", failed: "err" };
 function notifyHtml(sy) {
@@ -200,50 +149,93 @@ async function subsInto(box) {
         <div class="sub wrap">${tok(r.tokens_5h)} tokens in the last 5 h (${nf(r.calls_5h)} calls) · ${tok(r.tokens_24h)} in 24 h${r.top.length ? ` · most: ${r.top.map(([a, n]) => `${esc(a === "claude" ? "Claude Code" : agentName(a) || a)} ${tok(n)}`).join(", ")}` : ""}</div></div></div>`; }).join("")}</div></div>`;
 }
 
-// APP-47: five parts, one at a time: the page was 21 sections and 13,000 pixels long
-const STACK_TABS = [["tools", "Tools"], ["health", "Health"], ["guide", "Guide"], ["settings", "Settings"]];
+// GEN-21, GEN-25: packs and trackers, one section of the Stack page. A pack is a domain kept outside the repository (its
+// agents, skills, commands, n8n workflows and exams), pinned by commit: a new commit runs only after Approve, and the
+// commit approved before keeps running meanwhile. A tracker is an issue tracker the stack reads; what it would write back
+// stays in shadow per kind of write until that kind goes live. The runner publishes both (ops/domain: packs.view, trackers.view).
+let PK_SIG = "";
+const packSig = () => JSON.stringify([S?.packs || null, S?.trackers || null]);
+const pkShort = (sha) => String(sha || "").slice(0, 12);   /* cap: id: a commit's short name; the diff and the record keep it whole */
+function packBrings(p) {
+  const n = (xs, one, many) => (xs?.length ? `${nf(xs.length)} ${xs.length === 1 ? one : many}` : "");
+  return [n(p.agents, "agent", "agents"), n(p.skills, "skill", "skills"), n(p.workflows, "workflow", "workflows"),
+    n(p.jobs, "command", "commands"), n(p.exams, "exam set", "exam sets")].filter(Boolean).join(" · ") || "nothing yet";
+}
+function packCard(name, L, open) {
+  const run = L.packs.find((p) => p.name === name), wait = L.pending.find((p) => p.name === name), no = L.refused.filter((r) => r.name === name);
+  const agents = (xs) => xs.map((a) => `<details class="pk-item"><summary><b>${esc(a.id)}</b>${a.purpose ? ` · ${esc(a.purpose)}` : ""}${a.harness ? ` <span class="tiny faint">${esc(a.harness)}${a.model ? ` · ${esc(a.model)}` : ""}</span>` : ""}</summary><pre class="wrap small">${esc(a.prompt || "")}</pre></details>`).join("");
+  const jobs = (xs) => xs.map((j) => `<details class="pk-item"><summary><b>${esc(j.kind)}</b>${j.about ? ` · ${esc(j.about)}` : ""}</summary><pre class="wrap small">${esc(JSON.stringify(j.spec, null, 2))}</pre></details>`).join("");
+  const list = (label, xs) => (xs?.length ? `<div class="small wrap"><b>${label}</b> ${xs.map(esc).join(", ")}</div>` : "");
+  const state = wait ? `<span class="pill paused">waits for you</span>` : run ? `<span class="pill ok">runs ${esc(pkShort(run.commit))}</span>` : `<span class="pill failed">refused</span>`;
+  return `<details class="card pad pk${wait ? " pk-wait" : ""}" id="pack-${esc(name)}" data-keep="pack-${esc(name)}"${open ? " open" : ""}><summary>
+      <div class="row between wrap" style="gap:4px 8px"><b class="wrap">${esc(name)}${run?.version ? ` ${esc(run.version)}` : ""}</b>${state}</div>
+      <div class="small muted wrap">${esc((run || wait)?.about || "")}${(run || wait)?.about ? " · " : ""}${esc(packBrings(wait || run || {}))}</div></summary>
+    ${wait ? `<div class="pk-decide"><div class="row between wrap" style="gap:8px"><b class="wrap">${wait.runs ? `Update from ${esc(pkShort(wait.runs))} to ${esc(pkShort(wait.commit))}?` : `Run its first commit, ${esc(pkShort(wait.commit))}?`}</b>
+        <span class="row" style="gap:6px"><button class="btn sm ghost danger" data-pk="pack_refuse" data-name="${esc(name)}" data-commit="${esc(wait.commit)}">${ic.x}Refuse</button><button class="btn sm primary" data-pk="pack_approve" data-name="${esc(name)}" data-commit="${esc(wait.commit)}">${ic.check}Approve</button></span></div>
+      ${wait.problems.length ? `<div class="small err-t wrap">${wait.problems.map(esc).join("<br>")}</div>` : ""}
+      ${agents(wait.agents)}${jobs(wait.jobs)}${list("Workflows", wait.workflows)}${list("Skills", wait.skills)}
+      <details class="pk-item" data-keep="pkdiff-${esc(name)}"><summary>What changed${wait.runs ? ` since ${esc(pkShort(wait.runs))}` : ": the whole pack"}</summary><pre class="wrap small pk-diff">${esc(wait.diff || "")}</pre></details></div>` : ""}
+    ${run ? `<div class="pk-runs">${wait ? `<div class="tiny faint">Runs now, at ${esc(pkShort(run.commit))}:</div>` : ""}${agents(run.agents)}${jobs(run.jobs)}
+      ${list("Workflows", run.workflows)}${list("Skills", run.skills)}${list("Exam sets", run.exams)}${list("MCP servers", run.mcp)}
+      ${run.problems.length ? `<div class="small err-t wrap">${run.problems.map(esc).join("<br>")}</div>` : ""}</div>` : ""}
+    ${no.map((r) => `<div class="small err-t wrap">${r.commit ? `${esc(pkShort(r.commit))}: ` : ""}${esc(r.why)}</div>`).join("")}</details>`;
+}
+function trackersHtml(T) {
+  const need = T.shadow_needed || 0;
+  return `${T.trackers.map((t) => `<div class="card pad"><div class="row between wrap" style="gap:4px 8px"><b class="wrap">${esc(t.name)}</b><span class="pill">${esc(t.kind)}</span></div>
+      <div class="small muted wrap">starts ${t.workflow ? `<a href="#/workflows">${esc(t.workflow)}</a>` : "no workflow"} · read up to ${t.cursor ? esc(dt(t.cursor)) : "nothing yet"}</div></div>`).join("")}
+    ${T.kinds.map((k) => `<div class="card pad tk-kind"><div class="row between wrap" style="gap:6px 8px"><b>${esc(k.kind)}</b>
+        <span class="row wrap" style="gap:6px"><span class="pill ${k.live ? "ok" : ""}">${k.live ? "live" : "in shadow"}</span>${k.live ? `<button class="btn sm" data-tk-live="0" data-kind="${esc(k.kind)}">Back to shadow</button>`
+          : `<button class="btn sm${k.approved >= need ? " primary" : ""}" data-tk-live="1" data-kind="${esc(k.kind)}"${k.approved >= need ? "" : " disabled"}>Go live</button>`}</span></div>
+      <div class="small muted">${nf(k.approved)} of ${nf(need)} judged right${k.pending ? ` · <b>${nf(k.pending)} waiting for you</b>` : ""}</div>
+      ${(k.items || []).filter((i) => i.status === "pending").map((i) => `<div class="tk-item"><div class="tiny faint">${esc(i.tracker)}/${esc(i.key)} · ${esc(dt(i.at))}</div>
+        <pre class="wrap small">${esc(i.body)}</pre><div class="row" style="gap:6px;justify-content:flex-end"><button class="btn sm ghost" data-tk="tracker_shadow_reject" data-kind="${esc(k.kind)}" data-id="${esc(i.id)}">${ic.x}Wrong</button><button class="btn sm primary" data-tk="tracker_shadow_approve" data-kind="${esc(k.kind)}" data-id="${esc(i.id)}">${ic.check}Right</button></div></div>`).join("")}</div>`).join("")}`;
+}
+function packsHtml() {
+  PK_SIG = packSig();
+  const L = S?.packs || { packs: [], pending: [], refused: [] }, T = S?.trackers || { trackers: [], kinds: [], shadow_needed: 0 };
+  const names = [...new Set([...L.pending, ...L.packs, ...L.refused].map((p) => p.name))], want = route.q.get("pack");
+  const head = `<div class="section-h section" id="packs"><h2>Packs and trackers</h2>${explain("packs-what", `A pack brings agents, skills, commands, n8n workflows and exams from a repository of its own, pinned by commit in the deployment's packs.txt. A new commit runs only after you approve it here; until then the commit you approved before keeps running, and each of its commands is approved again where it runs. A tracker is an issue tracker the stack reads (trackers.yaml): what it would write back stays in shadow, kept here and in Needs you, until you judged ${nf(T.shadow_needed || 0)} writes of a kind right and let that kind go live. ${how("workflows")}`, "About packs and trackers")}</div>`;
+  if (!names.length && !T.trackers.length) return `${head}${emptyState("No packs or trackers: this deployment's packs.txt and trackers.yaml list none.", `<a class="btn sm" href="#/guide/workflows">${ic.doc}How packs come in</a>`, "card pad")}`;
+  return `${head}<div class="stack">${names.map((n) => packCard(n, L, n === want || L.pending.some((p) => p.name === n))).join("")}${trackersHtml(T)}</div>`;
+}
+function bindPacks() {
+  $$("[data-pk]").forEach((b) => (b.onclick = async () => {
+    const why = b.dataset.pk === "pack_refuse" ? prompt("Why not? It is kept with the refusal.", "") : "";
+    if (why === null) return;
+    b.disabled = true;
+    const r = await act({ action: b.dataset.pk, name: b.dataset.name, commit: b.dataset.commit, why }, b.dataset.pk === "pack_approve" ? "Approved: this commit runs from now on" : "Refused: the commit that ran keeps running");
+    if (!r) b.disabled = false;
+  }));
+  $$("[data-tk]").forEach((b) => (b.onclick = async () => {
+    b.disabled = true;
+    if (!(await act({ action: b.dataset.tk, kind: b.dataset.kind, id: b.dataset.id }, b.dataset.tk === "tracker_shadow_approve" ? "Judged right: it counts toward going live" : "Judged wrong: it does not count, and this kind stays in shadow"))) b.disabled = false;
+  }));
+  $$("[data-tk-live]").forEach((b) => (b.onclick = async () => {
+    b.disabled = true;
+    const live = b.dataset.tkLive === "1";
+    if (!(await act({ action: "tracker_live", kind: b.dataset.kind, live }, live ? "Live: this kind of write now reaches the tracker" : "Back in shadow: nothing of this kind leaves the stack"))) b.disabled = false;
+  }));
+}
+
+// APP-47, DEC-53: the Stack page is the stack's own, one part at a time: Health (services, resources, jobs, checks,
+// backups), Costs (what was paid, the subscriptions, the agents day by day), Tools, Connections (Gmail, outside agents,
+// packs and trackers) and Settings. The guide has its own page (#/guide), one tap from the title row.
+const STACK_TABS = [["health", "Health"], ["costs", "Costs"], ["tools", "Tools"], ["connections", "Connections"], ["settings", "Settings"]];
+const START_PAGES = [["", "Home"], ["#/tasks", "Tasks"], ["#/workflows", "Workflows"], ["#/memory", "Memory"], ["#/build", "Code"], ["#/chat", "Chat"], ["#/system", "Stack"]];   // APP-49: where the app opens, the menu's names
+const OLD_START = { "#/missions": "#/tasks", "#/wiki": "#/memory" };   // a choice kept from before DEC-46 and the Memory tab
 let stackTab = "";
-function vSystem() {
-  const sy = S.system || {};
-  const asked = route.q.get("conn") ? "tools" : scrollToLearn ? "guide" : route.q.get("tab");
-  if (STACK_TABS.some(([k]) => k === asked)) stackTab = asked;
-  const tab = stackTab || (stackTab = pref("mc-stack-tab", "tools"));
-  const svc = sy.services || [];
-  const down = svc.filter((s) => s.state !== "running");
-  view.innerHTML = `
-  <div class="hero stackhero"><div class="grow"><h1>Stack</h1><p>
-    ${notConnected() || !svc.length ? `<b class="err-t">not connected: its state is not known</b>` : down.length ? `<b class="err-t">${down.length} service${down.length > 1 ? "s" : ""} not running</b>` : "all services running"}${notConnected() || !svc.length ? "" : " · "}${notConnected() || !svc.length ? "" : sy.failed?.length ? `<b class="err-t">failed: ${sy.failed.map((u) => {                // which one, one tap to it (UX review 2026-10-30)
-      const c = (S.crew || []).find((x) => `${x.unit}.service` === u);
-      return c ? `<a class="err-t" href="#/crew/${encodeURIComponent(c.id)}">${esc(c.name)}</a>` : esc(u.replace(/\.service$/, ""));
-    }).join(", ")}</b>` : "no errors"}${sy.boot ? ` · last start ${rel(new Date(sy.boot.boot * 1000).toISOString())}, online in ${dur(sy.boot.ready_s)}` : ""}</p></div>
-    <a class="btn sm" href="#/files" title="What your missions made, the space it takes, the trash">${ic.doc}Files · ${fsize(S.files?.usage?.used || 0)}${(S.files?.usage?.pct || 0) >= 80 ? ` <b class="err-t">${S.files.usage.pct} %</b>` : ""}</a></div>
-  <nav class="seg stackseg" aria-label="Parts of this page">${STACK_TABS.map(([k, l]) => `<button type="button" data-st="${k}" class="${tab === k ? "on" : ""}">${l}</button>`).join("")}</nav>
-  <div data-sp="tools" ${tab === "tools" ? "" : "hidden"}>
-  ${phoneBanner()}
-  <div class="section-h"><h2>Tools</h2></div>
-  <div id="toolsbox" style="margin-bottom:14px">${stackToolsHtml()}</div>
-  ${S.house ? `<a class="banner info" href="#/house" style="margin-bottom:14px">${ic.house}<span class="grow"><b>House</b> · ${S.house.connected ? `${(S.house.things || []).length} things, ${(S.house.echos || []).length} Echos` : S.house.reachable ? "setup not finished" : "Home Assistant not reachable"}</span>${ic.next}</a>` : ""}
-  ${engineBanner()}
-  ${a2aCardHtml()}
-  <div id="subs" style="margin-bottom:14px"></div>
-  <div class="section-h"><h2>Connections</h2></div>
-  <div id="conncard" class="stack" style="margin-bottom:14px"><div class="skeleton" style="height:90px"></div></div>
-  </div>
-  <div data-sp="health" ${tab === "health" ? "" : "hidden"}>
-  <div class="section-h"><h2>Health and costs</h2>${how("safety")}</div>
-  <div class="grid g2 g4">
-    <div class="card kpi"><div class="kpi-l">Paid today</div><div class="kpi-v">${usd(sy.spend_today)}</div><div class="kpi-s">30 days: ${usd(sy.spend_30d)}</div></div>
-    <div class="card kpi"><div class="kpi-l">Credit used</div><div class="kpi-v">${usd(sy.spend_total)}</div><div class="kpi-s">of $${nf(sy.budget_total || 10)}</div><div class="meter"><i style="width:${Math.min(100, ((sy.spend_total || 0) / (sy.budget_total || 10)) * 100).toFixed(1)}%"></i></div></div>
-    <div class="card kpi"><div class="kpi-l">Long-term memory</div><div class="kpi-v">${nf(sy.memory?.facts)}</div><div class="kpi-s">facts · ${nf(sy.memory?.observations)} observations</div></div>
+function stackHealthHtml(sy, svc) {
+  return `<a class="banner info mb-3" href="#/traces">${ic.search}<span class="grow"><b>Traces</b> · every model call with its prompt and answer (Phoenix)</span>${ic.next}</a>
+  <div class="grid g2">
     <div class="card kpi"><div class="kpi-l">Last backup</div><div class="kpi-v" style="font-size:20px">${sy.backup ? rel(new Date(sy.backup.ts * 1000).toISOString()) : "–"}</div><div class="kpi-s">${sy.drill ? "restore test: " + esc(sy.drill.result) : ""}</div></div>
+    <div class="card kpi"><div class="kpi-l">Long-term memory</div><div class="kpi-v">${nf(sy.memory?.facts)}</div><div class="kpi-s">facts · ${nf(sy.memory?.observations)} observations</div></div>
   </div>
   <div class="section-h section"><h2>Resources</h2>${how("stack-page")}</div>
   <div id="rescard">${resourcesHtml(S.resources)}</div>
   <div class="split section">
     <div>
-      <div class="section-h"><h2>Agents today</h2>${how("technology")}</div>
-      <div class="card list">${(sy.agents_today || []).map((a) => { const max = Math.max(...sy.agents_today.map((x) => x.tokens)) || 1; return `<div style="align-items:center"><span class="agent ${esc(a.agent)}">${esc(a.agent)}</span><div class="grow"><div class="meter" style="margin:0"><i style="width:${((a.tokens / max) * 100).toFixed(1)}%"></i></div></div><div class="small num" style="min-width:110px;text-align:right">${nf(a.calls)} · ${tok(a.tokens)}</div></div>`; }).join("") || `<div class="muted small">No calls today</div>`}</div>
-      <div class="section-h section"><h2>Services</h2>${how("stack-page")}</div>
+      <div class="section-h"><h2>Services</h2>${how("stack-page")}</div>
       <div class="card grid g2" style="gap:0">${svc.map((s) => `<div class="svc"><span class="dot ${s.state === "running" ? (/unhealthy/.test(s.status) ? "warn" : "ok") : "err"}"></span><span class="n">${esc(s.name)}</span><span class="tiny faint">${esc(s.status.replace(/^Up /, "").replace(/ \(healthy\)/, ""))}</span></div>`).join("")}</div>
     </div>
     <div>
@@ -251,34 +243,57 @@ function vSystem() {
       <div class="card list">${(sy.timers || []).map((t) => { const failed = (sy.failed || []).some((f) => f.startsWith(t.unit + ".")); return `<div><div class="ic ${failed ? "err" : ""}">${failed ? ic.alert : ic.clock}</div><div class="grow"><div class="ttl">${esc((S.crew || []).find((c) => c.unit === t.unit)?.name || t.unit)}</div><div class="sub">last ${t.last ? rel(new Date(t.last / 1000).toISOString()) : "–"}</div></div><div class="tiny faint" style="white-space:nowrap">${t.next ? rel(new Date(t.next / 1000).toISOString()) : "–"}</div></div>`; }).join("")}</div>
     </div>
   </div>
-  ${stackChecks(sy)}
-  ${(sy.pending_memory || []).length ? `<div class="section-h section"><h2>Waiting for you</h2>${how("knowledge")}</div>
-    <div class="card list">${sy.pending_memory.map((p) => `<div style="flex-direction:column;gap:8px"><div class="row"><div class="ic warn">${ic.brain}</div><div class="grow small">${esc(p.text)}</div></div>
-      <div class="row" style="justify-content:flex-end"><button class="btn sm ghost danger" data-mem="reject" data-id="${esc(p.id)}">${ic.x}Discard</button><button class="btn sm primary" data-mem="approve" data-id="${esc(p.id)}">${ic.check}Remember</button></div></div>`).join("")}</div>` : ""}
-  ${memoryHtml()}
-  ${S.memory?.stores?.length ? librarianHtml(S.memory.librarian) : ""}
-  <a class="banner info" href="#/telemetry" style="margin-bottom:14px">${ic.pulse}<span class="grow"><b>Telemetry</b> · how each agent did, day by day: runs, verdicts, tokens, time, cost if paid</span>${ic.next}</a>
+  ${stackChecks(sy)}`;
+}
+function stackCostsHtml(sy) {
+  const today = sy.agents_today || [], max = Math.max(1, ...today.map((x) => x.tokens));
+  return `<div class="grid g2">
+    <div class="card kpi"><div class="kpi-l">Paid today</div><div class="kpi-v">${usd(sy.spend_today)}</div><div class="kpi-s">30 days: ${usd(sy.spend_30d)}</div></div>
+    <div class="card kpi"><div class="kpi-l">Credit used</div><div class="kpi-v">${usd(sy.spend_total)}</div><div class="kpi-s">of $${nf(sy.budget_total || 10)}</div><div class="meter"><i style="width:${Math.min(100, ((sy.spend_total || 0) / (sy.budget_total || 10)) * 100).toFixed(1)}%"></i></div></div>
   </div>
-  <div data-sp="guide" ${tab === "guide" ? "" : "hidden"}>
-  <div class="wsearch gsearch">${ic.search}<input class="input" id="gq" placeholder="How do I…? Search the guide: triggers, memory, deploy…" value="${esc(guideQuery)}"></div>
-  <div id="gresults"></div>
-  ${startHereHtml()}
-  <div class="section"><div class="section-h"><h2>How it fits together</h2></div>
-    <div class="card pad-l"><div class="glive" data-live="architecture"></div></div></div>
-  <div class="section" id="learn">${learnHtml()}</div>
-  </div>
-  <div data-sp="settings" ${tab === "settings" ? "" : "hidden"}>
-      <div class="section-h"><h2>Appearance</h2></div>
-      <div class="card pad">
-        <div class="row between wrap" style="gap:10px"><b class="small">Theme</b><div class="seg sm" id="themeseg">${[["system", "System"], ["light", "Light"], ["dark", "Dark"]].map(([k, l]) => `<button type="button" data-theme-pick="${k}" class="${pref("mc-theme", "system") === k ? "on" : ""}">${l}</button>`).join("")}</div></div>
-        <div class="row between wrap" style="gap:10px;margin-top:12px"><b class="small">Opens on</b><select class="input" id="startpick" style="width:auto">${[["", "Home"], ["#/build", "Code"], ["#/missions", "Agents"], ["#/wiki", "Wiki"], ["#/chat", "Chat"], ["#/system", "Stack"]].map(([k, l]) => `<option value="${k}" ${pref("mc-start", "") === k ? "selected" : ""}>${l}</option>`).join("")}</select></div>
-      </div>
-      <div class="section-h section"><h2>Notifications</h2>${how("delivery")}</div>
-      ${notifyHtml(sy)}
-      <div class="section-h section"><h2>This device</h2>${how("first-ten-minutes")}</div>
-      <div class="card pad" id="device"></div>
-  </div>`;
-  subsInto($("#subs"));
+  <div id="subs" class="section"></div>
+  <div class="section-h section"><h2>Agents today</h2>${how("technology")}</div>
+  <div class="card list">${today.map((a) => `<div style="align-items:center"><span class="agent ${esc(a.agent)}">${esc(a.agent)}</span><div class="grow"><div class="meter" style="margin:0"><i style="width:${((a.tokens / max) * 100).toFixed(1)}%"></i></div></div><div class="small num" style="min-width:110px;text-align:right">${nf(a.calls)} · ${tok(a.tokens)}</div></div>`).join("") || `<div class="muted small">No calls today</div>`}</div>
+  <div id="telbox"><div class="skeleton section" style="height:200px"></div></div>`;
+}
+function stackLine(sy, svc) {                              // the title's line: how the stack is, whichever part is open
+  if (notConnected()) return `<b class="err-t">${esc(linkWords())}</b>: its state is not known`;
+  if (!svc.length) return "the services' state comes with the runner's next report";
+  const down = svc.filter((s) => s.state !== "running");
+  const failed = (sy.failed || []).map((u) => {             // which one, one tap to it (UX review 2026-10-30)
+    const c = (S.crew || []).find((x) => `${x.unit}.service` === u);
+    return c ? `<a class="err-t" href="#/crew/${encodeURIComponent(c.id)}">${esc(c.name)}</a>` : esc(u.replace(/\.service$/, ""));
+  });
+  return `${down.length ? `<b class="err-t">${down.length} service${down.length > 1 ? "s" : ""} not running</b>` : "all services running"} · ${failed.length ? `<b class="err-t">failed: ${failed.join(", ")}</b>` : "no errors"}${sy.boot ? ` · last start ${rel(new Date(sy.boot.boot * 1000).toISOString())}, online in ${dur(sy.boot.ready_s)}` : ""}`;
+}
+function vSystem() {
+  const sy = S.system || {}, svc = sy.services || [];
+  if (route.q.get("tab") === "guide") { location.replace("#/guide"); return; }       // the guide has its own page (DEC-53)
+  const asked = route.q.get("conn") ? "connections" : route.q.get("tab");
+  if (STACK_TABS.some(([k]) => k === asked)) stackTab = asked;
+  if (!stackTab) stackTab = pref("mc-stack-tab", "health");
+  if (!STACK_TABS.some(([k]) => k === stackTab)) stackTab = "health";               // a part remembered from before
+  const tab = stackTab, part = (k, html) => `<div data-sp="${k}" ${tab === k ? "" : "hidden"}>${html}</div>`;
+  view.innerHTML = `
+  <div class="hero stackhero"><div class="grow"><h1>Stack</h1><p>${stackLine(sy, svc)}</p></div>
+    <div class="row wrap stackact"><a class="btn sm" href="#/guide">${ic.doc}Guide</a><a class="btn sm" href="#/files" title="What your tasks made, the space it takes, the trash">${ic.archive}Files · ${fsize(S.files?.usage?.used || 0)}${(S.files?.usage?.pct || 0) >= 80 ? ` <b class="err-t">${S.files.usage.pct} %</b>` : ""}</a></div></div>
+  <nav class="seg stackseg" aria-label="Parts of this page">${STACK_TABS.map(([k, l]) => `<button type="button" data-st="${k}" class="${tab === k ? "on" : ""}">${l}</button>`).join("")}</nav>
+  ${part("health", stackHealthHtml(sy, svc))}
+  ${part("costs", stackCostsHtml(sy))}
+  ${part("tools", `${phoneBanner()}<div id="toolsbox">${stackToolsHtml()}</div>`)}
+  ${part("connections", `<div class="section-h"><h2>Accounts and agents</h2>${how("connections")}</div>
+    <div id="conncard" class="stack mb-3"><div class="skeleton" style="height:90px"></div></div>
+    ${a2aCardHtml()}
+    <div id="packsbox">${packsHtml()}</div>`)}
+  ${part("settings", `<div class="section-h"><h2>Appearance</h2></div>
+    <div class="card pad">
+      <div class="row between wrap" style="gap:10px"><b class="small">Theme</b><div class="seg sm" id="themeseg">${[["system", "System"], ["light", "Light"], ["dark", "Dark"]].map(([k, l]) => `<button type="button" data-theme-pick="${k}" class="${pref("mc-theme", "system") === k ? "on" : ""}">${l}</button>`).join("")}</div></div>
+      <div class="row between wrap" style="gap:10px;margin-top:12px"><b class="small">Opens on</b><select class="input" id="startpick" style="width:auto">${START_PAGES.map(([k, l]) => `<option value="${k}" ${(OLD_START[pref("mc-start", "")] || pref("mc-start", "")) === k ? "selected" : ""}>${l}</option>`).join("")}</select></div>
+    </div>
+    <div class="section-h section"><h2>Notifications</h2>${how("delivery")}</div>
+    ${notifyHtml(sy)}
+    <div class="section-h section"><h2>This device</h2>${how("first-ten-minutes")}</div>
+    <div class="card pad" id="device"></div>`)}`;
   $$("[data-theme-pick]").forEach((b) => (b.onclick = () => {
     const v = b.dataset.themePick;
     try { localStorage.setItem("mc-theme", v); } catch (_) { /* then it holds until the page reloads */ }
@@ -286,22 +301,25 @@ function vSystem() {
     $$("[data-theme-pick]").forEach((x) => x.classList.toggle("on", x === b));
   }));
   if ($("#startpick")) $("#startpick").onchange = (e) => { try { localStorage.setItem("mc-start", e.target.value); } catch (_) { /* nothing to keep it in */ } };
+  const opened = (k) => { if (k === "costs") { subsInto($("#subs")); telInto($("#telbox")); } };   // a part's slower data loads when it opens
   $$("[data-st]").forEach((b) => (b.onclick = () => {
     stackTab = b.dataset.st;
-    try { localStorage.setItem("mc-stack-tab", stackTab); } catch (_) { /* a remembered tab is a convenience */ }
+    setPref("mc-stack-tab", stackTab);                    // a remembered part is a convenience
+    history.replaceState(history.state, "", `#/system?tab=${stackTab}`);
     $$("[data-st]").forEach((x) => x.classList.toggle("on", x === b));
     $$("[data-sp]").forEach((p) => (p.hidden = p.dataset.sp !== stackTab));
+    opened(stackTab);
     scrollTo(0, 0);
   }));
+  opened(tab);
   bindA2a();                                            // TSK-19: outside agents
+  bindPacks();                                          // GEN-21, GEN-25
   bindStackTools();
   if (!TOOLS) toolsLoad().then(() => { const b = $("#toolsbox"); if (b) { b.innerHTML = stackToolsHtml(); bindStackTools(); } });
-  bindLearn();
-  fillLive();
-  $$("[data-mem]").forEach((b) => (b.onclick = async () => { b.disabled = true; await act({ action: "memory", id: b.dataset.id, decision: b.dataset.mem }, b.dataset.mem === "approve" ? "Remembered: Hermes knows it from the next chat" : "Discarded: it is not remembered"); }));
   deviceCard();
   bindNotify();
-  if (scrollToLearn) { scrollToLearn = false; setTimeout(() => $("#learn")?.scrollIntoView({ block: "start" }), 30); }
+  const at = route.q.get("pack") ? `pack-${route.q.get("pack")}` : route.q.get("at");   // a pack's decision in Needs you opens its card
+  if (at) setTimeout(() => document.getElementById(at)?.scrollIntoView({ block: "start" }), 30);
 }
 
 async function deviceCard() {
@@ -343,19 +361,25 @@ async function deviceCard() {
 function onState(s) {
   const wasRunning = S?.running?.id, first = !S;
   S = s;
-  lastState = Date.now();
-  if (first && ["mission", "chat", "wiki", "new", "system", "build", "repo", "guide", "crew", "house", "tasks", "files", "file", "templates", "packs", "trackers", "runs"].includes(route.name)) return render(true);
-  if (route.name === "templates") { if (!route.args[0] && !typing()) render(true); chrome(); return; }
-  if (route.name === "runs") { chrome(); return; }   // Temporal's UI keeps its own state
-  if (route.name === "trackers") { if (!typing() && trackSig() !== TK_SIG) render(true); chrome(); return; }   // GEN-25: redrawn only when the trackers change
-  if (route.name === "packs") { if (!typing() && packSig() !== PK_SIG) render(true); chrome(); return; }   // GEN-21: redrawn only when the packs change   // GEN-34: the list follows; the builder never redraws under your edits
+  lastAlive = Date.now();
+  LINK = s.link || LINK;                                 // APP-65: how the runner is, as the app sees it
+  if (first && ["mission", "chat", "wiki", "new", "system", "build", "repo", "guide", "crew", "house", "tasks", "files", "file", "task"].includes(route.name)) return render(true);   // a task page opened cold: its Where it runs needs the state (WFL-11)
   if (route.name === "tasks" && !first) { tasksUpdate(); chrome(); return; }
   if (first && route.name === "swarm" && ["improve", "agents"].includes(swTab)) return render(true);   // FND-36: they read S
   if (route.name === "house" && !first) { houseUpdate(); chrome(); return; }
   if (route.name === "memory" && $("#memprobs")) { const p = $("#memprobs"), h = memProbsHtml(); if (p.innerHTML !== h) p.innerHTML = h; }   // the map's problems, as the keepers report them
   if (route.name === "guide") { guideOnState(); chrome(); return; }
   if (route.name === "home" && !first && $("#homefeed")) { homeUpdate(); chrome(); return; }
-  if (route.name === "system" && $("#rescard") && !first) { $("#rescard").innerHTML = resourcesHtml(S.resources); guideOnState(); chrome(); return; }
+  if (route.name === "system" && $("#rescard") && !first) {
+    $("#rescard").innerHTML = resourcesHtml(S.resources);
+    if (packSig() !== PK_SIG && !typing()) {             // GEN-21: redrawn only when the packs or trackers change, keeping what you opened
+      const box = $("#packsbox"), open = $$("details[open][data-keep]", box).map((d) => d.dataset.keep);
+      box.innerHTML = packsHtml();
+      open.forEach((k) => { const d = box.querySelector(`details[data-keep="${CSS.escape(k)}"]`); if (d) d.open = true; });
+      bindPacks();
+    }
+    chrome(); return;
+  }
   if (wasRunning && S.running?.id === wasRunning && $("#livelog") && (route.name === "home" || (route.name === "mission" && tab === "overview"))) {
     $("#livelog").textContent = (S.running.tail || []).join("\n") || "Starting…";        // update in place, no flicker
     const st = $(".runcard .steps"); if (st && S.running.steps) st.outerHTML = stepsHtml(S.running.steps);
@@ -365,7 +389,7 @@ function onState(s) {
 }
 // ---------- no connection: say why instead of loading forever (the shell itself comes from the phone's cache) ----------
 const bootAt = Date.now();
-let lastState = 0;
+let lastAlive = 0, LINK = null;                            // when the app last answered, and what it said of the runner
 const noLink = () => !S && Date.now() - bootAt > 8000;
 function offlineHtml() {
   return `<div class="card pad-l" id="offline"><h2>Can't reach your AI stack</h2>
@@ -378,6 +402,9 @@ function connect() {
   let es;
   try { es = new EventSource("/api/stream"); } catch (_) { return poll(); }
   es.onmessage = (e) => { try { onState(JSON.parse(e.data)); } catch (_) {} };
+  es.addEventListener("alive", (e) => {                     // APP-65: every 15 s, also while the runner writes nothing
+    try { const l = JSON.parse(e.data); LINK = { ...l, ready_s: l.ready_s ?? LINK?.ready_s }; lastAlive = Date.now(); chrome(); } catch (_) {}
+  });
   es.onerror = () => { es.close(); setTimeout(connect, 4000); poll(true); };
 }
 async function poll(once) {
@@ -413,5 +440,5 @@ parseRoute();
 render(true);
 countView();
 connect();
-loadGuide().then(() => { chrome(); const l = $("#learn"); if (l) { l.innerHTML = learnHtml(); bindLearn(); } });   // chapters: each page's "How this page works", Stack page
+loadGuide().then(() => { chrome(); const l = $("#learn"); if (l) { l.innerHTML = learnHtml(); bindLearn(); } });   // chapters: each page's "How this page works", the guide's index
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => {});

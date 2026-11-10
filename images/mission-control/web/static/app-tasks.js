@@ -1,4 +1,4 @@
-// The app, part of app-base.js, app-tasks.js, app-runs.js, app-devices.js, app-wiki-code.js, app-memory.js, app.js (PLT-25): the Tasks tab, triggers, Home, the crew, agents and the agent page. Loaded in that order; one global scope.
+// The app, part of app-base.js, app-tasks.js, app-runs.js, app-devices.js, app-wiki-code.js, app-memory.js, app-workflows.js, app.js (PLT-25): the Tasks tab, triggers, Home, the crew, agents and the agent page. Loaded in that order; one global scope.
 // ---------- the Tasks tab (DEC-46, 8 Nov 2026): what needs doing, and who does it ----------
 // Five views, one question each: Tasks (what am I having done?), Activity (what is happening now?), Team (who does the
 // work, and how well?), Network (which agents work on which tasks?) and Ideas (what could be better?). A task's When
@@ -67,7 +67,7 @@ function tRow(t) {
 function tasksHeadHtml() {
   const mine = (S.tasks || []).filter(tMine).map((t) => [t, taskAgentOf(t)]);   // the same tasks the list shows, yours or the stack's (a work site, 9 Nov 2026: "0 repeating" over a list with one)
   const need = mine.filter(([t, A]) => tNeeds(t, A)).length, run = mine.filter(([t, A]) => tLive(t, A)).length, rep = mine.filter(([t, A]) => tRepeating(t, A)).length;
-  return `<p class="agtop" id="thead">${notConnected() ? `<b class="err-t">Not connected</b>` : need ? `<b class="warn-t">${need} need${need > 1 ? "" : "s"} you</b>` : "Nothing needs you"}${run ? ` · <span class="run-t">${run} running</span>` : ""} · ${rep} repeating${netData?.agents?.length ? ` · ${netData.agents.length} agents this week` : ""}</p>`;
+  return `<p class="agtop" id="thead">${notConnected() ? `<b class="err-t">${esc(linkWords())}</b>` : need ? `<b class="warn-t">${need} need${need > 1 ? "" : "s"} you</b>` : "Nothing needs you"}${run ? ` · <span class="run-t">${run} running</span>` : ""} · ${rep} repeating${netData?.agents?.length ? ` · ${netData.agents.length} agents this week` : ""}</p>`;
 }
 function tasksListHtml() {
   const all = (S.tasks || []).filter(tMine).map((t) => [t, taskAgentOf(t)]);
@@ -170,7 +170,7 @@ function vTasks() {
   if (route.q.get("new") === "1") { tnewOpen = true; tasksView = "tasks"; tasksList = "active"; tasksOwner = "you"; }
   if (route.q.get("p")) teamPart = TEAM_PARTS.some(([k]) => k === route.q.get("p")) ? route.q.get("p") : teamPart;
   if (route.q.get("m")) netMode = route.q.get("m") === "team" ? "team" : "tasks";
-  view.innerHTML = `<div class="hero"><div class="grow" style="min-width:0"><h1>Tasks</h1>${tasksHeadHtml()}</div>${S?.engine ? `<a class="btn" href="#/templates">Templates</a>` : ""}<button class="btn primary" id="tnewb">${ic.plus}New task</button></div>
+  view.innerHTML = `<div class="hero"><div class="grow" style="min-width:0"><h1>Tasks</h1>${tasksHeadHtml()}</div><div class="row gap-2"><a class="btn phone-only" href="#/workflows">${ic.flow}Workflows</a><button class="btn primary" id="tnewb">${ic.plus}New task</button></div></div>
     <nav class="seg tviews" aria-label="Parts of Tasks">${TVIEWS.map(([k, l]) => `<button type="button" data-tv="${k}" class="${tasksView === k ? "on" : ""}">${l}</button>`).join("")}</nav>
     <div id="tvbody"></div>`;
   $("#tnewb").onclick = () => {
@@ -228,7 +228,7 @@ function teamDraw(b, live = false) {
   const box = $("#teambody", b);
   if (teamPart === "tasks") { if (!live) { box.innerHTML = `<div class="skeleton" style="height:200px"></div>`; swRender(box, "agents"); } return; }
   if (teamPart === "measured") {
-    box.innerHTML = `<div class="row wrap" style="gap:8px;margin-bottom:10px"><a class="btn sm" href="#/telemetry">${ic.pulse}Telemetry: every agent, day by day</a><a class="btn sm" href="#/trials">${ic.target}Trials</a></div>
+    box.innerHTML = `<div class="row wrap" style="gap:8px;margin-bottom:10px"><a class="btn sm" href="#/system?tab=costs">${ic.pulse}Every agent, day by day</a><a class="btn sm" href="#/trials">${ic.target}Trials</a></div>
       <div id="staffboard">${staffHtml()}</div>`;
     return;
   }
@@ -472,7 +472,7 @@ function needsRow(x) {
 
 function needsHtml() {
   const n = (S.decisions || []).length;
-  if (!n) return notConnected() ? `<div id="homeneeds" class="needs-calm off">${ic.alert}<span>Not connected: what needs you can't be read now.</span></div>`
+  if (!n) return notConnected() ? `<div id="homeneeds" class="needs-calm off">${ic.alert}<span>${esc(linkWords())}: what needs you can't be read now.</span></div>`
     : `<div id="homeneeds" class="needs-calm">${ic.check}<span>Nothing needs you right now.</span></div>`;
   return `<div id="homeneeds"><div class="section-h"><h2>Needs you <span class="hcount">${yoursN()}</span></h2><a class="tiny" href="#/decide">All</a></div>
     <div class="card list hneeds">${needsRows().map(needsRow).join("")}</div></div>`;
@@ -637,7 +637,7 @@ function feedHtml() {
     <div class="chips scroll-x" style="margin-bottom:6px">${kinds.map(([k, l]) => `<button type="button" class="tag hf ${homeFilter === k ? "on" : ""}" data-hf="${k}">${l}</button>`).join("")}</div>
     ${rows || `<div class="card empty small">Nothing here yet. A result shows up the moment an agent finishes.</div>`}
     ${mine.length > items.length ? `<button type="button" class="btn sm ghost" id="hfmore" style="margin-top:8px">Show older (${mine.length - items.length} more)</button>` : ""}
-    ${typeof explain === "function" ? explain("what-is-not-here-", `The stack's own work is not here: its health under Now, deploys under <a href="#/build">Code</a>, the agents' activity under <a href="#/swarm?tab=activity">Agents</a>.`, "What is not here") : ""}</div>`;
+    ${typeof explain === "function" ? explain("what-is-not-here-", `The stack's own work is not here: its health under Now, deploys under <a href="#/build">Code</a>, the agents' work under <a href="#/tasks?v=activity">Tasks → Activity</a>.`, "What is not here") : ""}</div>`;
 }
 
 // the first lines of a result under its headline, fetched once per file
@@ -646,6 +646,7 @@ function loadExcerpts() {
   for (const p of want) {
     homeEx.set(p, "");
     api(`/api/file?path=${encodeURIComponent(p)}`).then((t) => {
+      if (typeof t !== "string") return;                   // a result file that is gone answers with an error, not text: no excerpt
       const body = String(t).replace(/^---\n[\s\S]*?\n---\n?/, "").split("\n").map((l) => l.trim())
         .filter((l) => l && !/^(#|\||---|>|!\[|_.*_$|\*\*Sources)/.test(l)).join(" ").replace(/\[\[([^\]|]+\|)?([^\]]+)\]\]/g, "$2").replace(/[*_`]/g, "");
       homeEx.set(p, body.length > 320 ? body.slice(0, 320).replace(/\s+\S*$/, "") + " …" : body);   /* cap: preview: the item opens the whole result */
@@ -656,8 +657,9 @@ function loadExcerpts() {
 
 function homeHeadHtml() {
   const n = yoursN(), ideas = ideasN(), next = (S.missions || []).filter((m) => m.status === "active" && m.next_run).sort((a, b) => a.next_run.localeCompare(b.next_run))[0];
-  const busy = (S.running ? 1 : 0) + (S.builds || []).filter((b) => ["working", "checking", "deploying"].includes(b.status)).length + (S.claude_tasks || []).filter((t) => t.status === "running").length;
-  if (notConnected()) return `<p id="homehead">${day(new Date(), true)} · <b class="err-t">not connected</b>: what you see may be out of date</p>`;
+  const busy = (S.running ? 1 : 0) + (S.builds || []).filter((b) => ["working", "checking", "deploying"].includes(b.status)).length + (S.claude_tasks || []).filter((t) => t.status === "running").length
+    + (S.tasks || []).filter((t) => t.door !== "mission" && ["intake", "planning", "running"].includes(t.status)).length;   // a task at work is not "all quiet" (Now lists it)
+  if (notConnected()) return `<p id="homehead">${day(new Date(), true)} · <b class="err-t">${esc(linkWords())}</b>: what you see may be out of date</p>`;
   return `<p id="homehead">${day(new Date(), true)} · ${n ? `<b class="warn-t">${n} thing${n > 1 ? "s need" : " needs"} you</b>` : "nothing needs you"}${ideas ? ` · ${ideas} idea${ideas > 1 ? "s" : ""}` : ""} · ${busy ? `${busy} working now` : "all quiet"}${next ? ` · next: ${esc(next.title)} ${rel(next.next_run)}` : ""}</p>`;
 }
 
@@ -684,9 +686,9 @@ function vHome() {
   <nav class="seg homeseg" aria-label="Parts of Home">${HOME_TABS.map(([k, l]) => `<button type="button" data-ht="${k}" class="${tab === k ? "on" : ""}">${l}</button>`).join("")}</nav>
   <div class="home-pane home-today" data-hp="today" ${tab === "today" ? "" : "hidden"}>${needsHtml()}${nowHtml()}</div>
   <div class="home-pane" data-hp="results" ${tab === "results" ? "" : "hidden"}>${feedHtml()}</div>
-  <div class="home-pane home-overview" data-hp="overview" ${tab === "overview" ? "" : "hidden"}>${devicesHtml()}${homeStatsHtml()}</div>
+  <div class="home-pane home-overview" data-hp="overview" ${tab === "overview" ? "" : "hidden"}>${devicesHtml()}${houseCardHtml()}${sharedCardHtml()}${homeStatsHtml()}</div>
   </div>`;
-  for (const id of ["homehead", "homeneeds", "homenow", "homedev", "homestats", "homefeed"]) homeLast[id] = document.getElementById(id)?.outerHTML;
+  for (const id of ["homehead", "homeneeds", "homenow", "homedev", "homehouse", "homeshared", "homestats", "homefeed"]) homeLast[id] = document.getElementById(id)?.outerHTML;
   bindHome();
 }
 
@@ -719,7 +721,7 @@ window.addEventListener("scroll", () => {                 // back at the top: wh
   if (window.scrollY < 60 && homeHeld) { homeHeld = false; if (route.name === "home") homeUpdate(true); }
 }, { passive: true });
 function homeUpdate(force) {
-  const parts = [["homehead", homeHeadHtml], ["homeneeds", needsHtml], ["homenow", nowHtml], ["homedev", devicesHtml], ["homestats", homeStatsHtml], ["homefeed", feedHtml]];
+  const parts = [["homehead", homeHeadHtml], ["homeneeds", needsHtml], ["homenow", nowHtml], ["homedev", devicesHtml], ["homehouse", houseCardHtml], ["homeshared", sharedCardHtml], ["homestats", homeStatsHtml], ["homefeed", feedHtml]];
   const hold = !force && (window.scrollY > 120 || Date.now() - homeTouch < 2500);
   let held = false;
   for (const [id, fn] of parts) {

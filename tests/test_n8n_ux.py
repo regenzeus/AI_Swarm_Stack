@@ -14,15 +14,15 @@ def test_the_desk_menu_opens_n8n_inside_the_app_and_the_phone_menu_does_not_show
     js = (STATIC / "app-base.js").read_text()
     assert '["workflows", "#/workflows", "Workflows", ic.flow]' in js
     assert 'if (k === "workflows" && bottom) return "";' in js and ":8450" not in js and "n8nUrl" not in js
-    assert "workflows: vWorkflows }[route.name]" in js and "  flow: I(" in js
+    assert "workflows: vWorkflows, traces: vTraces }[route.name]" in js and "  flow: I(" in js
     wf = (STATIC / "app-workflows.js").read_text()
     assert 'const wfDesk = () => matchMedia("(min-width: 960px)").matches;' in wf
     assert "if (!wfDesk()) return wfList(open);" in wf                                   # a phone: the list
-    assert '<iframe class="n8n-frame" data-src="${esc(src)}" src="${esc(src)}"' in wf     # the desk: n8n inside the app
+    assert '<iframe class="tool-frame" data-src="${esc(src)}" src="${esc(src)}"' in wf     # the desk: n8n inside the app
     assert 'id === "executions" ? "/n8n/home/executions"' in wf and '`/n8n/workflow/${encodeURIComponent(id)}' in wf
     assert "app-workflows.js" in webjs.APP_PARTS
     css = (STATIC / "app.css").read_text()
-    assert 'body[data-page="workflows"] .view { max-width: none; }' in css and ".n8n-frame {" in css and "ellipsis" not in css[css.index(".n8n-frame {"):]
+    assert 'body[data-page="workflows"] .view, body[data-page="traces"] .view { max-width: none; padding-bottom: 0; }' in css and ".tool-frame {" in css and "ellipsis" not in css[css.index(".tool-frame {"):]
 
 
 def test_the_phone_lists_each_workflow_with_its_schedule_and_last_run():
@@ -37,7 +37,7 @@ def test_task_and_crew_pages_show_where_they_run():
     wf = (STATIC / "app-workflows.js").read_text()
     assert 'const m = t.door === "workflow" ? /^n8n:([^/]+)\\/(.*)$/.exec(t.ref || "") : null;' in wf   # a task the step service made
     assert "S?.workflows?.jobs?.[`task:${t.id}`]" in wf and "S?.workflows?.jobs?.[`crew:${id}`]" in wf
-    assert '<iframe class="n8n-frame run"' in wf and ": r || w ? wfStepsHtml(w, r)" in wf   # desk: the run's canvas; phone: its steps
+    assert '<iframe class="tool-frame run"' in wf and ": r || w ? wfStepsHtml(w, r)" in wf   # desk: the run's canvas; phone: its steps
     assert "wfRunLine(r)" in wf and '` · at “${esc(r.on)}”`' in wf                         # its state and the step it is on
     task = (STATIC / "task.js").read_text()
     assert "wfWhereInto($(\"#wfwhere\"), wf.wid, wf.ex, null, keepWf)" in task and "wfLink" not in task

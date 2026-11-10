@@ -1,4 +1,4 @@
-// The app, part of app-base.js, app-tasks.js, app-runs.js, app-devices.js, app-wiki-code.js, app-memory.js, app.js (PLT-25): the wiki, chart zoom, builds, ideas and the Code tab. Loaded in that order; one global scope.
+// The app, part of app-base.js, app-tasks.js, app-runs.js, app-devices.js, app-wiki-code.js, app-memory.js, app-workflows.js, app.js (PLT-25): the wiki, chart zoom, builds, ideas and the Code tab. Loaded in that order; one global scope.
 // ---------- wiki (Obsidian-style: pages, links, backlinks, graph) ----------
 const FOLDER_COLORS = { entities: "#2dd4bf", concepts: "#a78bfa", projects: "#fbbf24", events: "#f472b6", sources: "#94a3b8", answers: "#60a5fa", howto: "#a3e635", comparisons: "#fb923c" };
 const fcolor = (f) => FOLDER_COLORS[f] || "#8e97ab";

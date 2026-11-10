@@ -26,6 +26,7 @@ approved by their hash (GEN-22, WFL-03).
 
     entries(path)        packs.txt -> [{name, source, commit}]
     load()               -> {"packs": [active pack], "pending": [decision], "refused": [{name, commit, why}]}
+    view(loaded)         the same for the app's state: no folders or file paths
     approve(name, commit, who) / refuse(name, commit, who, why)
     plugin_args(pack)    Claude Code's arguments for a step of one of its agents
     handle(req)          the app's actions: pack_approve, pack_refuse
@@ -318,6 +319,17 @@ def load(txt=None, base=None, approvals=None):
     return {"packs": packs, "pending": pending, "refused": refused}
 
 
+def view(loaded=None):
+    """What the app shows (the Stack page's Packs and trackers): each running pack with what it brings, each commit
+    waiting for the owner with everything needed to decide it, and what is refused with why. No folders or file paths."""
+    L = loaded or load()
+    run = [{**{k: p[k] for k in ("name", "commit", "version", "about", "mcp", "exams", "problems")},
+            "agents": [{k: a[k] for k in ("id", "purpose", "harness", "model", "prompt")} for a in p["agents"]],
+            "skills": [s["id"] for s in p["skills"]], "jobs": [{k: j[k] for k in ("kind", "about", "spec")} for j in p["jobs"]],
+            "workflows": [w["name"] for w in p["workflows"]]} for p in L["packs"]]
+    return {"packs": run, "pending": L["pending"], "refused": L["refused"]}
+
+
 def cards(packs=None):
     """The running packs' agents as cards a step may name (<pack>:<agent>): harness, model and the agent's own prompt."""
     return {a["id"]: {"id": a["id"], "harness": a["harness"] or "claude-code", "model": a["model"], "prompt": a["prompt"], "pack": p["name"]}
@@ -332,9 +344,9 @@ def decisions(make, loaded=None):
         n = lambda xs, one: f"{len(xs)} {one}{'' if len(xs) == 1 else 's'}"   # noqa: E731
         why = (", ".join(n(p[k], w) for k, w in (("agents", "agent"), ("jobs", "command"), ("workflows", "workflow"), ("skills", "skill")) if p[k])
                + (f"; problems: {'; '.join(p['problems'])}" if p["problems"] else "") + (f"; {p['about']}" if p["about"] else ""))
-        yield make(f"pack:{p['name']}@{short}", "pack-commit", what, why, f"#/packs/{p['name']}",
+        yield make(f"pack:{p['name']}@{short}", "pack-commit", what, why, f"#/system?tab=connections&pack={p['name']}",
                    unanswered=f"commit {p['runs'][:12]} keeps running" if p["runs"] else "the pack does not run",
-                   answers=[{"label": "Look and decide", "href": f"#/packs/{p['name']}"}])
+                   answers=[{"label": "Look and decide", "href": f"#/system?tab=connections&pack={p['name']}"}])
 
 
 def egress_hosts():

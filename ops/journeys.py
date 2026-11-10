@@ -56,8 +56,8 @@ BROWSER_TIMEOUT = 3000   # limit: stops, the browser's whole run: every screen t
 APP, NET = "http://mission-control:8090", "aistack_mcui"   # the app as Tailscale serve reaches it; the browser allows no other host
 PHONE = 375
 # the routes a sweep starts from; it follows every link it finds (two screens of each kind)
-SEEDS = ["#/", "#/tasks", "#/missions", "#/new", "#/chat", "#/system", "#/wiki", "#/build", "#/guide", "#/share", "#/phone",
-         "#/house", "#/telemetry", *[f"#/swarm?tab={t}" for t in ("activity", "agents", "improve")], "#/swarm/agent/scout",
+SEEDS = ["#/", "#/home", "#/tasks", "#/missions", "#/new", "#/chat", "#/system", "#/wiki", "#/build", "#/guide", "#/share", "#/phone", "#/workflows", "#/traces",
+         "#/house", "#/system?tab=costs", "#/system?tab=connections", *[f"#/swarm?tab={t}" for t in ("activity", "agents", "improve")], "#/swarm/agent/scout",
          "#/crew/doctor?tab=team", "#/crew/memory", "#/swarm?tab=activity&agents=mission,scout&h=168", "#/swarm?tab=chat&ctx=calls:mission+scout"]
 MAKE_VARS = {"REPO": "example", "NAME": "example", "TEXT": "example", "MISSION": "example", "TOPIC": "example", "FILE": "example"}
 PATHS = re.compile(r"(?<![\w./-])((?:ops|images|eval|nas|compose|config|scripts)/[\w./-]+\.(?:py|sh|mjs|js|yaml|yml|json))\b")
@@ -436,12 +436,12 @@ def browser(cfg, web=None, extra=(), run=subprocess.run):
 
 
 def seeds(db=LIVE_DB):
-    """SEEDS and the newest planned tasks' cards and maps."""
+    """SEEDS and the newest planned tasks' pages, each also on its Sources (the flow from what it read to the answer)."""
     out = list(SEEDS)
     try:
         c = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
         for (tid,) in c.execute("select id from tasks where door='plan' order by id desc limit 2"):  # cap: parse (two tasks' pages are enough to try)
-            out += [f"#/task/{tid}", f"#/taskmap?t={tid}"]
+            out += [f"#/task/{tid}", f"#/task/{tid}?tab=sources"]
         c.close()
     except sqlite3.Error:
         pass

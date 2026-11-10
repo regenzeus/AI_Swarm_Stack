@@ -117,7 +117,7 @@ flowchart LR
   ts --> oc[OpenCode :8445]
   ts --> ua[Code map :8446]
   ts --> hd[Hermes admin :8448]
-  ts --> phx[Phoenix traces :8443]
+  ts --> phx[Phoenix traces, inside the app]
   mc -- chat --> hermes[Hermes gateway<br/>profiles main, scout, curator, mission]
   mc -- requests inbox / state.json --> runner[ops/missions.py runner<br/>host, systemd]
   runner --> crew[the crew's scheduled jobs<br/>health, memory, tests, phone, inbox …]

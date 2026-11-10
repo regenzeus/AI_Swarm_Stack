@@ -18,7 +18,8 @@
   var saved = function () { try { return localStorage.getItem("mc-theme"); } catch (e) { return null; } };
   applyTheme(saved());
   mq.addEventListener("change", function () { applyTheme(saved()); });
-  try { var start = localStorage.getItem("mc-start"); if (start && (!location.hash || location.hash === "#/")) location.replace(start); } catch (e) {}
+  try { var start = localStorage.getItem("mc-start"); start = ({ "#/missions": "#/tasks", "#/wiki": "#/memory" })[start] || start;   // names from before DEC-46 and the Memory tab
+    if (start && (!location.hash || location.hash === "#/")) location.replace(start); } catch (e) {}
 })();
 </script>
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -34,7 +35,7 @@
 <body>
 <div class="shell">
   <aside class="side">
-    <a class="brand" href="#/"><img src="/static/icons/icon-192.png" alt=""><span>{{APP_NAME}}</span></a>
+    <a class="brand" href="#/home"><img src="/static/icons/icon-192.png" alt=""><span>{{APP_NAME}}</span></a>
     <nav class="nav" id="nav-side"></nav>
     <div class="side-foot" id="side-foot"></div>
   </aside>
@@ -60,10 +61,6 @@
 <script src="/static/app-devices.js"></script>
 <script src="/static/app-wiki-code.js"></script>
 <script src="/static/app-memory.js"></script>
-<script src="/static/app-engine.js"></script>
-<script src="/static/app-templates.js"></script>
-<script src="/static/app-packs.js"></script>
-<script src="/static/app-trackers.js"></script>
 <script src="/static/app-workflows.js"></script>
 <script src="/static/app.js"></script>
 </body>

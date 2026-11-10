@@ -238,7 +238,7 @@ async def push_conn():
                 if p["id"] not in seen:
                     seen.add(p["id"])
                     if subs():
-                        await asyncio.to_thread(send_push, "Gmail: OK to move to Trash?", TC.fit(f"{p.get('count')} mails · {p.get('reason', '')}", 180), "/#/system?conn=1")  # cap: api
+                        await asyncio.to_thread(send_push, "Gmail: OK to move to Trash?", TC.fit(f"{p.get('count')} mails · {p.get('reason', '')}", 180), "/#/system?tab=connections")  # cap: api
         except Exception as ex:
             print("connections watcher:", ex, flush=True)
 

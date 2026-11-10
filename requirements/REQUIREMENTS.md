@@ -8,7 +8,7 @@ Method, statuses and rules: [README.md](README.md). Names of the parts: [glossar
 | Area | Requirements | Implemented | Partial | Violated | Planned | Proposed | Deprecated |
 |---|---|---|---|---|---|---|---|
 | [AI change requests](#acr-ai-change-requests) (ACR) | 2 | 2 | 0 | 0 | 0 | 0 | 0 |
-| [App](#app-app) (APP) | 58 | 57 | 0 | 0 | 0 | 0 | 1 |
+| [App](#app-app) (APP) | 64 | 62 | 1 | 0 | 0 | 0 | 1 |
 | [Assistant](#ast-assistant) (AST) | 14 | 13 | 1 | 0 | 0 | 0 | 0 |
 | [Autonomy](#aut-autonomy) (AUT) | 8 | 2 | 2 | 0 | 0 | 4 | 0 |
 | [Builder](#bld-builder) (BLD) | 39 | 38 | 0 | 0 | 0 | 1 | 0 |
@@ -33,10 +33,10 @@ Method, statuses and rules: [README.md](README.md). Names of the parts: [glossar
 | [Task engine](#tsk-task-engine) (TSK) | 45 | 39 | 6 | 0 | 0 | 0 | 0 |
 | [Trials](#trl-trials) (TRL) | 17 | 13 | 2 | 0 | 0 | 2 | 0 |
 | [Voice](#voi-voice) (VOI) | 9 | 8 | 0 | 0 | 0 | 1 | 0 |
-| [Workflows](#wfl-workflows) (WFL) | 14 | 10 | 4 | 0 | 0 | 0 | 0 |
-| **All** | **680** | **591** | **48** | **1** | **4** | **17** | **19** |
+| [Workflows](#wfl-workflows) (WFL) | 14 | 11 | 3 | 0 | 0 | 0 | 0 |
+| **All** | **686** | **597** | **48** | **1** | **4** | **17** | **19** |
 
-Unit tests claimed by a requirement: 1410 of 1410.
+Unit tests claimed by a requirement: 1421 of 1421.
 
 ## Findings
 
@@ -1532,12 +1532,12 @@ The trial's build #11 appeared on the Tasks board as task #89 (source door) besi
 
 | Need | Priority | Refined by |
 |---|---|---|
-| <a id="sn-01"></a>**SN-01** A personal AI team that works by itself: Agents read the news, research companies and topics, watch filings and prices, and deliver briefings, alerts and research results on their own, so that the owner mostly just reads results. | must | [APP-05](#app-05), [APP-25](#app-25), [APP-26](#app-26), [APP-30](#app-30), [APP-31](#app-31), [APP-32](#app-32), [APP-33](#app-33), [APP-34](#app-34), [APP-35](#app-35), [APP-46](#app-46), [APP-47](#app-47), [APP-48](#app-48), [APP-49](#app-49), [APP-50](#app-50), [APP-51](#app-51), [APP-52](#app-52), [AST-01](#ast-01), [AST-05](#ast-05), [AST-07](#ast-07), [AST-13](#ast-13), [BLD-25](#bld-25), [CST-01](#cst-01), [MIS-01](#mis-01), [MIS-02](#mis-02), [MIS-06](#mis-06), [MIS-08](#mis-08), [MIS-09](#mis-09), [MIS-10](#mis-10), [MIS-11](#mis-11), [MIS-13](#mis-13), [MIS-14](#mis-14), [MIS-15](#mis-15), [MIS-21](#mis-21), [MIS-22](#mis-22), [MIS-23](#mis-23), [RES-02](#res-02), [RES-03](#res-03), [RES-04](#res-04), [RES-05](#res-05), [SHP-13](#shp-13), [VOI-09](#voi-09) |
+| <a id="sn-01"></a>**SN-01** A personal AI team that works by itself: Agents read the news, research companies and topics, watch filings and prices, and deliver briefings, alerts and research results on their own, so that the owner mostly just reads results. | must | [APP-05](#app-05), [APP-25](#app-25), [APP-26](#app-26), [APP-30](#app-30), [APP-31](#app-31), [APP-32](#app-32), [APP-33](#app-33), [APP-34](#app-34), [APP-35](#app-35), [APP-46](#app-46), [APP-47](#app-47), [APP-48](#app-48), [APP-49](#app-49), [APP-50](#app-50), [APP-51](#app-51), [APP-52](#app-52), [APP-62](#app-62), [APP-63](#app-63), [APP-64](#app-64), [APP-65](#app-65), [APP-66](#app-66), [APP-67](#app-67), [AST-01](#ast-01), [AST-05](#ast-05), [AST-07](#ast-07), [AST-13](#ast-13), [BLD-25](#bld-25), [CST-01](#cst-01), [MIS-01](#mis-01), [MIS-02](#mis-02), [MIS-06](#mis-06), [MIS-08](#mis-08), [MIS-09](#mis-09), [MIS-10](#mis-10), [MIS-11](#mis-11), [MIS-13](#mis-13), [MIS-14](#mis-14), [MIS-15](#mis-15), [MIS-21](#mis-21), [MIS-22](#mis-22), [MIS-23](#mis-23), [RES-02](#res-02), [RES-03](#res-03), [RES-04](#res-04), [RES-05](#res-05), [SHP-13](#shp-13), [VOI-09](#voi-09) |
 | <a id="sn-02"></a>**SN-02** Out of the loop except for real decisions: the owner is asked only for decisions that are really his (approvals of spending, deploys, deletions, settings, grants), each one tap away with enough context to decide; no scripts to run, no busywork, nothing shown as needing him that does not. | must | [APP-04](#app-04), [APP-05](#app-05), [APP-06](#app-06), [APP-07](#app-07), [APP-13](#app-13), [APP-14](#app-14), [APP-21](#app-21), [APP-25](#app-25), [APP-26](#app-26), [APP-30](#app-30), [APP-31](#app-31), [APP-54](#app-54), [AST-06](#ast-06), [AST-12](#ast-12), [AUT-01](#aut-01), [AUT-02](#aut-02), [AUT-05](#aut-05), [AUT-07](#aut-07), [AUT-08](#aut-08), [CHG-02](#chg-02), [CHG-03](#chg-03), [CNX-02](#cnx-02), [CRW-02](#crw-02), [CRW-05](#crw-05), [CRW-06](#crw-06), [CST-03](#cst-03), [MEM-42](#mem-42), [MIS-07](#mis-07), [MIS-20](#mis-20), [PHN-02](#phn-02), [PHN-11](#phn-11), [PHN-12](#phn-12), [PHN-18](#phn-18), [PHN-20](#phn-20), [PHN-21](#phn-21), [PHN-22](#phn-22), [PHN-24](#phn-24), [PHN-25](#phn-25), [PHN-26](#phn-26), [SHP-01](#shp-01), [SHP-03](#shp-03), [SHP-08](#shp-08), [SWM-05](#swm-05), [SWM-06](#swm-06), [SWM-08](#swm-08), [SWM-33](#swm-33), [SWM-38](#swm-38), [SWM-39](#swm-39), [SWM-40](#swm-40), [SWM-42](#swm-42), [SWM-43](#swm-43), [SWM-44](#swm-44), [SWM-54](#swm-54), [SWM-55](#swm-55), [SWM-61](#swm-61), [SWM-87](#swm-87), [TRL-15](#trl-15), [TSK-03](#tsk-03), [TSK-20](#tsk-20), [TSK-40](#tsk-40), [VOI-08](#voi-08) |
 | <a id="sn-03"></a>**SN-03** Costs nothing to run: Running the stack costs $0 beyond the subscriptions the owner already pays; nothing can spend money by accident. | must | [APP-40](#app-40), [APP-41](#app-41), [APP-42](#app-42), [APP-43](#app-43), [APP-44](#app-44), [APP-45](#app-45), [AST-02](#ast-02), [AST-08](#ast-08), [BLD-06](#bld-06), [CST-02](#cst-02), [CST-15](#cst-15), [GW-02](#gw-02), [GW-04](#gw-04), [GW-09](#gw-09), [MEM-26](#mem-26), [MEM-44](#mem-44), [MIS-04](#mis-04), [MIS-16](#mis-16), [PHN-27](#phn-27), [PLT-11](#plt-11), [PLT-26](#plt-26), [PLT-27](#plt-27), [RES-07](#res-07), [SHP-05](#shp-05), [SWM-13](#swm-13), [SWM-14](#swm-14), [SWM-29](#swm-29), [SWM-40](#swm-40), [SWM-53](#swm-53), [SWM-60](#swm-60), [SWM-62](#swm-62), [SWM-81](#swm-81), [WFL-07](#wfl-07), [WFL-10](#wfl-10), [WFL-11](#wfl-11), [WFL-14](#wfl-14) |
 | <a id="sn-04"></a>**SN-04** Private data stays home: Notes, reports, memory, chats, mail and files stay on the PC and the NAS; only the model calls leave, and The owner knows which provider sees what. | must | [AUT-03](#aut-03), [CST-04](#cst-04), [CST-06](#cst-06), [GEN-14](#gen-14), [HSE-07](#hse-07), [KNW-05](#knw-05), [KNW-07](#knw-07), [MEM-06](#mem-06), [MEM-18](#mem-18), [MEM-30](#mem-30), [PHN-16](#phn-16), [PHN-19](#phn-19), [RES-01](#res-01), [SEC-03](#sec-03), [SEC-04](#sec-04), [SEC-06](#sec-06), [SEC-17](#sec-17), [SEC-18](#sec-18), [SEC-19](#sec-19), [SEC-22](#sec-22), [SWM-67](#swm-67) |
 | <a id="sn-05"></a>**SN-05** Agents cannot do damage: No agent can spend money, delete data for good, leak private data, change the NAS, the router or phone and PC security settings, or deploy code without the owner's approval; prompt injection from the web or mail cannot steer an agent into any of it. | must | [APP-10](#app-10), [APP-20](#app-20), [APP-61](#app-61), [AST-08](#ast-08), [AST-09](#ast-09), [AST-10](#ast-10), [AST-14](#ast-14), [AUT-01](#aut-01), [AUT-03](#aut-03), [BLD-02](#bld-02), [BLD-07](#bld-07), [BLD-10](#bld-10), [BLD-13](#bld-13), [BLD-16](#bld-16), [BLD-18](#bld-18), [BLD-27](#bld-27), [BLD-28](#bld-28), [BLD-39](#bld-39), [CHG-05](#chg-05), [CHG-12](#chg-12), [CHG-13](#chg-13), [CHG-15](#chg-15), [CNX-01](#cnx-01), [CNX-03](#cnx-03), [CNX-04](#cnx-04), [CNX-05](#cnx-05), [CNX-07](#cnx-07), [CNX-08](#cnx-08), [CNX-09](#cnx-09), [CRW-04](#crw-04), [CRW-10](#crw-10), [CRW-11](#crw-11), [CRW-13](#crw-13), [CST-04](#cst-04), [CST-05](#cst-05), [CST-06](#cst-06), [CST-07](#cst-07), [CST-10](#cst-10), [CST-11](#cst-11), [CST-12](#cst-12), [GEN-01](#gen-01), [GEN-02](#gen-02), [GEN-03](#gen-03), [GEN-04](#gen-04), [GEN-05](#gen-05), [GEN-06](#gen-06), [GEN-07](#gen-07), [GEN-08](#gen-08), [GEN-09](#gen-09), [GEN-10](#gen-10), [GEN-11](#gen-11), [GEN-12](#gen-12), [GEN-13](#gen-13), [GEN-14](#gen-14), [GEN-15](#gen-15), [GEN-16](#gen-16), [GEN-17](#gen-17), [GEN-18](#gen-18), [GEN-19](#gen-19), [GEN-20](#gen-20), [GEN-21](#gen-21), [GEN-22](#gen-22), [GEN-23](#gen-23), [GEN-24](#gen-24), [GEN-25](#gen-25), [GEN-26](#gen-26), [GEN-27](#gen-27), [GEN-28](#gen-28), [GEN-29](#gen-29), [GEN-30](#gen-30), [GEN-31](#gen-31), [GEN-32](#gen-32), [GEN-33](#gen-33), [GEN-34](#gen-34), [GEN-35](#gen-35), [GEN-36](#gen-36), [GEN-37](#gen-37), [GEN-38](#gen-38), [GEN-39](#gen-39), [GW-05](#gw-05), [HSE-04](#hse-04), [HSE-05](#hse-05), [HSE-08](#hse-08), [HSE-09](#hse-09), [KNW-04](#knw-04), [KNW-06](#knw-06), [KNW-11](#knw-11), [MEM-04](#mem-04), [MEM-29](#mem-29), [MEM-30](#mem-30), [MEM-39](#mem-39), [MEM-49](#mem-49), [MIS-17](#mis-17), [MIS-28](#mis-28), [PHN-01](#phn-01), [PHN-03](#phn-03), [PHN-04](#phn-04), [PHN-05](#phn-05), [PHN-06](#phn-06), [PHN-07](#phn-07), [PHN-08](#phn-08), [PHN-15](#phn-15), [PLT-02](#plt-02), [PLT-03](#plt-03), [PLT-09](#plt-09), [QA-23](#qa-23), [QA-24](#qa-24), [QA-25](#qa-25), [QA-26](#qa-26), [RES-01](#res-01), [RES-03](#res-03), [RES-04](#res-04), [RES-06](#res-06), [SEC-01](#sec-01), [SEC-02](#sec-02), [SEC-03](#sec-03), [SEC-04](#sec-04), [SEC-05](#sec-05), [SEC-06](#sec-06), [SEC-07](#sec-07), [SEC-08](#sec-08), [SEC-09](#sec-09), [SEC-10](#sec-10), [SEC-11](#sec-11), [SEC-12](#sec-12), [SEC-13](#sec-13), [SEC-14](#sec-14), [SEC-15](#sec-15), [SEC-16](#sec-16), [SEC-20](#sec-20), [SEC-21](#sec-21), [SEC-22](#sec-22), [SHP-05](#shp-05), [SHP-06](#shp-06), [SHP-07](#shp-07), [SHP-09](#shp-09), [SHP-10](#shp-10), [SWM-06](#swm-06), [SWM-109](#swm-109), [SWM-11](#swm-11), [SWM-15](#swm-15), [SWM-23](#swm-23), [SWM-24](#swm-24), [SWM-26](#swm-26), [SWM-42](#swm-42), [SWM-43](#swm-43), [SWM-46](#swm-46), [SWM-51](#swm-51), [SWM-58](#swm-58), [SWM-66](#swm-66), [SWM-67](#swm-67), [SWM-68](#swm-68), [SWM-69](#swm-69), [SWM-70](#swm-70), [SWM-77](#swm-77), [SWM-89](#swm-89), [TRL-05](#trl-05), [TSK-15](#tsk-15), [TSK-20](#tsk-20), [VOI-01](#voi-01), [VOI-03](#voi-03), [VOI-07](#voi-07), [WFL-01](#wfl-01), [WFL-02](#wfl-02), [WFL-05](#wfl-05), [WFL-06](#wfl-06), [WFL-08](#wfl-08), [WFL-09](#wfl-09), [WFL-12](#wfl-12), [WFL-13](#wfl-13) |
-| <a id="sn-06"></a>**SN-06** Usable from the phone, anywhere, one sign-in: Everything is usable and decidable from the owner's phone (installable app, push, Telegram), from anywhere on his tailnet, with his Tailscale login as the only sign-in. | must | [APP-01](#app-01), [APP-02](#app-02), [APP-03](#app-03), [APP-04](#app-04), [APP-08](#app-08), [APP-09](#app-09), [APP-15](#app-15), [APP-17](#app-17), [APP-19](#app-19), [APP-20](#app-20), [APP-37](#app-37), [APP-38](#app-38), [APP-39](#app-39), [AST-01](#ast-01), [AST-03](#ast-03), [AUT-05](#aut-05), [AUT-06](#aut-06), [MIS-15](#mis-15), [MIS-23](#mis-23), [QA-16](#qa-16), [QA-21](#qa-21), [QA-22](#qa-22), [SEC-01](#sec-01), [SEC-02](#sec-02), [SEC-20](#sec-20), [SWM-11](#swm-11), [SWM-57](#swm-57), [SWM-93](#swm-93), [SWM-95](#swm-95), [TSK-02](#tsk-02), [VOI-09](#voi-09) |
+| <a id="sn-06"></a>**SN-06** Usable from the phone, anywhere, one sign-in: Everything is usable and decidable from the owner's phone (installable app, push, Telegram), from anywhere on his tailnet, with his Tailscale login as the only sign-in. | must | [APP-01](#app-01), [APP-02](#app-02), [APP-03](#app-03), [APP-04](#app-04), [APP-08](#app-08), [APP-09](#app-09), [APP-15](#app-15), [APP-17](#app-17), [APP-19](#app-19), [APP-20](#app-20), [APP-37](#app-37), [APP-38](#app-38), [APP-39](#app-39), [APP-62](#app-62), [APP-64](#app-64), [APP-65](#app-65), [APP-66](#app-66), [AST-01](#ast-01), [AST-03](#ast-03), [AUT-05](#aut-05), [AUT-06](#aut-06), [MIS-15](#mis-15), [MIS-23](#mis-23), [QA-16](#qa-16), [QA-21](#qa-21), [QA-22](#qa-22), [SEC-01](#sec-01), [SEC-02](#sec-02), [SEC-20](#sec-20), [SWM-11](#swm-11), [SWM-57](#swm-57), [SWM-93](#swm-93), [SWM-95](#swm-95), [TSK-02](#tsk-02), [VOI-09](#voi-09) |
 | <a id="sn-07"></a>**SN-07** See what every agent does: For every agent, mission, crew job, build and tool the owner can see what it did step by step, what it read and changed, what it produced, what it cost and when something went wrong, without having to look for it. | must | [APP-07](#app-07), [APP-11](#app-11), [APP-12](#app-12), [APP-16](#app-16), [APP-19](#app-19), [APP-22](#app-22), [APP-23](#app-23), [APP-24](#app-24), [APP-35](#app-35), [APP-36](#app-36), [APP-53](#app-53), [AST-04](#ast-04), [AUT-04](#aut-04), [AUT-07](#aut-07), [BLD-14](#bld-14), [BLD-20](#bld-20), [CHG-16](#chg-16), [CHG-20](#chg-20), [CRW-01](#crw-01), [CRW-02](#crw-02), [CRW-09](#crw-09), [CRW-12](#crw-12), [GW-01](#gw-01), [GW-07](#gw-07), [HSE-02](#hse-02), [MEM-01](#mem-01), [MEM-07](#mem-07), [MEM-09](#mem-09), [MEM-10](#mem-10), [MEM-19](#mem-19), [MEM-22](#mem-22), [MEM-27](#mem-27), [MEM-44](#mem-44), [MEM-45](#mem-45), [MEM-46](#mem-46), [MIS-16](#mis-16), [OBS-01](#obs-01), [OBS-02](#obs-02), [OBS-03](#obs-03), [OBS-04](#obs-04), [OBS-05](#obs-05), [OBS-06](#obs-06), [OBS-07](#obs-07), [OBS-08](#obs-08), [OBS-09](#obs-09), [OBS-10](#obs-10), [OBS-14](#obs-14), [OBS-15](#obs-15), [OBS-18](#obs-18), [PLT-24](#plt-24), [PLT-30](#plt-30), [QA-17](#qa-17), [RES-05](#res-05), [SEC-07](#sec-07), [SHP-11](#shp-11), [SWM-103](#swm-103), [SWM-104](#swm-104), [SWM-105](#swm-105), [SWM-106](#swm-106), [SWM-107](#swm-107), [SWM-110](#swm-110), [SWM-111](#swm-111), [SWM-112](#swm-112), [SWM-113](#swm-113), [SWM-114](#swm-114), [SWM-115](#swm-115), [SWM-17](#swm-17), [SWM-23](#swm-23), [SWM-25](#swm-25), [SWM-30](#swm-30), [SWM-57](#swm-57), [SWM-58](#swm-58), [SWM-64](#swm-64), [SWM-78](#swm-78), [SWM-79](#swm-79), [SWM-80](#swm-80), [SWM-81](#swm-81), [SWM-82](#swm-82), [SWM-84](#swm-84), [SWM-90](#swm-90), [SWM-96](#swm-96), [SWM-99](#swm-99), [TSK-04](#tsk-04), [TSK-09](#tsk-09), [TSK-17](#tsk-17), [TSK-35](#tsk-35), [TSK-42](#tsk-42), [TSK-43](#tsk-43) |
 | <a id="sn-08"></a>**SN-08** The stack maintains and improves itself: Housekeeping agents keep the stack healthy, and the stack proposes and builds its own improvements; the owner approves what ships. | must | [APP-21](#app-21), [AST-11](#ast-11), [AUT-02](#aut-02), [BLD-01](#bld-01), [BLD-03](#bld-03), [BLD-04](#bld-04), [BLD-05](#bld-05), [BLD-08](#bld-08), [BLD-10](#bld-10), [BLD-21](#bld-21), [BLD-22](#bld-22), [BLD-24](#bld-24), [CHG-11](#chg-11), [CHG-15](#chg-15), [CHG-17](#chg-17), [CHG-18](#chg-18), [CHG-19](#chg-19), [CRW-01](#crw-01), [CRW-03](#crw-03), [CRW-04](#crw-04), [CRW-07](#crw-07), [CRW-08](#crw-08), [CRW-09](#crw-09), [CRW-10](#crw-10), [CST-07](#cst-07), [GW-09](#gw-09), [KNW-08](#knw-08), [MEM-11](#mem-11), [MEM-13](#mem-13), [MEM-20](#mem-20), [MEM-38](#mem-38), [MEM-39](#mem-39), [MEM-42](#mem-42), [MEM-43](#mem-43), [MEM-47](#mem-47), [MEM-50](#mem-50), [OBS-13](#obs-13), [PLT-08](#plt-08), [PLT-19](#plt-19), [QA-07](#qa-07), [SEC-08](#sec-08), [SWM-07](#swm-07), [SWM-102](#swm-102), [SWM-18](#swm-18), [SWM-38](#swm-38), [SWM-44](#swm-44), [SWM-45](#swm-45), [SWM-46](#swm-46), [SWM-47](#swm-47), [SWM-61](#swm-61), [SWM-70](#swm-70), [SWM-82](#swm-82), [SWM-83](#swm-83), [SWM-84](#swm-84), [SWM-91](#swm-91), [SWM-92](#swm-92), [SWM-93](#swm-93), [SWM-94](#swm-94), [SWM-95](#swm-95), [SWM-96](#swm-96), [TRL-14](#trl-14), [TRL-15](#trl-15), [TRL-16](#trl-16), [TRL-17](#trl-17), [TSK-13](#tsk-13), [TSK-16](#tsk-16), [TSK-17](#tsk-17), [TSK-42](#tsk-42), [WFL-03](#wfl-03) |
 | <a id="sn-09"></a>**SN-09** Nothing is ever lost: Data and configuration are backed up, the backups are proven to restore, and the whole stack can move to a new PC. | must | [AST-10](#ast-10), [AUT-04](#aut-04), [CNX-03](#cnx-03), [CST-05](#cst-05), [KNW-01](#knw-01), [KNW-11](#knw-11), [MEM-08](#mem-08), [MEM-12](#mem-12), [MEM-14](#mem-14), [MEM-17](#mem-17), [MEM-21](#mem-21), [MEM-35](#mem-35), [MEM-48](#mem-48), [PLT-12](#plt-12), [PLT-13](#plt-13), [PLT-14](#plt-14), [PLT-15](#plt-15), [PLT-16](#plt-16), [PLT-17](#plt-17), [PLT-33](#plt-33), [PLT-34](#plt-34), [SWM-30](#swm-30), [SWM-35](#swm-35), [SWM-36](#swm-36), [SWM-73](#swm-73), [SWM-76](#swm-76) |
@@ -1550,7 +1550,7 @@ The trial's build #11 appeared on the Tasks board as task #89 (source door) besi
 | <a id="sn-16"></a>**SN-16** Known, current and checkable requirements: What the stack must do is written down properly, kept current with every change, and contradictions between the parts are found and shown. | must | [APP-14](#app-14), [APP-18](#app-18), [MEM-02](#mem-02), [MEM-11](#mem-11), [MEM-13](#mem-13), [MEM-23](#mem-23), [MEM-47](#mem-47), [QA-06](#qa-06), [QA-08](#qa-08), [QA-09](#qa-09), [QA-10](#qa-10), [QA-11](#qa-11), [QA-12](#qa-12), [QA-13](#qa-13), [QA-14](#qa-14), [QA-15](#qa-15), [SWM-03](#swm-03), [SWM-20](#swm-20), [SWM-35](#swm-35), [SWM-55](#swm-55), [SWM-88](#swm-88), [TRL-02](#trl-02), [TRL-14](#trl-14), [TRL-17](#trl-17) |
 | <a id="sn-17"></a>**SN-17** Agents that work together over time: Agents keep working on the same topics over many runs, refine and reopen each other's work, see each other's artifacts and talk to each other directly, to groups or to all, with the owner reading along. | should | [APP-53](#app-53), [CHG-08](#chg-08), [CHG-10](#chg-10), [CHG-11](#chg-11), [CRW-05](#crw-05), [MEM-03](#mem-03), [MEM-24](#mem-24), [MEM-25](#mem-25), [MEM-28](#mem-28), [MEM-36](#mem-36), [MIS-18](#mis-18), [MIS-19](#mis-19), [MIS-20](#mis-20), [OBS-13](#obs-13), [SWM-01](#swm-01), [SWM-02](#swm-02), [SWM-03](#swm-03), [SWM-04](#swm-04), [SWM-05](#swm-05), [SWM-07](#swm-07), [SWM-08](#swm-08), [SWM-09](#swm-09), [SWM-10](#swm-10), [SWM-100](#swm-100), [SWM-101](#swm-101), [SWM-102](#swm-102), [SWM-103](#swm-103), [SWM-104](#swm-104), [SWM-105](#swm-105), [SWM-106](#swm-106), [SWM-107](#swm-107), [SWM-108](#swm-108), [SWM-109](#swm-109), [SWM-11](#swm-11), [SWM-110](#swm-110), [SWM-111](#swm-111), [SWM-112](#swm-112), [SWM-113](#swm-113), [SWM-114](#swm-114), [SWM-115](#swm-115), [SWM-12](#swm-12), [SWM-13](#swm-13), [SWM-16](#swm-16), [SWM-17](#swm-17), [SWM-18](#swm-18), [SWM-20](#swm-20), [SWM-21](#swm-21), [SWM-22](#swm-22), [SWM-27](#swm-27), [SWM-28](#swm-28), [SWM-32](#swm-32), [SWM-33](#swm-33), [SWM-34](#swm-34), [SWM-37](#swm-37), [SWM-41](#swm-41), [SWM-48](#swm-48), [SWM-49](#swm-49), [SWM-50](#swm-50), [SWM-51](#swm-51), [SWM-52](#swm-52), [SWM-54](#swm-54), [SWM-56](#swm-56), [SWM-60](#swm-60), [SWM-62](#swm-62), [SWM-63](#swm-63), [SWM-64](#swm-64), [SWM-65](#swm-65), [SWM-75](#swm-75), [SWM-86](#swm-86), [SWM-90](#swm-90), [SWM-97](#swm-97), [SWM-98](#swm-98), [SWM-99](#swm-99), [TRL-01](#trl-01), [TRL-07](#trl-07), [TSK-05](#tsk-05), [TSK-07](#tsk-07), [TSK-18](#tsk-18), [TSK-19](#tsk-19), [TSK-43](#tsk-43) |
 | <a id="sn-18"></a>**SN-18** Told once, not spammed: the owner hears about what needs him or went wrong once, on his phone, and is not flooded with repeats or noise. | should | [ACR-01](#acr-01), [APP-38](#app-38), [APP-54](#app-54), [AUT-05](#aut-05), [AUT-06](#aut-06), [CRW-12](#crw-12), [MIS-22](#mis-22), [OBS-10](#obs-10), [OBS-11](#obs-11), [OBS-12](#obs-12), [OBS-16](#obs-16), [OBS-17](#obs-17), [SHP-04](#shp-04), [SWM-100](#swm-100), [SWM-14](#swm-14), [SWM-39](#swm-39), [SWM-50](#swm-50), [SWM-56](#swm-56), [SWM-59](#swm-59), [SWM-71](#swm-71), [SWM-80](#swm-80) |
-| <a id="sn-19"></a>**SN-19** Give a task, the stack does the rest: The owner gives any task (coding, research, analysis, watching, errands) in one sentence, or with details preset when wanted; the stack works out what done means, plans it, chooses or creates the agents, models and harnesses, runs it once, on a schedule, on an event or after other work, for minutes or for months, and asks only the real decisions. | must | [APP-52](#app-52), [CHG-01](#chg-01), [CHG-04](#chg-04), [MEM-33](#mem-33), [TRL-01](#trl-01), [TRL-02](#trl-02), [TRL-03](#trl-03), [TRL-04](#trl-04), [TRL-05](#trl-05), [TRL-06](#trl-06), [TRL-07](#trl-07), [TRL-08](#trl-08), [TRL-09](#trl-09), [TRL-10](#trl-10), [TRL-11](#trl-11), [TRL-12](#trl-12), [TRL-13](#trl-13), [TSK-01](#tsk-01), [TSK-02](#tsk-02), [TSK-03](#tsk-03), [TSK-04](#tsk-04), [TSK-05](#tsk-05), [TSK-06](#tsk-06), [TSK-07](#tsk-07), [TSK-11](#tsk-11), [TSK-13](#tsk-13), [TSK-14](#tsk-14), [TSK-15](#tsk-15), [TSK-16](#tsk-16), [TSK-21](#tsk-21), [TSK-22](#tsk-22), [TSK-23](#tsk-23), [TSK-24](#tsk-24), [TSK-25](#tsk-25), [TSK-26](#tsk-26), [TSK-27](#tsk-27), [TSK-28](#tsk-28), [TSK-29](#tsk-29), [TSK-30](#tsk-30), [TSK-31](#tsk-31), [TSK-32](#tsk-32), [TSK-33](#tsk-33), [TSK-34](#tsk-34), [TSK-36](#tsk-36), [TSK-40](#tsk-40), [TSK-41](#tsk-41), [TSK-44](#tsk-44), [TSK-45](#tsk-45), [TSK-46](#tsk-46), [TSK-47](#tsk-47), [TSK-48](#tsk-48) |
+| <a id="sn-19"></a>**SN-19** Give a task, the stack does the rest: The owner gives any task (coding, research, analysis, watching, errands) in one sentence, or with details preset when wanted; the stack works out what done means, plans it, chooses or creates the agents, models and harnesses, runs it once, on a schedule, on an event or after other work, for minutes or for months, and asks only the real decisions. | must | [APP-52](#app-52), [APP-63](#app-63), [CHG-01](#chg-01), [CHG-04](#chg-04), [MEM-33](#mem-33), [TRL-01](#trl-01), [TRL-02](#trl-02), [TRL-03](#trl-03), [TRL-04](#trl-04), [TRL-05](#trl-05), [TRL-06](#trl-06), [TRL-07](#trl-07), [TRL-08](#trl-08), [TRL-09](#trl-09), [TRL-10](#trl-10), [TRL-11](#trl-11), [TRL-12](#trl-12), [TRL-13](#trl-13), [TSK-01](#tsk-01), [TSK-02](#tsk-02), [TSK-03](#tsk-03), [TSK-04](#tsk-04), [TSK-05](#tsk-05), [TSK-06](#tsk-06), [TSK-07](#tsk-07), [TSK-11](#tsk-11), [TSK-13](#tsk-13), [TSK-14](#tsk-14), [TSK-15](#tsk-15), [TSK-16](#tsk-16), [TSK-21](#tsk-21), [TSK-22](#tsk-22), [TSK-23](#tsk-23), [TSK-24](#tsk-24), [TSK-25](#tsk-25), [TSK-26](#tsk-26), [TSK-27](#tsk-27), [TSK-28](#tsk-28), [TSK-29](#tsk-29), [TSK-30](#tsk-30), [TSK-31](#tsk-31), [TSK-32](#tsk-32), [TSK-33](#tsk-33), [TSK-34](#tsk-34), [TSK-36](#tsk-36), [TSK-40](#tsk-40), [TSK-41](#tsk-41), [TSK-44](#tsk-44), [TSK-45](#tsk-45), [TSK-46](#tsk-46), [TSK-47](#tsk-47), [TSK-48](#tsk-48) |
 | <a id="sn-20"></a>**SN-20** Work that starts when the world changes: Tasks start by themselves when something happens, such as a news story breaking, mail arriving, code changing, a price moving, a device changing state or another task finishing. | should | [TSK-10](#tsk-10), [TSK-11](#tsk-11), [TSK-12](#tsk-12), [TSK-21](#tsk-21), [TSK-22](#tsk-22), [TSK-23](#tsk-23), [TSK-24](#tsk-24), [TSK-25](#tsk-25), [TSK-26](#tsk-26), [TSK-27](#tsk-27), [TSK-28](#tsk-28), [TSK-29](#tsk-29), [TSK-30](#tsk-30), [TSK-31](#tsk-31), [TSK-32](#tsk-32), [TSK-33](#tsk-33), [TSK-44](#tsk-44) |
 
 ## ACR AI change requests
@@ -2225,6 +2225,79 @@ The app's name shall come from the deployment (APP_NAME, "AI Stack" when unset);
 - Verified by: test: `tests/test_app_name.py::test_the_name_comes_from_the_deployment_and_defaults_to_ai_stack`, `tests/test_app_name.py::test_nothing_the_owner_sees_says_the_old_name`
 - Trace: `ops/deployment.py`, `images/mission-control/server.py`, `images/mission-control/web/index.html`, `images/mission-control/web/manifest.webmanifest`, `deployments/home/deployment.env`
 - Rationale: The owner, 9 Nov 2026: "rename the Webside from Mission Control to AI Stack ... have it be Configuration how the Webside is named so its easy to change in the instanciation."
+
+#### APP-62
+
+**The Stack page is the stack's own** · should · functional · **implemented**
+
+The Stack page shall hold the stack itself, one part at a time - Health (resources, services, scheduled jobs, checks, the last backup), Costs (what was paid, the subscriptions, the agents today and day by day), Tools, Connections (Gmail, outside agents, packs and trackers) and Settings - with the guide one tap from its title row; what belongs elsewhere shall be there and stay within two taps of the menu - the House beside the AI phone on Home's Overview, each memory store's figures and the weekly wiki tidy on Memory, a memory to approve in Needs you - and an old address of a part that moved shall open where it is now.
+
+- Parents: [SN-01](#sn-01), [SN-06](#sn-06)
+- Sources: [DEC-53](#dec-53), `docs/N8N-MIGRATION.md`
+- Verified by: test: `tests/test_app_after_n8n.py::test_the_stack_page_holds_the_stack_and_the_rest_is_where_it_belongs_two_taps_from_the_menu`, `tests/test_ux_polish.py::test_the_stack_page_shows_one_part_at_a_time_and_jobs_carry_their_names`
+- Trace: `images/mission-control/web/static/app.js`, `images/mission-control/web/static/app-base.js`, `images/mission-control/web/static/app-memory.js`, `images/mission-control/web/static/guide.js`, `images/mission-control/web/static/tools.json`, `ops/decisions.py`
+- Rationale: The owner, 10 Nov 2026: "I want the UX polished and updated and no trace of technical debt." The design's section 4: the Stack page was a drawer of 15 things.
+
+#### APP-63
+
+**One place to follow a run** · should · functional · **implemented**
+
+A run shall be followed on its task's page - Where it runs (its workflow, run, state and step), its steps each with its own log, the flow from what it read to the answer under Sources, and each agent's lane under Timeline - and on Workflows (n8n's runs); no other screen shall list runs of its own, except the agents' history on the Stack page's Costs, which opens each run's log; an old address of the task map, Telemetry or a run list shall open where the run is now.
+
+- Parents: [SN-01](#sn-01), [SN-19](#sn-19)
+- Sources: [DEC-53](#dec-53), `docs/N8N-MIGRATION.md`
+- Verified by: test: `tests/test_app_after_n8n.py::test_a_run_is_followed_on_its_task_page_and_the_old_run_screens_land_there`, `tests/test_n8n_ux.py::test_task_and_crew_pages_show_where_they_run`
+- Trace: `images/mission-control/web/static/task.js`, `images/mission-control/web/static/app-base.js`, `images/mission-control/web/static/app-workflows.js`, `ops/decisions.py`, `ops/journeys.py`
+- Rationale: The design's section 4: runs showed on seven screens (Live, Swarm, Engine, Runs, Telemetry, a crew page, the task map); the target is one place, the task page's Where it runs, plus n8n's runs.
+
+#### APP-64
+
+**One menu with the stack's seven parts** · should · functional · **implemented**
+
+The menu shall be Home, Tasks, Workflows (on the desk), Memory, Code, Chat and Stack; the phone's bar shall hold the same in the same order without Workflows, which a phone reaches from Tasks; Home shall have its own address apart from the page the app opens on, the choice of that page shall offer the menu's names and read a choice made under an old name, Home's entry shall count what needs the owner, and what the phone shared shall have its list, one tap from Home's Overview while there is any.
+
+- Parents: [SN-01](#sn-01), [SN-06](#sn-06)
+- Sources: [DEC-53](#dec-53), `docs/N8N-MIGRATION.md`
+- Verified by: test: `tests/test_app_after_n8n.py::test_the_menu_names_the_seven_parts_and_every_part_is_reachable`, `tests/test_server.py::test_the_shared_items_are_listed_newest_first_and_home_counts_them`, `tests/test_n8n_ux.py::test_the_desk_menu_opens_n8n_inside_the_app_and_the_phone_menu_does_not_show_it`
+- Trace: `images/mission-control/web/static/app-base.js`, `images/mission-control/web/static/app.js`, `images/mission-control/web/static/app-devices.js`, `images/mission-control/web/static/app-tasks.js`, `images/mission-control/web/index.html`, `images/mission-control/server.share.py`
+- Rationale: The design's section 4: 6 entries plus 33 more screens behind banners and links; the start page still offered "Agents" and "Wiki"; the Home route and Share were linked from nowhere.
+
+#### APP-65
+
+**The connection state says what is true** · should · functional · **implemented**
+
+The app shall say "Not connected" only when the device gets no answer from the app itself; when the app answers but the runner's state is old it shall say "The stack is starting" (with the runner's expected time to come up from the last boot record) while the machine started after the runner's last state and within the boot check's wait, "The runner did not start" with the machine's time since then after that wait, and "The runner stopped" with how long ago when the runner wrote during this boot and then stopped; the app shall tell the device it is there every 15 seconds also while the runner writes nothing.
+
+- Parents: [SN-01](#sn-01), [SN-06](#sn-06)
+- Sources: [DEC-53](#dec-53), `docs/N8N-MIGRATION.md`
+- Verified by: test: `tests/test_server.py::test_the_link_says_starting_stopped_or_not_started_from_the_boot_and_the_runner_s_last_state`, `tests/test_app_after_n8n.py::test_the_app_says_what_is_true_when_the_runner_s_state_is_old`, `tests/test_app_layout.py::test_an_app_no_runner_ever_wrote_to_is_not_connected`, `tests/test_app_layout.py::test_a_screen_without_a_connection_claims_nothing`
+- Trace: `images/mission-control/server.py`, `images/mission-control/web/static/app-base.js`, `images/mission-control/web/static/app.js`, `images/mission-control/web/static/app-tasks.js`
+- Rationale: docs/N8N-MIGRATION.md §4.2: "Not connected" meant that the runner's file was old, not that the app was down; after a reboot it showed 03:36 for 20 minutes.
+
+#### APP-66
+
+**The stack's tools inside the app** · should · functional · **implemented**
+
+A tool of the stack whose web UI can live under a sub-path shall be served under the app's own address behind the app's Tailscale-login gate, framed only by the app's own pages, its own login kept, and shown in a page of the app (a title row and the tool filling the window), not in a tab of its own - n8n at /n8n/ on Workflows and Phoenix at /phoenix/ on Traces, which a step's "Open in Phoenix" opens at that call's trace; a tool that cannot (its pages ask for /assets at the root) shall keep opening in its own tab, behind its own gate.
+
+- Parents: [SN-01](#sn-01), [SN-06](#sn-06)
+- Sources: [DEC-53](#dec-53), `docs/UX.md`
+- Verified by: test: `tests/test_n8n_inapp.py::test_phoenix_is_served_inside_the_app_like_n8n_and_a_step_s_call_opens_on_the_traces_page`, `tests/test_n8n_inapp.py::test_n8n_is_served_under_the_apps_address_behind_its_gate`
+- Trace: `images/mission-control/server.frames.py`, `images/mission-control/server.py`, `images/mission-control/web/static/app-workflows.js`, `images/mission-control/web/static/tools.json`, `images/mission-control/web/sw.js`, `compose/core.yaml`
+- Rationale: The owner, 10 Nov 2026: "Embed Phoenix and whatever inside the UX itself when possible, and n8n. Ensure our UX is coherent, a professional premium feel."
+
+#### APP-67
+
+**One visual system** · should · quality · **partial**
+
+The app shall follow one written design (docs/UX.md) - what the owner does daily, where each part and tool lives, the colour tokens defined for both themes, one type scale every font size is on, one spacing rhythm, one component for each job (title row, section, card, list, button, pill, tag, segmented control, banner, KPI tile, empty state, explanation, a tool's page and its frame) and the rules every screen follows.
+
+- Parents: [SN-01](#sn-01)
+- Sources: [DEC-53](#dec-53), `docs/UX.md`
+- Verified by: test: `tests/test_app_after_n8n.py::test_one_visual_system_every_font_size_is_on_the_type_scale_and_docs_ux_names_the_tokens`, `tests/test_app_layout.py::test_the_desk_uses_the_width_it_has`
+- Trace: `images/mission-control/web/static/app.css`, `images/mission-control/web/static/guide.css`, `docs/UX.md`
+- Gap: About 875 inline style attributes in the view code still name pixels instead of the spacing tokens; they move to classes as each screen is next touched (docs/UX.md §5).
+- Rationale: The owner, 10 Nov 2026: "Ensure our UX is coherent, a professional premium feel. Ensure it works on desktop widescreen browser as well as on mobile."
 
 ## AST Assistant
 
@@ -3881,9 +3954,9 @@ A deployment shall load domain packs from folders or repositories outside the st
 
 - Parents: [SN-05](#sn-05)
 - Sources: `docs/AI-STACK.md`, [DEC-51](#dec-51)
-- Verified by: test: `tests/test_domain_packs.py::test_an_unapproved_pack_does_not_run_and_waits_in_the_queue_with_its_manifest_prompts_commands_and_diff`, `tests/test_domain_packs.py::test_an_approved_pack_adds_its_agents_skill_workflow_and_job_kind_from_a_read_only_checkout`, `tests/test_domain_packs.py::test_a_pack_that_clashes_or_names_no_commit_of_its_source_is_refused_with_the_reason`, `tests/test_domain_packs.py::test_two_packs_of_one_name_and_a_manifest_naming_another_pack_are_refused`, `tests/test_domain_packs.py::test_home_without_packs_is_unchanged`, `tests/test_domain_packs.py::test_a_pack_workflow_that_is_no_n8n_workflow_or_runs_a_shell_command_is_refused_with_the_reason`, `tests/test_domain_packs.py::test_packs_are_the_apps_and_the_queues`
+- Verified by: test: `tests/test_domain_packs.py::test_an_unapproved_pack_does_not_run_and_waits_in_the_queue_with_its_manifest_prompts_commands_and_diff`, `tests/test_domain_packs.py::test_an_approved_pack_adds_its_agents_skill_workflow_and_job_kind_from_a_read_only_checkout`, `tests/test_domain_packs.py::test_a_pack_that_clashes_or_names_no_commit_of_its_source_is_refused_with_the_reason`, `tests/test_domain_packs.py::test_two_packs_of_one_name_and_a_manifest_naming_another_pack_are_refused`, `tests/test_domain_packs.py::test_home_without_packs_is_unchanged`, `tests/test_domain_packs.py::test_a_pack_workflow_that_is_no_n8n_workflow_or_runs_a_shell_command_is_refused_with_the_reason`, `tests/test_domain_packs.py::test_packs_are_the_apps_and_the_queues`, `tests/test_domain_packs.py::test_the_app_sees_each_pack_s_workflows_and_agents_but_no_folder_or_file_path`, `tests/test_app_after_n8n.py::test_packs_and_trackers_are_one_section_of_the_stack_page_and_their_old_links_open_it`
 - Acceptance: Test: a toy pack copied outside the repository adds agents, a skill, a workflow and a job kind; a name clash, an unapproved commit and a workflow that runs a shell command are refused with the reason; home without it is unchanged.
-- Trace: `ops/domain/packs.py`, `ops/domain/__init__.py`, `ops/decisions.py`, `images/mission-control/web/static/app-packs.js`, `tests/fixtures/packs/toy/stack.yaml`, `tests/fixtures/packs/toy/workflows/bug.json`
+- Trace: `ops/domain/packs.py`, `ops/domain/__init__.py`, `ops/decisions.py`, `ops/missions.py`, `images/mission-control/web/static/app.js`, `tests/fixtures/packs/toy/stack.yaml`, `tests/fixtures/packs/toy/workflows/bug.json`
 - Gap: Packs are read, checked, approved per commit and pinned; a running pack's workflows are not imported into n8n yet (WFL-08 imports the repository's own), and its agents are not in the AI Stack step's list yet (WFL-06).
 
 ### GEN-22
@@ -3933,7 +4006,7 @@ The stack shall poll trackers (Jira Data Center through atlassian-python-api, Fo
 - Sources: `docs/AI-STACK.md`
 - Verified by: test: `tests/test_domain_trackers.py::test_a_changed_item_is_handed_on_once_for_the_run_named_after_it_and_a_restart_hands_on_nothing_twice`, `tests/test_domain_trackers.py::test_a_comment_from_someone_else_is_handed_on_once`, `tests/test_domain_trackers.py::test_shadow_writes_nothing_outward_until_the_owner_lets_a_kind_go_live_after_its_measure`, `tests/test_domain_trackers.py::test_the_one_summary_comment_is_edited_across_three_updates`, `tests/test_domain_trackers.py::test_a_write_to_an_unknown_tracker_or_of_an_unknown_kind_is_refused_with_the_reason`, `tests/test_domain_trackers.py::test_jira_reads_by_jql_with_its_cursor_and_edits_its_one_summary`, `tests/test_domain_trackers.py::test_trackers_are_the_apps_and_the_queues`
 - Acceptance: Test: on a stand-in a changed item is handed on once across a restart under one run name, the summary comment is edited across three updates, and shadow mode writes nothing outward.
-- Trace: `ops/domain/trackers.py`, `images/mission-control/web/static/app-trackers.js`
+- Trace: `ops/domain/trackers.py`, `images/mission-control/web/static/app.js`
 - Gap: Reading with a cursor, writing in shadow and going live are built and tested; no n8n workflow polls the trackers or writes to them yet (the engine's pass did until 10 Nov 2026), so no deployment reads a tracker today.
 
 ### GEN-26
@@ -4046,8 +4119,7 @@ The app shall have one screen with Workflow Builder's editor to draw a template 
 - Parents: [SN-05](#sn-05)
 - Sources: `docs/N8N-MIGRATION.md`
 - Verified by: inspection: `docs/N8N-MIGRATION.md`
-- Trace: `images/mission-control/web/static/app-engine.js`, `images/mission-control/web/static/app-templates.js`
-- Reason: DEC-51, DEC-52: n8n's canvas, with the stack's own node (WFL-06), replaced the block editor, which was removed on 10 Nov 2026; the app's Engine, Runs and Templates screens show no data since and go in the app's own clean-up.
+- Reason: DEC-51, DEC-52: n8n's canvas, with the stack's own node (WFL-06), replaced the block editor, which was removed on 10 Nov 2026; the app's Engine, Runs and Templates screens went in the app's clean-up the same day (DEC-53), their old links landing on Workflows.
 - Superseded by: `W`, `F`, `L`, `-`, `0`, `6`
 
 ### GEN-35
@@ -4071,7 +4143,6 @@ Workflows, activities and signals shall pass only references, encrypted with the
 - Parents: [SN-05](#sn-05)
 - Sources: `docs/N8N-MIGRATION.md`
 - Verified by: inspection: `docs/N8N-MIGRATION.md`
-- Trace: `images/mission-control/server.engine.py`
 - Reason: DEC-51, DEC-52: the engine's history, its codec and its backup rule went with Temporal on 10 Nov 2026; n8n keeps a run's data 30 days (WFL-04) and the data guard (GEN-14) keeps a customer-class deployment's data on the machine.
 - Superseded by: `W`, `F`, `L`, `-`, `0`, `4`
 
@@ -8901,27 +8972,27 @@ Every page, search result list, job ad, filing, price series, vault note and mem
 
 **The swarm map** · must · interface · **implemented**
 
-Each task occurrence shall show its swarm as a flow of sources, agents, findings, writer and outputs, and as a timeline with one lane per agent run, live while it runs; a tap on any part shall show what it came from and what it fed, and sources read but not cited shall be told apart.
+Each task occurrence shall show on its task page its swarm as a flow of sources, agents, findings, writer and outputs (Sources) and a timeline with one lane per agent run (Timeline), live while it runs; a tap on any part of the flow shall show what it came from and what it fed, and sources read but not cited shall be told apart.
 
 - Parents: [SN-19](#sn-19), [SN-20](#sn-20)
 - Sources: `docs/SWARM-DESIGN.md`
-- Verified by: test: `tests/test_provenance.py::test_the_run_s_answer_is_derived_from_the_last_findings_and_marks_what_it_cites`, `tests/test_server.py::test_a_task_run_s_map_is_served_as_the_runner_wrote_it_and_the_newest_run_without_a_number`
+- Verified by: test: `tests/test_provenance.py::test_the_run_s_answer_is_derived_from_the_last_findings_and_marks_what_it_cites`, `tests/test_server.py::test_a_task_run_s_map_is_served_as_the_runner_wrote_it_and_the_newest_run_without_a_number`, `tests/test_app_after_n8n.py::test_a_run_is_followed_on_its_task_page_and_the_old_run_screens_land_there`
 - Phase: 7 Artifacts, map and telemetry
 - Acceptance: Test: the map of a recorded occurrence has every artifact and run of its record, and its lineage of the report reaches every cited source; checked on screen at 375 px.
-- Trace: `ops/provenance.py`, `images/mission-control/server.py`, `images/mission-control/web/static/app-base.js`
+- Trace: `ops/provenance.py`, `images/mission-control/server.py`, `images/mission-control/web/static/app-base.js`, `images/mission-control/web/static/task.js`
 
 #### TSK-25
 
 **Telemetry history and dashboard** · should · functional · **implemented**
 
-The stack shall keep a daily history per agent, model, harness and kind of task of runs, successes, the judge's verdicts, tokens, median and 95th-percentile time and cost for a year, and show it on one dashboard with filters, each number opening its runs.
+The stack shall keep a daily history per agent, model, harness and kind of task of runs, successes, the judge's verdicts, tokens, median and 95th-percentile time and cost for a year, and show it on the Stack page's Costs with filters, each agent opening its runs.
 
 - Parents: [SN-19](#sn-19), [SN-20](#sn-20)
 - Sources: `docs/SWARM-DESIGN.md`
-- Verified by: test: `tests/test_history.py::test_a_day_of_recorded_runs_gives_one_row_per_agent_model_harness_and_kind`, `tests/test_server.py::test_the_telemetry_history_is_served_and_says_when_there_is_none_yet`
+- Verified by: test: `tests/test_history.py::test_a_day_of_recorded_runs_gives_one_row_per_agent_model_harness_and_kind`, `tests/test_server.py::test_the_telemetry_history_is_served_and_says_when_there_is_none_yet`, `tests/test_app_after_n8n.py::test_the_stack_page_holds_the_stack_and_the_rest_is_where_it_belongs_two_taps_from_the_menu`
 - Phase: 7 Artifacts, map and telemetry
 - Acceptance: Test: a day of recorded runs gives the expected rows, and the dashboard's numbers match them.
-- Trace: `ops/history.py`, `images/mission-control/runrecord.py`, `images/mission-control/server.py`, `images/mission-control/web/static/app-base.js`
+- Trace: `ops/history.py`, `images/mission-control/runrecord.py`, `images/mission-control/server.py`, `images/mission-control/web/static/app-base.js`, `images/mission-control/web/static/app.js`
 
 #### TSK-26
 
@@ -9641,15 +9712,14 @@ On the desk the app's menu shall open a Workflows page with n8n's editor inside 
 
 ### WFL-12
 
-**The old engines go** · must · process · **partial**
+**The old engines go** · must · process · **implemented**
 
 Once no work runs on them, Temporal, the Conductor's scheduling, the block editor with its screens and the crew's systemd timers shall be removed, with their requirements rewritten or retired.
 
 - Parents: [SN-05](#sn-05)
-- Sources: [DEC-51](#dec-51), [DEC-52](#dec-52), `docs/N8N-MIGRATION.md`
-- Verified by: test: `tests/test_n8n_move.py::test_nothing_but_n8n_and_the_kept_timers_starts_work_on_a_schedule`, `tests/test_deploy.py::test_a_unit_the_repository_dropped_goes_from_this_machine_with_the_next_deploy`
-- Trace: `ops/deploy.py`, `ops/systemd/AGENTS.md`, `docs/N8N-MIGRATION.md`
-- Gap: Removed: Temporal and the block editor with their requirements (DEC-52, 10 Nov 2026); the crew's 23 timers (a deploy deletes their installed copies), the Conductor's schedule path, the missions' own schedule check, the event bus's time source, the crew's schedule form behind crew_schedule, and Temporal's two secrets (10 Nov 2026, WFL-09). Left for the app's clean-up: the Engine, Runs and Templates screens and their codec and Runs proxy (images/mission-control/server.engine.py).
+- Sources: [DEC-51](#dec-51), [DEC-52](#dec-52), [DEC-53](#dec-53), `docs/N8N-MIGRATION.md`
+- Verified by: test: `tests/test_n8n_move.py::test_nothing_but_n8n_and_the_kept_timers_starts_work_on_a_schedule`, `tests/test_deploy.py::test_a_unit_the_repository_dropped_goes_from_this_machine_with_the_next_deploy`, `tests/test_app_after_n8n.py::test_the_engine_runs_and_templates_screens_are_gone_and_their_links_land_on_workflows`
+- Trace: `ops/deploy.py`, `ops/systemd/AGENTS.md`, `docs/N8N-MIGRATION.md`, `images/mission-control/web/static/app-base.js`, `images/mission-control/server.py`
 
 ### WFL-13
 
@@ -9673,7 +9743,7 @@ The app shall serve n8n's editor under its own address at /n8n/, reachable only 
 - Sources: [DEC-51](#dec-51), `docs/N8N-MIGRATION.md`
 - Verified by: test: `tests/test_n8n_inapp.py::test_n8n_is_served_under_the_apps_address_behind_its_gate`, `tests/test_n8n_inapp.py::test_n8ns_live_updates_stream_through_the_app`, `tests/test_n8n_inapp.py::test_compose_puts_n8n_under_n8n_with_live_updates_over_plain_http`, `tests/test_n8n_inapp.py::test_a_resume_url_stays_at_n8ns_root`
 - Acceptance: Test: without the login n8n is never asked; with it the prefix is taken off, the query, body, cookies and every Set-Cookie pass, X-Frame-Options gives way to frame-ancestors self, a write from another site is refused, n8n down answers 502; live updates stream; compose sets N8N_PATH, the SSE push and the app's address; a resume URL under /n8n/ is refused.
-- Trace: `images/mission-control/server.n8n.py`, `images/mission-control/server.py`, `images/mission-control/web/sw.js`, `compose/core.yaml`, `compose/apps.yaml`, `ops/windows/host-setup.ps1`
+- Trace: `images/mission-control/server.frames.py`, `images/mission-control/server.n8n.py`, `images/mission-control/server.py`, `images/mission-control/web/sw.js`, `compose/core.yaml`, `compose/apps.yaml`, `ops/windows/host-setup.ps1`
 
 ## Decisions
 
@@ -9731,11 +9801,19 @@ The app shall serve n8n's editor under its own address at /n8n/, reachable only 
 | <a id="dec-50"></a>**DEC-50** The AI Stack runs on Temporal, with packs and a canvas; professional tools before our own | 2026-11-09 | What the owner asked: reuse professional tools rather than build from scratch, see how the agents work together like Lego Mindstorms, and let Claude choose the engine by research. So: Temporal (MIT) is the core engine on every deployment, with one generic Python graph runner; templates are graphs in a pack's git, drawn and watched on Workflow Builder's editor (Apache 2.0); packs are Claude Code plugin folders; the worker protocol keeps its trust model, Windows stays pull-only; the tracker through atlassian-python-api and mcp-atlassian; agentgateway for tool grants later. DBOS is not taken because its dashboard is proprietary. The review added: references only in the history, encrypted and kept off the NAS on a customer-class deployment; a run pins its template and a replay test guards the runner; child workflows and continue-as-new keep histories small; the Conductor is removed after 14 days without fallback; Temporal upgrades run in the update path. | - |
 | <a id="dec-51"></a>**DEC-51** n8n is the stack's workflow pillar; Temporal and our editor go | 2026-11-10 | What the owner found: the new engine layer was hard to reach, half migrated (9 of about 35 recurring jobs) and rough, and four mechanisms decided when work starts. So: n8n (self-hosted, Sustainable Use License, free for personal and internal business use) becomes the one place that decides when work starts and in what order, with its canvas and run history; the stack's services stay the workers behind one step service; workflows live in git; the owner decides in Needs you; packs, places, trackers and artifacts from DEC-50 stay; Temporal, the Conductor's scheduling, the block editor and the crew's timers are removed once no work runs on them. Stability first: the disk guard and the boot check before any move. | ['DEC-50'] |
 | <a id="dec-52"></a>**DEC-52** Temporal is removed; n8n is the one orchestrator | 2026-11-10 | What the owner asked: no technical debt, the repository in a clean state. So, after the runner went back to the Conductor for plans (10 Nov 2026, 10:40) and Temporal stood idle: Temporal's four services, its network, its databases' setup, its upgrade path, its SDK in the runner, the builder and the app, the graph runner, the bridge, the cutover, the codec, the preview, the graph template format, the block editor and its build are removed. What the n8n design keeps from DEC-50 stays, freed from Temporal, in ops/domain: packs (now bringing n8n workflows), places, trackers and the forge, roles, saved files and a run's record. The Conductor keeps its own plan checks and runs plans until their move to n8n (WFL-09). The app's Engine, Runs and Templates screens go in the app's own clean-up. | ['DEC-50'] |
+| <a id="dec-53"></a>**DEC-53** The app after n8n: one menu, one place for runs, a Stack page for the stack | 2026-11-10 | What the owner asked: the UX polished and updated, with no trace of technical debt (the target design's section 4). So: the Engine, Runs and Templates screens go, their old links landing on Workflows; packs and trackers are one section of the Stack page; a run is followed on its task's page (Where it runs, its steps, each step's log) and on Workflows, so the task map folds into the task page and Telemetry into the Stack page; the menu is Home, Tasks, Workflows (desk), Memory, Code, Chat, Stack; the Stack page holds health, services, resources, tools, costs and connections, and what is not the stack's moves to where it belongs; the connection state says what is true. Every old address keeps landing somewhere sensible. | - |
 
 ## Test index
 
 | Test | Proves |
 |---|---|
+| `tests/test_app_after_n8n.py::test_a_run_is_followed_on_its_task_page_and_the_old_run_screens_land_there` | [APP-63](#app-63), [TSK-24](#tsk-24) |
+| `tests/test_app_after_n8n.py::test_one_visual_system_every_font_size_is_on_the_type_scale_and_docs_ux_names_the_tokens` | [APP-67](#app-67) |
+| `tests/test_app_after_n8n.py::test_packs_and_trackers_are_one_section_of_the_stack_page_and_their_old_links_open_it` | [GEN-21](#gen-21) |
+| `tests/test_app_after_n8n.py::test_the_app_says_what_is_true_when_the_runner_s_state_is_old` | [APP-65](#app-65) |
+| `tests/test_app_after_n8n.py::test_the_engine_runs_and_templates_screens_are_gone_and_their_links_land_on_workflows` | [WFL-12](#wfl-12) |
+| `tests/test_app_after_n8n.py::test_the_menu_names_the_seven_parts_and_every_part_is_reachable` | [APP-64](#app-64) |
+| `tests/test_app_after_n8n.py::test_the_stack_page_holds_the_stack_and_the_rest_is_where_it_belongs_two_taps_from_the_menu` | [APP-62](#app-62), [TSK-25](#tsk-25) |
 | `tests/test_app_errors.py::test_errors_the_app_hit_are_kept_and_become_one_alert_on_the_health_board` | [APP-24](#app-24) |
 | `tests/test_app_errors.py::test_the_server_keeps_each_error_and_the_checks_lint_the_app_s_scripts` | [APP-24](#app-24) |
 | `tests/test_app_forms.py::test_an_error_in_the_app_is_told_to_the_owner_not_only_reported` | [APP-23](#app-23) |
@@ -9744,15 +9822,15 @@ The app shall serve n8n's editor under its own address at /n8n/, reachable only 
 | `tests/test_app_layout.py::test_a_crew_agent_s_claude_task_is_named_after_it_and_keeps_its_whole_question` | [APP-19](#app-19) |
 | `tests/test_app_layout.py::test_a_fresh_install_sees_no_one_else_s_topics` | [APP-46](#app-46) |
 | `tests/test_app_layout.py::test_a_page_that_loads_shows_it_is_coming_and_a_tool_without_an_address_has_no_tile` | [APP-46](#app-46) |
-| `tests/test_app_layout.py::test_a_screen_without_a_connection_claims_nothing` | [APP-46](#app-46) |
+| `tests/test_app_layout.py::test_a_screen_without_a_connection_claims_nothing` | [APP-46](#app-46), [APP-65](#app-65) |
 | `tests/test_app_layout.py::test_an_agent_s_own_sentence_shows_dates_the_app_s_way_and_quotes_as_quotes` | [APP-56](#app-56) |
-| `tests/test_app_layout.py::test_an_app_no_runner_ever_wrote_to_is_not_connected` | [APP-46](#app-46) |
+| `tests/test_app_layout.py::test_an_app_no_runner_ever_wrote_to_is_not_connected` | [APP-46](#app-46), [APP-65](#app-65) |
 | `tests/test_app_layout.py::test_an_icon_in_text_is_one_line_high_and_no_page_has_an_app_top_bar` | [APP-01](#app-01) |
 | `tests/test_app_layout.py::test_chat_on_a_desktop_holds_the_window_and_no_height_overshoots_the_zoom` | [APP-59](#app-59) |
 | `tests/test_app_layout.py::test_every_idea_is_in_one_list_under_agents` | [APP-21](#app-21) |
 | `tests/test_app_layout.py::test_new_chat_starts_afresh_and_attaching_is_a_clip` | [APP-01](#app-01), [APP-43](#app-43) |
 | `tests/test_app_layout.py::test_the_chat_has_one_top_bar_on_a_phone_with_the_live_state_in_it` | [APP-01](#app-01) |
-| `tests/test_app_layout.py::test_the_desk_uses_the_width_it_has` | [APP-56](#app-56) |
+| `tests/test_app_layout.py::test_the_desk_uses_the_width_it_has` | [APP-56](#app-56), [APP-67](#app-67) |
 | `tests/test_app_layout.py::test_the_look_is_opaque_and_exact_with_its_type_vendored` | [APP-46](#app-46) |
 | `tests/test_app_layout.py::test_the_phone_chat_is_pinned_to_the_screen_and_the_title_has_its_own_width` | [APP-40](#app-40) |
 | `tests/test_app_layout.py::test_the_section_headings_keep_their_gap_and_stay_on_one_line` | [APP-01](#app-01) |
@@ -10080,6 +10158,7 @@ The app shall serve n8n's editor under its own address at /n8n/, reachable only 
 | `tests/test_domain_packs.py::test_an_unapproved_pack_does_not_run_and_waits_in_the_queue_with_its_manifest_prompts_commands_and_diff` | [GEN-21](#gen-21) |
 | `tests/test_domain_packs.py::test_home_without_packs_is_unchanged` | [GEN-21](#gen-21) |
 | `tests/test_domain_packs.py::test_packs_are_the_apps_and_the_queues` | [GEN-21](#gen-21) |
+| `tests/test_domain_packs.py::test_the_app_sees_each_pack_s_workflows_and_agents_but_no_folder_or_file_path` | [GEN-21](#gen-21) |
 | `tests/test_domain_packs.py::test_two_packs_of_one_name_and_a_manifest_naming_another_pack_are_refused` | [GEN-21](#gen-21) |
 | `tests/test_domain_places.py::test_a_command_runs_at_the_wsl_host_place_only_once_approved_there_by_its_hash_and_a_value_outside_its_type_is_refused` | [GEN-22](#gen-22) |
 | `tests/test_domain_places.py::test_a_steps_file_is_kept_by_its_hash_with_its_maker_attached_to_a_stand_in_item_and_removed_past_its_retention` | [GEN-29](#gen-29) |
@@ -10410,8 +10489,9 @@ The app shall serve n8n's editor under its own address at /n8n/, reachable only 
 | `tests/test_n8n_inapp.py::test_a_resume_url_stays_at_n8ns_root` | [WFL-14](#wfl-14) |
 | `tests/test_n8n_inapp.py::test_a_schedule_reads_in_words` | [WFL-11](#wfl-11) |
 | `tests/test_n8n_inapp.py::test_compose_puts_n8n_under_n8n_with_live_updates_over_plain_http` | [WFL-14](#wfl-14) |
-| `tests/test_n8n_inapp.py::test_n8n_is_served_under_the_apps_address_behind_its_gate` | [WFL-14](#wfl-14) |
+| `tests/test_n8n_inapp.py::test_n8n_is_served_under_the_apps_address_behind_its_gate` | [APP-66](#app-66), [WFL-14](#wfl-14) |
 | `tests/test_n8n_inapp.py::test_n8ns_live_updates_stream_through_the_app` | [WFL-14](#wfl-14) |
+| `tests/test_n8n_inapp.py::test_phoenix_is_served_inside_the_app_like_n8n_and_a_step_s_call_opens_on_the_traces_page` | [APP-66](#app-66) |
 | `tests/test_n8n_inapp.py::test_the_runner_writes_the_view_beside_the_step_service` | [WFL-11](#wfl-11) |
 | `tests/test_n8n_inapp.py::test_the_view_has_every_workflow_its_schedule_its_steps_and_its_recent_runs` | [WFL-11](#wfl-11) |
 | `tests/test_n8n_move.py::test_a_generated_workflow_is_inactive_and_goes_through_the_step_service` | [WFL-09](#wfl-09), [WFL-13](#wfl-13) |
@@ -10441,8 +10521,8 @@ The app shall serve n8n's editor under its own address at /n8n/, reachable only 
 | `tests/test_n8n_sync.py::test_the_ai_stack_step_offers_every_block_with_the_stacks_live_lists` | [WFL-06](#wfl-06) |
 | `tests/test_n8n_sync.py::test_the_ai_stack_step_sends_the_step_waits_and_gives_the_answer` | [WFL-06](#wfl-06) |
 | `tests/test_n8n_ux.py::test_an_agents_page_lists_every_workflow_it_is_in` | [WFL-11](#wfl-11) |
-| `tests/test_n8n_ux.py::test_task_and_crew_pages_show_where_they_run` | [WFL-11](#wfl-11) |
-| `tests/test_n8n_ux.py::test_the_desk_menu_opens_n8n_inside_the_app_and_the_phone_menu_does_not_show_it` | [WFL-11](#wfl-11) |
+| `tests/test_n8n_ux.py::test_task_and_crew_pages_show_where_they_run` | [APP-63](#app-63), [WFL-11](#wfl-11) |
+| `tests/test_n8n_ux.py::test_the_desk_menu_opens_n8n_inside_the_app_and_the_phone_menu_does_not_show_it` | [APP-64](#app-64), [WFL-11](#wfl-11) |
 | `tests/test_n8n_ux.py::test_the_phone_lists_each_workflow_with_its_schedule_and_last_run` | [WFL-11](#wfl-11) |
 | `tests/test_n8n_ux.py::test_the_stack_pages_tools_know_n8ns_pages_inside_the_app` | [WFL-11](#wfl-11) |
 | `tests/test_new_machine_docs.py::test_documented_builder_default_matches_configuration` | [PLT-17](#plt-17) |
@@ -10813,8 +10893,10 @@ The app shall serve n8n's editor under its own address at /n8n/, reachable only 
 | `tests/test_server.py::test_the_ai_phone_can_ask_the_app_for_nothing_but_stop` | [PHN-07](#phn-07) |
 | `tests/test_server.py::test_the_ai_phone_cannot_approve_its_own_actions` | [PHN-07](#phn-07), [PHN-11](#phn-11) |
 | `tests/test_server.py::test_the_ai_phone_is_known_by_the_address_the_proxy_wrote` | [PHN-07](#phn-07) |
+| `tests/test_server.py::test_the_link_says_starting_stopped_or_not_started_from_the_boot_and_the_runner_s_last_state` | [APP-65](#app-65) |
 | `tests/test_server.py::test_the_live_stream_carries_the_ai_phone` | [APP-17](#app-17) |
 | `tests/test_server.py::test_the_owner_keeps_the_phone_screen_on_for_an_hour_at_most` | [PHN-17](#phn-17) |
+| `tests/test_server.py::test_the_shared_items_are_listed_newest_first_and_home_counts_them` | [APP-64](#app-64) |
 | `tests/test_server.py::test_the_telemetry_history_is_served_and_says_when_there_is_none_yet` | [TSK-25](#tsk-25) |
 | `tests/test_server.py::test_tool_progress_labels` | [AST-04](#ast-04) |
 | `tests/test_server.py::test_vault_files_stay_inside_the_vault` | [SEC-13](#sec-13) |
@@ -11095,7 +11177,7 @@ The app shall serve n8n's editor under its own address at /n8n/, reachable only 
 | `tests/test_ux_polish.py::test_the_code_tab_keeps_the_repositories_apart_from_the_work` | [APP-47](#app-47) |
 | `tests/test_ux_polish.py::test_the_crew_rows_carry_their_unit_so_the_app_can_name_a_job` | [APP-26](#app-26) |
 | `tests/test_ux_polish.py::test_the_greeting_uses_a_display_name_and_never_an_e_mail_address` | [APP-26](#app-26) |
-| `tests/test_ux_polish.py::test_the_stack_page_shows_one_part_at_a_time_and_jobs_carry_their_names` | [APP-26](#app-26), [APP-47](#app-47) |
+| `tests/test_ux_polish.py::test_the_stack_page_shows_one_part_at_a_time_and_jobs_carry_their_names` | [APP-26](#app-26), [APP-47](#app-47), [APP-62](#app-62) |
 | `tests/test_ux_polish.py::test_the_theme_is_a_choice_and_is_applied_before_the_first_paint` | [APP-49](#app-49) |
 | `tests/test_ux_review.py::test_a_copy_button_says_copied_only_when_it_copied` | [APP-25](#app-25) |
 | `tests/test_ux_review.py::test_a_mission_card_shows_its_result_not_a_note_for_the_health_doctor` | [APP-25](#app-25) |

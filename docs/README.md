@@ -49,6 +49,7 @@ into `requirements/findings.yaml`.
 | [REVIEW-2026-11-07.md](REVIEW-2026-11-07.md) | 7 Nov 2026 | The independent review of the whole stack (ten themed reviewers): every finding verified, what was fixed in branch review/2026-11-07, and what waits for the owner's decision |
 | [REVIEW-2026-11-01.md](REVIEW-2026-11-01.md) | 1-2 Nov 2026 | The overnight polish: answers to the owner's questions, blind spots, the trials (Mustache, mqtt-trace) and what each found, what is left and why |
 | [REVIEW-2026-10-30.md](REVIEW-2026-10-30.md) | 30 Oct 2026 | The wide review: its method, five sweeps, the ranked findings and the batches that fixed them |
+| [UX.md](UX.md) | 10 Nov 2026 | The app's UX: what the owner does daily, where everything lives (the menu, one place for a run, the tools inside the app), the visual system (tokens, type scale, components, layout) and the rules every screen follows |
 | [UX-REVIEW-2026-10-30.md](UX-REVIEW-2026-10-30.md) | 30 Oct 2026 | The UX review: the lint, the click-through of 70 screens and the fixes |
 | [TRUNCATION-AUDIT.md](TRUNCATION-AUDIT.md) | 30 Oct, 2 Nov 2026 | Every place that cut text; the rule that every cap names its reason (October) and that every cut someone reads shows itself, model answers cut at their output limit included (November) |
 | [DOGFOOD.md](DOGFOOD.md) | 28 Oct 2026 | The stack developing itself: builds asked for through the app and reviewed |

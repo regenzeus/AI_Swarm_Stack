@@ -338,3 +338,12 @@ items:
     runs plans until their move to n8n (WFL-09). The app''s Engine, Runs and Templates screens go in the app''s own
     clean-up.', sources: ['owner 2026-11-10: We need to clean technical debt. I want the repo in clean state.',
     docs/N8N-MIGRATION.md]}
+- {id: DEC-53, date: '2026-11-10', title: 'The app after n8n: one menu, one place for runs, a Stack page for the stack',
+    decision: 'What the owner asked: the UX polished and updated, with no trace of technical debt (the target design''s
+    section 4). So: the Engine, Runs and Templates screens go, their old links landing on Workflows; packs and trackers
+    are one section of the Stack page; a run is followed on its task''s page (Where it runs, its steps, each step''s log)
+    and on Workflows, so the task map folds into the task page and Telemetry into the Stack page; the menu is Home,
+    Tasks, Workflows (desk), Memory, Code, Chat, Stack; the Stack page holds health, services, resources, tools, costs
+    and connections, and what is not the stack''s moves to where it belongs; the connection state says what is true.
+    Every old address keeps landing somewhere sensible.', sources: ['owner 2026-11-10: I want the UX polished and
+      updated and no trace of technical debt.', docs/N8N-MIGRATION.md]}

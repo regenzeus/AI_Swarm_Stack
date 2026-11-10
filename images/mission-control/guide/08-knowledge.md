@@ -25,8 +25,8 @@ Drop something in, and it's filed into the vault and searchable within minutes.
 
 ```try
 label: Add a note, a web page or a file
-open: "#/system"
-note: Find "Add knowledge". Choose Note, Web page or File, give it a title and add it. It lands in the vault's inbox and gets indexed.
+open: "#/wiki"
+note: Tap "Add knowledge". Choose Note, Web page or File, give it a title and add it. It lands in the vault's inbox and gets indexed.
 ```
 
 ```try
@@ -40,13 +40,13 @@ note: Hermes calls vault_add. Later you can ask "What's my copper thesis?" and i
 After conversations, the memory system (Hindsight) pulls out lasting facts: your preferences, your holdings,
 people and decisions. Hermes recalls them in later conversations, in the app and on Telegram.
 
-New memories that look important wait for your OK first. When some are waiting, a banner on Home and a badge on
-**Stack** tell you. Tap **Remember** or **Discard**.
+New memories that look important wait for your OK first. When some are waiting, they are
+in **Needs you** on Home. Tap **Remember** or **Discard**.
 
 ```try
 label: Search what it remembers
-open: "#/system"
-note: Use "Long-term memory" on the Stack page. Search for a word, such as a company you follow.
+open: "#/longterm"
+note: Memory → Long-term holds every fact it keeps about you. Search for a word, such as a company you follow.
 ```
 
 ## Forgetting
@@ -76,7 +76,7 @@ model) and how much of it runs were given this week. *How much runs get from mem
 own wiki and the others). At the start of a run it is given the part of those that fits its task, within a budget; what
 does not fit is listed so it can open it, and other memory that matches is offered. During the run one memory tool
 searches, opens, subscribes and notes: `memory` for your assistant and the missions, `memorypublic` (without your facts, private wikis or journals) for the scout and the coders. A run's page shows, under **Memory**, what it was given, what it used and what
-it yielded. **Stack → Health** shows how much memory runs of each kind get and how much of it they use.
+it yielded. **Memory** shows how much memory runs of each kind get and how much of it they use.
 
 ## The Memory Keeper
 

@@ -37,12 +37,11 @@ def test_every_workflow_in_the_repository_is_a_whole_n8n_workflow():
 
 
 def test_every_scheduled_job_runs_on_n8n():
-    """WFL-09: since 10 Nov 2026 the 25 scheduled jobs that moved (the crew's and the plan tasks') run on n8n; the three
-    jobs that left their timers on 10 Nov (vault ingest, the trial rotation, the nightly restart) wait for their switch
-    (ops/n8n_switch.py <file> on). A file says what runs: "active"."""
+    """WFL-09: since 10 Nov 2026 every scheduled job (the crew's and the plan tasks', 28 with the three that left their
+    timers that day: vault ingest, the trial rotation, the nightly restart) runs on n8n. A file says what runs:
+    "active"; ops/n8n_switch.py <file> off takes one back."""
     jobs = {f.name: json.loads(f.read_text()) for f in WF if f.name.startswith(("crew-", "task-")) or f.name == "memory-keeper.json"}
-    waiting = {"crew-vault-ingest.json", "crew-trial-rotation.json", "crew-nightly-restart.json"}
-    assert len(jobs) == 28 and all(wf["active"] is (name not in waiting) for name, wf in jobs.items())
+    assert len(jobs) == 28 and all(wf["active"] for wf in jobs.values())
 
 
 def test_a_deploy_imports_the_repositorys_workflows_each_as_its_file_says(monkeypatch):
@@ -52,8 +51,7 @@ def test_a_deploy_imports_the_repositorys_workflows_each_as_its_file_says(monkey
     ex = ["docker", "exec", "-u", "node", "aistack-n8n-1", "n8n"]
     assert calls[0] == ex + ["import:workflow", "--separate", "--input=/workflows"]
     off = {c[7] for c in calls if len(c) > 7 and c[6] == "unpublish:workflow"}       # only the files that say inactive
-    assert off == {f"--id={json.loads((ROOT / 'n8n/workflows' / n).read_text())['id']}"
-                   for n in ("crew-vault-ingest.json", "crew-trial-rotation.json", "crew-nightly-restart.json")}
+    assert off == {f"--id={json.loads(f.read_text())['id']}" for f in WF if not json.loads(f.read_text())["active"]}
     assert ex + ["publish:workflow", "--id=aistackSelfTest1"] in calls and ex + ["publish:workflow", "--id=aistackMemKeeper"] in calls
     assert calls[-1] == ["docker", "restart", "aistack-n8n-1"]                      # the server loads what was published
     core = yaml.safe_load((ROOT / "compose/core.yaml").read_text())["services"]["n8n"]
