@@ -3,7 +3,8 @@
 its switch (ops/n8n_switch.py). n8n starts every scheduled job of the stack; this makes a new one's workflow.
 
     python3 ops/n8n_gen.py crew <job> '<cron>'   write n8n/workflows/crew-<name>.json for a crew job of ops/crew.py
-                                                 (an existing file stays as it is)
+                                                 (an existing file stays as it is) and list it in this deployment's
+                                                 workflows.yaml (PLT-38)
     python3 ops/n8n_gen.py --run-now             Run now for every crew-* and task-* file that lacks it (its id,
                                                  "active" and canvas changes kept)
 
@@ -91,8 +92,9 @@ def add_run_now(out=None):
     return changed
 
 
-def crew(job, cron, out=None):
-    """A crew job's workflow, inactive, in n8n/workflows (as an export names it). -> the file, or None when it exists."""
+def crew(job, cron, out=None, folder=None):
+    """A crew job's workflow, inactive, in n8n/workflows (as an export names it), and its name added to the deployment's
+    workflows.yaml (folder, default this deployment's), so its switch may publish it. -> the file, or None when it exists."""
     import crew as CR
     import n8n_jobs as NJ
     import n8n_sync as NS
@@ -107,6 +109,9 @@ def crew(job, cron, out=None):
     if p.exists():
         return None
     p.write_text(json.dumps(wf, indent=2, ensure_ascii=False, sort_keys=True) + "\n")
+    if out is None or folder is not None:            # PLT-38: made for this deployment, so its workflows.yaml lists it
+        import deployment as DEPLOY
+        DEPLOY.add_workflow(p, folder)
     return p
 
 
@@ -117,7 +122,8 @@ def main(argv):
         return 0
     if len(argv) == 4 and argv[1] == "crew":
         p = crew(argv[2], argv[3])
-        print(f"wrote {p.relative_to(R)} (inactive: ops/n8n_switch.py {p.relative_to(R)} on)" if p else "it has a workflow already")
+        print(f"wrote {p.relative_to(R)}, listed in this deployment's workflows.yaml (inactive: ops/n8n_switch.py "
+              f"{p.relative_to(R)} on)" if p else "it has a workflow already")
         return 0
     print(__doc__)
     return 2

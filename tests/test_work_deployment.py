@@ -126,8 +126,12 @@ class N8n:
         cur = ex["data"][ex["last"]]
         if node["type"] == "n8n-nodes-base.if":
             c = node["parameters"]["conditions"]["conditions"][0]
-            assert c["operator"] == {"type": "string", "operation": "equals"}
-            yes = self.value(ex, c["leftValue"], cur) == c["rightValue"]
+            left = self.value(ex, c["leftValue"], cur)
+            if c["operator"] == {"type": "number", "operation": "gte"}:
+                yes = isinstance(left, (int, float)) and left >= c["rightValue"]
+            else:
+                assert c["operator"] == {"type": "string", "operation": "equals"}
+                yes = left == c["rightValue"]
             ex["data"][node["name"]], ex["last"] = cur, node["name"]
             return self.advance(ex, node["name"], 0 if yes else 1)
         assert node["type"] == STEP, node["type"]
@@ -156,11 +160,14 @@ class N8n:
     def expr(self, ex, e, cur):
         if e == "JSON.stringify({execution: $execution.id})":
             return json.dumps({"execution": ex["id"]})
-        m = re.fullmatch(r"\$\('([^']+)'\)\.item\.json((?:\.\w+)*)|\$json((?:\.\w+)*)", e)
+        m = re.fullmatch(r"\$\('([^']+)'\)\.item\.json((?:\.\w+|\[\d+\])*)|\$json((?:\.\w+|\[\d+\])*)", e)
         assert m, f"the stand-in n8n does not read {e}"
         got = ex["data"][m.group(1)] if m.group(1) else cur
-        for k in filter(None, (m.group(2) or m.group(3) or "").split(".")):
-            got = got.get(k) if isinstance(got, dict) else None
+        for k in re.findall(r"\.(\w+)|\[(\d+)\]", m.group(2) or m.group(3) or ""):
+            if k[0]:
+                got = got.get(k[0]) if isinstance(got, dict) else None
+            else:
+                got = got[int(k[1])] if isinstance(got, list) and int(k[1]) < len(got) else None
         return got
 
     def request(self, ex, node, cur):
@@ -171,13 +178,16 @@ class N8n:
         if kind == "agent":
             body.update(agent=p("agent"), brief=p("brief"))
             if p("tracker", ""):                     # an agent step that reads its item
-                body.update(tracker=p("tracker"), key=str(p("key")))
+                body.update(tracker=p("tracker"), key=str(p("key")), from_item=True)
         if kind == "build":
             body.update(repo=p("repo"), brief=p("brief"), item=p("item"), base=p("base", ""), target=p("target", ""))
         if kind == "command":
             body.update(place=p("place"), command=p("command"), values={**json.loads(p("values", "{}")), **self.scale.get(p("command"), {})})
         if kind == "wait_item":
-            body.update(tracker=p("tracker"), key=str(p("key")), timeout_hours=float(p("timeout_hours", 0)))
+            body.update(tracker=p("tracker"), key=str(p("key")), timeout_hours=float(p("timeout_hours", 0)), on=p("on", "item"))
+        if kind == "item":
+            body.update(tracker=p("tracker"), key=str(p("key")), attach_to=p("attach_to", "") or None,
+                        attachments=[s.strip() for s in str(p("attachments", "")).split(",") if s.strip()])
         if kind == "tracker":
             body.update(tracker=p("tracker"), key=str(p("key")), write=p("write"), body=p("body", ""), from_step=p("from_step", "") or None)
             body = {k: v for k, v in body.items() if v is not None}
@@ -284,11 +294,11 @@ def world(K, tmp_path, monkeypatch):
     monkeypatch.setattr(PK, "sync_n8n", lambda: [])
     assert PK.handle({"action": "pack_approve", "name": "toy", "commit": head})["ok"]
     w.pack = PK.load()["packs"][0]
-    # the stand-in tracker
+    # the stand-in tracker, new to the deployment (start: now) and holding an older item already
     w.store = tmp_path / "standin.json"
-    w.store.write_text(json.dumps({"items": {}}))
+    w.store.write_text(json.dumps({"items": {"TOY-1": {"updated": "2026-11-01T08:00:00", "title": "An old item", "comments": []}}}))
     (tmp_path / "trackers.yaml").write_text(f"shadow_needed: 2\npoll_minutes: 5\ntrackers:\n"
-                                            f"  - {{name: tickets, kind: standin, path: {w.store}, workflow: toy/ticket}}\n")
+                                            f"  - {{name: tickets, kind: standin, path: {w.store}, workflow: toy/ticket, start: now}}\n")
     # the wsl-host place: the local worker in a temp folder, its toy job kinds approved there
     root = tmp_path / "wslhost"
     for d in ("inbox", "outbox", "jobs.d", "repos", "scratch"):
@@ -395,11 +405,43 @@ def poll(w, **k):
     return RR.poll(forge=w.forge, post=n8n_call(w), status=lambda ex: w.n8n.status(ex), now=w.clock["now"], **k)["said"]
 
 
-def item(w, updated, comments=()):
+DESCRIPTION = "Exporting the 2 GB sample stops at 1.2 GB with an out-of-memory error; the crash log is attached."
+FIRST = "It also happens with the 3 GB sample."
+REPLY = "2.4 GB, since 3.1, every time; the log is from 3.1."
+CRASH = "MemoryError in export.write_all at 1.2 GB\n"
+
+
+def item(w, updated, comments=None):
+    """The stand-in tracker's item TOY-7: a person's change to it (a new item, a comment), or the stack's own write
+    making it newer, at the time given."""
     db = json.loads(w.store.read_text())
-    db["items"][KEY] = {"updated": updated, "title": "The export fails at 2 GB",
-                        "comments": [{"id": i + 1, "author": a, "body": b} for i, (a, b) in enumerate(comments)]}
+    it = db["items"].setdefault(KEY, {"title": "The export fails at 2 GB", "body": DESCRIPTION, "status": "Open", "comments": [],
+                                      "attachments": [{"id": "1", "name": "crash.log", "size": len(CRASH), "content": CRASH}]})
+    it["updated"] = updated
+    for a, b in comments or ():
+        it["comments"].append({"id": len(it["comments"]) + 1, "author": a, "body": b, "at": updated})
     w.store.write_text(json.dumps(db))
+
+
+def comments_on(w):
+    return json.loads(w.store.read_text())["items"][KEY]["comments"]
+
+
+def owner_sends(w, kind):
+    """The owner's "Right, send it" in Needs you on the newest shadow write of that kind; -> its act."""
+    pending = [i for i in TR._shadow()[kind]["items"] if i["status"] == "pending"]
+    d = next(d for d in TR.decisions(lambda *a, **k: {"id": a[0], **k}) if d["id"] == f"shadow:{kind}:{pending[-1]['id']}")
+    assert [a["label"] for a in d["answers"]] == ["Right, send it", "Right, don't send", "Wrong"]
+    assert TR.handle(d["answers"][0]["act"])["ok"]
+    return d["answers"][0]["act"]
+
+
+def step_on(w):
+    """One pass of the runner's step worker, waited for."""
+    scan(w)
+    for t in list(w.threads.values()):
+        t.join(30)
+    assert w.errors == [], w.errors
 
 
 def restart_runner(w):
@@ -419,6 +461,11 @@ def waiting_at(w, ex):
 
 
 def test_the_toy_pack_runs_end_to_end_in_a_customer_class_deployment_against_stand_ins(world):
+    """The work deployment's CR and its follow-up CR (tracker items a run can work with), end to end: a new tracker
+    with start: now starts nothing for its old item; a new item starts one run; the triage agent reads the item; the
+    owner sends the question from shadow, once; the reporter's reply (its text) wakes the wait; the toy tool gets the
+    item's attachment by artifact id; the build opens a draft pull request; a comment on the item does not wake the
+    review wait and a pull request comment does; the summary is written once. n8n holds none of the item's text."""
     w = world
     # the deployment: customer data, no tailnet, n8n on 127.0.0.1 with its logic nodes only, answers kept lean
     assert DG.customer(DG.DATA) and "tailnet" not in DEPLOY.features(w.work) and DEPLOY.gate_problems(w.work) == []
@@ -434,22 +481,36 @@ def test_the_toy_pack_runs_end_to_end_in_a_customer_class_deployment_against_sta
             break
         time.sleep(0.05)
 
-    # 1. a stand-in item appears and the item's workflow starts, once, also when its event comes twice
-    item(w, "2026-11-10T09:00:00")
+    # 1. the tracker is new (start: now): its first pass starts nothing for the item that matches already
+    assert poll(w) == {} and w.n8n.ex == {} and json.loads((w.tmp / "state/tickets.json").read_text())["cursor"] == "2026-11-01T08:00:00"
+    # a new item, with its text, a first comment of its reporter and a crash log, starts its run once, also when its event comes twice
+    item(w, "2026-11-10T09:00:00", [("reporter", FIRST)])
     assert poll(w) == {"started": 1}
     assert list(w.n8n.ex) == ["101"] and RR.item("tickets", KEY)["runs"][0]["execution"] == "101"   # the webhook named its run
-    (w.tmp / "state/tickets.json").unlink()                                                          # the same change, handed on again
+    st = json.loads((w.tmp / "state/tickets.json").read_text())
+    st["cursor"], st["seen"] = "2026-11-01T08:00:00", {}                                           # the same change, handed on again
+    (w.tmp / "state/tickets.json").write_text(json.dumps(st))
     assert poll(w) == {"seen": 1} and list(w.n8n.ex) == ["101"]
 
-    # 2. the agent triages it, and the run comments on the item in shadow, with the triage's whole text
+    # 2. the agent reads the item and triages it; the run's question waits in shadow with the triage's whole text
     settle(w)
-    assert KEY in w.briefs[0] and waiting_at(w, "101") == "Wait for the reply"
+    assert DESCRIPTION in w.briefs[0] and FIRST in w.briefs[0] and KEY in w.briefs[0]                 # from the stack, not from n8n
+    assert waiting_at(w, "101") == "Wait for the reply"
     shadow = TR._shadow()["comment"]["items"]
     assert len(shadow) == 1 and shadow[0]["body"] == "Thank you for the report. To reproduce it we need to know:\n\n" + TRIAGE
-    assert json.loads(w.store.read_text())["items"][KEY]["comments"] == []                          # in shadow: nothing left the stack
+    assert [c["author"] for c in comments_on(w)] == ["reporter"]                                     # in shadow: nothing left the stack
 
-    # the stack's own comment changes the item, and does not wake the run
-    item(w, "2026-11-10T09:05:00", [("ai-stack", "Thank you for the report.")])
+    # 3. the owner sends it from shadow ("Right, send it"): the item has the question once, also after a retry
+    act = owner_sends(w, "comment")
+    assert TR.handle(act) == {"ok": False, "error": "that shadow write is not waiting"}               # a second tap
+    assert TR.adapter(TR.find("tickets")).put(KEY, "comment", shadow[0]["body"], shadow[0]["id"])["again"]   # a retry of the write
+    asked = [c for c in comments_on(w) if c["author"] == "ai-stack"]
+    assert len(asked) == 1 and asked[0]["body"].startswith("Thank you for the report.") and TR.own(asked[0], "ai-stack")
+    sent = TR._shadow()["comment"]
+    assert sent["approved"] == 1 and sent["items"][0]["sent"] == f"tracker:tickets/{KEY}/comment/{shadow[0]['id']}"
+    assert w.n8n.ex["101"]["data"]["Ask the reporter"]["shadow"] is True                             # the step's answer said shadow
+    # the stack's own comment changed the item: recorded, it does not wake the run
+    item(w, "2026-11-10T09:05:00")
     assert poll(w) == {"recorded": 1}
     settle(w)
     assert waiting_at(w, "101") == "Wait for the reply"
@@ -459,34 +520,45 @@ def test_the_toy_pack_runs_end_to_end_in_a_customer_class_deployment_against_sta
     settle(w)
     assert RR.item("tickets", KEY)["wait"] == wait and waiting_at(w, "101") == "Wait for the reply"
 
-    # 3. wait_item times out once, while n8n restarts: the answer waits for n8n, the run reminds and waits again
+    # 4. wait_item times out once, while n8n restarts: the answer waits for n8n, the run reminds (its first) and waits again
     w.clock["now"] += 72 * 3600 + 60
     w.n8n.down = True
     settle(w)
     ex = w.n8n.ex["101"]
-    assert w.n8n_restarts == 1 and [a.get("outcome") for a in ex["took"] if "outcome" in a][:1] == ["timeout"]
-    assert ex["data"]["Timed out?"]["outcome"] == "timeout" and "Remind the reporter" in ex["data"]
+    timeouts = [a for a in ex["took"] if a.get("outcome") == "timeout"]
+    assert w.n8n_restarts == 1 and len(timeouts) == 1 and timeouts[0]["reminded"] == 0
+    assert ex["data"]["Timed out?"]["outcome"] == "timeout" and "Remind the reporter" in ex["data"] and "Stop waiting" not in ex["data"]
     assert waiting_at(w, "101") == "Wait for the reply" and RR.item("tickets", KEY)["wait"]["rid"] != wait["rid"]   # the second wait
     reminder = TR._shadow()["comment"]["items"][1]
-    assert reminder["body"].startswith("A reminder: could you answer the questions above?")
+    assert reminder["body"].startswith("A reminder: could you answer the questions above?") and reminder["status"] == "pending"
 
-    # 4. a reply comment wakes the run
-    item(w, "2026-11-12T08:00:00", [("ai-stack", "Thank you for the report."), ("reporter", "2.4 GB, since 3.1, every time")])
+    # 5. the reporter's reply wakes the run; the register keeps its text, n8n gets that one comment came
+    item(w, "2026-11-12T08:00:00", [("reporter", REPLY)])
     assert poll(w) == {"woke": 1}
     w.clock["now"] += 60
-    scan(w)                                          # the wait answers; the run goes on to the toy tool at wsl-host
-    for t in list(w.threads.values()):
-        t.join(30)
-    assert [a.get("outcome") for a in ex_took(w, "101") if "outcome" in a] == ["timeout", "reply"]
-    assert waiting_at(w, "101") == "Reproduce"
+    step_on(w)                                       # the wait answers; the run reads the item
+    replied = [a for a in ex_took(w, "101") if a.get("outcome") == "reply"]
+    assert len(replied) == 1 and replied[0]["source"] == "item" and replied[0]["comments"] == [f"comment:tickets/{KEY}/3"]
+    assert replied[0]["reminded"] == 1 and replied[0]["summary"] == "1 new comment on the item" and not {"replies", "output"} & set(replied[0])
+    woke = next(s["answer"] for s in RR.run("101")["steps"] if s["node"] == "Wait for the reply" and (s["answer"] or {}).get("outcome") == "reply")
+    assert woke["replies"][0]["text"] == REPLY and woke["replies"][0]["author"] == "reporter" and REPLY in woke["output"]
 
-    # 5. a job of ten minutes (2 s here) at wsl-host, a second one queued behind it, the runner and n8n restarted mid-job
+    # 6. the run reads the item: its attachment goes into the artifact store, and n8n gets its id
+    step_on(w)
+    assert waiting_at(w, "101") == "Reproduce"
+    read = w.n8n.ex["101"]["data"]["Read the item"]
+    (aid,) = read["artifact_ids"]
+    assert read["status"] == "done" and read["attach_to"] == "wsl-host" and read["data_class"] == "customer" and set(read) <= set(FW.LEAN) | {"summary", "lean"}
+    from domain import artifacts as AR
+    assert AR.path_of(aid).read_text() == CRASH and AR.records(aid)[0]["data_class"] == "customer" and AR.records(aid)[0]["name"] == "crash.log"
+
+    # 7. a job of ten minutes (2 s here) at wsl-host on the attachment, a second one queued behind it, the runner and n8n restarted mid-job
     scan(w)
     seen = wait_until(lambda: (PL.place("wsl-host").status() or {}).get("running"))
     assert seen["kind"] == "toy.soak"
     w.n8n.ex["202"] = {"id": "202", "status": "waiting", "at": "another run's job", "resume": "n1", "data": {}, "last": "", "took": []}
     w.n8n.save()
-    w.drop({"kind": "command", "place": "wsl-host", "command": "toy.soak", "values": {"seconds": 2}, "title": "Another run's job",
+    w.drop({"kind": "command", "place": "wsl-host", "command": "toy.soak", "values": {"seconds": 2, "input": aid}, "title": "Another run's job",
             "workflow": "packtoyticket01", "execution": "202", "resume_url": f"{N8N}/webhook-waiting/202/n1"})
     scan(w)
     assert wait_until(lambda: (PL.place("wsl-host").status() or {}).get("queued") == 1)              # one runs, one waits behind it
@@ -498,12 +570,13 @@ def test_the_toy_pack_runs_end_to_end_in_a_customer_class_deployment_against_sta
     assert len(jobs) == 2                                                                            # each submitted once
     ends = sorted(json.loads((d / "result.json").read_text())["ended"] for d in jobs)
     assert all(json.loads((d / "result.json").read_text())["status"] == "done" for d in jobs) and ends[1] - ends[0] >= 1
+    assert all(f"read {len(CRASH)} bytes of crash.log" in (d / "artifacts/log.txt").read_text() for d in jobs)   # the job got the attachment
     other = w.n8n.ex["202"]["took"][0]
     assert other["status"] == "done" and other["command"] == "toy.soak"                             # neither given up
     ran = w.n8n.ex["101"]["data"]["Reproduce"]
     assert ran["status"] == "done" and ran["place"] == "wsl-host" and ran["artifact_ids"] and "log" not in ran   # its log by id only
 
-    # 6. the change goes to a draft pull request on the stand-in forge, and a review comment wakes the run
+    # 8. the change goes to a draft pull request on the stand-in forge; a comment on the item does not wake the review wait, one on the pull request does
     assert waiting_at(w, "101") == "Wait for the review"
     from domain import forgework as FWK
     branch = FWK.branch_name(KEY, "Make the change")
@@ -513,33 +586,64 @@ def test_the_toy_pack_runs_end_to_end_in_a_customer_class_deployment_against_sta
     assert git(w.push, "log", "-1", "--format=%s", branch) == "Stream the export instead of holding it"   # pushed through FORGE_PUSH
     built = w.n8n.ex["101"]["data"]["Make the change"]
     assert built["draft"] is True and built["pr"].endswith("/pull-requests/7") and "merge" not in json.dumps(w.B.assigned).lower()
+    item(w, "2026-11-12T09:00:00", [("reporter", "Any news?")])
+    assert poll(w) == {"recorded": 1}
+    settle(w)
+    assert waiting_at(w, "101") == "Wait for the review"
     w.forge.cs = [{"id": 1, "author": "ai-stack", "body": "opened"}, {"id": 2, "author": "reviewer", "body": "please add a test"}]
     assert poll(w) == {"woke": 1}
 
-    # 7. the run writes its summary in shadow and ends
+    # 9. the run writes its summary in shadow and ends; the owner sends it, and the item has it once
     settle(w)
     assert w.n8n.status("101") == "success"
+    reviewed = [a for a in ex_took(w, "101") if a.get("outcome") == "reply"][-1]
+    assert reviewed["source"] == "pr" and reviewed["comments"] == ["pr-comment:7/2"] and reviewed["summary"] == "1 new comment on its pull request"
     summary = TR._shadow()["summary"]["items"]
     assert len(summary) == 1 and summary[0]["body"] == f"A fix is in the draft pull request {built['pr']}; its review has begun."
-    assert json.loads(w.store.read_text())["items"][KEY]["comments"][-1]["author"] == "reporter"     # every write stayed in shadow
+    act = owner_sends(w, "summary")
+    assert not TR.handle(act)["ok"] and TR.adapter(TR.find("tickets")).put(KEY, "summary", summary[0]["body"], summary[0]["id"])["again"]
+    assert [c["body"].split("\n")[0] for c in comments_on(w) if c["author"] == "ai-stack"] == ["Thank you for the report. To reproduce it we need to know:", TR.SUMMARY_MARK]
+    assert TR._shadow()["comment"]["items"][1]["status"] == "pending"                               # the reminder was not sent: nothing else left
 
     # one run for the item, n8n got only summaries, the register holds the whole
-    assert list(RR.item("tickets", KEY)["runs"]) and len(RR.item("tickets", KEY)["runs"]) == 1 and set(w.n8n.ex) == {"101", "202"}
+    assert len(RR.item("tickets", KEY)["runs"]) == 1 and set(w.n8n.ex) == {"101", "202"} and RR.item("tickets", "TOY-1") is None
     took = ex_took(w, "101")
     assert took and all(a.get("lean") is True for a in took)
-    assert TRIAGE not in w.n8n_db.read_text() and TRIAGE[:300] not in w.n8n_db.read_text()          # nothing of the whole text in n8n
+    held = w.n8n_db.read_text()
+    for text in (TRIAGE, TRIAGE[:300], DESCRIPTION, FIRST, REPLY, CRASH.strip()):                    # nothing of the item's or the triage's text in n8n
+        assert text not in held, text
     assert RR.output_of("101", "Triage") == TRIAGE
 
     # the run's record exports as one zip a person can follow
     out = RC.export_run("101", w.tmp / "out/run.zip", db=w.K.conn(), packs=PK.load()["packs"])
     z = zipfile.ZipFile(out)
     run = json.loads(z.read("run.json"))
-    assert [n["block"] for n in run["nodes"]] == ["agent", "tracker", "wait_item", "tracker", "wait_item", "command", "build", "wait_item", "tracker"]
+    assert [n["block"] for n in run["nodes"]] == ["agent", "tracker", "wait_item", "tracker", "wait_item", "item", "command", "build", "wait_item", "tracker"]
     assert run["id"] == f"toy/ticket:tickets/{KEY}" and run["status"] == "done" and run["nodes"][0]["result"]["output"] == TRIAGE
     assert [w_["write"] for w_ in run["tracker_writes"]] == ["comment", "comment", "summary"] and all(w_["shadow"] for w_ in run["tracker_writes"])
     assert run["pull_requests"][0]["draft"] is True and run["pull_requests"][0]["url"] == built["pr"]
     shape = json.loads(z.read("workflow.json"))
     assert shape["name"] == "toy/ticket" and shape["source"].startswith("pack toy")
+
+
+def test_the_toy_ticket_reminds_twice_and_then_stops_waiting(world):
+    """G3: the toy's reminder loop has an end. Each timeout's answer says how often the wait timed out before
+    (reminded); the template reminds after the first and second and stops after the third, with its summary, so the
+    run ends instead of reminding for ever."""
+    w = world
+    assert poll(w) == {}                                                                             # the tracker's first pass
+    item(w, "2026-11-10T09:00:00")
+    assert poll(w) == {"started": 1}
+    settle(w)
+    for n in range(3):
+        assert waiting_at(w, "101") == "Wait for the reply"
+        w.clock["now"] += 72 * 3600 + 60
+        settle(w)
+    assert w.n8n.status("101") == "success"
+    assert [a["reminded"] for a in ex_took(w, "101") if a.get("outcome") == "timeout"] == [0, 1, 2]
+    assert [i["body"].split(":")[0] for i in TR._shadow()["comment"]["items"]] == ["Thank you for the report. To reproduce it we need to know", "A reminder", "A reminder"]
+    assert TR._shadow()["summary"]["items"][0]["body"].startswith("No answer after two reminders")
+    assert "Read the item" not in w.n8n.ex["101"]["data"] and comments_on(w) == []                   # in shadow, nothing left the stack
 
 
 def ex_took(w, ex):

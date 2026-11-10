@@ -6,6 +6,8 @@ Under /srv/ai/missions/flows/register/ (files, so it survives a restart of the r
                                    answer, the files it made (artifact ids) and its times
     items/<tracker>/<key>.json     one tracker item: the runs it started (with their n8n executions once a step named
                                    them), the wait registered on it (wait_item), the comments no wait has taken yet
+                                   (unread, each with its source and, in said, its author, time and text), and how often
+                                   each of the run's waits timed out (reminded)
     events.json                    the event ledger: each tracker or pull-request event routed, by its identity
     outbox.json                    events the trackers handed on and routing has not placed yet; the trackers' cursors
                                    move only after their events are here
@@ -13,8 +15,10 @@ In a customer-class deployment n8n gets short answers (ops/flows.py lean) and th
 task's record. ops/domain/record.py export_run makes a run's one zip from it.
 
 Routing (WFL-19): each event of trackers.poll() and forgework.poll_prs() is placed once, by (tracker, key, the change's
-identity), also across a restart:
-    - a run waits on the item (wait_item) and the event brings new comments: the wait is answered (outcome reply);
+identity), also across a restart. A comment's source is the item (a tracker comment) or the pull request (a review
+comment); a wait listens to one source (on: item, the default, pr, or any, WFL-32) and only that source answers it:
+    - a run waits on the item (wait_item) and the event brings new comments of the wait's source: the wait is answered
+      (outcome reply, with the comments' source, refs and texts); the other source's comments wait for a wait on them;
     - the item has no run yet: its workflow starts through n8n's webhook item/<pack>/<name> (the tracker's "workflow"),
       with {tracker, key, run, ref, comments}; the item is marked first, so an event never starts two runs;
     - otherwise the event is recorded; its new comments wait for the run's next wait_item, which takes them at once. A
@@ -23,7 +27,8 @@ identity), also across a restart:
 An event without new comments (the stack's own write changes the item too) never wakes a wait for a reply. The
 comments an event brings are others' only: the trackers leave out the stack's own, by their author or by the write mark
 every write of the stack ends with (trackers.own, WFL-26), so the owner's reply wakes a run also where the stack writes
-with the owner's account.
+with the owner's account. A wait's answer carries reminded: how often a wait of that node in this run timed out before
+(WFL-33), so a workflow reminds a set number of times and then ends.
 
     python3 ops/runreg.py poll                        one pass of the tracker poller (the crew job tracker-poll)
     python3 ops/runreg.py export <execution> <zip>    a run's one zip (ops/domain/record.py export_run)
@@ -148,6 +153,8 @@ def item_path(tracker, key):
 def _item(tracker, key, run_name=""):
     it = _read(item_path(tracker, key), {"tracker": tracker, "key": key, "run": run_name, "runs": [], "wait": None,
                                          "woke": {}, "unread": []})
+    it.setdefault("said", {})                        # an item kept before WFL-28 and WFL-33 gets their parts on its next change
+    it.setdefault("reminded", {})
     if not it["run"]:                                # the run named after the item (<workflow>:<tracker>/<key>)
         from domain import trackers as TR
         t = TR.find(tracker)
@@ -169,7 +176,7 @@ def _learn(it, execution):
         last["execution"] = str(execution)
     elif not last or last["execution"] != str(execution):
         it["runs"].append({"event": "", "at": _iso(), "execution": str(execution), "by": "a step"})
-        it["unread"] = []                            # the comments before this run were the last run's
+        it["unread"], it["said"], it["reminded"] = [], {}, {}   # the comments and reminders before this run were the last run's
 
 
 def learn(req):
@@ -183,12 +190,39 @@ def learn(req):
         _write(item_path(t, k), it)
 
 
+SOURCES = ("item", "pr", "any")                     # WFL-32: what a wait listens to: the item's comments, its pull request's, or both
+
+
+def source(ref):
+    """A comment's source by its ref: pr-comment:<pr>/<id> is the pull request's, comment:<tracker>/<key>/<id> the item's."""
+    return "pr" if str(ref).startswith("pr-comment:") else "item"
+
+
+def _of(on, refs):
+    return [r for r in refs if on == "any" or source(r) == on]
+
+
+def _reply(it, w, refs, ref=""):
+    """The answer of a wait its comments answer: their source, refs and whole texts (here and in n8n at home; a
+    customer deployment's n8n gets the summary, which names no text, WFL-22), and how often the wait timed out first."""
+    said = [it["said"].pop(r) for r in refs if r in it["said"]]
+    srcs = sorted({source(r) for r in refs})
+    where = {("item",): "the item", ("pr",): "its pull request"}.get(tuple(srcs), "the item and its pull request")
+    n = len(refs)
+    return {"status": "done", "outcome": "reply", "source": srcs[0] if len(srcs) == 1 else "any", "comments": refs, "replies": said,
+            "tracker": it["tracker"], "key": it["key"], "reminded": it["reminded"].pop(w.get("node") or "", 0),
+            "summary": f"{n} new comment{'' if n == 1 else 's'} on {where}",
+            "output": "\n\n".join(f"{s['author'] or 'someone'}{', ' + s['at'] if s['at'] else ''}:\n{s['text']}" for s in said),
+            **({"ref": ref} if ref else {})}
+
+
 def wait(rid, req, now=None):
-    """wait_item: the run waits on its item until a comment from someone else arrives (outcome reply, with the new
-    comments) or its time is up (outcome timeout). Registered once; comments that came while the run was busy elsewhere
-    answer it at once. -> the answer, or None while it waits."""
+    """wait_item: the run waits on its item until a comment from someone else of the wait's source arrives (outcome
+    reply, with the new comments and their texts) or its time is up (outcome timeout, reminded: how often a wait of this
+    node timed out before in this run). Registered once; comments of its source that came while the run was busy
+    elsewhere answer it at once. -> the answer, or None while it waits."""
     now = now or _now()
-    t, k = req["tracker"], req["key"]
+    t, k, on = req["tracker"], req["key"], req.get("on") or "item"
     with locked():
         it = _item(t, k)
         got = it["woke"].pop(rid, None)
@@ -198,13 +232,17 @@ def wait(rid, req, now=None):
                 _learn(it, req.get("execution"))
                 hours = float(req.get("timeout_hours") or 0)
                 w = it["wait"] = {"rid": rid, "since": now, "deadline": now + hours * 3600 if hours > 0 else 0,
-                                  "execution": str(req.get("execution") or "")}
-            if it["unread"]:
-                got = {"status": "done", "outcome": "reply", "comments": it["unread"], "tracker": t, "key": k}
-                it["unread"] = []
+                                  "execution": str(req.get("execution") or ""), "on": on, "node": str(req.get("node") or "")}
+            mine = _of(on, it["unread"])
+            if mine:
+                it["unread"] = [c for c in it["unread"] if c not in mine]
+                got = _reply(it, w, mine)
             elif w["deadline"] and now >= w["deadline"]:
-                got = {"status": "done", "outcome": "timeout", "comments": [], "tracker": t, "key": k,
-                       "waited_hours": round((now - w["since"]) / 3600, 2)}
+                node = w.get("node") or ""
+                n = it["reminded"].get(node, 0)
+                it["reminded"][node] = n + 1
+                got = {"status": "done", "outcome": "timeout", "source": on, "comments": [], "tracker": t, "key": k, "reminded": n,
+                       "waited_hours": round((now - w["since"]) / 3600, 2), "summary": f"no answer in {round((now - w['since']) / 3600, 2):g} hours"}
         if got is not None:
             it["wait"] = None
         _write(item_path(t, k), it)
@@ -285,21 +323,25 @@ def route(ev, cfg=None, post=None, status=None):
         it = _item(t, k, ev.get("run") or (TR.run_id(tr, k) if tr else ""))
         did = None
         w = it.get("wait")
-        if w and comments:
-            it["woke"][w["rid"]] = {"status": "done", "outcome": "reply", "comments": it["unread"] + comments, "tracker": t, "key": k,
-                                    "ref": ev.get("ref", "")}
-            it["wait"], it["unread"], did = None, [], "woke"
+        it["said"].update({s["ref"]: s for s in ev.get("said") or [] if s.get("ref") in comments})
+        mine = _of(w.get("on") or "item", comments) if w else []
+        if mine:                                     # comments of the wait's source wake it; the other source's wait for theirs
+            took = _of(w.get("on") or "item", it["unread"]) + mine
+            it["woke"][w["rid"]] = _reply(it, w, took, ev.get("ref", ""))
+            it["wait"], did = None, "woke"
+            it["unread"] = [c for c in it["unread"] + comments if c not in took]
         elif not it["runs"] or (comments and tr.get("restart") == "on_comment" and ended(it, status)):
             it["runs"].append({"event": eid, "at": _iso(), "execution": "", "by": "an event"})
-            unread, it["unread"] = it["unread"], []  # the new run gets its comments with its start
+            unread, said, it["unread"], it["said"] = it["unread"], it["said"], [], {}   # the new run gets its comments with its start
             _write(item_path(t, k), it)               # marked first: an event never starts two runs
             why, ex = start(tr.get("workflow"), {"tracker": t, "key": k, "run": it["run"], "ref": ev.get("ref", ""), "comments": comments}, post)
             it["runs"][-1]["execution"] = ex
             if why:
                 it["runs"].pop()
-                it["unread"] = unread
+                it["unread"], it["said"] = unread, said
                 _write(item_path(t, k), it)
                 return f"kept: {why}"
+            it["reminded"] = {}
             did = "started"
         else:
             it["unread"] += [c for c in comments if c not in it["unread"]]

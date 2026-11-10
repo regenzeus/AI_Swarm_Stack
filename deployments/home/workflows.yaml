@@ -1,0 +1,31 @@
+# deployments/home/workflows.yaml: the stack's own workflows home runs (PLT-38), each a file of n8n/workflows/ without
+# .json. A deploy imports these and no others, and unpublishes one it imported earlier that is no longer here. The
+# tracker poller (crew-tracker-poll) and the inbox's item workflow (item-home-inbox) come with trackers.yaml, so they
+# are not listed. task-* is every task the runner gives a schedule here (ops/n8n_jobs.py). A crew job made with
+# ops/n8n_gen.py, or a workflow made on the canvas and exported, is added at the end by that command.
+workflows:
+  - stack-self-test
+  - memory-keeper
+  - crew-checker
+  - crew-coach
+  - crew-code-graph
+  - crew-daily-digest
+  - crew-editor
+  - crew-health-doctor
+  - crew-inbox-digest
+  - crew-journey-checks
+  - crew-maintainability-review
+  - crew-memory-gatekeeper
+  - crew-nightly-restart
+  - crew-phone-check
+  - crew-phone-cleanup
+  - crew-postmaster
+  - crew-repository-facts
+  - crew-skill-curator
+  - crew-skill-keeper
+  - crew-swarm-sync
+  - crew-test-agent
+  - crew-trial-rotation
+  - crew-upgrade-check
+  - crew-vault-ingest
+  - task-*

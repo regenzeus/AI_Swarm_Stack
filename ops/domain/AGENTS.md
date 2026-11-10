@@ -20,7 +20,13 @@ boundary is checked, GEN-44).
   GEN-26). Jira goes through atlassian-python-api, pinned for the runner (ops/runner-requirements.txt). A comment is
   the stack's own by its author (`me`) or by the write mark it ends with (`trackers.own`, WFL-26), so a tracker where
   the stack writes with the owner's account (home's Forgejo inbox, GEN-45) still tells the owner's replies from the
-  stack's comments; `trackers.item_text` is an item as an agent step that names it reads it (WFL-25).
+  stack's comments; `trackers.item_text` is an item as an agent step that names it reads it (WFL-25),
+  `trackers.read_item` and `fetch` the item and its attachments for the step `item` (WFL-28). A new tracker counts
+  its items from its first pass (`start: now`, the default) or a date; a tracker that has its state keeps it
+  (`trackers.start_of`, WFL-27). The owner judges each shadow write: send it (written through the adapter once, with
+  its write id), keep it back, or wrong (WFL-29). The summary edits only the comment whose id the stack kept when it
+  wrote it (WFL-30); attach, transition and label are done when the item holds them already (WFL-31). Events carry
+  the comments' texts (`said`) for the run register; a pull request's comments are their own source (WFL-32).
 - `roles.py`: who decides for a role (GEN-27). `artifacts.py`: saved files by hash (GEN-29). `record.py`: a run's
   bundle (`export_run`, from the run register) and a pack's exams (GEN-31).
 

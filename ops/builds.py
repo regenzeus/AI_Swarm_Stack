@@ -1465,7 +1465,7 @@ def worker():
                             M.log(f"build #{r['id']}: CI status not read: {why}")
         except Exception:
             M.log(traceback.format_exc())
-        M.stop.wait(5)
+        M.rest(c, "builds", 5)
 
 
 def state(c):

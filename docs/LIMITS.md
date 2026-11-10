@@ -54,7 +54,7 @@ left out, and the reason says where that is shown.
 | `ops/ua_enrich.py` | `WORKERS_MAX` | at most this many whatever the deployment says |
 | `ops/wikis.py` | `len(done) >= PER_PASS` | wiki summaries a pass; the rest the next pass |
 
-## refuses (63)
+## refuses (68)
 
 | Where | Limit | Why |
 |---|---|---|
@@ -105,12 +105,17 @@ left out, and the reason says where that is shown.
 | `ops/flows.py` | `QUERY_MAX` | a memory search is words, as the memory tool's search takes them |
 | `ops/flows.py` | `MEMO_MAX` | a note to memory is kept whole or not at all (the gate reads it whole, as the memory tool's note) |
 | `ops/flows.py` | `EVIDENCE_MAX` | the evidence names where a note comes from, as the memory tool's |
+| `ops/flows.py` | `ATTACH_COUNT` | an item step fetches at most 10 attachments; more are named one by one in attachments |
+| `ops/flows.py` | `ATTACH_MB` | an attachment over 50 MB is not fetched (the place's worker copies back as much, localworker ARTIFACTS_MB) |
 | `ops/flows.py` | `len(brief) > BRIEF_MAX` | BRIEF_MAX above |
 | `ops/flows.py` | `not isinstance(m, str) or not m.strip() or len(m) > NOTE_MAX` | NOTE_MAX above |
 | `ops/flows.py` | `not isinstance(q, str) or not q.strip() or len(q) > 500` | a question fits a card (500 characters) |
 | `ops/flows.py` | `not isinstance(q, str) or not q.strip() or len(q) > QUERY_MAX` | QUERY_MAX above |
 | `ops/flows.py` | `not isinstance(t, str) or not t.strip() or len(t) > MEMO_MAX` | MEMO_MAX above |
 | `ops/flows.py` | `not isinstance(ev, str) or len(ev) > EVIDENCE_MAX` | EVIDENCE_MAX above |
+| `ops/flows.py` | `len(names) > ATTACH_COUNT` | ATTACH_COUNT above |
+| `ops/flows.py` | `len(files) > ATTACH_COUNT` | ATTACH_COUNT above |
+| `ops/flows.py` | `a["size"] > ATTACH_MB` | ATTACH_MB above |
 | `ops/journal.py` | `NOTE_CHARS` | (a standing note is one line every run reads; the app says so) |
 | `ops/mailvault-password.sh` | `[ ${#pw} -ge 16 ]` | a Gmail app password has 16 letters |
 | `ops/publish.py` | `ASSET_MAX` | an image over this stops a publish, with its name (SEC-19) |
@@ -122,7 +127,7 @@ left out, and the reason says where that is shown.
 | `ops/winjobs.py` | `MINUTES_MAX` | a job kind's time limit: a day at most; its own minutes stop it sooner |
 | `ops/winworker.py` | `FILES_KB` | a request's files (a patch) stay small: a patch past this is no change a person reviews |
 
-## stops (41)
+## stops (42)
 
 | Where | Limit | Why |
 |---|---|---|
@@ -148,6 +153,7 @@ left out, and the reason says where that is shown.
 | `ops/domain/packs.py` | `GIT_S` | a clone or fetch of a pack that takes longer fails with the reason |
 | `ops/domain/trackers.py` | `JIRA_PAGES` | a pass that asked for 1,000 pages (50,000 changed items) stops there; the cursor keeps what was handed on and the next pass goes on |
 | `ops/domain/trackers.py` | `FORGEJO_PAGES` | a pass that asked for 1,000 pages (50,000 changed issues) stops there; the cursor keeps what was handed on and the next pass goes on |
+| `ops/domain/trackers.py` | `FETCH_S` | a Forgejo attachment's download that takes over 10 minutes (50 MB at 85 KB/s) fails the step; a retry fetches again |
 | `ops/evals.py` | `--max-turns` | a replay is one answer, no tools |
 | `ops/flows.py` | `DELIVER_FOR_S` | after a day without n8n taking it the answer stays in done/ and the owner is told |
 | `ops/journeys.py` | `DECIDE_TIMEOUT` | the decide journey gives the runner and the app this many seconds at each step; past it the journey fails and says which step |

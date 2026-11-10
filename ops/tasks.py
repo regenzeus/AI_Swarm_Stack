@@ -57,10 +57,14 @@ def table(c):
                                                                                     # (a duplicate title joins the existing one)
     if "owner" not in {r[1] for r in c.execute("pragma table_info(tasks)")}:       # TSK-40: yours or the stack's
         c.execute("alter table tasks add column owner text")
+    fixed = 0
     for r in c.execute("select id, text, title from tasks where title like '% …' or title like '%…'").fetchall():   # APP-57: a title cut
         whole = title_of(r[1])                                                        # before 9 Nov 2026 is made whole again
         if whole and whole != r[2]:
             c.execute("update tasks set title=? where id=?", (whole, r[0]))
+            fixed += 1
+    if fixed:                                        # PLT-40: a repair is committed here, never left open for the caller's loop
+        c.commit()
 
 
 def owner_of(c, source, door=None, ref=None):
@@ -875,7 +879,7 @@ def worker():
                 continue
         except Exception as e:                         # one bad task must not stop the others; it is logged
             M.log(f"tasks worker: {type(e).__name__}: {e}")
-        M.stop.wait(3)
+        M.rest(c, "task intake", 3)
 
 
 FIELDS = ("id", "title", "goal", "text", "kind", "door", "ref", "done", "effort", "deadline", "autonomy", "rhythm", "after", "questions",

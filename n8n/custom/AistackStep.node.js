@@ -3,7 +3,7 @@
 // Control's step service (WFL-05) and waits, as n8n's Wait node does, until the runner posts the answer to this
 // execution's resume URL; the answer is the node's output. Its kind makes it one block of the palette: an agent, a
 // coding change, a crew job, a plan task, a question for the owner, a message, a memory search or note, a command at
-// a place, a whole plan, a wait on a tracker item, or a write to it. The Agent, Crew job, Place, Repository, Tracker
+// a place, a whole plan, a wait on a tracker item, a read of it, or a write to it. The Agent, Crew job, Place, Repository, Tracker
 // and Role pickers read the stack's lists live (GET /catalog). Plain JavaScript: n8n loads it from
 // N8N_CUSTOM_EXTENSIONS, nothing is built or fetched.
 const STEPS = 'http://mission-control:8099/steps';
@@ -52,8 +52,8 @@ class AistackStep {
       icon: 'fa:robot',
       group: ['transform'],
       version: 1,
-      subtitle: '={{ {agent: "Agent: " + $parameter["agent"], build: "Coding change in " + $parameter["repo"], crew: "Crew job: " + $parameter["job"], task: "Plan task #" + $parameter["task"], ask: "Ask the owner", notify: "Notify the owner", recall: "Recall: " + $parameter["query"], remember: "Remember a " + $parameter["note"], command: $parameter["command"] + " at " + $parameter["place"], plan: "Run a plan", wait_item: "Wait for the item", tracker: "Write a " + $parameter["write"] + " on the item"}[$parameter["kind"]] }}',
-      description: "A step of the stack's own work, sent to the stack and waited for: an agent, a coding change, a crew job, a plan task, a question, a message, memory, a command, a plan, a wait on a tracker item or a write to it",
+      subtitle: '={{ {agent: "Agent: " + $parameter["agent"], build: "Coding change in " + $parameter["repo"], crew: "Crew job: " + $parameter["job"], task: "Plan task #" + $parameter["task"], ask: "Ask the owner", notify: "Notify the owner", recall: "Recall: " + $parameter["query"], remember: "Remember a " + $parameter["note"], command: $parameter["command"] + " at " + $parameter["place"], plan: "Run a plan", wait_item: "Wait for the item", tracker: "Write a " + $parameter["write"] + " on the item", item: "Read the item"}[$parameter["kind"]] }}',
+      description: "A step of the stack's own work, sent to the stack and waited for: an agent, a coding change, a crew job, a plan task, a question, a message, memory, a command, a plan, a wait on a tracker item, a read of it or a write to it",
       defaults: { name: 'AI Stack step', color: '#6d5dfc' },
       inputs: ['main'],
       outputs: ['main'],
@@ -71,8 +71,9 @@ class AistackStep {
             { name: 'Remember', value: 'remember', description: 'A lesson, fact, failure or skill for memory; it enters only after the memory gate checks it' },
             { name: 'Run command', value: 'command', description: 'A command at a place (WSL, the WSL host, Windows), only once you approved it there' },
             { name: 'Run a plan', value: 'plan', description: 'The steps of a plan as waves of agent steps; every step\'s output is the answer' },
-            { name: 'Wait for the item', value: 'wait_item', description: 'Waits until someone else comments on the tracker item (outcome reply) or the time is up (outcome timeout)' },
+            { name: 'Wait for the item', value: 'wait_item', description: 'Waits until someone else comments on the tracker item or on its pull request (outcome reply) or the time is up (outcome timeout)' },
             { name: 'Write to the item', value: 'tracker', description: 'One write to the tracker item, held for your approval until you let that kind of write go live' },
+            { name: 'Read the item', value: 'item', description: 'The tracker item as it is now: its text, status, labels, comments and attachments; its files can go to a place for a command' },
           ] },
         { displayName: 'Agent', name: 'agent', type: 'options', default: 'scout', displayOptions: show('agent', 'remember'),
           typeOptions: { loadOptionsMethod: 'getAgents' },
@@ -115,15 +116,26 @@ class AistackStep {
         { displayName: 'Steps', name: 'steps', type: 'json', displayOptions: show('plan'),
           default: '[\n  {"agent": "scout", "title": "Research", "brief": "Find ...", "after": []},\n  {"agent": "desk", "title": "Write", "brief": "Write ...", "after": [1]}\n]',
           description: 'Each step: an agent, its brief, a title, and the numbers of the steps it waits for' },
-        { displayName: 'Tracker', name: 'tracker', type: 'options', default: '', displayOptions: show('wait_item', 'tracker'),
+        { displayName: 'Tracker', name: 'tracker', type: 'options', default: '', displayOptions: show('wait_item', 'tracker', 'item'),
           typeOptions: { loadOptionsMethod: 'getTrackers' }, description: 'The tracker of this deployment (trackers.yaml)' },
         { displayName: 'Read the item of', name: 'tracker', type: 'options', default: '', displayOptions: show('agent'),
           typeOptions: { loadOptionsMethod: 'getItemTrackers' },
           description: "The agent reads the item first: its title, text and every comment, the stack's own marked as its own" },
-        { displayName: 'Item', name: 'key', type: 'string', default: '={{ $json.body ? $json.body.key : $json.key }}', displayOptions: show('wait_item', 'tracker', 'agent'),
+        { displayName: 'Item', name: 'key', type: 'string', default: '={{ $json.body ? $json.body.key : $json.key }}', displayOptions: show('wait_item', 'tracker', 'agent', 'item'),
           description: 'The key of the item; the workflow of an item gets it from its start' },
         { displayName: 'Wait at most (hours)', name: 'timeout_hours', type: 'number', default: 72, typeOptions: { minValue: 0, numberPrecision: 2 },
-          displayOptions: show('wait_item'), description: 'Then the answer is outcome timeout, so the workflow can remind and wait again; 0 waits without end' },
+          displayOptions: show('wait_item'), description: 'Then the answer is outcome timeout, so the workflow can remind and wait again; 0 waits without end. The answer says reminded: how often this wait timed out before' },
+        { displayName: 'Wake on', name: 'on', type: 'options', default: 'item', displayOptions: show('wait_item'),
+          options: [
+            { name: 'A comment on the item', value: 'item', description: "The reporter's or anyone's comment on the tracker item" },
+            { name: 'A comment on its pull request', value: 'pr', description: "A reviewer's comment on the change's draft pull request" },
+            { name: 'Either', value: 'any' },
+          ] },
+        { displayName: 'Fetch its files for', name: 'attach_to', type: 'options', default: '', displayOptions: show('item'),
+          typeOptions: { loadOptionsMethod: 'getAttachPlaces' },
+          description: 'The place whose command gets the attachments: they are saved, and the answer names them by artifact id' },
+        { displayName: 'Attachments', name: 'attachments', type: 'string', default: '', displayOptions: show('item'),
+          description: 'The names of the attachments to fetch, separated by commas; empty for all of them' },
         { displayName: 'Write', name: 'write', type: 'options', default: 'comment', displayOptions: show('tracker'),
           options: ['comment', 'summary', 'attach', 'link', 'transition', 'label'].map((k) => ({ name: k[0].toUpperCase() + k.slice(1), value: k })),
           description: 'Summary: the one summary comment, edited each time. Attach: its text names a saved file (artifact:<id>)' },
@@ -153,6 +165,7 @@ class AistackStep {
         async getRepos() { return pick(this, 'repos'); },
         async getTrackers() { return pick(this, 'trackers'); },
         async getItemTrackers() { return [{ name: 'No item', value: '' }, ...(await pick(this, 'trackers'))]; },
+        async getAttachPlaces() { return [{ name: 'No files', value: '' }, ...(await pick(this, 'places'))]; },
         async getRoles() { return [{ name: 'The owner', value: '' }, ...(await pick(this, 'roles'))]; },
       },
     };
@@ -172,6 +185,7 @@ class AistackStep {
     };
     if (kind === 'agent') Object.assign(body, { agent: p('agent'), brief: p('brief') });
     if (kind === 'agent' && p('tracker', '')) Object.assign(body, { tracker: p('tracker'), key: String(p('key')) });
+    if (kind === 'agent' && p('tracker', '')) body.from_item = true;
     if (kind === 'build') Object.assign(body, { repo: p('repo'), brief: p('brief') });
     if (kind === 'build' && p('item', '')) Object.assign(body, { item: p('item'), base: p('base', ''), target: p('target', ''), forge: p('forge', '') || undefined });
     if (kind === 'crew') body.job = p('job');
@@ -185,6 +199,9 @@ class AistackStep {
     if (kind === 'command') Object.assign(body, { place: p('place'), command: p('command'), values: json(p('values', '{}'), {}) });
     if (kind === 'plan') body.steps = json(p('steps', '[]'), []);
     if (kind === 'wait_item') Object.assign(body, { tracker: p('tracker'), key: String(p('key')), timeout_hours: Number(p('timeout_hours', 0)) });
+    if (kind === 'wait_item') body.on = p('on', 'item');
+    if (kind === 'item') Object.assign(body, { tracker: p('tracker'), key: String(p('key')), attach_to: p('attach_to', '') || undefined,
+      attachments: String(p('attachments', '')).split(',').map((s) => s.trim()).filter(Boolean) });
     if (kind === 'tracker') Object.assign(body, { tracker: p('tracker'), key: String(p('key')), write: p('write'), body: p('body', ''), from_step: p('from_step', '') || undefined });
     const got = await this.helpers.httpRequest({ method: 'POST', url: STEPS, body, json: true });
     if (!got || !got.ok) throw new Error(`the step service refused the step: ${(got && got.error) || 'no answer'}`);

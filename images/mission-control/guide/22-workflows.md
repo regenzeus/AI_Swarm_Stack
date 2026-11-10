@@ -79,12 +79,22 @@ pack's workflow may never run a shell command of its own.
 ## Trackers
 
 The stack can read an issue tracker and write back to it. Everything it would write starts **in shadow**: you see it in
-Needs you and under **Packs and trackers** on the Stack page, and nothing leaves the stack. Once you judged enough
-writes of one kind right, you may let that kind go live, and send it back to shadow at any time.
+Needs you and under **Packs and trackers** on the Stack page, and nothing leaves the stack. Each write has three
+answers:
+
+- **Right, send it**: it goes to its item now, once, and counts as right. A question to someone on the tracker reaches
+  them this way while its kind is still in shadow.
+- **Right, don't send**: it counts as right, and nothing leaves.
+- **Wrong**: it does not count.
+
+Once you judged enough writes of one kind right, you may let that kind go live, and send it back to shadow at any
+time. A tracker that is new to the stack starts nothing for the items it already holds: they count from their next
+change (or from the date its `start` names).
 
 **Write an issue in your inbox repository.** At home the stack watches your private repository **inbox** on your
 Forgejo. Write an issue there as you would write a note to your assistant: within a few minutes the assistant reads
 it, answers it in a comment on the issue (or does what it asks and says what it did), and waits up to a week for your
 reply. Reply in a comment and it answers once more, then sums up and closes the issue. A new comment on a closed issue
-starts it again. While its comments are still in shadow, you find its answers in Needs you instead of on the issue.
+starts it again. While its comments are still in shadow, you find its answers in Needs you instead of on the issue;
+**Right, send it** puts one on the issue at once.
 

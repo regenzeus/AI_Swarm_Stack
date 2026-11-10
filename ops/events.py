@@ -560,7 +560,7 @@ def worker():
             tick(c)
         except Exception as e:                    # the next pass tries again; it is logged
             M.log(f"events: {type(e).__name__}: {e}")
-        M.stop.wait(15)
+        M.rest(c, "events", 15)
 
 
 ACTIONS = {"rule_save", "rule_toggle", "rule_delete", "event_rate", "calendar_set", "calendar_clear"}

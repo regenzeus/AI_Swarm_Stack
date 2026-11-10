@@ -232,10 +232,12 @@ def test_the_toy_packs_item_workflow_is_a_whole_n8n_workflow_on_logic_nodes_only
                                   "options": {"responseData": "={{ JSON.stringify({execution: $execution.id}) }}"}}
     steps = [n for n in wf["nodes"] if n["type"] == "CUSTOM.aistackStep"]
     assert all(n["parameters"]["kind"] in FW.KINDS and n["parameters"]["title"] == n["name"] for n in steps)
-    assert {n["parameters"]["kind"] for n in steps} == {"agent", "tracker", "wait_item", "command", "build"}
+    assert {n["parameters"]["kind"] for n in steps} == {"agent", "tracker", "wait_item", "command", "build", "item"}
     assert "PLACEHOLDER" not in json.dumps(wf)
-    loop = wf["connections"]["Timed out?"]["main"]
-    assert loop[0][0]["node"] == "Remind the reporter" and wf["connections"]["Remind the reporter"]["main"][0][0]["node"] == "Wait for the reply"
+    loop = wf["connections"]["Timed out?"]["main"]                                 # remind twice, then stop waiting (G3)
+    assert loop[0][0]["node"] == "Reminded twice?" and wf["connections"]["Remind the reporter"]["main"][0][0]["node"] == "Wait for the reply"
+    assert [o[0]["node"] for o in wf["connections"]["Reminded twice?"]["main"]] == ["Stop waiting", "Remind the reporter"]
+    assert "Stop waiting" not in wf["connections"]                                    # the run ends there
     assert PK.read("toy", "x", TOY, allow=LOGIC)["problems"] == []
 
 

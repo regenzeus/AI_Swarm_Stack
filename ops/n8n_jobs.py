@@ -6,7 +6,8 @@ inside the app (Workflows) and exported to git (WFL-08); the runner never edits 
 
 A workflow is the repository's (n8n/workflows/*.json) or one the runner made or switched off since the last export
 (/srv/ai/missions/flows/made/*.json, the runner's newer word: it wins until an export brings the same into git, then
-its file goes). A deploy's import keeps that word too (ops/n8n_sync.py).
+its file goes). A deploy's import keeps that word too (ops/n8n_sync.py). Of the repository's files only those the
+deployment runs count (PLT-38, deployments/<name>/workflows.yaml): a work deployment shows no schedule of home's jobs.
 
     python3 ops/n8n_jobs.py        every job n8n starts: its workflow, schedule, and next run
 """
@@ -58,13 +59,25 @@ def _files(folder):
     return out
 
 
-def workflows(repo=REPO, made=MADE):
-    """Every workflow by its id, as n8n should have it: the repository's, with the runner's newer word over it.
-    -> {id: {"wf", "file", "made"}}"""
+def chosen(repo=REPO):
+    """PLT-38: which of the repository's files this deployment runs: the names of its workflows.yaml and what its
+    trackers imply (ops/deployment.py) for the stack's own folder; every file of any other folder (a test's)."""
+    if Path(repo).resolve() != REPO.resolve():
+        return ["*"]
+    import deployment as DEPLOY
+    return DEPLOY.workflow_names()
+
+
+def workflows(repo=REPO, made=MADE, names=None):
+    """Every workflow of this deployment by its id, as n8n should have it: the repository's that the deployment runs
+    (names, default chosen(repo); ["*"] for every file), with the runner's newer word over it (the runner made it
+    here, so it is always this deployment's). -> {id: {"wf", "file", "made"}}"""
+    import fnmatch
+    names = chosen(repo) if names is None else names
     out = {}
     for src, folder in ((False, repo), (True, made)):
         for name, wf in _files(folder).items():
-            if wf.get("id"):
+            if wf.get("id") and (src or any(fnmatch.fnmatchcase(name.removesuffix(".json"), n) for n in names)):
                 out[str(wf["id"])] = {"wf": wf, "file": name, "made": src}
     return out
 

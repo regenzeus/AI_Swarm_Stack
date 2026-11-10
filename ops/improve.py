@@ -234,7 +234,7 @@ def worker():
                         M.log(traceback.format_exc())
         except Exception:
             M.log(traceback.format_exc())
-        M.stop.wait(60)
+        M.rest(c, "improve", 60)
 
 
 def state(c):

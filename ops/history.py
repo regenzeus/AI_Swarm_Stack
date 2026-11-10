@@ -139,7 +139,7 @@ def worker():
             first = False
         except Exception as e:                        # the next hour tries again; logged
             M.log(f"history: {type(e).__name__}: {e}")
-        M.stop.wait(3600)
+        M.rest(c, "history", 3600)
 
 
 def start():

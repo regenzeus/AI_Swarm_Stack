@@ -92,7 +92,7 @@ the commands approved there, the repositories the builder may change).
 
 | Block (kind) | Does | Through | Status |
 |---|---|---|---|
-| Agent step (`agent`) | one agent does one piece of work; its brief is the step it reads | the Conductor's run_step and adapters | built |
+| Agent step (`agent`) | one agent does one piece of work; its brief is the step it reads; with its item (`tracker`, `key`, `from_item`) the item's text and comments follow the brief, read by the step service (§3.6) | the Conductor's run_step and adapters | built |
 | Coding change (`build`) | the coder in the sandbox on a repository; answers with the build, its state, branch or pull request, CI and checks | the Conductor's build step (ops/builds.py), the owner's review included | built |
 | Crew job (`crew`) | a housekeeping job, as Run now starts it | its systemd unit | built |
 | Plan task (`task`) | one run of a plan task (a briefing, a price watch) | the Conductor's occurrence | built |
@@ -100,9 +100,10 @@ the commands approved there, the repositories the builder may change).
 | Notify the owner (`notify`) | a message, quiet hours respected (OBS-16) | ops/notify.py | built |
 | Recall (`recall`) | a search of the stack's memory; the hits are the answer | the memory tool's search (MEM-28) | built |
 | Remember (`remember`) | a lesson, fact, failure or skill; kept only after its check | the memory tool's write gate (MEM-28, MEM-35) | built |
-| Run command (`command`) | a job kind at a place (WSL, WSL host, Windows), only once approved there by its fingerprint | ops/domain/places.py (GEN-22) | built |
+| Run command (`command`) | a job kind at a place (WSL, WSL host, Windows), only once approved there by its fingerprint; a file parameter's value may be an artifact id, and the file goes into the job's request | ops/domain/places.py (GEN-22, WFL-28) | built |
 | Run a plan (`plan`) | an improvised plan's steps as waves of agent steps; every step's output is the answer | the agent path, one task with a row per step | built |
-| Wait for the item (`wait_item`) | the run waits on its tracker item: outcome `reply` with the new comments from others, or `timeout` after `timeout_hours`; a timeout is a result the workflow branches on (an IF node), not a failure | the run register (§3.6, WFL-20) | built |
+| Wait for the item (`wait_item`) | the run waits on its tracker item: outcome `reply` with the new comments from others (their source, refs and texts), or `timeout` after `timeout_hours`; a timeout is a result the workflow branches on (an IF node), not a failure. `on`: `item` (the default), `pr` or `any` says whose comments answer it; `reminded` how often it timed out before | the run register (§3.6, WFL-20, WFL-32, WFL-33) | built |
+| Read the item (`item`) | the item through its tracker's adapter: title, text, status, labels, comments (the stack's own marked) and attachments; `attach_to` a place saves its attachments (all, or those named in `attachments`) as artifacts and answers their ids, which a command there takes as a file parameter's value | trackers.read_item, the artifact store (WFL-28) | built |
 | Write to the item (`tracker`) | one write: comment, summary, attach, link, transition or label; answers with the shadow or the live reference. `from_step` adds an earlier step's whole answer from the run register, so n8n never carries the text | trackers.write, shadow per kind (WFL-21) | built |
 | Coding change for an item (`build` with `item`, `base`, `target`) | the branch `ai/<item>-<slug>` starts at the base ref or tag; with FORGE_PUSH a draft pull request into the target branch, directly (DEC-54); review comments wake the run | builds onto that branch, forgework.publish (GEN-26) | built |
 | Report | what Home shows for each step, with the n8n run | the step service itself (WFL-10) | built, not a block |
@@ -141,7 +142,7 @@ cursors move; each event is then placed once by (tracker, key, the change's iden
 
 | The item | The event | What happens |
 |---|---|---|
-| a run waits on it (`wait_item`) | brings new comments from someone else | the wait is answered: outcome `reply`, with the comments |
+| a run waits on it (`wait_item`) | brings new comments from someone else, of the wait's source | the wait is answered: outcome `reply`, with the comments' source, refs and texts; comments of the other source wait for a wait on them |
 | has no run yet | any | the item's workflow starts: `POST http://127.0.0.1:5678/webhook/item/<pack>/<name>` (n8n's root, never under `/n8n/`) with `{tracker, key, run, ref, comments}`; the item is marked first, so an event never starts two runs |
 | its run goes on, busy elsewhere | brings comments | recorded; the run's next `wait_item` takes them at once |
 | its run has ended (n8n's execution finished) | brings a new comment | a new run only when the tracker says `restart: on_comment` (default `never`) |
@@ -156,9 +157,54 @@ replies have the same author; the mark tells them apart, also when the owner quo
 tracker leaves `me` unset.
 
 **An agent step that reads its item** (WFL-25). An agent step may name its item (`tracker` and `key`, on the canvas
-"Read the item of"): the step service then adds the item as its tracker holds it to the brief, once, when the step's
-task is made: its title, status and text and every comment in order, the stack's own marked as the agent's, without
-the marks (`trackers.item_text`). An item that cannot be read fails the step with the reason.
+"Read the item of", which sends `from_item: true`): the step service then adds the item as its tracker holds it to the
+brief, once, when the step's task is made: its title, status and text and every comment in order, the stack's own
+marked as the agent's, without the marks (`trackers.item_text`). The text goes from the tracker to the agent through
+the step service only, never through n8n's execution data. An item that cannot be read fails the step with the reason;
+`from_item: false` names the item without reading it.
+
+**A new tracker starts now** (WFL-27). A tracker's `start` in trackers.yaml says from when its items count: `now`, the
+default, or a date (`start: 2026-11-01`). With `now` the tracker's first pass (it has no state yet) only sets its cursor
+to the newest match and starts nothing; the items that match already start a run with their next change. With a date
+the cursor starts at that date. A tracker that has its state keeps it: home's inbox ran its first pass before `start`
+existed, so its cursor, its seen comments and its runs stay as they are. Losing a tracker's state file makes it new
+again. The connections page shows each tracker's start.
+
+**Whose comments answer a wait** (WFL-32). A comment's source is the item (a tracker comment) or the pull request (a
+review comment, `pr-comment:<pr>/<id>`). `wait_item` listens to one: `on: item` (the default), `pr`, or `any`; only
+its source answers it, and the comments of the other source stay unread for a wait on them. The answer names its
+`source`. So a reporter's comment during the wait for the review does not end that wait, and an old review comment
+does not answer the next wait for the reporter. The answer carries the new comments' texts (`replies`, `output`) from
+the register; a customer deployment's n8n gets their refs and a summary that names no text (`1 new comment on the
+item`).
+
+**Reminders end** (WFL-33). A wait's answer carries `reminded`: how often a wait of that node timed out before in this
+run (0 on the first timeout); a reply starts the count again. A template reminds while `reminded` is below its
+number and then ends: the toy's ticket has `Timed out?` → `Reminded twice?` (IF `{{ $json.reminded }}` ≥ 2) →
+`Stop waiting` (its summary) or `Remind the reporter` → the wait again. Home's inbox has no reminder: after 7 days
+without a reply it sums up and closes, which is its end.
+
+**Reading an item and its files** (WFL-28). The block `item` reads the item through its tracker's adapter
+(`trackers.read_item`): title, text, status, labels, its comments (author, time, text, the stack's own marked) and its
+attachments (name, size). With `attach_to: <place>` it fetches the attachments (all, or those `attachments` names) into
+the artifact store, recorded with the deployment's data class (`dataguard`), and answers their `artifact_ids`; at most
+10 files of at most 50 MB each (`flows.ATTACH_COUNT`, `ATTACH_MB`, tagged limits), a name the item lacks fails the step.
+A command takes an artifact id as the value of a file parameter: the step service puts the file into the job's request
+folder under its own name, and the worker checks it as any file of a request (its `max_kb`). The text of the item never
+reaches a customer deployment's n8n: it gets the ids and a summary of counts.
+
+**The owner's answers to a shadow write** (WFL-29). Each write in shadow waits in Needs you (and on the connections
+page) with three answers: **Right, send it** counts it as right and writes it to its item now, through the adapter
+with its own write id, so a second tap or a retry writes it once, and records the tracker reference it got (`sent`);
+**Right, don't send** counts it and nothing leaves; **Wrong** does not count. A tracker that does not take it leaves
+the write waiting with the reason. The step's answer said `shadow: true` when it was written to shadow; the run went
+on without waiting for the owner. So in shadow a question to a reporter reaches the reporter, once the owner sends it,
+and the reporter's reply wakes the run.
+
+**Writes are done once** (WFL-30, WFL-31). The summary is the comment the stack wrote first on the item: its id is kept
+per item (`summaries.json` beside the trackers' state) and only that comment is edited; with no id kept a new one is
+added, so someone else's comment that carries the summary mark is never touched. A write that leaves no comment is done
+when the item already holds it: an attachment of the same name and size, the target status, the label.
 
 An event n8n does not take (n8n down, the workflow not published) stays in the outbox for the next pass. A pull
 request's review comments come back the same way: its key is the item's (`<tracker>/<key>`).
@@ -166,8 +212,9 @@ request's review comments come back the same way: its key is the item's (`<track
 **The item's workflow** starts with a Webhook trigger, POST, path `item/<pack>/<name>` (the tracker's `workflow`), and
 answers at once with its execution: Response Data `={{ JSON.stringify({execution: $execution.id}) }}`, so the register
 knows the run's execution from its start (shown on n8n 2.44.7 on 10 Nov 2026). Without it the execution is learnt from
-the run's first wait or tracker write. Its waits loop: `wait_item` → IF `{{ $json.outcome }}` is `timeout` → a reminder
-(`tracker`, comment) → `wait_item` again.
+the run's first wait or tracker write. Its waits loop: `wait_item` → IF `{{ $json.outcome }}` is `timeout` → IF
+`{{ $json.reminded }}` is below its number → a reminder (`tracker`, comment) → `wait_item` again; else the run ends
+(WFL-33).
 
 **Lean answers** (WFL-22). In a customer-class deployment (data.yaml `class: customer`) n8n gets the status, the
 outcome, the ids and references (task, step, build, pull request, artifacts, tracker writes) and a summary of at most
@@ -393,9 +440,51 @@ the workflow's triggers (case e: 3 to 14 s in our runs).
 - For a few seconds after a sync's restart a trigger can still start a run on the previous approved version; that run
   is complete and consistent, only older. Both versions were approved by the owner.
 - Pruning is safe for long waits; only finished runs age out.
-- Not tested: an n8n upgrade to another minor version with runs waiting. No second pinned n8n image was on the machine,
-  and pulling one (about 1.8 GB) was outside this change; the container was recreated with changed settings on the
-  same database instead (case f). The next n8n upgrade must repeat case f with the new image before it lands.
+- An n8n upgrade with runs waiting: tested below (PLT-39).
+
+### 11.1 An n8n upgrade while runs wait (CR 2026-11-10 G3, tested 10 Nov 2026)
+
+`ops/deploy.py` recreates n8n with `compose up` when versions.env's `N8N_IMAGE` changes. We tested that on throwaway
+containers (a Postgres of its own, a private internal network, the AI Stack step node from `n8n/custom` loaded through
+`N8N_CUSTOM_EXTENSIONS`, the live n8n's settings, and a stand-in step service aliased `mission-control`); never the live
+n8n. The newer image: n8n 2.45.4 (`n8nio/n8n:2.45.4@sha256:80e23ced901f0e22597d4f3464e3aaf9d835372262ea6f08ef760d8ca35df25c`,
+released 26 Oct 2026), the newest release at least two weeks old above the pinned 2.44.7; 2.46.0 and 3.0.0 of 27 Oct
+were pre-releases. Two runs waited on 2.44.7: home's item workflow `item-home-inbox.json` (an issue arrives, answered,
+posted, then **Wait for the owner's reply**, a `wait_item` step whose answer the stand-in held back) and a workflow whose
+AI Stack step runs a long **command** (`toy.soak` at `wsl`, held too) followed by a notify step. The stand-in delivers an
+answer the way `ops/flows.py` does: POSTed to the step's resume URL, tried again until n8n takes it.
+
+| Case | n8n after the waits | When the held answers came | The two runs |
+|---|---|---|---|
+| U1 | recreated on 2.45.4 (five database migrations at start) | once n8n had finished starting | both succeeded: the item run went on through Answer the reply, Post the second answer, Write the summary and Close the issue; the command run through its notify step |
+| U2 | recreated on 2.45.4, then back on 2.44.7 (the rollback a failed deploy does) | once 2.44.7 had finished starting on the migrated database | both succeeded |
+| U3 | recreated on 2.45.4 | released while n8n was down, sent only while `/healthz/readiness` answered 200 | both succeeded |
+| U4 | recreated on 2.44.7 (no new image) | as U3 | both succeeded |
+| W1 | recreated on 2.45.4 | the command's released while n8n was down (tried every 2 s), the item's 10 s after `/healthz` first answered | **both lost**: the command's answer was taken (200) during the migrations and dropped, and the run stayed waiting (the same answer sent again after the start resumed it and it succeeded); the item's was taken as soon as n8n registered its waiting webhooks, under a second before its start-up recovery, which marked the run `crashed`, and its next step's answer got 500 (`Cannot read properties of undefined (reading 'inputOverride')`) |
+| W2 | recreated on 2.44.7 (no new image) | released while down (tried every second) and when `/healthz` first answered | the item run **crashed** as in W1 (taken 0.2 s before the recovery); the command run succeeded |
+| W3 | `docker restart` on 2.44.7 (what an import or a switch does) | as W2 | both succeeded (the answers were taken just after the recovery) |
+
+**What it shows.** A new n8n image keeps every waiting run: n8n stores the execution in its database, the new
+version's migrations leave it, and it resumes when its answer comes; going back to the old image on the migrated
+database keeps them too. What breaks a run is **when** its answer arrives, on every start of n8n, new image or not:
+n8n answers `/healthz` the moment its port opens, before its migrations, before it activates its workflows and before
+its start-up recovery marks the executions that were running as `crashed`. An answer that lands in that window is
+taken and lost (during migrations), or resumes the run just before the recovery crashes it (the recovery's log line
+came 0.02 to 0.25 s after n8n listed its active workflows). `/healthz/readiness` answered 503 through all of that and
+first answered 200 after the recovery's line in every run (probed every 0.5 s); delivering only on 200 (U3, U4) lost
+nothing.
+
+**The rules (PLT-39):**
+- A new n8n image is deployed while runs wait; the deploy neither refuses nor waits for them. After `compose up` it waits
+  for `/healthz/readiness` (up to 10 minutes, for migrations), and a deploy whose n8n never gets ready fails, so the
+  builder reverts to the old pin, which U2 showed is safe.
+- The deploy's workflow import waits for `/healthz/readiness` too, not `/healthz`.
+- The step service sends an answer only while `/healthz/readiness` answers 200 (U3, WFL-34): `ops/flows.py` `deliver`
+  asks it first and, while n8n is starting, keeps the answer for its next round (every 60 s). Before, an answer whose
+  post fell into the start-up window of any n8n start (a deploy, an import, a switch, a task's new workflow, the
+  nightly restart) could be lost or crash its run.
+- 2.45.4 is not needed: the pin stays at 2.44.7. A later image is tested the same way before it lands: a throwaway
+  Postgres, n8n and stand-in, the two held runs, recreate on the new image, release once it is ready.
 
 The sync itself ran against the same throwaway n8n, with the AI Stack step node loaded: approving the toy pack
 imported `toy/bug`, `toy/ticket` and `toy/triage` under ids starting with `pack` and `item/toy/ticket` answered 200; an edit
@@ -437,6 +526,18 @@ run, the summary is written in shadow and the run ends. The runner side is reloa
 n8n restarted mid-wait and mid-job; nothing is lost and each job is submitted once. n8n gets lean answers only, and the
 zip holds every step. A second test greps the stand-in domain's names over `ops/`, `images/`, `compose/`, `config/` and
 `n8n/` and finds nothing.
+
+**The follow-up CR: tracker items a run can work with** (10 Nov 2026, GEN-46). The same test now runs the toy's ticket
+as the second CR's "Done when" says: the stand-in tracker is new (`start: now`) and holds an old item, which starts
+nothing; a new item with a text, a reporter's comment and a crash log starts one run; the triage agent's brief holds
+the item's text and that comment, read by the step service; the owner sends the question from shadow ("Right, send
+it"), and the item has it once, also after a second tap and a retry; the reporter's reply (its text in the register,
+only "1 new comment on the item" in n8n) wakes the wait after one reminder (`reminded: 1`); the block `item` saves
+the crash log as an artifact and the toy tool at wsl-host reads it, given by its artifact id; the build opens a draft
+pull request; a reporter's comment during the wait for the review (`on: pr`) does not wake it, a review comment does;
+the owner sends the summary, and the item has it once. n8n's executions hold none of the item's, the comments' or the
+triage's text. A second test lets the reply never come: the ticket reminds twice and then stops waiting with its
+summary, and the run ends.
 
 **The same flow on a real n8n** (10 Nov 2026): a throwaway n8n 2.44.7 (the pinned digest) with its own Postgres on a
 private network, the AI Stack step node and example-work's node list (`NODES_INCLUDE`), the toy's item workflow

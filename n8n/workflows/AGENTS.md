@@ -9,6 +9,10 @@ workflow from the runner, once (`ops/n8n_jobs.py`, kept in `/srv/ai/missions/flo
 here). After that a schedule is changed on n8n's canvas (Workflows in the app) and exported (WFL-08); the app has no
 schedule form of its own.
 
+Not every deployment runs every file here (PLT-38): a deployment imports those its `deployments/<name>/workflows.yaml`
+names, plus the tracker poller and its trackers' item workflows; the Active column below is home's, which runs them
+all. `ops/n8n_gen.py crew` adds a new job's name to the running deployment's list.
+
 The stack's own **item workflows** (`item-home-<name>.json`, named `Item: home/<name>`) start from a tracker item: the
 run register posts `item/home/<name>` when a tracker of the deployment names `home/<name>` as its workflow
 (docs/N8N-MIGRATION.md §3.6). They have no Run now; no pack may be named `home`, so no pack listens there.
@@ -30,7 +34,7 @@ file that lacks it and changes nothing else in the file.
 | `crew-journey-checks.json` | Crew: Journey checks | `10 4 * * *` | `run/crew-journey-checks` | yes |
 | `crew-maintainability-review.json` | Crew: Maintainability review | `30 4 * * 1` | `run/crew-maintainability-review` | yes |
 | `crew-memory-gatekeeper.json` | Crew: Memory gatekeeper | `*/10 * * * *` | `run/crew-memory-gatekeeper` | yes |
-| `crew-nightly-restart.json` | Crew: Nightly restart | `50 3 * * *` | `run/crew-nightly-restart` | no: waits for its switch |
+| `crew-nightly-restart.json` | Crew: Nightly restart | `50 3 * * *` | `run/crew-nightly-restart` | yes |
 | `crew-phone-check.json` | Crew: Phone check | `0 9 * * 1` | `run/crew-phone-check` | yes |
 | `crew-phone-cleanup.json` | Crew: Phone cleanup | `0 10 * * 0` | `run/crew-phone-cleanup` | yes |
 | `crew-postmaster.json` | Crew: Postmaster | `0 * * * *` | `run/crew-postmaster` | yes |
@@ -38,12 +42,12 @@ file that lacks it and changes nothing else in the file.
 | `crew-skill-curator.json` | Crew: Skill curator | `0 4 * * 0` | `run/crew-skill-curator` | yes |
 | `crew-skill-keeper.json` | Crew: Skill keeper | `*/5 * * * *` | `run/crew-skill-keeper` | yes |
 | `crew-swarm-sync.json` | Crew: Swarm sync | `* * * * *` | `run/crew-swarm-sync` | yes |
-| `crew-tracker-poll.json` | Crew: Tracker poll (WFL-19; it asks the trackers every `poll_minutes`, 5 by default) | `* * * * *` | `run/crew-tracker-poll` | no: a deployment with trackers publishes it (home: the lead's switch, GEN-45) |
-| `item-home-inbox.json` | Item: home/inbox (GEN-45; an issue in the owner's inbox repository, answered on the issue) | webhook `item/home/inbox` | none: its item starts it | no: switched on with the poller |
+| `crew-tracker-poll.json` | Crew: Tracker poll (WFL-19; it asks the trackers every `poll_minutes`, 5 by default) | `* * * * *` | `run/crew-tracker-poll` | yes: with the deployment's trackers (PLT-38) |
+| `item-home-inbox.json` | Item: home/inbox (GEN-45; an issue in the owner's inbox repository, answered on the issue) | webhook `item/home/inbox` | none: its item starts it | yes: with its tracker (PLT-38) |
 | `crew-test-agent.json` | Crew: Test agent | `30 4 * * 2` | `run/crew-test-agent` | yes |
-| `crew-trial-rotation.json` | Crew: Trial rotation | `0 1 * * *` | `run/crew-trial-rotation` | no: waits for its switch |
+| `crew-trial-rotation.json` | Crew: Trial rotation | `0 1 * * *` | `run/crew-trial-rotation` | yes |
 | `crew-upgrade-check.json` | Crew: Upgrade check | `0 9 01 * *` | `run/crew-upgrade-check` | yes |
-| `crew-vault-ingest.json` | Crew: Vault ingest | `* * * * *` | `run/crew-vault-ingest` | no: waits for its switch |
+| `crew-vault-ingest.json` | Crew: Vault ingest | `* * * * *` | `run/crew-vault-ingest` | yes |
 | `memory-keeper.json` | Memory Keeper | `30 4 * * *` | `run/memory-keeper` | yes |
 | `stack-self-test.json` | Stack self-test | webhook | `stack-self-test` | yes |
 | `task-10-ram-upgrade-to-32-gb.json` | Task #10: RAM upgrade to 32 GB | `0 8 * * *` | `run/task-10-ram-upgrade-to-32-gb` | yes |

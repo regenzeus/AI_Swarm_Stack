@@ -82,16 +82,19 @@ def publish(clone, branch, push, forge, origin, target, title, body, run, key):
 
 
 def poll_prs(forge, me="ai-stack", hand=None):
-    """Each watched pull request's new comments from someone else, as one event {run, key, ref, comments} for its run,
-    as a tracker comment is (the stack's own by its author or its write mark, trackers.own); each comment is handed on
-    once: hand(events) takes them before they count as seen."""
+    """Each watched pull request's new comments from someone else, as one event {run, key, ref, comments, said} for its
+    run, as a tracker comment is (the stack's own by its author or its write mark, trackers.own); each comment is handed
+    on once: hand(events) takes them before they count as seen. Their source is the pull request (pr-comment:<pr>/<id>),
+    so only a wait on: pr or on: any takes them (ops/runreg.py, WFL-32)."""
     from domain import trackers as TR
     prs, events = _prs(), []
     for p in prs:
         new = [c for c in forge.comments(p["origin"], p["number"]) if not TR.own(c, me) and str(c["id"]) not in p["seen"]]
         if not new:
             continue
-        events.append({"run": p["run"], "key": p["key"], "ref": f"pr:{p['number']}", "comments": [f"pr-comment:{p['number']}/{c['id']}" for c in new]})
+        refs = [f"pr-comment:{p['number']}/{c['id']}" for c in new]
+        events.append({"run": p["run"], "key": p["key"], "ref": f"pr:{p['number']}", "comments": refs,
+                       "said": [TR.said_of(r, c) for r, c in zip(refs, new)]})
         p["seen"] += [str(c["id"]) for c in new]
     if hand:
         hand(events)

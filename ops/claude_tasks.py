@@ -440,4 +440,4 @@ def work(c=None):
                 continue
         except Exception as e:
             M.log(f"claude tasks: {type(e).__name__}: {e}")
-        M.stop.wait(5)
+        M.rest(c, "claude tasks", 5)

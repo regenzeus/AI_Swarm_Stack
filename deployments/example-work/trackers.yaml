@@ -1,0 +1,11 @@
+# deployments/example-work/trackers.yaml: the trackers a work deployment watches (GEN-25, ops/domain/trackers.py), with
+# placeholders. Each item that matches the query starts the named workflow of a pack (<pack>/<name>, GEN-43); a tracker
+# here also brings the tracker poller (crew-tracker-poll, PLT-38). The token is a secret (JIRA_TOKEN, sops), never
+# here. Every kind of write starts in shadow until the owner lets it go live.
+poll_minutes: 5
+trackers:
+  - name: bugs
+    kind: jira
+    url: https://jira.example.com
+    query: project = DEMO AND labels = ai-stack
+    workflow: demo/bug

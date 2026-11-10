@@ -11,14 +11,17 @@ here reaches n8n after a restart of its container.
 Kinds (the step service's `KINDS`): Agent step (`agent`), Coding change (`build`), Crew job (`crew`), Plan task
 (`task`), Ask the owner (`ask`, optionally for a role: only its people may answer), Notify the owner (`notify`), Recall
 (`recall`), Remember (`remember`), Run command (`command`), Run a plan (`plan`), Wait for the item (`wait_item`: the
-item's tracker and key, at most `timeout_hours`), Write to the item (`tracker`: comment, summary, attach, link,
-transition or label, in shadow until its kind goes live). A Coding change for a tracker item also names the item
-(`<tracker>/<key>`), its base ref or tag and its target branch: it goes out as a draft pull request.
+item's tracker and key, at most `timeout_hours`, Wake on `on`: the item's comments, its pull request's, or either),
+Write to the item (`tracker`: comment, summary, attach, link, transition or label, in shadow until its kind goes live),
+Read the item (`item`: its text, comments and attachments; Fetch its files for `attach_to` a place, the attachments
+named or all, answered by artifact id). An Agent step with "Read the item of" sends `from_item: true`. A Coding change
+for a tracker item also names the item (`<tracker>/<key>`), its base ref or tag and its target branch: it goes out as a
+draft pull request.
 
 Each step also sends its workflow's name and its node's name, so the run register (ops/runreg.py) keeps the run's steps
 by name.
 
-The Agent, Crew job, Place, Repository, Tracker and Role pickers are n8n `loadOptions` methods that read
+The Agent, Crew job, Place (also Fetch its files for), Repository, Tracker and Role pickers are n8n `loadOptions` methods that read
 `GET http://mission-control:8099/catalog` (the lists the runner writes every minute, public/step-catalog.json).
 
 Rules:

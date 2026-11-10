@@ -1115,7 +1115,7 @@ def worker():
                 tick(c)
         except Exception as e:                            # the next pass tries again; it is logged
             M.log(f"conductor: {type(e).__name__}: {e}")
-        M.stop.wait(5)
+        M.rest(c, "conductor", 5)
 
 
 def state(c, task_ids):

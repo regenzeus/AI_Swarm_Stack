@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """WFL-08: the deployment's workflows live in git (n8n/workflows/*.json); n8n holds a copy.
 
-    python3 ops/n8n_sync.py import            the repository's workflows into n8n, each active or not as its file says,
-                                              and the running packs' (a deploy runs this when n8n/workflows/ or compose changed)
+    python3 ops/n8n_sync.py import            the deployment's workflows of the repository into n8n, each active or not as
+                                              its file says, and the running packs' (a deploy runs this when n8n/workflows/,
+                                              compose or deployments/ changed)
     python3 ops/n8n_sync.py packs             only the running packs' workflows (an approval in the queue does this too)
     python3 ops/n8n_sync.py export [dir]      n8n's workflows as one file each, made stable for git (default: n8n/workflows);
                                               a pack's workflow goes to the pack's own repository instead, never into git here
@@ -12,6 +13,11 @@ A change made on the canvas reaches git by `export` in a session's worktree and 
 A workflow the runner made or switched off for a task since the last export (ops/n8n_jobs.py, its own folder) is the
 newer word: an import publishes or unpublishes it as that word says, so a deploy never switches a cancelled task back on.
 Uses n8n's own command line inside its container (import:workflow, export:workflow), which the free edition has.
+
+Which of the repository's workflows a deployment runs (PLT-38): those its deployments/<name>/workflows.yaml names, and
+the tracker poller and the item workflows its trackers.yaml implies (ops/deployment.py workflow_names). The rest are
+not imported, and one imported earlier that the deployment no longer runs is unpublished (a run of it that waits still
+finishes). An export adds a workflow made on the canvas to that list, so the next import keeps it.
 
 A pack's workflows (GEN-43, ops/domain/packs.py): the running commit's files, each under the id pack_id(<pack>/<name>)
 whatever the file says, so a pack can never overwrite a workflow of the stack's or of another pack. What runs is the
@@ -23,6 +29,7 @@ finishes on the version it started with (n8n resumes from the copy it keeps with
 import hashlib
 import json
 import os
+import shlex
 import subprocess
 import sys
 import tempfile
@@ -33,6 +40,7 @@ from textcap import tail
 R = Path(__file__).resolve().parent.parent
 REPO = R / "n8n/workflows"
 CONTAINER = "aistack-n8n-1"
+CHOSEN = "/home/node/.n8n/chosen"                 # inside n8n: the deployment's files of /workflows, for one import
 VOLATILE = ("createdAt", "updatedAt", "versionId", "activeVersionId", "triggerCount", "shared", "tags", "pinData",
             "staticData", "meta", "isArchived", "versionCounter", "activeVersion", "parentFolder", "description")
 PACK = "pack"                                     # a pack's workflow ids start with it; the stack's start with "ais"
@@ -50,22 +58,52 @@ def stable(wf):
     return out
 
 
-def import_all(repo=REPO, run=subprocess.run, made=None):
-    """Imports every file (n8n imports them unpublished), publishes the ones whose file says active and unpublishes the
-    others (n8n 2.x activates only through publish in single-server mode), then restarts n8n so its server loads them.
-    The runner's newer word on a workflow (ops/n8n_jobs.py) decides over the repository's file."""
+def import_chosen(files, run=subprocess.run):
+    """The deployment's files of the repository's folder (mounted at /workflows) into n8n, unpublished: copied into a
+    folder of their own inside the container, so n8n's folder import takes exactly these."""
+    names = " ".join(shlex.quote(f) for f in files)
+    return run(["docker", "exec", "-u", "node", CONTAINER, "sh", "-c",
+                f"rm -rf {CHOSEN} && mkdir -p {CHOSEN} && cd /workflows && cp {names} {CHOSEN}/ && "
+                f"n8n import:workflow --separate --input={CHOSEN}; s=$?; rm -rf {CHOSEN}; exit $s"],
+               capture_output=True, text=True, timeout=300)
+
+
+def active_ids(run=subprocess.run):
+    """The ids of the workflows n8n has published, or None when n8n does not say."""
+    p = n8n("list:workflow", "--active=true", "--onlyId", run=run)
+    return None if p.returncode else {x.strip() for x in p.stdout.split() if x.strip()}
+
+
+def import_all(repo=REPO, run=subprocess.run, made=None, names=None):
+    """Imports the deployment's files (PLT-38, deployments/<name>/workflows.yaml; n8n imports them unpublished),
+    publishes the ones whose file says active and unpublishes the others (n8n 2.x activates only through publish in
+    single-server mode), unpublishes a workflow of the repository it published earlier that the deployment no longer
+    runs, then restarts n8n so its server loads them. The runner's newer word on a workflow (ops/n8n_jobs.py) decides
+    over the repository's file."""
     import n8n_jobs as NJ
-    p = n8n("import:workflow", "--separate", "--input=/workflows", run=run)
-    print(tail((p.stdout + p.stderr).strip(), 2000))     # cap: preview, the tail of n8n's own report; the journal keeps the rest
-    if p.returncode:
-        return p.returncode
+    made = made or NJ.MADE
+    names = NJ.chosen(repo) if names is None else names
+    mine = NJ.workflows(repo, made, names)
+    files = sorted(w["file"] for w in mine.values() if not w["made"])
+    if files:
+        p = import_chosen(files, run=run)
+        print(tail((p.stdout + p.stderr).strip(), 2000))     # cap: preview, the tail of n8n's own report; the journal keeps the rest
+        if p.returncode:
+            return p.returncode
     bad = 0
-    for _, w in sorted(NJ.workflows(repo, made or NJ.MADE).items(), key=lambda x: x[1]["file"]):
+    for _, w in sorted(mine.items(), key=lambda x: x[1]["file"]):
         wf = w["wf"]
         q = n8n("publish:workflow" if wf.get("active") else "unpublish:workflow", f"--id={wf['id']}", run=run)
         print(f"{'published' if wf.get('active') else 'unpublished'} {wf['name']}" if not q.returncode else
               f"{wf['name']}: {tail((q.stderr or q.stdout).strip(), 300)}")   # cap: preview, n8n's reason; the journal has it all
         bad += q.returncode != 0
+    live = active_ids(run=run)
+    for wid, w in sorted(NJ.workflows(repo, made, ["*"]).items(), key=lambda x: x[1]["file"]):
+        if wid not in mine and (live is None or wid in live):     # n8n did not say: unpublished anyway, harmless when it has none
+            q = n8n("unpublish:workflow", f"--id={wid}", run=run)
+            if not q.returncode:
+                print(f"unpublished {w['wf'].get('name')}: this deployment does not run it (its workflows.yaml)")
+            bad += q.returncode != 0 and live is not None
     try:
         from domain import packs as PK
         for line in sync_packs(PK.load(), run=run, restart=False):
@@ -308,6 +346,10 @@ def export_all(dest=REPO, run=subprocess.run, loaded=None, propose=None):
         files = sorted(Path(tmp).glob("*.json"))
         for n in write_stable(files, dest, [p["name"] for p in loaded.get("packs") or []]):
             print(f"exported {n}")
+            if Path(dest).resolve() == REPO.resolve():
+                import deployment as DEPLOY
+                if DEPLOY.add_workflow(n):           # PLT-38: made on the canvas here, so this deployment runs it
+                    print(f"{n} added to {DEPLOY.FOLDER / 'workflows.yaml'}")
         for line in export_packs(files, loaded, propose):
             print(line)
     return 0

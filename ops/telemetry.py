@@ -247,4 +247,4 @@ def worker():
                     write(r, M.KEY_OF[m["type"]])
         except Exception as e:
             M.log(f"telemetry: {type(e).__name__}: {e}")
-        M.stop.wait(5)
+        M.rest(c, "telemetry", 5)

@@ -124,6 +124,7 @@ LOCK_WINDOW_S = 600
 STACKS_EVERY_S = 3600            # limit: drops, at most one stack dump an hour (a diagnosis, never a stop)
 _stacks_at = [0.0]
 _conns = None                    # every open Robust connection: which thread opened it, and where
+WRITES = re.compile(r"\s*(insert|update|delete|replace)\b", re.I)   # the statements that open a transaction (Python's sqlite3)
 
 
 class Robust(sqlite3.Connection):
@@ -132,7 +133,11 @@ class Robust(sqlite3.Connection):
     same connection, so every other writer in the runner failed for 40 minutes, until a restart. The caller still gets the
     error; the half-done unit is dropped instead of holding the lock. Overnight 9 Nov 2026 the lock came back from inside
     the runner, holder unknown: a burst of failures now writes every thread's stack and every connection that is in a
-    transaction, with where it was opened, once an hour at most (lock_stacks)."""
+    transaction, with where it was opened, once an hour at most (lock_stacks). 10 Nov 2026 the holder was found: the
+    Conductor's own long-lived connection slept between passes inside a transaction (a write some pass made and never
+    committed), and every other writer failed until a restart, the inbox's first step among them. Each connection now
+    keeps the first write of its open transaction (statement and caller), and the loops that keep one connection end
+    every pass with end_pass(), which commits what was left open and says which write it was (PLT-40)."""
 
     def __init__(self, *a, **k):
         super().__init__(*a, **k)
@@ -142,7 +147,25 @@ class Robust(sqlite3.Connection):
             _conns = weakref.WeakSet()
         self.opened_by = threading.current_thread().name
         self.opened_at = "".join(traceback.format_stack(limit=8)[:-1])
+        self.first_write = None                  # (statement, caller) of the open transaction's first write
         _conns.add(self)
+
+    def _note(self, sql):
+        if self.first_write is None and not self.in_transaction and WRITES.match(str(sql)):
+            at = traceback.extract_stack(limit=5)[:-2]   # the caller and its caller (put() alone says little)
+            where = " < ".join(f"{Path(f.filename).name}:{f.lineno} {f.name}" for f in reversed(at[-2:]))
+            self.first_write = (TC.cut(" ".join(str(sql).split()), 160), where)   # cap: preview, a log line names the statement
+
+    def end_pass(self, who):
+        """The end of a loop's pass: a transaction still open is committed, and the write that opened it is logged, so a
+        forgotten commit never holds the database between passes. -> the write that was left open, or None."""
+        if not self.in_transaction:
+            self.first_write = None
+            return None
+        left = self.first_write or ("(unknown statement)", "?")
+        self.commit()
+        log(f"{who}: a pass left a write uncommitted, committed now: {left[0]} (at {left[1]})")
+        return left
 
     def _give_up(self, e):
         if "locked" in str(e) or "busy" in str(e):
@@ -156,6 +179,7 @@ class Robust(sqlite3.Connection):
                 log(f"the lock diagnosis failed: {type(d).__name__}: {d}")
 
     def execute(self, *a, **k):
+        self._note(a[0] if a else k.get("sql", ""))
         try:
             return super().execute(*a, **k)
         except sqlite3.OperationalError as e:
@@ -163,6 +187,7 @@ class Robust(sqlite3.Connection):
             raise
 
     def executemany(self, *a, **k):
+        self._note(a[0] if a else k.get("sql", ""))
         try:
             return super().executemany(*a, **k)
         except sqlite3.OperationalError as e:
@@ -171,10 +196,30 @@ class Robust(sqlite3.Connection):
 
     def commit(self):
         try:
-            return super().commit()
+            r = super().commit()
+            self.first_write = None
+            return r
         except sqlite3.OperationalError as e:
             self._give_up(e)
             raise
+
+    def rollback(self):
+        self.first_write = None
+        return super().rollback()
+
+
+def rest(c, who, seconds):
+    """A loop's pause between passes (PLT-40): its connection ends the pass with nothing open, then it waits. -> True when
+    the runner is stopping."""
+    try:
+        end = getattr(c, "end_pass", None)
+        if end:
+            end(who)
+        elif c is not None and c.in_transaction:     # a plain connection (tests): committed all the same
+            c.commit()
+    except sqlite3.Error as e:                       # logged; the next pass tries again
+        log(f"{who}: the pass's open write could not be committed: {type(e).__name__}: {e}")
+    return stop.wait(seconds)
 
 
 def lock_seen(now=None):
@@ -203,7 +248,8 @@ def lock_stacks(folder=None):
             except sqlite3.ProgrammingError:     # closed
                 continue
             if busy:
-                out.write(f"\n- opened by thread {c.opened_by}, at:\n{c.opened_at}")
+                w = c.first_write or ("(unknown statement)", "?")
+                out.write(f"\n- opened by thread {c.opened_by}; its first open write: {w[0]} (at {w[1]}); opened at:\n{c.opened_at}")
         out.write("\nEvery thread:\n")
         out.flush()
         faulthandler.dump_traceback(file=out, all_threads=True)
@@ -1180,7 +1226,7 @@ def watcher():
             SH.tick(c)                     # shopping: price readings of waiting proposals, following bought orders
         except Exception:
             log(traceback.format_exc())
-        stop.wait(60)
+        rest(c, "watcher", 60)
 
 
 def single_runner(path):
@@ -1265,7 +1311,7 @@ def main():
                     write_state(c, missions)
             except Exception:
                 log(traceback.format_exc())
-        stop.wait(2)
+        rest(c, "mission runner", 2)
 
 
 if __name__ == "__main__":

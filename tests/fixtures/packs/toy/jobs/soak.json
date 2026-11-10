@@ -1,8 +1,8 @@
 {
   "kind": "toy.soak",
-  "about": "Run the toy tool for the given seconds: a stand-in for a licensed tool whose run takes hours",
-  "params": {"seconds": {"type": "int", "min": 0, "max": 840}},
-  "steps": [["python3", "-c", "import sys, time; time.sleep(int(sys.argv[1])); print('soaked for', sys.argv[1], 's')", "{seconds}"]],
+  "about": "Run the toy tool on the item's input file for the given seconds: a stand-in for a licensed tool whose run takes hours",
+  "params": {"seconds": {"type": "int", "min": 0, "max": 840}, "input": {"type": "file", "max_kb": 64}},
+  "steps": [["python3", "-c", "import os, sys, time; f = os.path.join('..', '..', 'inbox', os.path.basename(os.getcwd()), sys.argv[2]); print('read', os.path.getsize(f), 'bytes of', sys.argv[2]); time.sleep(int(sys.argv[1])); print('soaked for', sys.argv[1], 's')", "{seconds}", "{input}"]],
   "collect": [],
   "minutes": 15
 }

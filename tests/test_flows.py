@@ -447,3 +447,32 @@ def test_the_nodes_pickers_read_the_agents_crew_jobs_places_and_repositories_the
     assert got["ok"] and got["agents"] == cat["agents"] and got["places"][0]["commands"] == ["toy.reproduce"]
     monkeypatch.setattr(S, "STEP_CATALOG", tmp_path / "none.json")
     assert TestClient(S.flows_app, base_url="http://mission-control:8099").get("/catalog").json()["ok"] is False
+
+
+def test_an_answer_waits_until_n8n_has_finished_starting():
+    """WFL-34: during n8n's start-up an answer was taken and dropped, or crashed its run (§11.1); it is posted only once
+    /healthz/readiness answers 200, and kept until then."""
+    posted, asked = [], []
+
+    def post(req, timeout=30):
+        posted.append(req.full_url)
+        return Resp()
+    starting = iter([False, False, True])
+    assert FW.deliver(RESUME, {"status": "done"}, post=post, ready=lambda: next(starting)) is False
+    assert FW.deliver(RESUME, {"status": "done"}, post=post, ready=lambda: next(starting)) is False
+    assert posted == []                                                    # nothing reached n8n while it was starting
+    assert FW.deliver(RESUME, {"status": "done"}, post=post, ready=lambda: next(starting)) is True
+    assert posted == ["http://127.0.0.1:5678/webhook-waiting/731/ab12"]
+
+    class NotYet(Resp):
+        status = 503
+
+    def get(req, timeout=5):
+        asked.append(req.full_url)
+        return NotYet() if len(asked) == 1 else Resp()
+    assert FW.n8n_ready(get) is False and FW.n8n_ready(get) is True
+    assert asked == ["http://127.0.0.1:5678/healthz/readiness"] * 2
+
+    def away(req, timeout=5):
+        raise OSError("connection refused")
+    assert FW.n8n_ready(away) is False

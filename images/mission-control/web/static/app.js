@@ -180,22 +180,28 @@ function packCard(name, L, open) {
       ${run.problems.length ? `<div class="small err-t wrap">${run.problems.map(esc).join("<br>")}</div>` : ""}</div>` : ""}
     ${no.map((r) => `<div class="small err-t wrap">${r.commit ? `${esc(pkShort(r.commit))}: ` : ""}${esc(r.why)}</div>`).join("")}</details>`;
 }
+// WFL-27: from when a tracker's items count: start now (from its first pass) or a start date.
+function trackerStart(t) {
+  if (t.start && t.start !== "now") return `counts items changed since ${esc(dt(t.start))}`;
+  return t.began ? `counts items from ${esc(dt(t.began))}` : t.started ? "counts items from its first pass" : "counts items from its first pass, still to come";
+}
 function trackersHtml(T) {
   const need = T.shadow_needed || 0;
   return `${T.trackers.map((t) => `<div class="card pad"><div class="row between wrap" style="gap:4px 8px"><b class="wrap">${esc(t.name)}</b><span class="pill">${esc(t.kind)}</span></div>
-      <div class="small muted wrap">starts ${t.workflow ? `<a href="#/workflows">${esc(t.workflow)}</a>` : "no workflow"} · read up to ${t.cursor ? esc(dt(t.cursor)) : "nothing yet"}</div></div>`).join("")}
+      <div class="small muted wrap">starts ${t.workflow ? `<a href="#/workflows">${esc(t.workflow)}</a>` : "no workflow"} · ${trackerStart(t)} · read up to ${t.cursor ? esc(dt(t.cursor)) : "nothing yet"}</div>
+      ${t.refused ? `<div class="small err-t wrap">${esc(t.refused)}</div>` : ""}</div>`).join("")}
     ${T.kinds.map((k) => `<div class="card pad tk-kind"><div class="row between wrap" style="gap:6px 8px"><b>${esc(k.kind)}</b>
         <span class="row wrap" style="gap:6px"><span class="pill ${k.live ? "ok" : ""}">${k.live ? "live" : "in shadow"}</span>${k.live ? `<button class="btn sm" data-tk-live="0" data-kind="${esc(k.kind)}">Back to shadow</button>`
           : `<button class="btn sm${k.approved >= need ? " primary" : ""}" data-tk-live="1" data-kind="${esc(k.kind)}"${k.approved >= need ? "" : " disabled"}>Go live</button>`}</span></div>
       <div class="small muted">${nf(k.approved)} of ${nf(need)} judged right${k.pending ? ` · <b>${nf(k.pending)} waiting for you</b>` : ""}</div>
       ${(k.items || []).filter((i) => i.status === "pending").map((i) => `<div class="tk-item"><div class="tiny faint">${esc(i.tracker)}/${esc(i.key)} · ${esc(dt(i.at))}</div>
-        <pre class="wrap small">${esc(i.body)}</pre><div class="row" style="gap:6px;justify-content:flex-end"><button class="btn sm ghost" data-tk="tracker_shadow_reject" data-kind="${esc(k.kind)}" data-id="${esc(i.id)}">${ic.x}Wrong</button><button class="btn sm primary" data-tk="tracker_shadow_approve" data-kind="${esc(k.kind)}" data-id="${esc(i.id)}">${ic.check}Right</button></div></div>`).join("")}</div>`).join("")}`;
+        <pre class="wrap small">${esc(i.body)}</pre><div class="row wrap" style="gap:6px;justify-content:flex-end"><button class="btn sm ghost" data-tk="tracker_shadow_reject" data-kind="${esc(k.kind)}" data-id="${esc(i.id)}">${ic.x}Wrong</button><button class="btn sm ghost" data-tk="tracker_shadow_approve" data-kind="${esc(k.kind)}" data-id="${esc(i.id)}">${ic.check}Right, don't send</button><button class="btn sm primary" data-tk="tracker_shadow_approve" data-send="1" data-kind="${esc(k.kind)}" data-id="${esc(i.id)}">${ic.send}Right, send it</button></div></div>`).join("")}</div>`).join("")}`;
 }
 function packsHtml() {
   PK_SIG = packSig();
   const L = S?.packs || { packs: [], pending: [], refused: [] }, T = S?.trackers || { trackers: [], kinds: [], shadow_needed: 0 };
   const names = [...new Set([...L.pending, ...L.packs, ...L.refused].map((p) => p.name))], want = route.q.get("pack");
-  const head = `<div class="section-h section" id="packs"><h2>Packs and trackers</h2>${explain("packs-what", `A pack brings agents, skills, commands, n8n workflows and exams from a repository of its own, pinned by commit in the deployment's packs.txt. A new commit runs only after you approve it here; until then the commit you approved before keeps running, and each of its commands is approved again where it runs. A tracker is an issue tracker the stack reads (trackers.yaml): what it would write back stays in shadow, kept here and in Needs you, until you judged ${nf(T.shadow_needed || 0)} writes of a kind right and let that kind go live. ${how("workflows")}`, "About packs and trackers")}</div>`;
+  const head = `<div class="section-h section" id="packs"><h2>Packs and trackers</h2>${explain("packs-what", `A pack brings agents, skills, commands, n8n workflows and exams from a repository of its own, pinned by commit in the deployment's packs.txt. A new commit runs only after you approve it here; until then the commit you approved before keeps running, and each of its commands is approved again where it runs. A tracker is an issue tracker the stack reads (trackers.yaml): a new one counts its items from its first pass, or from the date its start names. What the stack would write back stays in shadow, kept here and in Needs you: a write you judge right you may send to its item at once, or keep back. Once you judged ${nf(T.shadow_needed || 0)} writes of a kind right, you may let that kind go live. ${how("workflows")}`, "About packs and trackers")}</div>`;
   if (!names.length && !T.trackers.length) return `${head}${emptyState("No packs or trackers: this deployment's packs.txt and trackers.yaml list none.", `<a class="btn sm" href="#/guide/workflows">${ic.doc}How packs come in</a>`, "card pad")}`;
   return `${head}<div class="stack">${names.map((n) => packCard(n, L, n === want || L.pending.some((p) => p.name === n))).join("")}${trackersHtml(T)}</div>`;
 }
@@ -209,7 +215,8 @@ function bindPacks() {
   }));
   $$("[data-tk]").forEach((b) => (b.onclick = async () => {
     b.disabled = true;
-    if (!(await act({ action: b.dataset.tk, kind: b.dataset.kind, id: b.dataset.id }, b.dataset.tk === "tracker_shadow_approve" ? "Judged right: it counts toward going live" : "Judged wrong: it does not count, and this kind stays in shadow"))) b.disabled = false;
+    const send = b.dataset.send === "1";
+    if (!(await act({ action: b.dataset.tk, kind: b.dataset.kind, id: b.dataset.id, ...(send ? { send: true } : {}) }, b.dataset.tk !== "tracker_shadow_approve" ? "Judged wrong: it does not count, and this kind stays in shadow" : send ? "Sent: it is on the item now, once, and it counts toward going live" : "Judged right: it counts toward going live; nothing was sent"))) b.disabled = false;
   }));
   $$("[data-tk-live]").forEach((b) => (b.onclick = async () => {
     b.disabled = true;

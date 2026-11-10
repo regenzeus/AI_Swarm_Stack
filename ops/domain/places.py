@@ -113,15 +113,16 @@ class Place:
         if not k.get("approved"):                                  # the worker's own reason names Windows' script: here it is the queue
             raise Refused(f"the job kind {kind} is not approved at {self.name}: the owner approves it in Needs you" if self.name in LOCAL
                           else k.get("why") or f"the job kind {kind} is not approved at {self.name}")
-        if spec is not None:
-            ok, why = WJ.check_values(spec, values, None, {})
-            if why:
-                raise Refused(f"{kind}: {why}")
         rid = uuid.uuid4().hex[:12]                                   # cap: id
         tmp = self.requests / f".tmp-{rid}"
         tmp.mkdir(parents=True)
-        for name, text in (files or {}).items():
-            (tmp / name).write_text(text, encoding="utf-8")
+        for name, data in (files or {}).items():                      # a patch's text, or a file's bytes (an artifact, WFL-28)
+            (tmp / name).write_bytes(data) if isinstance(data, bytes) else (tmp / name).write_text(data, encoding="utf-8")
+        if spec is not None:
+            ok, why = WJ.check_values(spec, values, tmp, {})          # a file parameter is checked against the request's own files
+            if why:
+                shutil.rmtree(tmp, ignore_errors=True)
+                raise Refused(f"{kind}: {why}")
         (tmp / "request.json").write_text(json.dumps({"id": rid, "kind": kind, "values": values, "at": int(time.time())}), encoding="utf-8")
         os.replace(tmp, self.requests / rid)                          # the worker sees the whole request or none of it
         return rid

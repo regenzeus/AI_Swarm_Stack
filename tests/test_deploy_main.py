@@ -64,3 +64,28 @@ def test_a_new_machine_builds_in_from_order_with_the_pins_and_stops_on_a_failure
     assert D.build_all(["builder", "hermes"]) == 1
     assert not any("images/builder" in r for r in stub.ran)        # stopped at the failure
     assert "did not build" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("ready", [True, False])
+def test_an_n8n_image_change_goes_ahead_while_runs_wait_and_waits_until_n8n_is_ready(stub, monkeypatch, capsys, ready):
+    """PLT-39: a new n8n image keeps every waiting run (2.44.7 -> 2.45.4 on 10 Nov 2026: a run in wait_item and one in a
+    long command both resumed on the new image, docs/N8N-MIGRATION.md §11), so the deploy neither refuses nor waits for
+    them; it recreates n8n with compose and then waits for /healthz/readiness, which n8n answers only after its
+    migrations, its workflows and its start-up recovery (/healthz answers before all three). An n8n that never gets
+    ready is a failed deploy."""
+    old = "N8N_IMAGE=n8nio/n8n:2.44.7@sha256:aa\nPOSTGRES_IMAGE=postgres:17-alpine\n"
+    new = "N8N_IMAGE=n8nio/n8n:2.45.4@sha256:bb\nPOSTGRES_IMAGE=postgres:17-alpine\n"
+    git = {f"{'a' * 40}:versions.env": old, f"{'b' * 40}:versions.env": new}
+    monkeypatch.setattr(D.subprocess, "run", lambda cmd, **k: types.SimpleNamespace(
+        stdout=git.get(cmd[-1], "versions.env\n") if cmd[:2] == ["git", "show"] else "versions.env\n", returncode=0, stderr=""))
+    asked = []
+    monkeypatch.setattr(D, "healthy", lambda url, n=100: asked.append(url) or (ready or url != D.N8N_READY))
+    assert D.main("a" * 40, "b" * 40) == (0 if ready else 1)
+    out = capsys.readouterr().out
+    assert any(" compose " in r and r.endswith("up -d --remove-orphans") for r in stub.ran)
+    assert "n8n's image changes: n8nio/n8n:2.44.7 -> n8nio/n8n:2.45.4; runs that wait in n8n resume" in out
+    assert asked[0] == D.N8N_READY == "http://127.0.0.1:5678/healthz/readiness"
+    assert ("n8n on its new image: ready" in out and "DEPLOY OK" in out) if ready else ("NOT READY" in out and "DEPLOY FAILED" in out)
+    assert D.n8n_upgrade(["versions.env"], "a" * 40, "a" * 40) == [] and D.n8n_upgrade(["compose/core.yaml"], "a" * 40, "b" * 40) == []
+    src = (D.R / "ops/deploy.py").read_text()                     # the import after a workflow change waits for readiness too
+    assert "healthy(N8N_READY)" in src and 'healthy("http://127.0.0.1:5678/healthz")' not in src

@@ -214,3 +214,100 @@ def test_a_burst_of_locks_writes_who_held_what_once(tmp_path, monkeypatch):
     holder.rollback()
     holder.close()
 
+
+
+def test_a_pass_that_leaves_a_write_open_is_committed_and_named(tmp_path, monkeypatch):
+    """10 Nov 2026: the Conductor's connection slept between passes inside a transaction it never committed, and every
+    other writer in the runner failed on a lock for 18 minutes. A loop's pause ends the pass: what was left open is
+    committed and the log says which write it was."""
+    import sqlite3
+    import missions as M
+    said = []
+    monkeypatch.setattr(M, "log", lambda *a: said.append(" ".join(map(str, a))))
+    f = tmp_path / "m.sqlite"
+    c = sqlite3.connect(f, timeout=0.2, factory=M.Robust)
+    c.execute("create table t (x integer)")
+    c.commit()
+
+    def a_pass_that_forgets_its_commit(c):
+        c.execute("insert into t values (7)")
+    a_pass_that_forgets_its_commit(c)
+    assert c.in_transaction and c.first_write[0] == "insert into t values (7)"
+    assert "a_pass_that_forgets_its_commit" in c.first_write[1]
+    other = sqlite3.connect(f, timeout=0.2)
+    try:
+        other.execute("insert into t values (8)")                 # held: the forgotten write blocks every other writer
+        raise AssertionError("the open write should block another writer")
+    except sqlite3.OperationalError:
+        other.rollback()
+    monkeypatch.setattr(M.stop, "wait", lambda s: False)
+    M.rest(c, "conductor", 5)
+    assert not c.in_transaction and c.first_write is None
+    assert any("conductor: a pass left a write uncommitted" in s and "insert into t values (7)" in s
+               and "a_pass_that_forgets_its_commit" in s for s in said)
+    other.execute("insert into t values (8)")                     # the next writer gets through
+    other.commit()
+    assert sorted(r[0] for r in other.execute("select x from t")) == [7, 8]
+    said.clear()
+    M.rest(c, "conductor", 5)                                     # a clean pass says nothing
+    assert said == []
+    plain = sqlite3.connect(f, timeout=0.2)                       # a plain connection (tests) is committed too
+    plain.execute("insert into t values (9)")
+    M.rest(plain, "events", 1)
+    assert not plain.in_transaction
+
+
+def test_every_loop_that_keeps_one_connection_rests_through_end_pass():
+    """Each runner loop that opens its connection once and keeps it pauses with rest(c, ...), never a bare stop.wait,
+    so no pass can leave the database held while the loop sleeps."""
+    import ast
+    import pathlib
+    ops = pathlib.Path(__file__).resolve().parent.parent / "ops"
+    loose = []
+    for p in sorted(ops.glob("*.py")):
+        src = p.read_text()
+        lines = src.splitlines()
+        for n in ast.walk(ast.parse(src)):
+            if not isinstance(n, ast.FunctionDef):
+                continue
+            body = lines[n.lineno - 1:n.end_lineno]
+            loop = next((i for i, l in enumerate(body) if "while not" in l and "stop.is_set()" in l), None)
+            keeps = loop is not None and any(l.strip().startswith(("c = M.db()", "c = db()", "c = c or M.db()"))
+                                             for l in body[:loop])      # opened once, before the loop (one per pass is closed)
+            if keeps:
+                bare = [l.strip() for l in body if "stop.wait(" in l]
+                rests = [l.strip() for l in body if "rest(c, " in l]
+                if bare or not rests:
+                    loose.append(f"{p.name}:{n.lineno} {n.name}: {bare or 'no rest(c, ...)'}")
+    assert not loose, loose
+
+
+def test_the_lock_report_names_each_connection_s_open_write(tmp_path, monkeypatch):
+    import sqlite3
+    import missions as M
+    monkeypatch.setattr(M, "DB", tmp_path / "x.db")
+    holder = sqlite3.connect(tmp_path / "x.db", factory=M.Robust)
+    holder.execute("create table t (x)")
+    holder.execute("update t set x = 1 where x = 0")             # the open write
+    text = M.lock_stacks().read_text()
+    assert "its first open write: update t set x = 1 where x = 0" in text
+    assert "test_the_lock_report_names_each_connection_s_open_write" in text
+    holder.rollback()
+    assert holder.first_write is None
+    holder.close()
+
+
+def test_the_title_repair_commits_what_it_changed(tmp_path):
+    """APP-57's repair of cut titles runs in tasks.table(), which every loop calls; it commits its own change instead of
+    leaving it open on the caller's connection."""
+    import sqlite3
+    import tasks as TK
+    c = sqlite3.connect(tmp_path / "t.sqlite")
+    c.row_factory = sqlite3.Row
+    TK.table(c)
+    whole = "Find a quiet external drive enclosure for the NAS backup disks and compare the three best on noise"
+    c.execute("insert into tasks (text, title, status) values (?,?,?)", (whole, whole[:30] + " …", "planned"))
+    c.commit()
+    TK.table(c)
+    assert not c.in_transaction
+    assert not c.execute("select title from tasks").fetchone()[0].endswith("…")

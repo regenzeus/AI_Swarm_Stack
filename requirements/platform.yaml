@@ -519,3 +519,80 @@ items:
     sources: [DEC-52]
     verify: {method: test, by: ['tests/test_runner_env.py::test_the_runner_environment_is_pinned_checksummed_and_follows_its_lock']}
     trace: [ops/runner_env.sh, ops/runner-requirements.txt, ops/runner-requirements.lock, tests/requirements.txt, ops/systemd/missions.service]
+  - id: PLT-38
+    title: A deployment runs only the stack workflows it chooses
+    statement: "A deployment shall run, of the stack's own workflows in n8n/workflows/, only those its workflows.yaml
+      names (a file's name without .json, or a pattern such as task-*) and those its trackers imply: with any tracker the
+      tracker poller, and for a tracker whose workflow is home/<name> that item workflow. A deploy shall import no other
+      file and shall unpublish one it published earlier that the deployment no longer chooses; a workflow the runner made
+      for a task on that machine shall always count as the deployment's. The switch shall publish only a chosen
+      workflow, a crew job's workflow made by the generator and a workflow made on the canvas and exported shall be added
+      to the running deployment's list, the app's workflows and schedules shall show only the chosen ones, a changed
+      deployment folder shall start an import, and the deployment check shall refuse a listed name that matches no file.
+      Home's list and tracker shall choose every workflow home ran before (28 jobs, the self-test, the tracker poller and
+      the inbox's item workflow); the example work deployment shall choose only the self-test and the tracker poller."
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-09]
+    sources: [DEC-45, 'CR 2026-11-10 (second), G2: a work deployment gets the home set (phone, postmaster, digests, private task briefings)']
+    acceptance: 'Test: home chooses all 31 files, each published, and example-work only the self-test and the poller; trackers
+      bring the poller and home/<name> item workflows; an import copies only the chosen files into n8n, publishes the
+      runner-made one, unpublishes a published workflow no longer chosen and leaves one n8n never had; the workflow
+      reads of the app and the runner see only the chosen ones; the switch refuses an unchosen workflow; the generator and
+      add_workflow extend the list once and keep its comments; the check names a typo.'
+    verify: {method: test, by: ['tests/test_deployment_workflows.py::test_home_runs_every_workflow_it_ran_before_the_list',
+      'tests/test_deployment_workflows.py::test_a_work_deployment_runs_only_the_self_test_and_its_tracker_poller',
+      'tests/test_deployment_workflows.py::test_the_tracker_poller_and_the_stacks_item_workflows_come_with_the_trackers',
+      'tests/test_deployment_workflows.py::test_a_name_no_workflow_has_is_refused_by_the_deployment_check',
+      'tests/test_deployment_workflows.py::test_a_deploy_imports_only_the_deployments_workflows_and_unpublishes_the_ones_it_no_longer_runs',
+      'tests/test_deployment_workflows.py::test_the_app_and_the_runner_see_only_the_deployments_workflows',
+      'tests/test_deployment_workflows.py::test_a_switch_publishes_only_a_workflow_the_deployment_runs',
+      'tests/test_deployment_workflows.py::test_a_new_crew_job_and_a_canvas_workflow_join_the_deployments_list']}
+    trace: [ops/deployment.py, ops/n8n_sync.py, ops/n8n_jobs.py, ops/n8n_switch.py, ops/n8n_gen.py, ops/deploy.py,
+      deployments/home/workflows.yaml, deployments/example-work/workflows.yaml, deployments/example-work/trackers.yaml]
+  - id: PLT-39
+    title: A new n8n image is deployed while runs wait
+    statement: "A deploy that changes n8n's image (versions.env N8N_IMAGE) shall go ahead while runs wait in n8n, neither
+      refusing nor waiting for them, shall wait after compose recreated n8n until n8n's /healthz/readiness answers 200
+      (at most 10 minutes, for its database migrations) and shall fail when it does not, so the builder reverts to the
+      old pin; the deploy's workflow import shall wait for the same readiness, not for /healthz."
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05, SN-13]
+    sources: [docs/N8N-MIGRATION.md, 'CR 2026-11-10 (second), G3: an n8n upgrade through ops/deploy.py while a run waits in wait_item and in a command']
+    rationale: 'Shown on throwaway containers on 10 Nov 2026 (docs/N8N-MIGRATION.md §11.1): runs waiting in wait_item
+      (home''s item workflow) and in a long command resumed and succeeded after n8n was recreated on 2.45.4 and after
+      the rollback to 2.44.7 on the migrated database. n8n answers /healthz before its migrations, its workflows and its
+      start-up recovery; an answer that arrived then was taken and lost, or resumed a run the recovery then marked
+      crashed, on a new image and on the same one; sent only on a 200 from /healthz/readiness, none was lost.'
+    acceptance: 'Test: a deploy whose N8N_IMAGE moved runs compose up, says the image changes and that waiting runs
+      resume, waits for /healthz/readiness and says DEPLOY OK; an n8n that never gets ready fails the deploy; the
+      import waits for readiness; an unchanged pin or no versions.env change is no upgrade.'
+    verify: {method: test, by: ['tests/test_deploy_main.py::test_an_n8n_image_change_goes_ahead_while_runs_wait_and_waits_until_n8n_is_ready']}
+    trace: [ops/deploy.py, docs/N8N-MIGRATION.md]
+  - id: PLT-40
+    title: No loop of the runner holds the database between its passes
+    statement: Every loop of the host runner that keeps one database connection shall end each pass with no transaction
+      open, committing a write a pass left open and logging that write's statement and caller; and when writes fail on a
+      lock, the runner's lock report shall name the first open write of every connection in a transaction.
+    type: constraint
+    priority: must
+    status: implemented
+    acceptance: 'Test: a pass that leaves a write open is committed at its end and the log names the statement and the
+      code that wrote it, after which another writer gets through; a plain connection is committed as well; every loop
+      that keeps one connection pauses through that step; the lock report names the open write; the title repair of the
+      tasks table commits what it changed.'
+    rationale: "10 Nov 2026, 17:32 to 17:50: the Conductor's long-lived connection slept between passes inside a
+      transaction a pass had opened and never committed. 224 writes failed on a lock, the home inbox's first issue waited
+      40 minutes for its answer, and steps of three tasks failed, until the runner was restarted; the answer was posted
+      35 s later."
+    parents: [SN-13]
+    sources: ['owner 2026-11-10: Yes, inbox repo']
+    verify: {method: test, by: ['tests/test_runner.py::test_a_pass_that_leaves_a_write_open_is_committed_and_named',
+      'tests/test_runner.py::test_every_loop_that_keeps_one_connection_rests_through_end_pass',
+      'tests/test_runner.py::test_the_lock_report_names_each_connection_s_open_write',
+      'tests/test_runner.py::test_the_title_repair_commits_what_it_changed']}
+    trace: [ops/missions.py, ops/tasks.py, ops/conductor.py, ops/staffing.py, ops/builds.py, ops/claude_tasks.py, ops/events.py,
+      ops/history.py, ops/improve.py, ops/telemetry.py]

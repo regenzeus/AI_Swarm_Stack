@@ -6,7 +6,7 @@ through the stack's own node, which waits for the answer.
 
 | Path | What |
 |---|---|
-| `workflows/*.json` | one workflow per file, imported by every deploy that changes them (`ops/n8n_sync.py import`), active or not as the file says |
+| `workflows/*.json` | one workflow per file, imported by every deploy that changes them (`ops/n8n_sync.py import`), active or not as the file says; a deployment imports only those its `deployments/<name>/workflows.yaml` and its trackers choose (PLT-38) |
 | `custom/` | the stack's own node, AI Stack step (WFL-06), loaded by n8n when it starts |
 
 The editor lives inside the app: **Workflows** in the desk menu (`#/workflows`), served by the app under `/n8n/`
@@ -28,7 +28,10 @@ A pack's workflows are not here: they come from the pack's approved commit, name
 with `pack` (`ops/n8n_sync.py sync_packs`, GEN-43). An edit of one on the canvas is a proposal: `export` and every sync
 send it to the pack's own repository (branch `ai/canvas-<date>`, a draft pull request where its forge allows) and put
 the approved version back; it runs once a commit with it is approved. A changed workflow is imported in place: a run
-that waits finishes on the version it started with (WFL-24, docs/N8N-MIGRATION.md §11).
+that waits finishes on the version it started with (WFL-24, docs/N8N-MIGRATION.md §11). A new n8n image (versions.env)
+is deployed while runs wait: they survive it, and the deploy waits for `/healthz/readiness`, not `/healthz`, which
+answers before n8n's migrations and start-up recovery; an answer that reaches n8n in that window can be lost or crash
+its run (PLT-39, §11.1).
 
 Change a workflow on the canvas, then `python3 ops/n8n_sync.py export` in a session's worktree and land it. n8n is the
 one scheduler (WFL-09): a job with `"active": false` runs only when started by hand (Run now) until its switch

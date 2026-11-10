@@ -199,14 +199,41 @@ def build_order(images):
     return order
 
 
-def pinned_by(changed, old, new):
-    """The images whose base pin (an *_IMAGE in versions.env) changed: rebuilt though their own folder did not."""
+def pins(rev):
+    """The *_IMAGE pins of versions.env at a commit."""
+    return dict(re.findall(r"^([A-Z0-9_]+_IMAGE)=(\S+)$", subprocess.run(["git", "show", f"{rev}:versions.env"], cwd=R,
+                                                                      capture_output=True, text=True).stdout, re.M))
+
+
+def moved_pins(changed, old, new):
+    """The *_IMAGE pins of versions.env this deploy changes."""
     if "versions.env" not in changed:
         return set()
-    pins = lambda rev: dict(re.findall(r"^([A-Z_]+_IMAGE)=(\S+)$", subprocess.run(["git", "show", f"{rev}:versions.env"], cwd=R,
-                                                                                     capture_output=True, text=True).stdout, re.M))
     before, after = pins(old), pins(new)
-    moved = {k for k in after if before.get(k) != after[k]}
+    return {k for k in after if before.get(k) != after[k]}
+
+
+# n8n answers /healthz as soon as its port is open, before its database migrations, before its workflows are active and
+# before its start-up recovery; /healthz/readiness answers 200 only after all three (docs/N8N-MIGRATION.md §11).
+N8N_READY = "http://127.0.0.1:5678/healthz/readiness"
+
+
+def n8n_upgrade(changed, old, new):
+    """PLT-39: n8n's image changes (N8N_IMAGE). The deploy goes ahead while runs wait in n8n: n8n keeps a waiting
+    execution in its database across a new image and its migrations, and resumes it when its answer comes (tested
+    2.44.7 -> 2.45.4, 10 Nov 2026). -> the lines the deploy prints, or [] when the image stays."""
+    if "N8N_IMAGE" not in moved_pins(changed, old, new):
+        return []
+    before, after = pins(old).get("N8N_IMAGE", "?"), pins(new).get("N8N_IMAGE", "?")
+    return [f"n8n's image changes: {before.split('@')[0]} -> {after.split('@')[0]}; runs that wait in n8n resume on the "
+            "new one once it is ready (docs/N8N-MIGRATION.md §11)"]
+
+
+def pinned_by(changed, old, new):
+    """The images whose base pin (an *_IMAGE in versions.env) changed: rebuilt though their own folder did not."""
+    moved = moved_pins(changed, old, new)
+    if not moved:
+        return set()
     return {d.parent.name for d in (R / "images").glob("*/Dockerfile")
             if moved & set(re.findall(r"^ARG ([A-Z_]+_IMAGE)\b", d.read_text(), re.M))}
 
@@ -225,6 +252,12 @@ def main(old, new):
             run(*args, timeout=3600)
     if images or any(f.startswith(COMPOSE_INPUTS) for f in changed):
         run(*COMPOSE, "up", "-d", "--remove-orphans")
+    upgrade = n8n_upgrade(changed, old, new)
+    if upgrade:                                           # compose up recreated n8n on the new image: it migrates, then starts
+        print("\n".join(upgrade), flush=True)
+        ready = healthy(N8N_READY, n=200)                 # limit: waits, up to 10 min: a new image migrates n8n's database first
+        print(f"n8n on its new image: {'ready' if ready else 'NOT READY'}", flush=True)
+        ok = ok and ready
     if any(f.startswith("config/litellm/") for f in changed):
         run("docker", "restart", "aistack-litellm-1")
     hermes_restart = False
@@ -277,8 +310,8 @@ def main(old, new):
             n = Path(f).name
             if n != "missions.service" and subprocess.run(["systemctl", "--user", "is-active", "-q", n]).returncode == 0:
                 run("systemctl", "--user", "restart", n)
-    if any(f.startswith(("n8n/workflows/", "compose/")) for f in changed):    # WFL-08: the repository's workflows into n8n
-        healthy("http://127.0.0.1:5678/healthz")
+    if any(f.startswith(("n8n/workflows/", "compose/", "deployments/")) for f in changed):   # WFL-08, PLT-38: the deployment's workflows into n8n
+        healthy(N8N_READY)                                # not /healthz: it answers before the migrations and the workflows
         run("python3", "ops/n8n_sync.py", "import")
     if runner_changed(changed):
         print("RESTART_RUNNER", flush=True)       # every module the runner may import (builds, cleanup, telemetry, ...)

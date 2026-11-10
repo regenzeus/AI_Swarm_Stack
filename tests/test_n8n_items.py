@@ -39,7 +39,7 @@ def W(tmp_path, monkeypatch):
     store = tmp_path / "standin.json"
     store.write_text(json.dumps({"items": {}}))
     cfg = tmp_path / "trackers.yaml"
-    cfg.write_text(f"shadow_needed: 2\npoll_minutes: 5\ntrackers:\n  - {{name: test, kind: standin, path: {store}, workflow: toy/ticket}}\n")
+    cfg.write_text(f"shadow_needed: 2\npoll_minutes: 5\ntrackers:\n  - {{name: test, kind: standin, path: {store}, workflow: toy/ticket, start: 2026-01-01}}\n")
     monkeypatch.setenv("AISTACK_TRACKERS", str(cfg))
     monkeypatch.setenv("AISTACK_TRACKER_STATE", str(tmp_path / "state"))
     monkeypatch.setenv("AISTACK_ARTIFACTS", str(tmp_path / "artifacts"))
@@ -140,7 +140,7 @@ def test_an_ended_run_is_not_started_again_unless_its_tracker_says_restart_on_co
     RR.learn({"tracker": "test", "key": "T-5", "execution": "41"})
     W.item("T-5", "2026-11-10T11:00:00", [("reporter", "it is back")])
     assert W.poll(status=lambda ex: "success")["said"] == {"recorded": 1} and len(W.started) == 1   # restart: never (the default)
-    W.cfg.write_text(W.cfg.read_text().replace("workflow: toy/ticket}", "workflow: toy/ticket, restart: on_comment}"))
+    W.cfg.write_text(W.cfg.read_text().replace("start: 2026-01-01}", "start: 2026-01-01, restart: on_comment}"))
     W.item("T-5", "2026-11-10T12:00:00", [("reporter", "it is back"), ("ai-stack", "noted")])
     assert W.poll(status=lambda ex: "success")["said"] == {"recorded": 1}            # no new comment from others: no new run
     W.item("T-5", "2026-11-10T13:00:00", [("reporter", "it is back"), ("ai-stack", "noted"), ("reporter", "and again")])
@@ -308,10 +308,10 @@ def test_a_change_for_an_item_starts_at_its_tag_and_goes_out_as_a_draft_whose_re
     assert FW.item_build(conn, "b1", req, B=B, forge=forge, values={"FORGE_PUSH": push}, sleep=sleep)["pr"] == a["pr"] and len(forge.opened) == 1
     W.item("T-8", "2026-11-10T09:00:00")
     W.poll(forge=forge)
-    W.step("w8", kind="wait_item", tracker="test", key="T-8", timeout_hours=72)
+    W.step("w8", kind="wait_item", tracker="test", key="T-8", timeout_hours=72, on="pr")      # a wait for the review (WFL-32)
     forge.cs = [{"id": 1, "author": "ai-stack", "body": "opened"}, {"id": 2, "author": "reviewer", "body": "please add a test"}]
     assert FWK.poll_prs(forge, hand=RR.hand) and RR.drain(TR.config(), W.n8n, lambda ex: "running") == {"woke": 1}
-    W.step("w8", kind="wait_item", tracker="test", key="T-8", timeout_hours=72)
+    W.step("w8", kind="wait_item", tracker="test", key="T-8", timeout_hours=72, on="pr")
     assert W.resumed[-1][1]["outcome"] == "reply" and W.resumed[-1][1]["comments"] == ["pr-comment:7/2"]
     assert "merge" not in json.dumps(B.assigned).lower()                                             # the stack never merges
 
@@ -365,3 +365,130 @@ def test_the_node_waits_on_an_item_writes_to_it_and_a_timeout_is_a_result_while_
     assert "role: p('role', '') || undefined" in js and "item: p('item'), base: p('base', ''), target: p('target', '')" in js
     for write in TR.KINDS:
         assert f"'{write}'" in js
+
+
+# ---------- tracker items a run can work with (the CR of 10 Nov 2026): WFL-26 to WFL-28, WFL-32, WFL-33 ----------
+def test_a_new_tracker_with_three_matching_items_starts_nothing_and_one_run_when_one_of_them_gets_a_comment(W):
+    """WFL-27 (B3): start: now, the default for a new tracker."""
+    W.cfg.write_text(W.cfg.read_text().replace(", start: 2026-01-01", ""))
+    for n in (1, 2, 3):
+        W.item(f"T-{n}", f"2026-11-10T0{n}:00:00")
+    assert W.poll()["said"] == {} and W.started == []
+    W.item("T-2", "2026-11-10T09:00:00", [("reporter", "it is still there")])
+    assert W.poll()["said"] == {"started": 1} and [b["key"] for _, b in W.started] == ["T-2"]
+    assert W.started[0][1]["comments"] == ["comment:test/T-2/1"] and RR.item("test", "T-1") is None
+
+
+def test_with_me_unset_the_stacks_own_comment_and_summary_do_not_wake_a_wait_and_a_persons_comment_does(W, monkeypatch):
+    """WFL-26 (B2): the tracker names no me; every comment has one author, the stack's end with its write mark."""
+    monkeypatch.setattr(FW, "lean_answers", lambda *a: False)               # whole answers, as at home
+    assert "me" not in TR.find("test")
+    W.item("T-13", "2026-11-10T09:00:00")
+    W.poll()
+    W.step("w13", kind="wait_item", tracker="test", key="T-13", timeout_hours=72)
+    own = [("owner", f"Three questions.\n{TR.WRITE_MARK.format(id='n8n/a')}"), ("owner", f"{TR.SUMMARY_MARK}\nWhere it stands.\n{TR.WRITE_MARK.format(id='n8n/s')}")]
+    W.item("T-13", "2026-11-10T09:05:00", own)
+    assert W.poll()["said"] == {"recorded": 1}
+    W.step("w13", kind="wait_item", tracker="test", key="T-13", timeout_hours=72)
+    assert W.resumed == []
+    W.item("T-13", "2026-11-10T09:10:00", [*own, ("owner", "Here are the answers.")])
+    assert W.poll()["said"] == {"woke": 1}
+    W.step("w13", kind="wait_item", tracker="test", key="T-13", timeout_hours=72)
+    assert W.resumed[-1][1]["comments"] == ["comment:test/T-13/3"] and W.resumed[-1][1]["replies"][0]["text"] == "Here are the answers."
+
+
+def test_a_wait_is_answered_only_from_its_source_and_says_which_it_was(W, monkeypatch):
+    """WFL-32 (B4): a wait on the item is not woken by a pull request comment, which waits for a wait on the pull
+    request; on: any takes both. The answer says its source and carries the comments' texts."""
+    monkeypatch.setattr(FW, "lean_answers", lambda *a: False)               # whole answers, as at home
+    W.item("T-14", "2026-11-10T09:00:00")
+    W.poll()
+    W.step("w14", kind="wait_item", tracker="test", key="T-14", timeout_hours=0)          # on: item, the default
+    pr = {"run": "toy/ticket:test/T-14", "key": "test/T-14", "ref": "pr:7", "comments": ["pr-comment:7/2"],
+          "said": [{"ref": "pr-comment:7/2", "author": "reviewer", "at": "", "text": "please add a test"}]}
+    RR.hand([pr])
+    assert RR.drain(TR.config(), W.n8n, lambda ex: "running") == {"recorded": 1}
+    W.step("w14", kind="wait_item", tracker="test", key="T-14", timeout_hours=0)
+    assert W.resumed == [] and RR.item("test", "T-14")["unread"] == ["pr-comment:7/2"]
+    W.item("T-14", "2026-11-10T09:30:00", [("reporter", "2.4 GB")])
+    assert W.poll()["said"] == {"woke": 1}
+    W.step("w14", kind="wait_item", tracker="test", key="T-14", timeout_hours=0)
+    a = W.resumed[-1][1]
+    assert (a["outcome"], a["source"], a["comments"]) == ("reply", "item", ["comment:test/T-14/1"]) and a["replies"][0]["text"] == "2.4 GB"
+    assert a["output"] == "reporter:\n2.4 GB" and a["summary"] == "1 new comment on the item"
+    W.step("w15", kind="wait_item", tracker="test", key="T-14", timeout_hours=0, on="pr")  # the review comment that came before
+    a = W.resumed[-1][1]
+    assert (a["source"], a["comments"], a["replies"][0]["text"]) == ("pr", ["pr-comment:7/2"], "please add a test")
+    W.step("w16", kind="wait_item", tracker="test", key="T-14", timeout_hours=0, on="any")
+    W.item("T-14", "2026-11-10T10:00:00", [("reporter", "2.4 GB"), ("reporter", "and 3 GB")])
+    assert W.poll()["said"] == {"woke": 1}
+    W.step("w16", kind="wait_item", tracker="test", key="T-14", timeout_hours=0, on="any")
+    assert W.resumed[-1][1]["source"] == "item" and RR.item("test", "T-14")["unread"] == []
+    assert "a wait is on item, pr, any" in FW.validate({"kind": "wait_item", "tracker": "test", "key": "T-14", "on": "mail"}, {}, {})
+
+
+def test_a_waits_answer_says_how_often_it_timed_out_before_so_a_workflow_can_stop_reminding(W, monkeypatch):
+    """WFL-33 (G3): reminded counts the timeouts of the run's waits of one node; a reply carries it and starts it again."""
+    W.item("T-15", "2026-11-10T09:00:00")
+    W.poll()
+    now = {"t": W.clock["now"]}
+    monkeypatch.setattr(RR, "_now", lambda: now["t"])
+    said = []
+    for rid in ("w1", "w2", "w3"):
+        W.step(rid, kind="wait_item", tracker="test", key="T-15", timeout_hours=1, node="Wait for the reply")
+        now["t"] += 3601
+        W.step(rid, kind="wait_item", tracker="test", key="T-15", timeout_hours=1, node="Wait for the reply")
+        said.append((W.resumed[-1][1]["outcome"], W.resumed[-1][1]["reminded"]))
+    assert said == [("timeout", 0), ("timeout", 1), ("timeout", 2)]
+    W.step("w4", kind="wait_item", tracker="test", key="T-15", timeout_hours=1, node="Wait for the reply")
+    W.item("T-15", "2026-11-10T10:00:00", [("reporter", "here")])
+    W.poll()
+    W.step("w4", kind="wait_item", tracker="test", key="T-15", timeout_hours=1, node="Wait for the reply")
+    assert (W.resumed[-1][1]["outcome"], W.resumed[-1][1]["reminded"]) == ("reply", 3)
+    W.step("w5", kind="wait_item", tracker="test", key="T-15", timeout_hours=1, node="Wait for the reply")
+    now["t"] += 3601
+    W.step("w5", kind="wait_item", tracker="test", key="T-15", timeout_hours=1, node="Wait for the reply")
+    assert W.resumed[-1][1]["reminded"] == 0                                         # after a reply the count starts again
+
+
+def test_an_item_step_reads_the_item_and_fetches_its_attachments_by_artifact_id_within_its_caps(W, monkeypatch):
+    """WFL-28 (G1): the item through its adapter (title, text, status, labels, comments with the stack's own marked,
+    attachments); attach_to saves the named files into the artifact store with the deployment's data class and answers
+    their ids; more than ATTACH_COUNT, one over ATTACH_MB, or a name the item does not have are refused or fail."""
+    monkeypatch.setattr(FW, "lean_answers", lambda *a: False)               # whole answers, as at home
+    from domain import artifacts as AR
+    W.item("T-16", "2026-11-10T09:00:00", [("reporter", "the log is attached"), ("ai-stack", "thanks")])
+    db = json.loads(W.store.read_text())
+    db["items"]["T-16"].update(body="It stops at 1.2 GB.", status="Open", labels=["export"],
+                               attachments=[{"id": "1", "name": "crash.log", "content": "MemoryError\n"}, {"id": "2", "name": "big.bin", "size": 99 * 2 ** 20}])
+    W.store.write_text(json.dumps(db))
+    W.step("i1", kind="item", tracker="test", key="T-16", node="Read the item")
+    a = W.resumed[-1][1]
+    assert (a["status"], a["title"], a["body"], a["item_status"], a["labels"]) == ("done", "ticket T-16", "It stops at 1.2 GB.", "Open", ["export"])
+    assert [(c["author"], c["own"], c["text"]) for c in a["thread"]] == [("reporter", False, "the log is attached"), ("ai-stack", True, "thanks")]
+    assert a["attachments"] == [{"id": "1", "name": "crash.log", "size": 12}, {"id": "2", "name": "big.bin", "size": 99 * 2 ** 20}] and "artifact_ids" not in a
+    assert "Labels: export" in a["output"] and "Its attachments: crash.log, big.bin" in a["output"]
+    W.step("i2", kind="item", tracker="test", key="T-16", attach_to="wsl-host", attachments=["crash.log"])
+    a = W.resumed[-1][1]
+    (aid,) = a["artifact_ids"]
+    assert AR.path_of(aid).read_bytes() == b"MemoryError\n" and AR.records(aid)[0]["name"] == "crash.log" and a["data_class"] == FW.data_class()
+    lean = FW.lean(a)
+    assert lean["artifact_ids"] == [aid] and lean["summary"] == "2 comments, 2 attachments" and not {"body", "title", "thread", "output"} & set(lean)
+    W.step("i3", kind="item", tracker="test", key="T-16", attach_to="wsl-host")
+    assert W.resumed[-1][1]["status"] == "refused" and W.resumed[-1][1]["error"] == "big.bin is 99 MB; an attachment is fetched up to 50 MB"
+    W.step("i4", kind="item", tracker="test", key="T-16", attach_to="wsl-host", attachments=["nope.txt"])
+    assert W.resumed[-1][1]["error"] == "the item has no attachment 'nope.txt'"
+    assert "at most 10" in FW.validate({"kind": "item", "tracker": "test", "key": "T-16", "attach_to": "wsl-host", "attachments": [f"f{n}" for n in range(11)]}, {}, {})
+    assert "attach_to is a place" in FW.validate({"kind": "item", "tracker": "test", "key": "T-16", "attach_to": "mars"}, {}, {})
+    values, files = FW.job_files({"input": aid, "seconds": 2}, {"params": {"input": {"type": "file", "max_kb": 64}, "seconds": {"type": "int"}}})
+    assert values == {"input": "crash.log", "seconds": 2} and files == {"crash.log": b"MemoryError\n"}   # a command gets it by its id
+    with pytest.raises(ValueError, match="no saved file"):
+        FW.job_files({"input": "artifact:" + "0" * 64}, {"params": {"input": {"type": "file", "max_kb": 64}}})
+
+
+def test_the_node_reads_an_item_waits_on_its_source_and_says_from_item():
+    js = (ROOT / "n8n/custom/AistackStep.node.js").read_text()
+    assert "{ name: 'Read the item', value: 'item'," in js and "if (kind === 'wait_item') body.on = p('on', 'item');" in js
+    assert "if (kind === 'item') Object.assign(body, { tracker: p('tracker'), key: String(p('key')), attach_to: p('attach_to', '') || undefined," in js
+    assert "async getAttachPlaces() { return [{ name: 'No files', value: '' }, ...(await pick(this, 'places'))]; }," in js
+    assert "if (kind === 'agent' && p('tracker', '')) body.from_item = true;" in js

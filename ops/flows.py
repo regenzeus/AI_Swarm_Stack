@@ -30,15 +30,26 @@ The other blocks of the palette (WFL-06), each through the stack's own code:
     recall    a search of the stack's memory (the memory tool's search, MEM-28); the answer is its hits
     remember  a note through the memory tool's write gate (MEM-28, MEM-35): it enters memory only after its check
     command   a job kind at a place (ops/domain/places.py: wsl, wsl-host, windows), only when the owner approved that
-              kind there by its fingerprint (Needs you); submitted once per request, waited for
+              kind there by its fingerprint (Needs you); submitted once per request, waited for. A file parameter's
+              value may be an artifact id (artifact:<sha>, an item's attachment or an earlier command's file): the file
+              goes into the request's own folder under its name, and the worker checks it as any file of a request
     plan      an improvised plan: its steps are rows of one task, run in waves through the same path as an agent step;
               a step waits for the steps it names in "after", and the answer carries every step's output
-    An agent step that names a tracker item (tracker and key, WFL-25) reads it: the item's title, text and comments as
-    its tracker holds them when the step starts (trackers.item_text) follow its brief, the stack's own comments marked
-    as its own; an item that cannot be read fails the step with the reason.
+    An agent step that names a tracker item (tracker and key, from_item: true, WFL-25) reads it: the item's title,
+    text and comments as its tracker holds them when the step starts (trackers.item_text) follow its brief, the stack's
+    own comments marked as its own; read by the step service, so the text never passes through n8n. An item that cannot
+    be read fails the step with the reason. from_item: false names the item without reading it.
+    item      reads the item through its tracker's adapter (WFL-28): title, text, status, labels, its comments (author,
+              time, text, the stack's own marked) and its attachments; attach_to: <place> also fetches its attachments
+              (all, or those named in attachments) into the artifact store, recorded with the deployment's data class,
+              and answers their artifact ids, which a command at that place takes as the value of a file parameter.
+              At most ATTACH_COUNT files of at most ATTACH_MB each. In a customer deployment n8n gets the ids and a
+              summary that names no text
     wait_item the run waits on its tracker item (WFL-20): the answer is done with outcome reply (and the new comments
-              from others) or outcome timeout after timeout_hours (0: no timeout); a timeout is no failure, so the
-              workflow branches to a reminder and waits again. The item's events reach it through ops/runreg.py
+              from others, with their texts) or outcome timeout after timeout_hours (0: no timeout); a timeout is no
+              failure, so the workflow branches to a reminder and waits again, and reminded says how often this wait
+              timed out before (WFL-33). on: item (the default), pr or any says whose comments answer it (WFL-32). The
+              item's events reach it through ops/runreg.py
     tracker   one write to the item through trackers.write (WFL-21): comment, summary, attach, link, transition or
               label, in shadow until the owner lets its kind go live; the answer names the shadow or live reference.
               from_step adds an earlier step's whole answer from the run register, so a customer deployment's n8n,
@@ -51,8 +62,9 @@ Request: {"kind": one of KINDS, "agent": <card id>, "brief": <text>, "title": <t
           "repo": <repository>, "query": <words>, "scope": <collection>, "note": lesson|fact|failure|skill,
           "text": <note>, "evidence": <where it comes from>, "place": wsl|wsl-host|windows, "command": <job kind>,
           "values": {<parameter>: <value>}, "steps": [{"agent", "brief", "title", "after": [<step number>, ...]}, ...],
-          "tracker": <tracker>, "key": <item key>, "timeout_hours": <hours>, "write": <kind of write>, "body": <text>,
-          "from_step": <an earlier node's name>,
+          "tracker": <tracker>, "key": <item key>, "timeout_hours": <hours>, "on": item|pr|any, "write": <kind of write>,
+          "body": <text>, "from_step": <an earlier node's name>, "from_item": <bool>, "attach_to": <place>,
+          "attachments": [<name>, ...],
           "item": <tracker>/<key>, "base": <ref or tag>, "target": <branch>, "forge": <the repository's address there>,
           "role": <role>, "workflow": <n8n workflow id>, "workflow_name": <its name>, "node": <the node's name>,
           "execution": <n8n execution id>, "resume_url": <$execution.resumeUrl>}
@@ -77,7 +89,7 @@ PENDING, DONE = ROOT / "pending", ROOT / "done"
 N8N = "http://127.0.0.1:5678"                        # n8n's port on this machine (compose/core.yaml); the runner is on the host
 RESUME_PATH = re.compile(r"^/webhook-waiting/[A-Za-z0-9_-]{1,64}(/[A-Za-z0-9_-]{1,64})?$")
 RESUME_QUERY = re.compile(r"^(signature=[0-9a-f]{16,128})?$")   # n8n 2.x signs its resume URLs; nothing else may ride along
-KINDS = ("agent", "crew", "task", "ask", "notify", "build", "recall", "remember", "command", "plan", "wait_item", "tracker")
+KINDS = ("agent", "crew", "task", "ask", "notify", "build", "recall", "remember", "command", "plan", "wait_item", "tracker", "item")
 NOTE_MAX = 2000                                      # limit: refuses, a message from a workflow is a note, not a report
 ASKS = ROOT / "asks"
 JOBS = ROOT / "jobs"                                 # a command's job at its place, per request: submitted once, also after a restart
@@ -101,6 +113,9 @@ ITEM_KEY = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.#-]{0,99}")   # an item's key on 
 GIT_REF = re.compile(r"[A-Za-z0-9][A-Za-z0-9._/-]{0,199}")   # a branch or a tag
 STEP_NAME = re.compile(r"[^\x00-\x1f]{1,128}")       # a node's name in its workflow, as n8n shows it
 SUMMARY_CHARS = 300                                  # of a step's text in a lean answer; the whole is in the run register and the task's record
+ATTACH_COUNT = 10                                    # limit: refuses, an item step fetches at most 10 attachments; more are named one by one in attachments
+ATTACH_MB = 50                                       # limit: refuses, an attachment over 50 MB is not fetched (the place's worker copies back as much, localworker ARTIFACTS_MB)
+ARTIFACT = re.compile(r"artifact:[0-9a-f]{64}")
 
 M = None                                             # ops/missions.py, set by start()
 _busy = set()
@@ -196,15 +211,29 @@ def item_problem(req):
     """-> what is wrong with the item fields of a request (wait_item, tracker, an agent step that reads its item, a build
     for an item, a question's role), or ""."""
     kind = req.get("kind")
-    if kind in ("wait_item", "tracker") or (kind == "agent" and req.get("tracker") not in (None, "")):
+    if kind in ("wait_item", "tracker", "item") or (kind == "agent" and req.get("tracker") not in (None, "")):
         if not isinstance(req.get("tracker"), str) or not NAME.fullmatch(req["tracker"]) or not _tracker_named(req["tracker"]):
             return f"no tracker {req.get('tracker')!r} in this deployment's trackers.yaml"
         if not isinstance(req.get("key"), str) or not ITEM_KEY.fullmatch(req["key"]):
             return "an item step names its item's key"
+    if kind == "agent" and req.get("from_item") not in (None, True, False):
+        return "from_item is true or false"
     if kind == "wait_item":
+        import runreg as RR
         h = req.get("timeout_hours", 0)
         if isinstance(h, bool) or not isinstance(h, (int, float)) or h < 0:
             return "timeout_hours is a number of hours, 0 for no timeout"
+        if req.get("on", "item") not in RR.SOURCES:
+            return f"a wait is on {', '.join(RR.SOURCES)}: the item's comments, its pull request's, or both"
+    if kind == "item":
+        from domain import places as PL
+        if req.get("attach_to") not in (None, "") and req["attach_to"] not in PL.PLACES:
+            return f"attach_to is a place, one of {', '.join(PL.PLACES)}"
+        names = req.get("attachments") or []
+        if not isinstance(names, list) or not all(isinstance(n, str) and n.strip() for n in names):
+            return "attachments are the names of the item's attachments"
+        if len(names) > ATTACH_COUNT:                                   # limit: refuses, ATTACH_COUNT above
+            return f"an item step fetches at most {ATTACH_COUNT} attachments"
     if kind == "tracker":
         from domain import trackers as TR
         if req.get("write") not in TR.KINDS:
@@ -321,8 +350,9 @@ def opened(c, rid):
 
 
 def with_item(req):
-    """WFL-25: an agent step that names its item gets the item's title, text and comments after its brief, read once
-    when its task is made. -> the request to run, or an answer when the item cannot be read."""
+    """WFL-25: an agent step that names its item (from_item, true unless it says false) gets the item's title, text and
+    comments after its brief, read once by the step service when its task is made, so the text never passes through
+    n8n. -> the request to run, or an answer when the item cannot be read."""
     import runreg as RR
     from domain import trackers as TR
     RR.learn(req)
@@ -331,6 +361,74 @@ def with_item(req):
     except Exception as e:                           # the tracker away or the item gone: the step fails with the reason
         return None, {"status": "failed", "error": f"the item {req['tracker']}/{req['key']} could not be read: {type(e).__name__}: {e}"}
     return {**req, "brief": f"{req['brief']}\n\n{said}"}, None
+
+
+def data_class():
+    """The class files from outside get in the artifact store: the deployment's (the data guard's data.yaml)."""
+    try:
+        import dataguard as DG
+    except SystemExit:                               # no data.yaml: home's rules
+        return "personal"
+    return "customer" if DG.customer() else str(DG.DATA.get("class") or "personal")
+
+
+def item_read(rid, req, ad=None):
+    """WFL-28: the item through its tracker's adapter. With attach_to, its attachments (all, or those named) are
+    fetched into the artifact store with the deployment's data class and answered by artifact id, for a command at
+    that place; ATTACH_COUNT and ATTACH_MB refuse more. -> the answer."""
+    import runreg as RR
+    from domain import artifacts as AR
+    from domain import trackers as TR
+    RR.learn(req)
+    t, k = req["tracker"], str(req["key"])
+    try:
+        it = TR.read_item(t, k, ad=ad)
+    except Exception as e:                           # the tracker away or the item gone: the step fails with the reason
+        return {"status": "failed", "error": f"the item {t}/{k} could not be read: {type(e).__name__}: {e}"}
+    out = {"status": "done", "tracker": t, "key": k, "title": it["title"], "body": it["body"], "item_status": it["status"], "labels": it["labels"],
+           "thread": it["comments"], "attachments": it["attachments"], "output": TR.as_text(it),
+           "summary": f"{len(it['comments'])} comments, {len(it['attachments'])} attachments"}
+    if not req.get("attach_to"):
+        return out
+    want = req.get("attachments") or [a["name"] for a in it["attachments"]]
+    missing = [n for n in want if n not in {a["name"] for a in it["attachments"]}]
+    if missing:
+        return {**out, "status": "failed", "error": f"the item has no attachment {missing[0]!r}"}
+    files = [a for a in it["attachments"] if a["name"] in want]
+    if len(files) > ATTACH_COUNT:                    # limit: refuses, ATTACH_COUNT above
+        return {**out, "status": "refused", "error": f"the item has {len(files)} attachments; name at most {ATTACH_COUNT} in attachments"}
+    big = next((a for a in files if a["size"] > ATTACH_MB * 1024 * 1024), None)   # limit: refuses, ATTACH_MB above
+    if big:
+        return {**out, "status": "refused", "error": f"{big['name']} is {big['size'] // (1024 * 1024)} MB; an attachment is fetched up to {ATTACH_MB} MB"}
+    import tempfile
+    ids, cls = [], data_class()
+    with tempfile.TemporaryDirectory() as d:
+        for a in files:
+            p = Path(d) / (re.sub(r"[^A-Za-z0-9._-]", "_", Path(a["name"]).name).lstrip("._-") or "attachment")
+            try:
+                p.write_bytes(TR.fetch(t, k, a, ad=ad))
+            except Exception as e:                   # the step fails with the reason; a retry fetches again
+                return {**out, "status": "failed", "error": f"{a['name']} could not be fetched: {type(e).__name__}: {e}"}
+            ids.append(AR.put(p, task=f"{t}/{k}", step=rid, run=str(req.get("execution") or ""), data_class=cls)["id"])
+    return {**out, "attach_to": req["attach_to"], "artifact_ids": ids, "data_class": cls}
+
+
+def job_files(values, spec):
+    """A command's values whose file parameters name an artifact (artifact:<sha>): each file goes into the request's
+    folder under its own name, the value becomes that name. -> (values, {name: bytes}) or raises ValueError."""
+    from domain import artifacts as AR
+    params = (spec or {}).get("params") or {}
+    out, files = dict(values), {}
+    for name, v in values.items():
+        if not (isinstance(v, str) and ARTIFACT.fullmatch(v) and (params.get(name) or {}).get("type") == "file"):
+            continue
+        p = AR.path_of(v)
+        if p is None:
+            raise ValueError(f"{name}: no saved file {v}")
+        recs = AR.records(v)
+        fname = re.sub(r"[^A-Za-z0-9._-]", "_", recs[-1]["name"] if recs else name).lstrip("._-")[:100] or name   # cap: id, a worker's file name
+        files[fname], out[name] = p.read_bytes(), fname
+    return out, files
 
 
 def open_step(c, rid, req, cards):
@@ -688,9 +786,11 @@ def command(rid, req, stop=None, sleep=time.sleep):
             if mine.exists():
                 _say(f"flows: {rid}: its job file was empty or unreadable; the command is submitted again")
             _place_worker(req["place"])
-            job = {"rid": p.submit(req["command"], req.get("values") or {}, spec=_job_spec(req["command"])), "at": time.time()}
+            spec = _job_spec(req["command"])
+            values, files = job_files(req.get("values") or {}, spec)
+            job = {"rid": p.submit(req["command"], values, files, spec=spec), "at": time.time()}
             SF.save(mine, job)
-    except PL.Refused as e:
+    except (PL.Refused, ValueError) as e:
         return {"status": "refused", "error": str(e)}
     while True:
         st = p.state(job["rid"], submitted=job["at"])
@@ -785,7 +885,8 @@ WORD = {"done": "done", "failed": "failed", "refused": "refused", "cancelled": "
 WHAT = {"crew": lambda r: f"crew job {r['job']}", "task": lambda r: f"task #{r['task']}", "build": lambda r: f"a coding change in {r['repo']}",
         "recall": lambda r: "a memory search", "remember": lambda r: f"a {r['note']} for memory",
         "command": lambda r: f"{r['command']} at {r['place']}", "plan": lambda r: f"a plan of {len(r['steps'])} steps",
-        "wait_item": lambda r: f"a wait on {r['tracker']}/{r['key']}", "tracker": lambda r: f"a {r['write']} on {r['tracker']}/{r['key']}"}
+        "wait_item": lambda r: f"a wait on {r['tracker']}/{r['key']}", "tracker": lambda r: f"a {r['write']} on {r['tracker']}/{r['key']}",
+        "item": lambda r: f"a read of {r['tracker']}/{r['key']}"}
 
 
 def report(req, answer):
@@ -805,7 +906,8 @@ def report(req, answer):
 
 LEAN = ("status", "outcome", "task", "step", "occ", "run", "build", "state", "branch", "base", "changed", "pr", "pr_number", "draft",
         "ci", "job", "place", "command", "artifacts", "artifact_ids", "comments", "ref", "shadow", "again", "answer", "answered", "by",
-        "role", "kept", "sent", "tracker", "key", "write", "waited_hours", "agent", "harness", "verdict")
+        "role", "kept", "sent", "tracker", "key", "write", "waited_hours", "agent", "harness", "verdict", "source", "reminded", "attach_to",
+        "data_class")
 
 
 def lean_answers(data=None):
@@ -821,10 +923,13 @@ def lean_answers(data=None):
 
 def lean(answer):
     """What n8n keeps of an answer in a customer-class deployment: status, outcome, ids, references and a short summary;
-    the whole text is in the run register (ops/runreg.py) and the task's record."""
+    the whole text is in the run register (ops/runreg.py) and the task's record. A step whose text is people's words
+    from outside (an item, its replies) says its own summary, which names no text."""
     out = {k: answer[k] for k in LEAN if k in answer}
     text = str(answer.get("output") or answer.get("said") or "")
-    if text:
+    if answer.get("summary"):
+        out["summary"] = TC.cut(str(answer["summary"]), SUMMARY_CHARS)   # cap: preview, the step's own summary is short already
+    elif text:
         out["summary"] = TC.cut(text, SUMMARY_CHARS, "the whole text is in the task's record")   # cap: preview, the run register and the task keep it whole
     if answer.get("error"):
         out["error"] = TC.cut(str(answer["error"]), SUMMARY_CHARS, "the whole reason is in the run register")   # cap: preview, kept whole in the register
@@ -836,11 +941,25 @@ def lean(answer):
     return out
 
 
-def deliver(url, answer, post=None):
-    """POSTs the answer to n8n's resume URL. -> True when n8n took it."""
+def n8n_ready(get=None):
+    """WFL-34: whether n8n has finished starting. /healthz answers as soon as its port opens, before its migrations, its
+    workflows' activation and its start-up recovery; an answer posted then was dropped or crashed its run (the upgrade
+    test of 10 Nov 2026, docs/N8N-MIGRATION.md §11.1). /healthz/readiness answers 200 only after all three."""
+    try:
+        with (get or urllib.request.urlopen)(urllib.request.Request(f"{N8N}/healthz/readiness"), timeout=5) as r:
+            return r.status == 200
+    except OSError:
+        return False
+
+
+def deliver(url, answer, post=None, ready=None):
+    """POSTs the answer to n8n's resume URL, only while n8n is ready (WFL-34). -> True when n8n took it. A caller that
+    gives its own opener (post) gives its own readiness too, or none."""
     target = resume_target(url)
     if not target:
         return False
+    if not (ready or (n8n_ready if post is None else (lambda: True)))():
+        return False                                 # n8n is starting: sent again on the next round (DELIVER_EVERY_S)
     data = json.dumps(answer, ensure_ascii=False).encode()
     req = urllib.request.Request(target, data=data, headers={"Content-Type": "application/json"}, method="POST")
     try:
@@ -925,10 +1044,12 @@ def work(rid, req, cards, crew, sleep):
         return RR.wait(rid, req)
     if k == "tracker":
         return tracker_write(rid, req)
+    if k == "item":
+        return item_read(rid, req)
     if k == "plan":
         return run_plan(M.db(), rid, req, cards, stop=M.stop, sleep=sleep)
     c = M.db()
-    if req.get("tracker") and not opened(c, rid):
+    if req.get("tracker") and req.get("from_item") is not False and not opened(c, rid):
         req, failed = with_item(req)
         if failed:
             return failed

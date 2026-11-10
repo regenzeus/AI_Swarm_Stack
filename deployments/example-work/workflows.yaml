@@ -1,0 +1,6 @@
+# deployments/example-work/workflows.yaml: the stack's own workflows a work deployment runs (PLT-38), each a file of
+# n8n/workflows/ without .json. Only the self-test: none of home's jobs (phone, postmaster, digests, the owner's task
+# briefings) is imported here. The tracker poller (crew-tracker-poll) comes with trackers.yaml. A crew job made with
+# ops/n8n_gen.py, or a workflow made on the canvas and exported, is added at the end by that command.
+workflows:
+  - stack-self-test

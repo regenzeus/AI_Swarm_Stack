@@ -17,7 +17,7 @@ def world(tmp_path, monkeypatch):
     store = tmp_path / "standin.json"
     store.write_text(json.dumps({"items": {}}))
     cfg = tmp_path / "trackers.yaml"
-    cfg.write_text(f"shadow_needed: 2\ntrackers:\n  - {{name: test, kind: standin, path: {store}, workflow: toy/ask}}\n")
+    cfg.write_text(f"shadow_needed: 2\ntrackers:\n  - {{name: test, kind: standin, path: {store}, workflow: toy/ask, start: 2026-01-01}}\n")
     monkeypatch.setenv("AISTACK_TRACKERS", str(cfg))
     monkeypatch.setenv("AISTACK_TRACKER_STATE", str(tmp_path / "state"))
 
@@ -31,7 +31,7 @@ def world(tmp_path, monkeypatch):
 def test_a_changed_item_is_handed_on_once_for_the_run_named_after_it_and_a_restart_hands_on_nothing_twice(world):
     world["item"]("T-1", "2026-11-09T10:00:00")
     ev = TR.poll()
-    assert ev == [{"tracker": "test", "key": "T-1", "run": "toy/ask:test/T-1", "ref": "item:test/T-1@2026-11-09T10:00:00", "comments": []}]
+    assert ev == [{"tracker": "test", "key": "T-1", "run": "toy/ask:test/T-1", "ref": "item:test/T-1@2026-11-09T10:00:00", "comments": [], "said": []}]
     assert TR.poll() == []                                                               # the cursor holds across passes and restarts
     world["item"]("T-1", "2026-11-09T11:00:00")
     assert [(e["run"], e["ref"]) for e in TR.poll()] == [("toy/ask:test/T-1", "item:test/T-1@2026-11-09T11:00:00")]   # one item, one run's name
@@ -88,7 +88,7 @@ class FakeJira:
     `limit` issues, and the stack's one summary comment."""
 
     def __init__(self, issues=(), zone="Europe/Berlin"):
-        self.issues, self.zone, self.jqls, self.edited = list(issues), zone, [], []
+        self.issues, self.zone, self.jqls, self.edited, self.added = list(issues), zone, [], [], []
         self.cs = [{"id": "7", "author": {"name": "ai-stack"}, "body": f"{TR.SUMMARY_MARK}\nold"}]
 
     def myself(self):
@@ -111,17 +111,22 @@ class FakeJira:
         self.edited.append((key, cid, text))
 
     def issue_add_comment(self, key, text):
-        raise AssertionError("the summary is edited, never added again")
+        self.added.append((key, text))
+        return {"id": str(9 + len(self.added) - 1)}
 
 
-def test_jira_reads_by_jql_with_its_cursor_and_edits_its_one_summary():
+def test_jira_reads_by_jql_with_its_cursor_and_edits_its_one_summary(world):
     fake = FakeJira([("DEMO-1", "2026-11-09T10:00:00.000+0000")])
     j = TR.Jira({"query": "project = DEMO"}, client=fake)
     items, cur = j.changes({"at": "2026-11-09T09:00:00.000+0000", "seen": []})
     assert fake.jqls == ['(project = DEMO) AND updated >= "2026-11-09 10:00" ORDER BY updated ASC']   # 09:00 UTC is 10:00 in Berlin
     assert [i["key"] for i in items] == ["DEMO-1"] and cur == {"at": "2026-11-09T10:00:00.000+0000", "seen": [["DEMO-1", "2026-11-09T10:00:00.000+0000"]]}
-    j.put("DEMO-1", "summary", "new", "w1")
-    assert fake.edited[0][:2] == ("DEMO-1", "7") and "new" in fake.edited[0][2]
+    fake.cs.append({"id": "8", "author": {"name": "ai-stack"}, "body": f"{TR.SUMMARY_MARK}\nanother's"})
+    j.put("DEMO-1", "summary", "new", "w1")                                       # none kept for the item: added, its id kept
+    assert fake.added == [("DEMO-1", f"{TR.SUMMARY_MARK}\nnew\n{TR.WRITE_MARK.format(id='w1')}")] and fake.edited == []
+    fake.cs.append({"id": "9", "author": {"name": "ai-stack"}, "body": fake.added[0][1]})
+    j.put("DEMO-1", "summary", "newer", "w2")
+    assert fake.edited[0][:2] == ("DEMO-1", "9") and "newer" in fake.edited[0][2] and len(fake.added) == 1   # only the comment it wrote
 
 
 def test_jira_reads_its_cursor_in_the_token_users_time_zone_not_the_servers():
@@ -153,7 +158,7 @@ def test_jira_builds_its_query_without_an_empty_clause_and_refuses_one_with_its_
         TR.Jira({"name": "bugs", "query": "project = DEMO order by created DESC"}, client=fake)
     world["tmp"].joinpath("trackers.yaml").write_text(
         "trackers:\n  - {name: bugs, kind: jira, url: https://jira.example, query: 'project = DEMO ORDER BY created'}\n"
-        f"  - {{name: test, kind: standin, path: {world['store']}, workflow: toy/ask}}\n")
+        f"  - {{name: test, kind: standin, path: {world['store']}, workflow: toy/ask, start: 2026-01-01}}\n")
     assert TR.problems() == ["bugs: its query has its own ORDER BY; the stack orders by updated itself to keep its cursor, so leave the order out of the query"]
     world["item"]("T-9", "2026-11-09T10:00:00")
     assert [e["tracker"] for e in TR.poll()] == ["test"]                          # the refused tracker is not asked
@@ -202,7 +207,8 @@ def test_a_change_starts_at_a_tag_opens_a_draft_into_a_release_branch_and_a_revi
     assert git(up, "rev-parse", branch) == tagged                                          # pushed through FORGE_PUSH
     assert FW.poll_prs(forge) == []                                                        # no comment yet: nothing to hand on
     forge.cs = [{"id": 1, "author": "ai-stack", "body": "opened"}, {"id": 2, "author": "reviewer", "body": "please add a test"}]
-    assert FW.poll_prs(forge) == [{"run": "toy/ask:test/T-5", "key": "test/T-5", "ref": "pr:42", "comments": ["pr-comment:42/2"]}]
+    assert FW.poll_prs(forge) == [{"run": "toy/ask:test/T-5", "key": "test/T-5", "ref": "pr:42", "comments": ["pr-comment:42/2"],
+                                   "said": [{"ref": "pr-comment:42/2", "author": "reviewer", "at": "", "text": "please add a test"}]}]
     assert FW.poll_prs(forge) == []                                                        # a comment is handed on once
 
 
@@ -211,6 +217,7 @@ def test_trackers_are_the_apps_and_the_queues():
     root = Path(__file__).resolve().parents[1]
     js = (root / "images/mission-control/web/static/app.js").read_text()          # the Stack page's Packs and trackers
     assert "function trackersHtml(" in js and 'data-tk="tracker_shadow_approve"' in js and 'action: "tracker_live"' in js and "t.workflow" in js
+    assert 'data-send="1"' in js and "Right, send it</button>" in js and "Right, don't send</button>" in js and "${trackerStart(t)}" in js   # WFL-27, WFL-29
     assert '"tracker_shadow_approve", "tracker_shadow_reject", "tracker_live"' in (root / "images/mission-control/server.py").read_text()
     import decisions as DQ
     assert DQ._trackers in DQ.SOURCES
@@ -240,12 +247,12 @@ def test_the_stacks_own_comment_is_known_by_its_write_mark_where_it_writes_with_
 def test_jira_and_pull_request_comments_follow_the_same_rule_on_one_account(world):
     fake = FakeJira([("DEMO-9", "2026-11-09T10:00:00.000+0000")])
     fake.cs = [{"id": "1", "author": {"name": "owner"}, "body": f"Answered.\n{MARK}"}, {"id": "2", "author": {"name": "owner"}, "body": "Thanks, and?"}]
-    cfg = {"shadow_needed": 5, "poll_minutes": 5, "trackers": [{"name": "j", "kind": "jira", "query": "project = DEMO", "workflow": "demo/bug"}]}
+    cfg = {"shadow_needed": 5, "poll_minutes": 5, "trackers": [{"name": "j", "kind": "jira", "query": "project = DEMO", "workflow": "demo/bug", "start": "2026-01-01"}]}
     assert [e["comments"] for e in TR.poll(cfg, ad={"j": TR.Jira({"query": "project = DEMO"}, client=fake)})] == [["comment:j/DEMO-9/2"]]
     FW._save([{"run": "demo/bug:j/DEMO-9", "key": "j/DEMO-9", "origin": "forgejo:owner/repo", "number": 3, "seen": []}])
     forge = type("F", (), {"comments": lambda self, o, n: [{"id": 1, "author": "owner", "body": f"Opened.\n{MARK}"},
                                                            {"id": 2, "author": "owner", "body": "please add a test"}]})()
-    assert FW.poll_prs(forge) == [{"run": "demo/bug:j/DEMO-9", "key": "j/DEMO-9", "ref": "pr:3", "comments": ["pr-comment:3/2"]}]
+    assert [{k: v for k, v in e.items() if k != "said"} for e in FW.poll_prs(forge)] == [{"run": "demo/bug:j/DEMO-9", "key": "j/DEMO-9", "ref": "pr:3", "comments": ["pr-comment:3/2"]}]
 
 
 def test_an_agent_step_reads_its_item_with_the_stacks_own_comments_marked_as_its_own(world):
@@ -270,3 +277,166 @@ def test_a_trackers_entry_may_name_a_value_of_its_deployment_and_one_it_does_not
     assert cfg["trackers"][0]["repo"] == "someone/inbox" and TR.refused(cfg["trackers"][0]) == ""
     assert TR.problems(cfg) == ["other: it names ${NO_SUCH}, which the deployment.env does not set"]
     assert TR.poll(cfg, ad={"inbox": type("A", (), {"me": "x", "changes": lambda self, c: ([], c)})()}) == []   # the refused one is not asked
+
+
+# ---------- tracker items a run can work with (the CR of 10 Nov 2026): WFL-27 to WFL-31 ----------
+def three_items(tmp_path, monkeypatch, start=None):
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    store = tmp_path / "three.json"
+    store.write_text(json.dumps({"items": {f"T-{n}": {"updated": f"2026-11-0{n}T10:00:00", "title": f"old {n}", "comments": []} for n in (1, 2, 3)}}))
+    cfg = tmp_path / "three.yaml"
+    cfg.write_text(f"trackers:\n  - {{name: three, kind: standin, path: {store}, workflow: toy/ask{', start: ' + start if start else ''}}}\n")
+    monkeypatch.setenv("AISTACK_TRACKERS", str(cfg))
+    monkeypatch.setenv("AISTACK_TRACKER_STATE", str(tmp_path / "state"))
+    return store
+
+
+def test_a_new_tracker_starts_now_its_first_pass_only_sets_the_cursor_and_a_start_date_counts_from_that_date(tmp_path, monkeypatch):
+    store = three_items(tmp_path, monkeypatch)                                         # no start: now, the default
+    assert TR.poll() == []                                                              # three items match: none is handed on
+    st = json.loads((tmp_path / "state/three.json").read_text())
+    assert st["cursor"] == "2026-11-03T10:00:00" and st["start"] == "now" and st["began"]
+    db = json.loads(store.read_text())
+    db["items"]["T-2"].update(updated="2026-11-10T09:00:00", comments=[{"id": 1, "author": "reporter", "body": "still broken"}])
+    store.write_text(json.dumps(db))
+    assert [(e["key"], e["comments"]) for e in TR.poll()] == [("T-2", ["comment:three/T-2/1"])]   # it counts from its next change
+    v = TR.view()["trackers"][0]
+    assert v["start"] == "now" and v["began"] == st["began"] and v["cursor"] == "2026-11-10T09:00:00"
+    three_items(tmp_path / "dated", monkeypatch, start="2026-11-02")                 # a start date: the items changed after it
+    assert [e["key"] for e in TR.poll()] == ["T-2", "T-3"] and TR.start_of({"start": __import__("datetime").date(2026, 11, 2)}) == "2026-11-02T00:00:00+00:00"
+    assert TR.refused({"name": "x", "kind": "standin", "start": "soon"}) == "x: start is now or a date (2026-11-01), not 'soon'"
+
+
+def test_a_tracker_that_had_its_first_pass_before_start_existed_keeps_its_cursor_and_hands_on_as_before(tmp_path, monkeypatch):
+    """Home's inbox ran its first pass before start existed: its state file has a cursor and no began. It is no new
+    tracker: nothing is reset, and a change after its cursor is handed on as before."""
+    store = three_items(tmp_path, monkeypatch)
+    (tmp_path / "state").mkdir()
+    (tmp_path / "state/three.json").write_text(json.dumps({"cursor": "2026-11-02T10:00:00", "seen": {"T-1": ["9"]}}))
+    assert [e["key"] for e in TR.poll()] == ["T-3"]
+    st = json.loads((tmp_path / "state/three.json").read_text())
+    assert st["cursor"] == "2026-11-03T10:00:00" and st["seen"]["T-1"] == ["9"] and "began" not in st
+    assert json.loads(store.read_text())["items"]["T-1"]["comments"] == []
+    assert TR.view()["trackers"][0]["began"] == "" and TR.view()["trackers"][0]["started"] is True
+
+
+def test_the_owner_sends_a_shadow_write_once_keeps_one_back_or_judges_it_wrong(world):
+    """WFL-29 (B1): three answers in Needs you. "Right, send it" counts it and writes it through the adapter with its
+    write id, once, also on a second tap or a retry; "Right, don't send" counts it and nothing leaves; "Wrong" does not
+    count; a tracker that does not take it leaves the write waiting with the reason."""
+    world["item"]("T-10", "2026-11-09T10:00:00")
+    for n in range(4):
+        TR.write({"tracker": "test", "kind": "comment", "key": "T-10", "body": f"Question {n}", "write_id": f"run/s/{n}"})
+    ds = {d["id"]: d for d in TR.decisions(lambda *a, **k: {"id": a[0], **k})}
+    send, keep, wrong = ds["shadow:comment:run/s/0"]["answers"]
+    assert [send["label"], keep["label"], wrong["label"]] == ["Right, send it", "Right, don't send", "Wrong"]
+    assert send["act"] == {"action": "tracker_shadow_approve", "kind": "comment", "id": "run/s/0", "send": True}
+    assert TR.handle(send["act"]) == {"ok": True, "kind": "comment", "live": False, "approved": 1, "sent": "tracker:test/T-10/comment/run/s/0"}
+    assert TR.handle(send["act"]) == {"ok": False, "error": "that shadow write is not waiting"}
+    assert TR.adapter(TR.find("test")).put("T-10", "comment", "Question 0", "run/s/0") == {"done": True, "again": True}
+    cs = json.loads(world["store"].read_text())["items"]["T-10"]["comments"]
+    assert len(cs) == 1 and cs[0]["body"] == f"Question 0\n{TR.WRITE_MARK.format(id='run/s/0')}" and TR.own(cs[0], "ai-stack")
+    assert TR.handle(ds["shadow:comment:run/s/1"]["answers"][1]["act"])["approved"] == 2                # kept back: counts, nothing leaves
+    assert TR.handle(ds["shadow:comment:run/s/2"]["answers"][2]["act"])["approved"] == 2                # wrong: does not count
+    assert len(json.loads(world["store"].read_text())["items"]["T-10"]["comments"]) == 1
+
+    class Away(TR.StandIn):
+        def put(self, *a):
+            raise OSError("the tracker is down")
+    said = TR.handle(ds["shadow:comment:run/s/3"]["answers"][0]["act"], ad={"test": Away({"path": world["store"], "name": "test"})})
+    assert said == {"ok": False, "error": "test did not take it (OSError: the tracker is down); it is still waiting"}
+    items = {i["id"]: i for i in TR._shadow()["comment"]["items"]}
+    assert [items[f"run/s/{n}"]["status"] for n in range(4)] == ["approved", "approved", "rejected", "pending"]
+    assert items["run/s/0"]["sent"] and "sent" not in items["run/s/1"]
+
+
+class FakeForgejo:
+    """Forgejo's issue API as the adapter calls it (ops/forge.py call), for one issue, with the owner's comments."""
+
+    def __init__(self):
+        self.cs, self.issue, self.calls = [], {"number": 5, "title": "t", "body": "", "state": "open", "labels": []}, []
+
+    def token(self):
+        return "t"
+
+    def call(self, method, path, body=None):
+        self.calls.append((method, path))
+        if path.endswith("/comments") and method == "GET":
+            return [dict(c) for c in self.cs]
+        if path.endswith("/comments") and method == "POST":
+            self.cs.append({"id": 100 + len(self.cs), "user": {"login": "owner"}, "body": body["body"], "created_at": ""})
+            return dict(self.cs[-1])
+        if "/issues/comments/" in path:
+            next(c for c in self.cs if str(c["id"]) == path.rsplit("/", 1)[1])["body"] = body["body"]
+            return {}
+        if path.endswith("/labels"):
+            self.issue["labels"] += [{"name": x} for x in body["labels"]]
+            return {}
+        if method == "PATCH":
+            self.issue.update(body)
+        return dict(self.issue)
+
+
+def test_the_summary_edits_only_the_comment_the_stack_wrote_on_jira_and_forgejo(world, monkeypatch):
+    """WFL-30 (B5): someone else's comment that carries the summary mark is never edited; the stack's first summary is
+    added and its comment id kept, later ones edit that id."""
+    fake = FakeJira([("DEMO-5", "2026-11-09T10:00:00.000+0000")])
+    fake.cs = [{"id": "3", "author": {"name": "colleague"}, "body": f"{TR.SUMMARY_MARK}\nmine, copied from the stack"}]
+    j = TR.Jira({"name": "bugs", "query": "project = DEMO"}, client=fake)
+    j.put("DEMO-5", "summary", "first", "s1")
+    fake.cs.append({"id": "9", "author": {"name": "ai-stack"}, "body": fake.added[0][1]})
+    j.put("DEMO-5", "summary", "second", "s2")
+    assert len(fake.added) == 1 and [e[1] for e in fake.edited] == ["9"] and fake.cs[0]["body"].endswith("copied from the stack")
+    f = FakeForgejo()
+    f.cs.append({"id": 7, "user": {"login": "colleague"}, "body": f"{TR.SUMMARY_MARK}\nmine\n{TR.WRITE_MARK.format(id='x')}", "created_at": ""})
+    monkeypatch.setitem(__import__("sys").modules, "forge", type("M", (), {"FORGE": f}))
+    fj = TR.Forgejo({"name": "inbox", "repo": "o/r"})
+    fj.put("5", "summary", "first", "s1")
+    fj.put("5", "summary", "second", "s2")
+    assert [c["id"] for c in f.cs] == [7, 101] and "second" in f.cs[1]["body"] and f.cs[0]["body"].startswith(f"{TR.SUMMARY_MARK}\nmine")
+    assert json.loads((world["tmp"] / "state/summaries.json").read_text()) == {"bugs/DEMO-5": "9", "inbox/5": "101"}
+
+
+def test_attach_transition_and_label_are_done_once_whatever_the_retries(world, monkeypatch):
+    """WFL-31 (B6): a kind that writes no comment is done when the item holds it already: an attachment of the same
+    name and size, the target status, the label. Retried, the stand-in shows one attachment and no error."""
+    from domain import artifacts as AR
+    monkeypatch.setenv("AISTACK_ARTIFACTS", str(world["tmp"] / "artifacts"))
+    (world["tmp"] / "result.txt").write_text("reproduced\n")
+    aid = AR.put(world["tmp"] / "result.txt")["id"]
+    world["item"]("T-12", "2026-11-09T10:00:00")
+    for kind in ("attach", "transition", "label"):
+        TR.handle({"action": "tracker_live", "kind": kind, "live": True})
+    for kind, body in (("attach", f"{aid} result.txt"), ("transition", "Done"), ("label", "reproduced")):
+        first = TR.write({"tracker": "test", "kind": kind, "key": "T-12", "body": body, "write_id": f"run/{kind}/1"})
+        again = TR.write({"tracker": "test", "kind": kind, "key": "T-12", "body": body, "write_id": f"run/{kind}/2"})   # a retry under another id
+        assert first["pass"] and "again" not in first and again["again"], kind
+    it = json.loads(world["store"].read_text())["items"]["T-12"]
+    assert [(a["name"], a["size"]) for a in it["attachments"]] == [("result.txt", 11)] and it["status"] == "Done" and it["labels"] == ["reproduced"]
+    item = TR.read_item("test", "T-12")
+    assert item["attachments"] == [{"id": "1", "name": "result.txt", "size": 11}] and TR.fetch("test", "T-12", item["attachments"][0]) == b"reproduced\n"
+
+    class Jira(FakeJira):
+        status, sets, files = "Done", [], [{"id": "4", "filename": "result.txt", "size": 11}]
+
+        def issue(self, key, fields=""):
+            return {"fields": {"status": {"name": self.status}, "attachment": self.files, "labels": ["reproduced"]}}
+
+        def set_issue_status(self, key, status):
+            self.sets.append(status)
+
+        def add_attachment(self, key, path):
+            raise AssertionError("attached twice")
+
+        def issue_field_value(self, key, field):
+            return ["reproduced"]
+    fake = Jira()
+    fake.cs = []
+    j = TR.Jira({"query": "project = DEMO"}, client=fake)
+    assert j.put("DEMO-6", "transition", "done", "t1")["again"] and fake.sets == []
+    assert j.put("DEMO-6", "attach", f"{aid} result.txt", "a1")["again"] and j.put("DEMO-6", "label", "reproduced", "l1")["again"]
+    assert j.put("DEMO-6", "transition", "In Review", "t2") == {"done": True} and fake.sets == ["In Review"]
+    f = FakeForgejo()
+    f.issue["state"] = "closed"
+    monkeypatch.setitem(__import__("sys").modules, "forge", type("M", (), {"FORGE": f}))
+    assert TR.Forgejo({"name": "inbox", "repo": "o/r"}).put("5", "transition", "closed", "c1")["again"] and ("PATCH", "/repos/o/r/issues/5") not in f.calls

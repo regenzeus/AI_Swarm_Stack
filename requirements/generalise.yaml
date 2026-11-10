@@ -535,9 +535,9 @@ items:
   - id: GEN-44
     title: "A pack's item workflow runs end to end in a customer-class deployment, and the core names no domain"
     statement: "In a customer-class deployment the stack shall carry a pack's item workflow from its tracker item to its
-      end: the item starts one run (also when its event comes twice), an agent step triages it, every tracker write stays
-      in shadow, a wait on the item times out to a reminder and is woken by a reply from someone else but not by the
-      stack's own comment, a job of hours at the wsl-host place finishes with a second job queued behind it, a change
+      end: the item starts one run (also when its event comes twice), an agent step triages it, every tracker write waits
+      in shadow until the owner sends it, a wait on the item times out to a reminder and is woken by a reply from
+      someone else but not by the stack's own comment, a job of hours at the wsl-host place finishes with a second job queued behind it, a change
       goes out as a draft pull request whose review comment wakes the run, and the run writes its summary and ends;
       restarts of the runner side and of n8n while the run waits and while a job runs shall lose nothing, n8n shall get
       only summaries, and the run shall export as one zip. No file of ops/, images/, compose/, config/ or n8n/ shall name
@@ -596,3 +596,26 @@ items:
       'tests/test_domain_packs.py::test_a_pack_that_clashes_or_names_no_commit_of_its_source_is_refused_with_the_reason']}
     trace: [deployments/home/trackers.yaml, n8n/workflows/item-home-inbox.json, ops/domain/trackers.py, ops/domain/packs.py,
       ops/flows.py, ops/runreg.py, images/mission-control/guide/22-workflows.md]
+  - id: GEN-46
+    title: "A run works with its tracker item end to end"
+    statement: "In a customer-class deployment a pack's item workflow shall work with its item from its first change to
+      its end: a tracker new to the deployment starts nothing for the items it holds, and a new item starts one run; the
+      triage agent reads the item; the owner sends the run's question from shadow and the item holds it once; the
+      reporter's reply, its text kept by the stack, wakes the wait; a command at the wsl-host place gets the item's
+      attachment by artifact id; the change goes out as a draft pull request; a comment on the item does not wake the
+      wait for the review, a comment on the pull request does; the summary is written once; and n8n's executions hold
+      none of the item's text."
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-05]
+    sources: [docs/N8N-MIGRATION.md, docs/AI-STACK.md]
+    rationale: 'The CR of 10 Nov 2026 for tracker items a run can work with counts as done when this holds for the toy
+      pack against stand-ins.'
+    acceptance: 'Test, against the stand-ins of GEN-44 with a stand-in n8n running the toy''s item workflow: every step
+      of the statement, the runner side reloaded and n8n restarted while the run waits and while its job runs, and none
+      of the item''s text, its comments or the triage in n8n''s executions; with no reply the run reminds twice and ends.'
+    verify: {method: test, by: ['tests/test_work_deployment.py::test_the_toy_pack_runs_end_to_end_in_a_customer_class_deployment_against_stand_ins',
+      'tests/test_work_deployment.py::test_the_toy_ticket_reminds_twice_and_then_stops_waiting']}
+    trace: [ops/flows.py, ops/runreg.py, ops/domain/trackers.py, ops/domain/forgework.py, ops/domain/places.py,
+      tests/fixtures/packs/toy/workflows/ticket.json, tests/fixtures/packs/toy/jobs/soak.json]

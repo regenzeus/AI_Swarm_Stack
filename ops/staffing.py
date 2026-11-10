@@ -451,7 +451,7 @@ def worker():
             judge_due(c)
         except Exception as e:                         # the next pass tries again; it is logged
             M.log(f"staffing: {type(e).__name__}: {e}")
-        M.stop.wait(30)
+        M.rest(c, "staffing", 30)
 
 
 def state(c):

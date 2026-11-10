@@ -21,10 +21,13 @@
       "type": "CUSTOM.aistackStep",
       "typeVersion": 1,
       "position": [260, 0],
+      "notes": "The agent reads the item (its text and comments) first; the step service adds it to the brief, so the text never passes through n8n.",
       "parameters": {
         "title": "Triage",
         "kind": "agent",
         "agent": "toy:intake",
+        "tracker": "={{ $json.body.tracker }}",
+        "key": "={{ $json.body.key }}",
         "brief": "=Triage the item {{ $json.body.key }} of {{ $json.body.tracker }}: say what is missing to reproduce it, as questions for the reporter"
       }
     },
@@ -49,12 +52,14 @@
       "type": "CUSTOM.aistackStep",
       "typeVersion": 1,
       "position": [780, 0],
+      "notes": "Only a comment on the item answers it, never one on the pull request.",
       "parameters": {
         "title": "Wait for the reply",
         "kind": "wait_item",
         "tracker": "={{ $('An item arrives').item.json.body.tracker }}",
         "key": "={{ $('An item arrives').item.json.body.key }}",
-        "timeout_hours": 72
+        "timeout_hours": 72,
+        "on": "item"
       }
     },
     {
@@ -75,10 +80,28 @@
       }
     },
     {
+      "name": "Reminded twice?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [1040, 220],
+      "notes": "The wait's answer says how often it timed out before (reminded): after two reminders the run stops waiting, so it never reminds without end.",
+      "parameters": {
+        "conditions": {
+          "options": {"caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 2},
+          "conditions": [
+            {"id": "a7c1e2f0-0002-4c1a-9b1e-000000000002", "leftValue": "={{ $json.reminded }}", "rightValue": 2,
+             "operator": {"type": "number", "operation": "gte"}}
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
       "name": "Remind the reporter",
       "type": "CUSTOM.aistackStep",
       "typeVersion": 1,
-      "position": [1040, 220],
+      "position": [1300, 220],
       "parameters": {
         "title": "Remind the reporter",
         "kind": "tracker",
@@ -89,24 +112,53 @@
       }
     },
     {
-      "name": "Reproduce",
+      "name": "Stop waiting",
+      "type": "CUSTOM.aistackStep",
+      "typeVersion": 1,
+      "position": [1300, 440],
+      "parameters": {
+        "title": "Stop waiting",
+        "kind": "tracker",
+        "tracker": "={{ $('An item arrives').item.json.body.tracker }}",
+        "key": "={{ $('An item arrives').item.json.body.key }}",
+        "write": "summary",
+        "body": "No answer after two reminders, so the work on this item stops here. A new comment takes it up again."
+      }
+    },
+    {
+      "name": "Read the item",
       "type": "CUSTOM.aistackStep",
       "typeVersion": 1,
       "position": [1300, 0],
-      "notes": "The toy tool runs for ten minutes at the WSL host, one job at a time.",
+      "notes": "Its attachment goes into the artifact store; the toy tool at the WSL host gets it by artifact id.",
+      "parameters": {
+        "title": "Read the item",
+        "kind": "item",
+        "tracker": "={{ $('An item arrives').item.json.body.tracker }}",
+        "key": "={{ $('An item arrives').item.json.body.key }}",
+        "attach_to": "wsl-host",
+        "attachments": "crash.log"
+      }
+    },
+    {
+      "name": "Reproduce",
+      "type": "CUSTOM.aistackStep",
+      "typeVersion": 1,
+      "position": [1560, 0],
+      "notes": "The toy tool runs for ten minutes at the WSL host on the item's attachment, one job at a time.",
       "parameters": {
         "title": "Reproduce",
         "kind": "command",
         "place": "wsl-host",
         "command": "toy.soak",
-        "values": "{\"seconds\": 600}"
+        "values": "={\"seconds\": 600, \"input\": \"{{ $('Read the item').item.json.artifact_ids[0] }}\"}"
       }
     },
     {
       "name": "Make the change",
       "type": "CUSTOM.aistackStep",
       "typeVersion": 1,
-      "position": [1560, 0],
+      "position": [1820, 0],
       "parameters": {
         "title": "Make the change",
         "kind": "build",
@@ -121,21 +173,22 @@
       "name": "Wait for the review",
       "type": "CUSTOM.aistackStep",
       "typeVersion": 1,
-      "position": [1820, 0],
-      "notes": "A reviewer's comment on the draft pull request wakes the run.",
+      "position": [2080, 0],
+      "notes": "A reviewer's comment on the draft pull request wakes the run; a comment on the item does not.",
       "parameters": {
         "title": "Wait for the review",
         "kind": "wait_item",
         "tracker": "={{ $('An item arrives').item.json.body.tracker }}",
         "key": "={{ $('An item arrives').item.json.body.key }}",
-        "timeout_hours": 0
+        "timeout_hours": 0,
+        "on": "pr"
       }
     },
     {
       "name": "Write the summary",
       "type": "CUSTOM.aistackStep",
       "typeVersion": 1,
-      "position": [2080, 0],
+      "position": [2340, 0],
       "parameters": {
         "title": "Write the summary",
         "kind": "tracker",
@@ -151,8 +204,10 @@
     "Triage": {"main": [[{"node": "Ask the reporter", "type": "main", "index": 0}]]},
     "Ask the reporter": {"main": [[{"node": "Wait for the reply", "type": "main", "index": 0}]]},
     "Wait for the reply": {"main": [[{"node": "Timed out?", "type": "main", "index": 0}]]},
-    "Timed out?": {"main": [[{"node": "Remind the reporter", "type": "main", "index": 0}], [{"node": "Reproduce", "type": "main", "index": 0}]]},
+    "Timed out?": {"main": [[{"node": "Reminded twice?", "type": "main", "index": 0}], [{"node": "Read the item", "type": "main", "index": 0}]]},
+    "Reminded twice?": {"main": [[{"node": "Stop waiting", "type": "main", "index": 0}], [{"node": "Remind the reporter", "type": "main", "index": 0}]]},
     "Remind the reporter": {"main": [[{"node": "Wait for the reply", "type": "main", "index": 0}]]},
+    "Read the item": {"main": [[{"node": "Reproduce", "type": "main", "index": 0}]]},
     "Reproduce": {"main": [[{"node": "Make the change", "type": "main", "index": 0}]]},
     "Make the change": {"main": [[{"node": "Wait for the review", "type": "main", "index": 0}]]},
     "Wait for the review": {"main": [[{"node": "Write the summary", "type": "main", "index": 0}]]}

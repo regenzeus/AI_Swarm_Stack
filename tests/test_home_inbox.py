@@ -57,6 +57,7 @@ class Forgejo:
         at = self.tick()
         self.issues[n]["comments"].append({"id": self.ids, "user": {"login": self.owner}, "body": body, "created_at": at})
         self.issues[n]["updated_at"] = at
+        return dict(self.issues[n]["comments"][-1])
 
     def call(self, method, path, body=None):
         self.calls.append((method, path))
@@ -127,6 +128,7 @@ def home(K, tmp_path, monkeypatch):
     monkeypatch.setattr(RR, "_now", lambda: w.clock["now"])
     FW.M = types.SimpleNamespace(db=K.conn, stop=threading.Event(), log=w.logs.append, notify=w.told.append, event=lambda *a, **k: None)
     w.K = K
+    assert TR.poll() == []                           # the inbox's first pass (start: now), as home's live inbox had it long ago
     yield w
     FW.M.stop.set()
 
@@ -193,7 +195,9 @@ def test_an_issue_in_the_inbox_is_answered_waits_for_the_owners_reply_and_is_clo
     n = w.forge.open("Which backups ran last night?", "Please list last night's backups and whether each passed.")
     assert poll(w) == {"started": 1}
     assert list(w.n8n.ex) == ["101"] and RR.item("inbox", str(n))["runs"][0]["execution"] == "101"
-    (w.tmp / "state/inbox.json").unlink()
+    st = json.loads((w.tmp / "state/inbox.json").read_text())
+    st["cursor"], st["seen"] = "", {}                # the same change, handed on again
+    (w.tmp / "state/inbox.json").write_text(json.dumps(st))
     assert poll(w) == {"seen": 1} and list(w.n8n.ex) == ["101"]
 
     # 2. the main agent reads the issue and answers it; the whole answer goes on the issue, with the owner's account
@@ -267,4 +271,5 @@ def test_the_node_lets_an_agent_step_read_its_item():
     assert "if (kind === 'agent' && p('tracker', '')) Object.assign(body, { tracker: p('tracker'), key: String(p('key')) });" in js
     assert "displayName: 'Read the item of', name: 'tracker', type: 'options', default: '', displayOptions: show('agent')," in js
     assert "async getItemTrackers() { return [{ name: 'No item', value: '' }, ...(await pick(this, 'trackers'))]; }," in js
-    assert "displayOptions: show('wait_item', 'tracker', 'agent')" in js
+    assert "displayOptions: show('wait_item', 'tracker', 'agent', 'item')" in js
+    assert "if (kind === 'agent' && p('tracker', '')) body.from_item = true;" in js

@@ -155,7 +155,7 @@ items:
   - id: WFL-08
     title: Workflows live in git
     statement: Every workflow of a deployment shall be a JSON file in its repository; a change made on the canvas shall
-      be exported and committed through the landing path, and a deploy shall import the repository's workflows.
+      be exported and committed through the landing path, and a deploy shall import the repository's workflows that the deployment chooses (PLT-38).
     type: process
     priority: must
     status: partial
@@ -534,5 +534,161 @@ items:
       recorded and the owner''s unmarked reply wakes the run.'
     verify: {method: test, by: ['tests/test_domain_trackers.py::test_the_stacks_own_comment_is_known_by_its_write_mark_where_it_writes_with_the_owners_account',
       'tests/test_domain_trackers.py::test_jira_and_pull_request_comments_follow_the_same_rule_on_one_account',
-      'tests/test_home_inbox.py::test_an_issue_in_the_inbox_is_answered_waits_for_the_owners_reply_and_is_closed']}
+      'tests/test_home_inbox.py::test_an_issue_in_the_inbox_is_answered_waits_for_the_owners_reply_and_is_closed',
+      'tests/test_n8n_items.py::test_with_me_unset_the_stacks_own_comment_and_summary_do_not_wake_a_wait_and_a_persons_comment_does']}
     trace: [ops/domain/trackers.py, ops/domain/forgework.py, ops/runreg.py]
+  - id: WFL-27
+    title: A new tracker starts from now
+    statement: A tracker's entry shall say from when its items count (start, now by default, or a date); a tracker's
+      first pass, when it has no state yet, shall with now only set its cursor to the newest matching item and start
+      nothing, so an item that matches already starts a run with its next change, and with a date shall start its cursor
+      at that date; a tracker that has its state shall keep its cursor and its seen comments as they are; a start that is
+      neither now nor a date shall refuse the entry with the reason; the connections page shall show each tracker's
+      start.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-05]
+    sources: [docs/N8N-MIGRATION.md]
+    rationale: 'The CR of 10 Nov 2026 (B3): the first poll of a new tracker started a run for every item that already
+      matched. Home''s inbox had its first pass before start existed, so its state stays and nothing restarts.'
+    acceptance: 'Test: a stand-in tracker with three matching items and no start starts nothing on its first pass and
+      one run when one of them gets a comment; a start date hands on the items changed after it; a state without a
+      start keeps its cursor and seen comments; a bad start is refused; the page shows the start.'
+    verify: {method: test, by: ['tests/test_n8n_items.py::test_a_new_tracker_with_three_matching_items_starts_nothing_and_one_run_when_one_of_them_gets_a_comment',
+      'tests/test_domain_trackers.py::test_a_new_tracker_starts_now_its_first_pass_only_sets_the_cursor_and_a_start_date_counts_from_that_date',
+      'tests/test_domain_trackers.py::test_a_tracker_that_had_its_first_pass_before_start_existed_keeps_its_cursor_and_hands_on_as_before',
+      'tests/test_domain_trackers.py::test_trackers_are_the_apps_and_the_queues']}
+    trace: [ops/domain/trackers.py, images/mission-control/web/static/app.js]
+  - id: WFL-28
+    title: A run reads its tracker item and its files
+    statement: The step kind item shall read a tracker item through its tracker's adapter (its title, text, status,
+      labels, every comment with its author, time and text, the stack's own marked, and its attachments' names and
+      sizes); with attach_to a place it shall fetch the attachments (all, or those named) into the artifact store with
+      the deployment's data class and answer their artifact ids, refusing more than 10 files or one over 50 MB and
+      failing on a name the item lacks; a command shall take an artifact id as the value of a file parameter, the file
+      put into its request under its own name. A wait's answer shall carry the new comments' texts, an agent step's
+      from_item shall put the item into its brief through the step service, and in a customer-class deployment n8n
+      shall get the ids and a summary that names none of the item's or the comments' text.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-05]
+    sources: [docs/N8N-MIGRATION.md, docs/AI-STACK.md]
+    rationale: 'The CR of 10 Nov 2026 (G1): a run never saw what an item says, which kept the first work deployment from
+      using the stack.'
+    acceptance: 'Test: an item step answers the stand-in item''s fields and saves its named attachment as an artifact
+      a command takes by id, refuses more than 10 names, refuses a file over 50 MB and fails on a missing one, and its
+      lean answer holds no text; end to end the triage agent''s brief holds the item''s text and its reporter''s
+      comment, the toy tool reads the item''s attachment by artifact id, and n8n holds none of the text.'
+    verify: {method: test, by: ['tests/test_n8n_items.py::test_an_item_step_reads_the_item_and_fetches_its_attachments_by_artifact_id_within_its_caps',
+      'tests/test_n8n_items.py::test_the_node_reads_an_item_waits_on_its_source_and_says_from_item',
+      'tests/test_work_deployment.py::test_the_toy_pack_runs_end_to_end_in_a_customer_class_deployment_against_stand_ins']}
+    trace: [ops/flows.py, ops/domain/trackers.py, ops/domain/places.py, ops/runreg.py, n8n/custom/AistackStep.node.js]
+  - id: WFL-29
+    title: The owner sends a shadow write, keeps it back, or judges it wrong
+    statement: Each tracker write in shadow shall wait in Needs you and on the connections page with three answers in
+      plain words; Right, send it shall count it as right and write it to its item through the tracker's adapter with
+      its own write id, once whatever the taps and retries, and record the tracker reference it got; Right, don't send
+      shall count it as right and send nothing; Wrong shall not count it; a tracker that does not take the write shall
+      leave it waiting with the reason.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-05]
+    sources: [docs/N8N-MIGRATION.md]
+    rationale: 'The CR of 10 Nov 2026 (B1): an approved shadow write was never sent, so in shadow a question to the
+      reporter never reached the reporter.'
+    acceptance: 'Test: the three answers; send writes the comment once, also on a second tap and a retry of the write,
+      and records its reference; keep sends nothing; wrong does not count; a tracker that is down leaves the write
+      waiting; end to end the owner sends the question, the item has it once, and the reporter''s reply wakes the run.'
+    verify: {method: test, by: ['tests/test_domain_trackers.py::test_the_owner_sends_a_shadow_write_once_keeps_one_back_or_judges_it_wrong',
+      'tests/test_domain_trackers.py::test_trackers_are_the_apps_and_the_queues',
+      'tests/test_work_deployment.py::test_the_toy_pack_runs_end_to_end_in_a_customer_class_deployment_against_stand_ins']}
+    trace: [ops/domain/trackers.py, images/mission-control/web/static/app.js, images/mission-control/guide/22-workflows.md]
+  - id: WFL-30
+    title: The summary edits only the comment the stack wrote
+    statement: The stack's summary on a tracker item shall be the comment it wrote first, its comment id kept per item
+      when written; a later summary shall edit only that comment, and with no id kept the stack shall add a new one, so
+      a comment someone else wrote that carries the summary mark is never edited, on Jira, Forgejo and the stand-in.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-05]
+    sources: [docs/N8N-MIGRATION.md]
+    rationale: 'The CR of 10 Nov 2026 (B5): the adapters edited the first comment that held the summary mark, whoever
+      wrote it.'
+    acceptance: 'Test: on Jira and Forgejo a colleague''s comment with the summary mark stays as it is; the first
+      summary is added and its id kept, the second edits that id.'
+    verify: {method: test, by: ['tests/test_domain_trackers.py::test_the_summary_edits_only_the_comment_the_stack_wrote_on_jira_and_forgejo',
+      'tests/test_domain_trackers.py::test_jira_reads_by_jql_with_its_cursor_and_edits_its_one_summary',
+      'tests/test_domain_trackers.py::test_the_one_summary_comment_is_edited_across_three_updates']}
+    trace: [ops/domain/trackers.py]
+  - id: WFL-31
+    title: Attach, transition and label are done once
+    statement: A tracker write that leaves no comment shall be done when the item already holds it, an attachment of the
+      same name and size, the target status, the label, so a retry of it writes nothing twice and raises no error.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-05]
+    sources: [docs/N8N-MIGRATION.md]
+    rationale: 'The CR of 10 Nov 2026 (B6): put() knew a write as done only by the write mark of a comment.'
+    acceptance: 'Test: each kind retried on the stand-in leaves one attachment, its status and one label, without an
+      error; Jira''s transition, attachment and label and Forgejo''s close are not written again.'
+    verify: {method: test, by: ['tests/test_domain_trackers.py::test_attach_transition_and_label_are_done_once_whatever_the_retries']}
+    trace: [ops/domain/trackers.py]
+  - id: WFL-32
+    title: A wait is answered only by its source
+    statement: A wait on a tracker item shall listen to the item's comments (on item, the default), its pull request's
+      (on pr) or both (on any); only comments of its source shall answer it, the other source's shall stay unread for a
+      wait on them, and the answer shall say its source.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-05]
+    sources: [docs/N8N-MIGRATION.md]
+    rationale: 'The CR of 10 Nov 2026 (B4): tracker and pull request comments landed in one item, so a reporter''s
+      comment ended the wait for the review and old comments answered the next wait.'
+    acceptance: 'Test: a pull request comment does not wake a wait on the item and answers the next wait on the pull
+      request; an item comment wakes the wait on the item; on any takes either; end to end a reporter''s comment during
+      the wait for the review does not wake it and a review comment does.'
+    verify: {method: test, by: ['tests/test_n8n_items.py::test_a_wait_is_answered_only_from_its_source_and_says_which_it_was',
+      'tests/test_n8n_items.py::test_a_change_for_an_item_starts_at_its_tag_and_goes_out_as_a_draft_whose_review_comment_wakes_the_run',
+      'tests/test_work_deployment.py::test_the_toy_pack_runs_end_to_end_in_a_customer_class_deployment_against_stand_ins']}
+    trace: [ops/runreg.py, ops/domain/forgework.py, ops/flows.py, n8n/custom/AistackStep.node.js]
+  - id: WFL-33
+    title: A wait says how often it timed out, so reminders end
+    statement: A wait's answer shall carry reminded, how often a wait of the same node timed out before in its run (0 on
+      its first timeout, counted again after a reply), and the toy pack's item workflow shall remind twice and then stop
+      waiting with its summary, the pattern a pack copies.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-05]
+    sources: [docs/N8N-MIGRATION.md]
+    rationale: 'The CR of 10 Nov 2026 (G3): the toy''s reminder loop had no end.'
+    acceptance: 'Test: three timeouts answer reminded 0, 1 and 2, a reply after them 3, the next timeout 0; the toy''s
+      ticket with no reply reminds twice, stops waiting with its summary and ends.'
+    verify: {method: test, by: ['tests/test_n8n_items.py::test_a_waits_answer_says_how_often_it_timed_out_before_so_a_workflow_can_stop_reminding',
+      'tests/test_work_deployment.py::test_the_toy_ticket_reminds_twice_and_then_stops_waiting',
+      'tests/test_domain_packs.py::test_the_toy_packs_item_workflow_is_a_whole_n8n_workflow_on_logic_nodes_only']}
+    trace: [ops/runreg.py, tests/fixtures/packs/toy/workflows/ticket.json]
+  - id: WFL-34
+    title: An answer goes to n8n only once n8n has finished starting
+    statement: The step service shall post an answer to n8n's resume URL only while n8n's readiness check answers 200,
+      and while it does not, keep the answer and send it again on its next round, as it does when n8n is away.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05]
+    sources: [docs/N8N-MIGRATION.md]
+    rationale: 'The n8n upgrade test of 10 Nov 2026 (docs/N8N-MIGRATION.md §11.1): n8n answers its health check as soon
+      as its port opens, before its migrations, its workflows'' activation and its start-up recovery. An answer posted
+      then was taken with a 200 and dropped, or resumed a run that the recovery then marked crashed; the window opens
+      on every n8n start (a deploy, an import, the nightly restart).'
+    acceptance: 'Test: while n8n is not ready nothing is posted and the answer stays, once it is ready the answer is
+      taken; an n8n that cannot be reached counts as not ready; the readiness check asks /healthz/readiness on this
+      machine.'
+    verify: {method: test, by: ['tests/test_flows.py::test_an_answer_waits_until_n8n_has_finished_starting']}
+    trace: [ops/flows.py]

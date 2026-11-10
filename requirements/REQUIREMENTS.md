@@ -17,14 +17,14 @@ Method, statuses and rules: [README.md](README.md). Names of the parts: [glossar
 | [Constraints](#cst-constraints) (CST) | 15 | 11 | 2 | 1 | 0 | 1 | 0 |
 | [Crew](#crw-crew) (CRW) | 13 | 11 | 0 | 0 | 0 | 0 | 2 |
 | [Gateway](#gw-gateway) (GW) | 9 | 8 | 0 | 0 | 0 | 1 | 0 |
-| [Generalisation](#gen-generalisation) (GEN) | 45 | 18 | 12 | 0 | 2 | 3 | 10 |
+| [Generalisation](#gen-generalisation) (GEN) | 46 | 19 | 12 | 0 | 2 | 3 | 10 |
 | [House](#hse-house) (HSE) | 9 | 9 | 0 | 0 | 0 | 0 | 0 |
 | [Knowledge](#knw-knowledge) (KNW) | 15 | 15 | 0 | 0 | 0 | 0 | 0 |
 | [Memory](#mem-memory) (MEM) | 51 | 49 | 0 | 0 | 0 | 0 | 2 |
 | [Missions](#mis-missions) (MIS) | 28 | 24 | 1 | 0 | 0 | 1 | 2 |
 | [Observability](#obs-observability) (OBS) | 18 | 18 | 0 | 0 | 0 | 0 | 0 |
 | [AI phone](#phn-ai-phone) (PHN) | 27 | 27 | 0 | 0 | 0 | 0 | 0 |
-| [Platform](#plt-platform) (PLT) | 37 | 33 | 3 | 0 | 0 | 1 | 0 |
+| [Platform](#plt-platform) (PLT) | 40 | 36 | 3 | 0 | 0 | 1 | 0 |
 | [Quality and process](#qa-quality-and-process) (QA) | 27 | 25 | 1 | 0 | 0 | 1 | 0 |
 | [Research](#res-research) (RES) | 7 | 6 | 1 | 0 | 0 | 0 | 0 |
 | [Security](#sec-security) (SEC) | 22 | 20 | 2 | 0 | 0 | 0 | 0 |
@@ -33,10 +33,10 @@ Method, statuses and rules: [README.md](README.md). Names of the parts: [glossar
 | [Task engine](#tsk-task-engine) (TSK) | 45 | 39 | 6 | 0 | 0 | 0 | 0 |
 | [Trials](#trl-trials) (TRL) | 17 | 13 | 2 | 0 | 0 | 2 | 0 |
 | [Voice](#voi-voice) (VOI) | 9 | 8 | 0 | 0 | 0 | 1 | 0 |
-| [Workflows](#wfl-workflows) (WFL) | 26 | 23 | 3 | 0 | 0 | 0 | 0 |
-| **All** | **705** | **617** | **47** | **1** | **4** | **17** | **19** |
+| [Workflows](#wfl-workflows) (WFL) | 34 | 31 | 3 | 0 | 0 | 0 | 0 |
+| **All** | **717** | **629** | **47** | **1** | **4** | **17** | **19** |
 
-Unit tests claimed by a requirement: 1475 of 1475.
+Unit tests claimed by a requirement: 1501 of 1501.
 
 ## Findings
 
@@ -1536,15 +1536,15 @@ The trial's build #11 appeared on the Tasks board as task #89 (source door) besi
 | <a id="sn-02"></a>**SN-02** Out of the loop except for real decisions: the owner is asked only for decisions that are really his (approvals of spending, deploys, deletions, settings, grants), each one tap away with enough context to decide; no scripts to run, no busywork, nothing shown as needing him that does not. | must | [APP-04](#app-04), [APP-05](#app-05), [APP-06](#app-06), [APP-07](#app-07), [APP-13](#app-13), [APP-14](#app-14), [APP-21](#app-21), [APP-25](#app-25), [APP-26](#app-26), [APP-30](#app-30), [APP-31](#app-31), [APP-54](#app-54), [APP-68](#app-68), [AST-06](#ast-06), [AST-12](#ast-12), [AUT-01](#aut-01), [AUT-02](#aut-02), [AUT-05](#aut-05), [AUT-07](#aut-07), [AUT-08](#aut-08), [CHG-02](#chg-02), [CHG-03](#chg-03), [CNX-02](#cnx-02), [CRW-02](#crw-02), [CRW-05](#crw-05), [CRW-06](#crw-06), [CST-03](#cst-03), [MEM-42](#mem-42), [MIS-07](#mis-07), [MIS-20](#mis-20), [PHN-02](#phn-02), [PHN-11](#phn-11), [PHN-12](#phn-12), [PHN-18](#phn-18), [PHN-20](#phn-20), [PHN-21](#phn-21), [PHN-22](#phn-22), [PHN-24](#phn-24), [PHN-25](#phn-25), [PHN-26](#phn-26), [SHP-01](#shp-01), [SHP-03](#shp-03), [SHP-08](#shp-08), [SWM-05](#swm-05), [SWM-06](#swm-06), [SWM-08](#swm-08), [SWM-33](#swm-33), [SWM-38](#swm-38), [SWM-39](#swm-39), [SWM-40](#swm-40), [SWM-42](#swm-42), [SWM-43](#swm-43), [SWM-44](#swm-44), [SWM-54](#swm-54), [SWM-55](#swm-55), [SWM-61](#swm-61), [SWM-87](#swm-87), [TRL-15](#trl-15), [TSK-03](#tsk-03), [TSK-20](#tsk-20), [TSK-40](#tsk-40), [VOI-08](#voi-08) |
 | <a id="sn-03"></a>**SN-03** Costs nothing to run: Running the stack costs $0 beyond the subscriptions the owner already pays; nothing can spend money by accident. | must | [APP-40](#app-40), [APP-41](#app-41), [APP-42](#app-42), [APP-43](#app-43), [APP-44](#app-44), [APP-45](#app-45), [AST-02](#ast-02), [AST-08](#ast-08), [BLD-06](#bld-06), [CST-02](#cst-02), [CST-15](#cst-15), [GW-02](#gw-02), [GW-04](#gw-04), [GW-09](#gw-09), [MEM-26](#mem-26), [MEM-44](#mem-44), [MIS-04](#mis-04), [MIS-16](#mis-16), [PHN-27](#phn-27), [PLT-11](#plt-11), [PLT-26](#plt-26), [PLT-27](#plt-27), [RES-07](#res-07), [SHP-05](#shp-05), [SWM-13](#swm-13), [SWM-14](#swm-14), [SWM-29](#swm-29), [SWM-40](#swm-40), [SWM-53](#swm-53), [SWM-60](#swm-60), [SWM-62](#swm-62), [SWM-81](#swm-81), [WFL-07](#wfl-07), [WFL-10](#wfl-10), [WFL-11](#wfl-11), [WFL-14](#wfl-14) |
 | <a id="sn-04"></a>**SN-04** Private data stays home: Notes, reports, memory, chats, mail and files stay on the PC and the NAS; only the model calls leave, and The owner knows which provider sees what. | must | [AUT-03](#aut-03), [CST-04](#cst-04), [CST-06](#cst-06), [GEN-14](#gen-14), [HSE-07](#hse-07), [KNW-05](#knw-05), [KNW-07](#knw-07), [MEM-06](#mem-06), [MEM-18](#mem-18), [MEM-30](#mem-30), [PHN-16](#phn-16), [PHN-19](#phn-19), [RES-01](#res-01), [SEC-03](#sec-03), [SEC-04](#sec-04), [SEC-06](#sec-06), [SEC-17](#sec-17), [SEC-18](#sec-18), [SEC-19](#sec-19), [SEC-22](#sec-22), [SWM-67](#swm-67), [WFL-15](#wfl-15), [WFL-16](#wfl-16), [WFL-17](#wfl-17), [WFL-18](#wfl-18) |
-| <a id="sn-05"></a>**SN-05** Agents cannot do damage: No agent can spend money, delete data for good, leak private data, change the NAS, the router or phone and PC security settings, or deploy code without the owner's approval; prompt injection from the web or mail cannot steer an agent into any of it. | must | [APP-10](#app-10), [APP-20](#app-20), [APP-61](#app-61), [AST-08](#ast-08), [AST-09](#ast-09), [AST-10](#ast-10), [AST-14](#ast-14), [AUT-01](#aut-01), [AUT-03](#aut-03), [BLD-02](#bld-02), [BLD-07](#bld-07), [BLD-10](#bld-10), [BLD-13](#bld-13), [BLD-16](#bld-16), [BLD-18](#bld-18), [BLD-27](#bld-27), [BLD-28](#bld-28), [BLD-39](#bld-39), [CHG-05](#chg-05), [CHG-12](#chg-12), [CHG-13](#chg-13), [CHG-15](#chg-15), [CNX-01](#cnx-01), [CNX-03](#cnx-03), [CNX-04](#cnx-04), [CNX-05](#cnx-05), [CNX-07](#cnx-07), [CNX-08](#cnx-08), [CNX-09](#cnx-09), [CRW-04](#crw-04), [CRW-10](#crw-10), [CRW-11](#crw-11), [CRW-13](#crw-13), [CST-04](#cst-04), [CST-05](#cst-05), [CST-06](#cst-06), [CST-07](#cst-07), [CST-10](#cst-10), [CST-11](#cst-11), [CST-12](#cst-12), [GEN-01](#gen-01), [GEN-02](#gen-02), [GEN-03](#gen-03), [GEN-04](#gen-04), [GEN-05](#gen-05), [GEN-06](#gen-06), [GEN-07](#gen-07), [GEN-08](#gen-08), [GEN-09](#gen-09), [GEN-10](#gen-10), [GEN-11](#gen-11), [GEN-12](#gen-12), [GEN-13](#gen-13), [GEN-14](#gen-14), [GEN-15](#gen-15), [GEN-16](#gen-16), [GEN-17](#gen-17), [GEN-18](#gen-18), [GEN-19](#gen-19), [GEN-20](#gen-20), [GEN-21](#gen-21), [GEN-22](#gen-22), [GEN-23](#gen-23), [GEN-24](#gen-24), [GEN-25](#gen-25), [GEN-26](#gen-26), [GEN-27](#gen-27), [GEN-28](#gen-28), [GEN-29](#gen-29), [GEN-30](#gen-30), [GEN-31](#gen-31), [GEN-32](#gen-32), [GEN-33](#gen-33), [GEN-34](#gen-34), [GEN-35](#gen-35), [GEN-36](#gen-36), [GEN-37](#gen-37), [GEN-38](#gen-38), [GEN-39](#gen-39), [GEN-40](#gen-40), [GEN-41](#gen-41), [GEN-42](#gen-42), [GEN-43](#gen-43), [GEN-44](#gen-44), [GEN-45](#gen-45), [GW-05](#gw-05), [HSE-04](#hse-04), [HSE-05](#hse-05), [HSE-08](#hse-08), [HSE-09](#hse-09), [KNW-04](#knw-04), [KNW-06](#knw-06), [KNW-11](#knw-11), [MEM-04](#mem-04), [MEM-29](#mem-29), [MEM-30](#mem-30), [MEM-39](#mem-39), [MEM-49](#mem-49), [MIS-17](#mis-17), [MIS-28](#mis-28), [PHN-01](#phn-01), [PHN-03](#phn-03), [PHN-04](#phn-04), [PHN-05](#phn-05), [PHN-06](#phn-06), [PHN-07](#phn-07), [PHN-08](#phn-08), [PHN-15](#phn-15), [PLT-02](#plt-02), [PLT-03](#plt-03), [PLT-09](#plt-09), [QA-23](#qa-23), [QA-24](#qa-24), [QA-25](#qa-25), [QA-26](#qa-26), [RES-01](#res-01), [RES-03](#res-03), [RES-04](#res-04), [RES-06](#res-06), [SEC-01](#sec-01), [SEC-02](#sec-02), [SEC-03](#sec-03), [SEC-04](#sec-04), [SEC-05](#sec-05), [SEC-06](#sec-06), [SEC-07](#sec-07), [SEC-08](#sec-08), [SEC-09](#sec-09), [SEC-10](#sec-10), [SEC-11](#sec-11), [SEC-12](#sec-12), [SEC-13](#sec-13), [SEC-14](#sec-14), [SEC-15](#sec-15), [SEC-16](#sec-16), [SEC-20](#sec-20), [SEC-21](#sec-21), [SEC-22](#sec-22), [SHP-05](#shp-05), [SHP-06](#shp-06), [SHP-07](#shp-07), [SHP-09](#shp-09), [SHP-10](#shp-10), [SWM-06](#swm-06), [SWM-109](#swm-109), [SWM-11](#swm-11), [SWM-15](#swm-15), [SWM-23](#swm-23), [SWM-24](#swm-24), [SWM-26](#swm-26), [SWM-42](#swm-42), [SWM-43](#swm-43), [SWM-46](#swm-46), [SWM-51](#swm-51), [SWM-58](#swm-58), [SWM-66](#swm-66), [SWM-67](#swm-67), [SWM-68](#swm-68), [SWM-69](#swm-69), [SWM-70](#swm-70), [SWM-77](#swm-77), [SWM-89](#swm-89), [TRL-05](#trl-05), [TSK-15](#tsk-15), [TSK-20](#tsk-20), [VOI-01](#voi-01), [VOI-03](#voi-03), [VOI-07](#voi-07), [WFL-01](#wfl-01), [WFL-02](#wfl-02), [WFL-05](#wfl-05), [WFL-06](#wfl-06), [WFL-08](#wfl-08), [WFL-09](#wfl-09), [WFL-12](#wfl-12), [WFL-13](#wfl-13), [WFL-15](#wfl-15), [WFL-17](#wfl-17), [WFL-19](#wfl-19), [WFL-20](#wfl-20), [WFL-21](#wfl-21), [WFL-22](#wfl-22), [WFL-23](#wfl-23), [WFL-24](#wfl-24), [WFL-25](#wfl-25), [WFL-26](#wfl-26) |
+| <a id="sn-05"></a>**SN-05** Agents cannot do damage: No agent can spend money, delete data for good, leak private data, change the NAS, the router or phone and PC security settings, or deploy code without the owner's approval; prompt injection from the web or mail cannot steer an agent into any of it. | must | [APP-10](#app-10), [APP-20](#app-20), [APP-61](#app-61), [AST-08](#ast-08), [AST-09](#ast-09), [AST-10](#ast-10), [AST-14](#ast-14), [AUT-01](#aut-01), [AUT-03](#aut-03), [BLD-02](#bld-02), [BLD-07](#bld-07), [BLD-10](#bld-10), [BLD-13](#bld-13), [BLD-16](#bld-16), [BLD-18](#bld-18), [BLD-27](#bld-27), [BLD-28](#bld-28), [BLD-39](#bld-39), [CHG-05](#chg-05), [CHG-12](#chg-12), [CHG-13](#chg-13), [CHG-15](#chg-15), [CNX-01](#cnx-01), [CNX-03](#cnx-03), [CNX-04](#cnx-04), [CNX-05](#cnx-05), [CNX-07](#cnx-07), [CNX-08](#cnx-08), [CNX-09](#cnx-09), [CRW-04](#crw-04), [CRW-10](#crw-10), [CRW-11](#crw-11), [CRW-13](#crw-13), [CST-04](#cst-04), [CST-05](#cst-05), [CST-06](#cst-06), [CST-07](#cst-07), [CST-10](#cst-10), [CST-11](#cst-11), [CST-12](#cst-12), [GEN-01](#gen-01), [GEN-02](#gen-02), [GEN-03](#gen-03), [GEN-04](#gen-04), [GEN-05](#gen-05), [GEN-06](#gen-06), [GEN-07](#gen-07), [GEN-08](#gen-08), [GEN-09](#gen-09), [GEN-10](#gen-10), [GEN-11](#gen-11), [GEN-12](#gen-12), [GEN-13](#gen-13), [GEN-14](#gen-14), [GEN-15](#gen-15), [GEN-16](#gen-16), [GEN-17](#gen-17), [GEN-18](#gen-18), [GEN-19](#gen-19), [GEN-20](#gen-20), [GEN-21](#gen-21), [GEN-22](#gen-22), [GEN-23](#gen-23), [GEN-24](#gen-24), [GEN-25](#gen-25), [GEN-26](#gen-26), [GEN-27](#gen-27), [GEN-28](#gen-28), [GEN-29](#gen-29), [GEN-30](#gen-30), [GEN-31](#gen-31), [GEN-32](#gen-32), [GEN-33](#gen-33), [GEN-34](#gen-34), [GEN-35](#gen-35), [GEN-36](#gen-36), [GEN-37](#gen-37), [GEN-38](#gen-38), [GEN-39](#gen-39), [GEN-40](#gen-40), [GEN-41](#gen-41), [GEN-42](#gen-42), [GEN-43](#gen-43), [GEN-44](#gen-44), [GEN-45](#gen-45), [GEN-46](#gen-46), [GW-05](#gw-05), [HSE-04](#hse-04), [HSE-05](#hse-05), [HSE-08](#hse-08), [HSE-09](#hse-09), [KNW-04](#knw-04), [KNW-06](#knw-06), [KNW-11](#knw-11), [MEM-04](#mem-04), [MEM-29](#mem-29), [MEM-30](#mem-30), [MEM-39](#mem-39), [MEM-49](#mem-49), [MIS-17](#mis-17), [MIS-28](#mis-28), [PHN-01](#phn-01), [PHN-03](#phn-03), [PHN-04](#phn-04), [PHN-05](#phn-05), [PHN-06](#phn-06), [PHN-07](#phn-07), [PHN-08](#phn-08), [PHN-15](#phn-15), [PLT-02](#plt-02), [PLT-03](#plt-03), [PLT-09](#plt-09), [PLT-39](#plt-39), [QA-23](#qa-23), [QA-24](#qa-24), [QA-25](#qa-25), [QA-26](#qa-26), [RES-01](#res-01), [RES-03](#res-03), [RES-04](#res-04), [RES-06](#res-06), [SEC-01](#sec-01), [SEC-02](#sec-02), [SEC-03](#sec-03), [SEC-04](#sec-04), [SEC-05](#sec-05), [SEC-06](#sec-06), [SEC-07](#sec-07), [SEC-08](#sec-08), [SEC-09](#sec-09), [SEC-10](#sec-10), [SEC-11](#sec-11), [SEC-12](#sec-12), [SEC-13](#sec-13), [SEC-14](#sec-14), [SEC-15](#sec-15), [SEC-16](#sec-16), [SEC-20](#sec-20), [SEC-21](#sec-21), [SEC-22](#sec-22), [SHP-05](#shp-05), [SHP-06](#shp-06), [SHP-07](#shp-07), [SHP-09](#shp-09), [SHP-10](#shp-10), [SWM-06](#swm-06), [SWM-109](#swm-109), [SWM-11](#swm-11), [SWM-15](#swm-15), [SWM-23](#swm-23), [SWM-24](#swm-24), [SWM-26](#swm-26), [SWM-42](#swm-42), [SWM-43](#swm-43), [SWM-46](#swm-46), [SWM-51](#swm-51), [SWM-58](#swm-58), [SWM-66](#swm-66), [SWM-67](#swm-67), [SWM-68](#swm-68), [SWM-69](#swm-69), [SWM-70](#swm-70), [SWM-77](#swm-77), [SWM-89](#swm-89), [TRL-05](#trl-05), [TSK-15](#tsk-15), [TSK-20](#tsk-20), [VOI-01](#voi-01), [VOI-03](#voi-03), [VOI-07](#voi-07), [WFL-01](#wfl-01), [WFL-02](#wfl-02), [WFL-05](#wfl-05), [WFL-06](#wfl-06), [WFL-08](#wfl-08), [WFL-09](#wfl-09), [WFL-12](#wfl-12), [WFL-13](#wfl-13), [WFL-15](#wfl-15), [WFL-17](#wfl-17), [WFL-19](#wfl-19), [WFL-20](#wfl-20), [WFL-21](#wfl-21), [WFL-22](#wfl-22), [WFL-23](#wfl-23), [WFL-24](#wfl-24), [WFL-25](#wfl-25), [WFL-26](#wfl-26), [WFL-27](#wfl-27), [WFL-28](#wfl-28), [WFL-29](#wfl-29), [WFL-30](#wfl-30), [WFL-31](#wfl-31), [WFL-32](#wfl-32), [WFL-33](#wfl-33), [WFL-34](#wfl-34) |
 | <a id="sn-06"></a>**SN-06** Usable from the phone, anywhere, one sign-in: Everything is usable and decidable from the owner's phone (installable app, push, Telegram), from anywhere on his tailnet, with his Tailscale login as the only sign-in. | must | [APP-01](#app-01), [APP-02](#app-02), [APP-03](#app-03), [APP-04](#app-04), [APP-08](#app-08), [APP-09](#app-09), [APP-15](#app-15), [APP-17](#app-17), [APP-19](#app-19), [APP-20](#app-20), [APP-37](#app-37), [APP-38](#app-38), [APP-39](#app-39), [APP-62](#app-62), [APP-64](#app-64), [APP-65](#app-65), [APP-66](#app-66), [AST-01](#ast-01), [AST-03](#ast-03), [AUT-05](#aut-05), [AUT-06](#aut-06), [MIS-15](#mis-15), [MIS-23](#mis-23), [QA-16](#qa-16), [QA-21](#qa-21), [QA-22](#qa-22), [SEC-01](#sec-01), [SEC-02](#sec-02), [SEC-20](#sec-20), [SWM-11](#swm-11), [SWM-57](#swm-57), [SWM-93](#swm-93), [SWM-95](#swm-95), [TSK-02](#tsk-02), [VOI-09](#voi-09) |
 | <a id="sn-07"></a>**SN-07** See what every agent does: For every agent, mission, crew job, build and tool the owner can see what it did step by step, what it read and changed, what it produced, what it cost and when something went wrong, without having to look for it. | must | [APP-07](#app-07), [APP-11](#app-11), [APP-12](#app-12), [APP-16](#app-16), [APP-19](#app-19), [APP-22](#app-22), [APP-23](#app-23), [APP-24](#app-24), [APP-35](#app-35), [APP-36](#app-36), [APP-53](#app-53), [AST-04](#ast-04), [AUT-04](#aut-04), [AUT-07](#aut-07), [BLD-14](#bld-14), [BLD-20](#bld-20), [CHG-16](#chg-16), [CHG-20](#chg-20), [CRW-01](#crw-01), [CRW-02](#crw-02), [CRW-09](#crw-09), [CRW-12](#crw-12), [GW-01](#gw-01), [GW-07](#gw-07), [HSE-02](#hse-02), [MEM-01](#mem-01), [MEM-07](#mem-07), [MEM-09](#mem-09), [MEM-10](#mem-10), [MEM-19](#mem-19), [MEM-22](#mem-22), [MEM-27](#mem-27), [MEM-44](#mem-44), [MEM-45](#mem-45), [MEM-46](#mem-46), [MIS-16](#mis-16), [OBS-01](#obs-01), [OBS-02](#obs-02), [OBS-03](#obs-03), [OBS-04](#obs-04), [OBS-05](#obs-05), [OBS-06](#obs-06), [OBS-07](#obs-07), [OBS-08](#obs-08), [OBS-09](#obs-09), [OBS-10](#obs-10), [OBS-14](#obs-14), [OBS-15](#obs-15), [OBS-18](#obs-18), [PLT-24](#plt-24), [PLT-30](#plt-30), [QA-17](#qa-17), [RES-05](#res-05), [SEC-07](#sec-07), [SHP-11](#shp-11), [SWM-103](#swm-103), [SWM-104](#swm-104), [SWM-105](#swm-105), [SWM-106](#swm-106), [SWM-107](#swm-107), [SWM-110](#swm-110), [SWM-111](#swm-111), [SWM-112](#swm-112), [SWM-113](#swm-113), [SWM-114](#swm-114), [SWM-115](#swm-115), [SWM-17](#swm-17), [SWM-23](#swm-23), [SWM-25](#swm-25), [SWM-30](#swm-30), [SWM-57](#swm-57), [SWM-58](#swm-58), [SWM-64](#swm-64), [SWM-78](#swm-78), [SWM-79](#swm-79), [SWM-80](#swm-80), [SWM-81](#swm-81), [SWM-82](#swm-82), [SWM-84](#swm-84), [SWM-90](#swm-90), [SWM-96](#swm-96), [SWM-99](#swm-99), [TSK-04](#tsk-04), [TSK-09](#tsk-09), [TSK-17](#tsk-17), [TSK-35](#tsk-35), [TSK-42](#tsk-42), [TSK-43](#tsk-43) |
 | <a id="sn-08"></a>**SN-08** The stack maintains and improves itself: Housekeeping agents keep the stack healthy, and the stack proposes and builds its own improvements; the owner approves what ships. | must | [APP-21](#app-21), [AST-11](#ast-11), [AUT-02](#aut-02), [BLD-01](#bld-01), [BLD-03](#bld-03), [BLD-04](#bld-04), [BLD-05](#bld-05), [BLD-08](#bld-08), [BLD-10](#bld-10), [BLD-21](#bld-21), [BLD-22](#bld-22), [BLD-24](#bld-24), [CHG-11](#chg-11), [CHG-15](#chg-15), [CHG-17](#chg-17), [CHG-18](#chg-18), [CHG-19](#chg-19), [CRW-01](#crw-01), [CRW-03](#crw-03), [CRW-04](#crw-04), [CRW-07](#crw-07), [CRW-08](#crw-08), [CRW-09](#crw-09), [CRW-10](#crw-10), [CST-07](#cst-07), [GW-09](#gw-09), [KNW-08](#knw-08), [MEM-11](#mem-11), [MEM-13](#mem-13), [MEM-20](#mem-20), [MEM-38](#mem-38), [MEM-39](#mem-39), [MEM-42](#mem-42), [MEM-43](#mem-43), [MEM-47](#mem-47), [MEM-50](#mem-50), [OBS-13](#obs-13), [PLT-08](#plt-08), [PLT-19](#plt-19), [QA-07](#qa-07), [SEC-08](#sec-08), [SWM-07](#swm-07), [SWM-102](#swm-102), [SWM-18](#swm-18), [SWM-38](#swm-38), [SWM-44](#swm-44), [SWM-45](#swm-45), [SWM-46](#swm-46), [SWM-47](#swm-47), [SWM-61](#swm-61), [SWM-70](#swm-70), [SWM-82](#swm-82), [SWM-83](#swm-83), [SWM-84](#swm-84), [SWM-91](#swm-91), [SWM-92](#swm-92), [SWM-93](#swm-93), [SWM-94](#swm-94), [SWM-95](#swm-95), [SWM-96](#swm-96), [TRL-14](#trl-14), [TRL-15](#trl-15), [TRL-16](#trl-16), [TRL-17](#trl-17), [TSK-13](#tsk-13), [TSK-16](#tsk-16), [TSK-17](#tsk-17), [TSK-42](#tsk-42), [WFL-03](#wfl-03) |
-| <a id="sn-09"></a>**SN-09** Nothing is ever lost: Data and configuration are backed up, the backups are proven to restore, and the whole stack can move to a new PC. | must | [AST-10](#ast-10), [AUT-04](#aut-04), [CNX-03](#cnx-03), [CST-05](#cst-05), [KNW-01](#knw-01), [KNW-11](#knw-11), [MEM-08](#mem-08), [MEM-12](#mem-12), [MEM-14](#mem-14), [MEM-17](#mem-17), [MEM-21](#mem-21), [MEM-35](#mem-35), [MEM-48](#mem-48), [PLT-12](#plt-12), [PLT-13](#plt-13), [PLT-14](#plt-14), [PLT-15](#plt-15), [PLT-16](#plt-16), [PLT-17](#plt-17), [PLT-33](#plt-33), [PLT-34](#plt-34), [SWM-30](#swm-30), [SWM-35](#swm-35), [SWM-36](#swm-36), [SWM-73](#swm-73), [SWM-76](#swm-76) |
+| <a id="sn-09"></a>**SN-09** Nothing is ever lost: Data and configuration are backed up, the backups are proven to restore, and the whole stack can move to a new PC. | must | [AST-10](#ast-10), [AUT-04](#aut-04), [CNX-03](#cnx-03), [CST-05](#cst-05), [KNW-01](#knw-01), [KNW-11](#knw-11), [MEM-08](#mem-08), [MEM-12](#mem-12), [MEM-14](#mem-14), [MEM-17](#mem-17), [MEM-21](#mem-21), [MEM-35](#mem-35), [MEM-48](#mem-48), [PLT-12](#plt-12), [PLT-13](#plt-13), [PLT-14](#plt-14), [PLT-15](#plt-15), [PLT-16](#plt-16), [PLT-17](#plt-17), [PLT-33](#plt-33), [PLT-34](#plt-34), [PLT-38](#plt-38), [SWM-30](#swm-30), [SWM-35](#swm-35), [SWM-36](#swm-36), [SWM-73](#swm-73), [SWM-76](#swm-76) |
 | <a id="sn-10"></a>**SN-10** Knowledge that grows and answers with sources: Everything the owner and his agents write becomes a searchable, linked knowledge base (vault, wikis, long-term memory) that answers questions with citations. | must | [APP-15](#app-15), [CHG-08](#chg-08), [CHG-09](#chg-09), [CRW-13](#crw-13), [KNW-01](#knw-01), [KNW-02](#knw-02), [KNW-03](#knw-03), [KNW-04](#knw-04), [KNW-05](#knw-05), [KNW-06](#knw-06), [KNW-08](#knw-08), [KNW-09](#knw-09), [KNW-10](#knw-10), [KNW-12](#knw-12), [KNW-13](#knw-13), [KNW-14](#knw-14), [KNW-15](#knw-15), [MEM-01](#mem-01), [MEM-02](#mem-02), [MEM-03](#mem-03), [MEM-04](#mem-04), [MEM-05](#mem-05), [MEM-06](#mem-06), [MEM-09](#mem-09), [MEM-10](#mem-10), [MEM-12](#mem-12), [MEM-14](#mem-14), [MEM-15](#mem-15), [MEM-16](#mem-16), [MEM-17](#mem-17), [MEM-18](#mem-18), [MEM-19](#mem-19), [MEM-20](#mem-20), [MEM-21](#mem-21), [MEM-22](#mem-22), [MEM-23](#mem-23), [MEM-24](#mem-24), [MEM-25](#mem-25), [MEM-26](#mem-26), [MEM-27](#mem-27), [MEM-28](#mem-28), [MEM-29](#mem-29), [MEM-33](#mem-33), [MEM-34](#mem-34), [MEM-35](#mem-35), [MEM-36](#mem-36), [MEM-37](#mem-37), [MEM-38](#mem-38), [MEM-40](#mem-40), [MEM-41](#mem-41), [MEM-45](#mem-45), [MEM-46](#mem-46), [MEM-48](#mem-48), [MEM-49](#mem-49), [MEM-50](#mem-50), [MEM-51](#mem-51), [MIS-01](#mis-01), [MIS-11](#mis-11), [MIS-18](#mis-18), [MIS-19](#mis-19), [MIS-21](#mis-21), [MIS-28](#mis-28), [SWM-66](#swm-66), [TSK-34](#tsk-34) |
 | <a id="sn-11"></a>**SN-11** Hands in the real world, under control: Agents can act through the AI phone, Gmail, shopping and the House (lights, plugs, Echos), each only within grants and approvals the owner controls, with Stop and a log. | should | [CNX-01](#cnx-01), [CNX-02](#cnx-02), [CRW-11](#crw-11), [CST-12](#cst-12), [HSE-01](#hse-01), [HSE-02](#hse-02), [HSE-03](#hse-03), [HSE-05](#hse-05), [HSE-06](#hse-06), [HSE-07](#hse-07), [MIS-17](#mis-17), [PHN-01](#phn-01), [PHN-02](#phn-02), [PHN-05](#phn-05), [PHN-13](#phn-13), [PHN-14](#phn-14), [PHN-17](#phn-17), [PHN-18](#phn-18), [PHN-19](#phn-19), [PHN-22](#phn-22), [PHN-23](#phn-23), [PLT-22](#plt-22), [SHP-01](#shp-01), [SHP-02](#shp-02), [SHP-03](#shp-03), [SHP-04](#shp-04), [SHP-11](#shp-11), [SHP-13](#shp-13), [SWM-26](#swm-26), [TRL-16](#trl-16), [VOI-01](#voi-01), [VOI-02](#voi-02), [VOI-03](#voi-03), [VOI-04](#voi-04), [VOI-05](#voi-05), [VOI-06](#voi-06), [VOI-08](#voi-08) |
 | <a id="sn-12"></a>**SN-12** English everywhere: Chat, app, reports, wikis, Telegram, code, docs and commit messages are in English. | must | [CST-09](#cst-09), [MIS-12](#mis-12), [TSK-35](#tsk-35) |
-| <a id="sn-13"></a>**SN-13** Runs unattended for months: The stack keeps working through usage-limit pauses, restarts, deploys, reboots and power cuts, and recovers by itself; no work, approval or message is lost on a restart. | must | [APP-23](#app-23), [APP-24](#app-24), [AST-03](#ast-03), [AST-12](#ast-12), [BLD-03](#bld-03), [BLD-06](#bld-06), [BLD-09](#bld-09), [BLD-12](#bld-12), [CNX-06](#cnx-06), [CST-03](#cst-03), [CST-08](#cst-08), [CST-14](#cst-14), [GW-03](#gw-03), [GW-04](#gw-04), [GW-06](#gw-06), [GW-08](#gw-08), [MEM-05](#mem-05), [MEM-07](#mem-07), [MEM-08](#mem-08), [MEM-15](#mem-15), [MEM-16](#mem-16), [MEM-21](#mem-21), [MEM-34](#mem-34), [MEM-40](#mem-40), [MEM-41](#mem-41), [MEM-43](#mem-43), [MEM-51](#mem-51), [MIS-03](#mis-03), [MIS-04](#mis-04), [MIS-05](#mis-05), [MIS-10](#mis-10), [OBS-03](#obs-03), [OBS-04](#obs-04), [PHN-09](#phn-09), [PHN-10](#phn-10), [PHN-11](#phn-11), [PHN-14](#phn-14), [PHN-25](#phn-25), [PLT-04](#plt-04), [PLT-05](#plt-05), [PLT-06](#plt-06), [PLT-07](#plt-07), [PLT-08](#plt-08), [PLT-09](#plt-09), [PLT-10](#plt-10), [PLT-11](#plt-11), [PLT-13](#plt-13), [PLT-18](#plt-18), [PLT-21](#plt-21), [PLT-23](#plt-23), [PLT-27](#plt-27), [PLT-28](#plt-28), [PLT-29](#plt-29), [PLT-30](#plt-30), [PLT-31](#plt-31), [PLT-32](#plt-32), [PLT-35](#plt-35), [PLT-36](#plt-36), [PLT-37](#plt-37), [QA-17](#qa-17), [QA-27](#qa-27), [SHP-12](#shp-12), [SWM-12](#swm-12), [SWM-19](#swm-19), [SWM-31](#swm-31), [SWM-47](#swm-47), [SWM-52](#swm-52), [SWM-53](#swm-53), [SWM-63](#swm-63), [SWM-71](#swm-71), [SWM-72](#swm-72), [SWM-73](#swm-73), [SWM-76](#swm-76), [SWM-85](#swm-85), [SWM-87](#swm-87), [TSK-06](#tsk-06), [TSK-08](#tsk-08), [WFL-02](#wfl-02), [WFL-04](#wfl-04) |
+| <a id="sn-13"></a>**SN-13** Runs unattended for months: The stack keeps working through usage-limit pauses, restarts, deploys, reboots and power cuts, and recovers by itself; no work, approval or message is lost on a restart. | must | [APP-23](#app-23), [APP-24](#app-24), [AST-03](#ast-03), [AST-12](#ast-12), [BLD-03](#bld-03), [BLD-06](#bld-06), [BLD-09](#bld-09), [BLD-12](#bld-12), [CNX-06](#cnx-06), [CST-03](#cst-03), [CST-08](#cst-08), [CST-14](#cst-14), [GW-03](#gw-03), [GW-04](#gw-04), [GW-06](#gw-06), [GW-08](#gw-08), [MEM-05](#mem-05), [MEM-07](#mem-07), [MEM-08](#mem-08), [MEM-15](#mem-15), [MEM-16](#mem-16), [MEM-21](#mem-21), [MEM-34](#mem-34), [MEM-40](#mem-40), [MEM-41](#mem-41), [MEM-43](#mem-43), [MEM-51](#mem-51), [MIS-03](#mis-03), [MIS-04](#mis-04), [MIS-05](#mis-05), [MIS-10](#mis-10), [OBS-03](#obs-03), [OBS-04](#obs-04), [PHN-09](#phn-09), [PHN-10](#phn-10), [PHN-11](#phn-11), [PHN-14](#phn-14), [PHN-25](#phn-25), [PLT-04](#plt-04), [PLT-05](#plt-05), [PLT-06](#plt-06), [PLT-07](#plt-07), [PLT-08](#plt-08), [PLT-09](#plt-09), [PLT-10](#plt-10), [PLT-11](#plt-11), [PLT-13](#plt-13), [PLT-18](#plt-18), [PLT-21](#plt-21), [PLT-23](#plt-23), [PLT-27](#plt-27), [PLT-28](#plt-28), [PLT-29](#plt-29), [PLT-30](#plt-30), [PLT-31](#plt-31), [PLT-32](#plt-32), [PLT-35](#plt-35), [PLT-36](#plt-36), [PLT-37](#plt-37), [PLT-39](#plt-39), [PLT-40](#plt-40), [QA-17](#qa-17), [QA-27](#qa-27), [SHP-12](#shp-12), [SWM-12](#swm-12), [SWM-19](#swm-19), [SWM-31](#swm-31), [SWM-47](#swm-47), [SWM-52](#swm-52), [SWM-53](#swm-53), [SWM-63](#swm-63), [SWM-71](#swm-71), [SWM-72](#swm-72), [SWM-73](#swm-73), [SWM-76](#swm-76), [SWM-85](#swm-85), [SWM-87](#swm-87), [TSK-06](#tsk-06), [TSK-08](#tsk-08), [WFL-02](#wfl-02), [WFL-04](#wfl-04) |
 | <a id="sn-14"></a>**SN-14** Understand and change any codebase: The stack can study any repository (code graph, code map), answer questions about it, change the owner's own repositories through the builder, and check code against large specifications. | should | [APP-57](#app-57), [APP-58](#app-58), [APP-59](#app-59), [APP-60](#app-60), [APP-61](#app-61), [AST-09](#ast-09), [BLD-01](#bld-01), [BLD-11](#bld-11), [BLD-15](#bld-15), [BLD-17](#bld-17), [BLD-18](#bld-18), [BLD-19](#bld-19), [BLD-23](#bld-23), [BLD-25](#bld-25), [BLD-26](#bld-26), [BLD-27](#bld-27), [CHG-01](#chg-01), [CHG-02](#chg-02), [CHG-03](#chg-03), [CHG-04](#chg-04), [CHG-05](#chg-05), [CHG-06](#chg-06), [CHG-07](#chg-07), [CHG-08](#chg-08), [CHG-09](#chg-09), [CHG-10](#chg-10), [CHG-12](#chg-12), [CHG-13](#chg-13), [CHG-14](#chg-14), [CHG-16](#chg-16), [CHG-17](#chg-17), [CHG-18](#chg-18), [CHG-19](#chg-19), [CHG-20](#chg-20), [MEM-31](#mem-31), [MEM-32](#mem-32), [MEM-37](#mem-37), [QA-14](#qa-14) |
 | <a id="sn-15"></a>**SN-15** A codebase AI agents can develop safely: The repository is organised for coding agents (rules per directory, checks, tests, docs that stay true), so that agents can change it without breaking it. | must | [APP-13](#app-13), [AST-07](#ast-07), [AST-11](#ast-11), [AUT-08](#aut-08), [CHG-07](#chg-07), [CRW-07](#crw-07), [CRW-08](#crw-08), [CST-08](#cst-08), [CST-13](#cst-13), [KNW-13](#knw-13), [MEM-31](#mem-31), [MEM-32](#mem-32), [PLT-24](#plt-24), [PLT-25](#plt-25), [PLT-26](#plt-26), [PLT-33](#plt-33), [QA-01](#qa-01), [QA-02](#qa-02), [QA-03](#qa-03), [QA-04](#qa-04), [QA-05](#qa-05), [QA-06](#qa-06), [QA-07](#qa-07), [QA-13](#qa-13), [QA-16](#qa-16), [QA-18](#qa-18), [QA-19](#qa-19), [QA-20](#qa-20), [QA-21](#qa-21), [QA-22](#qa-22), [SEC-15](#sec-15), [SWM-01](#swm-01), [SWM-16](#swm-16), [SWM-22](#swm-22), [SWM-28](#swm-28), [SWM-37](#swm-37), [SWM-41](#swm-41), [SWM-85](#swm-85), [SWM-88](#swm-88) |
 | <a id="sn-16"></a>**SN-16** Known, current and checkable requirements: What the stack must do is written down properly, kept current with every change, and contradictions between the parts are found and shown. | must | [APP-14](#app-14), [APP-18](#app-18), [MEM-02](#mem-02), [MEM-11](#mem-11), [MEM-13](#mem-13), [MEM-23](#mem-23), [MEM-47](#mem-47), [QA-06](#qa-06), [QA-08](#qa-08), [QA-09](#qa-09), [QA-10](#qa-10), [QA-11](#qa-11), [QA-12](#qa-12), [QA-13](#qa-13), [QA-14](#qa-14), [QA-15](#qa-15), [SWM-03](#swm-03), [SWM-20](#swm-20), [SWM-35](#swm-35), [SWM-55](#swm-55), [SWM-88](#swm-88), [TRL-02](#trl-02), [TRL-14](#trl-14), [TRL-17](#trl-17) |
@@ -4245,7 +4245,7 @@ The running commit of each pack shall have its workflows in n8n, named <pack>/<n
 
 **A pack's item workflow runs end to end in a customer-class deployment, and the core names no domain** · must · functional · **implemented**
 
-In a customer-class deployment the stack shall carry a pack's item workflow from its tracker item to its end: the item starts one run (also when its event comes twice), an agent step triages it, every tracker write stays in shadow, a wait on the item times out to a reminder and is woken by a reply from someone else but not by the stack's own comment, a job of hours at the wsl-host place finishes with a second job queued behind it, a change goes out as a draft pull request whose review comment wakes the run, and the run writes its summary and ends; restarts of the runner side and of n8n while the run waits and while a job runs shall lose nothing, n8n shall get only summaries, and the run shall export as one zip. No file of ops/, images/, compose/, config/ or n8n/ shall name the domain a pack brings.
+In a customer-class deployment the stack shall carry a pack's item workflow from its tracker item to its end: the item starts one run (also when its event comes twice), an agent step triages it, every tracker write waits in shadow until the owner sends it, a wait on the item times out to a reminder and is woken by a reply from someone else but not by the stack's own comment, a job of hours at the wsl-host place finishes with a second job queued behind it, a change goes out as a draft pull request whose review comment wakes the run, and the run writes its summary and ends; restarts of the runner side and of n8n while the run waits and while a job runs shall lose nothing, n8n shall get only summaries, and the run shall export as one zip. No file of ops/, images/, compose/, config/ or n8n/ shall name the domain a pack brings.
 
 - Parents: [SN-05](#sn-05)
 - Sources: `docs/N8N-MIGRATION.md`, `docs/AI-STACK.md`, [DEC-54](#dec-54)
@@ -4266,6 +4266,19 @@ The home deployment shall watch the owner's private repository <FORGEJO_OWNER>/i
 - Acceptance: Test: home's trackers.yaml loads with no refused entry, its repository from FORGEJO_OWNER; the inbox workflow listens on item/<the tracker's workflow> and is made of the real kinds; against a stand-in Forgejo where every write has the owner's account and a stand-in n8n running the workflow, an issue starts one run (also when its change comes twice), the main agent's answer is commented whole, the stack's own comment does not wake the run, the owner's unmarked reply does, the second answer, the summary and the close follow, the run ends, and a later comment starts a new run; with nothing live and no reply in 7 days every write waits in shadow and the run ends; a value a trackers.yaml names that its deployment does not set is refused; a pack named home or item is refused.
 - Trace: `deployments/home/trackers.yaml`, `n8n/workflows/item-home-inbox.json`, `ops/domain/trackers.py`, `ops/domain/packs.py`, `ops/flows.py`, `ops/runreg.py`, `images/mission-control/guide/22-workflows.md`
 - Gap: Built and tested against a stand-in Forgejo and a stand-in n8n; live once the lead switches on the poller's and the inbox's workflows and the owner lets comment, summary and transition go live.
+
+### GEN-46
+
+**A run works with its tracker item end to end** · must · functional · **implemented**
+
+In a customer-class deployment a pack's item workflow shall work with its item from its first change to its end: a tracker new to the deployment starts nothing for the items it holds, and a new item starts one run; the triage agent reads the item; the owner sends the run's question from shadow and the item holds it once; the reporter's reply, its text kept by the stack, wakes the wait; a command at the wsl-host place gets the item's attachment by artifact id; the change goes out as a draft pull request; a comment on the item does not wake the wait for the review, a comment on the pull request does; the summary is written once; and n8n's executions hold none of the item's text.
+
+- Parents: [SN-05](#sn-05)
+- Sources: `docs/N8N-MIGRATION.md`, `docs/AI-STACK.md`
+- Verified by: test: `tests/test_work_deployment.py::test_the_toy_pack_runs_end_to_end_in_a_customer_class_deployment_against_stand_ins`, `tests/test_work_deployment.py::test_the_toy_ticket_reminds_twice_and_then_stops_waiting`
+- Acceptance: Test, against the stand-ins of GEN-44 with a stand-in n8n running the toy's item workflow: every step of the statement, the runner side reloaded and n8n restarted while the run waits and while its job runs, and none of the item's text, its comments or the triage in n8n's executions; with no reply the run reminds twice and ends.
+- Trace: `ops/flows.py`, `ops/runreg.py`, `ops/domain/trackers.py`, `ops/domain/forgework.py`, `ops/domain/places.py`, `tests/fixtures/packs/toy/workflows/ticket.json`, `tests/fixtures/packs/toy/jobs/soak.json`
+- Rationale: The CR of 10 Nov 2026 for tracker items a run can work with counts as done when this holds for the toy pack against stand-ins.
 
 ## HSE House
 
@@ -6338,6 +6351,44 @@ The host runner shall run in a Python environment of its own, outside the system
 - Verified by: test: `tests/test_runner_env.py::test_the_runner_environment_is_pinned_checksummed_and_follows_its_lock`
 - Acceptance: Test: uv is pinned by version and checksum, the lock holds the pins and every package they pull in (atlassian-python-api for the Jira tracker among them) with their hashes, the lock is written without releases younger than 14 days, the tests use the same pins, and the runner unit runs in that environment. Shown on 10 Nov 2026: an environment made from the lock with hashes required imports atlassian's Jira client.
 - Trace: `ops/runner_env.sh`, `ops/runner-requirements.txt`, `ops/runner-requirements.lock`, `tests/requirements.txt`, `ops/systemd/missions.service`
+
+### PLT-38
+
+**A deployment runs only the stack workflows it chooses** · must · functional · **implemented**
+
+A deployment shall run, of the stack's own workflows in n8n/workflows/, only those its workflows.yaml names (a file's name without .json, or a pattern such as task-*) and those its trackers imply: with any tracker the tracker poller, and for a tracker whose workflow is home/<name> that item workflow. A deploy shall import no other file and shall unpublish one it published earlier that the deployment no longer chooses; a workflow the runner made for a task on that machine shall always count as the deployment's. The switch shall publish only a chosen workflow, a crew job's workflow made by the generator and a workflow made on the canvas and exported shall be added to the running deployment's list, the app's workflows and schedules shall show only the chosen ones, a changed deployment folder shall start an import, and the deployment check shall refuse a listed name that matches no file. Home's list and tracker shall choose every workflow home ran before (28 jobs, the self-test, the tracker poller and the inbox's item workflow); the example work deployment shall choose only the self-test and the tracker poller.
+
+- Parents: [SN-09](#sn-09)
+- Sources: [DEC-45](#dec-45), `CR 2026-11-10 (second), G2: a work deployment gets the home set (phone, postmaster, digests, private task briefings)`
+- Verified by: test: `tests/test_deployment_workflows.py::test_home_runs_every_workflow_it_ran_before_the_list`, `tests/test_deployment_workflows.py::test_a_work_deployment_runs_only_the_self_test_and_its_tracker_poller`, `tests/test_deployment_workflows.py::test_the_tracker_poller_and_the_stacks_item_workflows_come_with_the_trackers`, `tests/test_deployment_workflows.py::test_a_name_no_workflow_has_is_refused_by_the_deployment_check`, `tests/test_deployment_workflows.py::test_a_deploy_imports_only_the_deployments_workflows_and_unpublishes_the_ones_it_no_longer_runs`, `tests/test_deployment_workflows.py::test_the_app_and_the_runner_see_only_the_deployments_workflows`, `tests/test_deployment_workflows.py::test_a_switch_publishes_only_a_workflow_the_deployment_runs`, `tests/test_deployment_workflows.py::test_a_new_crew_job_and_a_canvas_workflow_join_the_deployments_list`
+- Acceptance: Test: home chooses all 31 files, each published, and example-work only the self-test and the poller; trackers bring the poller and home/<name> item workflows; an import copies only the chosen files into n8n, publishes the runner-made one, unpublishes a published workflow no longer chosen and leaves one n8n never had; the workflow reads of the app and the runner see only the chosen ones; the switch refuses an unchosen workflow; the generator and add_workflow extend the list once and keep its comments; the check names a typo.
+- Trace: `ops/deployment.py`, `ops/n8n_sync.py`, `ops/n8n_jobs.py`, `ops/n8n_switch.py`, `ops/n8n_gen.py`, `ops/deploy.py`, `deployments/home/workflows.yaml`, `deployments/example-work/workflows.yaml`, `deployments/example-work/trackers.yaml`
+
+### PLT-39
+
+**A new n8n image is deployed while runs wait** · must · constraint · **implemented**
+
+A deploy that changes n8n's image (versions.env N8N_IMAGE) shall go ahead while runs wait in n8n, neither refusing nor waiting for them, shall wait after compose recreated n8n until n8n's /healthz/readiness answers 200 (at most 10 minutes, for its database migrations) and shall fail when it does not, so the builder reverts to the old pin; the deploy's workflow import shall wait for the same readiness, not for /healthz.
+
+- Parents: [SN-05](#sn-05), [SN-13](#sn-13)
+- Sources: `docs/N8N-MIGRATION.md`, `CR 2026-11-10 (second), G3: an n8n upgrade through ops/deploy.py while a run waits in wait_item and in a command`
+- Verified by: test: `tests/test_deploy_main.py::test_an_n8n_image_change_goes_ahead_while_runs_wait_and_waits_until_n8n_is_ready`
+- Acceptance: Test: a deploy whose N8N_IMAGE moved runs compose up, says the image changes and that waiting runs resume, waits for /healthz/readiness and says DEPLOY OK; an n8n that never gets ready fails the deploy; the import waits for readiness; an unchanged pin or no versions.env change is no upgrade.
+- Trace: `ops/deploy.py`, `docs/N8N-MIGRATION.md`
+- Rationale: Shown on throwaway containers on 10 Nov 2026 (docs/N8N-MIGRATION.md §11.1): runs waiting in wait_item (home's item workflow) and in a long command resumed and succeeded after n8n was recreated on 2.45.4 and after the rollback to 2.44.7 on the migrated database. n8n answers /healthz before its migrations, its workflows and its start-up recovery; an answer that arrived then was taken and lost, or resumed a run the recovery then marked crashed, on a new image and on the same one; sent only on a 200 from /healthz/readiness, none was lost.
+
+### PLT-40
+
+**No loop of the runner holds the database between its passes** · must · constraint · **implemented**
+
+Every loop of the host runner that keeps one database connection shall end each pass with no transaction open, committing a write a pass left open and logging that write's statement and caller; and when writes fail on a lock, the runner's lock report shall name the first open write of every connection in a transaction.
+
+- Parents: [SN-13](#sn-13)
+- Sources: `owner 2026-11-10: Yes, inbox repo`
+- Verified by: test: `tests/test_runner.py::test_a_pass_that_leaves_a_write_open_is_committed_and_named`, `tests/test_runner.py::test_every_loop_that_keeps_one_connection_rests_through_end_pass`, `tests/test_runner.py::test_the_lock_report_names_each_connection_s_open_write`, `tests/test_runner.py::test_the_title_repair_commits_what_it_changed`
+- Acceptance: Test: a pass that leaves a write open is committed at its end and the log names the statement and the code that wrote it, after which another writer gets through; a plain connection is committed as well; every loop that keeps one connection pauses through that step; the lock report names the open write; the title repair of the tasks table commits what it changed.
+- Trace: `ops/missions.py`, `ops/tasks.py`, `ops/conductor.py`, `ops/staffing.py`, `ops/builds.py`, `ops/claude_tasks.py`, `ops/events.py`, `ops/history.py`, `ops/improve.py`, `ops/telemetry.py`
+- Rationale: 10 Nov 2026, 17:32 to 17:50: the Conductor's long-lived connection slept between passes inside a transaction a pass had opened and never committed. 224 writes failed on a lock, the home inbox's first issue waited 40 minutes for its answer, and steps of three tasks failed, until the runner was restarted; the answer was posted 35 s later.
 
 ## QA Quality and process
 
@@ -9748,7 +9799,7 @@ A workflow that needs the owner shall put one question into Needs you with the a
 
 **Workflows live in git** · must · process · **partial**
 
-Every workflow of a deployment shall be a JSON file in its repository; a change made on the canvas shall be exported and committed through the landing path, and a deploy shall import the repository's workflows.
+Every workflow of a deployment shall be a JSON file in its repository; a change made on the canvas shall be exported and committed through the landing path, and a deploy shall import the repository's workflows that the deployment chooses (PLT-38).
 
 - Parents: [SN-05](#sn-05)
 - Sources: [DEC-51](#dec-51), `docs/N8N-MIGRATION.md`
@@ -9973,9 +10024,113 @@ A comment on a tracker item or a watched pull request shall count as the stack's
 
 - Parents: [SN-05](#sn-05)
 - Sources: `docs/N8N-MIGRATION.md`
-- Verified by: test: `tests/test_domain_trackers.py::test_the_stacks_own_comment_is_known_by_its_write_mark_where_it_writes_with_the_owners_account`, `tests/test_domain_trackers.py::test_jira_and_pull_request_comments_follow_the_same_rule_on_one_account`, `tests/test_home_inbox.py::test_an_issue_in_the_inbox_is_answered_waits_for_the_owners_reply_and_is_closed`
+- Verified by: test: `tests/test_domain_trackers.py::test_the_stacks_own_comment_is_known_by_its_write_mark_where_it_writes_with_the_owners_account`, `tests/test_domain_trackers.py::test_jira_and_pull_request_comments_follow_the_same_rule_on_one_account`, `tests/test_home_inbox.py::test_an_issue_in_the_inbox_is_answered_waits_for_the_owners_reply_and_is_closed`, `tests/test_n8n_items.py::test_with_me_unset_the_stacks_own_comment_and_summary_do_not_wake_a_wait_and_a_persons_comment_does`
 - Acceptance: Test: on one account the stack's marked answer and summary are its own and the owner's replies (plain, quoting it, ending in the quoted mark) are handed on; a Jira item and a pull request with one author hand on only the unmarked comment; end to end on home's inbox the stack's comment by the owner's account is recorded and the owner's unmarked reply wakes the run.
 - Trace: `ops/domain/trackers.py`, `ops/domain/forgework.py`, `ops/runreg.py`
+
+### WFL-27
+
+**A new tracker starts from now** · must · functional · **implemented**
+
+A tracker's entry shall say from when its items count (start, now by default, or a date); a tracker's first pass, when it has no state yet, shall with now only set its cursor to the newest matching item and start nothing, so an item that matches already starts a run with its next change, and with a date shall start its cursor at that date; a tracker that has its state shall keep its cursor and its seen comments as they are; a start that is neither now nor a date shall refuse the entry with the reason; the connections page shall show each tracker's start.
+
+- Parents: [SN-05](#sn-05)
+- Sources: `docs/N8N-MIGRATION.md`
+- Verified by: test: `tests/test_n8n_items.py::test_a_new_tracker_with_three_matching_items_starts_nothing_and_one_run_when_one_of_them_gets_a_comment`, `tests/test_domain_trackers.py::test_a_new_tracker_starts_now_its_first_pass_only_sets_the_cursor_and_a_start_date_counts_from_that_date`, `tests/test_domain_trackers.py::test_a_tracker_that_had_its_first_pass_before_start_existed_keeps_its_cursor_and_hands_on_as_before`, `tests/test_domain_trackers.py::test_trackers_are_the_apps_and_the_queues`
+- Acceptance: Test: a stand-in tracker with three matching items and no start starts nothing on its first pass and one run when one of them gets a comment; a start date hands on the items changed after it; a state without a start keeps its cursor and seen comments; a bad start is refused; the page shows the start.
+- Trace: `ops/domain/trackers.py`, `images/mission-control/web/static/app.js`
+- Rationale: The CR of 10 Nov 2026 (B3): the first poll of a new tracker started a run for every item that already matched. Home's inbox had its first pass before start existed, so its state stays and nothing restarts.
+
+### WFL-28
+
+**A run reads its tracker item and its files** · must · functional · **implemented**
+
+The step kind item shall read a tracker item through its tracker's adapter (its title, text, status, labels, every comment with its author, time and text, the stack's own marked, and its attachments' names and sizes); with attach_to a place it shall fetch the attachments (all, or those named) into the artifact store with the deployment's data class and answer their artifact ids, refusing more than 10 files or one over 50 MB and failing on a name the item lacks; a command shall take an artifact id as the value of a file parameter, the file put into its request under its own name. A wait's answer shall carry the new comments' texts, an agent step's from_item shall put the item into its brief through the step service, and in a customer-class deployment n8n shall get the ids and a summary that names none of the item's or the comments' text.
+
+- Parents: [SN-05](#sn-05)
+- Sources: `docs/N8N-MIGRATION.md`, `docs/AI-STACK.md`
+- Verified by: test: `tests/test_n8n_items.py::test_an_item_step_reads_the_item_and_fetches_its_attachments_by_artifact_id_within_its_caps`, `tests/test_n8n_items.py::test_the_node_reads_an_item_waits_on_its_source_and_says_from_item`, `tests/test_work_deployment.py::test_the_toy_pack_runs_end_to_end_in_a_customer_class_deployment_against_stand_ins`
+- Acceptance: Test: an item step answers the stand-in item's fields and saves its named attachment as an artifact a command takes by id, refuses more than 10 names, refuses a file over 50 MB and fails on a missing one, and its lean answer holds no text; end to end the triage agent's brief holds the item's text and its reporter's comment, the toy tool reads the item's attachment by artifact id, and n8n holds none of the text.
+- Trace: `ops/flows.py`, `ops/domain/trackers.py`, `ops/domain/places.py`, `ops/runreg.py`, `n8n/custom/AistackStep.node.js`
+- Rationale: The CR of 10 Nov 2026 (G1): a run never saw what an item says, which kept the first work deployment from using the stack.
+
+### WFL-29
+
+**The owner sends a shadow write, keeps it back, or judges it wrong** · must · functional · **implemented**
+
+Each tracker write in shadow shall wait in Needs you and on the connections page with three answers in plain words; Right, send it shall count it as right and write it to its item through the tracker's adapter with its own write id, once whatever the taps and retries, and record the tracker reference it got; Right, don't send shall count it as right and send nothing; Wrong shall not count it; a tracker that does not take the write shall leave it waiting with the reason.
+
+- Parents: [SN-05](#sn-05)
+- Sources: `docs/N8N-MIGRATION.md`
+- Verified by: test: `tests/test_domain_trackers.py::test_the_owner_sends_a_shadow_write_once_keeps_one_back_or_judges_it_wrong`, `tests/test_domain_trackers.py::test_trackers_are_the_apps_and_the_queues`, `tests/test_work_deployment.py::test_the_toy_pack_runs_end_to_end_in_a_customer_class_deployment_against_stand_ins`
+- Acceptance: Test: the three answers; send writes the comment once, also on a second tap and a retry of the write, and records its reference; keep sends nothing; wrong does not count; a tracker that is down leaves the write waiting; end to end the owner sends the question, the item has it once, and the reporter's reply wakes the run.
+- Trace: `ops/domain/trackers.py`, `images/mission-control/web/static/app.js`, `images/mission-control/guide/22-workflows.md`
+- Rationale: The CR of 10 Nov 2026 (B1): an approved shadow write was never sent, so in shadow a question to the reporter never reached the reporter.
+
+### WFL-30
+
+**The summary edits only the comment the stack wrote** · must · functional · **implemented**
+
+The stack's summary on a tracker item shall be the comment it wrote first, its comment id kept per item when written; a later summary shall edit only that comment, and with no id kept the stack shall add a new one, so a comment someone else wrote that carries the summary mark is never edited, on Jira, Forgejo and the stand-in.
+
+- Parents: [SN-05](#sn-05)
+- Sources: `docs/N8N-MIGRATION.md`
+- Verified by: test: `tests/test_domain_trackers.py::test_the_summary_edits_only_the_comment_the_stack_wrote_on_jira_and_forgejo`, `tests/test_domain_trackers.py::test_jira_reads_by_jql_with_its_cursor_and_edits_its_one_summary`, `tests/test_domain_trackers.py::test_the_one_summary_comment_is_edited_across_three_updates`
+- Acceptance: Test: on Jira and Forgejo a colleague's comment with the summary mark stays as it is; the first summary is added and its id kept, the second edits that id.
+- Trace: `ops/domain/trackers.py`
+- Rationale: The CR of 10 Nov 2026 (B5): the adapters edited the first comment that held the summary mark, whoever wrote it.
+
+### WFL-31
+
+**Attach, transition and label are done once** · must · functional · **implemented**
+
+A tracker write that leaves no comment shall be done when the item already holds it, an attachment of the same name and size, the target status, the label, so a retry of it writes nothing twice and raises no error.
+
+- Parents: [SN-05](#sn-05)
+- Sources: `docs/N8N-MIGRATION.md`
+- Verified by: test: `tests/test_domain_trackers.py::test_attach_transition_and_label_are_done_once_whatever_the_retries`
+- Acceptance: Test: each kind retried on the stand-in leaves one attachment, its status and one label, without an error; Jira's transition, attachment and label and Forgejo's close are not written again.
+- Trace: `ops/domain/trackers.py`
+- Rationale: The CR of 10 Nov 2026 (B6): put() knew a write as done only by the write mark of a comment.
+
+### WFL-32
+
+**A wait is answered only by its source** · must · functional · **implemented**
+
+A wait on a tracker item shall listen to the item's comments (on item, the default), its pull request's (on pr) or both (on any); only comments of its source shall answer it, the other source's shall stay unread for a wait on them, and the answer shall say its source.
+
+- Parents: [SN-05](#sn-05)
+- Sources: `docs/N8N-MIGRATION.md`
+- Verified by: test: `tests/test_n8n_items.py::test_a_wait_is_answered_only_from_its_source_and_says_which_it_was`, `tests/test_n8n_items.py::test_a_change_for_an_item_starts_at_its_tag_and_goes_out_as_a_draft_whose_review_comment_wakes_the_run`, `tests/test_work_deployment.py::test_the_toy_pack_runs_end_to_end_in_a_customer_class_deployment_against_stand_ins`
+- Acceptance: Test: a pull request comment does not wake a wait on the item and answers the next wait on the pull request; an item comment wakes the wait on the item; on any takes either; end to end a reporter's comment during the wait for the review does not wake it and a review comment does.
+- Trace: `ops/runreg.py`, `ops/domain/forgework.py`, `ops/flows.py`, `n8n/custom/AistackStep.node.js`
+- Rationale: The CR of 10 Nov 2026 (B4): tracker and pull request comments landed in one item, so a reporter's comment ended the wait for the review and old comments answered the next wait.
+
+### WFL-33
+
+**A wait says how often it timed out, so reminders end** · should · functional · **implemented**
+
+A wait's answer shall carry reminded, how often a wait of the same node timed out before in its run (0 on its first timeout, counted again after a reply), and the toy pack's item workflow shall remind twice and then stop waiting with its summary, the pattern a pack copies.
+
+- Parents: [SN-05](#sn-05)
+- Sources: `docs/N8N-MIGRATION.md`
+- Verified by: test: `tests/test_n8n_items.py::test_a_waits_answer_says_how_often_it_timed_out_before_so_a_workflow_can_stop_reminding`, `tests/test_work_deployment.py::test_the_toy_ticket_reminds_twice_and_then_stops_waiting`, `tests/test_domain_packs.py::test_the_toy_packs_item_workflow_is_a_whole_n8n_workflow_on_logic_nodes_only`
+- Acceptance: Test: three timeouts answer reminded 0, 1 and 2, a reply after them 3, the next timeout 0; the toy's ticket with no reply reminds twice, stops waiting with its summary and ends.
+- Trace: `ops/runreg.py`, `tests/fixtures/packs/toy/workflows/ticket.json`
+- Rationale: The CR of 10 Nov 2026 (G3): the toy's reminder loop had no end.
+
+### WFL-34
+
+**An answer goes to n8n only once n8n has finished starting** · must · constraint · **implemented**
+
+The step service shall post an answer to n8n's resume URL only while n8n's readiness check answers 200, and while it does not, keep the answer and send it again on its next round, as it does when n8n is away.
+
+- Parents: [SN-05](#sn-05)
+- Sources: `docs/N8N-MIGRATION.md`
+- Verified by: test: `tests/test_flows.py::test_an_answer_waits_until_n8n_has_finished_starting`
+- Acceptance: Test: while n8n is not ready nothing is posted and the answer stays, once it is ready the answer is taken; an n8n that cannot be reached counts as not ready; the readiness check asks /healthz/readiness on this machine.
+- Trace: `ops/flows.py`
+- Rationale: The n8n upgrade test of 10 Nov 2026 (docs/N8N-MIGRATION.md §11.1): n8n answers its health check as soon as its port opens, before its migrations, its workflows' activation and its start-up recovery. An answer posted then was taken with a 200 and dropped, or resumed a run that the recovery then marked crashed; the window opens on every n8n start (a deploy, an import, the nightly restart).
 
 ## Decisions
 
@@ -10353,6 +10508,7 @@ A comment on a tracker item or a watched pull request shall count as the stack's
 | `tests/test_deploy_main.py::test_a_failed_smoke_test_health_check_or_build_is_a_failed_deploy` | [BLD-20](#bld-20) |
 | `tests/test_deploy_main.py::test_a_new_machine_builds_in_from_order_with_the_pins_and_stops_on_a_failure` | [PLT-17](#plt-17) |
 | `tests/test_deploy_main.py::test_a_whole_deploy_says_ok_and_runs_the_smoke_test` | [BLD-20](#bld-20) |
+| `tests/test_deploy_main.py::test_an_n8n_image_change_goes_ahead_while_runs_wait_and_waits_until_n8n_is_ready` | [PLT-39](#plt-39) |
 | `tests/test_deployment.py::test_a_line_may_name_a_line_above_and_the_environment_wins` | [PLT-33](#plt-33) |
 | `tests/test_deployment.py::test_every_compose_call_reads_the_file_and_a_changed_file_is_applied` | [PLT-33](#plt-33) |
 | `tests/test_deployment.py::test_no_converted_value_is_hard_coded_in_running_code` | [PLT-33](#plt-33) |
@@ -10360,6 +10516,14 @@ A comment on a tracker item or a watched pull request shall count as the stack's
 | `tests/test_deployment.py::test_the_guard_finds_a_value_written_out_and_respects_its_allowlist` | [PLT-33](#plt-33) |
 | `tests/test_deployment.py::test_the_page_carries_the_apps_addresses_and_the_tools_name_only_those` | [PLT-33](#plt-33) |
 | `tests/test_deployment.py::test_units_name_the_home_and_docker_by_specifier` | [PLT-33](#plt-33) |
+| `tests/test_deployment_workflows.py::test_a_deploy_imports_only_the_deployments_workflows_and_unpublishes_the_ones_it_no_longer_runs` | [PLT-38](#plt-38) |
+| `tests/test_deployment_workflows.py::test_a_name_no_workflow_has_is_refused_by_the_deployment_check` | [PLT-38](#plt-38) |
+| `tests/test_deployment_workflows.py::test_a_new_crew_job_and_a_canvas_workflow_join_the_deployments_list` | [PLT-38](#plt-38) |
+| `tests/test_deployment_workflows.py::test_a_switch_publishes_only_a_workflow_the_deployment_runs` | [PLT-38](#plt-38) |
+| `tests/test_deployment_workflows.py::test_a_work_deployment_runs_only_the_self_test_and_its_tracker_poller` | [PLT-38](#plt-38) |
+| `tests/test_deployment_workflows.py::test_home_runs_every_workflow_it_ran_before_the_list` | [PLT-38](#plt-38) |
+| `tests/test_deployment_workflows.py::test_the_app_and_the_runner_see_only_the_deployments_workflows` | [PLT-38](#plt-38) |
+| `tests/test_deployment_workflows.py::test_the_tracker_poller_and_the_stacks_item_workflows_come_with_the_trackers` | [PLT-38](#plt-38) |
 | `tests/test_desk.py::test_a_redirect_to_a_private_address_is_refused` | [SEC-06](#sec-06) |
 | `tests/test_desk.py::test_a_weekly_brief_keeps_a_week_of_news_and_a_daily_one_36_hours` | [MIS-11](#mis-11) |
 | `tests/test_desk.py::test_every_briefing_is_english_even_for_a_topic_once_marked_german` | [CST-09](#cst-09) |
@@ -10405,7 +10569,7 @@ A comment on a tracker item or a watched pull request shall count as the stack's
 | `tests/test_domain_packs.py::test_home_without_packs_is_unchanged` | [GEN-21](#gen-21) |
 | `tests/test_domain_packs.py::test_packs_are_the_apps_and_the_queues` | [GEN-21](#gen-21) |
 | `tests/test_domain_packs.py::test_the_app_sees_each_pack_s_workflows_and_agents_but_no_folder_or_file_path` | [GEN-21](#gen-21) |
-| `tests/test_domain_packs.py::test_the_toy_packs_item_workflow_is_a_whole_n8n_workflow_on_logic_nodes_only` | [GEN-42](#gen-42) |
+| `tests/test_domain_packs.py::test_the_toy_packs_item_workflow_is_a_whole_n8n_workflow_on_logic_nodes_only` | [GEN-42](#gen-42), [WFL-33](#wfl-33) |
 | `tests/test_domain_packs.py::test_two_packs_of_one_name_and_a_manifest_naming_another_pack_are_refused` | [GEN-21](#gen-21) |
 | `tests/test_domain_places.py::test_a_command_runs_at_the_wsl_host_place_only_once_approved_there_by_its_hash_and_a_value_outside_its_type_is_refused` | [GEN-22](#gen-22) |
 | `tests/test_domain_places.py::test_a_job_kind_sets_its_own_run_limit_in_its_file_and_the_status_carries_it` | [GEN-40](#gen-40) |
@@ -10420,18 +10584,23 @@ A comment on a tracker item or a watched pull request shall count as the stack's
 | `tests/test_domain_trackers.py::test_a_change_starts_at_a_tag_opens_a_draft_into_a_release_branch_and_a_reviewers_comment_is_handed_on_once` | [GEN-26](#gen-26) |
 | `tests/test_domain_trackers.py::test_a_changed_item_is_handed_on_once_for_the_run_named_after_it_and_a_restart_hands_on_nothing_twice` | [GEN-25](#gen-25) |
 | `tests/test_domain_trackers.py::test_a_comment_from_someone_else_is_handed_on_once` | [GEN-25](#gen-25) |
+| `tests/test_domain_trackers.py::test_a_new_tracker_starts_now_its_first_pass_only_sets_the_cursor_and_a_start_date_counts_from_that_date` | [WFL-27](#wfl-27) |
+| `tests/test_domain_trackers.py::test_a_tracker_that_had_its_first_pass_before_start_existed_keeps_its_cursor_and_hands_on_as_before` | [WFL-27](#wfl-27) |
 | `tests/test_domain_trackers.py::test_a_trackers_entry_may_name_a_value_of_its_deployment_and_one_it_does_not_set_is_refused` | [GEN-45](#gen-45) |
 | `tests/test_domain_trackers.py::test_a_write_to_an_unknown_tracker_or_of_an_unknown_kind_is_refused_with_the_reason` | [GEN-25](#gen-25) |
 | `tests/test_domain_trackers.py::test_an_agent_step_reads_its_item_with_the_stacks_own_comments_marked_as_its_own` | [WFL-25](#wfl-25) |
+| `tests/test_domain_trackers.py::test_attach_transition_and_label_are_done_once_whatever_the_retries` | [WFL-31](#wfl-31) |
 | `tests/test_domain_trackers.py::test_jira_and_pull_request_comments_follow_the_same_rule_on_one_account` | [WFL-26](#wfl-26) |
 | `tests/test_domain_trackers.py::test_jira_builds_its_query_without_an_empty_clause_and_refuses_one_with_its_own_order` | [GEN-41](#gen-41) |
 | `tests/test_domain_trackers.py::test_jira_hands_on_60_items_of_one_minute_once_and_its_cursor_moves_on` | [GEN-41](#gen-41) |
-| `tests/test_domain_trackers.py::test_jira_reads_by_jql_with_its_cursor_and_edits_its_one_summary` | [GEN-25](#gen-25), [GEN-41](#gen-41) |
+| `tests/test_domain_trackers.py::test_jira_reads_by_jql_with_its_cursor_and_edits_its_one_summary` | [GEN-25](#gen-25), [GEN-41](#gen-41), [WFL-30](#wfl-30) |
 | `tests/test_domain_trackers.py::test_jira_reads_its_cursor_in_the_token_users_time_zone_not_the_servers` | [GEN-41](#gen-41) |
 | `tests/test_domain_trackers.py::test_shadow_writes_nothing_outward_until_the_owner_lets_a_kind_go_live_after_its_measure` | [GEN-25](#gen-25) |
-| `tests/test_domain_trackers.py::test_the_one_summary_comment_is_edited_across_three_updates` | [GEN-25](#gen-25) |
+| `tests/test_domain_trackers.py::test_the_one_summary_comment_is_edited_across_three_updates` | [GEN-25](#gen-25), [WFL-30](#wfl-30) |
+| `tests/test_domain_trackers.py::test_the_owner_sends_a_shadow_write_once_keeps_one_back_or_judges_it_wrong` | [WFL-29](#wfl-29) |
 | `tests/test_domain_trackers.py::test_the_stacks_own_comment_is_known_by_its_write_mark_where_it_writes_with_the_owners_account` | [WFL-26](#wfl-26) |
-| `tests/test_domain_trackers.py::test_trackers_are_the_apps_and_the_queues` | [GEN-25](#gen-25) |
+| `tests/test_domain_trackers.py::test_the_summary_edits_only_the_comment_the_stack_wrote_on_jira_and_forgejo` | [WFL-30](#wfl-30) |
+| `tests/test_domain_trackers.py::test_trackers_are_the_apps_and_the_queues` | [GEN-25](#gen-25), [WFL-27](#wfl-27), [WFL-29](#wfl-29) |
 | `tests/test_editor.py::test_a_pass_saves_its_sorting_and_changes_nothing` | [ACR-02](#acr-02) |
 | `tests/test_editor.py::test_each_idea_and_the_ideas_view_show_the_editor_s_sorting` | [ACR-02](#acr-02) |
 | `tests/test_editor.py::test_the_editor_is_a_crew_duty_with_its_card_units_and_prompt` | [ACR-02](#acr-02) |
@@ -10486,6 +10655,7 @@ A comment on a tracker item or a watched pull request shall count as the stack's
 | `tests/test_flows.py::test_an_agent_reads_its_brief_as_its_step` | [WFL-05](#wfl-05) |
 | `tests/test_flows.py::test_an_agent_step_runs_through_the_conductors_own_runner_and_n8n_gets_the_answer` | [WFL-05](#wfl-05) |
 | `tests/test_flows.py::test_an_answer_n8n_did_not_take_is_sent_again_after_a_restart_without_running_the_step_again` | [WFL-05](#wfl-05) |
+| `tests/test_flows.py::test_an_answer_waits_until_n8n_has_finished_starting` | [WFL-34](#wfl-34) |
 | `tests/test_flows.py::test_an_empty_answer_file_is_handled_again_and_answered` | [WFL-05](#wfl-05) |
 | `tests/test_flows.py::test_home_hears_how_each_step_of_a_workflow_ended` | [WFL-10](#wfl-10) |
 | `tests/test_flows.py::test_the_answer_only_ever_goes_to_n8n_on_this_machine` | [WFL-05](#wfl-05) |
@@ -10760,19 +10930,25 @@ A comment on a tracker item or a watched pull request shall count as the stack's
 | `tests/test_n8n_inapp.py::test_phoenix_is_served_inside_the_app_like_n8n_and_a_step_s_call_opens_on_the_traces_page` | [APP-66](#app-66) |
 | `tests/test_n8n_inapp.py::test_the_runner_writes_the_view_beside_the_step_service` | [WFL-11](#wfl-11) |
 | `tests/test_n8n_inapp.py::test_the_view_has_every_workflow_its_schedule_its_steps_and_its_recent_runs` | [WFL-11](#wfl-11) |
-| `tests/test_n8n_items.py::test_a_change_for_an_item_starts_at_its_tag_and_goes_out_as_a_draft_whose_review_comment_wakes_the_run` | [GEN-26](#gen-26) |
+| `tests/test_n8n_items.py::test_a_change_for_an_item_starts_at_its_tag_and_goes_out_as_a_draft_whose_review_comment_wakes_the_run` | [GEN-26](#gen-26), [WFL-32](#wfl-32) |
 | `tests/test_n8n_items.py::test_a_comment_from_someone_else_wakes_the_waiting_run_and_the_stacks_own_change_does_not` | [WFL-19](#wfl-19) |
 | `tests/test_n8n_items.py::test_a_comment_while_the_run_is_busy_elsewhere_answers_its_next_wait_at_once` | [WFL-19](#wfl-19) |
 | `tests/test_n8n_items.py::test_a_new_item_starts_its_workflow_once_through_its_webhook_even_when_its_event_comes_twice` | [WFL-19](#wfl-19) |
+| `tests/test_n8n_items.py::test_a_new_tracker_with_three_matching_items_starts_nothing_and_one_run_when_one_of_them_gets_a_comment` | [WFL-27](#wfl-27) |
 | `tests/test_n8n_items.py::test_a_question_for_a_role_says_who_may_answer_refuses_anyone_else_and_records_who_did` | [GEN-27](#gen-27) |
 | `tests/test_n8n_items.py::test_a_tracker_write_step_answers_with_its_shadow_reference_and_once_live_with_the_live_one` | [WFL-21](#wfl-21) |
 | `tests/test_n8n_items.py::test_a_tracker_write_takes_an_earlier_steps_whole_text_from_the_run_register` | [WFL-21](#wfl-21) |
+| `tests/test_n8n_items.py::test_a_wait_is_answered_only_from_its_source_and_says_which_it_was` | [WFL-32](#wfl-32) |
 | `tests/test_n8n_items.py::test_a_wait_that_times_out_is_an_outcome_and_the_run_reminds_in_shadow_and_waits_again` | [WFL-20](#wfl-20) |
+| `tests/test_n8n_items.py::test_a_waits_answer_says_how_often_it_timed_out_before_so_a_workflow_can_stop_reminding` | [WFL-33](#wfl-33) |
 | `tests/test_n8n_items.py::test_an_ended_run_is_not_started_again_unless_its_tracker_says_restart_on_comment` | [WFL-19](#wfl-19) |
 | `tests/test_n8n_items.py::test_an_event_n8n_could_not_take_stays_in_the_outbox_and_starts_its_run_on_the_next_pass` | [WFL-19](#wfl-19) |
+| `tests/test_n8n_items.py::test_an_item_step_reads_the_item_and_fetches_its_attachments_by_artifact_id_within_its_caps` | [WFL-28](#wfl-28) |
 | `tests/test_n8n_items.py::test_the_item_steps_are_checked_before_anything_runs` | [WFL-20](#wfl-20) |
+| `tests/test_n8n_items.py::test_the_node_reads_an_item_waits_on_its_source_and_says_from_item` | [WFL-28](#wfl-28) |
 | `tests/test_n8n_items.py::test_the_node_waits_on_an_item_writes_to_it_and_a_timeout_is_a_result_while_a_failure_still_fails` | [WFL-20](#wfl-20) |
 | `tests/test_n8n_items.py::test_the_poller_is_a_crew_job_on_n8ns_minute_and_asks_the_trackers_every_poll_minutes` | [WFL-19](#wfl-19) |
+| `tests/test_n8n_items.py::test_with_me_unset_the_stacks_own_comment_and_summary_do_not_wake_a_wait_and_a_persons_comment_does` | [WFL-26](#wfl-26) |
 | `tests/test_n8n_items.py::test_with_no_map_of_roles_a_question_for_a_role_is_the_owners` | [GEN-27](#gen-27) |
 | `tests/test_n8n_items.py::test_without_forge_push_a_change_for_an_item_waits_for_the_owner_in_the_app` | [GEN-26](#gen-26) |
 | `tests/test_n8n_move.py::test_a_generated_workflow_is_inactive_and_goes_through_the_step_service` | [WFL-09](#wfl-09), [WFL-13](#wfl-13) |
@@ -11119,6 +11295,7 @@ A comment on a tracker item or a watched pull request shall count as the stack's
 | `tests/test_runner.py::test_a_briefing_reads_the_news_of_its_schedule_s_window` | [MIS-11](#mis-11) |
 | `tests/test_runner.py::test_a_briefing_that_hangs_is_stopped_at_its_deadline` | [MIS-11](#mis-11) |
 | `tests/test_runner.py::test_a_burst_of_locks_writes_who_held_what_once` | [MIS-01](#mis-01) |
+| `tests/test_runner.py::test_a_pass_that_leaves_a_write_open_is_committed_and_named` | [PLT-40](#plt-40) |
 | `tests/test_runner.py::test_a_paused_agents_runs_are_skipped` | [SWM-26](#swm-26) |
 | `tests/test_runner.py::test_a_run_a_restart_cut_off_says_why_and_waits_for_the_stack` | [MIS-05](#mis-05) |
 | `tests/test_runner.py::test_a_write_that_fails_on_a_lock_gives_up_its_transaction` | [MIS-01](#mis-01) |
@@ -11126,12 +11303,15 @@ A comment on a tracker item or a watched pull request shall count as the stack's
 | `tests/test_runner.py::test_create_refuses_a_duplicate_within_30_minutes` | [MIS-07](#mis-07) |
 | `tests/test_runner.py::test_create_task_writes_mission_and_queues_first_run` | [MIS-01](#mis-01), [MIS-06](#mis-06) |
 | `tests/test_runner.py::test_enqueue_dedup_but_events_always_queue` | [MIS-04](#mis-04) |
+| `tests/test_runner.py::test_every_loop_that_keeps_one_connection_rests_through_end_pass` | [PLT-40](#plt-40) |
 | `tests/test_runner.py::test_one_runner_at_a_time` | [MIS-04](#mis-04) |
 | `tests/test_runner.py::test_paused` | [MIS-05](#mis-05) |
 | `tests/test_runner.py::test_schedule_text` | [MIS-02](#mis-02) |
 | `tests/test_runner.py::test_section_parsing` | [MIS-11](#mis-11) |
 | `tests/test_runner.py::test_slugify_is_unique_and_ascii` | [MIS-06](#mis-06) |
 | `tests/test_runner.py::test_spend_window_query_window_is_utc` | [MIS-16](#mis-16) |
+| `tests/test_runner.py::test_the_lock_report_names_each_connection_s_open_write` | [PLT-40](#plt-40) |
+| `tests/test_runner.py::test_the_title_repair_commits_what_it_changed` | [PLT-40](#plt-40) |
 | `tests/test_runner.py::test_update_validates_and_resume_skips_catch_up` | [MIS-08](#mis-08) |
 | `tests/test_runner.py::test_valid_schedule` | [MIS-02](#mis-02) |
 | `tests/test_runner_env.py::test_the_runner_environment_is_pinned_checksummed_and_follows_its_lock` | [PLT-37](#plt-37) |
@@ -11510,7 +11690,8 @@ A comment on a tracker item or a watched pull request shall count as the stack's
 | `tests/test_winworker.py::test_the_stack_side_can_start_nothing_on_windows` | [GEN-11](#gen-11) |
 | `tests/test_winworker.py::test_the_worker_is_a_feature_a_deployment_switches_on` | [GEN-11](#gen-11) |
 | `tests/test_work_deployment.py::test_the_core_names_nothing_of_the_stand_in_domain` | [GEN-44](#gen-44) |
-| `tests/test_work_deployment.py::test_the_toy_pack_runs_end_to_end_in_a_customer_class_deployment_against_stand_ins` | [GEN-44](#gen-44) |
+| `tests/test_work_deployment.py::test_the_toy_pack_runs_end_to_end_in_a_customer_class_deployment_against_stand_ins` | [GEN-44](#gen-44), [GEN-46](#gen-46), [WFL-28](#wfl-28), [WFL-29](#wfl-29), [WFL-32](#wfl-32) |
+| `tests/test_work_deployment.py::test_the_toy_ticket_reminds_twice_and_then_stops_waiting` | [GEN-46](#gen-46), [WFL-33](#wfl-33) |
 | `tests/test_wsl_memory.py::test_a_new_machine_gets_it_from_the_root_bootstrap` | [PLT-35](#plt-35) |
 | `tests/test_wsl_memory.py::test_it_refuses_to_run_without_root_and_says_how` | [PLT-35](#plt-35) |
 | `tests/test_wsl_memory.py::test_the_file_cache_goes_back_to_windows_every_30_minutes` | [PLT-35](#plt-35) |
