@@ -25,7 +25,7 @@ left out, and the reason says where that is shown.
 | `ops/onboard.py` | `NEED_GB` | the PC's available memory before the code map's container starts (= conductor NEED_GB opencode) |
 | `ops/repofacts.py` | `NEED_GB` | the PC's available memory before a facts run starts (measured: 736 MiB at peak on click; its container is capped at 2 GB) |
 
-## paces (23)
+## paces (24)
 
 | Where | Limit | Why |
 |---|---|---|
@@ -39,6 +39,7 @@ left out, and the reason says where that is shown.
 | `ops/claude_tasks.py` | `PARALLEL_MAX` | at most this many whatever the deployment says |
 | `ops/diskguard.py` | `RELIEF_EVERY_S` | at most one prune an hour (a second prune of an empty cache frees nothing) |
 | `ops/doctor.py` | `MAX_ISSUES` | issues one doctor pass looks at; the rest the next |
+| `ops/domain/trackers.py` | `POLL_MINUTES` | the trackers are asked every 5 minutes unless the deployment's poll_minutes says otherwise |
 | `ops/editor.py` | `MAX_IDEAS` | open ideas one pass sorts (the oldest first); the rest the next pass, and the result says how many waited |
 | `ops/flows.py` | `WAIT_AGAIN_S` | a step that waits (its work elsewhere, no headroom) is looked at again after 30 s |
 | `ops/flows.py` | `POLL_S` | a command's job is looked at every 2 s, as places.run_job does |
@@ -53,7 +54,7 @@ left out, and the reason says where that is shown.
 | `ops/ua_enrich.py` | `WORKERS_MAX` | at most this many whatever the deployment says |
 | `ops/wikis.py` | `len(done) >= PER_PASS` | wiki summaries a pass; the rest the next pass |
 
-## refuses (64)
+## refuses (63)
 
 | Where | Limit | Why |
 |---|---|---|
@@ -94,7 +95,6 @@ left out, and the reason says where that is shown.
 | `ops/conductor.py` | `EACH` | a plan fanning out over more names the limit on the task: the pools pace the copies |
 | `ops/email-setup.sh` | `[ ${#pw} -ge 16 ]` | a Gmail app password has 16 letters |
 | `ops/events.py` | `not re.match(r"^https://[^\s/]+/\S+$", url) or len(url) > 2000` | what is no calendar address |
-| `ops/fakeworker.py` | `STALE_S` | a request older than this was left from before a sleep: nobody waits for it |
 | `ops/files.py` | `MAX_BYTES` | one file a mission makes, with its size: split it (MIS-23) |
 | `ops/files.py` | `ATTACH_MAX` | a mail's attachments together: Gmail takes 25 MB, encoding adds a third |
 | `ops/files.py` | `len(out) > 20` | files asked of one mission, with the limit (MIS-23) |
@@ -146,7 +146,7 @@ left out, and the reason says where that is shown.
 | `ops/crew.py` | `--max-turns` | the maintainer's pass past 60 turns is reported as stopped |
 | `ops/crew.py` | `--max-turns` | a crew agent's Board answer past 20 turns is reported as stopped |
 | `ops/domain/packs.py` | `GIT_S` | a clone or fetch of a pack that takes longer fails with the reason |
-| `ops/domain/places.py` | `PICKUP_S` | a request no worker took within this is given up as not picked up |
+| `ops/domain/trackers.py` | `JIRA_PAGES` | a pass that asked for 1,000 pages (50,000 changed items) stops there; the cursor keeps what was handed on and the next pass goes on |
 | `ops/evals.py` | `--max-turns` | a replay is one answer, no tools |
 | `ops/flows.py` | `DELIVER_FOR_S` | after a day without n8n taking it the answer stays in done/ and the owner is told |
 | `ops/journeys.py` | `DECIDE_TIMEOUT` | the decide journey gives the runner and the app this many seconds at each step; past it the journey fails and says which step |
@@ -167,7 +167,7 @@ left out, and the reason says where that is shown.
 | `ops/staffing.py` | `TEMP_BUDGET` | a temporary agent key's daily budget; subscription models cost nothing, so it only bites if a paid model appears |
 | `ops/ua_map_in.py` | `NODE_TIMEOUT` | s for one plugin script (the structure of one batch, the merge of all); counts as a failed try |
 
-## drops (46)
+## drops (47)
 
 | Where | Limit | Why |
 |---|---|---|
@@ -199,15 +199,15 @@ left out, and the reason says where that is shown.
 | `ops/conductor.py` | `MAX_STEPS` | steps a checkpoint adds past this; the run's plan changes say so |
 | `ops/diskguard.py` | `ALERT_EVERY_S` | at most one urgent alert an hour (the reading repeats every 20 s) |
 | `ops/domain/artifacts.py` | `RETAIN_DAYS` | an artifact past this many days is removed (the deployment may say otherwise: ARTIFACT_DAYS) |
-| `ops/fakeworker.py` | `LOG_MAX` | a job's log past this comes back as its end, with a marker saying how much was cut |
-| `ops/fakeworker.py` | `ARTIFACTS_MB` | artifacts past this many MB are not copied back; the result names them as left out |
-| `ops/fakeworker.py` | `size > ARTIFACTS_MB` | as ARTIFACTS_MB above (named in left_out) |
 | `ops/flows_view.py` | `RUNS_SHOWN` | a workflow's runs past its 10 newest stay out of the app's view; n8n's executions keep every one |
 | `ops/flows_view.py` | `SEEN_KEPT` | the oldest steps remembered past 3,000 are forgotten here; n8n keeps its own history (WFL-04) |
 | `ops/house.py` | `VOICE_MAX_PER_HOUR` | spoken requests past 30 an hour (HSE-07) |
 | `ops/house.py` | `_voice["busy"] or len(_voice["times"]) >= VOICE_MAX_PER_HOUR` | as VOICE_MAX_PER_HOUR, and one at a time (HSE-07) |
 | `ops/ics.py` | `MAX_REPEATS` | occurrences looked at per calendar event: years of a weekly meeting |
 | `ops/improve.py` | `MAX` | ideas past 5 a self-review; its prompt names the limit and the log says |
+| `ops/localworker.py` | `LOG_MAX` | a job's log past this comes back as its end, with a marker saying how much was cut |
+| `ops/localworker.py` | `ARTIFACTS_MB` | artifacts past this many MB are not copied back; the result names them as left out |
+| `ops/localworker.py` | `size > ARTIFACTS_MB` | as ARTIFACTS_MB above (named in left_out) |
 | `ops/missions.py` | `STACKS_EVERY_S` | at most one stack dump an hour (a diagnosis, never a stop) |
 | `ops/notify.py` | `TELEGRAM_MAX` | Telegram's own limit on a message; the text is cut visibly |
 | `ops/phone_agents.py` | `MAX_APPS` | the biggest unused apps offered at a time; the next scan offers more |
@@ -215,5 +215,6 @@ left out, and the reason says where that is shown.
 | `ops/repocard.py` | `CHARS` | a card past about 1,500 tokens: the lowest kinds' last lines go, and the card says how many (the repo page shows all) |
 | `ops/repofacts.py` | `BRIEF_TESTS_FIRST` | tests to run first past these are counted, not named (the whole suite runs at the end anyway) |
 | `ops/repofacts.py` | `BRIEF_USERS` | users of the changed files whose tests are looked up past these (the most linked first) |
+| `ops/runreg.py` | `EVENTS_KEPT` | the oldest event identities past 20,000 are forgotten; the trackers' cursors and seen comments already keep an old change from coming back |
 | `ops/staffing.py` | `len(calls) > CALLS` | tool calls named for the judge; the text says how many more and the task's page has them |
 | `ops/swarm_client.py` | `len(times) >= NOTIFY_DAY` | a phone message past this many a day; the next line says so once, and all stay on the Swarm page |

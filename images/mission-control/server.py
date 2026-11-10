@@ -2,6 +2,8 @@
 
 Port 8090: the app and its API, published to 127.0.0.1 only; reached from your devices through `tailscale serve`
 (https://<pc>.ts.net:8447). Every /api call must carry Tailscale's identity header, which only tailscale serve sets.
+A deployment without the tailnet sets APP_GATE=local: the app is reached on the PC itself (http://127.0.0.1:8090), and
+a request by a loopback address is the owner's (WFL-16).
 Port 8091: MCP tools (missions_overview, mission_create, mission_update, ...) for Hermes, reached only by LiteLLM on
 the internal "mcnet" network (granted per key in ops/keys.sh).
 This container never starts anything itself: it reads the runner's state (/missions/public/state.json) and drops
@@ -95,9 +97,33 @@ def _part(name):
 
 
 # ---------- app API ----------
+# WFL-16: the app's front door, by the deployment. tailnet (home): tailscale serve adds the owner's login to each
+# request. local (no tailnet, compose's APP_GATE): the port is published on 127.0.0.1 only, so the browser is on this PC;
+# the request must name a loopback address (or the app's service name, for the stack's own checks), which also keeps a
+# page of another site out by a DNS name that points here; it is then the owner's, under LOCAL_LOGIN. The write rule
+# below (SEC-20) holds for both.
+APP_GATE = os.environ.get("APP_GATE", "tailnet")
+LOCAL_HOSTS = {"127.0.0.1", "localhost", "[::1]", "mission-control"}
+LOCAL_LOGIN = "owner@this-pc"
+
+
+def local_owner(request):
+    """APP_GATE=local: -> True when the request names a loopback host, after making it the owner's: any Tailscale header
+    it brought is dropped and the owner's login is set, so every part of the app sees one owner, as with the tailnet."""
+    host = request.headers.get("host", "")
+    if host.rsplit(":", 1)[0] not in LOCAL_HOSTS:
+        return False
+    request.scope["headers"] = [(k, v) for k, v in request.scope["headers"] if not k.lower().startswith(b"tailscale-")] + [
+        (b"tailscale-user-login", LOCAL_LOGIN.encode())]
+    return True
+
+
 class TailnetOnly(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
-        if request.url.path.startswith(("/api/", "/share", *(f"/{n}" for n in FRAMES))) and not request.headers.get("tailscale-user-login"):
+        if APP_GATE == "local":
+            if not local_owner(request):
+                return JSONResponse({"error": "only reachable on this PC, at http://127.0.0.1:8090"}, status_code=403)
+        elif request.url.path.startswith(("/api/", "/share", *(f"/{n}" for n in FRAMES))) and not request.headers.get("tailscale-user-login"):
             return JSONResponse({"error": "only reachable through Tailscale"}, status_code=403)
         # SEC-20: tailscale serve adds the owner's login to whatever his browser sends, a page of another site included;
         # a browser names where a request comes from (Sec-Fetch-Site), so a write from anywhere but this app is refused.
@@ -253,6 +279,8 @@ async def api_request(request):
     if body.get("action") == "chat_ready":                                 # sent by the app itself when a waiting chat is answered
         return JSONResponse({"ok": False, "error": "not a request the app's screens make"}, status_code=403)
     body["source"] = "app"
+    if body.get("action") == "flow_answer":                                 # GEN-27: who answered, from the sign-in, never from the page
+        body["who"] = request.headers.get("tailscale-user-login") or "owner"
     note_owner(str(body.get("action", "")))
     return JSONResponse(await submit(body))
 

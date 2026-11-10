@@ -103,6 +103,8 @@ CREW = [
      "what": "Each night at 01:00 except Sunday: starts that night's trial of the weekly rotation once the stack is idle, or skips the night (TRL-14)."},
     {"id": "recycle", "name": "Nightly restart", "unit": "recycle", "area": "ops",
      "what": "Each night at 03:50: restarts the services that grow while idle (qmd, Phoenix, Open WebUI) once the stack is idle, so their memory does not pile up in swap (PLT-27)."},
+    {"id": "tracker-poll", "name": "Tracker poll", "unit": "tracker-poll", "area": "ops",
+     "what": "Asks the deployment's trackers for changed items every few minutes (5 unless the deployment says otherwise): a new item starts its workflow, a reply wakes the run that waits for it, each change counted once (WFL-19)."},
     {"id": "token-probe", "name": "Token probe", "unit": "token-probe", "area": "ops", "oneoff": True,
      "what": "One-off: measures whether the ChatGPT prompt cache hits after the token fixes."},
 ]

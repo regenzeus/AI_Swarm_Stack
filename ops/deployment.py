@@ -15,6 +15,7 @@ import os
 import re
 import shlex
 import sys
+import urllib.parse
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -113,6 +114,24 @@ def missing(values=None):
     return [f"{n} is empty, and {f} needs it" for f, n in need if empty(v.get(n))]
 
 
+def gate_problems(values=None):
+    """WFL-15, WFL-16: -> what does not fit the deployment's tailnet, one line each. With the tailnet the app's gate is
+    Tailscale's login (APP_GATE tailnet, the default); without it the gate is local (the app on this PC only) and n8n's
+    editor and webhook addresses are on 127.0.0.1, so nothing of n8n is reached from elsewhere."""
+    v = VALUES if values is None else values
+    gate = v.get("APP_GATE") or "tailnet"
+    if gate not in ("tailnet", "local"):
+        return [f"APP_GATE is {gate!r}: tailnet or local"]
+    if "tailnet" in features(v):
+        return ["APP_GATE is local, and the tailnet is on: the app would take any request on this PC as the owner's"] if gate == "local" else []
+    out = [] if gate == "local" else ["APP_GATE is not local, and the tailnet is off: the app would wait for a Tailscale login that never comes"]
+    for name in ("N8N_EDITOR_URL", "N8N_WEBHOOK_URL"):
+        host = urllib.parse.urlsplit(str(v.get(name) or "")).hostname
+        if host not in ("127.0.0.1", "localhost"):
+            out.append(f"{name} is not on 127.0.0.1, and the tailnet is off: n8n's addresses stay on this PC")
+    return out
+
+
 def app_name(values=None):
     """The app's name as the owner sees it (APP-61: "AI Stack" unless the deployment names it otherwise)."""
     return str((VALUES if values is None else values).get("APP_NAME") or "").strip() or "AI Stack"
@@ -130,7 +149,7 @@ if __name__ == "__main__":
     elif args == ["file"]:
         print(FILE)
     elif args == ["check"]:                      # make up: a switched-on feature with an empty value stops here, not in compose
-        bad = missing()
+        bad = missing() + gate_problems()
         print("\n".join(bad) or f"   the deployment {VALUES.get('DEPLOYMENT') or FOLDER.name} has every value its features need")
         sys.exit(1 if bad else 0)
     elif args == ["timers"]:

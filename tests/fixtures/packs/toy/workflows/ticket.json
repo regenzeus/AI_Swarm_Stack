@@ -1,0 +1,163 @@
+{
+  "name": "toy/ticket",
+  "active": true,
+  "nodes": [
+    {
+      "name": "An item arrives",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "notes": "The tracker's poller starts the item's run here with {tracker, key, run, ref, comments}; the answer names the run's execution, so the run register knows it from the start.",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "item/toy/ticket",
+        "options": {
+          "responseData": "={{ JSON.stringify({execution: $execution.id}) }}"
+        }
+      }
+    },
+    {
+      "name": "Triage",
+      "type": "CUSTOM.aistackStep",
+      "typeVersion": 1,
+      "position": [260, 0],
+      "parameters": {
+        "title": "Triage",
+        "kind": "agent",
+        "agent": "toy:intake",
+        "brief": "=Triage the item {{ $json.body.key }} of {{ $json.body.tracker }}: say what is missing to reproduce it, as questions for the reporter"
+      }
+    },
+    {
+      "name": "Ask the reporter",
+      "type": "CUSTOM.aistackStep",
+      "typeVersion": 1,
+      "position": [520, 0],
+      "notes": "The triage's whole text comes from the stack's record of the run (n8n keeps only its summary in a customer deployment).",
+      "parameters": {
+        "title": "Ask the reporter",
+        "kind": "tracker",
+        "tracker": "={{ $('An item arrives').item.json.body.tracker }}",
+        "key": "={{ $('An item arrives').item.json.body.key }}",
+        "write": "comment",
+        "body": "Thank you for the report. To reproduce it we need to know:",
+        "from_step": "Triage"
+      }
+    },
+    {
+      "name": "Wait for the reply",
+      "type": "CUSTOM.aistackStep",
+      "typeVersion": 1,
+      "position": [780, 0],
+      "parameters": {
+        "title": "Wait for the reply",
+        "kind": "wait_item",
+        "tracker": "={{ $('An item arrives').item.json.body.tracker }}",
+        "key": "={{ $('An item arrives').item.json.body.key }}",
+        "timeout_hours": 72
+      }
+    },
+    {
+      "name": "Timed out?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [1040, 0],
+      "parameters": {
+        "conditions": {
+          "options": {"caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 2},
+          "conditions": [
+            {"id": "a7c1e2f0-0001-4c1a-9b1e-000000000001", "leftValue": "={{ $json.outcome }}", "rightValue": "timeout",
+             "operator": {"type": "string", "operation": "equals"}}
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "name": "Remind the reporter",
+      "type": "CUSTOM.aistackStep",
+      "typeVersion": 1,
+      "position": [1040, 220],
+      "parameters": {
+        "title": "Remind the reporter",
+        "kind": "tracker",
+        "tracker": "={{ $('An item arrives').item.json.body.tracker }}",
+        "key": "={{ $('An item arrives').item.json.body.key }}",
+        "write": "comment",
+        "body": "A reminder: could you answer the questions above? The work on this item waits for them."
+      }
+    },
+    {
+      "name": "Reproduce",
+      "type": "CUSTOM.aistackStep",
+      "typeVersion": 1,
+      "position": [1300, 0],
+      "notes": "The toy tool runs for ten minutes at the WSL host, one job at a time.",
+      "parameters": {
+        "title": "Reproduce",
+        "kind": "command",
+        "place": "wsl-host",
+        "command": "toy.soak",
+        "values": "{\"seconds\": 600}"
+      }
+    },
+    {
+      "name": "Make the change",
+      "type": "CUSTOM.aistackStep",
+      "typeVersion": 1,
+      "position": [1560, 0],
+      "parameters": {
+        "title": "Make the change",
+        "kind": "build",
+        "repo": "toy",
+        "brief": "Fix what the reproduction showed",
+        "item": "={{ $('An item arrives').item.json.body.tracker }}/{{ $('An item arrives').item.json.body.key }}",
+        "base": "v1.0",
+        "target": "release/1"
+      }
+    },
+    {
+      "name": "Wait for the review",
+      "type": "CUSTOM.aistackStep",
+      "typeVersion": 1,
+      "position": [1820, 0],
+      "notes": "A reviewer's comment on the draft pull request wakes the run.",
+      "parameters": {
+        "title": "Wait for the review",
+        "kind": "wait_item",
+        "tracker": "={{ $('An item arrives').item.json.body.tracker }}",
+        "key": "={{ $('An item arrives').item.json.body.key }}",
+        "timeout_hours": 0
+      }
+    },
+    {
+      "name": "Write the summary",
+      "type": "CUSTOM.aistackStep",
+      "typeVersion": 1,
+      "position": [2080, 0],
+      "parameters": {
+        "title": "Write the summary",
+        "kind": "tracker",
+        "tracker": "={{ $('An item arrives').item.json.body.tracker }}",
+        "key": "={{ $('An item arrives').item.json.body.key }}",
+        "write": "summary",
+        "body": "=A fix is in the draft pull request {{ $('Make the change').item.json.pr }}; its review has begun."
+      }
+    }
+  ],
+  "connections": {
+    "An item arrives": {"main": [[{"node": "Triage", "type": "main", "index": 0}]]},
+    "Triage": {"main": [[{"node": "Ask the reporter", "type": "main", "index": 0}]]},
+    "Ask the reporter": {"main": [[{"node": "Wait for the reply", "type": "main", "index": 0}]]},
+    "Wait for the reply": {"main": [[{"node": "Timed out?", "type": "main", "index": 0}]]},
+    "Timed out?": {"main": [[{"node": "Remind the reporter", "type": "main", "index": 0}], [{"node": "Reproduce", "type": "main", "index": 0}]]},
+    "Remind the reporter": {"main": [[{"node": "Wait for the reply", "type": "main", "index": 0}]]},
+    "Reproduce": {"main": [[{"node": "Make the change", "type": "main", "index": 0}]]},
+    "Make the change": {"main": [[{"node": "Wait for the review", "type": "main", "index": 0}]]},
+    "Wait for the review": {"main": [[{"node": "Write the summary", "type": "main", "index": 0}]]}
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

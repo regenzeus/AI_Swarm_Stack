@@ -41,7 +41,9 @@ def test_every_scheduled_job_runs_on_n8n():
     timers that day: vault ingest, the trial rotation, the nightly restart) runs on n8n. A file says what runs:
     "active"; ops/n8n_switch.py <file> off takes one back."""
     jobs = {f.name: json.loads(f.read_text()) for f in WF if f.name.startswith(("crew-", "task-")) or f.name == "memory-keeper.json"}
-    assert len(jobs) == 28 and all(wf["active"] for wf in jobs.values())
+    waiting = {"crew-tracker-poll.json"}                 # WFL-19: the tracker poller, published by a deployment that has trackers
+    assert len(jobs) == 29 and all(wf["active"] for n, wf in jobs.items() if n not in waiting)
+    assert not any(jobs[n]["active"] for n in waiting)
 
 
 def test_a_deploy_imports_the_repositorys_workflows_each_as_its_file_says(monkeypatch):
@@ -104,7 +106,9 @@ def test_an_answer_that_is_not_done_ends_the_n8n_run_as_an_error():
     the answer's error as the message and the whole answer as its description; a done answer (an owner's answer too) is
     the node's output. Shown on a throwaway n8n 2.44.7 on 10 Nov 2026: a done answer ended in success, a failed one in error."""
     js = (ROOT / "n8n/custom/AistackStep.node.js").read_text()
-    assert "if (answer.status !== 'done') failOnResume(this, answer);" in js
+    assert "if (!succeeded(answer)) failOnResume(this, answer);" in js
+    assert "const succeeded = (a) => a.status === 'done' || (a.outcome !== undefined && !FAILED.includes(a.status));" in js
+    assert "const FAILED = ['failed', 'refused', 'cancelled'];" in js
     assert "const entry = ctx.runExecutionData && ctx.runExecutionData.executionData && ctx.runExecutionData.executionData.nodeExecutionStack[0];" in js
     assert "entry.node.disabled = false;" in js and "resumeError: {\n    name: 'NodeOperationError'," in js
     assert "message: `The step ${answer.status || 'gave no status'}: ${answer.error || 'no reason given'}`," in js

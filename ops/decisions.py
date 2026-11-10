@@ -234,10 +234,13 @@ def _commands(st):
 
 
 def _flows(st):
-    """A workflow's question for the owner (WFL-07): its own answers as buttons; the tap resumes the workflow."""
+    """A workflow's question (WFL-07): its own answers as buttons; the tap resumes the workflow. A question for a role
+    says who may answer it (GEN-27)."""
     import flows as FW
     for q in FW.waiting():
-        yield _d(f"flow:{q['id']}", "agent-request", q["question"], q.get("why") or "A workflow waits for your answer", "#/decide",
+        people = q.get("people") or ["owner"]
+        who = "" if people == ["owner"] else f" Who may answer: {', '.join(people)} ({q.get('role') or 'its role'})."
+        yield _d(f"flow:{q['id']}", "agent-request", q["question"], (q.get("why") or "A workflow waits for your answer") + who, "#/decide",
                  unanswered="the workflow waits", created=q.get("created"),
                  answers=[{"label": a, "act": {"action": "flow_answer", "id": q["id"], "answer": a}} for a in q["answers"]])
 

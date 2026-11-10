@@ -3,16 +3,20 @@ gates, every kind of write in shadow until the owner lets it go live.
 
 The deployment lists its trackers in trackers.yaml beside its deployment.env:
     shadow_needed: 5                 # approved shadow items a kind of write needs before the owner may let it go live
+    poll_minutes: 5                  # how often the poller asks the trackers (the crew job tracker-poll, ops/runreg.py)
     trackers:
-      - {name: bugs, kind: jira, url: https://jira.example, query: 'project = DEMO', workflow: toy/bug}
-      - {name: home, kind: forgejo, repo: owner/repo, workflow: home/triage}
-      - {name: test, kind: standin, path: /tmp/standin.json, workflow: toy/bug}
-Tokens are secrets (sops), never in the file: JIRA_TOKEN, FORGEJO_TOKEN.
+      - {name: bugs, kind: jira, url: https://jira.example, query: 'project = DEMO', workflow: demo/bug}
+      - {name: home, kind: forgejo, repo: owner/repo, workflow: home/triage, restart: on_comment}
+      - {name: test, kind: standin, path: /tmp/standin.json, workflow: demo/bug}
+Tokens are secrets (sops), never in the file: JIRA_TOKEN, FORGEJO_TOKEN. "workflow" is the pack's workflow an item
+starts (through n8n's webhook item/<pack>/<name>); "restart" says whether a new comment on an item whose run has ended
+starts a new run (on_comment) or not (never, the default). An entry that cannot be used is refused with its reason
+(refused(): an unknown kind or restart, a Jira query with its own ORDER BY) and not asked.
 
 Reading. poll() asks each tracker for the items changed since its cursor and hands each change on as one event for
 the run named after its item (<workflow>:<tracker>/<key>), with the comments from someone other than the stack that it
 has not handed on before. The cursor and the comments seen are kept on disk, so a restart hands nothing on twice.
-Which run an event starts or wakes is the workflow's business (n8n, DEC-51), never this module's.
+Which run an event starts or wakes is the run register's business (ops/runreg.py), never this module's.
 
 Writing. A write is one call with a write id, so a retry is harmless. The kinds: comment, summary (the stack's one
 summary comment, edited, never duplicated), attach, link, transition, label. Each kind starts in shadow: the write goes
@@ -20,20 +24,22 @@ to the shadow log and the owner's queue, never outward. Once the owner approved 
 queue asks whether that kind may go live; a live kind writes outward.
 
     adapter(cfg)               a tracker's adapter: StandIn, Forgejo, Jira
-    poll(cfg)                  one pass over every tracker -> the events it hands on
+    poll(cfg, hand=None)       one pass over every tracker -> the events it hands on (to hand() before a cursor moves)
+    problems(cfg)              the tracker entries refused at load, each with its reason
     write(d)                   one write, in shadow or live
     decisions(make)            the queue's items: shadow writes to approve, kinds ready to go live
     handle(req)                the app's actions: tracker_shadow_approve, tracker_shadow_reject, tracker_live
 """
 import datetime as dt
-import json
 import os
+import re
 import sys
 from pathlib import Path
 
 import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+import statefile as SF  # noqa: E402
 import textcap as TC  # noqa: E402
 
 KINDS = ("comment", "summary", "attach", "link", "transition", "label")
@@ -41,6 +47,11 @@ SUMMARY_MARK = "<!-- ai-stack:summary -->"     # the stack's one summary comment
 WRITE_MARK = "<!-- ai-stack:write {id} -->"    # every write carries its id, so a retry finds it written
 SHADOW_NEEDED = 5                              # limit: waits, approved shadow items a kind of write needs before it may go live (the deployment may set more)
 BODY_CHARS = 20000                             # cap: store, one write's text (a tracker refuses far less than this)
+POLL_MINUTES = 5                               # limit: paces, the trackers are asked every 5 minutes unless the deployment's poll_minutes says otherwise
+RESTART = ("never", "on_comment")              # a new comment on an item whose run has ended starts a new run only with on_comment
+ORDER_BY = re.compile(r"\border\s+by\b", re.I)
+JIRA_PAGE = 50                                 # issues per request; the pass pages on until Jira has given every one
+JIRA_PAGES = 1000                              # limit: stops, a pass that asked for 1,000 pages (50,000 changed items) stops there; the cursor keeps what was handed on and the next pass goes on
 
 
 def _deployment():
@@ -54,7 +65,24 @@ def config(path=None):
         d = yaml.safe_load(p.read_text(encoding="utf-8")) or {}
     except OSError:
         d = {}
-    return {"shadow_needed": int(d.get("shadow_needed") or SHADOW_NEEDED), "trackers": list(d.get("trackers") or [])}
+    return {"shadow_needed": int(d.get("shadow_needed") or SHADOW_NEEDED), "trackers": list(d.get("trackers") or []),
+            "poll_minutes": float(d.get("poll_minutes") or POLL_MINUTES)}
+
+
+def refused(t):
+    """Why a tracker's entry cannot be used, or "": it is read at load and refused with the reason, never half used."""
+    if t.get("kind") not in ADAPTERS:
+        return f"{t.get('name')}: kind is one of {', '.join(ADAPTERS)}, not {t.get('kind')!r}"
+    if t.get("restart", "never") not in RESTART:
+        return f"{t.get('name')}: restart is never or on_comment, not {t.get('restart')!r}"
+    if t.get("kind") == "jira" and ORDER_BY.search(str(t.get("query") or "")):
+        return (f"{t.get('name')}: its query has its own ORDER BY; the stack orders by updated itself to keep its cursor, "
+                "so leave the order out of the query")
+    return ""
+
+
+def problems(cfg=None):
+    return [w for w in (refused(t) for t in (cfg or config())["trackers"]) if w]
 
 
 def state_dir():
@@ -66,18 +94,11 @@ def _now():
 
 
 def _read(p, default):
-    try:
-        return json.loads(Path(p).read_text())
-    except (OSError, ValueError):
-        return default
+    return SF.load(p, default)
 
 
 def _write_json(p, d):
-    p = Path(p)
-    p.parent.mkdir(parents=True, exist_ok=True)
-    tmp = p.with_suffix(".tmp")
-    tmp.write_text(json.dumps(d, indent=1, ensure_ascii=False))
-    tmp.replace(p)
+    SF.save(p, d, indent=1)                          # whole or not at all: a cursor, the seen comments, the shadow writes
 
 
 # ---------- adapters ----------
@@ -168,22 +189,67 @@ class Forgejo:
         return {"done": True}
 
 
+def _when(s):
+    """A Jira time (2026-11-09T10:05:10.000+0100) or an older cursor without an offset, as a datetime."""
+    return dt.datetime.fromisoformat(re.sub(r"([+-]\d\d)(\d\d)$", r"\1:\2", str(s)))
+
+
+def _minute(s):
+    t = _when(s)
+    return (t.astimezone(dt.timezone.utc) if t.tzinfo else t).strftime("%Y-%m-%d %H:%M")
+
+
 class Jira:
-    """Jira Data Center through atlassian-python-api (a token, never a password)."""
+    """Jira Data Center through atlassian-python-api (a token, never a password).
+
+    Its cursor is the newest change's `updated` as Jira gives it (with the server's offset), and the (key, updated) pairs
+    of that minute already handed on. JQL reads a time to the minute and in the token user's time zone: the cursor is
+    turned into that zone (/rest/api/2/myself, timeZone) and asked with >= of its minute, the pairs handed on drop out,
+    and a pass pages on until Jira has given every match, so a minute with more items than a page never holds it."""
 
     def __init__(self, cfg, client=None):
+        why = refused({"name": cfg.get("name", "jira"), **cfg, "kind": "jira"})
+        if why:
+            raise ValueError(why)
         if client is None:
-            from atlassian import Jira as J                      # in the runner's environment (ops/runner-requirements.txt)
+            from atlassian import Jira as J                      # pinned for the runner (ops/runner-requirements.txt, hashed in its lock)
             client = J(url=cfg["url"], token=os.environ.get(cfg.get("token_env") or "JIRA_TOKEN", ""))
-        self.j, self.query, self.me = client, cfg.get("query") or "", cfg.get("me") or "ai-stack"
+        self.j, self.query, self.me = client, str(cfg.get("query") or "").strip(), cfg.get("me") or "ai-stack"
+        self._zone = None
+
+    def zone(self):
+        if self._zone is None:
+            from zoneinfo import ZoneInfo
+            self._zone = ZoneInfo((self.j.myself() or {}).get("timeZone") or "UTC")
+        return self._zone
+
+    def jql(self, cursor):
+        at = cursor.get("at") if isinstance(cursor, dict) else cursor
+        since = ""
+        if at:
+            t = _when(at)
+            since = f'updated >= "{(t.astimezone(self.zone()) if t.tzinfo else t):%Y-%m-%d %H:%M}"'
+        where = " AND ".join(x for x in (f"({self.query})" if self.query else "", since) if x)
+        return f"{where} ORDER BY updated ASC" if where else "ORDER BY updated ASC"
 
     def changes(self, cursor):
-        since = f' AND updated > "{cursor[:16].replace("T", " ")}"' if cursor else ""
-        got = self.j.jql(f"{self.query}{since} ORDER BY updated ASC", limit=50, fields="summary,status,labels,updated") or {}
-        items = [{"key": i["key"], "updated": i["fields"]["updated"], "title": i["fields"].get("summary", ""),
-                  "status": (i["fields"].get("status") or {}).get("name", ""), "labels": i["fields"].get("labels") or []}
-                 for i in got.get("issues") or []]
-        return items, (items[-1]["updated"] if items else cursor)
+        held = {tuple(p) for p in (cursor.get("seen") or [])} if isinstance(cursor, dict) else set()
+        q, got, start = self.jql(cursor), {}, 0
+        for _ in range(JIRA_PAGES):                              # limit: stops, JIRA_PAGES above
+            page = self.j.jql(q, start=start, limit=JIRA_PAGE, fields="summary,status,labels,updated") or {}
+            issues = page.get("issues") or []
+            for i in issues:
+                got[(i["key"], i["fields"]["updated"])] = {"key": i["key"], "updated": i["fields"]["updated"], "title": i["fields"].get("summary", ""),
+                                                           "status": (i["fields"].get("status") or {}).get("name", ""), "labels": i["fields"].get("labels") or []}
+            start += len(issues)
+            if not issues or start >= int(page.get("total") or 0):
+                break
+        if not got:
+            return [], cursor
+        items = sorted(got.values(), key=lambda i: _when(i["updated"]))
+        newest = items[-1]["updated"]
+        seen = sorted(p for p in held | set(got) if _minute(p[1]) == _minute(newest))
+        return [i for i in items if (i["key"], i["updated"]) not in held], {"at": newest, "seen": [list(p) for p in seen]}
 
     def comments(self, key):
         got = self.j.issue_get_comments(key) or {}
@@ -232,22 +298,29 @@ def run_id(t, key):
     return f"{t.get('workflow', '')}:{t['name']}/{key}"
 
 
-def poll(cfg=None, ad=None):
+def poll(cfg=None, ad=None, hand=None):
     """One pass: every tracker's changes since its cursor, each as one event {tracker, key, run, ref, comments} for the
     run named after its item; a comment is handed on once, and the stack's own never. The cursor moves only after a
-    tracker's events are made, so a pass that fails hands its items on again next time."""
+    tracker's events are made and handed on (hand(events): the run register's outbox, ops/runreg.py), so a pass that
+    fails hands its items on again next time. A tracker its entry refuses (refused()) is not asked."""
     cfg = cfg or config()
     events = []
     for t in cfg["trackers"]:
+        if refused(t):
+            continue
         st = _read(state_dir() / f"{t['name']}.json", {"cursor": "", "seen": {}})
         a = (ad or {}).get(t["name"]) or adapter(t)
         items, cursor = a.changes(st["cursor"])
+        mine = []
         for it in items:
             key = it["key"]
             ext = [c for c in a.comments(key) if c["author"] != a.me and str(c["id"]) not in st["seen"].get(key, [])]
-            events.append({"tracker": t["name"], "key": key, "run": run_id(t, key), "ref": f"item:{t['name']}/{key}@{it['updated']}",
-                           "comments": [f"comment:{t['name']}/{key}/{c['id']}" for c in ext]})
+            mine.append({"tracker": t["name"], "key": key, "run": run_id(t, key), "ref": f"item:{t['name']}/{key}@{it['updated']}",
+                         "comments": [f"comment:{t['name']}/{key}/{c['id']}" for c in ext]})
             st["seen"].setdefault(key, []).extend(str(c["id"]) for c in ext)
+        if hand:
+            hand(mine)
+        events += mine
         st["cursor"] = cursor
         _write_json(state_dir() / f"{t['name']}.json", st)
     return events
@@ -329,8 +402,11 @@ def view(cfg=None):
     """What the app shows: each tracker and its cursor, and each kind of write with its shadow state."""
     cfg = cfg or config()
     sh = _shadow()
-    return {"trackers": [{"name": t["name"], "kind": t["kind"], "workflow": t.get("workflow", ""),
-                          "cursor": _read(state_dir() / f"{t['name']}.json", {}).get("cursor", "")} for t in cfg["trackers"]],
+    def cursor(t):
+        c = _read(state_dir() / f"{t['name']}.json", {}).get("cursor", "")
+        return c.get("at", "") if isinstance(c, dict) else c
+    return {"trackers": [{"name": t["name"], "kind": t["kind"], "workflow": t.get("workflow", ""), "cursor": cursor(t),
+                          "restart": t.get("restart", "never"), "refused": refused(t)} for t in cfg["trackers"]],
             "kinds": [{"kind": k, "live": sh.get(k, {}).get("live", False), "approved": sh.get(k, {}).get("approved", 0),
                        "pending": sum(1 for i in sh.get(k, {}).get("items", []) if i["status"] == "pending"),
                        "items": sh.get(k, {}).get("items", [])[-20:]} for k in KINDS],          # cap: list, the newest; the log keeps all

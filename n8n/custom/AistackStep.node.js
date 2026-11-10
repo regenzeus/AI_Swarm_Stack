@@ -3,13 +3,16 @@
 // Control's step service (WFL-05) and waits, as n8n's Wait node does, until the runner posts the answer to this
 // execution's resume URL; the answer is the node's output. Its kind makes it one block of the palette: an agent, a
 // coding change, a crew job, a plan task, a question for the owner, a message, a memory search or note, a command at
-// a place, or a whole plan. The Agent, Crew job, Place and Repository pickers read the stack's lists live
-// (GET /catalog). Plain JavaScript: n8n loads it from N8N_CUSTOM_EXTENSIONS, nothing is built or fetched.
+// a place, a whole plan, a wait on a tracker item, or a write to it. The Agent, Crew job, Place, Repository, Tracker
+// and Role pickers read the stack's lists live (GET /catalog). Plain JavaScript: n8n loads it from
+// N8N_CUSTOM_EXTENSIONS, nothing is built or fetched.
 const STEPS = 'http://mission-control:8099/steps';
 const CATALOG = 'http://mission-control:8099/catalog';
 const WAIT_INDEFINITELY = new Date('3000-01-01T00:00:00.000Z');   // n8n's own "until resumed" (n8n-workflow)
 
 const show = (...kinds) => ({ show: { kind: kinds } });
+const FAILED = ['failed', 'refused', 'cancelled'];
+const succeeded = (a) => a.status === 'done' || (a.outcome !== undefined && !FAILED.includes(a.status));
 
 // One of the stack's lists as a picker's options: the full name, the id it sends, what it is for.
 async function pick(fns, list) {
@@ -22,7 +25,8 @@ async function pick(fns, list) {
   }));
 }
 
-// An answer that is not "done" (failed, refused, cancelled) ends the run as an error, so n8n's history shows it in red.
+// An answer that failed, was refused or cancelled ends the run as an error, so n8n's history shows it in red. An answer
+// with an outcome (a wait on an item: reply or timeout) is a result, not a failure: the workflow branches on it.
 // n8n resumes a waiting node by passing the webhook's data through it (it disables the node for the resume); a resume
 // error on the waiting entry makes the node fail there instead, as n8n does when a sub-workflow it waited for failed.
 // The answer stays the node's input, and its whole text is the error's description.
@@ -48,8 +52,8 @@ class AistackStep {
       icon: 'fa:robot',
       group: ['transform'],
       version: 1,
-      subtitle: '={{ {agent: "Agent: " + $parameter["agent"], build: "Coding change in " + $parameter["repo"], crew: "Crew job: " + $parameter["job"], task: "Plan task #" + $parameter["task"], ask: "Ask the owner", notify: "Notify the owner", recall: "Recall: " + $parameter["query"], remember: "Remember a " + $parameter["note"], command: $parameter["command"] + " at " + $parameter["place"], plan: "Run a plan"}[$parameter["kind"]] }}',
-      description: "A step of the stack's own work, sent to the stack and waited for: an agent, a coding change, a crew job, a plan task, a question for the owner, a message, memory, a command or a plan",
+      subtitle: '={{ {agent: "Agent: " + $parameter["agent"], build: "Coding change in " + $parameter["repo"], crew: "Crew job: " + $parameter["job"], task: "Plan task #" + $parameter["task"], ask: "Ask the owner", notify: "Notify the owner", recall: "Recall: " + $parameter["query"], remember: "Remember a " + $parameter["note"], command: $parameter["command"] + " at " + $parameter["place"], plan: "Run a plan", wait_item: "Wait for the item", tracker: "Write a " + $parameter["write"] + " on the item"}[$parameter["kind"]] }}',
+      description: "A step of the stack's own work, sent to the stack and waited for: an agent, a coding change, a crew job, a plan task, a question, a message, memory, a command, a plan, a wait on a tracker item or a write to it",
       defaults: { name: 'AI Stack step', color: '#6d5dfc' },
       inputs: ['main'],
       outputs: ['main'],
@@ -67,6 +71,8 @@ class AistackStep {
             { name: 'Remember', value: 'remember', description: 'A lesson, fact, failure or skill for memory; it enters only after the memory gate checks it' },
             { name: 'Run command', value: 'command', description: 'A command at a place (WSL, the WSL host, Windows), only once you approved it there' },
             { name: 'Run a plan', value: 'plan', description: 'The steps of a plan as waves of agent steps; every step\'s output is the answer' },
+            { name: 'Wait for the item', value: 'wait_item', description: 'Waits until someone else comments on the tracker item (outcome reply) or the time is up (outcome timeout)' },
+            { name: 'Write to the item', value: 'tracker', description: 'One write to the tracker item, held for your approval until you let that kind of write go live' },
           ] },
         { displayName: 'Agent', name: 'agent', type: 'options', default: 'scout', displayOptions: show('agent', 'remember'),
           typeOptions: { loadOptionsMethod: 'getAgents' },
@@ -109,6 +115,29 @@ class AistackStep {
         { displayName: 'Steps', name: 'steps', type: 'json', displayOptions: show('plan'),
           default: '[\n  {"agent": "scout", "title": "Research", "brief": "Find ...", "after": []},\n  {"agent": "desk", "title": "Write", "brief": "Write ...", "after": [1]}\n]',
           description: 'Each step: an agent, its brief, a title, and the numbers of the steps it waits for' },
+        { displayName: 'Tracker', name: 'tracker', type: 'options', default: '', displayOptions: show('wait_item', 'tracker'),
+          typeOptions: { loadOptionsMethod: 'getTrackers' }, description: 'The tracker of this deployment (trackers.yaml)' },
+        { displayName: 'Item', name: 'key', type: 'string', default: '={{ $json.body ? $json.body.key : $json.key }}', displayOptions: show('wait_item', 'tracker'),
+          description: 'The key of the item; the workflow of an item gets it from its start' },
+        { displayName: 'Wait at most (hours)', name: 'timeout_hours', type: 'number', default: 72, typeOptions: { minValue: 0, numberPrecision: 2 },
+          displayOptions: show('wait_item'), description: 'Then the answer is outcome timeout, so the workflow can remind and wait again; 0 waits without end' },
+        { displayName: 'Write', name: 'write', type: 'options', default: 'comment', displayOptions: show('tracker'),
+          options: ['comment', 'summary', 'attach', 'link', 'transition', 'label'].map((k) => ({ name: k[0].toUpperCase() + k.slice(1), value: k })),
+          description: 'Summary: the one summary comment, edited each time. Attach: its text names a saved file (artifact:<id>)' },
+        { displayName: 'Text', name: 'body', type: 'string', default: '', typeOptions: { rows: 3 }, displayOptions: show('tracker'),
+          description: 'The comment, the summary, the status to move to, the label, the link or the file to attach' },
+        { displayName: 'Add the text of step', name: 'from_step', type: 'string', default: '', displayOptions: show('tracker'),
+          description: "An earlier step's name: its whole answer is added to the text from the stack's record of the run (n8n may hold only its summary)" },
+        { displayName: 'For the item', name: 'item', type: 'string', default: '', displayOptions: show('build'),
+          description: 'A change for a tracker item: <tracker>/<key>. It starts at the base below and goes out as a draft pull request' },
+        { displayName: 'Base (branch or tag)', name: 'base', type: 'string', default: '', displayOptions: show('build'),
+          description: 'Where a change for an item starts' },
+        { displayName: 'Target branch', name: 'target', type: 'string', default: '', displayOptions: show('build'),
+          description: 'The branch its draft pull request goes into' },
+        { displayName: 'On the forge', name: 'forge', type: 'string', default: '', displayOptions: show('build'),
+          description: 'The address of the repository on the forge, when it is not the own origin of the repository' },
+        { displayName: 'Role', name: 'role', type: 'options', default: '', displayOptions: show('ask'),
+          typeOptions: { loadOptionsMethod: 'getRoles' }, description: 'Who may answer: the people of this role; none, the owner' },
         { displayName: 'Title', name: 'title', type: 'string', default: '',
           description: "How Home's feed names this step" },
       ],
@@ -119,6 +148,8 @@ class AistackStep {
         async getCrewJobs() { return pick(this, 'crew'); },
         async getPlaces() { return pick(this, 'places'); },
         async getRepos() { return pick(this, 'repos'); },
+        async getTrackers() { return pick(this, 'trackers'); },
+        async getRoles() { return [{ name: 'The owner', value: '' }, ...(await pick(this, 'roles'))]; },
       },
     };
   }
@@ -130,21 +161,26 @@ class AistackStep {
       kind,
       title: p('title', '') || undefined,
       workflow: this.getWorkflow().id,
+      workflow_name: this.getWorkflow().name,
+      node: this.getNode().name,
       execution: this.getExecutionId(),
       resume_url: this.evaluateExpression('{{ $execution.resumeUrl }}', 0),
     };
     if (kind === 'agent') Object.assign(body, { agent: p('agent'), brief: p('brief') });
     if (kind === 'build') Object.assign(body, { repo: p('repo'), brief: p('brief') });
+    if (kind === 'build' && p('item', '')) Object.assign(body, { item: p('item'), base: p('base', ''), target: p('target', ''), forge: p('forge', '') || undefined });
     if (kind === 'crew') body.job = p('job');
     if (kind === 'task') body.task = Number(p('task'));
     if (kind === 'notify') body.message = p('message');
     if (kind === 'ask') Object.assign(body, { question: p('question'), why: p('why', ''),
-      answers: String(p('answers', 'Yes, No')).split(',').map((s) => s.trim()).filter(Boolean) });
+      answers: String(p('answers', 'Yes, No')).split(',').map((s) => s.trim()).filter(Boolean), role: p('role', '') || undefined });
     if (kind === 'recall') Object.assign(body, { query: p('query'), scope: p('scope', '') });
     if (kind === 'remember') Object.assign(body, { note: p('note'), text: p('text'), evidence: p('evidence', ''),
       agent: p('agent', '') || undefined, repo: p('repo', '') || undefined });
     if (kind === 'command') Object.assign(body, { place: p('place'), command: p('command'), values: json(p('values', '{}'), {}) });
     if (kind === 'plan') body.steps = json(p('steps', '[]'), []);
+    if (kind === 'wait_item') Object.assign(body, { tracker: p('tracker'), key: String(p('key')), timeout_hours: Number(p('timeout_hours', 0)) });
+    if (kind === 'tracker') Object.assign(body, { tracker: p('tracker'), key: String(p('key')), write: p('write'), body: p('body', ''), from_step: p('from_step', '') || undefined });
     const got = await this.helpers.httpRequest({ method: 'POST', url: STEPS, body, json: true });
     if (!got || !got.ok) throw new Error(`the step service refused the step: ${(got && got.error) || 'no answer'}`);
     await this.putExecutionToWait(WAIT_INDEFINITELY);
@@ -153,7 +189,7 @@ class AistackStep {
 
   async webhook() {
     const answer = this.getRequestObject().body || {};
-    if (answer.status !== 'done') failOnResume(this, answer);
+    if (!succeeded(answer)) failOnResume(this, answer);
     return { workflowData: [[{ json: answer }]] };
   }
 }

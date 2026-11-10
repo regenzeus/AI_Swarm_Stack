@@ -1,6 +1,6 @@
 #!/bin/bash
 # wslhost-setup.sh <user> [root]: the wsl-host place's worker (GEN-22, docs/AI-STACK.md §7), set up once by the owner.
-# The worker runs the worker protocol (ops/fakeworker.py, the same rules as Windows' worker) as the Linux user that owns
+# The worker runs the worker protocol (ops/localworker.py, the same rules as Windows' worker) as the Linux user that owns
 # the deployment's licensed tools and repositories, which may not be the user the stack runs as. That user may have no
 # sudo, so this script, run once with sudo, makes the root folders that user owns and a system unit running as them.
 # Then the deployment names the place in its places.yaml:  places: {wsl-host: {root: <root>, user: <user>}}
@@ -21,7 +21,7 @@ After=network.target
 
 [Service]
 User=$U
-ExecStart=/usr/bin/python3 $REPO/ops/fakeworker.py $ROOT
+ExecStart=/usr/bin/python3 $REPO/ops/localworker.py $ROOT
 Restart=always
 RestartSec=5
 

@@ -20,7 +20,7 @@ gets what it needs under `environment:`, as `${NAME:?run via make}`.
 | `phoenix` | core | traces of the model calls and task runs |
 | `ollama` | core | the smoke test's tiny model, reachable only through LiteLLM with vk-smoke |
 | `n8n-db` | core | one-shot at each start: n8n's role and database in `postgres`, safe to repeat (WFL-02) |
-| `n8n` | core | the workflow pillar (n8n, DEC-51): schedules, triggers, waits and the canvas; on 127.0.0.1:5678 for the runner and tailscale serve's direct port only; its editor is inside the app (`N8N_PATH=/n8n/`, SSE live updates, Mission Control proxies it on `stepnet`, WFL-14); the stack's steps through Mission Control's step service on `stepnet` (WFL-01, WFL-05) |
+| `n8n` | core | the workflow pillar (n8n, DEC-51): schedules, triggers, waits and the canvas; on 127.0.0.1:5678 for the runner and tailscale serve's direct port only; its editor is inside the app (`N8N_PATH=/n8n/`, SSE live updates, Mission Control proxies it on `stepnet`, WFL-14); the stack's steps through Mission Control's step service on `stepnet` (WFL-01, WFL-05). Without the tailnet its addresses are the deployment's, on 127.0.0.1 (`N8N_EDITOR_URL`, `N8N_WEBHOOK_URL`, WFL-15), and customer data loads only the deployment's `N8N_NODES_INCLUDE` (WFL-17) |
 | `hermes` | apps | the assistant (Hermes Agent) with its profiles: main, scout, mission, curator |
 | `hermes-dashboard` | apps | Hermes' own admin UI, in Hermes' network namespace |
 | `gate-hermes-dashboard` | apps | the tailnet sign-in gate in front of the Hermes dashboard |
@@ -46,7 +46,9 @@ gets what it needs under `environment:`, as `${NAME:?run via make}`.
 
 ## Rules for every service
 
-- **Ports**: `127.0.0.1:<port>:<port>` only. Outside access is `tailscale serve` on Windows, never a public bind.
+- **Ports**: `127.0.0.1:<port>:<port>` only. Outside access is `tailscale serve` on Windows, never a public bind. The
+  data guard refuses a customer deployment while any port is on another address (WFL-18). Without the tailnet the app's
+  gate is `APP_GATE=local` (WFL-16).
 - **Limits**: every service has `mem_limit` and the shared logging block (`json-file`, 10 MB × 3). The Stack page
   shows memory against `mem_limit`, so set a realistic one. The WSL VM has 10 GB in total.
 - **Networks**: the least a service needs, one purpose per network (the comment next to each network says which).

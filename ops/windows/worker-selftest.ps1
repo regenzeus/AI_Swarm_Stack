@@ -1,5 +1,5 @@
 # The Windows worker's self-test (GEN-11): worker.ps1 on this PC against the protocol cases the stack's tests run on
-# ops/fakeworker.py, in a folder of its own under %TEMP% (nothing of C:\AIWorker is touched). It runs as whoever starts it,
+# ops/localworker.py, in a folder of its own under %TEMP% (nothing of C:\AIWorker is touched). It runs as whoever starts it,
 # so it checks the rules, not the account separation; worker-setup.ps1 runs it once more as aiworker.
 #   powershell -NoProfile -ExecutionPolicy Bypass -File worker-selftest.ps1 [-Worker <path of worker.ps1>]
 # Needs git and Python (py) on PATH. Exit 0 when every case holds; each case prints ok or FAILED with what came back.

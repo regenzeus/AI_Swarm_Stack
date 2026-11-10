@@ -36,7 +36,8 @@ def test_n8n_is_reached_only_from_this_machine():
     assert all(p.startswith("127.0.0.1:") for p in S["n8n"]["ports"])
     assert "ports" not in S["n8n-db"]
     assert CORE["networks"]["backend"].get("internal") is True and "backend" in S["n8n"]["networks"]
-    assert env("n8n")["N8N_EDITOR_BASE_URL"].startswith("https://") and env("n8n")["N8N_PROXY_HOPS"] == "1"
+    # the tailnet's https address by default; a deployment without it names its 127.0.0.1 one (WFL-15)
+    assert env("n8n")["N8N_EDITOR_BASE_URL"].startswith("${N8N_EDITOR_URL:-https://") and env("n8n")["N8N_PROXY_HOPS"] == "1"
 
 
 def test_n8n_uses_its_own_role_database_and_secrets():

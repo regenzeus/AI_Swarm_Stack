@@ -11,7 +11,7 @@
       ],
       "parameters": {
         "httpMethod": "POST",
-        "path": "toy-bug"
+        "path": "toy/bug"
       }
     },
     {

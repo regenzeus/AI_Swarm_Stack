@@ -34,6 +34,7 @@ file that lacks it and changes nothing else in the file.
 | `crew-skill-curator.json` | Crew: Skill curator | `0 4 * * 0` | `run/crew-skill-curator` | yes |
 | `crew-skill-keeper.json` | Crew: Skill keeper | `*/5 * * * *` | `run/crew-skill-keeper` | yes |
 | `crew-swarm-sync.json` | Crew: Swarm sync | `* * * * *` | `run/crew-swarm-sync` | yes |
+| `crew-tracker-poll.json` | Crew: Tracker poll (WFL-19; it asks the trackers every `poll_minutes`, 5 by default) | `* * * * *` | `run/crew-tracker-poll` | no: a deployment with trackers publishes it |
 | `crew-test-agent.json` | Crew: Test agent | `30 4 * * 2` | `run/crew-test-agent` | yes |
 | `crew-trial-rotation.json` | Crew: Trial rotation | `0 1 * * *` | `run/crew-trial-rotation` | no: waits for its switch |
 | `crew-upgrade-check.json` | Crew: Upgrade check | `0 9 01 * *` | `run/crew-upgrade-check` | yes |

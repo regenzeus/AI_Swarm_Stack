@@ -3,11 +3,15 @@
 A place is a worker of the worker protocol (ops/winjobs.py):
     wsl        the stack's own worker, a thread of the runner, as the stack's user (the root is under /srv/ai/state)
     wsl-host   the same protocol on the WSL host, run as the Linux user the deployment names as the owner of its tools
-               and repositories (ops/fakeworker.py made real by a unit the owner sets up once: ops/wslhost-setup.sh)
+               and repositories (ops/localworker.py as a unit the owner sets up once: ops/wslhost-setup.sh)
     windows    the Windows worker, pull-only (ops/winworker.py's folders)
 A job runs only when its kind is approved at that place, by the hash of its file: a pack's job kinds are copied to each
 place's jobs.d, and the owner approves each there (Needs you, class command, a security floor). Per-change values are
 the kind's typed parameters, checked by the stack before the request and by the worker again.
+
+A worker runs one job at a time (per lock); the others wait in its inbox. A job's run limit is its kind's own `minutes`
+(its file, up to a day), which the worker enforces. The stack gives a request up as not picked up only after it waited
+PICKUP_S while its worker was gone or idle: the time it waits behind a running job does not count (GEN-40).
 
 The deployment's places.yaml beside its deployment.env:
     places: {wsl-host: {root: /home/aiworker/worker, user: aiworker}}
@@ -34,7 +38,9 @@ LOCAL = ("wsl", "wsl-host")
 PLACES = (*LOCAL, "windows")
 ALIVE_S = 60                    # a worker writes its status every 10 s; older than this, it is not running
 LEASE_S = 60                    # a claim whose heartbeat is older than this was lost with its worker
-PICKUP_S = 300                  # limit: stops, a request no worker took within this is given up as not picked up
+# limit: stops, a request that waited this long while its worker was gone or idle is given up as not picked up; the
+# time it waits behind the worker's running job does not count (GEN-40)
+PICKUP_S = 300
 
 
 def _deployment():
@@ -70,12 +76,32 @@ class Place:
     def __init__(self, name, requests, answers):
         self.name, self.requests, self.answers = name, Path(requests), Path(answers)
 
-    def status(self):
+    def last_status(self):
+        """The worker's last status, however old, or None when it never wrote one."""
         try:
-            st = json.loads((self.answers / "status.json").read_text(encoding="utf-8-sig"))
+            return json.loads((self.answers / "status.json").read_text(encoding="utf-8-sig"))
         except (OSError, ValueError):
             return None
-        return st if time.time() - float(st.get("ts") or 0) < ALIVE_S else None
+
+    def status(self, now=None):
+        """The worker's status while it is alive (written within ALIVE_S), else None. The local worker's names the job it
+        runs (running) and how many requests wait behind it (queued)."""
+        st = self.last_status()
+        return st if st and (now or time.time()) - float(st.get("ts") or 0) < ALIVE_S else None
+
+    def waited(self, submitted, now=None):
+        """-> the seconds a request not yet taken has waited while its worker was gone or idle. Time behind a running
+        job does not count: alive and busy, the clock stands; gone while busy, it counts from when the worker was last
+        seen; idle, from its last job's end (idle_since, the local worker's; a worker without it counts from the
+        request)."""
+        now = now or time.time()
+        st = self.last_status()
+        if not st:
+            return now - submitted
+        ts, busy = float(st.get("ts") or 0), bool(st.get("busy") or st.get("running"))
+        if busy:
+            return 0.0 if now - ts < ALIVE_S else now - max(submitted, ts)
+        return now - max(submitted, float(st.get("idle_since") or 0))
 
     def submit(self, kind, values, files=None, spec=None):
         st = self.status()
@@ -114,9 +140,12 @@ class Place:
             if now - float(claim.get("beat") or 0) > LEASE_S:
                 return {"id": rid, "status": "lost", "error": f"the {self.name} worker stopped answering while it ran the job"}
             return {"id": rid, "status": "running"}
-        if submitted and now - submitted > PICKUP_S:
-            return {"id": rid, "status": "not picked up", "error": f"no {self.name} worker took the request within {PICKUP_S // 60} minutes"}
-        return {"id": rid, "status": "queued"}
+        if submitted and self.waited(submitted, now) > PICKUP_S:          # limit: stops, PICKUP_S above
+            return {"id": rid, "status": "not picked up",
+                    "error": f"no {self.name} worker took the request within {PICKUP_S // 60} minutes while it was idle or not running"}
+        st = self.status(now) or {}
+        return {"id": rid, "status": "queued", **({"behind": st["running"]} if st.get("running") else {}),
+                **({"queued": st["queued"]} if "queued" in st else {})}
 
     def artifacts(self, rid):
         d = self.answers / rid / "artifacts"
@@ -205,10 +234,10 @@ def handle(req, cfg=None):
 
 
 def worker_loop(stop, cfg=None):
-    """The wsl place's worker: a thread of the runner, the protocol's rules (ops/fakeworker.py), as the stack's user."""
-    import fakeworker as FK
+    """The wsl place's worker: a thread of the runner, the local worker (ops/localworker.py), as the stack's user."""
+    import localworker as LW
     cfg = cfg or config()
-    w = FK.Worker(cfg["wsl"]["root"])
+    w = LW.Worker(cfg["wsl"]["root"])
     for d in ("inbox", "outbox", "jobs.d", "repos", "scratch"):
         (Path(cfg["wsl"]["root"]) / d).mkdir(parents=True, exist_ok=True)
     while not stop.is_set():

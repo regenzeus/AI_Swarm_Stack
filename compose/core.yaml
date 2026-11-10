@@ -124,23 +124,29 @@ services:
       N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY:?run via make up}   # encrypts the credentials n8n stores
       N8N_PATH: /n8n/                     # WFL-14: the editor lives inside the app, under its address (images/mission-control/server.frames.py)
       N8N_PUSH_BACKEND: sse               # live updates as one plain HTTP answer, which the app passes through
-      N8N_EDITOR_BASE_URL: https://${PC_TAILNET_HOST:-localhost}:8447/n8n/   # the app's tailnet address (tailscale serve --https=8447)
+      # the app's address: its tailnet one (tailscale serve --https=8447), or http://127.0.0.1:8090/n8n/ in a deployment
+      # without the tailnet (N8N_EDITOR_URL in its deployment.env, WFL-15)
+      N8N_EDITOR_BASE_URL: ${N8N_EDITOR_URL:-https://${PC_TAILNET_HOST:-localhost}:8447/n8n/}
       # webhooks and resume URLs stay at n8n's root on its own tailnet port: programs have no Tailscale login for the
-      # app's gate, and the runner re-aims a resume URL's path at 127.0.0.1:5678 (ops/flows.py resume_target)
-      WEBHOOK_URL: https://${PC_TAILNET_HOST:-localhost}:8450/
-      N8N_PROXY_HOPS: "1"                 # tailscale serve in front (the app passes the browser's address on)
+      # app's gate, and the runner re-aims a resume URL's path at 127.0.0.1:5678 (ops/flows.py resume_target); without
+      # the tailnet they stay on this PC: http://127.0.0.1:5678/ (N8N_WEBHOOK_URL, WFL-15)
+      WEBHOOK_URL: ${N8N_WEBHOOK_URL:-https://${PC_TAILNET_HOST:-localhost}:8450/}
+      N8N_PROXY_HOPS: "1"                 # the app in front (it passes the browser's address on)
       GENERIC_TIMEZONE: Europe/Berlin
       TZ: Europe/Berlin
       N8N_DIAGNOSTICS_ENABLED: "false"    # WFL-03: nothing sent home
       N8N_VERSION_NOTIFICATIONS_ENABLED: "false"
       N8N_PERSONALIZATION_ENABLED: "false"
       NODES_EXCLUDE: '["n8n-nodes-base.executeCommand","n8n-nodes-base.localFileTrigger"]'   # commands only at places (GEN-22)
+      # WFL-17: customer data loads only the logic nodes and the AI Stack step (the deployment's N8N_NODES_INCLUDE, which
+      # ops/dataguard.py checks against N8N_NODES); empty (home): every node but the excluded ones
+      NODES_INCLUDE: ${N8N_NODES_INCLUDE:-}
       N8N_BLOCK_ENV_ACCESS_IN_NODE: "true"
       N8N_CUSTOM_EXTENSIONS: /home/node/custom   # WFL-06: the AI Stack step node (n8n/custom)
       EXECUTIONS_DATA_PRUNE: "true"
       EXECUTIONS_DATA_MAX_AGE: "720"      # limit: drops, an execution's data after 30 days (WFL-04); the run's result stays on Home
     volumes: [n8n:/home/node/.n8n, ../n8n/workflows:/workflows:ro, ../n8n/custom:/home/node/custom:ro]   # the repository's workflows (WFL-08) and the stack's node (WFL-06)
-    ports: ["127.0.0.1:5678:5678"]        # the runner (resume URLs) and tailscale serve's direct port 8450; the editor itself is in the app
+    ports: ["127.0.0.1:5678:5678"]        # the runner (resume URLs) and tailscale serve's direct port 8450 (none without the tailnet); the editor itself is in the app
     networks: [backend, flows, stepnet]   # stepnet: the step service, nothing else
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:5678/healthz || exit 1"]

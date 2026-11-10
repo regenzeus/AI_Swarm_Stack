@@ -28,7 +28,7 @@ Sustainable Use License).
 | The Conductor's plan graphs: step order, branches, fan-out, waiting for the owner | n8n workflows |
 | Temporal, its runner, bridge, cutover, codec | removed (DEC-52) |
 | Our block editor, Templates, Engine screens | n8n's editor and its executions |
-| Tracker polling (Jira, Forgejo) | n8n's Jira trigger, or our adapter called by n8n |
+| Tracker polling (Jira, Forgejo) | our adapters, called by the crew job tracker-poll on n8n's schedule; each event routed by the run register (§3.6) |
 
 **Stays, unchanged in what it does:** Hermes, the swarm, the coding agents and their sandbox, OpenCode, Claude Code
 tasks, LiteLLM and the subscriptions, the memory system (Hindsight, wikis, journals, the Memory Keeper's rules),
@@ -40,8 +40,8 @@ packs, places, artifacts and the record of a run.
 ## 3. Design
 
 ```
-                        n8n (core service, tailnet only)
-   triggers: schedule, webhook, Gmail, Telegram, Jira, calendar
+                        n8n (core service, tailnet or this PC only)
+   triggers: schedule, webhook (a tracker item's run too), Gmail, Telegram, calendar
    nodes:    the "AI Stack step" node (the block palette)  +  n8n's own nodes
                  |  POST /steps (kind, agent, brief, resume URL)
                  v
@@ -61,7 +61,7 @@ packs, places, artifacts and the record of a run.
 - Port 5678 on 127.0.0.1 only. The editor lives inside the app: the app serves it under `/n8n/` behind its own
   gate (`N8N_PATH=/n8n/`, live updates over plain HTTP streaming, `N8N_PUSH_BACKEND=sse`; WFL-14). n8n's own tailnet
   port (`tailscale serve --https=8450`) keeps webhooks and resume URLs at n8n's root and is the direct fallback when
-  the app is down. No public exposure.
+  the app is down. No public exposure. A deployment without the tailnet keeps all of it on the PC (§10).
 - Its own login: the owner creates the owner account once in the browser. Single sign-on is a paid feature.
 - Secrets `N8N_DB_PASSWORD` and `N8N_ENCRYPTION_KEY` in the sops file; n8n's stored credentials are encrypted with
   the key.
@@ -84,8 +84,9 @@ plus the change, shopping and desk steps) are exposed to n8n:
 ### 3.3 The stack's own node: the block palette (phase 2)
 One node, **AI Stack step** (`n8n/custom/AistackStep.node.js`, type `CUSTOM.aistackStep`, plain JavaScript loaded
 through `N8N_CUSTOM_EXTENSIONS`; the TypeScript package once planned is not needed). Its kind makes it one block; each
-sends its work to the step service and waits for the answer. An answer that is not `done` fails the block, so the run
-ends as an error in n8n's history. The Agent, Crew job, Place and Repository pickers read the stack's lists live
+sends its work to the step service and waits for the answer. An answer that failed, was refused or cancelled fails
+the block, so the run ends as an error in n8n's history; an answer with an outcome (a wait on an item) is a result. A
+question (`ask`) may name a role of the deployment (GEN-27): only its people may answer, and the answer says who did. The Agent, Crew job, Place and Repository pickers read the stack's lists live
 (`GET /catalog` on the step service: the agents of the stack and of the running packs, the crew jobs, the places with
 the commands approved there, the repositories the builder may change).
 
@@ -101,6 +102,9 @@ the commands approved there, the repositories the builder may change).
 | Remember (`remember`) | a lesson, fact, failure or skill; kept only after its check | the memory tool's write gate (MEM-28, MEM-35) | built |
 | Run command (`command`) | a job kind at a place (WSL, WSL host, Windows), only once approved there by its fingerprint | ops/domain/places.py (GEN-22) | built |
 | Run a plan (`plan`) | an improvised plan's steps as waves of agent steps; every step's output is the answer | the agent path, one task with a row per step | built |
+| Wait for the item (`wait_item`) | the run waits on its tracker item: outcome `reply` with the new comments from others, or `timeout` after `timeout_hours`; a timeout is a result the workflow branches on (an IF node), not a failure | the run register (§3.6, WFL-20) | built |
+| Write to the item (`tracker`) | one write: comment, summary, attach, link, transition or label; answers with the shadow or the live reference. `from_step` adds an earlier step's whole answer from the run register, so n8n never carries the text | trackers.write, shadow per kind (WFL-21) | built |
+| Coding change for an item (`build` with `item`, `base`, `target`) | the branch `ai/<item>-<slug>` starts at the base ref or tag; with FORGE_PUSH a draft pull request into the target branch, directly (DEC-54); review comments wake the run | builds onto that branch, forgework.publish (GEN-26) | built |
 | Report | what Home shows for each step, with the n8n run | the step service itself (WFL-10) | built, not a block |
 
 Every scheduled workflow also has a **Run now** trigger (WFL-13): `POST <n8n>/webhook/run/<file stem>` starts it at
@@ -110,13 +114,58 @@ once, while it is published.
 - Workflows live in `n8n/workflows/<name>.json`. A job exports changes made on the canvas (`n8n export:workflow
   --backup`) and commits them through the landing path; a deploy imports the repository's workflows
   (`n8n import:workflow --separate`). Built-in git sync is a paid feature and is not needed.
-- A work deployment keeps its workflows in its pack repository, never in the public one (SEC-22's terms).
+- A work deployment keeps its workflows in its pack repository, never in the public one (SEC-22's terms). The
+  approved commit's workflows are imported as `<pack>/<name>` under ids made from that name (GEN-43); an approval or
+  refusal syncs them at once, a deploy too. A canvas edit of a pack's workflow is a proposal: it goes to the pack's own
+  repository as a branch `ai/canvas-<date>` and a draft pull request where the pack's forge allows, and the approved
+  version is imported again; the edit runs once a commit with it is approved. A pack's workflow with a node outside
+  the deployment's `N8N_NODES_INCLUDE` (the data guard's list, §10) is refused at load (GEN-42). How a new commit meets the runs that wait: §11.
 
 ### 3.5 Temporal
 Not needed. n8n's waits plus the step service cover runs that wait for days; the tasks table plus steps that are
 safe to repeat cover restarts. Plans went back to the Conductor on 10 Nov 2026 at 10:40, and Temporal was removed the
 same day (DEC-52): its services and databases' setup, its upgrade path, its SDK, the graph runner, the bridge, the
 cutover, the codec, the graph template format and the block editor.
+
+### 3.6 Tracker items and the run register
+n8n cannot find a waiting execution by a business key, so the step service keeps the map: the **run register**
+(`ops/runreg.py`, `/srv/ai/missions/flows/register/`, WFL-23) is the stack's record of every run n8n drives, next to the
+tasks table. It holds each step's request, whole answer, files (artifact ids) and times by its n8n run; each tracker
+item's runs (with their executions) and the wait registered on it; and the ledger of routed events. n8n holds time and
+order only.
+
+**Routing** (WFL-19). The crew job **tracker-poll** runs on n8n's minute (`crew-tracker-poll.json`, inactive until a
+deployment with trackers publishes it) and asks the trackers every `poll_minutes` of the deployment's trackers.yaml (5
+by default). `trackers.poll()` and `forgework.poll_prs()` hand their events to the register's outbox before their
+cursors move; each event is then placed once by (tracker, key, the change's identity), also across a restart:
+
+| The item | The event | What happens |
+|---|---|---|
+| a run waits on it (`wait_item`) | brings new comments from someone else | the wait is answered: outcome `reply`, with the comments |
+| has no run yet | any | the item's workflow starts: `POST http://127.0.0.1:5678/webhook/item/<pack>/<name>` (n8n's root, never under `/n8n/`) with `{tracker, key, run, ref, comments}`; the item is marked first, so an event never starts two runs |
+| its run goes on, busy elsewhere | brings comments | recorded; the run's next `wait_item` takes them at once |
+| its run has ended (n8n's execution finished) | brings a new comment | a new run only when the tracker says `restart: on_comment` (default `never`) |
+| any | brings no new comments (the stack's own write changes the item too) | recorded; it never wakes a wait |
+
+An event n8n does not take (n8n down, the workflow not published) stays in the outbox for the next pass. A pull
+request's review comments come back the same way: its key is the item's (`<tracker>/<key>`).
+
+**The item's workflow** starts with a Webhook trigger, POST, path `item/<pack>/<name>` (the tracker's `workflow`), and
+answers at once with its execution: Response Data `={{ JSON.stringify({execution: $execution.id}) }}`, so the register
+knows the run's execution from its start (shown on n8n 2.44.7 on 10 Nov 2026). Without it the execution is learnt from
+the run's first wait or tracker write. Its waits loop: `wait_item` → IF `{{ $json.outcome }}` is `timeout` → a reminder
+(`tracker`, comment) → `wait_item` again.
+
+**Lean answers** (WFL-22). In a customer-class deployment (data.yaml `class: customer`) n8n gets the status, the
+outcome, the ids and references (task, step, build, pull request, artifacts, tracker writes) and a summary of at most
+300 characters; the whole answer stays in the register and the task's record. `n8n_answers: full` in data.yaml
+relaxes it. A step's brief still travels in n8n's execution as the workflow wrote it. A tracker write that should carry
+an earlier step's text names that step (`from_step`): the step service takes the whole answer from the register, so
+the text goes to the tracker (in shadow first) without passing through n8n.
+
+**A run's record** (GEN-31, WFL-23): `python3 ops/runreg.py export <execution> <zip>` (record.export_run): each step in
+order with its request and whole answer, its task's record, the files by artifact id and hash, the tracker writes with
+their shadow or live references, the pull request, and the workflow's shape from git or the pack cache.
 
 ## 4. The app with n8n
 
@@ -176,7 +225,7 @@ Of 858 requirement items, about 160 trace to code n8n touches. Most keep their i
 | Kept from the engine design (GEN-11, GEN-21, GEN-22, GEN-25 to GEN-27, GEN-29 to GEN-32) | 10 | Kept, the Temporal wording gone (DEC-52); each says what is not wired to n8n yet. The runner's own environment became PLT-37. |
 | Conductor and tasks (TSK-05, TSK-06, TSK-08, TSK-10, TSK-11, TSK-21, TSK-22, TSK-36, TSK-42, CRW-01, APP-11 …) | about 60 | Intent kept (every task has a page, steps survive restarts, headroom, one trace, one decision queue); "the Conductor" becomes "the task's workflow in n8n". TSK-21 and TSK-22 (everything through the Conductor) are retired at the end. |
 | Schedulers (crew timers, mission schedules, event rules) | about 70 | Mostly unchanged in intent; the trace moves from timers and the runner to `n8n/workflows/*.json`. |
-| New: workflows (WFL) | 13 | n8n in the core; its database and secrets; privacy; pruning; the step service; the stack's own node; Run now; Ask the owner through Needs you; workflows in git; one scheduler; Home shows n8n runs; Workflows in the menu; n8n's command node off. |
+| New: workflows (WFL) | 24 | n8n in the core; its database and secrets; privacy; pruning; the step service; the stack's own node; Run now; Ask the owner through Needs you; workflows in git; one scheduler; Home shows n8n runs; Workflows in the menu; n8n's command node off; and for the first work deployment (§12): n8n on the PC without the tailnet, the app's gate, the node allowlist, executions on the PC, tracker items, wait_item, tracker writes, lean answers, the run register, pack updates in place. |
 
 ## 6. Code: what changes
 
@@ -228,13 +277,159 @@ see (news, prices, filings, mail, the house, files, the calendar, finished tasks
 or a task's next run (TSK-21). Not on n8n yet: the weekly self-review's own clock inside the runner. n8n does not catch
 up a time the PC was off.
 
+**The first work deployment** (the CR of 10 Nov 2026, §12): built the same day. Tracker items start and wake runs
+through the run register, packs' workflows run in n8n, jobs of hours wait their turn at a place, and a customer-class
+deployment runs n8n on the PC with its logic nodes and lean answers. Its whole path is one test against stand-ins
+(GEN-44), and it ran once on a throwaway n8n 2.44.7.
+
 ## 9. Risks
 
 | Risk | Answer |
 |---|---|
 | An execution that dies mid-step is marked crashed | Long steps run in the runner, not in n8n; n8n only waits, and waits survive restarts |
 | Workflows live in n8n's database | Exported to git; deploys import from git |
-| The licence | Free for personal and internal business use; selling the stack as a product would need a commercial n8n licence |
+| The licence | Free for personal and internal business use; selling the stack as a product would need a commercial n8n licence. A deployment where the stack serves a third party (its work done for someone outside the deployment owner's own business) needs n8n's commercial licence: that is the deployment owner's decision. The core uses none of n8n's paid features, and the step service stays orchestrator-neutral |
 | A second sign-in | Tailnet only; one more login on the desk |
 | Disk on C: | The image is 1.8 GB; the disk guard (PLT-36) prunes the build cache when C: runs low |
 | n8n's own upgrades | Pinned by digest; upgraded in the update path after two weeks' age |
+
+## 10. A customer-class deployment
+
+A deployment whose data class is customer (`deployments/<name>/data.yaml`, GEN-14) has the tailnet off, like every
+feature that sends data out. `deployments/example-work` is the example. What n8n and the app do there:
+
+- **On the PC only (WFL-15).** n8n's editor address is the app's on the PC, `N8N_EDITOR_URL=http://127.0.0.1:8090/n8n/`,
+  and its webhooks and resume URLs are n8n's own, `N8N_WEBHOOK_URL=http://127.0.0.1:5678/`; port 5678 stays on
+  127.0.0.1, and there is no port 8450. Compose takes both from the deployment and falls back to the tailnet's
+  addresses (home). `python3 ops/deployment.py check` (run by `make up`) refuses a deployment without the tailnet whose
+  addresses are elsewhere.
+- **The app's gate follows the deployment (WFL-16).** With the tailnet the app admits a request by Tailscale's identity
+  header, as before. Without it (`APP_GATE=local`) no such header exists: the app is published on 127.0.0.1 only, so a
+  request that names the PC itself (`127.0.0.1`, `localhost`, `::1`, or the app's service name for the stack's own
+  checks) is the owner's, under one local login, and any Tailscale header it brings is dropped. Another host name is
+  refused, which keeps out a page of another site whose name was made to point at the PC. A write from another site is
+  refused under both gates (SEC-20). n8n and Phoenix inside the app work the same way; n8n is told the browser used
+  http, and its secure cookie holds on 127.0.0.1 and localhost (n8n's own rule; Safari is the exception). Open the app
+  at `http://127.0.0.1:8090` on the PC.
+- **Only the logic nodes (WFL-17).** n8n loads the schedule, webhook and manual triggers, wait, if, switch, merge,
+  loop (`splitInBatches`), set, no-op, sticky note, execute workflow and its trigger, respond to webhook, and the AI
+  Stack step: `N8N_NODES_INCLUDE` in the deployment, handed to n8n as `NODES_INCLUDE`. No HTTP Request, Code, Jira,
+  Bitbucket or mail node: the work reaches systems only through the stack's steps, their approvals and shadow mode.
+  The list is `N8N_NODES` in `ops/dataguard.py`; the data guard refuses a customer deployment with no list or a node
+  off it. `dataguard.n8n_nodes()` gives the code the deployment's list (a tuple of node types, or None when n8n loads
+  every node, as at home), so a pack's workflow with a node off it is refused. Checked on a throwaway n8n 2.44.7 on
+  10 Nov 2026: with the example's list it loaded those 15 node types and no other (n8n's include rule also leaves out
+  every node of a package the list does not name, the AI nodes among them).
+- **Execution data stays on the PC (WFL-18).** n8n keeps every node's output in its database, and an agent step's
+  whole text is its output. Its database is in the stack's Postgres (volume `pgdata`) and its home is the volume `n8n`;
+  both are local volumes, every published port is on 127.0.0.1, and n8n sends no diagnostics or version pings. They
+  leave the PC only through the backup (feature `home`, `ops/backup.sh`) and its off-site copy (`offsite`), which
+  customer data has off: the data guard checks all of it (`ops/dataguard.py check`, `stays_local`).
+
+## 11. Pack updates and waiting runs (N8, tested 10 Nov 2026)
+
+A pack's workflows run in n8n (GEN-43, `ops/n8n_sync.py sync_packs`), and its runs may wait days or weeks for an
+answer. Before building on that we tested, on a throwaway n8n 2.44.7 (the pinned image, its own Postgres on a private
+network, never the live one), what n8n does to a waiting execution when its workflow changes under it. The workflow:
+a webhook, a Set node, a Wait node resumed by its webhook, and a Set node after it that writes its version. Each case
+started a run, let it wait, then changed the workflow the way `ops/n8n_sync.py` does (import under the same id,
+publish, restart) and resumed the run through its resume URL.
+
+| Case | What changed while the run waited | The resumed run |
+|---|---|---|
+| a | the node after the wait changed (v1 to v2) | succeeded, on v1 |
+| b1 | the node it waits on renamed | succeeded, on v1 |
+| b2 | the node it waits on removed | succeeded, on v1 |
+| c | the workflow unpublished | succeeded, on v1 (the resume URL answered 404 for the first two seconds after the restart, then 200) |
+| d | the workflow unpublished and archived | succeeded, on v1 |
+| e | a trigger 0 s after import, publish and restart | the new run started on the *previous* version; once n8n had settled (6 s later) new runs started on the new one |
+| f | executions backdated 40 days, pruning at 1 hour and 1 execution, every minute | the five finished runs were soft-deleted after one minute and then removed; the two waiting runs stayed and resumed, each succeeding |
+| f | the container removed and recreated with other settings (time zone, log level, pruning) on the same database | both waiting runs survived and resumed |
+
+**Why:** n8n keeps a copy of the workflow with each execution (`execution_data.workflowData`, with its
+`workflowVersionId`) and resumes from that copy, not from the workflow as it is now. Pruning soft-deletes only
+executions whose status is not `new`, `running` or `waiting` (`softDeletePrunableExecutions` in n8n's execution
+repository), so the 720-hour age (WFL-04) never removes a run that still waits. Publishing in n8n 2.44 goes through a
+publication outbox that the server works off after it starts; until then the version published before still answers
+the workflow's triggers (case e: 3 to 14 s in our runs).
+
+**The rules (WFL-24, GEN-43):**
+- A pack's new commit is imported **in place**, under the same ids. No versioned copies: a run waiting in the old
+  commit's version finishes on that version, whatever the new one renamed or removed, and runs that start after the
+  import take the new version. The same holds for the stack's own workflows on a deploy.
+- A waiting run of an old version calls the step service with the agents and job kinds that run *now* (the pack's new
+  commit): its workflow is old, its agents are current. A pack update that removes an agent or job kind a waiting run
+  still needs makes that step fail with the step service's reason; cancel such runs in n8n before approving.
+- A pack refused or removed has its workflows unpublished: no new run starts, and its waiting runs still finish. To
+  stop them, cancel them in n8n's executions.
+- For a few seconds after a sync's restart a trigger can still start a run on the previous approved version; that run
+  is complete and consistent, only older. Both versions were approved by the owner.
+- Pruning is safe for long waits; only finished runs age out.
+- Not tested: an n8n upgrade to another minor version with runs waiting. No second pinned n8n image was on the machine,
+  and pulling one (about 1.8 GB) was outside this change; the container was recreated with changed settings on the
+  same database instead (case f). The next n8n upgrade must repeat case f with the new image before it lands.
+
+The sync itself ran against the same throwaway n8n, with the AI Stack step node loaded: approving the toy pack
+imported `toy/bug`, `toy/ticket` and `toy/triage` under ids starting with `pack` and `item/toy/ticket` answered 200; an edit
+of `toy/ticket` left in n8n went to the toy's own repository as `ai/canvas-2026-11-10` and the next sync put the
+approved version back; removing the pack from packs.txt unpublished all three and the webhook answered 404.
+
+## 12. The first work deployment (CR of 10 Nov 2026)
+
+The CR asked the stack to carry a customer-class deployment on a work PC: a tracker item starts a run, agents triage
+it and ask the reporter, the run waits days for the answer with reminders, a licensed tool runs for hours at the WSL
+host, a coder makes a change from a tag, a draft pull request goes to the forge. It added nothing about that domain to
+the core: the domain comes as a pack, and everything here is tested with the toy pack and stand-ins. The design, in
+one place:
+
+- **The run register is the run's truth; n8n holds time and order** (DEC-54, WFL-23, §3.6). What a step asked,
+  answered and made is in the register and the task's record; a run's zip is made from them and the workflow's shape
+  from git or the pack cache, never from n8n's API.
+- **The data class sets up n8n** (§10). Customer data: no tailnet, so n8n and its editor are on 127.0.0.1; only the
+  logic nodes and the AI Stack step, from the data guard's one list (`dataguard.n8n_nodes()`, which the pack check
+  reads too); executions on the PC; lean answers (status, ids, a summary). A tracker write that should carry an
+  earlier step's text takes it from the register (`from_step`), so the text never passes through n8n.
+- **The outside-write rule.** Every write to a system outside the stack waits in shadow per kind until the owner lets
+  that kind go live (GEN-25, WFL-21). The one stated exception is a draft pull request (DEC-54): a change for an item,
+  with FORGE_PUSH, and a canvas edit sent back to its pack go out as drafts directly; nobody uses a draft until they
+  merge it, and the stack never merges.
+- **Pack workflows** (GEN-42, GEN-43, §3.4): the approved commit's workflows are in n8n as `<pack>/<name>`; a canvas
+  edit is a proposal to the pack's repository; a new commit is imported in place and a waiting run finishes on its
+  version (the N8 rule, §11).
+- **Places for jobs of hours** (GEN-40): one job at a time per worker, a queued request never given up while the
+  worker is busy, a job kind's own run limit.
+
+**The end-to-end test** (GEN-44, `tests/test_work_deployment.py`, in the suite): a stand-in n8n runs the toy's item
+workflow node by node as n8n does, around the real step service and run register, a stand-in tracker, forge and
+builder, the local worker in a temp folder, and example-work's data class and node list. The item starts one run (also
+when its event comes twice), the triage's whole text is commented in shadow, the stack's own comment does not wake the
+wait, the wait times out to a reminder and a second wait, a reply wakes it, the toy tool runs at wsl-host with another
+run's job queued behind it, a draft pull request goes to the stand-in forge from tag `v1.0`, a review comment wakes the
+run, the summary is written in shadow and the run ends. The runner side is reloaded from disk mid-wait and mid-job,
+n8n restarted mid-wait and mid-job; nothing is lost and each job is submitted once. n8n gets lean answers only, and the
+zip holds every step. A second test greps the stand-in domain's names over `ops/`, `images/`, `compose/`, `config/` and
+`n8n/` and finds nothing.
+
+**The same flow on a real n8n** (10 Nov 2026): a throwaway n8n 2.44.7 (the pinned digest) with its own Postgres on a
+private network, the AI Stack step node and example-work's node list (`NODES_INCLUDE`), the toy's item workflow
+prepared and imported as `ops/n8n_sync.py` does (its tool's 600 s shortened to 20 s), and the step service's real
+runner code (`ops/flows.py`, `ops/runreg.py`, the domain modules, the local worker) in a throwaway container on the same
+network under the name `mission-control`, with the stand-ins above and a fixed triage in place of the agent's model
+call. What happened:
+
+| Step | Result |
+|---|---|
+| The item's first event, 1 s after n8n's restart | the webhook answered 404 (the publication not yet worked off, §11 case c), so the event stayed in the outbox; the next pass, 3 s later, started the run |
+| The start | `item/toy/ticket` answered `{"execution": "1"}` (Response Data), so the register knew the run at once; the same change handed on again: `seen`, still one execution |
+| Triage, comment | the agent step's answer went to n8n lean; the comment in shadow held the triage's whole text, taken from the register |
+| The stack's own comment | `recorded`; the wait stayed |
+| n8n restarted mid-wait | back in 5 s; the waiting run was there |
+| 72 hours later (the register's clock moved on) | the wait answered `timeout`; the IF node took the reminder branch (a comment in shadow) and a second wait |
+| The reporter's reply | `woke`; the IF node took the other branch to the toy tool |
+| The toy tool at wsl-host, another run's job queued behind it, n8n restarted mid-job | both jobs done, one after the other (20 s apart); the answer reached n8n after its restart |
+| The change | a draft pull request `ai/TOY-7-make-the-change` into `release/1` on the stand-in forge |
+| The review comment | `woke` the wait for the review; the summary written in shadow; execution 1 ended `success` |
+| n8n's database | one execution, `success`; its data holds a lean answer and none of the triage's last line (the register holds it whole) |
+| The run's zip | agent, tracker, wait_item, tracker, wait_item, command, build, wait_item, tracker, with the three shadow writes |
+
+All containers, the network and the volumes were removed afterwards; the live stack was not touched.

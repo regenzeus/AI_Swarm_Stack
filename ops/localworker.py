@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
-"""The Windows worker's protocol in plain Python (GEN-11, docs/PLATFORM.md §6): the stack's tests and CI run it in place of
-ops/windows/worker.ps1, over the same folder layout and by the same rules (ops/winjobs.py). Not for real work: it runs
-as whoever starts it, with none of the account separation that is the real worker's boundary.
+"""The local worker: the worker protocol (GEN-11, GEN-22, docs/PLATFORM.md §6) in plain Python, over the same folder
+layout and by the same rules (ops/winjobs.py) as Windows' worker (ops/windows/worker.ps1). It runs the local places'
+jobs: the wsl place as a thread of the runner (ops/domain/places.py worker_loop), the wsl-host place as a unit of the
+Linux user the deployment names (ops/wslhost-setup.sh). The stack's tests and CI also run it in place of worker.ps1.
+It runs as whoever starts it: the account separation is the unit's, not this file's.
 
-    python3 ops/fakeworker.py <root> [--once]      root holds inbox/, outbox/, jobs.d/, approved.json, repos/, scratch/
+    python3 ops/localworker.py <root> [--once]     root holds inbox/, outbox/, jobs.d/, approved.json, repos/, scratch/
+
+One job at a time, the oldest request first; the others wait in the inbox, and its status says so, so the stack never
+gives up a request that is only queued behind a job of hours (GEN-40).
 
 The worker's side of the protocol:
   inbox/<id>/request.json     {id, kind, values, at} and the request's files (a patch)   (the broker's copy of the stack's)
@@ -11,7 +16,9 @@ The worker's side of the protocol:
   outbox/<id>/progress.jsonl  one line per step: {at, step, of, exit}
   outbox/<id>/result.json     {id, kind, status: done|failed|refused, error, steps: [{n, exit, seconds}], artifacts, ended}
   outbox/<id>/artifacts/      the files the kind collects, and log.txt
-  outbox/status.json          {ts, kinds: {kind: {approved, why, sha, retry, lock}}, busy: {lock: id}}"""
+  outbox/status.json          {ts, kinds: {kind: {approved, why, sha, retry, lock, minutes}}, busy: {lock: id},
+                               running: {id, kind, since} or null, queued: requests waiting, idle_since: when its last
+                               job ended (0 before its first); written at every pass and every BEAT_S while a job runs"""
 import json
 import os
 import shutil
@@ -25,7 +32,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import winjobs as WJ  # noqa: E402
 
 BEAT_S = 10
-STALE_S = 3600                 # limit: refuses, a request older than this was left from before a sleep: nobody waits for it
+# limit: refuses, a request that waited this long while the worker was idle or gone was left from before a sleep: nobody
+# waits for it (the time it waited behind this worker's own jobs does not count)
+STALE_S = 3600
 # limit: drops, a job's log past this comes back as its end, with a marker saying how much was cut
 LOG_MAX = 200_000
 # limit: drops, artifacts past this many MB are not copied back; the result names them as left out
@@ -48,6 +57,9 @@ class Worker:
         self.repos, self.scratch = self.root / "repos", self.root / "scratch"
         self.beat_s = beat_s
         self.busy = {}
+        self.running = None                              # {id, kind, since} of the job it runs
+        self.idle_since = 0.0                            # when its last job ended; 0 before its first (a restart counts all)
+        self._saving = threading.Lock()                  # the pass and the job's beat both write status.json
 
     def approvals(self):
         try:
@@ -61,21 +73,25 @@ class Worker:
 
     def status(self):
         kinds, appr = WJ.load_kinds(self.jobs), self.approvals()
-        save(self.outbox / "status.json", {
-            "ts": int(time.time()),
-            "kinds": {n: {"approved": WJ.approved(n, kinds, appr) is None, "why": WJ.approved(n, kinds, appr), "sha": sha,
-                          "retry": bool(k.get("retry")), "lock": k.get("lock") or n} for n, (k, sha, _p) in kinds.items()},
-            "busy": dict(self.busy)})
+        with self._saving:
+            save(self.outbox / "status.json", {
+                "ts": round(time.time(), 1),             # to the tenth: the stack's clock for a queued request reads it
+                "kinds": {n: {"approved": WJ.approved(n, kinds, appr) is None, "why": WJ.approved(n, kinds, appr), "sha": sha,
+                              "retry": bool(k.get("retry")), "lock": k.get("lock") or n, "minutes": k.get("minutes")}
+                          for n, (k, sha, _p) in kinds.items()},
+                "busy": dict(self.busy), "running": self.running, "queued": len(self.waiting()), "idle_since": self.idle_since})
 
-    def take(self):
-        """The oldest request of the inbox that has no answer folder yet, or None. The worker may only read the inbox (the
+    def waiting(self):
+        """The inbox's requests that have no answer folder yet, oldest first. The worker may only read the inbox (the
         broker writes and empties it), so an answer folder is what marks a request as taken."""
         if not self.inbox.is_dir():
-            return None
-        for d in sorted((d for d in self.inbox.iterdir() if d.is_dir()), key=lambda d: d.stat().st_mtime):
-            if WJ.ID.fullmatch(d.name) and not (self.outbox / d.name).exists():
-                return d
-        return None
+            return []
+        return [d for d in sorted((d for d in self.inbox.iterdir() if d.is_dir()), key=lambda d: d.stat().st_mtime)
+                if WJ.ID.fullmatch(d.name) and not (self.outbox / d.name).exists()]
+
+    def take(self):
+        """The oldest waiting request, or None."""
+        return next(iter(self.waiting()), None)
 
     def refuse(self, rid, kind, why):
         save(self.outbox / rid / "result.json", {"id": rid, "kind": kind, "status": "refused", "error": why, "steps": [], "artifacts": [],
@@ -90,8 +106,8 @@ class Worker:
         kind_name = str(req.get("kind") or "")
         if req.get("id") != rid:
             return self.refuse(rid, kind_name, "the request's id is not its folder's")
-        if time.time() - float(req.get("at") or 0) > STALE_S:
-            return self.refuse(rid, kind_name, "the request waited over an hour, so it was dropped")
+        if time.time() - max(float(req.get("at") or 0), self.idle_since) > STALE_S:   # limit: refuses, STALE_S above
+            return self.refuse(rid, kind_name, "the request waited over an hour while no job ran, so it was dropped")
         kinds = WJ.load_kinds(self.jobs)
         why = WJ.approved(kind_name, kinds, self.approvals())
         if why:
@@ -110,12 +126,15 @@ class Worker:
         scratch.mkdir(parents=True)
         lock = k.get("lock") or kind_name
         self.busy[lock] = rid
+        self.running = {"id": rid, "kind": kind_name, "since": int(time.time())}
         stop = threading.Event()
         save(out / "claimed.json", {"id": rid, "at": int(time.time()), "beat": time.time()})
+        self.status()
 
-        def beat():
+        def beat():                                      # the lease and the status stay fresh for a job of hours
             while not stop.wait(self.beat_s):
                 save(out / "claimed.json", {"id": rid, "at": int(time.time()), "beat": time.time()})
+                self.status()
         threading.Thread(target=beat, daemon=True).start()
         builtins = {"scratch": str(scratch), "repos": str(self.repos), "out": str(out / "artifacts"),
                     "patch": str((req_dir / values["patch"]).resolve()) if "patch" in values else ""}
@@ -158,10 +177,11 @@ class Worker:
             dest = arts / f.relative_to(scratch).as_posix().replace("/", "__")
             shutil.copyfile(f, dest)
             names.append(dest.name)
-        self.busy.pop(lock, None)
         shutil.rmtree(scratch, ignore_errors=True)
         save(out / "result.json", {"id": rid, "kind": kind_name, "status": status, "error": error, "steps": steps, "artifacts": names,
                                    "left_out": left, "ended": int(time.time())})
+        self.busy.pop(lock, None)
+        self.running, self.idle_since = None, time.time()
 
     def once(self):
         self.status()

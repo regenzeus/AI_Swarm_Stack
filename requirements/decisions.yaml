@@ -347,3 +347,12 @@ items:
     and connections, and what is not the stack''s moves to where it belongs; the connection state says what is true.
     Every old address keeps landing somewhere sensible.', sources: ['owner 2026-11-10: I want the UX polished and
       updated and no trace of technical debt.', docs/N8N-MIGRATION.md]}
+- {id: DEC-54, date: '2026-11-10', title: 'A draft pull request goes out directly; the step service is the run register',
+    decision: 'For the first work deployment (the CR of 10 Nov 2026), the owner: "Do it as the CR says directly." So: with
+    FORGE_PUSH a coding change for an item is pushed and opened as a draft pull request at once, with no shadow step; it
+    is the one stated exception to shadow mode for the stack''s outside writes (GEN-25), because a draft changes nothing
+    people use until they merge it, and the stack never merges. And the lead''s design, accepted by the owner: the step
+    service is the run register (WFL-23), holding the item-to-run map, the event ledger and every step''s request,
+    answer, files and times; a run''s record is made from it, and n8n gives time and order only, never through its
+    internal API.', sources: ['owner 2026-11-10: Do it as the CR says directly. Update our design, requirements, everything.',
+      docs/N8N-MIGRATION.md]}

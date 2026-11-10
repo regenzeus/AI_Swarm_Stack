@@ -17,7 +17,10 @@ def test_the_runner_environment_is_pinned_checksummed_and_follows_its_lock():
     lock = (ROOT / "ops/runner-requirements.lock").read_text()
     locked, req = pins(lock), pins((ROOT / "ops/runner-requirements.txt").read_text())
     assert req and all(locked.get(k) == v for k, v in req.items())                         # the lock holds the pins
-    assert lock.count("--hash=sha256:") >= len(locked)
+    blocks = re.split(r"\n(?=[a-z0-9_.-]+==)", lock.strip())
+    assert len(blocks) == len(locked) and all("--hash=sha256:" in b for b in blocks)     # every package it pulls in, hashed
+    assert "atlassian-python-api" in req and "requests" in locked                          # the Jira tracker's client and what it needs
+    assert '--exclude-newer "$aged"' in sh and "date -u -d '14 days ago'" in sh           # no release younger than the pin rule
     tests = pins((ROOT / "tests/requirements.txt").read_text())
     assert all(tests[k] == v for k, v in req.items() if k in tests)                       # the tests run on the same pins
     unit = (ROOT / "ops/systemd/missions.service").read_text()

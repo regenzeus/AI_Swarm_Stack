@@ -21,15 +21,24 @@ still copied to each worker and approved there by their hash, so a command never
 
 Names: a pack's name is letters, digits and dashes; a pack named like a core agent or another pack is refused with the
 reason, and so is a pack whose manifest names another pack. Everything it brings is namespaced by its name, so packs
-cannot clash with each other or with the core. A workflow may not use n8n's command node: commands run only at places,
-approved by their hash (GEN-22, WFL-03).
+cannot clash with each other or with the core; a workflow's webhooks listen under item/<pack>/ or <pack>/ only. A
+workflow may not use n8n's command node: commands run only at places, approved by their hash (GEN-22, WFL-03). A
+deployment whose n8n loads only listed nodes (N8N_NODES_INCLUDE, read by the data guard: dataguard.n8n_nodes(), WFL-17)
+refuses a workflow with any other node, with the reason (GEN-42).
+
+In n8n (GEN-43, ops/n8n_sync.py sync_packs): the running commit's workflows are imported, each under an id made from its
+name, published or not as its file says; an approval or a refusal syncs at once, a deploy too. An edit on the canvas is
+a proposal, never what runs: it goes to the pack's own repository as a branch (ai/canvas-<date>) and, where the pack's
+forge allows, a draft pull request (propose), and the approved version is imported again. It runs once a commit with
+it is approved.
 
     entries(path)        packs.txt -> [{name, source, commit}]
     load()               -> {"packs": [active pack], "pending": [decision], "refused": [{name, commit, why}]}
     view(loaded)         the same for the app's state: no folders or file paths
-    approve(name, commit, who) / refuse(name, commit, who, why)
+    approve(name, commit, who) / refuse(name, commit, who, why)   a refusal also withdraws that commit's approval
     plugin_args(pack)    Claude Code's arguments for a step of one of its agents
-    handle(req)          the app's actions: pack_approve, pack_refuse
+    handle(req)          the app's actions: pack_approve, pack_refuse (each syncs n8n)
+    propose(pack, files) canvas edits -> a branch and a draft pull request in the pack's repository
 """
 import datetime as dt
 import json
@@ -53,11 +62,24 @@ HEX = re.compile(r"[0-9a-f]{7,40}")
 DIFF_CHARS = 60000              # cap: preview, the diff shown with a decision; the whole is in the pack's repository
 GIT_S = 300                     # limit: stops, a clone or fetch of a pack that takes longer fails with the reason
 NO_NODES = ("n8n-nodes-base.executeCommand", "n8n-nodes-base.localFileTrigger")   # off in the stack's n8n (WFL-03)
+WEBHOOK = "n8n-nodes-base.webhook"
 
 
 def _deployment():
     import deployment as D
     return D.chosen()
+
+
+def n8n_nodes(values=None):
+    """The node types the deployment's n8n loads, as a set, from the data guard's one reading of it
+    (dataguard.n8n_nodes: N8N_NODES_INCLUDE, handed to n8n as NODES_INCLUDE), or None: n8n loads its nodes less
+    NO_NODES. A line that is no JSON list of node types -> ValueError with the data guard's reason."""
+    try:
+        import dataguard as DG
+        got = DG.n8n_nodes(values)
+    except SystemExit as e:                          # the data guard's refusal (or no data.yaml), as a pack's problem
+        raise ValueError(str(e)) from None
+    return None if got is None else set(got)
 
 
 def packs_txt():
@@ -125,8 +147,11 @@ def approve(name, commit, who, path=None):
 
 
 def refuse(name, commit, who, why="", path=None):
+    """A refusal also withdraws the commit's approval: its workflows leave n8n, and the pack's last other approved
+    commit runs, if any."""
     d = _approvals(path)
     rec = d.setdefault(name, {"approved": [], "refused": []})
+    rec["approved"] = [a for a in rec["approved"] if a["commit"] != commit]
     if not any(r["commit"] == commit for r in rec["refused"]):
         rec["refused"].append({"commit": commit, "who": who, "at": _now(), "why": TC.cut(str(why or ""), 300)})   # cap: store
     _write(d, path)
@@ -209,10 +234,34 @@ def _front(text):
         return {}, m.group(2)
 
 
-def read(name, commit, folder):
-    """A pack's contents, each named in its namespace, and what is wrong with it."""
+def _flow_problems(name, nodes, allow):
+    """What keeps a pack's workflow out of n8n: a node n8n leaves off, a node off the deployment's allowlist, a webhook
+    outside the pack's namespace."""
+    types = {str(n.get("type")) for n in nodes if isinstance(n, dict)}
+    banned = sorted(types & set(NO_NODES))
+    if banned:
+        return f"it uses {', '.join(banned)}, which the stack's n8n leaves off; a command runs at a place"
+    off = sorted(types - allow) if allow is not None else []
+    if off:
+        return f"it uses {', '.join(off)}, which this deployment's n8n does not load (N8N_NODES_INCLUDE in its deployment.env)"
+    paths = sorted(str((n.get("parameters") or {}).get("path") or "") for n in nodes if isinstance(n, dict) and n.get("type") == WEBHOOK)
+    outside = [p for p in paths if not p.startswith((f"item/{name}/", f"{name}/"))]
+    if outside:
+        return f"its webhook path {outside[0]!r} is outside the pack's namespace (item/{name}/... or {name}/...)"
+    return ""
+
+
+def read(name, commit, folder, allow="deployment"):
+    """A pack's contents, each named in its namespace, and what is wrong with it. allow: the node types the
+    deployment's n8n loads (None: all but NO_NODES)."""
     folder = Path(folder)
     problems = []
+    if allow == "deployment":
+        try:
+            allow = n8n_nodes()
+        except ValueError as e:                      # no workflow of the pack loads until the deployment's list is right
+            allow = frozenset()
+            problems.append(f"workflows: {e}")
     try:
         man = json.loads((folder / ".claude-plugin/plugin.json").read_text())
     except (OSError, ValueError) as e:
@@ -260,11 +309,11 @@ def read(name, commit, folder):
         if not wname.startswith(f"{name}/"):
             problems.append(f"workflows/{f.name}: a pack's workflow is named {name}/<something>, not {wname!r}")
             continue
-        banned = sorted({str(n.get("type")) for n in nodes if isinstance(n, dict) and n.get("type") in NO_NODES})
-        if banned:
-            problems.append(f"workflows/{f.name}: it uses {', '.join(banned)}, which the stack's n8n leaves off; a command runs at a place")
+        bad = _flow_problems(name, nodes, allow)
+        if bad:
+            problems.append(f"workflows/{f.name}: {bad}")
             continue
-        workflows.append({"name": wname, "path": str(f), "nodes": len(nodes)})
+        workflows.append({"name": wname, "path": str(f), "nodes": len(nodes), "active": bool(w.get("active"))})
     try:
         mcp = sorted((json.loads((folder / ".mcp.json").read_text()).get("mcpServers") or {}))
     except (OSError, ValueError):
@@ -313,7 +362,7 @@ def load(txt=None, base=None, approvals=None):
         if runs:
             try:
                 _, rf = checkout({**e, "commit": runs}, base)
-                packs.append(read(name, runs, rf))
+                packs.append({**read(name, runs, rf), "source": e["source"]})
             except (ValueError, OSError, subprocess.SubprocessError) as x:
                 refused.append({"name": name, "commit": runs, "why": str(x)})
     return {"packs": packs, "pending": pending, "refused": refused}
@@ -397,15 +446,75 @@ def plugin_args(pack, agent=None, egress="deployment"):
     return args
 
 
+def sync_n8n():
+    """n8n made to hold the running commits' workflows (ops/n8n_sync.py sync_packs). -> what changed, in lines."""
+    import n8n_sync as NS
+    return NS.sync_packs(load())
+
+
 def handle(req, approvals=None):
+    """The queue's answers. Each one syncs n8n at once (an approved commit's workflows arrive, a refused one's go); when
+    n8n cannot be reached the decision still stands and the next deploy syncs it."""
     a = req.get("action")
     name, commit, who = str(req.get("name") or ""), str(req.get("commit") or ""), str(req.get("who") or "owner")
     if not NAME.fullmatch(name) or not HEX.fullmatch(commit):
         return {"ok": False, "error": "name a pack and its commit"}
     if a == "pack_approve":
         approve(name, commit, who, approvals)
-        return {"ok": True, "approved": commit}
-    if a == "pack_refuse":
+        out = {"ok": True, "approved": commit}
+    elif a == "pack_refuse":
         refuse(name, commit, who, req.get("why"), approvals)
-        return {"ok": True, "refused": commit}
-    return {"ok": False, "error": f"unknown pack action {a}"}
+        out = {"ok": True, "refused": commit}
+    else:
+        return {"ok": False, "error": f"unknown pack action {a}"}
+    try:
+        out["n8n"] = sync_n8n()
+    except Exception as x:                           # n8n down or a pack's repository away: the decision stands, a deploy syncs
+        out["n8n"] = [f"n8n not synced yet: {type(x).__name__}: {TC.cut(str(x), 300)}"]   # cap: preview, the reason
+    return out
+
+
+# ---------- canvas edits go back to the pack ----------
+def propose(pack, files, forge=None, when=None):
+    """Canvas edits of a running pack's workflows -> a branch ai/canvas-<date> in the pack's own repository (never the
+    stack's), from the commit that runs (or on top of that day's branch), and a draft pull request into the pack's main
+    branch where its forge knows the repository and holds a token. files: {path in the pack: text}.
+    -> {"branch", "commit", "pr"}; nothing runs from it until a commit with it is approved."""
+    day = (when or dt.datetime.now()).strftime("%Y-%m-%d")
+    branch = f"ai/canvas-{day}"
+    bare = cache() / f"{pack['name']}.git"
+    src = pack["source"]
+    if src and not re.match(r"^[a-z]+://|^[\w.-]+@[\w.-]+:", src):
+        src = str(Path(src).expanduser().resolve())
+    target = _git("symbolic-ref", "--short", "HEAD", cwd=bare).strip() or "main"
+    with tempfile.TemporaryDirectory(prefix=f"{pack['name']}-canvas-") as tmp:
+        _git("clone", "--quiet", "--no-checkout", str(bare), tmp)
+        try:
+            _git("fetch", "--quiet", src, f"refs/heads/{branch}", cwd=tmp)
+            start = "FETCH_HEAD"                     # that day's branch exists: the edit goes on top of it
+        except ValueError:
+            start = pack["commit"]
+        _git("checkout", "--quiet", "-B", branch, start, cwd=tmp)
+        for rel, text in sorted(files.items()):
+            p = Path(tmp) / rel
+            p.parent.mkdir(parents=True, exist_ok=True)
+            p.write_text(text, encoding="utf-8")
+        _git("add", "--", *sorted(files), cwd=tmp)
+        if not _git("status", "--porcelain", cwd=tmp).strip():
+            return {"branch": branch, "commit": "", "pr": None}
+        names = ", ".join(sorted(Path(r).stem for r in files))
+        _git("-c", "user.name=AI Stack", "-c", "user.email=ai-stack@localhost", "commit", "--quiet", "-m",
+             f"Canvas edit of {names}\n\nMade on n8n's canvas; it runs once a commit with it is approved.", cwd=tmp)
+        head = _git("rev-parse", "HEAD", cwd=tmp).strip()
+        _git("push", "--quiet", src, f"{branch}:refs/heads/{branch}", cwd=tmp)
+    pr = None
+    if forge is None:
+        import forge as F
+        forge = F.FORGE
+    if forge.repo_of(pack["source"]):
+        try:
+            pr = forge.open_pr(pack["source"], branch, target, f"Canvas edit of {names}",
+                               "Made on n8n's canvas in the AI Stack. It runs once a commit with it is approved.", draft=True)
+        except Exception as x:                       # the branch is there; the pull request can be opened by hand
+            pr = {"error": f"{type(x).__name__}: {TC.cut(str(x), 300)}"}   # cap: preview, the forge's reason
+    return {"branch": branch, "commit": head, "pr": pr}

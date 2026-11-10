@@ -1,5 +1,8 @@
 # The host runner's Python packages (ops/missions.py and everything it imports), pinned. The runner uses the standard
-# library and PyYAML; ops/runner_env.sh installs exactly these into the runner's own environment with uv, so the
-# runner never depends on the system's Python packages.
-# Pin rule: the newest release at least 14 days old when it is set; tests/requirements.txt carries the same pins.
+# library, PyYAML, and atlassian-python-api for a deployment's Jira tracker (ops/domain/trackers.py); ops/runner_env.sh
+# installs exactly these and what they pull in, each by its hash (ops/runner-requirements.lock), into the runner's own
+# environment with uv, so the runner never depends on the system's Python packages.
+# Pin rule: the newest release at least 14 days old when it is set, and the lock takes no dependency newer than that
+# either; tests/requirements.txt carries the same pins where the tests need the package.
 pyyaml==6.0.3
+atlassian-python-api==5.0.5

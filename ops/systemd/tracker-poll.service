@@ -1,0 +1,8 @@
+[Unit]
+Description=Trackers: changed items start or wake their runs in n8n, each change once (ops/runreg.py poll, WFL-19)
+[Service]
+Type=oneshot
+TimeoutStartSec=10min
+WorkingDirectory=%h/ai-stack
+ExecCondition=/usr/bin/python3 %h/ai-stack/ops/stack_gate.py
+ExecStart=/usr/local/bin/sops exec-env secrets/secrets.enc.yaml "%h/.local/share/aistack/runner/bin/python ops/runreg.py poll"

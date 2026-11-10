@@ -1,6 +1,6 @@
 # part of server.py (WFL-14, APP-66): the stack's tools inside the app. A tool whose web UI can live under a sub-path is
-# served under the app's own address, behind the app's front door (TailnetOnly: the owner's Tailscale login, and no write
-# from another site), so the app's pages show it in a frame instead of a tab of its own:
+# served under the app's own address, behind the app's front door (TailnetOnly: the owner's Tailscale login, or this PC
+# without a tailnet (WFL-16), and no write from another site), so the app's pages show it in a frame instead of a tab of its own:
 #   /n8n/     n8n (N8N_PATH=/n8n/, compose/core.yaml): the Workflows page, a task's Where it runs
 #   /phoenix/ Phoenix (PHOENIX_HOST_ROOT_PATH=/phoenix): the Traces page, a step log's "Open in Phoenix"
 # Each tool answers at its root and only names the prefix in its pages, so the prefix is taken off on the way in.
@@ -35,7 +35,7 @@ def frame_headers_in(request):
     host = request.headers.get("host", "")
     if host:
         out += [("host", host), ("x-forwarded-host", host)]
-    return out + [("x-forwarded-proto", "https")]      # tailscale serve speaks https to the browser
+    return out + [("x-forwarded-proto", "http" if APP_GATE == "local" else "https")]   # tailscale serve speaks https; this PC, http
 
 
 def frame_headers_out(r, prefix):

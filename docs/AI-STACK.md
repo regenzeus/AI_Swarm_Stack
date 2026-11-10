@@ -3,10 +3,25 @@
 The architecture as it stands on 10 November 2026. n8n decides when work starts and in what order (DEC-51); the
 stack's own services do the work; Temporal and the block editor are gone (DEC-52). How the move to n8n proceeds, phase
 by phase, is in [N8N-MIGRATION.md](N8N-MIGRATION.md); the platform underneath (deployments, features, the data guard,
-the Windows worker) is in [PLATFORM.md](PLATFORM.md). Requirements: WFL-01 to WFL-12 for the workflows, GEN-21 to
-GEN-32 for what a domain's work uses.
+the Windows worker) is in [PLATFORM.md](PLATFORM.md). Requirements: WFL-01 to WFL-24 for the workflows, GEN-21 to
+GEN-32 and GEN-40 to GEN-44 for what a domain's work uses.
 
 **In one line:** n8n decides when and in what order; our services do the work.
+
+**The run's truth** is the stack's, not n8n's: the tasks table holds each task and its steps' rows, and the step
+service's **run register** (`ops/runreg.py`, WFL-23) holds every run n8n drives: each step's request, whole answer,
+files and times, each tracker item's runs and the wait registered on it, and the ledger of routed events. n8n holds
+time and order only. A run's record (one zip) is made from the register; from n8n it takes only the workflow's shape,
+from git or the pack cache, never through n8n's internal API. In a customer-class deployment n8n keeps summaries and
+the whole text lives here (WFL-22).
+
+**The deployment's data class sets up n8n.** Customer data turns the tailnet off, so n8n and its editor stay on
+127.0.0.1 (WFL-15, WFL-16); n8n loads only its logic nodes and the AI Stack step, from the data guard's one list
+(WFL-17), keeps its executions on the PC (WFL-18) and gets lean answers (WFL-22). Home keeps every node and whole
+answers. **Every write outside the stack** waits in shadow per kind until the owner lets it go live; the one stated
+exception is a draft pull request (DEC-54: a change for an item with FORGE_PUSH, a canvas edit sent to its pack), which
+goes out directly because nobody uses a draft until they merge it, and the stack never merges. How the first work
+deployment's whole path holds, and the run on a real n8n: [N8N-MIGRATION.md](N8N-MIGRATION.md) §12.
 
 ## 1. The layers
 
@@ -14,7 +29,7 @@ GEN-32 for what a domain's work uses.
 |---|---|---|
 | **Interface** | The app (Mission Control) for phone and desk, Telegram, chat, the AI phone, the House | `images/mission-control/`, `images/phone/` |
 | **Orchestration** | n8n: schedules and triggers, the order of steps, waits of any length, every run's history | `compose/core.yaml`, `n8n/` |
-| **The step service** | The one seam between n8n and the stack: n8n hands a step over, the runner does it and answers | `ops/flows.py`, `images/mission-control/server.flows.py` |
+| **The step service** | The one seam between n8n and the stack: n8n hands a step over, the runner does it and answers; its run register is the record of every run | `ops/flows.py`, `ops/runreg.py`, `images/mission-control/server.flows.py` |
 | **Workers** | The host runner and what it starts: agents, the coding sandbox, crew jobs, commands at places | `ops/`, `images/builder/` |
 | **Knowledge** | Long-term memory, the wikis, each agent's journal, the code map, saved files | `ops/journal.py`, `ops/memory.py`, `ops/domain/artifacts.py` |
 | **Models** | One gateway for every model call: the subscriptions and the local models, with costs and budgets | `config/litellm/` |
@@ -49,12 +64,19 @@ GEN-32 for what a domain's work uses.
 The step service is the seam: nothing in the stack's agents depends on n8n, and another orchestrator could call it.
 
 - n8n's **AI Stack step** node (`n8n/custom/AistackStep.node.js`, WFL-06) posts a step to Mission Control's step
-  service on the internal `stepnet` network and waits. Kinds: agent, crew, task, ask, notify.
+  service on the internal `stepnet` network and waits. Kinds: agent, build, crew, task, ask, notify, recall,
+  remember, command, plan, wait_item, tracker ([N8N-MIGRATION.md](N8N-MIGRATION.md) §3.3).
 - The app drops the request into the runner's inbox; the runner (`ops/flows.py`) runs it with the code that runs
   every step today: the Conductor's step runners (`ops/stepkinds.py`: Hermes, Claude Code, build, check, OpenCode,
   wiki, and the domain modules' kinds), with headroom, budget, routing, memory, costs and one trace per run (WFL-05).
 - On the end the runner calls n8n's resume URL with the result, also after a restart of either side.
-- **Ask** puts the question into Needs you; the owner's tap resumes the workflow (WFL-07). **Notify** tells the owner.
+- **Ask** puts the question into Needs you; the owner's tap resumes the workflow (WFL-07). A question may name a
+  role: Needs you says who may answer, only they can, and the answer records who did (GEN-27). **Notify** tells the
+  owner.
+- **Tracker items** (WFL-19 to WFL-21): the crew job tracker-poll routes each tracker and pull-request event once. A
+  new item starts its workflow through n8n's webhook `item/<pack>/<name>`; a comment from someone else wakes the run's
+  `wait_item`; a wait that times out is an outcome the workflow branches on; `tracker` writes through shadow mode.
+- **The run register** (WFL-23) keeps every step; a customer-class deployment answers n8n with summaries (WFL-22).
 
 ## 5. Workers
 
@@ -78,17 +100,18 @@ not wired to n8n yet, its requirement says so.
 
 | Part | What it does | Requirement |
 |---|---|---|
-| **Packs** (`packs.py`) | A domain kept outside the repository: Claude Code plugin folders (agents, skills, MCP servers), `stack.yaml`, job kinds, n8n workflows (`workflows/*.json`, named `<pack>/<name>`, never using n8n's command node) and exams; listed in the deployment's `packs.txt`, pinned by commit, each commit approved in Needs you while the last approved one keeps running | GEN-21, GEN-32 |
+| **Packs** (`packs.py`) | A domain kept outside the repository: Claude Code plugin folders (agents, skills, MCP servers), `stack.yaml`, job kinds, n8n workflows (`workflows/*.json`, named `<pack>/<name>`, never using n8n's command node or a node the deployment's n8n does not load) and exams; listed in the deployment's `packs.txt`, pinned by commit, each commit approved in Needs you while the last approved one keeps running. The running commit's workflows are in n8n (imported on approval and on deploys, replaced in place by a new commit, unpublished when the pack goes; a run that waits finishes on its version); a canvas edit is a proposal sent to the pack's own repository as a draft | GEN-21, GEN-32, GEN-42, GEN-43, WFL-24 |
 | **Grants** (`packs.py`) | Each pack agent's step gets exactly the MCP servers and tools its `stack.yaml` grants; a server off the deployment's egress list is dropped | GEN-30 |
-| **Trackers** (`trackers.py`) | Jira Data Center and Forgejo issues read with a cursor; each change of an item handed on once for the run named after it; writes (comment, one summary, attach, link, transition, label) in shadow per kind until the owner lets the kind go live | GEN-25 |
-| **The forge** (`forgework.py`) | A change starts at the tag or branch its workflow names, pushes `ai/<item>-<slug>` through `FORGE_PUSH`, opens a draft pull request, and hands reviewers' comments on once | GEN-26 |
-| **Roles** (`roles.py`) | The deployment's map of roles to people; with none, every role is the owner's | GEN-27 |
+| **Trackers** (`trackers.py`) | Jira Data Center and Forgejo issues read with a cursor (Jira's in the token user's time zone, paged, its minute's repeats dropped); each change of an item handed on once for the run named after it, routed by the run register; writes (comment, one summary, attach, link, transition, label) in shadow per kind until the owner lets the kind go live | GEN-25, GEN-41, WFL-19 |
+| **The forge** (`forgework.py`) | A change for an item starts at the tag or branch its step names, pushes `ai/<item>-<slug>` through `FORGE_PUSH` and opens a draft pull request directly (DEC-54), and hands reviewers' comments on once to the item's run; the stack never merges | GEN-26 |
+| **Roles** (`roles.py`) | The deployment's map of roles to people; with none, every role is the owner's; a workflow's question names one | GEN-27 |
 | **Saved files** (`artifacts.py`) | Files kept by their SHA-256 with the task, step, run and commit that made them, their data class and retention; a run passes only their ids | GEN-29 |
-| **The record** (`record.py`) | A finished run as one zip a person can follow without the app, and a pack's exam cases scored against their known outcomes | GEN-31 |
+| **The record** (`record.py`) | A finished run as one zip a person can follow without the app, made from the run register (`export_run`), and a pack's exam cases scored against their known outcomes | GEN-31, WFL-23 |
+| **Places for jobs of hours** (`places.py`, `ops/localworker.py`) | A worker runs one job at a time and says what it runs and what waits; a request queued behind a job of hours is never given up; a job kind sets its own run limit | GEN-40 |
 
-What is not wired yet: importing a pack's workflows into n8n, a workflow step that runs a command at a place, the
-tracker poller on a schedule, a run's export from n8n's execution, and a question addressed to a role. Each of these
-comes as a block of n8n's palette ([N8N-MIGRATION.md](N8N-MIGRATION.md)).
+The whole path of a tracker item, from its first event to its draft pull request and summary, is one test against
+stand-ins (GEN-44), and none of these parts names a domain. What is not wired yet: running an exam case through n8n
+([N8N-MIGRATION.md](N8N-MIGRATION.md)).
 
 ## 7. Knowledge
 

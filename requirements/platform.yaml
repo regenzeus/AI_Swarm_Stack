@@ -505,13 +505,16 @@ items:
   - id: PLT-37
     title: The runner has its own pinned Python environment
     statement: The host runner shall run in a Python environment of its own, outside the system Python, made by uv
-      (pinned by version and checksum, no sudo) from a lock with a hash for every package, and made again only when the
-      lock changes; the tests shall use the same pins.
+      (pinned by version and checksum, no sudo) from a lock with a hash for every package it pulls in, none released
+      less than 14 days before the lock was written, and made again only when the lock changes; the tests shall use the
+      same pins.
     type: constraint
     priority: must
     status: implemented
-    acceptance: 'Test: uv is pinned by version and checksum, the lock holds the pins with their hashes, the tests use the
-      same pins, and the runner unit runs in that environment.'
+    acceptance: 'Test: uv is pinned by version and checksum, the lock holds the pins and every package they pull in
+      (atlassian-python-api for the Jira tracker among them) with their hashes, the lock is written without releases
+      younger than 14 days, the tests use the same pins, and the runner unit runs in that environment. Shown on 10 Nov
+      2026: an environment made from the lock with hashes required imports atlassian''s Jira client.'
     parents: [SN-13]
     sources: [DEC-52]
     verify: {method: test, by: ['tests/test_runner_env.py::test_the_runner_environment_is_pinned_checksummed_and_follows_its_lock']}

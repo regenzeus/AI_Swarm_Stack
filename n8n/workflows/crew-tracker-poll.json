@@ -1,0 +1,90 @@
+{
+  "active": false,
+  "connections": {
+    "On its schedule (* * * * *)": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Crew: Tracker poll",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Run now": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Crew: Tracker poll",
+            "type": "main"
+          }
+        ]
+      ]
+    }
+  },
+  "id": "aisc341c439edb6a",
+  "name": "Crew: Tracker poll",
+  "nodes": [
+    {
+      "id": "80fb6fd5-8ad2-ab7c-2437-76d6234e4f85",
+      "name": "On its schedule (* * * * *)",
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "expression": "* * * * *",
+              "field": "cronExpression"
+            }
+          ]
+        }
+      },
+      "position": [
+        0,
+        0
+      ],
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2
+    },
+    {
+      "id": "8cbd0d00-23cb-0f3b-8e36-7f75bcca0d82",
+      "name": "Crew: Tracker poll",
+      "notes": "The crew job tracker-poll (tracker-poll.service), as Run now starts it (WFL-05).",
+      "parameters": {
+        "job": "tracker-poll",
+        "kind": "crew",
+        "title": "Crew: Tracker poll"
+      },
+      "position": [
+        260,
+        0
+      ],
+      "type": "CUSTOM.aistackStep",
+      "typeVersion": 1,
+      "webhookId": "8137f783-5441-86dd-6a97-7baae255ec09"
+    },
+    {
+      "id": "3e602ade-abcf-1c4e-260a-cdf8e7e20066",
+      "name": "Run now",
+      "notes": "Starts the job now, as its schedule would (POST).",
+      "parameters": {
+        "httpMethod": "POST",
+        "options": {},
+        "path": "run/crew-tracker-poll"
+      },
+      "position": [
+        0,
+        160
+      ],
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "webhookId": "52c84104-0b95-7822-da6c-60084c98b62c"
+    }
+  ],
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "none",
+    "timezone": "Europe/Berlin"
+  }
+}

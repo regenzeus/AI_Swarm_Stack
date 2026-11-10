@@ -32,7 +32,8 @@ if [ ! -x "$UV" ]; then
   install -m 755 "$tmp/uv-x86_64-unknown-linux-gnu/uv" "$UV"
 fi
 if [ "${1:-}" = lock ]; then
-  "$UV" pip compile -q --python-version 3.12 --generate-hashes --no-header -o "$LOCK" "$REQ"
+  aged=$(date -u -d '14 days ago' +%Y-%m-%dT00:00:00Z)   # limit: drops, a release younger than 14 days is not locked, the pin rule of runner-requirements.txt for every package pulled in
+  "$UV" pip compile -q --python-version 3.12 --generate-hashes --no-header --exclude-newer "$aged" -o "$LOCK" "$REQ"
   echo "wrote $LOCK"; exit 0
 fi
 want=$(sha256sum "$LOCK" | cut -c1-16)   # cap: id, the lock's fingerprint
@@ -41,4 +42,4 @@ if [ "$(cat "$VENV/.lock-sha" 2>/dev/null || true)" != "$want" ]; then
   "$UV" pip sync -q --require-hashes --python "$VENV/bin/python" "$LOCK"
   echo "$want" > "$VENV/.lock-sha"
 fi
-"$VENV/bin/python" -c "import yaml" && echo "$VENV/bin/python"
+"$VENV/bin/python" -c "import yaml, atlassian" && echo "$VENV/bin/python"

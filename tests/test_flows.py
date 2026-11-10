@@ -12,7 +12,7 @@ from pathlib import Path
 import pytest
 
 import conductor as CD
-import fakeworker as FK
+import localworker as LW
 import flows as FW
 import tasks as TK
 from domain import places as PL
@@ -50,6 +50,7 @@ def took(ok=True):
 def F(K, tmp_path, monkeypatch):
     monkeypatch.setattr(FW, "PENDING", tmp_path / "flows/pending")
     monkeypatch.setattr(FW, "DONE", tmp_path / "flows/done")
+    monkeypatch.setattr(__import__("runreg"), "ROOT", tmp_path / "flows/register")
     FW.PENDING.mkdir(parents=True)
     told = []
     FW.M = types.SimpleNamespace(db=K.conn, stop=CD.M.stop, log=print, notify=lambda text, *a: told.append(text))
@@ -114,6 +115,39 @@ def test_an_answer_n8n_did_not_take_is_sent_again_after_a_restart_without_runnin
     post2, sent2 = took()
     FW.handle("a2", p, cards=CARDS, crew=CREW, post=post2, sleep=lambda s: None)
     assert not p.exists() and len(F.ran) == 1 and sent2[0][1]["status"] == "done"
+
+
+def test_a_state_file_write_cut_short_leaves_the_old_file_or_none(tmp_path, monkeypatch):
+    import statefile as SF
+    old = tmp_path / "done/a.json"
+    SF.save(old, {"status": "done", "output": "the old answer"})
+    assert oct(old.stat().st_mode & 0o777) == "0o644"                       # the app (another uid) reads the answers
+
+    def killed(fd):                                                          # the runner dies after a part of the text
+        raise KeyboardInterrupt("killed by a deploy")
+    monkeypatch.setattr(SF.os, "fsync", killed)
+    for path in (old, tmp_path / "done/b.json"):
+        with pytest.raises(KeyboardInterrupt):
+            SF.save(path, {"status": "done", "output": "x" * 100000})
+    assert json.loads(old.read_text())["output"] == "the old answer"         # the old file, whole
+    assert not (tmp_path / "done/b.json").exists()                          # or none
+    assert sorted(f.name for f in (tmp_path / "done").iterdir()) == ["a.json"]   # and no temp file left behind
+    (tmp_path / "empty.json").write_text("")
+    (tmp_path / "cut.json").write_text('{"status": "do')
+    assert SF.load(tmp_path / "empty.json") is None and SF.load(tmp_path / "cut.json", {}) == {} and SF.load(tmp_path / "none.json") is None
+
+
+def test_an_empty_answer_file_is_handled_again_and_answered(F):
+    logged = []
+    FW.M.log = logged.append
+    p = drop("e1", kind="agent", agent="scout", brief="Find facts.", resume_url=RESUME)
+    FW.DONE.mkdir(parents=True)
+    (FW.DONE / "e1.json").write_text("")                                    # left by a write a restart cut short
+    post, sent = took()
+    FW.handle("e1", p, cards=CARDS, crew=CREW, post=post, sleep=lambda s: None)
+    assert not p.exists() and len(F.ran) == 1 and sent[0][1]["status"] == "done"
+    assert json.loads((FW.DONE / "e1.json").read_text())["status"] == "done"
+    assert len([x for x in logged if "e1" in x and "empty or unreadable" in x]) == 1     # said once
 
 
 def test_a_step_that_fails_twice_answers_failed_with_its_reason(F, monkeypatch):
@@ -311,7 +345,7 @@ def host(tmp_path, monkeypatch):
     monkeypatch.setattr(FW, "_job_spec", lambda kind: SPEC if kind == SPEC["kind"] else None)
     PL.sync_jobs([{"name": "toy", "jobs": [{"kind": SPEC["kind"], "file": str(JOB), "sha256": __import__("winjobs").digest(JOB), "spec": SPEC}]}])
     stop = threading.Event()
-    w = FK.Worker(root, beat_s=1)
+    w = LW.Worker(root, beat_s=1)
 
     def loop():
         while not stop.is_set():

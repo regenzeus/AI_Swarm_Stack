@@ -111,12 +111,12 @@ items:
     type: constraint
     priority: should
     status: partial
-    acceptance: 'Test: with the fake worker a where: windows step runs end to end; an unknown kind, a wrong value, an unapproved kind, a patch outside its paths and a stale lease are each refused or recovered with the reason; wsl.conf and listening sockets are unchanged.'
+    acceptance: 'Test: with the local worker a where: windows step runs end to end; an unknown kind, a wrong value, an unapproved kind, a patch outside its paths and a stale lease are each refused or recovered with the reason; wsl.conf and listening sockets are unchanged.'
     parents: [SN-05]
     sources: [docs/PLATFORM.md, DEC-45]
-    gap: 'The worker, its rules, the fake worker, the stack''s side, the broker and the setup exist; the protocol cases pass on the fake worker and, through worker-selftest.ps1, on the real worker on the home PC (as the owner). The separate account, its folder rights and the network limit are proven only once the owner has run worker-setup.ps1 and the self-test as aiworker.'
+    gap: 'The worker, its rules, the local worker, the stack''s side, the broker and the setup exist; the protocol cases pass on the local worker and, through worker-selftest.ps1, on the real worker on the home PC (as the owner). The separate account, its folder rights and the network limit are proven only once the owner has run worker-setup.ps1 and the self-test as aiworker.'
     verify: {method: test, by: [tests/test_winworker.py::test_a_declared_approved_job_runs_end_to_end_and_brings_its_evidence_back, tests/test_winworker.py::test_a_failing_build_is_a_failed_job_with_its_step, tests/test_winworker.py::test_the_stack_refuses_at_once_what_windows_would_refuse, tests/test_winworker.py::test_a_wrong_value_is_refused_by_the_worker_with_which_and_why, tests/test_winworker.py::test_a_patch_outside_its_kinds_paths_is_refused_before_it_is_applied, tests/test_winworker.py::test_an_unapproved_or_changed_kind_does_not_run_even_when_asked_directly, tests/test_winworker.py::test_a_lost_job_is_reported_and_one_whose_kind_may_retry_runs_once_more, tests/test_winworker.py::test_a_job_past_its_time_limit_is_stopped, tests/test_winworker.py::test_a_kind_definition_that_is_unclear_is_not_valid, tests/test_winworker.py::test_the_stack_side_can_start_nothing_on_windows, tests/test_winworker.py::test_a_where_windows_step_runs_end_to_end_and_a_step_kind_says_where_it_runs, tests/test_winworker.py::test_the_worker_is_a_feature_a_deployment_switches_on]}
-    trace: [ops/winworker.py, ops/winjobs.py, ops/fakeworker.py, ops/stepkinds.py, ops/windows/worker.ps1, ops/windows/worker-broker.ps1, ops/windows/worker-setup.ps1, ops/windows/worker-approve.ps1, ops/windows/worker-selftest.ps1]
+    trace: [ops/winworker.py, ops/winjobs.py, ops/localworker.py, ops/stepkinds.py, ops/windows/worker.ps1, ops/windows/worker-broker.ps1, ops/windows/worker-setup.ps1, ops/windows/worker-approve.ps1, ops/windows/worker-selftest.ps1]
   - id: GEN-12
     title: More than one person
     statement: The stack shall support more than one person, each with a role and a sign-in, once a second real user exists.
@@ -234,7 +234,7 @@ items:
     type: functional
     priority: should
     status: partial
-    gap: "Packs are read, checked, approved per commit and pinned; a running pack's workflows are not imported into n8n yet (WFL-08 imports the repository's own), and its agents are not in the AI Stack step's list yet (WFL-06)."
+    gap: "A running pack's agents are not in the AI Stack step's list yet (WFL-06); its workflows reach n8n since 10 Nov 2026 (GEN-43)."
     acceptance: 'Test: a toy pack copied outside the repository adds agents, a skill, a workflow and a job kind; a name clash, an unapproved commit and a workflow that runs a shell command are refused with the reason; home without it is unchanged.'
     parents: [SN-05]
     sources: [docs/AI-STACK.md, DEC-51]
@@ -260,7 +260,7 @@ items:
     sources: [docs/AI-STACK.md]
     verify: {method: test, by: ['tests/test_domain_places.py::test_a_command_runs_at_the_wsl_host_place_only_once_approved_there_by_its_hash_and_a_value_outside_its_type_is_refused',
       'tests/test_domain_places.py::test_commands_are_the_queues']}
-    trace: [ops/domain/places.py, ops/wslhost-setup.sh]
+    trace: [ops/domain/places.py, ops/localworker.py, ops/wslhost-setup.sh]
   - id: GEN-23
     title: 'Templates are graphs run by one runner'
     statement: "A pack's template shall be a graph of blocks stored as YAML in the pack's repository, run by one generic graph-runner workflow on Temporal that keeps every gate, wait and check."
@@ -285,11 +285,11 @@ items:
     verify: {method: inspection, by: [docs/N8N-MIGRATION.md]}
   - id: GEN-25
     title: 'Trackers, read by polling and written through gates'
-    statement: 'The stack shall poll trackers (Jira Data Center through atlassian-python-api, Forgejo issues) with a cursor and hand each change of an item on once, with the comments from others not handed on before, for the run named after the item, and write comments, one summary comment, attachments and transitions only as action classes, idempotently, with shadow mode per kind of write, each leaving it when the owner taps, after a stated number of approved shadow items.'
+    statement: 'The stack shall poll trackers (Jira Data Center through atlassian-python-api, Forgejo issues) with a cursor and hand each change of an item on once, with the comments from others not handed on before, for the run named after the item, and write comments, one summary comment, attachments and transitions only as action classes, idempotently, with shadow mode per kind of write, each leaving it when the owner taps, after a stated number of approved shadow items. The one stated exception among the stack''s outside writes is a draft pull request (GEN-26): it goes to the forge directly, with no shadow step, because it is a draft that the stack never merges (the owner''s decision, DEC-54).'
     type: functional
     priority: should
     status: partial
-    gap: "Reading with a cursor, writing in shadow and going live are built and tested; no n8n workflow polls the trackers or writes to them yet (the engine's pass did until 10 Nov 2026), so no deployment reads a tracker today."
+    gap: "Reading with a cursor, written in shadow and going live are built and tested; the poller (WFL-19) and the tracker step (WFL-21) are built; no deployment has published its poller's workflow yet."
     acceptance: 'Test: on a stand-in a changed item is handed on once across a restart under one run name, the summary comment is edited across three updates, and shadow mode writes nothing outward.'
     parents: [SN-05]
     sources: [docs/AI-STACK.md]
@@ -303,29 +303,31 @@ items:
     trace: [ops/domain/trackers.py, images/mission-control/web/static/app.js]
   - id: GEN-26
     title: 'A branch from a named tag'
-    statement: "A change shall start from the base ref its workflow names, push its branch through FORGE_PUSH, open a draft pull request into the workflow's target branch, and hand on each pull-request comment from someone else once to its run."
+    statement: "A change for a tracker item shall start its branch ai/<item>-<slug> at the base ref or tag its step names, and in a deployment with FORGE_PUSH push it and open a draft pull request into the step's target branch directly, without a shadow step (DEC-54); without FORGE_PUSH the change waits for the owner in the app. Each pull-request comment from someone else reaches the item's run once, through the run register's routing (WFL-19). The stack never merges it."
     type: functional
     priority: should
-    status: partial
-    gap: "Starting at the tag, pushing, the draft pull request and handing on comments are built and tested; no workflow uses them yet."
-    acceptance: "Test: on the Bitbucket stand-in a change starts at a tag, opens a draft into a release branch, and a reviewer's comment is handed on once."
+    status: implemented
+    acceptance: "Test: on the Bitbucket stand-in a change starts at a tag, opens a draft into a release branch, and a reviewer's comment is handed on once; a coding change step for an item starts at its tag, is pushed through FORGE_PUSH as a draft whose review comment wakes the waiting run, and without FORGE_PUSH waits for the owner."
     parents: [SN-05]
-    sources: [docs/AI-STACK.md]
-    verify: {method: test, by: ['tests/test_domain_trackers.py::test_a_change_starts_at_a_tag_opens_a_draft_into_a_release_branch_and_a_reviewers_comment_is_handed_on_once']}
-    trace: [ops/domain/forgework.py, ops/forge.py]
+    sources: [docs/AI-STACK.md, DEC-54]
+    verify: {method: test, by: ['tests/test_domain_trackers.py::test_a_change_starts_at_a_tag_opens_a_draft_into_a_release_branch_and_a_reviewers_comment_is_handed_on_once',
+      'tests/test_n8n_items.py::test_a_change_for_an_item_starts_at_its_tag_and_goes_out_as_a_draft_whose_review_comment_wakes_the_run',
+      'tests/test_n8n_items.py::test_without_forge_push_a_change_for_an_item_waits_for_the_owner_in_the_app']}
+    trace: [ops/domain/forgework.py, ops/forge.py, ops/flows.py]
   - id: GEN-27
     title: 'Decisions name roles'
-    statement: 'A question for people shall name a role that the deployment maps to people, and each decision shall record who gave it; an answer from outside the role is refused.'
+    statement: "A question for people shall name a role that the deployment maps to people; Needs you shows who may answer it, an answer from outside the role is refused, and each answer records who gave it (the app's signed-in person, from the sign-in, never from the page). With no map, every role is the owner's."
     type: functional
     priority: should
-    status: partial
-    gap: "The map of roles to people is built and tested; a workflow's question (WFL-07) goes to the owner, and naming a role on it is not wired yet."
-    acceptance: 'Test: a deployment maps two roles to its people, a role it does not name goes to its default people, and an answer from outside a role is refused.'
+    status: implemented
+    acceptance: 'Test: a deployment maps two roles to its people, a role it does not name goes to its default people, and an answer from outside a role is refused; a workflow''s question for a role says who may answer, refuses anyone else and its answer names who gave it; with no map a question for a role is the owner''s.'
     parents: [SN-05]
     sources: [docs/AI-STACK.md]
     verify: {method: test, by: ['tests/test_domain_roles.py::test_every_role_is_the_owners_at_home_and_a_deployment_maps_roles_to_its_people',
-      'tests/test_domain_roles.py::test_the_repositorys_roles_file_names_no_person']}
-    trace: [ops/domain/roles.py, config/roles.yaml]
+      'tests/test_domain_roles.py::test_the_repositorys_roles_file_names_no_person',
+      'tests/test_n8n_items.py::test_a_question_for_a_role_says_who_may_answer_refuses_anyone_else_and_records_who_did',
+      'tests/test_n8n_items.py::test_with_no_map_of_roles_a_question_for_a_role_is_the_owners']}
+    trace: [ops/domain/roles.py, config/roles.yaml, ops/flows.py, ops/decisions.py, images/mission-control/server.py]
   - id: GEN-28
     title: 'Named pools of capacity'
     statement: 'A deployment shall name pools with sizes; each pool is a task queue whose worker runs at most its size of activities at once, and lost work is given back by its heartbeat.'
@@ -367,7 +369,7 @@ items:
     type: functional
     priority: should
     status: partial
-    gap: "The bundle and the exam's scoring are built and tested on a run's data; reading a run from n8n's execution to export it, and running an exam case through n8n, are not built yet."
+    gap: "The bundle and the exam's scoring are built and tested; a run n8n drove exports from the run register (WFL-23); running an exam case through n8n is not built yet."
     acceptance: 'Test: a toy run exports a bundle with its chain from item to decisions, and a toy exam set runs and scores.'
     parents: [SN-05]
     sources: [docs/AI-STACK.md]
@@ -462,3 +464,100 @@ items:
     parents: [SN-05]
     sources: [docs/N8N-MIGRATION.md]
     verify: {method: inspection, by: [docs/N8N-MIGRATION.md]}
+  - id: GEN-40
+    title: Jobs of hours wait their turn at a place
+    statement: "The local worker (ops/localworker.py) shall run one job at a time and write in its status the job it runs
+      and how many requests wait behind it, refreshed every 10 seconds while a job runs; the stack shall give a request
+      up as not picked up only after it waited 5 minutes while its worker was not running or idle, never for the time it
+      waited behind a running job; and a job's one run limit shall be its kind's own minutes, from its file (1 minute to
+      a day)."
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-05]
+    sources: [docs/PLATFORM.md, docs/AI-STACK.md]
+    rationale: 'A licensed tool runs for hours at the wsl-host place. Before, the second of two long jobs was given up
+      after 5 minutes while it was only queued (CR of 10 Nov 2026, N3). Capacity pools are left out on purpose.'
+    acceptance: 'Test: two long toy jobs (scaled to 4 seconds against a pick-up timeout of 0.5 seconds) queued at one place
+      both finish, one after the other, and the status named the running job with one queued; on a fast clock a request
+      10 minutes behind a running job is queued, and 5 minutes idle or gone gives it up; a kind of 600 minutes is valid
+      and its minutes are in the status. Shown on 10 Nov 2026: two 6-minute jobs at a throwaway wsl-host worker in a
+      temp folder, with the real 5-minute timeout, both done.'
+    verify: {method: test, by: ['tests/test_domain_places.py::test_two_long_jobs_queued_at_one_place_both_finish_one_after_the_other_and_neither_is_given_up',
+      'tests/test_domain_places.py::test_the_pickup_clock_stands_while_the_worker_runs_another_job_and_counts_while_it_is_idle_or_gone',
+      'tests/test_domain_places.py::test_a_job_kind_sets_its_own_run_limit_in_its_file_and_the_status_carries_it',
+      'tests/test_winworker.py::test_a_job_past_its_time_limit_is_stopped']}
+    trace: [ops/localworker.py, ops/domain/places.py, ops/winjobs.py, docs/PLATFORM.md]
+  - id: GEN-41
+    title: 'Jira read with a cursor that holds'
+    statement: "The Jira adapter shall turn its cursor (Jira's time with the server's offset) into the token user's time zone (read from /rest/api/2/myself) before asking JQL, ask with >= of the cursor's minute and drop the (key, updated) pairs of that minute it handed on before, page until Jira has given every match, so a minute with more items than a page never holds the cursor, and build its JQL without an empty clause; a query with its own ORDER BY is refused at load with the reason, and that tracker is not asked."
+    type: functional
+    priority: should
+    status: implemented
+    acceptance: 'Test, with a fake client: a server offset other than the user''s zone gives the user''s minute; 60 items in one minute are handed on once over two pages and the cursor moves on to a later item; an empty query gives a query without an empty clause, and a query with ORDER BY is refused with its reason and not asked.'
+    parents: [SN-05]
+    sources: [docs/N8N-MIGRATION.md]
+    verify: {method: test, by: ['tests/test_domain_trackers.py::test_jira_reads_by_jql_with_its_cursor_and_edits_its_one_summary',
+      'tests/test_domain_trackers.py::test_jira_reads_its_cursor_in_the_token_users_time_zone_not_the_servers',
+      'tests/test_domain_trackers.py::test_jira_hands_on_60_items_of_one_minute_once_and_its_cursor_moves_on',
+      'tests/test_domain_trackers.py::test_jira_builds_its_query_without_an_empty_clause_and_refuses_one_with_its_own_order']}
+    trace: [ops/domain/trackers.py]
+  - id: GEN-42
+    title: "A pack's workflow uses only the nodes the deployment's n8n loads"
+    statement: "A pack's workflow shall be refused at load, with the node and the reason, when it uses a node type outside the list the deployment's n8n loads (N8N_NODES_INCLUDE in its deployment.env, handed to n8n as NODES_INCLUDE, read through the data guard's dataguard.n8n_nodes(), the one reading of it, WFL-17), or, without that list, n8n's command or local file trigger node; a pack's webhook shall listen under item/<pack>/ or <pack>/ only, so a pack takes no path of the stack's or of another pack."
+    type: functional
+    priority: must
+    status: implemented
+    acceptance: 'Test: with the data guard''s list of logic nodes, a workflow with an HTTP Request node is refused naming the node and N8N_NODES_INCLUDE; without the list it loads; a list that is no JSON list loads no workflow and says why; a webhook on run/crew-checker is refused; the toy pack''s item workflow uses logic nodes only and holds no placeholder.'
+    parents: [SN-05]
+    sources: [docs/N8N-MIGRATION.md, DEC-51]
+    verify: {method: test, by: ['tests/test_domain_packs.py::test_a_pack_workflow_with_a_node_off_the_deployments_allowlist_is_refused_with_the_reason',
+      'tests/test_domain_packs.py::test_the_toy_packs_item_workflow_is_a_whole_n8n_workflow_on_logic_nodes_only',
+      'tests/test_domain_packs.py::test_a_pack_workflow_that_is_no_n8n_workflow_or_runs_a_shell_command_is_refused_with_the_reason']}
+    trace: [ops/domain/packs.py, ops/dataguard.py, tests/fixtures/packs/toy/workflows/ticket.json]
+  - id: GEN-43
+    title: "A pack's workflows run in n8n, and a canvas edit is a proposal"
+    statement: "The running commit of each pack shall have its workflows in n8n, named <pack>/<name>, each under an id made from that name and never one the file names, published or not as its file says: imported when the owner approves the commit and on each deploy, replaced in place by an approved new commit, and unpublished when the pack is refused or leaves packs.txt. An edit made on n8n's canvas to a pack's workflow shall not change what runs: it goes to the pack's own repository as a branch ai/canvas-<date> and, where the pack's forge knows the repository, a draft pull request, never into the stack's repository, and the approved version is imported again; it runs only once a commit with it is approved."
+    type: functional
+    priority: must
+    status: implemented
+    acceptance: 'Test: approving the toy pack imports its three workflows under ids from their names with one restart, a second sync changes nothing, removing it unpublishes them; a new commit replaces them in place and refusing it brings the old version back; a canvas edit is sent once and the approved version runs; the edit lands on the pack''s branch with a draft pull request; an export writes only the stack''s workflows into git; a deploy syncs the packs before its one restart.'
+    parents: [SN-05]
+    sources: [docs/N8N-MIGRATION.md, DEC-51]
+    verify: {method: test, by: ['tests/test_domain_packs.py::test_an_approved_packs_workflows_reach_n8n_under_ids_from_their_names_and_leave_when_the_pack_goes',
+      'tests/test_domain_packs.py::test_a_new_commit_replaces_its_workflows_in_place_and_a_refusal_unpublishes_them',
+      'tests/test_domain_packs.py::test_a_canvas_edit_is_a_proposal_and_the_approved_version_keeps_running',
+      'tests/test_domain_packs.py::test_a_proposal_goes_to_the_packs_own_repository_as_a_branch_and_a_draft_pull_request',
+      'tests/test_domain_packs.py::test_an_export_sends_a_packs_workflow_to_its_repository_never_into_the_stacks_git',
+      'tests/test_domain_packs.py::test_a_deploy_syncs_the_running_packs_before_its_one_restart']}
+    trace: [ops/domain/packs.py, ops/n8n_sync.py, tests/fixtures/packs/toy/workflows/ticket.json]
+  - id: GEN-44
+    title: "A pack's item workflow runs end to end in a customer-class deployment, and the core names no domain"
+    statement: "In a customer-class deployment the stack shall carry a pack's item workflow from its tracker item to its
+      end: the item starts one run (also when its event comes twice), an agent step triages it, every tracker write stays
+      in shadow, a wait on the item times out to a reminder and is woken by a reply from someone else but not by the
+      stack's own comment, a job of hours at the wsl-host place finishes with a second job queued behind it, a change
+      goes out as a draft pull request whose review comment wakes the run, and the run writes its summary and ends;
+      restarts of the runner side and of n8n while the run waits and while a job runs shall lose nothing, n8n shall get
+      only summaries, and the run shall export as one zip. No file of ops/, images/, compose/, config/ or n8n/ shall name
+      the domain a pack brings."
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-05]
+    sources: [docs/N8N-MIGRATION.md, docs/AI-STACK.md, DEC-54]
+    rationale: 'The CR of 10 Nov 2026 for the first work deployment counts as done when this holds for the toy pack
+      against stand-ins.'
+    acceptance: 'Test, against stand-ins (a stand-in tracker, a stand-in forge, the local worker in a temp folder, the step
+      service and the run register on temp paths, example-work''s data class and node list) with a stand-in n8n that runs
+      the toy''s item workflow node by node: every step of the statement, the runner side reloaded from disk mid-wait and
+      mid-job, n8n restarted mid-wait and mid-job, each command submitted once, nothing of the triage''s whole text in
+      n8n''s executions while the register holds it, and the zip with every step in order; the stand-in domain''s names
+      over ops/, images/, compose/, config/ and n8n/ find nothing. Shown on 10 Nov 2026 on a throwaway n8n 2.44.7 with
+      example-work''s node list and the step service''s real runner code in a throwaway container: the same flow ended
+      in success with n8n restarted mid-wait and mid-job, one execution for the item, and none of the triage''s whole
+      text in n8n''s execution data (docs/N8N-MIGRATION.md §12).'
+    verify: {method: test, by: ['tests/test_work_deployment.py::test_the_toy_pack_runs_end_to_end_in_a_customer_class_deployment_against_stand_ins',
+      'tests/test_work_deployment.py::test_the_core_names_nothing_of_the_stand_in_domain']}
+    trace: [ops/flows.py, ops/runreg.py, ops/domain/trackers.py, ops/domain/forgework.py, ops/domain/places.py, ops/domain/packs.py,
+      ops/domain/record.py, tests/fixtures/packs/toy/workflows/ticket.json]

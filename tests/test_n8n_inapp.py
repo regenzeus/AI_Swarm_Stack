@@ -88,8 +88,10 @@ def test_compose_puts_n8n_under_n8n_with_live_updates_over_plain_http():
     apps = yaml.safe_load((ROOT / "compose/apps.yaml").read_text())
     env = core["services"]["n8n"]["environment"]
     assert env["N8N_PATH"] == "/n8n/" and env["N8N_PUSH_BACKEND"] == "sse"
-    assert env["N8N_EDITOR_BASE_URL"] == "https://${PC_TAILNET_HOST:-localhost}:8447/n8n/"      # the app's tailnet address
-    assert env["WEBHOOK_URL"] == "https://${PC_TAILNET_HOST:-localhost}:8450/"                   # webhooks and resume URLs at n8n's root
+    # the app's tailnet address, and webhooks and resume URLs at n8n's root; without the tailnet the deployment's own
+    # addresses on 127.0.0.1 (WFL-15, tests/test_customer_deployment.py)
+    assert env["N8N_EDITOR_BASE_URL"] == "${N8N_EDITOR_URL:-https://${PC_TAILNET_HOST:-localhost}:8447/n8n/}"
+    assert env["WEBHOOK_URL"] == "${N8N_WEBHOOK_URL:-https://${PC_TAILNET_HOST:-localhost}:8450/}"
     assert "stepnet" in core["services"]["n8n"]["networks"] and "stepnet" in apps["services"]["mission-control"]["networks"]
     server = (ROOT / "images/mission-control/server.py").read_text()
     assert '"/share", *(f"/{n}" for n in FRAMES))) and not request.headers.get("tailscale-user-login")' in server

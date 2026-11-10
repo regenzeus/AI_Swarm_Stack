@@ -15,7 +15,13 @@ The runner makes a task's workflow when the task gets its schedule and switches 
 (ops/n8n_jobs.py reconcile, every minute in this worker).
 
 A question for the owner (WFL-07) waits in Needs you (ops/decisions.py, source _flows) with the answers the workflow
-offers; the owner's tap there (the action flow_answer) is the step's answer, and the workflow goes on.
+offers; the owner's tap there (the action flow_answer) is the step's answer, and the workflow goes on. A question may
+name a role (GEN-27, ops/domain/roles.py): Needs you then says who may answer, only they can, and the answer records
+who did. With no map of roles, every role is the owner's.
+
+Every step is kept in the run register (ops/runreg.py, WFL-23): its request, its whole answer, its files and its
+times, by its n8n run. In a customer-class deployment n8n gets a lean answer (WFL-22: status, ids and a short summary);
+the whole text stays in the register and the task's record. The deployment may relax it (data.yaml n8n_answers: full).
 
 The other blocks of the palette (WFL-06), each through the stack's own code:
     build     a coding change: the Conductor's build step (run_build, a builder assignment in the sandbox), waited for
@@ -27,13 +33,26 @@ The other blocks of the palette (WFL-06), each through the stack's own code:
               kind there by its fingerprint (Needs you); submitted once per request, waited for
     plan      an improvised plan: its steps are rows of one task, run in waves through the same path as an agent step;
               a step waits for the steps it names in "after", and the answer carries every step's output
+    wait_item the run waits on its tracker item (WFL-20): the answer is done with outcome reply (and the new comments
+              from others) or outcome timeout after timeout_hours (0: no timeout); a timeout is no failure, so the
+              workflow branches to a reminder and waits again. The item's events reach it through ops/runreg.py
+    tracker   one write to the item through trackers.write (WFL-21): comment, summary, attach, link, transition or
+              label, in shadow until the owner lets its kind go live; the answer names the shadow or live reference.
+              from_step adds an earlier step's whole answer from the run register, so a customer deployment's n8n,
+              which holds only summaries, never carries the text it writes
+    A coding change for a tracker item (build with item, base and target, GEN-26) starts its branch at the base ref or
+    tag and, in a deployment with FORGE_PUSH, goes out as a draft pull request into the target branch; never merged.
 
 Request: {"kind": one of KINDS, "agent": <card id>, "brief": <text>, "title": <text>, "job": <crew id>,
           "task": <plan task id>, "question": <text>, "why": <text>, "answers": [<label>, ...], "message": <text>,
           "repo": <repository>, "query": <words>, "scope": <collection>, "note": lesson|fact|failure|skill,
           "text": <note>, "evidence": <where it comes from>, "place": wsl|wsl-host|windows, "command": <job kind>,
           "values": {<parameter>: <value>}, "steps": [{"agent", "brief", "title", "after": [<step number>, ...]}, ...],
-          "workflow": <n8n workflow id>, "execution": <n8n execution id>, "resume_url": <$execution.resumeUrl>}
+          "tracker": <tracker>, "key": <item key>, "timeout_hours": <hours>, "write": <kind of write>, "body": <text>,
+          "from_step": <an earlier node's name>,
+          "item": <tracker>/<key>, "base": <ref or tag>, "target": <branch>, "forge": <the repository's address there>,
+          "role": <role>, "workflow": <n8n workflow id>, "workflow_name": <its name>, "node": <the node's name>,
+          "execution": <n8n execution id>, "resume_url": <$execution.resumeUrl>}
 
     python3 ops/flows.py             what is pending, running and done
 """
@@ -46,6 +65,7 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
+import statefile as SF
 import textcap as TC
 from textcap import tail
 
@@ -54,7 +74,7 @@ PENDING, DONE = ROOT / "pending", ROOT / "done"
 N8N = "http://127.0.0.1:5678"                        # n8n's port on this machine (compose/core.yaml); the runner is on the host
 RESUME_PATH = re.compile(r"^/webhook-waiting/[A-Za-z0-9_-]{1,64}(/[A-Za-z0-9_-]{1,64})?$")
 RESUME_QUERY = re.compile(r"^(signature=[0-9a-f]{16,128})?$")   # n8n 2.x signs its resume URLs; nothing else may ride along
-KINDS = ("agent", "crew", "task", "ask", "notify", "build", "recall", "remember", "command", "plan")
+KINDS = ("agent", "crew", "task", "ask", "notify", "build", "recall", "remember", "command", "plan", "wait_item", "tracker")
 NOTE_MAX = 2000                                      # limit: refuses, a message from a workflow is a note, not a report
 ASKS = ROOT / "asks"
 JOBS = ROOT / "jobs"                                 # a command's job at its place, per request: submitted once, also after a restart
@@ -72,6 +92,12 @@ DELIVER_EVERY_S = 60                                 # limit: paces, an undelive
 DELIVER_FOR_S = 86400                                # limit: stops, after a day without n8n taking it the answer stays in done/ and the owner is told
 SCAN_S = 2
 SETTLED = ("done", "skipped", "failed", "cancelled")
+BUILDS = ROOT / "builds"                             # a coding change for an item, per request: its build, branch and pull request
+NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,63}")   # a tracker's or a role's name
+ITEM_KEY = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.#-]{0,99}")   # an item's key on its tracker (DEMO-12, 42)
+GIT_REF = re.compile(r"[A-Za-z0-9][A-Za-z0-9._/-]{0,199}")   # a branch or a tag
+STEP_NAME = re.compile(r"[^\x00-\x1f]{1,128}")       # a node's name in its workflow, as n8n shows it
+SUMMARY_CHARS = 300                                  # of a step's text in a lean answer; the whole is in the run register and the task's record
 
 M = None                                             # ops/missions.py, set by start()
 _busy = set()
@@ -150,8 +176,52 @@ def validate(req, cards, crew, repos=None):
         why = plan_problem(req.get("steps"), cards)
         if why:
             return why
+    why = item_problem(req)
+    if why:
+        return why
     if req.get("resume_url") and not resume_target(req["resume_url"]):
         return "resume_url must be n8n's own resume URL"
+    return ""
+
+
+def _tracker_named(name):
+    from domain import trackers as TR
+    return TR.find(name) is not None
+
+
+def item_problem(req):
+    """-> what is wrong with the item fields of a request (wait_item, tracker, a build for an item, a question's role), or ""."""
+    kind = req.get("kind")
+    if kind in ("wait_item", "tracker"):
+        if not isinstance(req.get("tracker"), str) or not NAME.fullmatch(req["tracker"]) or not _tracker_named(req["tracker"]):
+            return f"no tracker {req.get('tracker')!r} in this deployment's trackers.yaml"
+        if not isinstance(req.get("key"), str) or not ITEM_KEY.fullmatch(req["key"]):
+            return "an item step names its item's key"
+    if kind == "wait_item":
+        h = req.get("timeout_hours", 0)
+        if isinstance(h, bool) or not isinstance(h, (int, float)) or h < 0:
+            return "timeout_hours is a number of hours, 0 for no timeout"
+    if kind == "tracker":
+        from domain import trackers as TR
+        if req.get("write") not in TR.KINDS:
+            return f"a tracker write is one of {', '.join(TR.KINDS)}"
+        b, src = req.get("body", ""), req.get("from_step")
+        if src is not None and (not isinstance(src, str) or not STEP_NAME.fullmatch(src)):
+            return "from_step names an earlier step of the run, as the workflow names its node"
+        if not isinstance(b, str) or not (b.strip() or src) or len(b) > TR.BODY_CHARS:   # limit: refuses, one write's text as trackers.write keeps it
+            return f"a tracker write needs its text (or a step to take it from), at most {TR.BODY_CHARS:,} characters"
+    if kind == "build" and any(req.get(k) for k in ("item", "base", "target")):
+        t, _, k = str(req.get("item") or "").partition("/")
+        if not NAME.fullmatch(t) or not ITEM_KEY.fullmatch(k) or not _tracker_named(t):
+            return "a coding change for an item names it as <tracker>/<key>, of a tracker in trackers.yaml"
+        for f in ("base", "target"):
+            v = req.get(f)
+            if not isinstance(v, str) or not GIT_REF.fullmatch(v) or ".." in v:
+                return f"a coding change for an item names its {f} ({'the ref or tag it starts at' if f == 'base' else 'the branch its pull request goes into'})"
+        if req.get("forge") is not None and not isinstance(req["forge"], str):
+            return "forge is the repository's address on the forge"
+    if kind == "ask" and req.get("role") and (not isinstance(req["role"], str) or not NAME.fullmatch(req["role"])):
+        return "a question's role is a name of the deployment's roles"
     return ""
 
 
@@ -416,6 +486,72 @@ def run_build(c, rid, req, cards, stop=None, sleep=time.sleep):
             "checks": tail(b["checks"] or "", 4000, "the build keeps the whole log") if b else ""}   # cap: preview, the checks' end; the build's page has them all
 
 
+BUILD_FAILED = ("failed", "rejected", "rolled_back", "reverted")
+
+
+def item_build(c, rid, req, B=None, forge=None, values=None, stop=None, sleep=time.sleep):
+    """GEN-26: a coding change for a tracker item. Its branch ai/<item>-<slug> starts at the base ref or tag (pushed to
+    the build's own origin), the builder works on it as a build onto that branch (as a change's step does), and in a
+    deployment with FORGE_PUSH the change is pushed and opened as a draft pull request into the target branch, directly
+    (DEC-54); its reviewers' comments reach the item's run through the run register (ops/runreg.py). Without FORGE_PUSH
+    the build waits in the app for the owner, as today. The stack never merges. -> the answer, or None when stopping."""
+    import runreg as RR
+    from domain import forgework as FWK
+    from domain import trackers as TR
+    if B is None:
+        import builds as B
+    if forge is None:
+        import forge as F
+        forge = F.FORGE
+    values = values if values is not None else B.DEPLOY.VALUES
+    tracker, key = req["item"].split("/", 1)
+    title = req.get("title") or req["brief"].strip().splitlines()[0]
+    BUILDS.mkdir(parents=True, exist_ok=True)
+    mine = BUILDS / f"{rid}.json"
+    st = SF.load(mine) or {}
+    if not st.get("build"):                          # once per request, also after a restart
+        branch = FWK.branch_name(key, title)
+        clone = B.clone(req["repo"])
+        sha = FWK.base_commit(clone, req["base"])
+        B.git(clone, "push", "-q", "-f", "origin", f"{sha}:refs/heads/{branch}", timeout=300)
+        bid = B.handle({"action": "build_assign", "repo": req["repo"], "title": TC.cut(title, 120), "description": req["brief"],   # cap: id, the brief is whole
+                        "onto": branch, "source": f"n8n:{req.get('workflow', '')}/{req.get('execution', '')}"}, c)["id"]
+        st = {"build": bid, "branch": branch, "base": sha}
+        SF.save(mine, st)
+        RR.learn({"tracker": tracker, "key": key, "execution": req.get("execution")})
+    bid = st["build"]
+    while True:
+        b = c.execute("select * from builds where id=?", (bid,)).fetchone()
+        state = b["status"] if b else "failed"
+        if state in ("review", "merged"):
+            break
+        if state in BUILD_FAILED:
+            return {"status": "failed", "build": bid, "state": state, "branch": st["branch"], "error": (b["error"] if b else "") or f"build #{bid} {state}"}
+        if stop is not None and stop.is_set():
+            return None
+        sleep(WAIT_AGAIN_S)
+    said = {"status": "done", "build": bid, "state": state, "branch": st["branch"], "base": st["base"], "tracker": tracker, "key": key,
+            "output": b["summary"] or ""}
+    if state == "merged":                            # a build onto a branch with nothing to commit: no change was needed
+        return {**said, "changed": False, "pr": ""}
+    push = str(values.get("FORGE_PUSH") or "")
+    if not push:
+        return {**said, "changed": True, "pr": "", "note": "no FORGE_PUSH in this deployment: the change waits for the owner in the app"}
+    if not st.get("pr"):
+        clone = B.clone(req["repo"])
+        B.git(clone, "fetch", "-q", "origin", f"+refs/heads/{b['branch']}:refs/heads/{st['branch']}", timeout=300)
+        t = TR.find(tracker) or {"name": tracker}
+        pr = FWK.publish(clone, st["branch"], push.format(repo=req["repo"]), forge, req.get("forge") or B.origin(req["repo"]), req["target"],
+                         f"{key}: {title}", f"{b['summary'] or ''}\n\n---\nA draft from the AI Stack for {tracker}/{key}; the stack never merges it.",
+                         TR.run_id(t, key), f"{tracker}/{key}")
+        if not pr:
+            return {**said, "status": "failed", "error": "the forge opened no pull request (no token, or the repository is not on it)"}
+        st["pr"] = {"url": pr.get("url") or "", "number": pr.get("number")}
+        SF.save(mine, st)
+        B.put(c, bid, pr=st["pr"]["url"], pr_number=st["pr"]["number"])
+    return {**said, "changed": True, "pr": st["pr"]["url"], "pr_number": st["pr"]["number"], "draft": True}
+
+
 def run_plan(c, rid, req, cards, stop=None, sleep=time.sleep, db=None):
     """An improvised plan as one task: its steps are rows, run in waves (every step whose steps before have finished,
     together), each through the same path as an agent step. A step after one that failed does not run. -> the answer
@@ -524,65 +660,97 @@ def command(rid, req, stop=None, sleep=time.sleep):
     mine = JOBS / f"{rid}.json"
     try:
         p = PL.place(req["place"])
-        if mine.exists():
-            job = json.loads(mine.read_text())
-        else:
+        job = SF.load(mine)
+        if job is None:
+            if mine.exists():
+                _say(f"flows: {rid}: its job file was empty or unreadable; the command is submitted again")
             _place_worker(req["place"])
             job = {"rid": p.submit(req["command"], req.get("values") or {}, spec=_job_spec(req["command"])), "at": time.time()}
-            mine.write_text(json.dumps(job))
+            SF.save(mine, job)
     except PL.Refused as e:
         return {"status": "refused", "error": str(e)}
     while True:
         st = p.state(job["rid"], submitted=job["at"])
         if st["status"] in ("done", "failed", "refused", "lost", "not picked up"):
             log = p.answers / job["rid"] / "artifacts" / "log.txt"
+            files = p.artifacts(job["rid"])
             return {"status": st["status"] if st["status"] in ("done", "refused") else "failed", "place": req["place"],
                     "command": req["command"], "job": f"{req['place']}/{job['rid']}", "error": st.get("error") or "",
-                    "steps": st.get("steps") or [], "artifacts": [a.name for a in p.artifacts(job["rid"])],
+                    "steps": st.get("steps") or [], "artifacts": [a.name for a in files], "artifact_ids": saved(files, rid, req),
                     "log": tail(log.read_text(errors="replace"), 4000, f"the whole log is {log}") if log.is_file() else ""}   # cap: preview, the log's end; the job keeps it whole
         if stop is not None and stop.is_set():
             return None
         sleep(POLL_S)
 
 
+def saved(files, rid, req):
+    """A command's files into the artifact store (GEN-29), kept by their hash with the run that made them. -> their ids."""
+    from domain import artifacts as AR
+    ids = []
+    for f in files:
+        try:
+            ids.append(AR.put(f, task=str(req.get("title") or req.get("command") or ""), step=rid, run=str(req.get("execution") or ""))["id"])
+        except OSError as e:                         # the file stays in its place's answer folder; logged
+            if M:
+                M.log(f"flows: {rid}: {f.name} not saved: {e}")
+    return ids
+
+
+def people_of(role):
+    """Who may answer a question: its role's people (ops/domain/roles.py); no role, or no map: the owner."""
+    from domain import roles as RL
+    return RL.people(role) if role else [RL.OWNER]
+
+
 def ask(rid, req, notify=None):
-    """The question waits in Needs you until the owner answers. -> the answer, or None while there is none."""
+    """The question waits in Needs you until one who may answer does. -> the answer, or None while there is none."""
     ASKS.mkdir(parents=True, exist_ok=True)
     got = ASKS / f"{rid}.answer.json"
-    if got.exists():
-        a = json.loads(got.read_text())
-        return {"status": "done", "answer": a["answer"], "answered": a.get("at", "")}
+    a = SF.load(got)
+    if a is None and got.exists():
+        _say(f"flows: {rid}: its answer file was empty or unreadable; the question waits again")
+        got.unlink(missing_ok=True)
+    if a is not None:
+        return {"status": "done", "answer": a["answer"], "answered": a.get("at", ""), "by": a.get("who") or "owner",
+                **({"role": req["role"]} if req.get("role") else {})}
     q = ASKS / f"{rid}.json"
-    if not q.exists():
-        q.write_text(json.dumps({"id": rid, "question": req["question"], "why": req.get("why") or "", "answers": req.get("answers") or ["Yes", "No"],
-                                 "workflow": req.get("workflow"), "execution": req.get("execution"),
-                                 "created": time.strftime("%Y-%m-%dT%H:%M:%S%z")}, ensure_ascii=False))
+    if SF.load(q) is None:
+        people = people_of(req.get("role"))
+        SF.save(q, {"id": rid, "question": req["question"], "why": req.get("why") or "", "answers": req.get("answers") or ["Yes", "No"],
+                    "role": req.get("role") or "", "people": people, "workflow": req.get("workflow"), "execution": req.get("execution"),
+                    "created": time.strftime("%Y-%m-%dT%H:%M:%S%z")})
         if notify:
-            notify(f"A workflow asks you: {req['question']} (Needs you)")
+            notify(f"A workflow asks {'you' if people == ['owner'] else ', '.join(people)}: {req['question']} (Needs you)")
     return None
 
 
 def answer(req):
-    """The owner's tap in Needs you (action flow_answer): the answer of one waiting question."""
+    """A tap in Needs you (action flow_answer): the answer of one waiting question, from one who may give it (the
+    app's signed-in person, "who"; at home, with no map of roles, that is the owner). The answer records who gave it."""
     rid, a = str(req.get("id") or ""), req.get("answer")
     q = ASKS / f"{rid}.json"
-    if not re.fullmatch(r"[A-Za-z0-9_-]{1,64}", rid) or not q.exists():
+    qd = SF.load(q) if re.fullmatch(r"[A-Za-z0-9_-]{1,64}", rid) else None
+    if qd is None:
         return {"ok": False, "error": "that question is not waiting any more"}
-    if a not in json.loads(q.read_text())["answers"]:
+    if a not in qd["answers"]:
         return {"ok": False, "error": "that is not one of the question's answers"}
+    who, people = str(req.get("who") or "owner"), qd.get("people") or ["owner"]
+    if people != ["owner"] and who not in people:
+        return {"ok": False, "error": f"only {', '.join(people)} may answer this ({qd.get('role') or 'its role'})"}
     got = ASKS / f"{rid}.answer.json"
-    if got.exists():
+    if SF.load(got) is not None:
         return {"ok": False, "error": "it was answered already"}
-    got.write_text(json.dumps({"answer": a, "at": time.strftime("%Y-%m-%dT%H:%M:%S%z")}))
-    return {"ok": True, "answer": a}
+    SF.save(got, {"answer": a, "at": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "who": who})
+    return {"ok": True, "answer": a, "who": who}
 
 
 def waiting():
     """The questions without an answer, for Needs you."""
     if not ASKS.is_dir():
         return []
-    return [json.loads(p.read_text()) for p in sorted(ASKS.glob("*.json"))
-            if not p.name.endswith(".answer.json") and not (ASKS / f"{p.stem}.answer.json").exists()]
+    qs = (SF.load(p) for p in sorted(ASKS.glob("*.json"))
+          if not p.name.endswith(".answer.json") and SF.load(ASKS / f"{p.stem}.answer.json") is None)
+    return [q for q in qs if q is not None]
 
 
 def answer_of(task, s):
@@ -593,7 +761,8 @@ def answer_of(task, s):
 WORD = {"done": "done", "failed": "failed", "refused": "refused", "cancelled": "cancelled"}
 WHAT = {"crew": lambda r: f"crew job {r['job']}", "task": lambda r: f"task #{r['task']}", "build": lambda r: f"a coding change in {r['repo']}",
         "recall": lambda r: "a memory search", "remember": lambda r: f"a {r['note']} for memory",
-        "command": lambda r: f"{r['command']} at {r['place']}", "plan": lambda r: f"a plan of {len(r['steps'])} steps"}
+        "command": lambda r: f"{r['command']} at {r['place']}", "plan": lambda r: f"a plan of {len(r['steps'])} steps",
+        "wait_item": lambda r: f"a wait on {r['tracker']}/{r['key']}", "tracker": lambda r: f"a {r['write']} on {r['tracker']}/{r['key']}"}
 
 
 def report(req, answer):
@@ -609,6 +778,39 @@ def report(req, answer):
     why = f": {answer['error']}" if answer.get("error") and st != "done" else ""
     run = f" (n8n run {req['execution']})" if req.get("execution") else ""
     ev("workflow", "", f"{what}: {st}{why}{run}", title="Workflows", push=st in ("failed", "refused"))
+
+
+LEAN = ("status", "outcome", "task", "step", "occ", "run", "build", "state", "branch", "base", "changed", "pr", "pr_number", "draft",
+        "ci", "job", "place", "command", "artifacts", "artifact_ids", "comments", "ref", "shadow", "again", "answer", "answered", "by",
+        "role", "kept", "sent", "tracker", "key", "write", "waited_hours", "agent", "harness", "verdict")
+
+
+def lean_answers(data=None):
+    """WFL-22: a customer-class deployment answers n8n with status, ids and a short summary, unless its data.yaml says
+    n8n_answers: full. Read from the data guard's own file (ops/dataguard.py); none: not a customer deployment."""
+    try:
+        import dataguard as DG
+    except SystemExit:                               # the deployment has no data.yaml: home's rules
+        return False
+    data = DG.DATA if data is None else data
+    return DG.customer(data) and str(data.get("n8n_answers") or "summaries") != "full"
+
+
+def lean(answer):
+    """What n8n keeps of an answer in a customer-class deployment: status, outcome, ids, references and a short summary;
+    the whole text is in the run register (ops/runreg.py) and the task's record."""
+    out = {k: answer[k] for k in LEAN if k in answer}
+    text = str(answer.get("output") or answer.get("said") or "")
+    if text:
+        out["summary"] = TC.cut(text, SUMMARY_CHARS, "the whole text is in the task's record")   # cap: preview, the run register and the task keep it whole
+    if answer.get("error"):
+        out["error"] = TC.cut(str(answer["error"]), SUMMARY_CHARS, "the whole reason is in the run register")   # cap: preview, kept whole in the register
+    if isinstance(answer.get("steps"), list):
+        out["steps"] = [lean(x) if isinstance(x, dict) else x for x in answer["steps"]]
+    if "hits" in answer:
+        out["hits"] = len(answer["hits"])
+    out["lean"] = True
+    return out
 
 
 def deliver(url, answer, post=None):
@@ -637,6 +839,41 @@ def all_cards():
         return CD.cards()
 
 
+def tracker_write(rid, req):
+    """WFL-21: one write to the item through trackers.write, in shadow until the owner lets its kind go live; its write
+    id is the request's, so the runner's own retry writes nothing twice."""
+    import runreg as RR
+    from domain import trackers as TR
+    RR.learn(req)
+    body = str(req.get("body") or "").strip()
+    if req.get("from_step"):                         # an earlier step's whole text, from the register: n8n may hold only its summary
+        said = RR.output_of(req.get("execution"), req["from_step"])
+        if said is None:
+            return {"status": "refused", "error": f"no step {req['from_step']!r} with an answer in this run"}
+        body = f"{body}\n\n{said}" if body else said
+    r = TR.write({"tracker": req["tracker"], "kind": req["write"], "key": req["key"], "body": body, "write_id": f"n8n/{rid}",
+                  "run": str(req.get("execution") or ""), "node": req.get("node") or req.get("title") or ""})
+    if r.get("refused"):
+        return {"status": "refused", "error": r["why"]}
+    return {"status": "done", "tracker": req["tracker"], "key": req["key"], "write": req["write"], "shadow": bool(r.get("shadow")),
+            "ref": r["ref"], **({"again": True} if r.get("again") else {})}
+
+
+def _say(line):
+    if M:
+        M.log(line)
+
+
+def _register(fn, *a):
+    """The run register keeps every step; a register that cannot write never stops the step (logged)."""
+    import runreg as RR
+    try:
+        getattr(RR, fn)(*a)
+    except Exception as e:                           # logged; the step and its answer go on
+        if M:
+            M.log(f"flows: run register {fn}: {type(e).__name__}: {e}")
+
+
 def work(rid, req, cards, crew, sleep):
     """The request's work, by its kind. -> the answer, or None while it waits (looked at again on the next scan, or after
     the runner's restart)."""
@@ -656,8 +893,15 @@ def work(rid, req, cards, crew, sleep):
         return remember(req)
     if k == "command":
         return command(rid, req, stop=M.stop, sleep=sleep)
+    if k == "build" and req.get("item"):
+        return item_build(M.db(), rid, req, stop=M.stop, sleep=sleep)
     if k == "build":
         return run_build(M.db(), rid, req, cards, stop=M.stop, sleep=sleep)
+    if k == "wait_item":
+        import runreg as RR
+        return RR.wait(rid, req)
+    if k == "tracker":
+        return tracker_write(rid, req)
     if k == "plan":
         return run_plan(M.db(), rid, req, cards, stop=M.stop, sleep=sleep)
     c = M.db()
@@ -678,21 +922,26 @@ def handle(rid, path, cards=None, crew=None, post=None, sleep=time.sleep, repos=
     req = json.loads(path.read_text())
     DONE.mkdir(parents=True, exist_ok=True)
     out = DONE / f"{rid}.json"
-    if out.exists():
-        answer = json.loads(out.read_text())
-    else:
+    answer = SF.load(out)
+    if answer is None and out.exists():              # a write cut short before writes were atomic: no answer yet
+        _say(f"flows: {rid}: its answer file was empty or unreadable; removed, the step is handled again")
+        out.unlink(missing_ok=True)
+    if answer is None:
+        _register("step_begin", rid, req)
         why = validate(req, cards, crew, repos=repos)
         answer = {"status": "refused", "error": why} if why else work(rid, req, cards, crew, sleep)
         if answer is None:
             return
-        out.write_text(json.dumps(answer, ensure_ascii=False))
+        SF.save(out, answer)
+        _register("step_end", rid, req, answer)
         report(req, answer)
     if not req.get("resume_url"):
         path.unlink(missing_ok=True)
         return
+    sent = lean(answer) if lean_answers() else answer
     first = time.time()
     while time.time() - first < DELIVER_FOR_S:
-        if deliver(req["resume_url"], answer, post):
+        if deliver(req["resume_url"], sent, post):
             path.unlink(missing_ok=True)
             return
         if M and M.stop.is_set():
@@ -753,10 +1002,11 @@ def step_agents(packs=()):
 
 def step_catalog(packs=None, repos=None, places=None):
     """WFL-06: what the node's pickers offer, live: the agents that can do a step (the stack's and each running pack's),
-    the crew jobs, the places with the commands approved at each, the repositories the builder may change, and the kinds.
+    the crew jobs, the places with the commands approved at each, the repositories the builder may change, the
+    deployment's trackers and roles, and the kinds.
     A part that cannot be read is empty, with its reason under "problems"."""
     import crew as CR
-    out = {"kinds": list(KINDS), "agents": [], "crew": [], "places": [], "repos": [], "problems": []}
+    out = {"kinds": list(KINDS), "agents": [], "crew": [], "places": [], "repos": [], "trackers": [], "roles": [], "problems": []}
 
     def part(name, f):
         try:
@@ -785,19 +1035,24 @@ def step_catalog(packs=None, repos=None, places=None):
     part("crew", lambda: [{"id": j, "name": a.get("name") or j} for j, a in sorted(CR.BY_ID.items()) if a.get("unit")])
     part("places", where)
     part("repos", code)
+
+    def trackers():
+        from domain import trackers as TR
+        return [{"id": t["name"], "name": t["name"], "purpose": f"{t.get('kind')}, starts {t.get('workflow') or 'no workflow'}"}
+                for t in TR.config()["trackers"]]
+
+    def roles():
+        from domain import roles as RL
+        return [{"id": r, "name": r, "purpose": "may answer: " + ", ".join(ps)} for r, ps in sorted(RL.load()[0].items())]
+    part("trackers", trackers)
+    part("roles", roles)
     return out
-
-
-def _write(path, data):
-    tmp = path.with_suffix(".tmp")
-    tmp.write_text(json.dumps(data, ensure_ascii=False))
-    tmp.replace(path)
 
 
 def write_catalog(public):
     """public/workflows.json for the app's pages (WFL-11), public/step-catalog.json for the node's pickers (WFL-06)."""
-    _write(Path(public) / "workflows.json", catalog())
-    _write(Path(public) / "step-catalog.json", step_catalog())
+    SF.save(Path(public) / "workflows.json", catalog())
+    SF.save(Path(public) / "step-catalog.json", step_catalog())
 
 
 def worker():

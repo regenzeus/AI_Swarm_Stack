@@ -45,7 +45,7 @@ def test_a_question_waits_in_needs_you_and_the_owners_tap_resumes_the_workflow(t
     assert items[0]["answers"][0]["act"] == {"action": "flow_answer", "id": "q1", "answer": "Merge"}
     FW.handle("q1", p, cards={}, crew={}, post=post, sleep=lambda s: None)          # asked again: still one question, one message
     assert len(told) == 1 and sent == []
-    assert FW.answer({"id": "q1", "answer": "Merge"}) == {"ok": True, "answer": "Merge"}
+    assert FW.answer({"id": "q1", "answer": "Merge"}) == {"ok": True, "answer": "Merge", "who": "owner"}
     assert list(D._flows({})) == []
     FW.handle("q1", p, cards={}, crew={}, post=post, sleep=lambda s: None)
     assert not p.exists() and sent[0]["status"] == "done" and sent[0]["answer"] == "Merge"

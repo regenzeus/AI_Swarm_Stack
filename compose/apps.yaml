@@ -346,6 +346,7 @@ services:
       PHONE_HOST: ${PHONE_HOST:-}
       PC_TAILNET_HOST: ${PC_TAILNET_HOST:-}
       APP_NAME: ${APP_NAME:-AI Stack}                 # the app's name (APP-61)
+      APP_GATE: ${APP_GATE:-tailnet}                  # WFL-16: tailnet (Tailscale's login) or local (this PC only, no tailnet)
       NAS_HOST: ${NAS_HOST:-}
       HA_URL: ${HA_URL:-}
       ROUTER_URL: ${ROUTER_URL:-}

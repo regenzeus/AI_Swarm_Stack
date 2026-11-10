@@ -1,0 +1,8 @@
+{
+  "kind": "toy.soak",
+  "about": "Run the toy tool for the given seconds: a stand-in for a licensed tool whose run takes hours",
+  "params": {"seconds": {"type": "int", "min": 0, "max": 840}},
+  "steps": [["python3", "-c", "import sys, time; time.sleep(int(sys.argv[1])); print('soaked for', sys.argv[1], 's')", "{seconds}"]],
+  "collect": [],
+  "minutes": 15
+}

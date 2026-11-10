@@ -34,8 +34,10 @@ async def steps_get(request):
     if not re.fullmatch(r"[0-9a-f]{16}", rid):
         return JSONResponse({"ok": False, "error": "no such step"}, status_code=404)
     done = FLOWS / "done" / f"{rid}.json"
-    if done.exists():
+    try:
         return JSONResponse({"ok": True, "id": rid, **json.loads(done.read_text())})
+    except (OSError, ValueError):                    # none yet, or one cut short: the runner handles the step again
+        pass
     if (FLOWS / "pending" / f"{rid}.json").exists():
         return JSONResponse({"ok": True, "id": rid, "status": "pending"})
     return JSONResponse({"ok": False, "error": "no such step"}, status_code=404)

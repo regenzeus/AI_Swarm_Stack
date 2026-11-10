@@ -11,7 +11,7 @@
       ],
       "parameters": {
         "httpMethod": "POST",
-        "path": "toy-triage"
+        "path": "toy/triage"
       }
     },
     {

@@ -17,7 +17,7 @@ Method, statuses and rules: [README.md](README.md). Names of the parts: [glossar
 | [Constraints](#cst-constraints) (CST) | 15 | 11 | 2 | 1 | 0 | 1 | 0 |
 | [Crew](#crw-crew) (CRW) | 13 | 11 | 0 | 0 | 0 | 0 | 2 |
 | [Gateway](#gw-gateway) (GW) | 9 | 8 | 0 | 0 | 0 | 1 | 0 |
-| [Generalisation](#gen-generalisation) (GEN) | 39 | 11 | 13 | 0 | 2 | 3 | 10 |
+| [Generalisation](#gen-generalisation) (GEN) | 44 | 18 | 11 | 0 | 2 | 3 | 10 |
 | [House](#hse-house) (HSE) | 9 | 9 | 0 | 0 | 0 | 0 | 0 |
 | [Knowledge](#knw-knowledge) (KNW) | 15 | 15 | 0 | 0 | 0 | 0 | 0 |
 | [Memory](#mem-memory) (MEM) | 51 | 49 | 0 | 0 | 0 | 0 | 2 |
@@ -33,10 +33,10 @@ Method, statuses and rules: [README.md](README.md). Names of the parts: [glossar
 | [Task engine](#tsk-task-engine) (TSK) | 45 | 39 | 6 | 0 | 0 | 0 | 0 |
 | [Trials](#trl-trials) (TRL) | 17 | 13 | 2 | 0 | 0 | 2 | 0 |
 | [Voice](#voi-voice) (VOI) | 9 | 8 | 0 | 0 | 0 | 1 | 0 |
-| [Workflows](#wfl-workflows) (WFL) | 14 | 11 | 3 | 0 | 0 | 0 | 0 |
-| **All** | **687** | **598** | **48** | **1** | **4** | **17** | **19** |
+| [Workflows](#wfl-workflows) (WFL) | 24 | 21 | 3 | 0 | 0 | 0 | 0 |
+| **All** | **702** | **615** | **46** | **1** | **4** | **17** | **19** |
 
-Unit tests claimed by a requirement: 1423 of 1423.
+Unit tests claimed by a requirement: 1464 of 1464.
 
 ## Findings
 
@@ -1535,8 +1535,8 @@ The trial's build #11 appeared on the Tasks board as task #89 (source door) besi
 | <a id="sn-01"></a>**SN-01** A personal AI team that works by itself: Agents read the news, research companies and topics, watch filings and prices, and deliver briefings, alerts and research results on their own, so that the owner mostly just reads results. | must | [APP-05](#app-05), [APP-25](#app-25), [APP-26](#app-26), [APP-30](#app-30), [APP-31](#app-31), [APP-32](#app-32), [APP-33](#app-33), [APP-34](#app-34), [APP-35](#app-35), [APP-46](#app-46), [APP-47](#app-47), [APP-48](#app-48), [APP-49](#app-49), [APP-50](#app-50), [APP-51](#app-51), [APP-52](#app-52), [APP-62](#app-62), [APP-63](#app-63), [APP-64](#app-64), [APP-65](#app-65), [APP-66](#app-66), [APP-67](#app-67), [APP-68](#app-68), [AST-01](#ast-01), [AST-05](#ast-05), [AST-07](#ast-07), [AST-13](#ast-13), [BLD-25](#bld-25), [CST-01](#cst-01), [MIS-01](#mis-01), [MIS-02](#mis-02), [MIS-06](#mis-06), [MIS-08](#mis-08), [MIS-09](#mis-09), [MIS-10](#mis-10), [MIS-11](#mis-11), [MIS-13](#mis-13), [MIS-14](#mis-14), [MIS-15](#mis-15), [MIS-21](#mis-21), [MIS-22](#mis-22), [MIS-23](#mis-23), [RES-02](#res-02), [RES-03](#res-03), [RES-04](#res-04), [RES-05](#res-05), [SHP-13](#shp-13), [VOI-09](#voi-09) |
 | <a id="sn-02"></a>**SN-02** Out of the loop except for real decisions: the owner is asked only for decisions that are really his (approvals of spending, deploys, deletions, settings, grants), each one tap away with enough context to decide; no scripts to run, no busywork, nothing shown as needing him that does not. | must | [APP-04](#app-04), [APP-05](#app-05), [APP-06](#app-06), [APP-07](#app-07), [APP-13](#app-13), [APP-14](#app-14), [APP-21](#app-21), [APP-25](#app-25), [APP-26](#app-26), [APP-30](#app-30), [APP-31](#app-31), [APP-54](#app-54), [APP-68](#app-68), [AST-06](#ast-06), [AST-12](#ast-12), [AUT-01](#aut-01), [AUT-02](#aut-02), [AUT-05](#aut-05), [AUT-07](#aut-07), [AUT-08](#aut-08), [CHG-02](#chg-02), [CHG-03](#chg-03), [CNX-02](#cnx-02), [CRW-02](#crw-02), [CRW-05](#crw-05), [CRW-06](#crw-06), [CST-03](#cst-03), [MEM-42](#mem-42), [MIS-07](#mis-07), [MIS-20](#mis-20), [PHN-02](#phn-02), [PHN-11](#phn-11), [PHN-12](#phn-12), [PHN-18](#phn-18), [PHN-20](#phn-20), [PHN-21](#phn-21), [PHN-22](#phn-22), [PHN-24](#phn-24), [PHN-25](#phn-25), [PHN-26](#phn-26), [SHP-01](#shp-01), [SHP-03](#shp-03), [SHP-08](#shp-08), [SWM-05](#swm-05), [SWM-06](#swm-06), [SWM-08](#swm-08), [SWM-33](#swm-33), [SWM-38](#swm-38), [SWM-39](#swm-39), [SWM-40](#swm-40), [SWM-42](#swm-42), [SWM-43](#swm-43), [SWM-44](#swm-44), [SWM-54](#swm-54), [SWM-55](#swm-55), [SWM-61](#swm-61), [SWM-87](#swm-87), [TRL-15](#trl-15), [TSK-03](#tsk-03), [TSK-20](#tsk-20), [TSK-40](#tsk-40), [VOI-08](#voi-08) |
 | <a id="sn-03"></a>**SN-03** Costs nothing to run: Running the stack costs $0 beyond the subscriptions the owner already pays; nothing can spend money by accident. | must | [APP-40](#app-40), [APP-41](#app-41), [APP-42](#app-42), [APP-43](#app-43), [APP-44](#app-44), [APP-45](#app-45), [AST-02](#ast-02), [AST-08](#ast-08), [BLD-06](#bld-06), [CST-02](#cst-02), [CST-15](#cst-15), [GW-02](#gw-02), [GW-04](#gw-04), [GW-09](#gw-09), [MEM-26](#mem-26), [MEM-44](#mem-44), [MIS-04](#mis-04), [MIS-16](#mis-16), [PHN-27](#phn-27), [PLT-11](#plt-11), [PLT-26](#plt-26), [PLT-27](#plt-27), [RES-07](#res-07), [SHP-05](#shp-05), [SWM-13](#swm-13), [SWM-14](#swm-14), [SWM-29](#swm-29), [SWM-40](#swm-40), [SWM-53](#swm-53), [SWM-60](#swm-60), [SWM-62](#swm-62), [SWM-81](#swm-81), [WFL-07](#wfl-07), [WFL-10](#wfl-10), [WFL-11](#wfl-11), [WFL-14](#wfl-14) |
-| <a id="sn-04"></a>**SN-04** Private data stays home: Notes, reports, memory, chats, mail and files stay on the PC and the NAS; only the model calls leave, and The owner knows which provider sees what. | must | [AUT-03](#aut-03), [CST-04](#cst-04), [CST-06](#cst-06), [GEN-14](#gen-14), [HSE-07](#hse-07), [KNW-05](#knw-05), [KNW-07](#knw-07), [MEM-06](#mem-06), [MEM-18](#mem-18), [MEM-30](#mem-30), [PHN-16](#phn-16), [PHN-19](#phn-19), [RES-01](#res-01), [SEC-03](#sec-03), [SEC-04](#sec-04), [SEC-06](#sec-06), [SEC-17](#sec-17), [SEC-18](#sec-18), [SEC-19](#sec-19), [SEC-22](#sec-22), [SWM-67](#swm-67) |
-| <a id="sn-05"></a>**SN-05** Agents cannot do damage: No agent can spend money, delete data for good, leak private data, change the NAS, the router or phone and PC security settings, or deploy code without the owner's approval; prompt injection from the web or mail cannot steer an agent into any of it. | must | [APP-10](#app-10), [APP-20](#app-20), [APP-61](#app-61), [AST-08](#ast-08), [AST-09](#ast-09), [AST-10](#ast-10), [AST-14](#ast-14), [AUT-01](#aut-01), [AUT-03](#aut-03), [BLD-02](#bld-02), [BLD-07](#bld-07), [BLD-10](#bld-10), [BLD-13](#bld-13), [BLD-16](#bld-16), [BLD-18](#bld-18), [BLD-27](#bld-27), [BLD-28](#bld-28), [BLD-39](#bld-39), [CHG-05](#chg-05), [CHG-12](#chg-12), [CHG-13](#chg-13), [CHG-15](#chg-15), [CNX-01](#cnx-01), [CNX-03](#cnx-03), [CNX-04](#cnx-04), [CNX-05](#cnx-05), [CNX-07](#cnx-07), [CNX-08](#cnx-08), [CNX-09](#cnx-09), [CRW-04](#crw-04), [CRW-10](#crw-10), [CRW-11](#crw-11), [CRW-13](#crw-13), [CST-04](#cst-04), [CST-05](#cst-05), [CST-06](#cst-06), [CST-07](#cst-07), [CST-10](#cst-10), [CST-11](#cst-11), [CST-12](#cst-12), [GEN-01](#gen-01), [GEN-02](#gen-02), [GEN-03](#gen-03), [GEN-04](#gen-04), [GEN-05](#gen-05), [GEN-06](#gen-06), [GEN-07](#gen-07), [GEN-08](#gen-08), [GEN-09](#gen-09), [GEN-10](#gen-10), [GEN-11](#gen-11), [GEN-12](#gen-12), [GEN-13](#gen-13), [GEN-14](#gen-14), [GEN-15](#gen-15), [GEN-16](#gen-16), [GEN-17](#gen-17), [GEN-18](#gen-18), [GEN-19](#gen-19), [GEN-20](#gen-20), [GEN-21](#gen-21), [GEN-22](#gen-22), [GEN-23](#gen-23), [GEN-24](#gen-24), [GEN-25](#gen-25), [GEN-26](#gen-26), [GEN-27](#gen-27), [GEN-28](#gen-28), [GEN-29](#gen-29), [GEN-30](#gen-30), [GEN-31](#gen-31), [GEN-32](#gen-32), [GEN-33](#gen-33), [GEN-34](#gen-34), [GEN-35](#gen-35), [GEN-36](#gen-36), [GEN-37](#gen-37), [GEN-38](#gen-38), [GEN-39](#gen-39), [GW-05](#gw-05), [HSE-04](#hse-04), [HSE-05](#hse-05), [HSE-08](#hse-08), [HSE-09](#hse-09), [KNW-04](#knw-04), [KNW-06](#knw-06), [KNW-11](#knw-11), [MEM-04](#mem-04), [MEM-29](#mem-29), [MEM-30](#mem-30), [MEM-39](#mem-39), [MEM-49](#mem-49), [MIS-17](#mis-17), [MIS-28](#mis-28), [PHN-01](#phn-01), [PHN-03](#phn-03), [PHN-04](#phn-04), [PHN-05](#phn-05), [PHN-06](#phn-06), [PHN-07](#phn-07), [PHN-08](#phn-08), [PHN-15](#phn-15), [PLT-02](#plt-02), [PLT-03](#plt-03), [PLT-09](#plt-09), [QA-23](#qa-23), [QA-24](#qa-24), [QA-25](#qa-25), [QA-26](#qa-26), [RES-01](#res-01), [RES-03](#res-03), [RES-04](#res-04), [RES-06](#res-06), [SEC-01](#sec-01), [SEC-02](#sec-02), [SEC-03](#sec-03), [SEC-04](#sec-04), [SEC-05](#sec-05), [SEC-06](#sec-06), [SEC-07](#sec-07), [SEC-08](#sec-08), [SEC-09](#sec-09), [SEC-10](#sec-10), [SEC-11](#sec-11), [SEC-12](#sec-12), [SEC-13](#sec-13), [SEC-14](#sec-14), [SEC-15](#sec-15), [SEC-16](#sec-16), [SEC-20](#sec-20), [SEC-21](#sec-21), [SEC-22](#sec-22), [SHP-05](#shp-05), [SHP-06](#shp-06), [SHP-07](#shp-07), [SHP-09](#shp-09), [SHP-10](#shp-10), [SWM-06](#swm-06), [SWM-109](#swm-109), [SWM-11](#swm-11), [SWM-15](#swm-15), [SWM-23](#swm-23), [SWM-24](#swm-24), [SWM-26](#swm-26), [SWM-42](#swm-42), [SWM-43](#swm-43), [SWM-46](#swm-46), [SWM-51](#swm-51), [SWM-58](#swm-58), [SWM-66](#swm-66), [SWM-67](#swm-67), [SWM-68](#swm-68), [SWM-69](#swm-69), [SWM-70](#swm-70), [SWM-77](#swm-77), [SWM-89](#swm-89), [TRL-05](#trl-05), [TSK-15](#tsk-15), [TSK-20](#tsk-20), [VOI-01](#voi-01), [VOI-03](#voi-03), [VOI-07](#voi-07), [WFL-01](#wfl-01), [WFL-02](#wfl-02), [WFL-05](#wfl-05), [WFL-06](#wfl-06), [WFL-08](#wfl-08), [WFL-09](#wfl-09), [WFL-12](#wfl-12), [WFL-13](#wfl-13) |
+| <a id="sn-04"></a>**SN-04** Private data stays home: Notes, reports, memory, chats, mail and files stay on the PC and the NAS; only the model calls leave, and The owner knows which provider sees what. | must | [AUT-03](#aut-03), [CST-04](#cst-04), [CST-06](#cst-06), [GEN-14](#gen-14), [HSE-07](#hse-07), [KNW-05](#knw-05), [KNW-07](#knw-07), [MEM-06](#mem-06), [MEM-18](#mem-18), [MEM-30](#mem-30), [PHN-16](#phn-16), [PHN-19](#phn-19), [RES-01](#res-01), [SEC-03](#sec-03), [SEC-04](#sec-04), [SEC-06](#sec-06), [SEC-17](#sec-17), [SEC-18](#sec-18), [SEC-19](#sec-19), [SEC-22](#sec-22), [SWM-67](#swm-67), [WFL-15](#wfl-15), [WFL-16](#wfl-16), [WFL-17](#wfl-17), [WFL-18](#wfl-18) |
+| <a id="sn-05"></a>**SN-05** Agents cannot do damage: No agent can spend money, delete data for good, leak private data, change the NAS, the router or phone and PC security settings, or deploy code without the owner's approval; prompt injection from the web or mail cannot steer an agent into any of it. | must | [APP-10](#app-10), [APP-20](#app-20), [APP-61](#app-61), [AST-08](#ast-08), [AST-09](#ast-09), [AST-10](#ast-10), [AST-14](#ast-14), [AUT-01](#aut-01), [AUT-03](#aut-03), [BLD-02](#bld-02), [BLD-07](#bld-07), [BLD-10](#bld-10), [BLD-13](#bld-13), [BLD-16](#bld-16), [BLD-18](#bld-18), [BLD-27](#bld-27), [BLD-28](#bld-28), [BLD-39](#bld-39), [CHG-05](#chg-05), [CHG-12](#chg-12), [CHG-13](#chg-13), [CHG-15](#chg-15), [CNX-01](#cnx-01), [CNX-03](#cnx-03), [CNX-04](#cnx-04), [CNX-05](#cnx-05), [CNX-07](#cnx-07), [CNX-08](#cnx-08), [CNX-09](#cnx-09), [CRW-04](#crw-04), [CRW-10](#crw-10), [CRW-11](#crw-11), [CRW-13](#crw-13), [CST-04](#cst-04), [CST-05](#cst-05), [CST-06](#cst-06), [CST-07](#cst-07), [CST-10](#cst-10), [CST-11](#cst-11), [CST-12](#cst-12), [GEN-01](#gen-01), [GEN-02](#gen-02), [GEN-03](#gen-03), [GEN-04](#gen-04), [GEN-05](#gen-05), [GEN-06](#gen-06), [GEN-07](#gen-07), [GEN-08](#gen-08), [GEN-09](#gen-09), [GEN-10](#gen-10), [GEN-11](#gen-11), [GEN-12](#gen-12), [GEN-13](#gen-13), [GEN-14](#gen-14), [GEN-15](#gen-15), [GEN-16](#gen-16), [GEN-17](#gen-17), [GEN-18](#gen-18), [GEN-19](#gen-19), [GEN-20](#gen-20), [GEN-21](#gen-21), [GEN-22](#gen-22), [GEN-23](#gen-23), [GEN-24](#gen-24), [GEN-25](#gen-25), [GEN-26](#gen-26), [GEN-27](#gen-27), [GEN-28](#gen-28), [GEN-29](#gen-29), [GEN-30](#gen-30), [GEN-31](#gen-31), [GEN-32](#gen-32), [GEN-33](#gen-33), [GEN-34](#gen-34), [GEN-35](#gen-35), [GEN-36](#gen-36), [GEN-37](#gen-37), [GEN-38](#gen-38), [GEN-39](#gen-39), [GEN-40](#gen-40), [GEN-41](#gen-41), [GEN-42](#gen-42), [GEN-43](#gen-43), [GEN-44](#gen-44), [GW-05](#gw-05), [HSE-04](#hse-04), [HSE-05](#hse-05), [HSE-08](#hse-08), [HSE-09](#hse-09), [KNW-04](#knw-04), [KNW-06](#knw-06), [KNW-11](#knw-11), [MEM-04](#mem-04), [MEM-29](#mem-29), [MEM-30](#mem-30), [MEM-39](#mem-39), [MEM-49](#mem-49), [MIS-17](#mis-17), [MIS-28](#mis-28), [PHN-01](#phn-01), [PHN-03](#phn-03), [PHN-04](#phn-04), [PHN-05](#phn-05), [PHN-06](#phn-06), [PHN-07](#phn-07), [PHN-08](#phn-08), [PHN-15](#phn-15), [PLT-02](#plt-02), [PLT-03](#plt-03), [PLT-09](#plt-09), [QA-23](#qa-23), [QA-24](#qa-24), [QA-25](#qa-25), [QA-26](#qa-26), [RES-01](#res-01), [RES-03](#res-03), [RES-04](#res-04), [RES-06](#res-06), [SEC-01](#sec-01), [SEC-02](#sec-02), [SEC-03](#sec-03), [SEC-04](#sec-04), [SEC-05](#sec-05), [SEC-06](#sec-06), [SEC-07](#sec-07), [SEC-08](#sec-08), [SEC-09](#sec-09), [SEC-10](#sec-10), [SEC-11](#sec-11), [SEC-12](#sec-12), [SEC-13](#sec-13), [SEC-14](#sec-14), [SEC-15](#sec-15), [SEC-16](#sec-16), [SEC-20](#sec-20), [SEC-21](#sec-21), [SEC-22](#sec-22), [SHP-05](#shp-05), [SHP-06](#shp-06), [SHP-07](#shp-07), [SHP-09](#shp-09), [SHP-10](#shp-10), [SWM-06](#swm-06), [SWM-109](#swm-109), [SWM-11](#swm-11), [SWM-15](#swm-15), [SWM-23](#swm-23), [SWM-24](#swm-24), [SWM-26](#swm-26), [SWM-42](#swm-42), [SWM-43](#swm-43), [SWM-46](#swm-46), [SWM-51](#swm-51), [SWM-58](#swm-58), [SWM-66](#swm-66), [SWM-67](#swm-67), [SWM-68](#swm-68), [SWM-69](#swm-69), [SWM-70](#swm-70), [SWM-77](#swm-77), [SWM-89](#swm-89), [TRL-05](#trl-05), [TSK-15](#tsk-15), [TSK-20](#tsk-20), [VOI-01](#voi-01), [VOI-03](#voi-03), [VOI-07](#voi-07), [WFL-01](#wfl-01), [WFL-02](#wfl-02), [WFL-05](#wfl-05), [WFL-06](#wfl-06), [WFL-08](#wfl-08), [WFL-09](#wfl-09), [WFL-12](#wfl-12), [WFL-13](#wfl-13), [WFL-15](#wfl-15), [WFL-17](#wfl-17), [WFL-19](#wfl-19), [WFL-20](#wfl-20), [WFL-21](#wfl-21), [WFL-22](#wfl-22), [WFL-23](#wfl-23), [WFL-24](#wfl-24) |
 | <a id="sn-06"></a>**SN-06** Usable from the phone, anywhere, one sign-in: Everything is usable and decidable from the owner's phone (installable app, push, Telegram), from anywhere on his tailnet, with his Tailscale login as the only sign-in. | must | [APP-01](#app-01), [APP-02](#app-02), [APP-03](#app-03), [APP-04](#app-04), [APP-08](#app-08), [APP-09](#app-09), [APP-15](#app-15), [APP-17](#app-17), [APP-19](#app-19), [APP-20](#app-20), [APP-37](#app-37), [APP-38](#app-38), [APP-39](#app-39), [APP-62](#app-62), [APP-64](#app-64), [APP-65](#app-65), [APP-66](#app-66), [AST-01](#ast-01), [AST-03](#ast-03), [AUT-05](#aut-05), [AUT-06](#aut-06), [MIS-15](#mis-15), [MIS-23](#mis-23), [QA-16](#qa-16), [QA-21](#qa-21), [QA-22](#qa-22), [SEC-01](#sec-01), [SEC-02](#sec-02), [SEC-20](#sec-20), [SWM-11](#swm-11), [SWM-57](#swm-57), [SWM-93](#swm-93), [SWM-95](#swm-95), [TSK-02](#tsk-02), [VOI-09](#voi-09) |
 | <a id="sn-07"></a>**SN-07** See what every agent does: For every agent, mission, crew job, build and tool the owner can see what it did step by step, what it read and changed, what it produced, what it cost and when something went wrong, without having to look for it. | must | [APP-07](#app-07), [APP-11](#app-11), [APP-12](#app-12), [APP-16](#app-16), [APP-19](#app-19), [APP-22](#app-22), [APP-23](#app-23), [APP-24](#app-24), [APP-35](#app-35), [APP-36](#app-36), [APP-53](#app-53), [AST-04](#ast-04), [AUT-04](#aut-04), [AUT-07](#aut-07), [BLD-14](#bld-14), [BLD-20](#bld-20), [CHG-16](#chg-16), [CHG-20](#chg-20), [CRW-01](#crw-01), [CRW-02](#crw-02), [CRW-09](#crw-09), [CRW-12](#crw-12), [GW-01](#gw-01), [GW-07](#gw-07), [HSE-02](#hse-02), [MEM-01](#mem-01), [MEM-07](#mem-07), [MEM-09](#mem-09), [MEM-10](#mem-10), [MEM-19](#mem-19), [MEM-22](#mem-22), [MEM-27](#mem-27), [MEM-44](#mem-44), [MEM-45](#mem-45), [MEM-46](#mem-46), [MIS-16](#mis-16), [OBS-01](#obs-01), [OBS-02](#obs-02), [OBS-03](#obs-03), [OBS-04](#obs-04), [OBS-05](#obs-05), [OBS-06](#obs-06), [OBS-07](#obs-07), [OBS-08](#obs-08), [OBS-09](#obs-09), [OBS-10](#obs-10), [OBS-14](#obs-14), [OBS-15](#obs-15), [OBS-18](#obs-18), [PLT-24](#plt-24), [PLT-30](#plt-30), [QA-17](#qa-17), [RES-05](#res-05), [SEC-07](#sec-07), [SHP-11](#shp-11), [SWM-103](#swm-103), [SWM-104](#swm-104), [SWM-105](#swm-105), [SWM-106](#swm-106), [SWM-107](#swm-107), [SWM-110](#swm-110), [SWM-111](#swm-111), [SWM-112](#swm-112), [SWM-113](#swm-113), [SWM-114](#swm-114), [SWM-115](#swm-115), [SWM-17](#swm-17), [SWM-23](#swm-23), [SWM-25](#swm-25), [SWM-30](#swm-30), [SWM-57](#swm-57), [SWM-58](#swm-58), [SWM-64](#swm-64), [SWM-78](#swm-78), [SWM-79](#swm-79), [SWM-80](#swm-80), [SWM-81](#swm-81), [SWM-82](#swm-82), [SWM-84](#swm-84), [SWM-90](#swm-90), [SWM-96](#swm-96), [SWM-99](#swm-99), [TSK-04](#tsk-04), [TSK-09](#tsk-09), [TSK-17](#tsk-17), [TSK-35](#tsk-35), [TSK-42](#tsk-42), [TSK-43](#tsk-43) |
 | <a id="sn-08"></a>**SN-08** The stack maintains and improves itself: Housekeeping agents keep the stack healthy, and the stack proposes and builds its own improvements; the owner approves what ships. | must | [APP-21](#app-21), [AST-11](#ast-11), [AUT-02](#aut-02), [BLD-01](#bld-01), [BLD-03](#bld-03), [BLD-04](#bld-04), [BLD-05](#bld-05), [BLD-08](#bld-08), [BLD-10](#bld-10), [BLD-21](#bld-21), [BLD-22](#bld-22), [BLD-24](#bld-24), [CHG-11](#chg-11), [CHG-15](#chg-15), [CHG-17](#chg-17), [CHG-18](#chg-18), [CHG-19](#chg-19), [CRW-01](#crw-01), [CRW-03](#crw-03), [CRW-04](#crw-04), [CRW-07](#crw-07), [CRW-08](#crw-08), [CRW-09](#crw-09), [CRW-10](#crw-10), [CST-07](#cst-07), [GW-09](#gw-09), [KNW-08](#knw-08), [MEM-11](#mem-11), [MEM-13](#mem-13), [MEM-20](#mem-20), [MEM-38](#mem-38), [MEM-39](#mem-39), [MEM-42](#mem-42), [MEM-43](#mem-43), [MEM-47](#mem-47), [MEM-50](#mem-50), [OBS-13](#obs-13), [PLT-08](#plt-08), [PLT-19](#plt-19), [QA-07](#qa-07), [SEC-08](#sec-08), [SWM-07](#swm-07), [SWM-102](#swm-102), [SWM-18](#swm-18), [SWM-38](#swm-38), [SWM-44](#swm-44), [SWM-45](#swm-45), [SWM-46](#swm-46), [SWM-47](#swm-47), [SWM-61](#swm-61), [SWM-70](#swm-70), [SWM-82](#swm-82), [SWM-83](#swm-83), [SWM-84](#swm-84), [SWM-91](#swm-91), [SWM-92](#swm-92), [SWM-93](#swm-93), [SWM-94](#swm-94), [SWM-95](#swm-95), [SWM-96](#swm-96), [TRL-14](#trl-14), [TRL-15](#trl-15), [TRL-16](#trl-16), [TRL-17](#trl-17), [TSK-13](#tsk-13), [TSK-16](#tsk-16), [TSK-17](#tsk-17), [TSK-42](#tsk-42), [WFL-03](#wfl-03) |
@@ -3846,9 +3846,9 @@ A step kind shall be able to name where it runs (WSL or Windows); a Windows step
 - Parents: [SN-05](#sn-05)
 - Sources: `docs/PLATFORM.md`, [DEC-45](#dec-45)
 - Verified by: test: `tests/test_winworker.py::test_a_declared_approved_job_runs_end_to_end_and_brings_its_evidence_back`, `tests/test_winworker.py::test_a_failing_build_is_a_failed_job_with_its_step`, `tests/test_winworker.py::test_the_stack_refuses_at_once_what_windows_would_refuse`, `tests/test_winworker.py::test_a_wrong_value_is_refused_by_the_worker_with_which_and_why`, `tests/test_winworker.py::test_a_patch_outside_its_kinds_paths_is_refused_before_it_is_applied`, `tests/test_winworker.py::test_an_unapproved_or_changed_kind_does_not_run_even_when_asked_directly`, `tests/test_winworker.py::test_a_lost_job_is_reported_and_one_whose_kind_may_retry_runs_once_more`, `tests/test_winworker.py::test_a_job_past_its_time_limit_is_stopped`, `tests/test_winworker.py::test_a_kind_definition_that_is_unclear_is_not_valid`, `tests/test_winworker.py::test_the_stack_side_can_start_nothing_on_windows`, `tests/test_winworker.py::test_a_where_windows_step_runs_end_to_end_and_a_step_kind_says_where_it_runs`, `tests/test_winworker.py::test_the_worker_is_a_feature_a_deployment_switches_on`
-- Acceptance: Test: with the fake worker a where: windows step runs end to end; an unknown kind, a wrong value, an unapproved kind, a patch outside its paths and a stale lease are each refused or recovered with the reason; wsl.conf and listening sockets are unchanged.
-- Trace: `ops/winworker.py`, `ops/winjobs.py`, `ops/fakeworker.py`, `ops/stepkinds.py`, `ops/windows/worker.ps1`, `ops/windows/worker-broker.ps1`, `ops/windows/worker-setup.ps1`, `ops/windows/worker-approve.ps1`, `ops/windows/worker-selftest.ps1`
-- Gap: The worker, its rules, the fake worker, the stack's side, the broker and the setup exist; the protocol cases pass on the fake worker and, through worker-selftest.ps1, on the real worker on the home PC (as the owner). The separate account, its folder rights and the network limit are proven only once the owner has run worker-setup.ps1 and the self-test as aiworker.
+- Acceptance: Test: with the local worker a where: windows step runs end to end; an unknown kind, a wrong value, an unapproved kind, a patch outside its paths and a stale lease are each refused or recovered with the reason; wsl.conf and listening sockets are unchanged.
+- Trace: `ops/winworker.py`, `ops/winjobs.py`, `ops/localworker.py`, `ops/stepkinds.py`, `ops/windows/worker.ps1`, `ops/windows/worker-broker.ps1`, `ops/windows/worker-setup.ps1`, `ops/windows/worker-approve.ps1`, `ops/windows/worker-selftest.ps1`
+- Gap: The worker, its rules, the local worker, the stack's side, the broker and the setup exist; the protocol cases pass on the local worker and, through worker-selftest.ps1, on the real worker on the home PC (as the owner). The separate account, its folder rights and the network limit are proven only once the owner has run worker-setup.ps1 and the self-test as aiworker.
 
 ### GEN-12
 
@@ -3969,7 +3969,7 @@ A deployment shall load domain packs from folders or repositories outside the st
 - Verified by: test: `tests/test_domain_packs.py::test_an_unapproved_pack_does_not_run_and_waits_in_the_queue_with_its_manifest_prompts_commands_and_diff`, `tests/test_domain_packs.py::test_an_approved_pack_adds_its_agents_skill_workflow_and_job_kind_from_a_read_only_checkout`, `tests/test_domain_packs.py::test_a_pack_that_clashes_or_names_no_commit_of_its_source_is_refused_with_the_reason`, `tests/test_domain_packs.py::test_two_packs_of_one_name_and_a_manifest_naming_another_pack_are_refused`, `tests/test_domain_packs.py::test_home_without_packs_is_unchanged`, `tests/test_domain_packs.py::test_a_pack_workflow_that_is_no_n8n_workflow_or_runs_a_shell_command_is_refused_with_the_reason`, `tests/test_domain_packs.py::test_packs_are_the_apps_and_the_queues`, `tests/test_domain_packs.py::test_the_app_sees_each_pack_s_workflows_and_agents_but_no_folder_or_file_path`, `tests/test_app_after_n8n.py::test_packs_and_trackers_are_one_section_of_the_stack_page_and_their_old_links_open_it`
 - Acceptance: Test: a toy pack copied outside the repository adds agents, a skill, a workflow and a job kind; a name clash, an unapproved commit and a workflow that runs a shell command are refused with the reason; home without it is unchanged.
 - Trace: `ops/domain/packs.py`, `ops/domain/__init__.py`, `ops/decisions.py`, `ops/missions.py`, `images/mission-control/web/static/app.js`, `tests/fixtures/packs/toy/stack.yaml`, `tests/fixtures/packs/toy/workflows/bug.json`
-- Gap: Packs are read, checked, approved per commit and pinned; a running pack's workflows are not imported into n8n yet (WFL-08 imports the repository's own), and its agents are not in the AI Stack step's list yet (WFL-06).
+- Gap: A running pack's agents are not in the AI Stack step's list yet (WFL-06); its workflows reach n8n since 10 Nov 2026 (GEN-43).
 
 ### GEN-22
 
@@ -3981,7 +3981,7 @@ A pack's command shall be a job kind of the worker protocol, run at wsl, windows
 - Sources: `docs/AI-STACK.md`
 - Verified by: test: `tests/test_domain_places.py::test_a_command_runs_at_the_wsl_host_place_only_once_approved_there_by_its_hash_and_a_value_outside_its_type_is_refused`, `tests/test_domain_places.py::test_commands_are_the_queues`
 - Acceptance: Test: a toy job kind on the wsl-host worker runs with a change's diff, a value outside its type is refused, and the verdict reaches the coder's next prompt in the same build.
-- Trace: `ops/domain/places.py`, `ops/wslhost-setup.sh`
+- Trace: `ops/domain/places.py`, `ops/localworker.py`, `ops/wslhost-setup.sh`
 - Gap: The places, the typed values and the approval of each job kind by its hash at each place are built and tested; no workflow starts a command yet (the AI Stack step has no command kind, WFL-06), and the coder starting a check job from inside its build and reading the verdict in the same build is not built (docs/AI-STACK.md).
 
 ### GEN-23
@@ -4012,40 +4012,38 @@ A run shall wait on a key (a tracker item or a pull request) for weeks without h
 
 **Trackers, read by polling and written through gates** · should · functional · **partial**
 
-The stack shall poll trackers (Jira Data Center through atlassian-python-api, Forgejo issues) with a cursor and hand each change of an item on once, with the comments from others not handed on before, for the run named after the item, and write comments, one summary comment, attachments and transitions only as action classes, idempotently, with shadow mode per kind of write, each leaving it when the owner taps, after a stated number of approved shadow items.
+The stack shall poll trackers (Jira Data Center through atlassian-python-api, Forgejo issues) with a cursor and hand each change of an item on once, with the comments from others not handed on before, for the run named after the item, and write comments, one summary comment, attachments and transitions only as action classes, idempotently, with shadow mode per kind of write, each leaving it when the owner taps, after a stated number of approved shadow items. The one stated exception among the stack's outside writes is a draft pull request (GEN-26): it goes to the forge directly, with no shadow step, because it is a draft that the stack never merges (the owner's decision, DEC-54).
 
 - Parents: [SN-05](#sn-05)
 - Sources: `docs/AI-STACK.md`
 - Verified by: test: `tests/test_domain_trackers.py::test_a_changed_item_is_handed_on_once_for_the_run_named_after_it_and_a_restart_hands_on_nothing_twice`, `tests/test_domain_trackers.py::test_a_comment_from_someone_else_is_handed_on_once`, `tests/test_domain_trackers.py::test_shadow_writes_nothing_outward_until_the_owner_lets_a_kind_go_live_after_its_measure`, `tests/test_domain_trackers.py::test_the_one_summary_comment_is_edited_across_three_updates`, `tests/test_domain_trackers.py::test_a_write_to_an_unknown_tracker_or_of_an_unknown_kind_is_refused_with_the_reason`, `tests/test_domain_trackers.py::test_jira_reads_by_jql_with_its_cursor_and_edits_its_one_summary`, `tests/test_domain_trackers.py::test_trackers_are_the_apps_and_the_queues`
 - Acceptance: Test: on a stand-in a changed item is handed on once across a restart under one run name, the summary comment is edited across three updates, and shadow mode writes nothing outward.
 - Trace: `ops/domain/trackers.py`, `images/mission-control/web/static/app.js`
-- Gap: Reading with a cursor, writing in shadow and going live are built and tested; no n8n workflow polls the trackers or writes to them yet (the engine's pass did until 10 Nov 2026), so no deployment reads a tracker today.
+- Gap: Reading with a cursor, written in shadow and going live are built and tested; the poller (WFL-19) and the tracker step (WFL-21) are built; no deployment has published its poller's workflow yet.
 
 ### GEN-26
 
-**A branch from a named tag** · should · functional · **partial**
+**A branch from a named tag** · should · functional · **implemented**
 
-A change shall start from the base ref its workflow names, push its branch through FORGE_PUSH, open a draft pull request into the workflow's target branch, and hand on each pull-request comment from someone else once to its run.
+A change for a tracker item shall start its branch ai/<item>-<slug> at the base ref or tag its step names, and in a deployment with FORGE_PUSH push it and open a draft pull request into the step's target branch directly, without a shadow step (DEC-54); without FORGE_PUSH the change waits for the owner in the app. Each pull-request comment from someone else reaches the item's run once, through the run register's routing (WFL-19). The stack never merges it.
 
 - Parents: [SN-05](#sn-05)
-- Sources: `docs/AI-STACK.md`
-- Verified by: test: `tests/test_domain_trackers.py::test_a_change_starts_at_a_tag_opens_a_draft_into_a_release_branch_and_a_reviewers_comment_is_handed_on_once`
-- Acceptance: Test: on the Bitbucket stand-in a change starts at a tag, opens a draft into a release branch, and a reviewer's comment is handed on once.
-- Trace: `ops/domain/forgework.py`, `ops/forge.py`
-- Gap: Starting at the tag, pushing, the draft pull request and handing on comments are built and tested; no workflow uses them yet.
+- Sources: `docs/AI-STACK.md`, [DEC-54](#dec-54)
+- Verified by: test: `tests/test_domain_trackers.py::test_a_change_starts_at_a_tag_opens_a_draft_into_a_release_branch_and_a_reviewers_comment_is_handed_on_once`, `tests/test_n8n_items.py::test_a_change_for_an_item_starts_at_its_tag_and_goes_out_as_a_draft_whose_review_comment_wakes_the_run`, `tests/test_n8n_items.py::test_without_forge_push_a_change_for_an_item_waits_for_the_owner_in_the_app`
+- Acceptance: Test: on the Bitbucket stand-in a change starts at a tag, opens a draft into a release branch, and a reviewer's comment is handed on once; a coding change step for an item starts at its tag, is pushed through FORGE_PUSH as a draft whose review comment wakes the waiting run, and without FORGE_PUSH waits for the owner.
+- Trace: `ops/domain/forgework.py`, `ops/forge.py`, `ops/flows.py`
 
 ### GEN-27
 
-**Decisions name roles** · should · functional · **partial**
+**Decisions name roles** · should · functional · **implemented**
 
-A question for people shall name a role that the deployment maps to people, and each decision shall record who gave it; an answer from outside the role is refused.
+A question for people shall name a role that the deployment maps to people; Needs you shows who may answer it, an answer from outside the role is refused, and each answer records who gave it (the app's signed-in person, from the sign-in, never from the page). With no map, every role is the owner's.
 
 - Parents: [SN-05](#sn-05)
 - Sources: `docs/AI-STACK.md`
-- Verified by: test: `tests/test_domain_roles.py::test_every_role_is_the_owners_at_home_and_a_deployment_maps_roles_to_its_people`, `tests/test_domain_roles.py::test_the_repositorys_roles_file_names_no_person`
-- Acceptance: Test: a deployment maps two roles to its people, a role it does not name goes to its default people, and an answer from outside a role is refused.
-- Trace: `ops/domain/roles.py`, `config/roles.yaml`
-- Gap: The map of roles to people is built and tested; a workflow's question (WFL-07) goes to the owner, and naming a role on it is not wired yet.
+- Verified by: test: `tests/test_domain_roles.py::test_every_role_is_the_owners_at_home_and_a_deployment_maps_roles_to_its_people`, `tests/test_domain_roles.py::test_the_repositorys_roles_file_names_no_person`, `tests/test_n8n_items.py::test_a_question_for_a_role_says_who_may_answer_refuses_anyone_else_and_records_who_did`, `tests/test_n8n_items.py::test_with_no_map_of_roles_a_question_for_a_role_is_the_owners`
+- Acceptance: Test: a deployment maps two roles to its people, a role it does not name goes to its default people, and an answer from outside a role is refused; a workflow's question for a role says who may answer, refuses anyone else and its answer names who gave it; with no map a question for a role is the owner's.
+- Trace: `ops/domain/roles.py`, `config/roles.yaml`, `ops/flows.py`, `ops/decisions.py`, `images/mission-control/server.py`
 
 ### GEN-28
 
@@ -4096,7 +4094,7 @@ A finished run shall export as one bundle a person can follow without the app, a
 - Verified by: test: `tests/test_domain_record.py::test_a_toy_run_exports_one_bundle_with_its_chain_from_item_to_decisions_and_the_files_it_made`, `tests/test_domain_record.py::test_a_toy_exam_set_runs_through_its_workflow_and_scores_naming_the_case_it_got_wrong`
 - Acceptance: Test: a toy run exports a bundle with its chain from item to decisions, and a toy exam set runs and scores.
 - Trace: `ops/domain/record.py`, `tests/fixtures/packs/toy/exams/bugs.yaml`
-- Gap: The bundle and the exam's scoring are built and tested on a run's data; reading a run from n8n's execution to export it, and running an exam case through n8n, are not built yet.
+- Gap: The bundle and the exam's scoring are built and tested; a run n8n drove exports from the run register (WFL-23); running an exam case through n8n is not built yet.
 
 ### GEN-32
 
@@ -4193,6 +4191,68 @@ An update that moves Temporal shall step its schema and server through each mino
 - Verified by: inspection: `docs/N8N-MIGRATION.md`
 - Reason: DEC-51, DEC-52: n8n is pinned by digest like every image (WFL-01); the Temporal upgrade path was removed on 10 Nov 2026.
 - Superseded by: `W`, `F`, `L`, `-`, `0`, `1`
+
+### GEN-40
+
+**Jobs of hours wait their turn at a place** · must · functional · **implemented**
+
+The local worker (ops/localworker.py) shall run one job at a time and write in its status the job it runs and how many requests wait behind it, refreshed every 10 seconds while a job runs; the stack shall give a request up as not picked up only after it waited 5 minutes while its worker was not running or idle, never for the time it waited behind a running job; and a job's one run limit shall be its kind's own minutes, from its file (1 minute to a day).
+
+- Parents: [SN-05](#sn-05)
+- Sources: `docs/PLATFORM.md`, `docs/AI-STACK.md`
+- Verified by: test: `tests/test_domain_places.py::test_two_long_jobs_queued_at_one_place_both_finish_one_after_the_other_and_neither_is_given_up`, `tests/test_domain_places.py::test_the_pickup_clock_stands_while_the_worker_runs_another_job_and_counts_while_it_is_idle_or_gone`, `tests/test_domain_places.py::test_a_job_kind_sets_its_own_run_limit_in_its_file_and_the_status_carries_it`, `tests/test_winworker.py::test_a_job_past_its_time_limit_is_stopped`
+- Acceptance: Test: two long toy jobs (scaled to 4 seconds against a pick-up timeout of 0.5 seconds) queued at one place both finish, one after the other, and the status named the running job with one queued; on a fast clock a request 10 minutes behind a running job is queued, and 5 minutes idle or gone gives it up; a kind of 600 minutes is valid and its minutes are in the status. Shown on 10 Nov 2026: two 6-minute jobs at a throwaway wsl-host worker in a temp folder, with the real 5-minute timeout, both done.
+- Trace: `ops/localworker.py`, `ops/domain/places.py`, `ops/winjobs.py`, `docs/PLATFORM.md`
+- Rationale: A licensed tool runs for hours at the wsl-host place. Before, the second of two long jobs was given up after 5 minutes while it was only queued (CR of 10 Nov 2026, N3). Capacity pools are left out on purpose.
+
+### GEN-41
+
+**Jira read with a cursor that holds** · should · functional · **implemented**
+
+The Jira adapter shall turn its cursor (Jira's time with the server's offset) into the token user's time zone (read from /rest/api/2/myself) before asking JQL, ask with >= of the cursor's minute and drop the (key, updated) pairs of that minute it handed on before, page until Jira has given every match, so a minute with more items than a page never holds the cursor, and build its JQL without an empty clause; a query with its own ORDER BY is refused at load with the reason, and that tracker is not asked.
+
+- Parents: [SN-05](#sn-05)
+- Sources: `docs/N8N-MIGRATION.md`
+- Verified by: test: `tests/test_domain_trackers.py::test_jira_reads_by_jql_with_its_cursor_and_edits_its_one_summary`, `tests/test_domain_trackers.py::test_jira_reads_its_cursor_in_the_token_users_time_zone_not_the_servers`, `tests/test_domain_trackers.py::test_jira_hands_on_60_items_of_one_minute_once_and_its_cursor_moves_on`, `tests/test_domain_trackers.py::test_jira_builds_its_query_without_an_empty_clause_and_refuses_one_with_its_own_order`
+- Acceptance: Test, with a fake client: a server offset other than the user's zone gives the user's minute; 60 items in one minute are handed on once over two pages and the cursor moves on to a later item; an empty query gives a query without an empty clause, and a query with ORDER BY is refused with its reason and not asked.
+- Trace: `ops/domain/trackers.py`
+
+### GEN-42
+
+**A pack's workflow uses only the nodes the deployment's n8n loads** · must · functional · **implemented**
+
+A pack's workflow shall be refused at load, with the node and the reason, when it uses a node type outside the list the deployment's n8n loads (N8N_NODES_INCLUDE in its deployment.env, handed to n8n as NODES_INCLUDE, read through the data guard's dataguard.n8n_nodes(), the one reading of it, WFL-17), or, without that list, n8n's command or local file trigger node; a pack's webhook shall listen under item/<pack>/ or <pack>/ only, so a pack takes no path of the stack's or of another pack.
+
+- Parents: [SN-05](#sn-05)
+- Sources: `docs/N8N-MIGRATION.md`, [DEC-51](#dec-51)
+- Verified by: test: `tests/test_domain_packs.py::test_a_pack_workflow_with_a_node_off_the_deployments_allowlist_is_refused_with_the_reason`, `tests/test_domain_packs.py::test_the_toy_packs_item_workflow_is_a_whole_n8n_workflow_on_logic_nodes_only`, `tests/test_domain_packs.py::test_a_pack_workflow_that_is_no_n8n_workflow_or_runs_a_shell_command_is_refused_with_the_reason`
+- Acceptance: Test: with the data guard's list of logic nodes, a workflow with an HTTP Request node is refused naming the node and N8N_NODES_INCLUDE; without the list it loads; a list that is no JSON list loads no workflow and says why; a webhook on run/crew-checker is refused; the toy pack's item workflow uses logic nodes only and holds no placeholder.
+- Trace: `ops/domain/packs.py`, `ops/dataguard.py`, `tests/fixtures/packs/toy/workflows/ticket.json`
+
+### GEN-43
+
+**A pack's workflows run in n8n, and a canvas edit is a proposal** · must · functional · **implemented**
+
+The running commit of each pack shall have its workflows in n8n, named <pack>/<name>, each under an id made from that name and never one the file names, published or not as its file says: imported when the owner approves the commit and on each deploy, replaced in place by an approved new commit, and unpublished when the pack is refused or leaves packs.txt. An edit made on n8n's canvas to a pack's workflow shall not change what runs: it goes to the pack's own repository as a branch ai/canvas-<date> and, where the pack's forge knows the repository, a draft pull request, never into the stack's repository, and the approved version is imported again; it runs only once a commit with it is approved.
+
+- Parents: [SN-05](#sn-05)
+- Sources: `docs/N8N-MIGRATION.md`, [DEC-51](#dec-51)
+- Verified by: test: `tests/test_domain_packs.py::test_an_approved_packs_workflows_reach_n8n_under_ids_from_their_names_and_leave_when_the_pack_goes`, `tests/test_domain_packs.py::test_a_new_commit_replaces_its_workflows_in_place_and_a_refusal_unpublishes_them`, `tests/test_domain_packs.py::test_a_canvas_edit_is_a_proposal_and_the_approved_version_keeps_running`, `tests/test_domain_packs.py::test_a_proposal_goes_to_the_packs_own_repository_as_a_branch_and_a_draft_pull_request`, `tests/test_domain_packs.py::test_an_export_sends_a_packs_workflow_to_its_repository_never_into_the_stacks_git`, `tests/test_domain_packs.py::test_a_deploy_syncs_the_running_packs_before_its_one_restart`
+- Acceptance: Test: approving the toy pack imports its three workflows under ids from their names with one restart, a second sync changes nothing, removing it unpublishes them; a new commit replaces them in place and refusing it brings the old version back; a canvas edit is sent once and the approved version runs; the edit lands on the pack's branch with a draft pull request; an export writes only the stack's workflows into git; a deploy syncs the packs before its one restart.
+- Trace: `ops/domain/packs.py`, `ops/n8n_sync.py`, `tests/fixtures/packs/toy/workflows/ticket.json`
+
+### GEN-44
+
+**A pack's item workflow runs end to end in a customer-class deployment, and the core names no domain** · must · functional · **implemented**
+
+In a customer-class deployment the stack shall carry a pack's item workflow from its tracker item to its end: the item starts one run (also when its event comes twice), an agent step triages it, every tracker write stays in shadow, a wait on the item times out to a reminder and is woken by a reply from someone else but not by the stack's own comment, a job of hours at the wsl-host place finishes with a second job queued behind it, a change goes out as a draft pull request whose review comment wakes the run, and the run writes its summary and ends; restarts of the runner side and of n8n while the run waits and while a job runs shall lose nothing, n8n shall get only summaries, and the run shall export as one zip. No file of ops/, images/, compose/, config/ or n8n/ shall name the domain a pack brings.
+
+- Parents: [SN-05](#sn-05)
+- Sources: `docs/N8N-MIGRATION.md`, `docs/AI-STACK.md`, [DEC-54](#dec-54)
+- Verified by: test: `tests/test_work_deployment.py::test_the_toy_pack_runs_end_to_end_in_a_customer_class_deployment_against_stand_ins`, `tests/test_work_deployment.py::test_the_core_names_nothing_of_the_stand_in_domain`
+- Acceptance: Test, against stand-ins (a stand-in tracker, a stand-in forge, the local worker in a temp folder, the step service and the run register on temp paths, example-work's data class and node list) with a stand-in n8n that runs the toy's item workflow node by node: every step of the statement, the runner side reloaded from disk mid-wait and mid-job, n8n restarted mid-wait and mid-job, each command submitted once, nothing of the triage's whole text in n8n's executions while the register holds it, and the zip with every step in order; the stand-in domain's names over ops/, images/, compose/, config/ and n8n/ find nothing. Shown on 10 Nov 2026 on a throwaway n8n 2.44.7 with example-work's node list and the step service's real runner code in a throwaway container: the same flow ended in success with n8n restarted mid-wait and mid-job, one execution for the item, and none of the triage's whole text in n8n's execution data (docs/N8N-MIGRATION.md §12).
+- Trace: `ops/flows.py`, `ops/runreg.py`, `ops/domain/trackers.py`, `ops/domain/forgework.py`, `ops/domain/places.py`, `ops/domain/packs.py`, `ops/domain/record.py`, `tests/fixtures/packs/toy/workflows/ticket.json`
+- Rationale: The CR of 10 Nov 2026 for the first work deployment counts as done when this holds for the toy pack against stand-ins.
 
 ## HSE House
 
@@ -6258,12 +6318,12 @@ Every 20 s the runner shall read the free space on Windows C:, which holds WSL's
 
 **The runner has its own pinned Python environment** · must · constraint · **implemented**
 
-The host runner shall run in a Python environment of its own, outside the system Python, made by uv (pinned by version and checksum, no sudo) from a lock with a hash for every package, and made again only when the lock changes; the tests shall use the same pins.
+The host runner shall run in a Python environment of its own, outside the system Python, made by uv (pinned by version and checksum, no sudo) from a lock with a hash for every package it pulls in, none released less than 14 days before the lock was written, and made again only when the lock changes; the tests shall use the same pins.
 
 - Parents: [SN-13](#sn-13)
 - Sources: [DEC-52](#dec-52)
 - Verified by: test: `tests/test_runner_env.py::test_the_runner_environment_is_pinned_checksummed_and_follows_its_lock`
-- Acceptance: Test: uv is pinned by version and checksum, the lock holds the pins with their hashes, the tests use the same pins, and the runner unit runs in that environment.
+- Acceptance: Test: uv is pinned by version and checksum, the lock holds the pins and every package they pull in (atlassian-python-api for the Jira tracker among them) with their hashes, the lock is written without releases younger than 14 days, the tests use the same pins, and the runner unit runs in that environment. Shown on 10 Nov 2026: an environment made from the lock with hashes required imports atlassian's Jira client.
 - Trace: `ops/runner_env.sh`, `ops/runner-requirements.txt`, `ops/runner-requirements.lock`, `tests/requirements.txt`, `ops/systemd/missions.service`
 
 ## QA Quality and process
@@ -9591,7 +9651,7 @@ The Voice page shall show spoken questions answered a day and the share answered
 
 **n8n is part of the core** · must · constraint · **implemented**
 
-n8n shall run as a core service on every deployment, its image pinned by digest in versions.env, its port published on 127.0.0.1 only and opened to the owner on the tailnet, never on the internet.
+n8n shall run as a core service on every deployment, its image pinned by digest in versions.env, its port published on 127.0.0.1 only and opened to the owner on the tailnet (or on the PC itself in a deployment without one, WFL-15), never on the internet.
 
 - Parents: [SN-05](#sn-05)
 - Sources: [DEC-51](#dec-51), `docs/N8N-MIGRATION.md`
@@ -9639,13 +9699,13 @@ n8n shall prune execution data older than 30 days.
 
 **Steps run through one step service** · must · interface · **implemented**
 
-n8n shall start every step of the stack's own work through Mission Control's step service, which hands it to the runner and returns at once; the runner calls n8n's resume URL with the result, also after a restart of either side. The step kinds are agent, crew, task, ask, notify, build (a coding change in the builder sandbox), recall (a memory search), remember (a note through the memory gate), command (a job kind at a place) and plan (an improvised plan's steps in waves), each run through the stack's own code for that work. A crew job whose unit is still running shall answer at once that the run in progress covers it, never start a second or wait behind it.
+n8n shall start every step of the stack's own work through Mission Control's step service, which hands it to the runner and returns at once; the runner calls n8n's resume URL with the result, also after a restart of either side. The step kinds are agent, crew, task, ask, notify, build (a coding change in the builder sandbox), recall (a memory search), remember (a note through the memory gate), command (a job kind at a place), plan (an improvised plan's steps in waves), wait_item (a wait on a tracker item, WFL-20) and tracker (a write to it, WFL-21), each run through the stack's own code for that work. A crew job whose unit is still running shall answer at once that the run in progress covers it, never start a second or wait behind it. Every state file the step service and the run register write (answers, jobs, questions, builds, the register's ledger, outbox, runs and items, the trackers' cursors) shall be written whole or not at all (a temp file in the same folder, then os.replace), and an empty or unreadable answer file shall count as no answer yet (said once, removed, the step handled again), so one bad file never holds a request.
 
 - Parents: [SN-05](#sn-05)
 - Sources: [DEC-51](#dec-51), `docs/N8N-MIGRATION.md`
-- Verified by: test: `tests/test_flows.py::test_a_request_is_checked_before_anything_runs`, `tests/test_flows.py::test_the_answer_only_ever_goes_to_n8n_on_this_machine`, `tests/test_flows.py::test_an_agent_step_runs_through_the_conductors_own_runner_and_n8n_gets_the_answer`, `tests/test_flows.py::test_an_answer_n8n_did_not_take_is_sent_again_after_a_restart_without_running_the_step_again`, `tests/test_flows.py::test_a_step_that_fails_twice_answers_failed_with_its_reason`, `tests/test_flows.py::test_a_refused_request_runs_nothing_and_says_why`, `tests/test_flows.py::test_a_crew_job_runs_as_its_own_unit_and_waits_for_it`, `tests/test_flows.py::test_a_crew_job_still_running_covers_the_next_run_at_once`, `tests/test_flows.py::test_the_runner_starts_the_step_worker_and_the_app_serves_the_step_port_on_its_own_network`, `tests/test_flows.py::test_the_step_port_drops_a_step_for_the_runner_and_answers_what_is_known`, `tests/test_flows.py::test_an_agent_reads_its_brief_as_its_step`, `tests/test_flows.py::test_the_new_kinds_are_checked_before_anything_runs`, `tests/test_flows.py::test_a_coding_change_runs_as_the_conductors_build_step_and_answers_with_its_build`, `tests/test_flows.py::test_a_memory_search_answers_with_its_hits_each_cut`, `tests/test_flows.py::test_a_note_enters_memory_only_through_the_memory_tools_gate`, `tests/test_flows.py::test_a_command_runs_at_its_place_only_once_approved_there_and_is_submitted_once`, `tests/test_flows.py::test_a_plan_runs_in_waves_through_the_agent_path_and_answers_every_steps_output`
-- Acceptance: Test: a request is checked before anything runs; an agent step runs through the Conductor's own step runner on a row of its own and n8n gets the answer at this machine's n8n only; the agent reads its brief as its step; an answer n8n did not take is sent again after a restart without running the step again; a failed step answers with its reason; a crew job runs as its unit; the app's step port is on a network only n8n shares; a coding change runs as the Conductor's build step and answers with its build, branch, pull request and checks; a memory search answers with its hits, each cut visibly; a note enters memory only through the memory tool's gate; a command runs at its place only once approved there and is submitted once, also across a restart; a plan runs its steps in waves through the agent path and a step after a failed one does not run.
-- Trace: `ops/flows.py`, `images/mission-control/server.flows.py`, `images/mission-control/server.py`, `ops/missions.py`, `compose/core.yaml`, `compose/apps.yaml`, `ops/domain/packs.py`, `ops/domain/places.py`, `ops/memstack.py`
+- Verified by: test: `tests/test_flows.py::test_a_request_is_checked_before_anything_runs`, `tests/test_flows.py::test_the_answer_only_ever_goes_to_n8n_on_this_machine`, `tests/test_flows.py::test_an_agent_step_runs_through_the_conductors_own_runner_and_n8n_gets_the_answer`, `tests/test_flows.py::test_an_answer_n8n_did_not_take_is_sent_again_after_a_restart_without_running_the_step_again`, `tests/test_flows.py::test_a_step_that_fails_twice_answers_failed_with_its_reason`, `tests/test_flows.py::test_a_refused_request_runs_nothing_and_says_why`, `tests/test_flows.py::test_a_crew_job_runs_as_its_own_unit_and_waits_for_it`, `tests/test_flows.py::test_a_crew_job_still_running_covers_the_next_run_at_once`, `tests/test_flows.py::test_the_runner_starts_the_step_worker_and_the_app_serves_the_step_port_on_its_own_network`, `tests/test_flows.py::test_the_step_port_drops_a_step_for_the_runner_and_answers_what_is_known`, `tests/test_flows.py::test_an_agent_reads_its_brief_as_its_step`, `tests/test_flows.py::test_the_new_kinds_are_checked_before_anything_runs`, `tests/test_flows.py::test_a_coding_change_runs_as_the_conductors_build_step_and_answers_with_its_build`, `tests/test_flows.py::test_a_memory_search_answers_with_its_hits_each_cut`, `tests/test_flows.py::test_a_note_enters_memory_only_through_the_memory_tools_gate`, `tests/test_flows.py::test_a_command_runs_at_its_place_only_once_approved_there_and_is_submitted_once`, `tests/test_flows.py::test_a_plan_runs_in_waves_through_the_agent_path_and_answers_every_steps_output`, `tests/test_flows.py::test_a_state_file_write_cut_short_leaves_the_old_file_or_none`, `tests/test_flows.py::test_an_empty_answer_file_is_handled_again_and_answered`
+- Acceptance: Test: a request is checked before anything runs; an agent step runs through the Conductor's own step runner on a row of its own and n8n gets the answer at this machine's n8n only; the agent reads its brief as its step; an answer n8n did not take is sent again after a restart without running the step again; a failed step answers with its reason; a crew job runs as its unit; the app's step port is on a network only n8n shares; a coding change runs as the Conductor's build step and answers with its build, branch, pull request and checks; a memory search answers with its hits, each cut visibly; a note enters memory only through the memory tool's gate; a command runs at its place only once approved there and is submitted once, also across a restart; a plan runs its steps in waves through the agent path and a step after a failed one does not run; a write killed half way leaves the old file or none, and an empty answer file left by one (10 Nov 2026, a deploy restarted the runner) is handled again and answered.
+- Trace: `ops/flows.py`, `ops/statefile.py`, `ops/runreg.py`, `images/mission-control/server.flows.py`, `images/mission-control/server.py`, `ops/missions.py`, `compose/core.yaml`, `compose/apps.yaml`, `ops/domain/packs.py`, `ops/domain/places.py`, `ops/memstack.py`
 
 ### WFL-06
 
@@ -9749,13 +9809,136 @@ Every scheduled workflow of the repository shall have a second trigger, a webhoo
 
 **n8n inside the app, behind its gate** · should · functional · **implemented**
 
-The app shall serve n8n's editor under its own address at /n8n/, reachable only with the owner's Tailscale login and refusing a write from another site, passing methods, query strings, bodies, cookies and n8n's live updates through as they stream, and letting only the app's own pages frame it; n8n's webhooks and resume URLs stay at n8n's own root on its tailnet port.
+The app shall serve n8n's editor under its own address at /n8n/, reachable only with the owner's Tailscale login (or on the PC itself without a tailnet, WFL-16) and refusing a write from another site, passing methods, query strings, bodies, cookies and n8n's live updates through as they stream, and letting only the app's own pages frame it; n8n's webhooks and resume URLs stay at n8n's own root on its tailnet port.
 
 - Parents: [SN-03](#sn-03)
 - Sources: [DEC-51](#dec-51), `docs/N8N-MIGRATION.md`
 - Verified by: test: `tests/test_n8n_inapp.py::test_n8n_is_served_under_the_apps_address_behind_its_gate`, `tests/test_n8n_inapp.py::test_n8ns_live_updates_stream_through_the_app`, `tests/test_n8n_inapp.py::test_compose_puts_n8n_under_n8n_with_live_updates_over_plain_http`, `tests/test_n8n_inapp.py::test_a_resume_url_stays_at_n8ns_root`
 - Acceptance: Test: without the login n8n is never asked; with it the prefix is taken off, the query, body, cookies and every Set-Cookie pass, X-Frame-Options gives way to frame-ancestors self, a write from another site is refused, n8n down answers 502; live updates stream; compose sets N8N_PATH, the SSE push and the app's address; a resume URL under /n8n/ is refused.
 - Trace: `images/mission-control/server.frames.py`, `images/mission-control/server.n8n.py`, `images/mission-control/server.py`, `images/mission-control/web/sw.js`, `compose/core.yaml`, `compose/apps.yaml`, `ops/windows/host-setup.ps1`
+
+### WFL-15
+
+**n8n without the tailnet stays on the PC** · must · constraint · **implemented**
+
+Where a deployment has no tailnet, n8n's editor address shall be the app's on the PC (http://127.0.0.1:8090/n8n/) and its webhook and resume URLs shall be n8n's own on 127.0.0.1:5678, set by the deployment (N8N_EDITOR_URL, N8N_WEBHOOK_URL); the deployment check shall refuse a deployment without the tailnet whose app gate is not local or whose n8n addresses are not on 127.0.0.1, and one with the tailnet whose gate is local.
+
+- Parents: [SN-04](#sn-04), [SN-05](#sn-05)
+- Sources: [DEC-45](#dec-45), [DEC-51](#dec-51), `docs/N8N-MIGRATION.md`
+- Verified by: test: `tests/test_customer_deployment.py::test_without_the_tailnet_n8n_and_the_app_stay_on_127_0_0_1`, `tests/test_n8n_inapp.py::test_compose_puts_n8n_under_n8n_with_live_updates_over_plain_http`
+- Acceptance: Test: the example work deployment has no tailnet, a local gate and both addresses on 127.0.0.1, and passes the check; a tailnet address, a missing address or a tailnet gate without the tailnet is refused; home keeps its tailnet addresses. Shown on a throwaway n8n 2.44.7 on 10 Nov 2026: its settings named http://127.0.0.1:5678/ for webhooks and http://127.0.0.1:8090/n8n for the editor.
+- Trace: `compose/core.yaml`, `ops/deployment.py`, `deployments/example-work/deployment.env`, `docs/N8N-MIGRATION.md`
+
+### WFL-16
+
+**The app's gate follows the deployment** · must · constraint · **implemented**
+
+The app's front door shall admit by the deployment's gate: with the tailnet (APP_GATE tailnet, the default), only a request with Tailscale's identity header; without it (APP_GATE local), only a request that names the PC itself (127.0.0.1, localhost, ::1, or the app's service name), which shall be the owner's under one local login whatever Tailscale header it brings; under both, a write from another site shall be refused, and n8n inside the app shall be told the scheme the browser used.
+
+- Parents: [SN-04](#sn-04)
+- Sources: [DEC-45](#dec-45), `docs/N8N-MIGRATION.md`
+- Verified by: test: `tests/test_customer_deployment.py::test_without_the_tailnet_the_apps_gate_takes_this_pc_as_the_owner_and_still_refuses_a_write_from_another_site`, `tests/test_n8n_inapp.py::test_n8n_is_served_under_the_apps_address_behind_its_gate`
+- Acceptance: Test: with the local gate the PC's request is the owner's and a forged Tailscale header names nobody, n8n gets http as the scheme, another host name and a cross-site write are refused before n8n is asked; with the tailnet gate the same request without a login is refused and the owner's login passes as before.
+- Trace: `images/mission-control/server.py`, `images/mission-control/server.frames.py`, `compose/apps.yaml`, `deployments/example-work/deployment.env`
+- Rationale: Without a tailnet no Tailscale header exists, and the app (with n8n and Phoenix inside it) would refuse everything. Its port is published on 127.0.0.1 only, so a request that reaches it comes from the PC; the host check keeps out a page of another site whose name was made to point here.
+
+### WFL-17
+
+**Customer data loads only n8n's logic nodes** · must · constraint · **implemented**
+
+Where a deployment holds customer data, its n8n shall load only the logic nodes (the schedule, webhook and manual triggers, wait, if, switch, merge, loop, set, no-op, sticky note, execute workflow and its trigger, respond to webhook) and the AI Stack step, through n8n's NODES_INCLUDE from the deployment's N8N_NODES_INCLUDE; the data guard shall refuse such a deployment whose list is empty or names a node off ops/dataguard.py N8N_NODES, and dataguard.n8n_nodes() shall give the code the deployment's list (None when n8n loads every node).
+
+- Parents: [SN-04](#sn-04), [SN-05](#sn-05)
+- Sources: [DEC-45](#dec-45), [DEC-51](#dec-51), `docs/N8N-MIGRATION.md`
+- Verified by: test: `tests/test_customer_deployment.py::test_a_customer_deployments_n8n_loads_only_the_logic_nodes_and_the_aistack_step`
+- Acceptance: Test: the example work deployment's list is exactly N8N_NODES, home's is none; an HTTP Request node in the list and an empty list are refused by the data guard. Shown on a throwaway n8n 2.44.7 on 10 Nov 2026 with the example's list: it loaded those 15 node types and no other, the AI Stack step and no langchain node among them.
+- Trace: `ops/dataguard.py`, `compose/core.yaml`, `deployments/example-work/deployment.env`, `docs/N8N-MIGRATION.md`
+- Rationale: An HTTP Request, Code, Jira, Bitbucket or mail node would reach a system past the stack's steps, their approvals and shadow mode. Home keeps every node.
+
+### WFL-18
+
+**n8n's executions stay on the PC** · must · constraint · **implemented**
+
+Where a deployment holds customer data, the data guard shall refuse it when a published port of any service is not on 127.0.0.1, when n8n's database volume (pgdata) or its home (n8n) is not a local volume, when n8n sends diagnostics or version pings, or when a feature by which they leave the PC (home's backup, offsite) is on.
+
+- Parents: [SN-04](#sn-04)
+- Sources: [DEC-45](#dec-45), `docs/PLATFORM.md`, `docs/N8N-MIGRATION.md`
+- Verified by: test: `tests/test_customer_deployment.py::test_n8ns_database_and_volume_stay_on_the_pc_and_the_backup_stays_off_for_customer_data`
+- Acceptance: Test: the compose files pass; a copy with n8n's volume on NFS, its port on every address and diagnostics on is refused with each reason; home and offsite are refused for customer data; the backup script stops with "not configured" before any network call in the example work deployment.
+- Trace: `ops/dataguard.py`, `ops/backup.sh`, `compose/core.yaml`, `docs/N8N-MIGRATION.md`
+- Rationale: n8n keeps every node's output in its database, and an agent step's whole text is its output.
+
+### WFL-19
+
+**Tracker items start and wake runs** · should · functional · **implemented**
+
+A crew job on n8n's schedule (tracker-poll, every minute, asking the trackers every poll_minutes of the deployment, 5 by default) shall poll every tracker of the deployment and the watched pull requests, and route each event once by its tracker, key and the change's identity, also across a restart of the runner or the poller, through the run register. An event for an item with no run shall start the item's workflow through n8n's webhook item/<pack>/<name> at n8n's root with its tracker, key, run, reference and comments; an event with new comments from someone other than the stack shall answer the run's waiting wait_item; an event without new comments shall never wake a wait; any other event is recorded, its comments going to the run's next wait. A run that has ended (its n8n execution finished) shall not start again when its item changes, except that a new comment starts a new run when the tracker says restart on_comment (default never). An event n8n does not take stays for the next pass.
+
+- Parents: [SN-05](#sn-05)
+- Sources: `docs/N8N-MIGRATION.md`, [DEC-54](#dec-54)
+- Verified by: test: `tests/test_n8n_items.py::test_a_new_item_starts_its_workflow_once_through_its_webhook_even_when_its_event_comes_twice`, `tests/test_n8n_items.py::test_a_comment_from_someone_else_wakes_the_waiting_run_and_the_stacks_own_change_does_not`, `tests/test_n8n_items.py::test_a_comment_while_the_run_is_busy_elsewhere_answers_its_next_wait_at_once`, `tests/test_n8n_items.py::test_an_ended_run_is_not_started_again_unless_its_tracker_says_restart_on_comment`, `tests/test_n8n_items.py::test_an_event_n8n_could_not_take_stays_in_the_outbox_and_starts_its_run_on_the_next_pass`, `tests/test_n8n_items.py::test_the_poller_is_a_crew_job_on_n8ns_minute_and_asks_the_trackers_every_poll_minutes`
+- Acceptance: Test: a stand-in item starts its workflow once through its webhook, also when its event comes twice; a comment by someone else wakes the waiting run and the stack's own change does not; a comment while the run is busy answers its next wait at once; an ended run is not started again unless the tracker says on_comment; an event n8n could not take starts its run on the next pass; the poller is a crew job on n8n's minute that asks every poll_minutes. Shown on a throwaway n8n 2.44.7 on 10 Nov 2026: POST webhook/item/toy/bug started the run and answered its execution.
+- Trace: `ops/runreg.py`, `ops/domain/trackers.py`, `ops/domain/forgework.py`, `ops/crew.py`, `ops/systemd/tracker-poll.service`, `n8n/workflows/crew-tracker-poll.json`
+
+### WFL-20
+
+**A run waits on its tracker item** · should · functional · **implemented**
+
+The step kind wait_item shall register the run's step on its tracker item with the step service and answer done with outcome reply and the new comments from others, or with outcome timeout once its timeout_hours have passed (0 waits without end); the AI Stack step node shall treat an answer with an outcome as a result, so the workflow branches on it, while a failed, refused or cancelled answer still fails the node.
+
+- Parents: [SN-05](#sn-05)
+- Sources: `docs/N8N-MIGRATION.md`
+- Verified by: test: `tests/test_n8n_items.py::test_a_wait_that_times_out_is_an_outcome_and_the_run_reminds_in_shadow_and_waits_again`, `tests/test_n8n_items.py::test_the_node_waits_on_an_item_writes_to_it_and_a_timeout_is_a_result_while_a_failure_still_fails`, `tests/test_n8n_items.py::test_the_item_steps_are_checked_before_anything_runs`, `tests/test_n8n_sync.py::test_an_answer_that_is_not_done_ends_the_n8n_run_as_an_error`
+- Acceptance: Test: a wait that times out answers done with outcome timeout and the run reminds in shadow and waits again; the node sends the wait's fields and fails only a failed, refused or cancelled answer. Shown on a throwaway n8n 2.44.7 on 10 Nov 2026: a wait that timed out went on in success through an IF node to a reminder and a second wait, whose reply ended the run in success; a failed answer ended its run in error.
+- Trace: `ops/flows.py`, `ops/runreg.py`, `n8n/custom/AistackStep.node.js`
+
+### WFL-21
+
+**A run writes to its tracker item** · should · functional · **implemented**
+
+The step kind tracker shall make one write (comment, summary, attach, link, transition or label) to its item through trackers.write with the step's own write id, and answer with the shadow reference while that kind of write is in shadow and with the live reference once the owner let it go live. A write that names an earlier step of its run (from_step) shall add that step's whole answer from the run register to its text, so n8n never needs to carry the text the stack writes, and shall be refused when the run has no answered step of that name.
+
+- Parents: [SN-05](#sn-05)
+- Sources: `docs/N8N-MIGRATION.md`, [DEC-54](#dec-54)
+- Verified by: test: `tests/test_n8n_items.py::test_a_tracker_write_step_answers_with_its_shadow_reference_and_once_live_with_the_live_one`, `tests/test_n8n_items.py::test_a_tracker_write_takes_an_earlier_steps_whole_text_from_the_run_register`
+- Acceptance: Test: a summary written by a step answers with its shadow reference and leaves nothing on the item; once summaries are live the next answers with its live reference and the item holds it; a comment with from_step holds its own text and the triage step's whole answer, and a step name the run does not have is refused.
+- Trace: `ops/flows.py`, `ops/runreg.py`, `ops/domain/trackers.py`, `n8n/custom/AistackStep.node.js`
+
+### WFL-22
+
+**n8n keeps summaries in a customer deployment** · should · constraint · **implemented**
+
+In a deployment whose data class is customer (ops/dataguard.py), the step service shall answer n8n with the status, the outcome, the ids and references (task, step, build, pull request, artifacts, tracker writes) and a summary of at most 300 characters, while the whole answer stays in the run register and the task's record; the deployment may relax it with n8n_answers full in its data.yaml.
+
+- Parents: [SN-05](#sn-05)
+- Sources: `docs/N8N-MIGRATION.md`, `docs/PLATFORM.md`
+- Verified by: test: `tests/test_run_register.py::test_a_customer_deployment_answers_n8n_with_status_ids_and_a_summary_while_the_register_keeps_the_whole_text`, `tests/test_run_register.py::test_a_customer_deployment_may_relax_lean_answers_and_home_answers_whole`
+- Acceptance: Test: in a customer deployment n8n gets the status, ids and a cut summary of an agent step and the pull request of a change, and the register and the done file keep the whole text; a personal deployment, and a customer one with n8n_answers full, answer whole.
+- Trace: `ops/flows.py`, `ops/dataguard.py`
+
+### WFL-23
+
+**The run register is the stack's record of a run** · should · functional · **implemented**
+
+The step service shall keep a run register, persisted on disk and surviving restarts of the runner and of n8n, holding the map from each tracker item to its runs and the wait registered on it, the ledger of routed events, and every step's request, whole answer, files (artifact ids) and times by its n8n run; a run shall export as one zip from the register (each step in order, its task's record, artifact ids and the files' hashes, the tracker writes with their shadow or live references, the pull request), with only the workflow's shape taken from the workflow file in git or the pack's cache, never from n8n's internal API. n8n holds time and order only.
+
+- Parents: [SN-05](#sn-05)
+- Sources: [DEC-54](#dec-54), `docs/N8N-MIGRATION.md`, `docs/AI-STACK.md`
+- Verified by: test: `tests/test_run_register.py::test_every_step_is_kept_in_the_run_register_with_its_request_answer_files_and_times_across_a_restart`, `tests/test_run_register.py::test_a_stand_in_run_exports_as_one_zip_from_the_run_register_with_the_workflows_shape_from_its_pack`
+- Acceptance: Test: every step is kept with its request, answer, files and times, once across a restart; a stand-in run (agent, tracker writes, a wait that timed out, a command's file, a draft pull request, the summary) exports as one zip with its steps in order, its task's record, its files by hash, its tracker writes in shadow, its pull request and its workflow's shape from the toy pack, and nothing from n8n's internal API.
+- Trace: `ops/runreg.py`, `ops/flows.py`, `ops/domain/record.py`, `docs/AI-STACK.md`
+
+### WFL-24
+
+**A new version of a workflow leaves its waiting runs as they started** · must · functional · **implemented**
+
+A changed workflow (a pack's new commit, a deploy) shall be imported in place under the same id, because n8n resumes a waiting execution from the copy of the workflow it keeps with that execution: a run waiting in the old version finishes on the old version, also when the node it waits on was renamed or removed, or the workflow unpublished or archived, and runs that start after the import run the new version. n8n's pruning shall never delete a waiting execution (it prunes finished ones only), so a run may wait for weeks.
+
+- Parents: [SN-05](#sn-05)
+- Sources: `docs/N8N-MIGRATION.md`, [DEC-51](#dec-51)
+- Verified by: test: `tests/test_domain_packs.py::test_a_new_commit_replaces_its_workflows_in_place_and_a_refusal_unpublishes_them`, `tests/test_n8n_service.py::test_n8n_prunes_executions_after_30_days`
+- Acceptance: Shown on a throwaway n8n 2.44.7 on 10 Nov 2026 (docs/N8N-MIGRATION.md §11): each waiting run resumed and succeeded on the version it started with; pruning at 1 hour and 1 execution deleted the finished runs and left the waiting ones, which then resumed. Test: a new pack commit replaces its workflows under the same ids.
+- Trace: `ops/n8n_sync.py`, `docs/N8N-MIGRATION.md`
 
 ## Decisions
 
@@ -9814,6 +9997,7 @@ The app shall serve n8n's editor under its own address at /n8n/, reachable only 
 | <a id="dec-51"></a>**DEC-51** n8n is the stack's workflow pillar; Temporal and our editor go | 2026-11-10 | What the owner found: the new engine layer was hard to reach, half migrated (9 of about 35 recurring jobs) and rough, and four mechanisms decided when work starts. So: n8n (self-hosted, Sustainable Use License, free for personal and internal business use) becomes the one place that decides when work starts and in what order, with its canvas and run history; the stack's services stay the workers behind one step service; workflows live in git; the owner decides in Needs you; packs, places, trackers and artifacts from DEC-50 stay; Temporal, the Conductor's scheduling, the block editor and the crew's timers are removed once no work runs on them. Stability first: the disk guard and the boot check before any move. | ['DEC-50'] |
 | <a id="dec-52"></a>**DEC-52** Temporal is removed; n8n is the one orchestrator | 2026-11-10 | What the owner asked: no technical debt, the repository in a clean state. So, after the runner went back to the Conductor for plans (10 Nov 2026, 10:40) and Temporal stood idle: Temporal's four services, its network, its databases' setup, its upgrade path, its SDK in the runner, the builder and the app, the graph runner, the bridge, the cutover, the codec, the preview, the graph template format, the block editor and its build are removed. What the n8n design keeps from DEC-50 stays, freed from Temporal, in ops/domain: packs (now bringing n8n workflows), places, trackers and the forge, roles, saved files and a run's record. The Conductor keeps its own plan checks and runs plans until their move to n8n (WFL-09). The app's Engine, Runs and Templates screens go in the app's own clean-up. | ['DEC-50'] |
 | <a id="dec-53"></a>**DEC-53** The app after n8n: one menu, one place for runs, a Stack page for the stack | 2026-11-10 | What the owner asked: the UX polished and updated, with no trace of technical debt (the target design's section 4). So: the Engine, Runs and Templates screens go, their old links landing on Workflows; packs and trackers are one section of the Stack page; a run is followed on its task's page (Where it runs, its steps, each step's log) and on Workflows, so the task map folds into the task page and Telemetry into the Stack page; the menu is Home, Tasks, Workflows (desk), Memory, Code, Chat, Stack; the Stack page holds health, services, resources, tools, costs and connections, and what is not the stack's moves to where it belongs; the connection state says what is true. Every old address keeps landing somewhere sensible. | - |
+| <a id="dec-54"></a>**DEC-54** A draft pull request goes out directly; the step service is the run register | 2026-11-10 | For the first work deployment (the CR of 10 Nov 2026), the owner: "Do it as the CR says directly." So: with FORGE_PUSH a coding change for an item is pushed and opened as a draft pull request at once, with no shadow step; it is the one stated exception to shadow mode for the stack's outside writes (GEN-25), because a draft changes nothing people use until they merge it, and the stack never merges. And the lead's design, accepted by the owner: the step service is the run register (WFL-23), holding the item-to-run map, the event ledger and every step's request, answer, files and times; a run's record is made from it, and n8n gives time and order only, never through its internal API. | - |
 
 ## Test index
 
@@ -10095,6 +10279,10 @@ The app shall serve n8n's editor under its own address at /n8n/, reachable only 
 | `tests/test_crew.py::test_text_times_and_intervals` | [CRW-01](#crw-01), [CRW-02](#crw-02) |
 | `tests/test_crew.py::test_the_review_and_the_board_answers_get_the_builders_clone_first_also_on_a_fresh_machine` | [CRW-07](#crw-07) |
 | `tests/test_crew.py::test_untested_functions` | [CRW-08](#crw-08) |
+| `tests/test_customer_deployment.py::test_a_customer_deployments_n8n_loads_only_the_logic_nodes_and_the_aistack_step` | [WFL-17](#wfl-17) |
+| `tests/test_customer_deployment.py::test_n8ns_database_and_volume_stay_on_the_pc_and_the_backup_stays_off_for_customer_data` | [WFL-18](#wfl-18) |
+| `tests/test_customer_deployment.py::test_without_the_tailnet_n8n_and_the_app_stay_on_127_0_0_1` | [WFL-15](#wfl-15) |
+| `tests/test_customer_deployment.py::test_without_the_tailnet_the_apps_gate_takes_this_pc_as_the_owner_and_still_refuses_a_write_from_another_site` | [WFL-16](#wfl-16) |
 | `tests/test_customise.py::test_a_tool_added_is_a_grant_the_owner_confirms_and_a_tool_removed_needs_only_the_replay` | [TSK-29](#tsk-29) |
 | `tests/test_customise.py::test_an_agent_s_model_change_is_an_agent_change_put_up_for_its_replay` | [TSK-28](#tsk-28) |
 | `tests/test_customise.py::test_the_composer_s_chosen_agents_and_model_do_the_steps_as_the_owner_s_choice` | [TSK-30](#tsk-30) |
@@ -10164,19 +10352,30 @@ The app shall serve n8n's editor under its own address at /n8n/, reachable only 
 | `tests/test_doctor.py::test_evidence_is_redacted` | [SEC-16](#sec-16) |
 | `tests/test_doctor.py::test_open_issues_come_from_the_board_one_per_issue` | [CRW-09](#crw-09) |
 | `tests/test_doctor.py::test_the_doctor_is_a_crew_agent_with_its_units` | [CRW-09](#crw-09) |
+| `tests/test_domain_packs.py::test_a_canvas_edit_is_a_proposal_and_the_approved_version_keeps_running` | [GEN-43](#gen-43) |
+| `tests/test_domain_packs.py::test_a_deploy_syncs_the_running_packs_before_its_one_restart` | [GEN-43](#gen-43) |
 | `tests/test_domain_packs.py::test_a_new_commit_leaves_the_old_one_running_and_puts_one_decision_in_the_queue_and_a_refusal_keeps_it_out` | [GEN-32](#gen-32) |
+| `tests/test_domain_packs.py::test_a_new_commit_replaces_its_workflows_in_place_and_a_refusal_unpublishes_them` | [GEN-43](#gen-43), [WFL-24](#wfl-24) |
 | `tests/test_domain_packs.py::test_a_pack_agent_gets_exactly_its_grants_and_a_server_off_the_egress_list_is_refused` | [GEN-30](#gen-30) |
 | `tests/test_domain_packs.py::test_a_pack_that_clashes_or_names_no_commit_of_its_source_is_refused_with_the_reason` | [GEN-21](#gen-21) |
-| `tests/test_domain_packs.py::test_a_pack_workflow_that_is_no_n8n_workflow_or_runs_a_shell_command_is_refused_with_the_reason` | [GEN-21](#gen-21) |
+| `tests/test_domain_packs.py::test_a_pack_workflow_that_is_no_n8n_workflow_or_runs_a_shell_command_is_refused_with_the_reason` | [GEN-21](#gen-21), [GEN-42](#gen-42) |
+| `tests/test_domain_packs.py::test_a_pack_workflow_with_a_node_off_the_deployments_allowlist_is_refused_with_the_reason` | [GEN-42](#gen-42) |
+| `tests/test_domain_packs.py::test_a_proposal_goes_to_the_packs_own_repository_as_a_branch_and_a_draft_pull_request` | [GEN-43](#gen-43) |
 | `tests/test_domain_packs.py::test_an_approved_pack_adds_its_agents_skill_workflow_and_job_kind_from_a_read_only_checkout` | [GEN-21](#gen-21) |
+| `tests/test_domain_packs.py::test_an_approved_packs_workflows_reach_n8n_under_ids_from_their_names_and_leave_when_the_pack_goes` | [GEN-43](#gen-43) |
+| `tests/test_domain_packs.py::test_an_export_sends_a_packs_workflow_to_its_repository_never_into_the_stacks_git` | [GEN-43](#gen-43) |
 | `tests/test_domain_packs.py::test_an_unapproved_pack_does_not_run_and_waits_in_the_queue_with_its_manifest_prompts_commands_and_diff` | [GEN-21](#gen-21) |
 | `tests/test_domain_packs.py::test_home_without_packs_is_unchanged` | [GEN-21](#gen-21) |
 | `tests/test_domain_packs.py::test_packs_are_the_apps_and_the_queues` | [GEN-21](#gen-21) |
 | `tests/test_domain_packs.py::test_the_app_sees_each_pack_s_workflows_and_agents_but_no_folder_or_file_path` | [GEN-21](#gen-21) |
+| `tests/test_domain_packs.py::test_the_toy_packs_item_workflow_is_a_whole_n8n_workflow_on_logic_nodes_only` | [GEN-42](#gen-42) |
 | `tests/test_domain_packs.py::test_two_packs_of_one_name_and_a_manifest_naming_another_pack_are_refused` | [GEN-21](#gen-21) |
 | `tests/test_domain_places.py::test_a_command_runs_at_the_wsl_host_place_only_once_approved_there_by_its_hash_and_a_value_outside_its_type_is_refused` | [GEN-22](#gen-22) |
+| `tests/test_domain_places.py::test_a_job_kind_sets_its_own_run_limit_in_its_file_and_the_status_carries_it` | [GEN-40](#gen-40) |
 | `tests/test_domain_places.py::test_a_steps_file_is_kept_by_its_hash_with_its_maker_attached_to_a_stand_in_item_and_removed_past_its_retention` | [GEN-29](#gen-29) |
 | `tests/test_domain_places.py::test_commands_are_the_queues` | [GEN-22](#gen-22) |
+| `tests/test_domain_places.py::test_the_pickup_clock_stands_while_the_worker_runs_another_job_and_counts_while_it_is_idle_or_gone` | [GEN-40](#gen-40) |
+| `tests/test_domain_places.py::test_two_long_jobs_queued_at_one_place_both_finish_one_after_the_other_and_neither_is_given_up` | [GEN-40](#gen-40) |
 | `tests/test_domain_record.py::test_a_toy_exam_set_runs_through_its_workflow_and_scores_naming_the_case_it_got_wrong` | [GEN-31](#gen-31) |
 | `tests/test_domain_record.py::test_a_toy_run_exports_one_bundle_with_its_chain_from_item_to_decisions_and_the_files_it_made` | [GEN-31](#gen-31) |
 | `tests/test_domain_roles.py::test_every_role_is_the_owners_at_home_and_a_deployment_maps_roles_to_its_people` | [GEN-27](#gen-27) |
@@ -10185,7 +10384,10 @@ The app shall serve n8n's editor under its own address at /n8n/, reachable only 
 | `tests/test_domain_trackers.py::test_a_changed_item_is_handed_on_once_for_the_run_named_after_it_and_a_restart_hands_on_nothing_twice` | [GEN-25](#gen-25) |
 | `tests/test_domain_trackers.py::test_a_comment_from_someone_else_is_handed_on_once` | [GEN-25](#gen-25) |
 | `tests/test_domain_trackers.py::test_a_write_to_an_unknown_tracker_or_of_an_unknown_kind_is_refused_with_the_reason` | [GEN-25](#gen-25) |
-| `tests/test_domain_trackers.py::test_jira_reads_by_jql_with_its_cursor_and_edits_its_one_summary` | [GEN-25](#gen-25) |
+| `tests/test_domain_trackers.py::test_jira_builds_its_query_without_an_empty_clause_and_refuses_one_with_its_own_order` | [GEN-41](#gen-41) |
+| `tests/test_domain_trackers.py::test_jira_hands_on_60_items_of_one_minute_once_and_its_cursor_moves_on` | [GEN-41](#gen-41) |
+| `tests/test_domain_trackers.py::test_jira_reads_by_jql_with_its_cursor_and_edits_its_one_summary` | [GEN-25](#gen-25), [GEN-41](#gen-41) |
+| `tests/test_domain_trackers.py::test_jira_reads_its_cursor_in_the_token_users_time_zone_not_the_servers` | [GEN-41](#gen-41) |
 | `tests/test_domain_trackers.py::test_shadow_writes_nothing_outward_until_the_owner_lets_a_kind_go_live_after_its_measure` | [GEN-25](#gen-25) |
 | `tests/test_domain_trackers.py::test_the_one_summary_comment_is_edited_across_three_updates` | [GEN-25](#gen-25) |
 | `tests/test_domain_trackers.py::test_trackers_are_the_apps_and_the_queues` | [GEN-25](#gen-25) |
@@ -10238,10 +10440,12 @@ The app shall serve n8n's editor under its own address at /n8n/, reachable only 
 | `tests/test_flows.py::test_a_plan_runs_in_waves_through_the_agent_path_and_answers_every_steps_output` | [WFL-05](#wfl-05) |
 | `tests/test_flows.py::test_a_refused_request_runs_nothing_and_says_why` | [WFL-05](#wfl-05) |
 | `tests/test_flows.py::test_a_request_is_checked_before_anything_runs` | [WFL-05](#wfl-05) |
+| `tests/test_flows.py::test_a_state_file_write_cut_short_leaves_the_old_file_or_none` | [WFL-05](#wfl-05) |
 | `tests/test_flows.py::test_a_step_that_fails_twice_answers_failed_with_its_reason` | [WFL-05](#wfl-05) |
 | `tests/test_flows.py::test_an_agent_reads_its_brief_as_its_step` | [WFL-05](#wfl-05) |
 | `tests/test_flows.py::test_an_agent_step_runs_through_the_conductors_own_runner_and_n8n_gets_the_answer` | [WFL-05](#wfl-05) |
 | `tests/test_flows.py::test_an_answer_n8n_did_not_take_is_sent_again_after_a_restart_without_running_the_step_again` | [WFL-05](#wfl-05) |
+| `tests/test_flows.py::test_an_empty_answer_file_is_handled_again_and_answered` | [WFL-05](#wfl-05) |
 | `tests/test_flows.py::test_home_hears_how_each_step_of_a_workflow_ended` | [WFL-10](#wfl-10) |
 | `tests/test_flows.py::test_the_answer_only_ever_goes_to_n8n_on_this_machine` | [WFL-05](#wfl-05) |
 | `tests/test_flows.py::test_the_new_kinds_are_checked_before_anything_runs` | [WFL-05](#wfl-05) |
@@ -10502,12 +10706,27 @@ The app shall serve n8n's editor under its own address at /n8n/, reachable only 
 | `tests/test_n8n_inapp.py::test_a_question_waits_for_the_owner_and_old_runs_leave_the_view` | [WFL-11](#wfl-11) |
 | `tests/test_n8n_inapp.py::test_a_resume_url_stays_at_n8ns_root` | [WFL-14](#wfl-14) |
 | `tests/test_n8n_inapp.py::test_a_schedule_reads_in_words` | [WFL-11](#wfl-11) |
-| `tests/test_n8n_inapp.py::test_compose_puts_n8n_under_n8n_with_live_updates_over_plain_http` | [WFL-14](#wfl-14) |
-| `tests/test_n8n_inapp.py::test_n8n_is_served_under_the_apps_address_behind_its_gate` | [APP-66](#app-66), [WFL-14](#wfl-14) |
+| `tests/test_n8n_inapp.py::test_compose_puts_n8n_under_n8n_with_live_updates_over_plain_http` | [WFL-14](#wfl-14), [WFL-15](#wfl-15) |
+| `tests/test_n8n_inapp.py::test_n8n_is_served_under_the_apps_address_behind_its_gate` | [APP-66](#app-66), [WFL-14](#wfl-14), [WFL-16](#wfl-16) |
 | `tests/test_n8n_inapp.py::test_n8ns_live_updates_stream_through_the_app` | [WFL-14](#wfl-14) |
 | `tests/test_n8n_inapp.py::test_phoenix_is_served_inside_the_app_like_n8n_and_a_step_s_call_opens_on_the_traces_page` | [APP-66](#app-66) |
 | `tests/test_n8n_inapp.py::test_the_runner_writes_the_view_beside_the_step_service` | [WFL-11](#wfl-11) |
 | `tests/test_n8n_inapp.py::test_the_view_has_every_workflow_its_schedule_its_steps_and_its_recent_runs` | [WFL-11](#wfl-11) |
+| `tests/test_n8n_items.py::test_a_change_for_an_item_starts_at_its_tag_and_goes_out_as_a_draft_whose_review_comment_wakes_the_run` | [GEN-26](#gen-26) |
+| `tests/test_n8n_items.py::test_a_comment_from_someone_else_wakes_the_waiting_run_and_the_stacks_own_change_does_not` | [WFL-19](#wfl-19) |
+| `tests/test_n8n_items.py::test_a_comment_while_the_run_is_busy_elsewhere_answers_its_next_wait_at_once` | [WFL-19](#wfl-19) |
+| `tests/test_n8n_items.py::test_a_new_item_starts_its_workflow_once_through_its_webhook_even_when_its_event_comes_twice` | [WFL-19](#wfl-19) |
+| `tests/test_n8n_items.py::test_a_question_for_a_role_says_who_may_answer_refuses_anyone_else_and_records_who_did` | [GEN-27](#gen-27) |
+| `tests/test_n8n_items.py::test_a_tracker_write_step_answers_with_its_shadow_reference_and_once_live_with_the_live_one` | [WFL-21](#wfl-21) |
+| `tests/test_n8n_items.py::test_a_tracker_write_takes_an_earlier_steps_whole_text_from_the_run_register` | [WFL-21](#wfl-21) |
+| `tests/test_n8n_items.py::test_a_wait_that_times_out_is_an_outcome_and_the_run_reminds_in_shadow_and_waits_again` | [WFL-20](#wfl-20) |
+| `tests/test_n8n_items.py::test_an_ended_run_is_not_started_again_unless_its_tracker_says_restart_on_comment` | [WFL-19](#wfl-19) |
+| `tests/test_n8n_items.py::test_an_event_n8n_could_not_take_stays_in_the_outbox_and_starts_its_run_on_the_next_pass` | [WFL-19](#wfl-19) |
+| `tests/test_n8n_items.py::test_the_item_steps_are_checked_before_anything_runs` | [WFL-20](#wfl-20) |
+| `tests/test_n8n_items.py::test_the_node_waits_on_an_item_writes_to_it_and_a_timeout_is_a_result_while_a_failure_still_fails` | [WFL-20](#wfl-20) |
+| `tests/test_n8n_items.py::test_the_poller_is_a_crew_job_on_n8ns_minute_and_asks_the_trackers_every_poll_minutes` | [WFL-19](#wfl-19) |
+| `tests/test_n8n_items.py::test_with_no_map_of_roles_a_question_for_a_role_is_the_owners` | [GEN-27](#gen-27) |
+| `tests/test_n8n_items.py::test_without_forge_push_a_change_for_an_item_waits_for_the_owner_in_the_app` | [GEN-26](#gen-26) |
 | `tests/test_n8n_move.py::test_a_generated_workflow_is_inactive_and_goes_through_the_step_service` | [WFL-09](#wfl-09), [WFL-13](#wfl-13) |
 | `tests/test_n8n_move.py::test_a_jobs_schedule_and_next_run_come_from_its_workflows_cron` | [CRW-01](#crw-01), [MIS-02](#mis-02), [WFL-09](#wfl-09) |
 | `tests/test_n8n_move.py::test_a_missions_schedule_goes_to_its_task_and_then_its_workflow_holds_it` | [APP-68](#app-68), [MIS-02](#mis-02), [WFL-09](#wfl-09) |
@@ -10520,14 +10739,14 @@ The app shall serve n8n's editor under its own address at /n8n/, reachable only 
 | `tests/test_n8n_move.py::test_the_runners_word_wins_until_git_holds_it_and_a_deploy_keeps_it` | [WFL-09](#wfl-09) |
 | `tests/test_n8n_service.py::test_n8n_is_part_of_the_core_and_starts_after_its_database` | [WFL-01](#wfl-01) |
 | `tests/test_n8n_service.py::test_n8n_is_reached_only_from_this_machine` | [WFL-01](#wfl-01) |
-| `tests/test_n8n_service.py::test_n8n_prunes_executions_after_30_days` | [WFL-04](#wfl-04) |
+| `tests/test_n8n_service.py::test_n8n_prunes_executions_after_30_days` | [WFL-04](#wfl-04), [WFL-24](#wfl-24) |
 | `tests/test_n8n_service.py::test_n8n_sends_nothing_home_and_keeps_its_command_node_off` | [WFL-03](#wfl-03) |
 | `tests/test_n8n_service.py::test_n8n_uses_its_own_role_database_and_secrets` | [WFL-02](#wfl-02) |
 | `tests/test_n8n_service.py::test_the_boot_check_counts_the_database_job_as_set_up` | [WFL-02](#wfl-02) |
 | `tests/test_n8n_service.py::test_the_database_setup_is_safe_to_repeat` | [WFL-02](#wfl-02) |
 | `tests/test_n8n_service.py::test_the_n8n_image_is_pinned_by_digest` | [WFL-01](#wfl-01) |
 | `tests/test_n8n_sync.py::test_a_deploy_imports_the_repositorys_workflows_each_as_its_file_says` | [WFL-08](#wfl-08) |
-| `tests/test_n8n_sync.py::test_an_answer_that_is_not_done_ends_the_n8n_run_as_an_error` | [WFL-06](#wfl-06) |
+| `tests/test_n8n_sync.py::test_an_answer_that_is_not_done_ends_the_n8n_run_as_an_error` | [WFL-06](#wfl-06), [WFL-20](#wfl-20) |
 | `tests/test_n8n_sync.py::test_an_export_is_stable_for_git` | [WFL-08](#wfl-08) |
 | `tests/test_n8n_sync.py::test_every_scheduled_job_runs_on_n8n` | [WFL-08](#wfl-08) |
 | `tests/test_n8n_sync.py::test_every_scheduled_workflow_can_be_run_now_through_n8n` | [WFL-13](#wfl-13) |
@@ -10845,6 +11064,10 @@ The app shall serve n8n's editor under its own address at /n8n/, reachable only 
 | `tests/test_rotation.py::test_each_night_has_its_trial_and_sunday_rests` | [TRL-14](#trl-14) |
 | `tests/test_rotation.py::test_it_starts_the_trial_only_when_the_stack_is_idle` | [TRL-14](#trl-14) |
 | `tests/test_rotation.py::test_the_research_exam_goes_in_as_research_and_hands_the_key_its_answer_and_the_pages_read` | [TRL-16](#trl-16) |
+| `tests/test_run_register.py::test_a_customer_deployment_answers_n8n_with_status_ids_and_a_summary_while_the_register_keeps_the_whole_text` | [WFL-22](#wfl-22) |
+| `tests/test_run_register.py::test_a_customer_deployment_may_relax_lean_answers_and_home_answers_whole` | [WFL-22](#wfl-22) |
+| `tests/test_run_register.py::test_a_stand_in_run_exports_as_one_zip_from_the_run_register_with_the_workflows_shape_from_its_pack` | [WFL-23](#wfl-23) |
+| `tests/test_run_register.py::test_every_step_is_kept_in_the_run_register_with_its_request_answer_files_and_times_across_a_restart` | [WFL-23](#wfl-23) |
 | `tests/test_runner.py::test_a_briefing_reads_the_news_of_its_schedule_s_window` | [MIS-11](#mis-11) |
 | `tests/test_runner.py::test_a_briefing_that_hangs_is_stopped_at_its_deadline` | [MIS-11](#mis-11) |
 | `tests/test_runner.py::test_a_burst_of_locks_writes_who_held_what_once` | [MIS-01](#mis-01) |
@@ -11228,7 +11451,7 @@ The app shall serve n8n's editor under its own address at /n8n/, reachable only 
 | `tests/test_windows_desk.py::test_the_desk_gives_claude_reading_tools_only_and_runs_nothing_from_a_request` | [PLT-31](#plt-31) |
 | `tests/test_winworker.py::test_a_declared_approved_job_runs_end_to_end_and_brings_its_evidence_back` | [GEN-11](#gen-11) |
 | `tests/test_winworker.py::test_a_failing_build_is_a_failed_job_with_its_step` | [GEN-11](#gen-11) |
-| `tests/test_winworker.py::test_a_job_past_its_time_limit_is_stopped` | [GEN-11](#gen-11) |
+| `tests/test_winworker.py::test_a_job_past_its_time_limit_is_stopped` | [GEN-11](#gen-11), [GEN-40](#gen-40) |
 | `tests/test_winworker.py::test_a_kind_definition_that_is_unclear_is_not_valid` | [GEN-11](#gen-11) |
 | `tests/test_winworker.py::test_a_lost_job_is_reported_and_one_whose_kind_may_retry_runs_once_more` | [GEN-11](#gen-11) |
 | `tests/test_winworker.py::test_a_patch_outside_its_kinds_paths_is_refused_before_it_is_applied` | [GEN-11](#gen-11) |
@@ -11238,6 +11461,8 @@ The app shall serve n8n's editor under its own address at /n8n/, reachable only 
 | `tests/test_winworker.py::test_the_stack_refuses_at_once_what_windows_would_refuse` | [GEN-11](#gen-11) |
 | `tests/test_winworker.py::test_the_stack_side_can_start_nothing_on_windows` | [GEN-11](#gen-11) |
 | `tests/test_winworker.py::test_the_worker_is_a_feature_a_deployment_switches_on` | [GEN-11](#gen-11) |
+| `tests/test_work_deployment.py::test_the_core_names_nothing_of_the_stand_in_domain` | [GEN-44](#gen-44) |
+| `tests/test_work_deployment.py::test_the_toy_pack_runs_end_to_end_in_a_customer_class_deployment_against_stand_ins` | [GEN-44](#gen-44) |
 | `tests/test_wsl_memory.py::test_a_new_machine_gets_it_from_the_root_bootstrap` | [PLT-35](#plt-35) |
 | `tests/test_wsl_memory.py::test_it_refuses_to_run_without_root_and_says_how` | [PLT-35](#plt-35) |
 | `tests/test_wsl_memory.py::test_the_file_cache_goes_back_to_windows_every_30_minutes` | [PLT-35](#plt-35) |

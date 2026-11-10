@@ -6,7 +6,8 @@ items:
   - id: WFL-01
     title: n8n is part of the core
     statement: n8n shall run as a core service on every deployment, its image pinned by digest in versions.env, its
-      port published on 127.0.0.1 only and opened to the owner on the tailnet, never on the internet.
+      port published on 127.0.0.1 only and opened to the owner on the tailnet (or on the PC itself in a deployment without
+      one, WFL-15), never on the internet.
     type: constraint
     priority: must
     status: implemented
@@ -63,9 +64,14 @@ items:
     statement: n8n shall start every step of the stack's own work through Mission Control's step service, which hands
       it to the runner and returns at once; the runner calls n8n's resume URL with the result, also after a restart of
       either side. The step kinds are agent, crew, task, ask, notify, build (a coding change in the builder sandbox),
-      recall (a memory search), remember (a note through the memory gate), command (a job kind at a place) and plan
-      (an improvised plan's steps in waves), each run through the stack's own code for that work. A crew job whose unit
+      recall (a memory search), remember (a note through the memory gate), command (a job kind at a place), plan
+      (an improvised plan's steps in waves), wait_item (a wait on a tracker item, WFL-20) and tracker (a write to it,
+      WFL-21), each run through the stack's own code for that work. A crew job whose unit
       is still running shall answer at once that the run in progress covers it, never start a second or wait behind it.
+      Every state file the step service and the run register write (answers, jobs, questions, builds, the register's
+      ledger, outbox, runs and items, the trackers' cursors) shall be written whole or not at all (a temp file in the
+      same folder, then os.replace), and an empty or unreadable answer file shall count as no answer yet (said once,
+      removed, the step handled again), so one bad file never holds a request.
     type: interface
     priority: must
     status: implemented
@@ -78,7 +84,9 @@ items:
       coding change runs as the Conductor''s build step and answers with its build, branch, pull request and checks; a
       memory search answers with its hits, each cut visibly; a note enters memory only through the memory tool''s gate;
       a command runs at its place only once approved there and is submitted once, also across a restart; a plan runs
-      its steps in waves through the agent path and a step after a failed one does not run.'
+      its steps in waves through the agent path and a step after a failed one does not run; a write killed half way
+      leaves the old file or none, and an empty answer file left by one (10 Nov 2026, a deploy restarted the runner) is
+      handled again and answered.'
     verify: {method: test, by: ['tests/test_flows.py::test_a_request_is_checked_before_anything_runs',
       'tests/test_flows.py::test_the_answer_only_ever_goes_to_n8n_on_this_machine',
       'tests/test_flows.py::test_an_agent_step_runs_through_the_conductors_own_runner_and_n8n_gets_the_answer',
@@ -95,8 +103,10 @@ items:
       'tests/test_flows.py::test_a_memory_search_answers_with_its_hits_each_cut',
       'tests/test_flows.py::test_a_note_enters_memory_only_through_the_memory_tools_gate',
       'tests/test_flows.py::test_a_command_runs_at_its_place_only_once_approved_there_and_is_submitted_once',
-      'tests/test_flows.py::test_a_plan_runs_in_waves_through_the_agent_path_and_answers_every_steps_output']}
-    trace: [ops/flows.py, images/mission-control/server.flows.py, images/mission-control/server.py, ops/missions.py, compose/core.yaml, compose/apps.yaml,
+      'tests/test_flows.py::test_a_plan_runs_in_waves_through_the_agent_path_and_answers_every_steps_output',
+      'tests/test_flows.py::test_a_state_file_write_cut_short_leaves_the_old_file_or_none',
+      'tests/test_flows.py::test_an_empty_answer_file_is_handled_again_and_answered']}
+    trace: [ops/flows.py, ops/statefile.py, ops/runreg.py, images/mission-control/server.flows.py, images/mission-control/server.py, ops/missions.py, compose/core.yaml, compose/apps.yaml,
       ops/domain/packs.py, ops/domain/places.py, ops/memstack.py]
   - id: WFL-06
     title: The stack's own nodes on the canvas
@@ -273,7 +283,7 @@ items:
   - id: WFL-14
     title: n8n inside the app, behind its gate
     statement: The app shall serve n8n's editor under its own address at /n8n/, reachable only with the owner's
-      Tailscale login and refusing a write from another site, passing methods, query strings, bodies, cookies and n8n's
+      Tailscale login (or on the PC itself without a tailnet, WFL-16) and refusing a write from another site, passing methods, query strings, bodies, cookies and n8n's
       live updates through as they stream, and letting only the app's own pages frame it; n8n's webhooks and resume
       URLs stay at n8n's own root on its tailnet port.
     type: functional
@@ -291,3 +301,195 @@ items:
       'tests/test_n8n_inapp.py::test_a_resume_url_stays_at_n8ns_root']}
     trace: [images/mission-control/server.frames.py, images/mission-control/server.n8n.py, images/mission-control/server.py, images/mission-control/web/sw.js, compose/core.yaml,
       compose/apps.yaml, ops/windows/host-setup.ps1]
+  - id: WFL-15
+    title: n8n without the tailnet stays on the PC
+    statement: "Where a deployment has no tailnet, n8n's editor address shall be the app's on the PC
+      (http://127.0.0.1:8090/n8n/) and its webhook and resume URLs shall be n8n's own on 127.0.0.1:5678, set by the
+      deployment (N8N_EDITOR_URL, N8N_WEBHOOK_URL); the deployment check shall refuse a deployment without the tailnet
+      whose app gate is not local or whose n8n addresses are not on 127.0.0.1, and one with the tailnet whose gate is
+      local."
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-04, SN-05]
+    sources: [DEC-45, DEC-51, docs/N8N-MIGRATION.md]
+    acceptance: 'Test: the example work deployment has no tailnet, a local gate and both addresses on 127.0.0.1, and passes
+      the check; a tailnet address, a missing address or a tailnet gate without the tailnet is refused; home keeps its
+      tailnet addresses. Shown on a throwaway n8n 2.44.7 on 10 Nov 2026: its settings named http://127.0.0.1:5678/ for
+      webhooks and http://127.0.0.1:8090/n8n for the editor.'
+    verify: {method: test, by: ['tests/test_customer_deployment.py::test_without_the_tailnet_n8n_and_the_app_stay_on_127_0_0_1',
+      'tests/test_n8n_inapp.py::test_compose_puts_n8n_under_n8n_with_live_updates_over_plain_http']}
+    trace: [compose/core.yaml, ops/deployment.py, deployments/example-work/deployment.env, docs/N8N-MIGRATION.md]
+  - id: WFL-16
+    title: The app's gate follows the deployment
+    statement: "The app's front door shall admit by the deployment's gate: with the tailnet (APP_GATE tailnet, the
+      default), only a request with Tailscale's identity header; without it (APP_GATE local), only a request that names
+      the PC itself (127.0.0.1, localhost, ::1, or the app's service name), which shall be the owner's under one local
+      login whatever Tailscale header it brings; under both, a write from another site shall be refused, and n8n inside
+      the app shall be told the scheme the browser used."
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-04]
+    sources: [DEC-45, docs/N8N-MIGRATION.md]
+    rationale: 'Without a tailnet no Tailscale header exists, and the app (with n8n and Phoenix inside it) would refuse
+      everything. Its port is published on 127.0.0.1 only, so a request that reaches it comes from the PC; the host
+      check keeps out a page of another site whose name was made to point here.'
+    acceptance: 'Test: with the local gate the PC''s request is the owner''s and a forged Tailscale header names nobody,
+      n8n gets http as the scheme, another host name and a cross-site write are refused before n8n is asked; with the
+      tailnet gate the same request without a login is refused and the owner''s login passes as before.'
+    verify: {method: test, by: ['tests/test_customer_deployment.py::test_without_the_tailnet_the_apps_gate_takes_this_pc_as_the_owner_and_still_refuses_a_write_from_another_site',
+      'tests/test_n8n_inapp.py::test_n8n_is_served_under_the_apps_address_behind_its_gate']}
+    trace: [images/mission-control/server.py, images/mission-control/server.frames.py, compose/apps.yaml, deployments/example-work/deployment.env]
+  - id: WFL-17
+    title: Customer data loads only n8n's logic nodes
+    statement: "Where a deployment holds customer data, its n8n shall load only the logic nodes (the schedule, webhook and
+      manual triggers, wait, if, switch, merge, loop, set, no-op, sticky note, execute workflow and its trigger, respond
+      to webhook) and the AI Stack step, through n8n's NODES_INCLUDE from the deployment's N8N_NODES_INCLUDE; the data
+      guard shall refuse such a deployment whose list is empty or names a node off ops/dataguard.py N8N_NODES, and
+      dataguard.n8n_nodes() shall give the code the deployment's list (None when n8n loads every node)."
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-04, SN-05]
+    sources: [DEC-45, DEC-51, docs/N8N-MIGRATION.md]
+    rationale: 'An HTTP Request, Code, Jira, Bitbucket or mail node would reach a system past the stack''s steps, their
+      approvals and shadow mode. Home keeps every node.'
+    acceptance: 'Test: the example work deployment''s list is exactly N8N_NODES, home''s is none; an HTTP Request node in
+      the list and an empty list are refused by the data guard. Shown on a throwaway n8n 2.44.7 on 10 Nov 2026 with the
+      example''s list: it loaded those 15 node types and no other, the AI Stack step and no langchain node among them.'
+    verify: {method: test, by: ['tests/test_customer_deployment.py::test_a_customer_deployments_n8n_loads_only_the_logic_nodes_and_the_aistack_step']}
+    trace: [ops/dataguard.py, compose/core.yaml, deployments/example-work/deployment.env, docs/N8N-MIGRATION.md]
+  - id: WFL-18
+    title: n8n's executions stay on the PC
+    statement: "Where a deployment holds customer data, the data guard shall refuse it when a published port of any
+      service is not on 127.0.0.1, when n8n's database volume (pgdata) or its home (n8n) is not a local volume, when n8n
+      sends diagnostics or version pings, or when a feature by which they leave the PC (home's backup, offsite) is on."
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-04]
+    sources: [DEC-45, docs/PLATFORM.md, docs/N8N-MIGRATION.md]
+    rationale: n8n keeps every node's output in its database, and an agent step's whole text is its output.
+    acceptance: 'Test: the compose files pass; a copy with n8n''s volume on NFS, its port on every address and diagnostics
+      on is refused with each reason; home and offsite are refused for customer data; the backup script stops with "not
+      configured" before any network call in the example work deployment.'
+    verify: {method: test, by: ['tests/test_customer_deployment.py::test_n8ns_database_and_volume_stay_on_the_pc_and_the_backup_stays_off_for_customer_data']}
+    trace: [ops/dataguard.py, ops/backup.sh, compose/core.yaml, docs/N8N-MIGRATION.md]
+  - id: WFL-19
+    title: Tracker items start and wake runs
+    statement: A crew job on n8n's schedule (tracker-poll, every minute, asking the trackers every poll_minutes of the
+      deployment, 5 by default) shall poll every tracker of the deployment and the watched pull requests, and route
+      each event once by its tracker, key and the change's identity, also across a restart of the runner or the poller,
+      through the run register. An event for an item with no run shall start the item's workflow through n8n's webhook
+      item/<pack>/<name> at n8n's root with its tracker, key, run, reference and comments; an event with new comments
+      from someone other than the stack shall answer the run's waiting wait_item; an event without new comments shall
+      never wake a wait; any other event is recorded, its comments going to the run's next wait. A run that has ended
+      (its n8n execution finished) shall not start again when its item changes, except that a new comment starts a new
+      run when the tracker says restart on_comment (default never). An event n8n does not take stays for the next pass.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-05]
+    sources: [docs/N8N-MIGRATION.md, DEC-54]
+    acceptance: 'Test: a stand-in item starts its workflow once through its webhook, also when its event comes twice; a
+      comment by someone else wakes the waiting run and the stack''s own change does not; a comment while the run is
+      busy answers its next wait at once; an ended run is not started again unless the tracker says on_comment; an
+      event n8n could not take starts its run on the next pass; the poller is a crew job on n8n''s minute that asks
+      every poll_minutes. Shown on a throwaway n8n 2.44.7 on 10 Nov 2026: POST webhook/item/toy/bug started the run
+      and answered its execution.'
+    verify: {method: test, by: ['tests/test_n8n_items.py::test_a_new_item_starts_its_workflow_once_through_its_webhook_even_when_its_event_comes_twice',
+      'tests/test_n8n_items.py::test_a_comment_from_someone_else_wakes_the_waiting_run_and_the_stacks_own_change_does_not',
+      'tests/test_n8n_items.py::test_a_comment_while_the_run_is_busy_elsewhere_answers_its_next_wait_at_once',
+      'tests/test_n8n_items.py::test_an_ended_run_is_not_started_again_unless_its_tracker_says_restart_on_comment',
+      'tests/test_n8n_items.py::test_an_event_n8n_could_not_take_stays_in_the_outbox_and_starts_its_run_on_the_next_pass',
+      'tests/test_n8n_items.py::test_the_poller_is_a_crew_job_on_n8ns_minute_and_asks_the_trackers_every_poll_minutes']}
+    trace: [ops/runreg.py, ops/domain/trackers.py, ops/domain/forgework.py, ops/crew.py, ops/systemd/tracker-poll.service,
+      n8n/workflows/crew-tracker-poll.json]
+  - id: WFL-20
+    title: A run waits on its tracker item
+    statement: The step kind wait_item shall register the run's step on its tracker item with the step service and
+      answer done with outcome reply and the new comments from others, or with outcome timeout once its timeout_hours
+      have passed (0 waits without end); the AI Stack step node shall treat an answer with an outcome as a result, so
+      the workflow branches on it, while a failed, refused or cancelled answer still fails the node.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-05]
+    sources: [docs/N8N-MIGRATION.md]
+    acceptance: 'Test: a wait that times out answers done with outcome timeout and the run reminds in shadow and waits
+      again; the node sends the wait''s fields and fails only a failed, refused or cancelled answer. Shown on a
+      throwaway n8n 2.44.7 on 10 Nov 2026: a wait that timed out went on in success through an IF node to a reminder
+      and a second wait, whose reply ended the run in success; a failed answer ended its run in error.'
+    verify: {method: test, by: ['tests/test_n8n_items.py::test_a_wait_that_times_out_is_an_outcome_and_the_run_reminds_in_shadow_and_waits_again',
+      'tests/test_n8n_items.py::test_the_node_waits_on_an_item_writes_to_it_and_a_timeout_is_a_result_while_a_failure_still_fails',
+      'tests/test_n8n_items.py::test_the_item_steps_are_checked_before_anything_runs',
+      'tests/test_n8n_sync.py::test_an_answer_that_is_not_done_ends_the_n8n_run_as_an_error']}
+    trace: [ops/flows.py, ops/runreg.py, n8n/custom/AistackStep.node.js]
+  - id: WFL-21
+    title: A run writes to its tracker item
+    statement: The step kind tracker shall make one write (comment, summary, attach, link, transition or label) to its
+      item through trackers.write with the step's own write id, and answer with the shadow reference while that kind of
+      write is in shadow and with the live reference once the owner let it go live. A write that names an earlier step
+      of its run (from_step) shall add that step's whole answer from the run register to its text, so n8n never needs
+      to carry the text the stack writes, and shall be refused when the run has no answered step of that name.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-05]
+    sources: [docs/N8N-MIGRATION.md, DEC-54]
+    acceptance: 'Test: a summary written by a step answers with its shadow reference and leaves nothing on the item;
+      once summaries are live the next answers with its live reference and the item holds it; a comment with from_step
+      holds its own text and the triage step''s whole answer, and a step name the run does not have is refused.'
+    verify: {method: test, by: ['tests/test_n8n_items.py::test_a_tracker_write_step_answers_with_its_shadow_reference_and_once_live_with_the_live_one',
+      'tests/test_n8n_items.py::test_a_tracker_write_takes_an_earlier_steps_whole_text_from_the_run_register']}
+    trace: [ops/flows.py, ops/runreg.py, ops/domain/trackers.py, n8n/custom/AistackStep.node.js]
+  - id: WFL-22
+    title: n8n keeps summaries in a customer deployment
+    statement: In a deployment whose data class is customer (ops/dataguard.py), the step service shall answer n8n with
+      the status, the outcome, the ids and references (task, step, build, pull request, artifacts, tracker writes) and
+      a summary of at most 300 characters, while the whole answer stays in the run register and the task's record; the
+      deployment may relax it with n8n_answers full in its data.yaml.
+    type: constraint
+    priority: should
+    status: implemented
+    parents: [SN-05]
+    sources: [docs/N8N-MIGRATION.md, docs/PLATFORM.md]
+    acceptance: 'Test: in a customer deployment n8n gets the status, ids and a cut summary of an agent step and the pull
+      request of a change, and the register and the done file keep the whole text; a personal deployment, and a
+      customer one with n8n_answers full, answer whole.'
+    verify: {method: test, by: ['tests/test_run_register.py::test_a_customer_deployment_answers_n8n_with_status_ids_and_a_summary_while_the_register_keeps_the_whole_text',
+      'tests/test_run_register.py::test_a_customer_deployment_may_relax_lean_answers_and_home_answers_whole']}
+    trace: [ops/flows.py, ops/dataguard.py]
+  - id: WFL-23
+    title: The run register is the stack's record of a run
+    statement: The step service shall keep a run register, persisted on disk and surviving restarts of the runner and
+      of n8n, holding the map from each tracker item to its runs and the wait registered on it, the ledger of routed
+      events, and every step's request, whole answer, files (artifact ids) and times by its n8n run; a run shall export
+      as one zip from the register (each step in order, its task's record, artifact ids and the files' hashes, the
+      tracker writes with their shadow or live references, the pull request), with only the workflow's shape taken
+      from the workflow file in git or the pack's cache, never from n8n's internal API. n8n holds time and order only.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-05]
+    sources: [DEC-54, docs/N8N-MIGRATION.md, docs/AI-STACK.md]
+    acceptance: 'Test: every step is kept with its request, answer, files and times, once across a restart; a stand-in
+      run (agent, tracker writes, a wait that timed out, a command''s file, a draft pull request, the summary) exports as
+      one zip with its steps in order, its task''s record, its files by hash, its tracker writes in shadow, its pull
+      request and its workflow''s shape from the toy pack, and nothing from n8n''s internal API.'
+    verify: {method: test, by: ['tests/test_run_register.py::test_every_step_is_kept_in_the_run_register_with_its_request_answer_files_and_times_across_a_restart',
+      'tests/test_run_register.py::test_a_stand_in_run_exports_as_one_zip_from_the_run_register_with_the_workflows_shape_from_its_pack']}
+    trace: [ops/runreg.py, ops/flows.py, ops/domain/record.py, docs/AI-STACK.md]
+  - id: WFL-24
+    title: A new version of a workflow leaves its waiting runs as they started
+    statement: "A changed workflow (a pack's new commit, a deploy) shall be imported in place under the same id, because n8n resumes a waiting execution from the copy of the workflow it keeps with that execution: a run waiting in the old version finishes on the old version, also when the node it waits on was renamed or removed, or the workflow unpublished or archived, and runs that start after the import run the new version. n8n's pruning shall never delete a waiting execution (it prunes finished ones only), so a run may wait for weeks."
+    type: functional
+    priority: must
+    status: implemented
+    acceptance: 'Shown on a throwaway n8n 2.44.7 on 10 Nov 2026 (docs/N8N-MIGRATION.md §11): each waiting run resumed and succeeded on the version it started with; pruning at 1 hour and 1 execution deleted the finished runs and left the waiting ones, which then resumed. Test: a new pack commit replaces its workflows under the same ids.'
+    parents: [SN-05]
+    sources: [docs/N8N-MIGRATION.md, DEC-51]
+    verify: {method: test, by: ['tests/test_domain_packs.py::test_a_new_commit_replaces_its_workflows_in_place_and_a_refusal_unpublishes_them',
+      'tests/test_n8n_service.py::test_n8n_prunes_executions_after_30_days']}
+    trace: [ops/n8n_sync.py, docs/N8N-MIGRATION.md]

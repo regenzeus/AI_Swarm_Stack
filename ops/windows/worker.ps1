@@ -4,7 +4,7 @@
 #   - it runs only while approved.json holds its name with the SHA-256 of its file (worker-approve.ps1);
 #   - every value of a request is checked by its parameter's type, a patch's paths against the kind's patch_paths;
 #   - every step is an argument list, its values one argument each, never a command line someone wrote.
-# The same rules as ops/winjobs.py (the stack's tests run them in ops/fakeworker.py); worker-selftest.ps1 checks this file.
+# The same rules as ops/winjobs.py (the stack's tests run them in ops/localworker.py); worker-selftest.ps1 checks this file.
 #   worker.ps1 [-Root C:\AIWorker] [-Once]
 param([string]$Root = "C:\AIWorker", [switch]$Once, [double]$MinuteS = 60, [int]$BeatS = 10)
 $ErrorActionPreference = "Stop"

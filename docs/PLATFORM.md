@@ -77,6 +77,9 @@ in `.invalid` counts as none. Other settings a deployment may give in its `deplo
 | `FORGE_PUSH_PREFIX` | the branch prefix on that remote | `ai/` |
 | `OWN_FORGES` | hosts (comma separated) whose repositories are the owner's own work, besides Forgejo and `FORGE_URL` | none |
 | `CODEMAP_GATE` | `tailnet` (the viewer needs a Tailscale login) or `local` (loopback only, no login) | `tailnet` |
+| `APP_GATE` | `tailnet` (the app needs a Tailscale login) or `local` (no tailnet: the app on this PC only, a loopback request is the owner's; WFL-16) | `tailnet` |
+| `N8N_EDITOR_URL`, `N8N_WEBHOOK_URL` | n8n's editor address and the base of its webhooks and resume URLs; without the tailnet `http://127.0.0.1:8090/n8n/` and `http://127.0.0.1:5678/` (WFL-15) | the tailnet's, ports 8447 and 8450 |
+| `N8N_NODES_INCLUDE` | the n8n nodes the deployment loads, a JSON list; customer data needs it, from `ops/dataguard.py` `N8N_NODES` (WFL-17) | empty: every node |
 | `UA_ENRICH_WORKERS` | explanation calls side by side (at most 8) | 1 |
 | `UA_JSON_MODE` | `1`: the explanation calls ask the model for a JSON object | off |
 
@@ -254,10 +257,15 @@ A step kind gains an optional `where`: `wsl` (the default, today's behaviour) or
 worker as a job of its kind (`winworker.step_kind`), waits for it, and its answer is the job's result, with the artifacts as evidence. The
 coder still edits code in the builder in WSL; only the build or the tool run goes to Windows.
 
-### The fake worker
+### The local worker
 
-`ops/fakeworker.py` is the worker's protocol in plain Python over the same folder layout, with the rules of
-`ops/winjobs.py`, so the stack's tests and CI never need Windows (`tests/test_winworker.py`). The real worker,
+`ops/localworker.py` is the worker's protocol in plain Python over the same folder layout, with the rules of
+`ops/winjobs.py`. It runs the local places' jobs (the wsl place as a thread of the runner, the wsl-host place as a unit
+of the user the deployment names, `ops/wslhost-setup.sh`), and the stack's tests and CI run it in place of Windows'
+worker, so they never need Windows (`tests/test_winworker.py`). It was called the fake worker until 10 Nov 2026, when
+the wsl-host place made it the real thing; the protocol did not change. It runs one job at a time, the oldest request
+first, and its status names the job it runs and how many requests wait behind it, so the stack does not give up a
+request queued behind a job of hours (GEN-40). The real Windows worker,
 `ops/windows/worker.ps1`, is checked on Windows by `ops/windows/worker-selftest.ps1` against the same cases: a job runs
 end to end and brings its evidence back; a value with shell syntax, a patch to a build file or with `..`, an undeclared
 kind, a name not on the worker's list and a kind edited after its approval are refused; a job past its limit is stopped.
@@ -300,7 +308,7 @@ the deployment it is on (`ops/measure.py`; `python3 ops/measure.py report <repo>
 2. Features and the deployment folder (A, G), minimal.
 3. The model policy (B).
 4. The data guard with enforced egress (F).
-5. The Windows worker (D): the fake worker and the protocol tests first, then worker.ps1, the broker and the setup.
+5. The Windows worker (D): the local worker (then the fake one) and the protocol tests first, then worker.ps1, the broker and the setup.
 6. The measurement harness, run at home on a stand-in repository.
 7. The forge (C), the pluggable judge (E), updates from tags (H).
 

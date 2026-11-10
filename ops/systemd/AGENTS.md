@@ -35,6 +35,7 @@ drop-ins; `ops/deploy.py` remove_units).
 | `repofacts-sync` | refreshes the facts of repositories whose HEAD moved, one at a time (`ops/repofacts.py`) |
 | `digest` | the morning Telegram digest |
 | `upgrade-check` | monthly report on newer pinned versions |
+| `tracker-poll` | the trackers' changed items start or wake their runs in n8n, each change once (`ops/runreg.py poll`, WFL-19) |
 | `rotation` | one trial a night of the weekly rotation, when the stack is idle (TRL-14) |
 | `recycle` | restarts qmd, Phoenix and Open WebUI at night, when the stack is idle (PLT-27) |
 | `desk.service` | one briefing run (started by `make desk`) |

@@ -1,4 +1,4 @@
-"""The Windows worker's protocol (GEN-11, docs/PLATFORM.md §6), run against ops/fakeworker.py so it needs no Windows: a
+"""The Windows worker's protocol (GEN-11, docs/PLATFORM.md §6), run against ops/localworker.py so it needs no Windows: a
 declared, approved job kind runs end to end, and every hostile or broken request is refused or recovered with its reason."""
 import json
 import subprocess
@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-import fakeworker as FW
+import localworker as FW
 import winjobs as WJ
 import winworker as WW
 

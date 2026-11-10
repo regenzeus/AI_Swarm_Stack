@@ -12,6 +12,11 @@ second `--env-file`, and takes the feature list from it as `COMPOSE_PROFILES`.
 | File | Holds |
 |---|---|
 | `deployment.env` | the hosts, paths and accounts, `DEPLOYMENT`, `FEATURES` and `COMPOSE_PROFILES=${FEATURES}`; never a secret |
+| `data.yaml` | the data class, personal or customer, per deployment and per repository (GEN-14) |
+
+Without the tailnet a deployment sets `APP_GATE=local` and n8n's two addresses on 127.0.0.1 (`N8N_EDITOR_URL`,
+`N8N_WEBHOOK_URL`); with customer data it also lists n8n's logic nodes in `N8N_NODES_INCLUDE` (docs/N8N-MIGRATION.md
+§10). `python3 ops/deployment.py check` and `python3 ops/dataguard.py check` refuse a deployment that does not.
 
 A feature that is off starts no compose service (each service names its feature as its profile), enables no timer (each
 unit names its feature in a `# feature:` line), and its scripts exit with "not configured" before any network call.

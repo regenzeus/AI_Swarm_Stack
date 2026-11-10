@@ -2,6 +2,7 @@
 run named after it, and a restart hands nothing on twice; the summary comment is edited across three updates; shadow
 mode writes nothing outward until the owner lets a kind go live; a change starts at a tag, opens a draft into a release
 branch, and a reviewer's comment is handed on once."""
+import datetime as dt
 import json
 import subprocess
 
@@ -83,12 +84,25 @@ def test_a_write_to_an_unknown_tracker_or_of_an_unknown_kind_is_refused_with_the
 
 
 class FakeJira:
-    def __init__(self):
-        self.jqls, self.cs, self.edited = [], [{"id": "7", "author": {"name": "ai-stack"}, "body": f"{TR.SUMMARY_MARK}\nold"}], []
+    """Jira Data Center as the adapter sees it: JQL read to the minute in the token user's time zone, pages of at most
+    `limit` issues, and the stack's one summary comment."""
 
-    def jql(self, q, limit, fields):
+    def __init__(self, issues=(), zone="Europe/Berlin"):
+        self.issues, self.zone, self.jqls, self.edited = list(issues), zone, [], []
+        self.cs = [{"id": "7", "author": {"name": "ai-stack"}, "body": f"{TR.SUMMARY_MARK}\nold"}]
+
+    def myself(self):
+        return {"name": "ai-stack", "timeZone": self.zone}
+
+    def jql(self, q, start=0, limit=50, fields=""):
+        import re
+        from zoneinfo import ZoneInfo
         self.jqls.append(q)
-        return {"issues": [{"key": "DEMO-1", "fields": {"updated": "2026-11-09T10:00:00.000+0000", "summary": "s", "status": {"name": "Open"}, "labels": []}}]}
+        m = re.search(r'updated >= "(.+?)"', q)
+        since = dt.datetime.strptime(m[1], "%Y-%m-%d %H:%M").replace(tzinfo=ZoneInfo(self.zone)) if m else None
+        hits = sorted((i for i in self.issues if since is None or TR._when(i[1]) >= since), key=lambda i: TR._when(i[1]))
+        return {"total": len(hits), "issues": [{"key": k, "fields": {"updated": u, "summary": "s", "status": {"name": "Open"}, "labels": []}}
+                                               for k, u in hits[start:start + limit]]}
 
     def issue_get_comments(self, key):
         return {"comments": self.cs}
@@ -101,12 +115,49 @@ class FakeJira:
 
 
 def test_jira_reads_by_jql_with_its_cursor_and_edits_its_one_summary():
-    fake = FakeJira()
+    fake = FakeJira([("DEMO-1", "2026-11-09T10:00:00.000+0000")])
     j = TR.Jira({"query": "project = DEMO"}, client=fake)
-    items, cur = j.changes("2026-11-09T09:00:00")
-    assert fake.jqls == ['project = DEMO AND updated > "2026-11-09 09:00" ORDER BY updated ASC'] and items[0]["key"] == "DEMO-1" and cur == items[0]["updated"]
+    items, cur = j.changes({"at": "2026-11-09T09:00:00.000+0000", "seen": []})
+    assert fake.jqls == ['(project = DEMO) AND updated >= "2026-11-09 10:00" ORDER BY updated ASC']   # 09:00 UTC is 10:00 in Berlin
+    assert [i["key"] for i in items] == ["DEMO-1"] and cur == {"at": "2026-11-09T10:00:00.000+0000", "seen": [["DEMO-1", "2026-11-09T10:00:00.000+0000"]]}
     j.put("DEMO-1", "summary", "new", "w1")
     assert fake.edited[0][:2] == ("DEMO-1", "7") and "new" in fake.edited[0][2]
+
+
+def test_jira_reads_its_cursor_in_the_token_users_time_zone_not_the_servers():
+    fake = FakeJira([("DEMO-2", "2026-11-09T10:05:10.000+0100"), ("DEMO-3", "2026-11-09T10:07:00.000+0100")], zone="America/New_York")
+    j = TR.Jira({"query": "project = DEMO"}, client=fake)
+    items, cur = j.changes({"at": "2026-11-09T10:05:10.000+0100", "seen": [["DEMO-2", "2026-11-09T10:05:10.000+0100"]]})
+    assert 'updated >= "2026-11-09 04:05"' in fake.jqls[0]                     # the server's 10:05 +0100 is 04:05 for the user
+    assert [i["key"] for i in items] == ["DEMO-3"] and cur["at"] == "2026-11-09T10:07:00.000+0100"
+
+
+def test_jira_hands_on_60_items_of_one_minute_once_and_its_cursor_moves_on():
+    fake = FakeJira([(f"DEMO-{n}", f"2026-11-09T10:05:{n % 60:02d}.000+0000") for n in range(1, 61)], zone="UTC")
+    j = TR.Jira({"query": "project = DEMO"}, client=fake)
+    items, cur = j.changes("")
+    assert len(items) == 60 and len({i["key"] for i in items}) == 60 and len(fake.jqls) == 2   # two pages of at most 50
+    again, cur2 = j.changes(cur)
+    assert again == [] and cur2["at"] == cur["at"]                               # the minute comes back; nothing twice
+    fake.issues.append(("DEMO-61", "2026-11-09T10:06:01.000+0000"))
+    later, cur3 = j.changes(cur2)
+    assert [i["key"] for i in later] == ["DEMO-61"] and cur3 == {"at": "2026-11-09T10:06:01.000+0000", "seen": [["DEMO-61", "2026-11-09T10:06:01.000+0000"]]}
+
+
+def test_jira_builds_its_query_without_an_empty_clause_and_refuses_one_with_its_own_order(world):
+    fake = FakeJira([("DEMO-4", "2026-11-09T10:00:00.000+0000")], zone="UTC")
+    j = TR.Jira({"query": "  "}, client=fake)
+    assert j.jql("") == "ORDER BY updated ASC"
+    assert j.jql({"at": "2026-11-09T10:00:00.000+0000"}) == 'updated >= "2026-11-09 10:00" ORDER BY updated ASC'
+    with pytest.raises(ValueError, match="its own ORDER BY"):
+        TR.Jira({"name": "bugs", "query": "project = DEMO order by created DESC"}, client=fake)
+    world["tmp"].joinpath("trackers.yaml").write_text(
+        "trackers:\n  - {name: bugs, kind: jira, url: https://jira.example, query: 'project = DEMO ORDER BY created'}\n"
+        f"  - {{name: test, kind: standin, path: {world['store']}, workflow: toy/ask}}\n")
+    assert TR.problems() == ["bugs: its query has its own ORDER BY; the stack orders by updated itself to keep its cursor, so leave the order out of the query"]
+    world["item"]("T-9", "2026-11-09T10:00:00")
+    assert [e["tracker"] for e in TR.poll()] == ["test"]                          # the refused tracker is not asked
+    assert TR.view()["trackers"][0]["refused"].startswith("bugs: its query has its own ORDER BY")
 
 
 def git(cwd, *a):
@@ -165,4 +216,4 @@ def test_trackers_are_the_apps_and_the_queues():
     assert DQ._trackers in DQ.SOURCES
     cls = __import__("yaml").safe_load((root / "config/autonomy.yaml").read_text())["classes"]
     assert all(f"tracker-{k}" in cls for k in TR.KINDS) and cls["tracker-transition"]["floor"] == "people" and cls["tracker-attach"]["floor"] == "people"
-    assert [t["workflow"] for t in TR.view({"shadow_needed": 5, "trackers": [{"name": "t", "kind": "standin", "workflow": "toy/bug"}]})["trackers"]] == ["toy/bug"]
+    assert [t["workflow"] for t in TR.view({"shadow_needed": 5, "trackers": [{"name": "t", "kind": "standin", "workflow": "toy/ticket"}]})["trackers"]] == ["toy/ticket"]

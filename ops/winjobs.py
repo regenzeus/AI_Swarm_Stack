@@ -1,7 +1,7 @@
 """The Windows worker's rules (GEN-11, DEC-45, docs/PLATFORM.md §6), in one place: what a job kind is, when it is
 approved, how a request's values and patch are checked, and how a step's arguments are filled in.
 
-ops/fakeworker.py runs jobs by these rules over the worker's folders, so the stack's tests never need Windows;
+ops/localworker.py runs jobs by these rules over the worker's folders, so the stack's tests never need Windows;
 ops/windows/worker.ps1 is the same rules on Windows, and both pass tests/test_winworker.py's protocol cases. Stdlib only.
 
 A job kind (a JSON file of jobs.d, written by the owner on Windows; the stack can only name one):
