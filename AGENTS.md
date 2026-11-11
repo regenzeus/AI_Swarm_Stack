@@ -52,6 +52,9 @@ docs it points to. `README.md` is the product overview; `docs/` holds architectu
 | `.forgejo/workflows/` | CI | [.forgejo/workflows/AGENTS.md](.forgejo/workflows/AGENTS.md) |
 | `docs/` | Architecture, security model, reviews | [docs/AGENTS.md](docs/AGENTS.md) |
 | `docs/screenshots/` | The public page's pictures, never of real data | [docs/screenshots/AGENTS.md](docs/screenshots/AGENTS.md) |
+| `docs/spikes/` | The stage 0 spike reports: question, measurements, verdict | [docs/spikes/AGENTS.md](docs/spikes/AGENTS.md) |
+| `spikes/` | Stage 0 spikes: short trials of the design's risky choices, not product; reports in `docs/spikes/` | [spikes/AGENTS.md](spikes/AGENTS.md) |
+| `spikes/eval/` | The evaluation spike (not product): exam sets, experiments and a calibrated rubric judge in Phoenix, the interim scorer | [spikes/eval/AGENTS.md](spikes/eval/AGENTS.md) |
 | `eval/` | Frozen benchmark and retrieval evaluation | [eval/AGENTS.md](eval/AGENTS.md) |
 | `eval/trials/` | Trials: tasks with an answer key no agent sees, scored and audited (docs/SWARM-TRIALS.md) | [eval/trials/AGENTS.md](eval/trials/AGENTS.md) |
 | `requirements/` | What the stack must do: needs, constraints, decisions, requirements, findings (contradictions) | [requirements/AGENTS.md](requirements/AGENTS.md) |

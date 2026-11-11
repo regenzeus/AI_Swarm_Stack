@@ -51,6 +51,7 @@ into `requirements/findings.yaml`.
 
 | Document | Date | What it records |
 |---|---|---|
+| [spikes/EVAL.md](spikes/EVAL.md) | 11 Nov 2026 | Stage 0 spike: Phoenix as the interim scorer and the base of stage 6's evaluation: a made-up exam set as a dataset, a rubric judge as a Phoenix evaluator through the gateway, its calibration against hand labels, the settings that keep data on the site; the verdict and the work side's usage |
 | [REVIEW-2026-11-10.md](REVIEW-2026-11-10.md) | 10 Nov 2026 | The second independent review, after the n8n update (nine themed reviewers): what the update broke or left open, what was fixed in branch review/2026-11-10, what waits for the owner |
 | [REVIEW-2026-11-07.md](REVIEW-2026-11-07.md) | 7 Nov 2026 | The independent review of the whole stack (ten themed reviewers): every finding verified, what was fixed in branch review/2026-11-07, and what waits for the owner's decision |
 | [REVIEW-2026-11-01.md](REVIEW-2026-11-01.md) | 1-2 Nov 2026 | The overnight polish: answers to the owner's questions, blind spots, the trials (Mustache, mqtt-trace) and what each found, what is left and why |

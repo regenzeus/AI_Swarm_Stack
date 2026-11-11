@@ -29,7 +29,7 @@ Method, statuses and rules: [README.md](README.md). Names of the parts: [glossar
 | [Quality and process](#qa-quality-and-process) (QA) | 28 | 26 | 1 | 0 | 0 | 1 | 0 |
 | [Records](#rec-records) (REC) | 8 | 8 | 0 | 0 | 0 | 0 | 0 |
 | [Research](#res-research) (RES) | 7 | 6 | 1 | 0 | 0 | 0 | 0 |
-| [Security](#sec-security) (SEC) | 28 | 22 | 6 | 0 | 0 | 0 | 0 |
+| [Security](#sec-security) (SEC) | 29 | 23 | 6 | 0 | 0 | 0 | 0 |
 | [Shopping](#shp-shopping) (SHP) | 13 | 12 | 0 | 0 | 0 | 1 | 0 |
 | [Agent swarm](#swm-agent-swarm) (SWM) | 115 | 103 | 8 | 0 | 2 | 0 | 2 |
 | [Task engine](#tsk-task-engine) (TSK) | 52 | 43 | 6 | 0 | 0 | 0 | 3 |
@@ -38,9 +38,9 @@ Method, statuses and rules: [README.md](README.md). Names of the parts: [glossar
 | [Voice](#voi-voice) (VOI) | 9 | 8 | 0 | 0 | 0 | 1 | 0 |
 | [Ways in](#way-ways-in) (WAY) | 8 | 7 | 1 | 0 | 0 | 0 | 0 |
 | [Workflows](#wfl-workflows) (WFL) | 34 | 31 | 3 | 0 | 0 | 0 | 0 |
-| **All** | **817** | **718** | **52** | **1** | **4** | **17** | **25** |
+| **All** | **818** | **719** | **52** | **1** | **4** | **17** | **25** |
 
-Unit tests claimed by a requirement: 1722 of 1722.
+Unit tests claimed by a requirement: 1723 of 1723.
 
 ## Findings
 
@@ -7789,6 +7789,7 @@ make publish shall push the committed stack to the public GitHub repository only
 - Verified by: test: `tests/test_publish.py::test_images_come_only_from_one_folder_and_hide_nothing`, `tests/test_publish.py::test_a_generated_file_stays_what_its_generator_makes_after_the_name_swap`, `tests/test_publish.py::test_every_landing_runs_the_privacy_scan_and_a_leak_stops_it`, `tests/test_publish.py::test_an_address_written_as_a_regular_expression_is_still_found`, `tests/test_publish.py::test_real_runs_stay_out_but_the_evidence_requirements_cite_stays`, `tests/test_publish.py::test_a_fresh_publish_replaces_the_public_history`, `tests/test_publish.py::test_terms_are_replaced_as_whole_words_and_only_a_capitalised_sentence_start_is_capitalised`, `tests/test_publish.py::test_the_scan_names_every_leftover_without_printing_the_term_and_lets_placeholders_pass`, `tests/test_publish.py::test_the_snapshot_leaves_out_the_secrets_and_follows_the_public_text`, `tests/test_publish.py::test_a_snapshot_with_a_leftover_runs_no_tests_and_pushes_nothing`, `tests/test_publish.py::test_the_push_commits_every_file_of_the_snapshot_whatever_its_gitignore_says`
 - Trace: `ops/publish.py`, `ops/private-terms.sh`, `Makefile`
 - Findings: [FND-75](#fnd-75), [FND-124](#fnd-124)
+- Refined by: [SEC-29](#sec-29)
 
 ### SEC-20
 
@@ -7907,6 +7908,19 @@ n8n's container shall run with a read-only root filesystem (its /tmp and its com
 - Verified by: test: `tests/test_trust.py::test_n8n_is_off_the_flat_backend_hardened_and_its_tailnet_port_serves_resume_links_only`
 - Trace: `compose/core.yaml`
 - Rationale: Review of 10 Nov (O4, SEC2-R5, N8N2-R14). Shown on a throwaway n8n 2.44.7 on 11 Nov 2026: it started, restarted, imported, ran a webhook and resumed a waiting step this way; its cache needs mode 1777 (a plain tmpfs failed with EACCES on restart). Nothing of the stack uses n8n's public API (the runner uses its command line); on 2.44.7 N8N_PUBLIC_API_DISABLED refuses every API key while its routes stay, and its docs page stayed until N8N_PUBLIC_API_SWAGGERUI_DISABLED (read in n8n's own code, dist/public-api/index.js). The SSH and Git nodes stay on at home, and Postgres' superuser still owns n8n's database (docs/SECURITY.md).
+
+### SEC-29
+
+**Phoenix stays on the site** · must · constraint · **implemented**
+
+The core's Phoenix shall make no public-internet request of its own, shall run without its in-app agent assistant and that assistant's web, bash and GitHub tools, shall allow no hosted code sandbox, shall let its playground speak only to OpenAI-compatible endpoints, and shall export to no remote collector.
+
+- Parents: [SEC-19](#sec-19)
+- Sources: `docs/PLATFORM-DESIGN.md`
+- Verified by: test: `tests/test_phoenix_onsite.py::test_phoenix_runs_without_its_agent_assistant_external_requests_or_hosted_sandboxes`
+- Acceptance: Test: the compose file sets each of these settings and names no remote collector.
+- Trace: `compose/core.yaml`
+- Rationale: Phoenix 20 switched on an agent assistant with server-side bash and web access by default; it reads the traces, which hold prompt content (found by the stage 0 evaluation spike, 11 Nov 2026).
 
 ## SHP Shopping
 
@@ -12398,6 +12412,7 @@ The step service shall post an answer to n8n's resume URL only while n8n's readi
 | `tests/test_parallel_tests.py::test_each_test_process_has_a_temp_folder_of_its_own` | [QA-27](#qa-27) |
 | `tests/test_parallel_tests.py::test_the_checks_run_the_suite_over_workers_when_xdist_is_there` | [QA-27](#qa-27) |
 | `tests/test_parallel_tests.py::test_the_publish_runs_the_snapshots_tests_over_workers_too` | [QA-27](#qa-27) |
+| `tests/test_phoenix_onsite.py::test_phoenix_runs_without_its_agent_assistant_external_requests_or_hosted_sandboxes` | [SEC-29](#sec-29) |
 | `tests/test_phone.py::test_a_job_covers_its_steps_and_a_step_outside_it_is_refused_not_carded` | [PHN-26](#phn-26) |
 | `tests/test_phone.py::test_a_mismatch_stops_without_buying` | [SHP-09](#shp-09) |
 | `tests/test_phone.py::test_a_pin_locked_phone_is_never_unlocked` | [PHN-06](#phn-06) |

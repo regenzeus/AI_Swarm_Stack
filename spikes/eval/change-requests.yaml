@@ -1,0 +1,247 @@
+# A made-up exam set for the interim scorer (docs/spikes/EVAL.md): 18 change requests on invented repositories, each
+# with the outcome it must reach, a made-up result of a run, and a person's verdict on that result (the ground truth the
+# judge is calibrated against). Every item is invented: no real repository, ticket, customer or person. Real cases stay
+# in the site's own Phoenix, never in git.
+#
+#   request           what was asked, as a person would type it
+#   expected_outcome  what must be true afterwards, stated so a reader can check it (a case is only fair when it does)
+#   result            what the run reported: summary, test evidence, diff stat; the text the judge reads
+#   label             pass | fail, by a person who read the result against the expected outcome
+#   why               that person's reason, one sentence
+name: change-requests
+title: Made-up change requests with hand verdicts, for calibrating the judge
+cases:
+  - id: cr-01
+    request: "tasklist: add a --due option to `tasklist add` so a task can have a due date."
+    expected_outcome: >-
+      `tasklist add "x" --due 2027-03-01` stores the date; a date not in YYYY-MM-DD form is refused with exit code 2 and
+      a message naming the expected form; `tasklist list` shows the due date and sorts tasks with a due date first,
+      earliest first. Tests cover all three.
+    result: |
+      Added --due to the add command (src/tasklist/cli.py) and a due field to the Task model (src/tasklist/model.py).
+      Invalid dates raise UsageError("due date must be YYYY-MM-DD"), which click turns into exit code 2.
+      list now sorts by (due is None, due, created).
+      New tests: test_add_with_due_stores_date, test_add_with_bad_due_exits_2, test_list_sorts_due_first.
+      pytest: 64 passed in 3.2s (was 61 before the change). Diff: 3 files, +58 -4.
+    label: pass
+    why: All three parts are done and each has a test that ran and passed.
+
+  - id: cr-02
+    request: "tasklist: add a --due option to `tasklist add` so a task can have a due date."
+    expected_outcome: >-
+      `tasklist add "x" --due 2027-03-01` stores the date; a date not in YYYY-MM-DD form is refused with exit code 2 and
+      a message naming the expected form; `tasklist list` shows the due date and sorts tasks with a due date first,
+      earliest first. Tests cover all three.
+    result: |
+      Added --due to the add command and a due field to the Task model. If the date cannot be parsed the task is still
+      added without a due date, so the user does not lose their input. list sorts due tasks first.
+      New tests: test_add_with_due_stores_date, test_add_with_bad_due_keeps_task, test_list_sorts_due_first.
+      pytest: 64 passed. Diff: 3 files, +51 -4.
+    label: fail
+    why: A bad date is accepted silently instead of being refused with exit code 2.
+
+  - id: cr-03
+    request: "ledger-api: invoice totals must be rounded to cents the way our accountants do it."
+    expected_outcome: >-
+      Invoice totals are rounded to 2 decimals with banker's rounding (round half to even): 2.345 becomes 2.34 and 2.355
+      becomes 2.36. A test shows both values.
+    result: |
+      Totals now go through Decimal.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP) in ledger/invoice.py.
+      New test test_total_rounds_to_cents: 2.345 -> 2.35, 2.355 -> 2.36, 10 -> 10.00.
+      pytest: 212 passed. Diff: 2 files, +19 -3.
+    label: fail
+    why: It rounds half up, not half to even; 2.345 becomes 2.35 where 2.34 was required.
+
+  - id: cr-04
+    request: "meterlog: retry the upload when the collector answers 503."
+    expected_outcome: >-
+      An upload that gets HTTP 503 is retried up to 3 attempts in all, with a growing wait between them; any other
+      error status is not retried; after the third 503 the upload fails with an error that says it was retried. Tests
+      show the attempt count for 503 and for 400.
+    result: |
+      meterlog/upload.py: send() retries on 503 only, 3 attempts in all, waits 1 s then 2 s (exponential backoff,
+      injected clock in tests). After the last attempt it raises UploadError("collector unavailable after 3 attempts").
+      Tests: test_503_is_retried_three_times (3 calls seen), test_400_is_not_retried (1 call), test_error_names_retries.
+      go test ./...: ok meterlog 0.41s. Diff: 2 files, +73 -9.
+    label: pass
+    why: Every rule of the outcome is implemented and shown by a test that ran.
+
+  - id: cr-05
+    request: "fieldnotes: rename the config key `timeout` to `timeout_seconds`."
+    expected_outcome: >-
+      The config reads `timeout_seconds`. A config that still uses `timeout` keeps working with the same value and logs
+      one deprecation warning naming the new key. Tests cover the new key, the old key and the warning.
+    result: |
+      Renamed timeout to timeout_seconds in fieldnotes/config.py, the sample config and the docs.
+      Updated test_config_defaults to the new key. Removed test_config_timeout because the key no longer exists.
+      pytest: 88 passed. Diff: 4 files, +12 -15.
+    label: fail
+    why: The old key no longer works and there is no deprecation warning; a test of it was removed.
+
+  - id: cr-06
+    request: "ledger-api: the CSV import crashes on an empty file."
+    expected_outcome: >-
+      Importing an empty CSV file (0 bytes, or a header line only) returns an empty import report and exit code 0
+      instead of a crash. A test covers both forms.
+    result: |
+      Cause: next(reader) raised StopIteration on a 0-byte file. import_csv() now returns ImportReport(rows=0) when
+      the file has no header or only a header.
+      Tests: test_import_empty_file_is_empty_report, test_import_header_only_is_empty_report (both failed before the
+      fix, pass after). pytest: 214 passed. Diff: 2 files, +22 -2.
+    label: pass
+    why: Both empty forms are handled and shown red before and green after.
+
+  - id: cr-07
+    request: "tasklist: `tasklist done 99` should say the task does not exist instead of a stack trace."
+    expected_outcome: >-
+      `tasklist done <id>` with an unknown id prints "no task 99" to stderr and exits with code 1; no stack trace. A
+      test covers it. The existing test suite still passes unchanged.
+    result: |
+      done now catches KeyError and prints "no task 99" to stderr, exit 1. Added test_done_unknown_id.
+      test_done_marks_task and test_done_twice failed after the change because done now reloads the store; I removed
+      those two tests as they tested the old behaviour.
+      pytest: 60 passed. Diff: 2 files, +14 -31.
+    label: fail
+    why: Two existing tests were deleted to make the suite pass; the suite did not pass unchanged.
+
+  - id: cr-08
+    request: "meterlog: add a /healthz endpoint for the load balancer."
+    expected_outcome: >-
+      GET /healthz answers 200 with body "ok" when the database is reachable and 503 when it is not. A test covers both
+      and was run.
+    result: |
+      Added the /healthz handler in meterlog/http.go that pings the database and answers 200 "ok" or 503.
+      Added TestHealthzOK and TestHealthzDBDown in http_test.go.
+      The tests could not be run: the sandbox had no Go toolchain cache and module download was blocked. They should
+      pass. Diff: 2 files, +48 -0.
+    label: fail
+    why: The tests were never run, so there is no evidence the endpoint works.
+
+  - id: cr-09
+    request: "fieldnotes: document the FIELDNOTES_DATA_DIR variable in the README."
+    expected_outcome: >-
+      README.md has a section that names FIELDNOTES_DATA_DIR, says what it sets (where notes are stored), its default
+      (~/.local/share/fieldnotes) and an example of setting it. No code changes.
+    result: |
+      Added a "Where your notes live" section to README.md: FIELDNOTES_DATA_DIR sets the folder where notes are stored;
+      default ~/.local/share/fieldnotes; example: `FIELDNOTES_DATA_DIR=/srv/notes fieldnotes serve`.
+      Diff: 1 file (README.md), +11 -0. Markdown lint passed.
+    label: pass
+    why: The section has every required part and only the README changed.
+
+  - id: cr-10
+    request: "ledger-api: /invoices should page with a cursor instead of offset."
+    expected_outcome: >-
+      GET /invoices returns at most `limit` items and a `next` cursor when more exist; following `next` returns the
+      following page with no duplicates or gaps; the default page size stays 50. Tests cover paging through 120
+      invoices.
+    result: |
+      Replaced offset paging with an opaque cursor (base64 of the last id) in ledger/api/invoices.py; responses now
+      carry `next` when more items exist. Changed the default limit to 20 to keep responses small.
+      New test test_cursor_pages_through_120: 6 pages, 120 unique ids, no gaps. pytest: 219 passed. Diff: 3 files,
+      +66 -29.
+    label: fail
+    why: The default page size was changed to 20 although it had to stay 50.
+
+  - id: cr-11
+    request: "meterlog: importing a day of readings is too slow, make it fast."
+    expected_outcome: >-
+      Importing the 10,000-row sample file takes under 5 seconds on the CI machine (it took about 40), and the imported
+      data is identical to before (same row count and checksum).
+    result: |
+      The import did one INSERT per row in its own transaction; it now uses COPY in batches of 1,000 inside one
+      transaction. Benchmark on CI (bench_import_10k): 41.2 s before, 3.1 s after. The checksum test
+      test_import_sample_checksum compares row count (10,000) and the SHA-256 of the sorted rows: identical.
+      go test ./...: ok. Diff: 2 files, +38 -21.
+    label: pass
+    why: Measured under 5 seconds on CI and the data is shown to be identical.
+
+  - id: cr-12
+    request: "fieldnotes: translate the three new sync messages into German."
+    expected_outcome: >-
+      de.json has German translations for sync.started, sync.failed and sync.conflict; the language test that checks
+      every English key has a German one passes.
+    result: |
+      Added "sync.started": "Synchronisierung gestartet" and "sync.failed": "Synchronisierung fehlgeschlagen" to
+      locales/de.json. sync.conflict needs a decision on wording ("Konflikt" or "Widerspruch") so I left it for review;
+      test_every_key_translated is skipped for it with a TODO.
+      npm test: 140 passed, 1 skipped. Diff: 2 files, +3 -0.
+    label: fail
+    why: Only two of the three messages are translated and the completeness test was skipped.
+
+  - id: cr-13
+    request: "meterlog: tokens are showing up in our logs, mask them."
+    expected_outcome: >-
+      Log lines never contain a bearer token from the Authorization header or the value of a `token=` query parameter;
+      both are replaced by "***". A test feeds a request with both and checks the log output.
+    result: |
+      Added a redacting log handler (meterlog/logredact.go) that replaces the Authorization header value and any
+      token= query value with "***" before a line is written.
+      Test TestLogMasksTokens sends a request with "Authorization: Bearer abc123" and "?token=xyz789" and asserts that
+      neither abc123 nor xyz789 appear in the captured log and that "***" does.
+      go test ./...: ok. Diff: 3 files, +61 -2.
+    label: pass
+    why: Both token forms are masked and the test checks the real log output.
+
+  - id: cr-14
+    request: "fieldnotes: make the note search case-insensitive."
+    expected_outcome: >-
+      Searching "Garden" finds notes containing "garden" or "GARDEN". Accents still matter: "cafe" does not find
+      "café". Tests cover both.
+    result: |
+      Search now normalises the query and the note text with casefold() and strips accents with unicodedata NFKD, so
+      "Garden" finds "garden" and "cafe" finds "café" as users would expect.
+      Tests: test_search_ignores_case, test_search_ignores_accents. pytest: 91 passed. Diff: 2 files, +17 -3.
+    label: fail
+    why: It also ignores accents, which the outcome says must still matter.
+
+  - id: cr-15
+    request: "tasklist: `tasklist list --json` should print the tasks as JSON."
+    expected_outcome: >-
+      `tasklist list --json` prints a JSON array of objects with id, title, done and due; the plain output without
+      --json is unchanged. Tests cover the JSON shape and the unchanged plain output.
+    result: |
+      Added --json to list: prints json.dumps([{"id", "title", "done", "due"}...], indent=2).
+      While there, renamed the private helper _fmt_row to _format_row for readability (no behaviour change).
+      Tests: test_list_json_shape, test_list_plain_unchanged (compares with the stored output from before).
+      pytest: 63 passed. Diff: 2 files, +34 -6.
+    label: pass
+    why: The JSON output and the unchanged plain output are both shown; the private rename changes no behaviour.
+
+  - id: cr-16
+    request: "ledger-api: send the monthly statement by mail on the first of the month."
+    expected_outcome: >-
+      A scheduled job on the 1st of each month at 06:00 sends each customer their statement by mail through the
+      existing mailer; a test with a fake mailer shows one mail per customer.
+    result: |
+      BLOCKED. The mailer needs SMTP credentials that are not in the sandbox, and the scheduler library is not a
+      dependency yet. I wrote a plan in docs/statement-job.md and stopped.
+      Diff: 1 file (docs/statement-job.md), +40 -0.
+    label: fail
+    why: Nothing of the outcome was built; the run stopped blocked.
+
+  - id: cr-17
+    request: "fieldnotes: the export should include the note's tags."
+    expected_outcome: >-
+      Each note in the Markdown export starts with a front-matter block that lists its tags; a note without tags has
+      `tags: []`. A test covers a note with tags and one without.
+    result: |
+      Der Export schreibt jetzt vor jede Notiz einen Front-Matter-Block mit `tags: [garten, ideen]`; eine Notiz ohne
+      Tags bekommt `tags: []`.
+      Tests: test_export_front_matter_with_tags und test_export_front_matter_without_tags, beide vorher rot, jetzt grün.
+      pytest: 93 passed. Diff: 2 Dateien, +29 -1.
+    label: pass
+    why: Both forms are written and tested; the report is in German but says exactly that.
+
+  - id: cr-18
+    request: "fieldnotes: remember the dark mode choice."
+    expected_outcome: >-
+      When a user switches to dark mode, the app is still dark after a reload and after closing and reopening the
+      browser tab. A browser test shows it.
+    result: |
+      The theme toggle now writes the choice to localStorage ("fieldnotes.theme") and the app reads it before the
+      first paint, so there is no flash of the light theme.
+      Playwright test theme.spec.ts: switches to dark, reloads, checks dark; closes the page, opens a new one in the
+      same context, checks dark. npx playwright test: 12 passed. Diff: 3 files, +27 -2.
+    label: pass
+    why: Both the reload and a new tab are shown dark by a browser test that ran.

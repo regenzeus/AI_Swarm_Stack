@@ -147,7 +147,7 @@ def stack(tmp_path, monkeypatch):
             stop.wait(0.05)
     client = TestClient(SV.app)
 
-    def tap(token, wait=1.5):
+    def tap(token, wait=10):      # limit: waits, a ceiling: under a loaded machine 1.5 s ran out; a good tap returns at once
         """Stands in for ops/journeys.mjs: what the page reads and sends, through the real server."""
         id, rep = f"test:{token}", {"started": True, "writes": [], "errors": [], "still_shown": []}
 

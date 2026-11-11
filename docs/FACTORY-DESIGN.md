@@ -69,7 +69,7 @@ The Run page is the heart of the app. Everything else leads to it: Home's "Runni
 | Tab | What it shows | Ready |
 |---|---|---|
 | **In** | Every input by name, with its source and size: instructions, earlier steps' outputs, the work item's text and files, memory recalled, skills loaded. Exactly what the agent saw, section by section, plus n8n's raw item data. | The moment the step starts |
-| **Activity** | The agent's work in plain words, newest first ("Searching the web: copper spot price week 46" → "Reading 4 sources" → "Writing the summary, 1,200 words so far"). Each line opens to that call's exact input and output, time and tokens. The text being written streams live where the model streams. | Live, as each call starts and ends |
+| **Activity** | The agent's work in plain words, newest first ("Searching the web: RAM prices for a 32 GB kit" → "Reading 4 sources" → "Writing the summary, 1,200 words so far"). Each line opens to that call's exact input and output, time and tokens. The text being written streams live where the model streams. | Live, as each call starts and ends |
 | **Out** | The result text, its named values, its files, its outcome (done, needs you, failed with the reason) | The moment the step ends |
 | **Trace** | Phoenix's trace of this step, embedded: the call tree, prompts, completions, token counts | Each call within about a second of its end |
 

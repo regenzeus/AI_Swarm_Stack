@@ -86,6 +86,16 @@ services:
       # the app's gate): its pages ask for /phoenix/...; it still answers at its root, where the gateway sends its traces
       PHOENIX_HOST_ROOT_PATH: /phoenix
       PHOENIX_TELEMETRY_ENABLED: "false"   # no usage pixel from the owner's browser to Phoenix's makers
+      # SEC-29: Phoenix stays on the site. No public-internet request of its own; its in-app agent assistant (on by
+      # default since Phoenix 20, with web search, server-side bash and GitHub's hosted tools) is off, as are hosted
+      # code sandboxes; the playground speaks only to OpenAI-compatible endpoints (the site's gateway)
+      PHOENIX_ALLOW_EXTERNAL_RESOURCES: "false"
+      PHOENIX_DISABLE_AGENT_ASSISTANT: "true"
+      PHOENIX_AGENTS_DISABLE_WEB_ACCESS: "true"
+      PHOENIX_AGENTS_DISABLE_BASH: "true"
+      PHOENIX_AGENTS_DISABLE_GITHUB: "true"
+      PHOENIX_ALLOWED_SANDBOX_PROVIDERS: NONE
+      PHOENIX_ALLOWED_PROVIDERS: OPENAI
     volumes: [phoenix:/data]
     ports: ["127.0.0.1:6006:6006"]
     networks: [backend, obs]      # no longer on edge: Phoenix holds traces with prompt content

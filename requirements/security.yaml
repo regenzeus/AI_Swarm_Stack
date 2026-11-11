@@ -391,3 +391,19 @@ items:
       SSH and Git nodes stay on at home, and Postgres'' superuser still owns n8n''s database (docs/SECURITY.md).'
     verify: {method: test, by: [tests/test_trust.py::test_n8n_is_off_the_flat_backend_hardened_and_its_tailnet_port_serves_resume_links_only]}
     trace: [compose/core.yaml]
+  - id: SEC-29
+    title: Phoenix stays on the site
+    statement: The core's Phoenix shall make no public-internet request of its own, shall run without its in-app agent
+      assistant and that assistant's web, bash and GitHub tools, shall allow no hosted code sandbox, shall let its
+      playground speak only to OpenAI-compatible endpoints, and shall export to no remote collector.
+    type: constraint
+    priority: must
+    status: implemented
+    acceptance: 'Test: the compose file sets each of these settings and names no remote collector.'
+    rationale: Phoenix 20 switched on an agent assistant with server-side bash and web access by default; it reads the
+      traces, which hold prompt content (found by the stage 0 evaluation spike, 11 Nov 2026).
+    parents: [SEC-19]
+    sources: [docs/PLATFORM-DESIGN.md]
+    verify: {method: test, by: [tests/test_phoenix_onsite.py::test_phoenix_runs_without_its_agent_assistant_external_requests_or_hosted_sandboxes]}
+    trace: [compose/core.yaml]
+
