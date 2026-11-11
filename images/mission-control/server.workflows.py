@@ -335,5 +335,58 @@ async def api_factory_run(request):
     return JSONResponse({"workflow": w, "run": r, "asks": asks})
 
 
+N8N_TRIGGERS = ("n8n-nodes-base.scheduleTrigger", "n8n-nodes-base.webhook", "n8n-nodes-base.manualTrigger")
+
+
+def canvas_of(d, schedule=""):
+    """APP-86: what n8n's read-only canvas draws: the published version (what runs; the draft when none is published), its
+    triggers named by what they are ("On its schedule · Mondays 08:00", never the cron), connections renamed with them."""
+    pub = d.get("activeVersion") if d.get("activeVersionId") and isinstance(d.get("activeVersion"), dict) else None
+    nodes = json.loads(json.dumps((pub or d).get("nodes") or []))
+    conns = json.loads(json.dumps((pub or d).get("connections") or {}))
+    taken, rename = {n.get("name") for n in nodes}, {}
+    for n in nodes:
+        t = str(n.get("type") or "")
+        if t in N8N_TRIGGERS or t.lower().endswith("trigger"):
+            new = re.sub(r"\s*\([^)]*\)\s*$", "", n["name"]).strip() or n["name"]
+            if t == "n8n-nodes-base.scheduleTrigger" and schedule and schedule not in new:
+                new = f"{new} · {schedule}"
+            while new != n["name"] and new in taken:
+                new += " ·"
+            if new != n["name"]:
+                taken.add(new)
+                rename[n["name"]] = new
+                n["name"] = new
+    conns = {rename.get(a, a): {k: [[{**c, "node": rename.get(c.get("node"), c.get("node"))} for c in outs or []] for outs in v or []]
+                                for k, v in (out or {}).items()} for a, out in conns.items()}
+    return {"workflow": {"id": d.get("id"), "name": d.get("name"), "nodes": nodes, "connections": conns, "settings": d.get("settings") or {}},
+            "published": bool(pub), "draft_differs": bool(pub) and d.get("versionId") != d.get("activeVersionId")}
+
+
+async def api_factory_canvas(request):
+    """APP-86: a workflow for n8n's read-only canvas, read from n8n with the app's own session (APP-85), the owner's only."""
+    wid = request.path_params["wid"]
+    if not n8n_owner(request) or not re.fullmatch(r"[A-Za-z0-9_-]{1,64}", wid):
+        return JSONResponse({"error": "n8n's canvas shows to you, signed in", "fallback": True}, status_code=403)
+    if not await n8n_login():
+        return JSONResponse({"error": "n8n needs its login once: run make n8n-login on the PC", "fallback": True, "login": True}, status_code=503)
+    for attempt in (0, 1):
+        c = _frame_client("n8n")
+        try:
+            r = await c.get(f"/rest/workflows/{wid}", headers=n8n_with_session([]))
+        except httpx.HTTPError as e:
+            return JSONResponse({"error": f"n8n is not reachable ({type(e).__name__})", "fallback": True}, status_code=502)
+        finally:
+            await c.aclose()
+        if r.status_code == 401 and attempt == 0 and await n8n_login(force=True):
+            continue
+        break
+    if r.status_code != 200:
+        return JSONResponse({"error": f"n8n has no such workflow ({r.status_code})", "fallback": True}, status_code=404)
+    wfs, _ = factory_model(*factory_inputs())
+    w = next((x for x in wfs if x["id"] == wid), {})
+    return JSONResponse(canvas_of(r.json().get("data") or {}, w.get("trigger") or ""), headers={"Cache-Control": "no-store"})
+
+
 FACTORY_ROUTES = [Route("/api/factory", api_factory), Route("/api/factory/workflow/{wid}", api_factory_workflow),
-                  Route("/api/factory/run/{wid}/{rid}", api_factory_run)]
+                  Route("/api/factory/workflow/{wid}/canvas", api_factory_canvas), Route("/api/factory/run/{wid}/{rid}", api_factory_run)]

@@ -8,10 +8,11 @@ on this page being out of date (QA-22). Text cut for length is a different list:
 the asker is told at once with the limit named. **stops**: a run past this ends and is reported. **drops**: something is
 left out, and the reason says where that is shown.
 
-## waits (21)
+## waits (22)
 
 | Where | Limit | Why |
 |---|---|---|
+| `images/mission-control/server.frames.py` | `N8N_RELOGIN_S` | a login n8n refused is tried again after a minute, not on every request |
 | `images/mission-control/server.py` | `LINK_STALE_S` | the runner writes its state every few seconds; none for a minute means it stopped |
 | `images/mission-control/server.py` | `LINK_START_S` | the boot check gives the stack up to 20 min (ops/stack_ready.py WAIT_S), then the runner starts |
 | `images/mission-control/server.share.py` | `LIMIT_RETRY` | a chat that met a usage limit is tried again this often (AST-12) |
@@ -147,7 +148,7 @@ left out, and the reason says where that is shown.
 | `ops/winjobs.py` | `MINUTES_MAX` | a job kind's time limit: a day at most; its own minutes stop it sooner |
 | `ops/winworker.py` | `FILES_KB` | a request's files (a patch) stay small: a patch past this is no change a person reviews |
 
-## stops (50)
+## stops (51)
 
 | Where | Limit | Why |
 |---|---|---|
@@ -183,6 +184,7 @@ left out, and the reason says where that is shown.
 | `ops/journeys.py` | `DECIDE_TIMEOUT` | the decide journey gives the runner and the app this many seconds at each step; past it the journey fails and says which step |
 | `ops/journeys.py` | `BROWSER_TIMEOUT` | the browser's whole run: every screen twice at 375 px, then at nine more shapes (APP-60) |
 | `ops/missions.py` | `TASK_TIMEOUT` | one mission run past this counts as failed |
+| `ops/n8n_login.py` | `CHECK_TIMEOUT_S` | n8n that does not answer the check within 15 s: nothing is stored |
 | `ops/onboard.py` | `ATTEMPTS` | a step that failed this often names its reason and waits for the owner's Try again (BLD-26) |
 | `ops/onboard.py` | `RESTARTS` | a job that died this often without finishing a step says so instead of looping (BLD-26) |
 | `ops/onboard.py` | `MAP_TIMEOUT` | one code map run that hangs (717 files take 30 s without a model): counts as a failed try |

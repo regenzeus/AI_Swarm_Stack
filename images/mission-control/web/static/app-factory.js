@@ -202,17 +202,18 @@ async function vWorkflow() {
   const w = d.workflow, runs = d.runs || [], fac = FV?.factories?.[w.factory] || w.factory, area = FV?.areas?.[w.area] || w.area;
   view.innerHTML = `<a class="back" href="#/workflows">${ic.back}Workflows</a>
     <div class="hero"><div class="grow" style="min-width:0"><h1 class="wrap">${esc(w.name)}</h1><p>${esc(fac)} · ${esc(area)} · ${esc(triggerWords(w))}${w.source === "n8n" ? ` · ${w.active ? "on" : "off"}` : ""}${w.asks ? ` · <b class="warn-t">${nf(w.asks)} Ask${w.asks === 1 ? "" : "s"} open</b>` : ""}</p></div>
-      <div class="row gap-2 wrap">${wfRunNow(w)}${wfDesk() && w.source === "n8n" ? `<a class="btn sm" href="#/n8n?open=${encodeURIComponent(w.id)}">${ic.edit}Edit in n8n</a>` : ""}</div></div>
+      <div class="row gap-2 wrap">${wfRunNow(w)}</div></div>
     <div class="agstrip" id="wfagents">${wfAgentsHtml(w)}</div>
     <div id="tnewbox"></div>
-    <div class="section-h"><h2>Diagram</h2>${explain("wf-diagram", w.source === "standard" ? "A standard workflow of the platform: its steps as its template has them. The runs below came in through the stack's older ways in (a sentence, a Claude question, a chat request, a build); each will start through this workflow on n8n." : "Its nodes and connections as n8n has them: a trigger starts it, each AI Stack step hands its work to an agent or a scheduled job and waits for the answer. Tap a node for what it is.", "About the diagram")}</div>
+    <div class="section-h"><h2>Diagram</h2>${w.source === "n8n" && wfDesk() ? `<button class="btn sm" id="wfedit">${ic.edit}Edit</button>` : ""}${explain("wf-diagram", w.source === "standard" ? "A standard workflow of the platform: its steps as its template has them. The runs below came in through the stack's older ways in (a sentence, a Claude question, a chat request, a build); each will start through this workflow on n8n." : "Its nodes and connections as n8n has them: a trigger starts it, each AI Stack step hands its work to an agent or a scheduled job and waits for the answer. Tap a node for what it is.", "About the diagram")}</div>
     <div class="card pad wfdcard" id="wfdiagram"></div><div id="wfinfo"></div>
     ${wfResultHtml(w, runs)}
     <div class="section-h section"><h2>Runs <span class="hcount">${nf(d.runs_total || runs.length)}</span></h2></div>
     ${runs.length ? `<div class="card list">${runs.map((r) => wfRunRow(w, r)).join("")}</div>${moreOf(d.runs_total || runs.length, runs.length)}` : `<div class="card pad small muted">No run yet: ${w.source === "standard" ? "each new request of this kind shows here." : "its first run shows here as it starts."}</div>`}
     <div class="section-h section"><h2>Settings</h2>${w.source === "n8n" ? explain("wf-settings", "Its schedule and its on/off switch are n8n's: change them on its canvas (its schedule trigger, its Active switch), on the desk under Edit in n8n. Each change is exported to git like every other.", "Where to change it") : ""}</div>${wfSettingsHtml(w)}`;
-  diagramInto($("#wfdiagram"), w.graph, null, (n) => { $("#wfinfo").innerHTML = nodeInfoHtml(n); });
+  if (w.source === "n8n") canvasInto($("#wfdiagram"), w); else diagramInto($("#wfdiagram"), w.graph, null, (n) => { $("#wfinfo").innerHTML = nodeInfoHtml(n); });
   wfBindRunNow(w);
+  if ($("#wfedit")) $("#wfedit").onclick = () => editInto($("#wfdiagram"), w);
   swWhoCards().then((cards) => { const el = $("#wfagents"); if (el && route.name === "workflow") el.innerHTML = wfAgentsHtml(w, cards); }).catch(() => {});
   if (w.result_view === "tax" && typeof taxViewInto === "function") taxViewInto($("#wfresult"), { id: (runs[0] || {}).task });
 }
@@ -264,7 +265,8 @@ async function vRun() {
       : `<div class="card pad small muted">No step has reached the stack yet.</div>`}
     ${r.result ? `<div class="section-h section"><h2>Result</h2></div><div class="card pad"><div class="small md">${md(youText(r.result))}</div></div>` : ""}
     <div class="row wrap gap-2 section">${cost ? `<span class="small muted">${esc(cost)}</span>` : ""}${r.href ? `<a class="btn sm" href="${r.href}">${ic.history}Its whole record: each step's log, what it read</a>` : ""}${wfDesk() && r.execution ? `<a class="btn sm ghost" href="#/n8n?open=${encodeURIComponent(w.id)}">${ic.edit}In n8n</a>` : ""}</div>`;
-  diagramInto($("#wfdiagram"), w.graph, r.path || {}, (n) => { $("#wfinfo").innerHTML = nodeInfoHtml(n, steps.find((s) => s.title === (n.title || n.name))); });
+  const ours = () => diagramInto($("#wfdiagram"), w.graph, r.path || {}, (n) => { $("#wfinfo").innerHTML = nodeInfoHtml(n, steps.find((s) => s.title === (n.title || n.name))); });
+  if (w.source === "n8n" && /^\d+$/.test(r.execution || "")) executionInto($("#wfdiagram"), w, r, ours); else ours();
   bindAsks();
 }
 function wfRunRow(w, r) {
@@ -301,3 +303,90 @@ function wfBindForms() {
   if (tnewOpen) bindNewTask();
   if (S) bindTriggers();
 }
+
+// ---------- n8n's own canvas (APP-86; the factory design v3, §4 B) ----------
+// Read mode: n8n's read-only demo canvas (/n8n/workflows/demo), on the app's own address, so it is this page's own
+// document: the app hands it the workflow (n8n's published version, read with the app's session, APP-85) by
+// postMessage once it says n8nReady. On a phone the frame is wider than the screen and pans sideways at a readable size
+// instead of fitting a small picture. Edit: n8n's editor on the workflow's draft in the same frame; its Publish and
+// Execute are hidden here and refused by the app (a draft goes live through the factory); Done comes back. A run with
+// an n8n execution shows n8n's own view of it. When n8n cannot be reached the app draws the diagram itself.
+// The live layer (phase B, §4 B) attaches through CANVAS_LAYERS: each fn(doc, {workflow, run}) runs once n8n drew.
+const CANVAS_LAYERS = [canvasAgentLinks];
+const N8N_HIDE = `[data-test-id="workflow-open-publish-modal-button"], [data-test-id="workflow-open-publish-modal-button"] + button,
+  [data-test-id^="execute-workflow-button"], [data-test-id="execute-node-button"], [data-test-id="workflow-menu"],
+  [data-test-id="execution-preview-delete-button"], [data-test-id="execution-debug-button"] { display: none !important; }`;
+const N8N_PHONE_W = 150;                                 // a node's room on a phone, so a workflow reads at its size and pans sideways
+function canvasFallback(box, w, why) {
+  box.innerHTML = `<div class="tiny faint">${esc(why)}</div><div id="wfdraw"></div>`;
+  diagramInto($("#wfdraw", box), w.graph, null, (n) => { const i = $("#wfinfo"); if (i) i.innerHTML = nodeInfoHtml(n); });
+}
+async function canvasInto(box, w, run = null) {
+  if (!box) return;
+  box.innerHTML = `<div class="skeleton" style="height:260px"></div>`;
+  const d = await api(`/api/factory/workflow/${encodeURIComponent(w.id)}/canvas`).catch((e) => ({ error: e.message, fallback: true }));
+  if (!box.isConnected) return;
+  if (!d || d.fallback || !d.workflow) return canvasFallback(box, w, d?.login ? "n8n's own canvas shows once its login is stored (make n8n-login on the PC); until then the app draws it." : `n8n's canvas is not there (${d?.error || "no answer"}); the app draws it for now.`);
+  const wide = wfDesk() ? 0 : Math.max(box.clientWidth || 0, (d.workflow.nodes || []).length * N8N_PHONE_W);
+  box.innerHTML = `<div class="n8n-wrap"><iframe class="n8n-canvas" src="/n8n/workflows/demo" title="${esc(w.name)}: n8n's canvas"${wide ? ` style="width:${wide}px"` : ""}></iframe></div>
+    ${d.draft_differs ? `<div class="tiny faint" style="margin-top:6px">A saved draft differs from what runs; this is what runs.</div>` : ""}`;
+  const f = $("iframe", box);
+  let sent = false;
+  const send = () => {
+    if (sent || !f.isConnected) return;
+    sent = true;
+    window.removeEventListener("message", ready);
+    f.contentWindow.postMessage(JSON.stringify({ command: "openWorkflow", workflow: d.workflow }), "*");
+    afterDraw(f, w, run);
+  };
+  const ready = (e) => { if (e.source !== f.contentWindow) return; try { if (JSON.parse(e.data).command === "n8nReady") send(); } catch (_) { /* not n8n's */ } };
+  window.addEventListener("message", ready);
+  setTimeout(send, 8000);                                  // an n8n that said nothing: hand it over all the same
+}
+function afterDraw(f, w, run, tries = 0) {                 // once n8n drew its nodes: the layers (the agents' links; later the live run)
+  const doc = f.contentDocument;
+  if (!doc?.querySelector(".vue-flow__node")) { if (tries < 40) setTimeout(() => afterDraw(f, w, run, tries + 1), 300); return; }
+  for (const fn of CANVAS_LAYERS) { try { fn(doc, { workflow: w, run }); } catch (_) { /* a layer that cannot attach leaves the canvas as n8n drew it */ } }
+}
+function canvasAgentLinks(doc) {                          // an AI Stack step's subtitle "Agent: <id>" opens that agent's page in the app
+  for (const el of doc.querySelectorAll('[class*="_subtitle_"]')) {
+    const m = /^Agent: ([\w-]+)/.exec((el.textContent || "").trim());
+    if (!m || el.dataset.agentLink) continue;
+    el.dataset.agentLink = m[1];
+    el.style.textDecoration = "underline";
+    el.style.cursor = "pointer";
+    el.title = "Open this agent's page";
+    el.addEventListener("click", (e) => { e.stopPropagation(); location.hash = agentHref(m[1]); }, true);
+  }
+}
+function n8nHide(f) {                                     // Publish and Execute are the factory's, not the editor's (the app refuses them too)
+  const quiet = (d) => {                                   // n8n's own "Production Checklist" popover (no selector of its own) points at publishing
+    for (const el of d.body?.children || []) if (/^Production Checklist/.test((el.innerText || "").trim())) el.style.display = "none";
+  };
+  const put = () => {
+    const d = f.contentDocument;
+    if (!d?.head || d.getElementById("aistack-hide")) return;
+    d.head.insertAdjacentHTML("beforeend", `<style id="aistack-hide">${N8N_HIDE}</style>`);
+    new (f.contentWindow.MutationObserver)(() => quiet(d)).observe(d.body, { childList: true });
+    quiet(d);
+  };
+  f.addEventListener("load", put);
+  put();
+}
+function editInto(box, w) {                               // the workflow's draft in n8n's editor, in the same frame
+  box.innerHTML = `<div class="row between wrap gap-2" style="margin-bottom:8px"><span class="small muted">You edit a draft. It goes live through the factory: as a change in git, with its checks and your approval; publishing from here is off.</span>
+      <button class="btn sm primary" id="wfdone">${ic.check}Done</button></div>
+    <iframe class="n8n-canvas edit" src="/n8n/workflow/${encodeURIComponent(w.id)}" title="${esc(w.name)}: its draft in n8n's editor"></iframe>`;
+  n8nHide($("iframe", box));
+  $("#wfdone").onclick = () => canvasInto(box, w);
+  if (typeof APP_PROMOTE === "function") APP_PROMOTE(box, w);   // the promote path (draft -> change -> checks -> gate -> publish) attaches here, after its own design
+}
+async function executionInto(box, w, r, fallback) {        // a run's page: n8n's own view of its execution, each node's input and output
+  const d = await api(`/api/factory/workflow/${encodeURIComponent(w.id)}/canvas`).catch(() => null);
+  if (!box.isConnected) return;
+  if (!d || d.fallback) return fallback();
+  box.innerHTML = `<iframe class="n8n-canvas run" src="/n8n/workflow/${encodeURIComponent(w.id)}/executions/${encodeURIComponent(r.execution)}" title="Run ${esc(r.execution)} in n8n"></iframe>`;
+  n8nHide($("iframe", box));
+}
+const APP_PROMOTE = null;
+

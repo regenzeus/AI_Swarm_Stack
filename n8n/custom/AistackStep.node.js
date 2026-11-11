@@ -78,6 +78,10 @@ class AistackStep {
             { name: 'Write to the item', value: 'tracker', description: 'One write to the tracker item, held for your approval until you let that kind of write go live' },
             { name: 'Read the item', value: 'item', description: 'The tracker item as it is now: its text, status, labels, comments and attachments; its files can go to a place for a command' },
           ] },
+        // APP-87: the agent's own page in the app (its instructions, model, tools, the workflows it is used in); the canvas
+        // in the app also opens it from this node's subtitle. A notice's text is fixed, so it leads to the agents' list.
+        { displayName: 'Open this agent\'s page in the app: <a href="/#/agents" target="_top">Agents</a>, then the agent named below (on the app\'s canvas, tap the node\'s "Agent:" line)',
+          name: 'agentPage', type: 'notice', default: '', displayOptions: show('agent') },
         { displayName: 'Agent', name: 'agent', type: 'options', default: 'scout', displayOptions: show('agent', 'remember'),
           typeOptions: { loadOptionsMethod: 'getAgents' },
           description: 'The agent that does the step (for a note: whose note it is; a lesson goes to its role)' },

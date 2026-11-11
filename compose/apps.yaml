@@ -360,6 +360,9 @@ services:
       MCP_TOKEN_MEMORY: ${MCP_TOKEN_MEMORY:-}
       MCP_TOKEN_MEMORYPUBLIC: ${MCP_TOKEN_MEMORYPUBLIC:-}
       MCP_TOKEN_STACK: ${MCP_TOKEN_STACK:-}
+      # APP-85: n8n's login, typed once (make n8n-login, sops): the app signs in to n8n for the owner's own session
+      N8N_LOGIN_EMAIL: ${N8N_LOGIN_EMAIL:-}
+      N8N_LOGIN_PASSWORD: ${N8N_LOGIN_PASSWORD:-}
       NAS_HOST: ${NAS_HOST:-}
       HA_URL: ${HA_URL:-}
       ROUTER_URL: ${ROUTER_URL:-}

@@ -16,7 +16,7 @@ GW := $(if $(GATEWAY_TOKEN_NAME),AISTACK_GATEWAY_TOKEN=\$$$(GATEWAY_TOKEN_NAME) 
 # Run a compose command with secrets in its environment: $(call dc,<args>)
 dc = sops exec-env $(SECRETS) 'sops exec-env $(KEYS) "$(GW)$(COMPOSE) $(1)"'
 
-.PHONY: up down ps logs restart keys trust-keys secrets-edit smoke claude-connect probe-tools req check lock pull-smoke-model chatgpt-login ingest-exports bench bench-gate retrieval curate vault-check skill-approve skills-restore-from-git backup restore-drill restore understand facts facts-image understand-dashboard upgrade-check digest forget hindsight-models desk email-setup wiki-rebuild ua-enrich mailvault-deploy mailvault-password publish-check publish tasks-gate conductor-gate journeys trial trial-check ha-deploy voice-deploy deploy-testrepo opencode-password
+.PHONY: up down ps logs restart keys trust-keys secrets-edit smoke claude-connect probe-tools req check lock pull-smoke-model chatgpt-login ingest-exports bench bench-gate retrieval curate vault-check skill-approve skills-restore-from-git backup restore-drill restore understand facts facts-image understand-dashboard upgrade-check digest forget hindsight-models desk email-setup wiki-rebuild ua-enrich mailvault-deploy mailvault-password n8n-login publish-check publish tasks-gate conductor-gate journeys trial trial-check ha-deploy voice-deploy deploy-testrepo opencode-password
 
 up:               ## start core services
 	python3 ops/deployment.py check
@@ -134,6 +134,9 @@ mailvault-deploy: ## the copy of Gmail on the NAS (nas/mailvault): starts it, or
 
 mailvault-password: ## type the mail copy's own Gmail app password: it goes straight to the NAS
 	sops exec-env $(SECRETS) 'bash ops/mailvault-password.sh'
+
+n8n-login:        ## type n8n's login once: the app signs in to n8n for you (stored in sops, never shown)
+	python3 ops/n8n_login.py
 
 understand-dashboard: ## code map of REPO in the browser (tailnet :8446), link also on Telegram
 	bash ops/understand-dashboard.sh $(REPO)

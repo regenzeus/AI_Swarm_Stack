@@ -1721,3 +1721,9 @@ body[data-page="n8n"] .pagehelp, body[data-page="traces"] .pagehelp { display: n
 .agchip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 99px; background: var(--accent); color: var(--accent-ink);
   font-size: var(--fs-3); font-weight: 650; text-decoration: none; overflow-wrap: anywhere; }
 .agchip .ico { width: 15px; height: 15px; }
+/* APP-86: n8n's own canvas inside the workflow page (read mode), its editor on the draft (Edit), a run's execution */
+.n8n-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: var(--r-s); }
+.n8n-canvas { display: block; width: 100%; height: min(62vh, 620px); border: 0; border-radius: var(--r-s); background: var(--surface-2); }
+.n8n-canvas.edit { height: calc((100dvh / var(--z, 1)) - 220px); min-height: 480px; }
+.n8n-canvas.run { height: min(70vh, 720px); }
+

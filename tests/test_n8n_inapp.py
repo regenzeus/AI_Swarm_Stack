@@ -55,7 +55,7 @@ def test_n8n_is_served_under_the_apps_address_behind_its_gate(n8n):
     import server as S
     from starlette.datastructures import Headers
     assert ("accept-encoding", "identity") in S.frame_headers_in(types.SimpleNamespace(headers=Headers({"host": "h"})))   # never httpx's own gzip
-    assert r.headers.get_list("set-cookie") == ["n8n-auth=a; Path=/; HttpOnly", "n8n-browser=b; Path=/"]
+    assert r.headers.get_list("set-cookie") == ["n8n-browser=b; Path=/"]   # APP-85: n8n-auth never reaches the browser; the app holds the session
     assert "x-frame-options" not in r.headers and r.headers["content-security-policy"] == "frame-ancestors 'self'"   # only the app frames it
     answer["response"] = answer_of(302, {"location": "/signin?redirect=%2F"})
     assert cl.get("/n8n/", headers=GATE, follow_redirects=False).headers["location"] == "/n8n/signin?redirect=%2F"

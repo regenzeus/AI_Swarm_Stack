@@ -45,13 +45,14 @@ note: One sentence is enough; its run shows how it goes.
 
 ## A workflow's page
 
-Its **diagram** is always there: n8n's nodes and connections drawn by the app, the trigger first, each AI Stack step
-with what kind of step it is and the agent that does it. Tap a node for what it is; an agent step runs on its agent's harness (Hermes, Claude Code, OpenCode, or Python for a step without a model). Below: **Run now**, its **result**,
-its **runs**, its **agents** and its **settings** (its schedule and its on/off switch are n8n's; on the desk **Edit in
-n8n** opens its canvas).
+Its **diagram** is always there: n8n's own canvas of the version that runs, the trigger first, each AI Stack step
+with the agent that does it (tap its "Agent:" line for the agent's page); an agent step runs on its agent's harness (Hermes,
+Claude Code, OpenCode, or Python for a step without a model). On the desk **Edit** opens the workflow's draft in n8n's
+editor: a change stays a draft and goes live through the factory, never from the editor. When n8n cannot be reached,
+the app draws the diagram itself. Below: **Run now**, its **result**, its **runs**, its **agents** and its **settings**.
 
 ## A run's page
 
-The diagram again, with the path this run took lit up: what is done, what runs, what waits for you, what failed, and
-what it never reached faded. Below it, each step with its state and times, the run's Asks to answer in place, what it
+n8n's own view of the run: each node it reached, with its input and its output (for a run only the stack's records
+hold, the app's diagram with the path it took lit up). Below it, each step with its state and times, the run's Asks to answer in place, what it
 cost and its result, and its whole record (the steps' logs, what it read, its timeline) one tap away.

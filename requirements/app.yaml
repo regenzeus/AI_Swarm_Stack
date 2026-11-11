@@ -967,7 +967,7 @@ items:
       images/mission-control/web/static/app.css, ops/flows_view.py]
   - id: APP-72
     title: A workflow's page always shows its diagram
-    statement: A workflow's page shall always show its diagram, drawn by the app from the workflow's n8n nodes and
+    statement: A workflow's page shall always show its diagram - n8n's own canvas (APP-86), or when n8n cannot be reached one drawn by the app from the workflow's n8n nodes and
       connections (each node with what it is - a trigger in words, an AI Stack step's kind and agent or job, or n8n's own -
       and an If's two ways out), laid out from its triggers and readable on a phone (one under the other) and on the desk
       (side by side), every label whole; and its Run now, its result, its runs, its agents and its settings (its schedule
@@ -1139,3 +1139,46 @@ items:
     sources: ['the owner on the phone, 11 Nov 2026: Its agents is very unprominent']
     verify: {method: test, by: [tests/test_factory_app.py::test_a_workflow_names_its_agents_under_its_title]}
     trace: [images/mission-control/web/static/app-factory.js, images/mission-control/web/static/app.css]
+  - id: APP-85
+    title: The app holds n8n's session for the owner
+    statement: The owner shall store n8n's login once (make n8n-login - asked with no echo, checked against n8n, kept in
+      sops by name, never printed or written in clear); the app shall sign in to n8n itself and keep n8n's session (its
+      cookie and the browser id it is bound to) in memory, add it only to the owner's own signed-in requests (never the
+      AI phone, never the stack's own checks), never hand it to a browser, sign in again once when n8n answers 401, try a
+      refused login again after a minute at the soonest, and without the login stored say in one line how to store it.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-01, SN-06]
+    sources: ['owner 2026-11-11: I just want user has to login. Seamless integration.']
+    verify: {method: test, by: [tests/test_n8n_canvas.py::test_the_app_holds_n8ns_session_for_the_owners_own_session_only,
+      tests/test_n8n_canvas.py::test_an_expired_session_signs_in_again_once, tests/test_n8n_canvas.py::test_without_the_login_stored_n8n_says_how_to_store_it,
+      tests/test_n8n_canvas.py::test_make_n8n_login_stores_the_login_by_name_and_never_shows_it]}
+    trace: [images/mission-control/server.frames.py, ops/n8n_login.py, Makefile, compose/apps.yaml, docs/SECURITY.md]
+  - id: APP-86
+    title: n8n's own canvas, read mode and Edit on the draft
+    statement: A workflow's page shall show n8n's own read-only canvas of the version that runs (its triggers named by what
+      they are, never their cron; on a phone wider than the screen and panned at a readable size), with Edit (desk)
+      opening the workflow's draft in n8n's editor in the same frame and Done returning; from the app's frame a save
+      shall stay a draft and publishing, running, archiving, deleting, sharing and retrying shall be refused and hidden,
+      with one line saying a change goes live through the factory; a run with an n8n execution shall show n8n's own view
+      of it; the app's own drawing shall show only when n8n cannot be reached; the live layer shall have a hook to attach.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-01, SN-03]
+    sources: ['owner 2026-11-11: Can you not just make it show the n8n canvas and let us interact with it? ... read only mode ... an option to go into write mode.']
+    verify: {method: test, by: [tests/test_n8n_canvas.py::test_the_canvas_gets_what_runs_with_its_triggers_named_by_what_they_are,
+      tests/test_n8n_canvas.py::test_edit_saves_a_draft_and_never_publishes_or_runs, tests/test_n8n_canvas.py::test_the_workflow_page_shows_n8ns_canvas_edit_and_a_runs_execution]}
+    trace: [images/mission-control/server.frames.py, images/mission-control/server.workflows.py, images/mission-control/web/static/app-factory.js, images/mission-control/web/static/app.css]
+  - id: APP-87
+    title: The AI Stack node leads to its agent
+    statement: The AI Stack step node shall name its agent in its subtitle, the app's canvas shall make that line open the
+      agent's page, and the node's settings shall link to the agents in the app (opening the app, not the frame).
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-01, SN-19]
+    sources: ['owner 2026-11-11: I also somehow want to link the agents to the agent pages.']
+    verify: {method: test, by: [tests/test_n8n_canvas.py::test_the_ai_stack_node_leads_to_its_agents_page]}
+    trace: [n8n/custom/AistackStep.node.js, images/mission-control/web/static/app-factory.js]
