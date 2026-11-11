@@ -50,7 +50,8 @@ def test_every_app_screen_has_a_chapter():
 def test_every_assistant_tool_is_explained():
     import server
     tools = {t.name for t in asyncio.run(server.mcp.list_tools())} | {t.name for t in asyncio.run(server.claude_mcp.list_tools())} \
-        | {t.name for t in asyncio.run(server.house_mcp.list_tools())} | {t.name for t in asyncio.run(server.files_mcp.list_tools())}
+        | {t.name for t in asyncio.run(server.house_mcp.list_tools())} | {t.name for t in asyncio.run(server.files_mcp.list_tools())} \
+        | {t.name for t in asyncio.run(server.stack_mcp.list_tools())}
     missing = {t for t in tools if t not in TEXT}
     assert not missing, f"Mission Control tools not mentioned in the guide: {missing}"
     helped = set(re.findall(r"^  (\w+): \"", re.search(r"const TOOL_HELP = \{(.*?)\n\};", GUIDE_JS, re.S)[1], re.M))
@@ -116,6 +117,6 @@ def test_every_screen_s_how_this_page_works_opens_the_chapter_about_it():
     for _, meta, _ in ALL:
         for v in meta["views"]:
             first.setdefault(v, meta["title"])
-    assert first["missions"].startswith("Tasks") and first["task"].startswith("Tasks") and first["mission"].startswith("Repeating tasks")
+    assert first["missions"].startswith("Workflows and runs") and first["task"].startswith("Workflows and runs") and first["mission"].startswith("Briefings, research")
     gjs = (Path(__file__).resolve().parent.parent / "images/mission-control/web/static/guide.js").read_text()
     assert ': "#/guide";' in gjs and '"#/system";' not in re.search(r"function helpHref\(\).*?\n\}", gjs, re.S)[0]

@@ -6,6 +6,7 @@ from pathlib import Path
 
 import yaml
 
+import deployment as DEPLOY
 import flows as FW
 import n8n_gen as G
 import n8n_sync as NS
@@ -53,7 +54,8 @@ def test_a_deploy_imports_the_repositorys_workflows_each_as_its_file_says(monkey
     assert NS.import_all(run=run, made=Path("/nonexistent")) == 0
     ex = ["docker", "exec", "-u", "node", "aistack-n8n-1", "n8n"]
     assert "n8n import:credentials --input=/tmp/hook.json" in calls[0][-1]            # SEC-27: the webhooks' credential first
-    assert f"cp {' '.join(f.name for f in WF)} /home/node/.n8n/chosen/" in calls[1][-1]     # home: every file (PLT-38)
+    home = [f.name for f in WF if DEPLOY.workflow_feature(f) in DEPLOY.ON]          # home: every file of a feature that is on (PLT-38, PHN-28)
+    assert f"cp {' '.join(home)} /home/node/.n8n/chosen/" in calls[1][-1]
     assert "n8n import:workflow --separate --input=/home/node/.n8n/chosen" in calls[1][-1]
     off = {c[7] for c in calls if len(c) > 7 and c[6] == "unpublish:workflow"}       # only the files that say inactive
     assert off == {f"--id={json.loads(f.read_text())['id']}" for f in WF if not json.loads(f.read_text())["active"]}
@@ -116,7 +118,8 @@ def test_an_answer_that_is_not_done_ends_the_n8n_run_as_an_error():
     assert "entry.node.disabled = false;" in js and "resumeError: {\n    name: 'NodeOperationError'," in js
     assert "message: `The step ${answer.status || 'gave no status'}: ${answer.error || 'no reason given'}`," in js
     assert "description: JSON.stringify(answer, null, 2)," in js
-    assert 'return {"status": "done", "answer": a["answer"]' in (ROOT / "ops/flows.py").read_text()   # the owner's answer is "done"
+    flows = (ROOT / "ops/flows.py").read_text()                                    # an answer is done; a dismissal or expiry carries its outcome (ASK-19)
+    assert 'return {"status": "done", "outcome": ans.get("outcome"), "answer": label' in flows and '{"status": "dismissed", "outcome": None' in flows
 
 
 def test_every_scheduled_workflow_can_be_run_now_through_n8n():

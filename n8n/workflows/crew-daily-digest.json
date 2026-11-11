@@ -25,6 +25,8 @@
       ]
     }
   },
+  "factory": "platform",
+  "feature": "telegram",
   "id": "aisc9d06c9de1e37",
   "name": "Crew: Daily digest",
   "nodes": [

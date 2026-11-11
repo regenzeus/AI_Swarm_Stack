@@ -1,0 +1,64 @@
+# The toy pack's records (REC-01, ops/domain/records.py): what each item of its tracker of record is, how items link,
+# what each type needs, which status change only a role's holder approves, and the measures. Mapped onto a stand-in
+# Jira's issue types, labels, custom fields and issue link phrases (tests/fixtures/jira/five.json). Generic on purpose.
+fields:                          # the fields the cache keeps, by this pack's name: the tracker's field id
+  reason: customfield_10101
+  impact: customfield_10102
+  affected_version: versions
+  result: customfield_10201
+  extract: customfield_10202
+
+types:                           # the first whose match an item meets, in this order
+  change_request:
+    name: Change request
+    match: {issue_type: Change Request}
+    template: templates/change-request.md
+    fields: [reason, impact]
+    needs:                       # its work products: a record of that type, linked by that link type
+      - {type: test_report, link: verified_by}
+    links: [satisfies]
+  problem:
+    name: Problem
+    match: {issue_type: Bug}
+    template: templates/problem.md
+    fields: [affected_version]
+  analysis:
+    name: Analysis
+    match: {issue_type: Task, label: analysis}
+  review_record:
+    name: Review record
+    match: {label: review}
+  test_report:
+    name: Test report
+    match: {issue_type: Test Execution}
+    fields: [result, extract]
+  release_notes:
+    name: Release notes
+    match: {label: release-notes}
+
+links:                           # said: the phrase on the item the link goes from; said_back: on the item it goes to
+  satisfies: {name: satisfies, inverse: satisfied by, said: [satisfies], said_back: [is satisfied by]}
+  blocks: {name: blocks, inverse: blocked by, said: [blocks], said_back: [is blocked by]}
+  implements: {name: implements, inverse: implemented by, said: [implements], said_back: [is implemented by]}
+  verified_by: {name: verified by, inverse: verifies, said: [is tested by], said_back: [tests]}
+  derived_from: {name: derived from, inverse: source of, said: [is derived from], said_back: [is the source of]}
+
+gates:                           # only the role's holder approves, by a tap (the Ask system's gate)
+  - {type: change_request, to: Approved, role: approver}
+
+measures:
+  - id: conformance
+    name: Change requests with every required work product
+    share: {of: {type: change_request}, where: {complete: true}}
+  - id: traceability
+    name: Problems traced to a change request
+    share: {of: {type: problem}, where: {link: {type: satisfies, to: change_request}}}
+  - id: reaction
+    name: Hours from reported to in progress
+    duration: {of: {type: problem}, from: created, to: {status: In Progress}, stat: median}
+  - id: fix_with_test
+    name: Fixed problems with a test report
+    share: {of: {type: problem, status: Done}, where: {link: {type: verified_by, to: test_report}}}
+  - id: regression
+    name: Regression result per extract
+    count: {of: {type: test_report}, by: [extract, result]}

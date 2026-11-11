@@ -129,12 +129,19 @@ def decide(channel, category, p=None, now=None):
     return "held" if quiet(p, now) else "send"
 
 
-def push_allowed(kind, text, title="", category=None, by=""):
-    """missions.event(push=True): the push only if the owner's preferences and quiet hours allow it; logged."""
+def push_allowed(kind, text, title="", category=None, by="", **more):
+    """missions.event(push=True): the push only if the owner's preferences and quiet hours allow it; logged. more: the
+    line's area, detail and task, for Activity (OBS-19)."""
     cat = category or category_of(kind, title)
     d = decide("push", cat)
-    _log(channel="push", category=cat, title=title, text=text, decision="sent" if d == "send" else d, by=by)
+    _log(channel="push", category=cat, title=title, text=text, decision="sent" if d == "send" else d, by=by, **more)
     return d == "send"
+
+
+def quiet_line(kind, text, title="", category=None, by="", **more):
+    """missions.event(quiet=True): a line in Activity only, never a push or a message (a failure during an update that
+    settled by itself, OBS-20); logged like a message, so Activity reads it from the same record."""
+    _log(channel="activity", category=category or category_of(kind, title), title=title, text=text, decision="quiet", by=by, **more)
 
 
 def _telegram_bot(text_html, buttons):

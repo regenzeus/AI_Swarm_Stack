@@ -17,8 +17,9 @@ def run(*args, **env):
                           env={"PATH": "/usr/bin:/bin", "HOME": env.pop("HOME", "/nonexistent"), **env})
 
 
-def test_a_machine_runs_home_unless_it_names_another_deployment(tmp_path):
-    assert DEPLOY.chosen(env={}, home=tmp_path) == ROOT / "deployments/home"
+def test_a_machine_runs_the_platform_only_unless_it_names_a_deployment(tmp_path):
+    """PLT-44 (11 Nov 2026): a machine that names no deployment runs the platform only, never home with every feature on."""
+    assert DEPLOY.chosen(env={}, home=tmp_path) == ROOT / "deployments/platform" and DEPLOY.named(env={}, home=tmp_path) == ""
     (tmp_path / ".config/aistack").mkdir(parents=True)
     (tmp_path / ".config/aistack/deployment").write_text("example-work\n")
     assert DEPLOY.chosen(env={}, home=tmp_path) == ROOT / "deployments/example-work"
@@ -135,7 +136,7 @@ def test_compose_demands_no_home_value_of_a_deployment_without_the_feature():
             assert secret.match(v) or str(work.get(v) or "").strip(), f"{f}: ${{{v}:?}} would stop a deployment that leaves {v} empty"
     assert D.missing(work) == []
     home_like = {**work, "FEATURES": "home,phone,tailnet", "NAS_HOST": "nas.lan", "HA_URL": "", "ROUTER_URL": "x", "PHONE_HOST": "off.invalid",
-                 "PC_TAILNET_HOST": "pc.ts.net"}
+                 "PC_TAILNET_HOST": "pc.ts.net", "REFUSE": ""}               # REFUSE: the example refuses home (PLT-47)
     assert D.missing(home_like) == ["HA_URL is empty, and home needs it", "PHONE_HOST is empty, and phone needs it"]
     assert "python3 ops/deployment.py check" in (root / "Makefile").read_text()
 

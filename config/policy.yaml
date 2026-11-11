@@ -1,0 +1,51 @@
+# What the stack may do on its own (ASK-01, ops/asks.py): every kind of action has a tier.
+#   do    do it, with an undo record (what, how to undo, until when)
+#   tell  do it, with an undo record and one line in the activity (no push)
+#   ask   ask before: an Ask waits in Needs you
+#   never the stack may not do it at all
+# These are the stack's generic defaults. A deployment overrides them in deployments/<name>/policy.yaml, and the owner's
+# standing rules (/srv/ai/asks/rules.json, made in the app) override both, except for a gate: a gate always asks and
+# only an explicit tap by a person in its role answers it.
+#
+# The owner decides which kinds stop asking: every kind that acts on the owner's things starts at ask, and a tap on
+# "Yes, and always for this kind" (or the policy page) turns it into a standing rule.
+tiers:
+  deploy: ask            # deploy a build
+  buy: ask               # spend money
+  task-start: ask        # start a task that waits for an OK
+  task-resume: ask       # go on with a change that stopped
+  answer: ask            # a fact only a person knows (a task's question, the tax desk, an agent's question)
+  confirm: ask           # say whether something shipped works
+  phone-cleanup: ask     # a cleanup step on the AI phone
+  phone: ask             # anything else on the AI phone
+  memory-keep: ask       # remember what an agent asked to remember
+  memory-forget: ask     # forget a long-term fact (each can be undone)
+  memory-move: ask       # move facts out of long-term memory
+  idea: ask              # turn an idea into a task
+  agent-change: ask      # take a change to an agent
+  mail-sort: ask         # sort out a sender's mail
+  delete: ask            # delete data that has no undo
+  access: ask            # grant an agent access to an account
+  setup: ask             # a setup step only a person can do
+  pack: ask              # run a pack's new commit
+  command: ask           # let a job kind run at a place
+  tracker-write: ask     # a write to a tracker item, judged in shadow
+  tracker-live: ask      # let a kind of tracker write go live
+  workflow: ask          # a workflow's question
+  test: ask              # the nightly journey's own test item
+  credentials: never     # enter or change credentials
+  security-settings: never
+  submit-to-authorities: never
+
+# Where Asks reach people. A channel that is off sends nothing. app is always on.
+channels: [app]
+
+# The data rule (ASK-07): the text of an Ask, an answer or a record is checked before it is kept or sent. Content goes by
+# reference to a local path, never as text.
+data:
+  text_max: 2000          # characters of one text: an Ask is a question and a few facts, not a document
+  extract_paths: []       # path patterns (regular expressions) whose content never goes into an Ask's text
+  private_markers: []     # words that mark a text as private (regular expressions, matched without case)
+
+# Tickets (ASK-12): the tracker that holds one ticket per task, by its name in the deployment's trackers.yaml.
+tickets: {}

@@ -232,11 +232,11 @@ def test_home_hears_how_each_step_of_a_workflow_ended(F):
     p = drop("a9", kind="agent", agent="scout", brief="Find facts.", title="RAM facts", execution="731", resume_url=RESUME)
     post, sent = took()
     FW.handle("a9", p, cards=CARDS, crew=CREW, post=post, sleep=lambda s: None)
-    assert said == [("workflow", "RAM facts: done (n8n run 731)", False, "Workflows")]
+    assert said == [("workflow", "RAM facts ran fine.", False, "Workflows")]                # OBS-19: plain words, the n8n run behind a tap
     said.clear()
     p = drop("b9", kind="agent", agent="root", brief="x", resume_url=RESUME)
     FW.handle("b9", p, cards=CARDS, crew=CREW, post=post, sleep=lambda s: None)
-    assert said == [("workflow", "root: refused: no agent 'root'", True, "Workflows")]      # a failure is pushed to the owner
+    assert said == [("workflow", "root was not started: no agent 'root'. It needs a look: open it to see what went wrong.", True, "Workflows")]   # a failure is pushed
 
 
 def test_an_agent_reads_its_brief_as_its_step(F, monkeypatch):
@@ -420,14 +420,14 @@ def test_a_plan_runs_in_waves_through_the_agent_path_and_answers_every_steps_out
     together.abort()
     assert "Your step (3 of 3): Advice: Recommend one kit." in prompts[3] and "result of step 1" in prompts[3] and "result of step 2" in prompts[3]
     assert "The task: RAM upgrade" in prompts[1] and TK.row(F.c, a["task"])["status"] == "done"
-    assert said[-1] == "RAM upgrade: done"
+    assert said[-1] == "RAM upgrade ran fine."
     steps[0]["title"] = "Prices (fail)"
     p = drop("p2", kind="plan", steps=steps, resume_url=RESUME)
     FW.handle("p2", p, cards=CARDS, crew=CREW, post=post, sleep=lambda s: None)
     a = sent[1][1]
     assert a["status"] == "failed" and [s["status"] for s in a["steps"]] == ["failed", "done", "cancelled"]
     assert a["error"].startswith("step 1: RuntimeError: the shop did not answer") and a["steps"][2]["error"] == "step 1 did not finish"
-    assert said[-1].startswith("a plan of 3 steps: failed: step 1")
+    assert said[-1].startswith("A plan of 3 steps couldn't run: a service it needs did not answer.")   # OBS-19: why in plain words
 
 
 def test_the_nodes_pickers_read_the_agents_crew_jobs_places_and_repositories_the_runner_writes(F, host, tmp_path, monkeypatch):

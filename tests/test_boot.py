@@ -193,7 +193,7 @@ def test_a_job_waiting_its_turn_is_not_charged_with_its_last_run_s_failure(monke
     now = time.time()
     runs = [{"state": "running", "start": now, "seconds": 0, "log": []}, {"state": "failed", "start": now - 9000, "seconds": 1, "error": "refused", "log": []}]
     monkeypatch.setattr(O, "crew_history", lambda unit: [dict(r) for r in runs])
-    monkeypatch.setattr(CR, "CREW", [{"id": "x", "name": "X", "unit": "x", "agent": True}])
+    monkeypatch.setattr(CR, "CREW", [{"id": "x", "name": "X", "unit": "x", "agent": True, "factory": "platform"}])
     monkeypatch.setattr(CR, "agent_file", lambda aid: {"result": "failed: refused"})
     monkeypatch.setattr(CR, "schedule_of", lambda unit: "daily 04:00")
     monkeypatch.setattr(CR, "payoff_of", lambda c, aid: {})

@@ -30,6 +30,7 @@ classes:
   tracker-attach:  {title: Tracker attachments, level: 0, highest: 0, exam: null, floor: people, what: "attach a file to a tracker item: people read it"}
   tracker-link:    {title: Tracker links,      level: 0, highest: 1, exam: null,            what: "link a tracker item to another or to a change"}
   tracker-transition: {title: Tracker transitions, level: 0, highest: 0, exam: null, floor: people, what: "move a tracker item to another status: people act on it"}
+  tracker-open:    {title: New tracker items,  level: 0, highest: 0, exam: null, floor: people, what: "open a new item in a tracker (a question's ticket): people read it"}
   tracker-label:   {title: Tracker labels,     level: 0, highest: 1, exam: null,            what: "label a tracker item"}
   command:         {title: A command,          level: 0, highest: 0, exam: null, floor: security, what: "let a job kind run at a place, by the hash of its file"}
   pack-commit:     {title: A pack commit,      level: 0, highest: 0, exam: null, floor: security, what: "run a pack's new commit: its agents, prompts, commands and templates"}

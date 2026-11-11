@@ -33,7 +33,7 @@ def test_a_gateway_deployment_serves_only_the_gateways_models_and_refuses_any_ot
         if m["model_name"] != "smoke":
             assert params["api_base"] == WORK["gateway"]["openai_base"] and params["api_key"] == "os.environ/AISTACK_GATEWAY_TOKEN"
     assert cfg["litellm_settings"]["max_budget"] == 50 and "cache_affinity" not in str(cfg["litellm_settings"]["callbacks"])
-    assert set(cfg["mcp_servers"]) == {"qmd", "memory", "memorypublic", "missions", "files", "claude", "graphify"}   # its features' only
+    assert set(cfg["mcp_servers"]) == {"qmd", "memory", "memorypublic", "missions", "files", "claude", "graphify", "stack"}   # its features' only
     committed = (ROOT / "deployments/example-work/litellm.yaml").read_text()
     assert committed == MP.litellm(WORK, (ROOT / "config/litellm/config.yaml").read_text(), ROOT / "deployments/example-work"), \
         "run AISTACK_DEPLOYMENT=example-work python3 ops/modelpolicy.py litellm"

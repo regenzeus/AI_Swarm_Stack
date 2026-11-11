@@ -14,7 +14,7 @@ STATIC = APP / "web/static"
 
 def moved(*calls):
     """MOVED (app-base.js) evaluated in node: [route, args, query] -> the address an old link lands on."""
-    src = re.search(r"^const MOVED = \{.*?^\};", webjs.app_js(), re.M | re.S)[0]
+    src = re.search(r"^const keepQ = .*?^const MOVED = \{.*?^\};", webjs.app_js(), re.M | re.S)[0]   # with the old Tasks tab's own (APP-69)
     js = f"{src}\nprocess.stdout.write(JSON.stringify({json.dumps(calls)}.map(([r, a, q]) => MOVED[r](a, new URLSearchParams(q)))));"
     return json.loads(subprocess.run(["node", "-e", js], check=True, capture_output=True, text=True).stdout)
 
@@ -34,7 +34,7 @@ def test_the_engine_runs_and_templates_screens_are_gone_and_their_links_land_on_
     assert not {"engine", "runs", "templates", "packs", "trackers"} & views()
     assert "S?.engine" not in webjs.app_js() and "taskEngineLink" not in (STATIC / "task.js").read_text()
     assert moved(["engine", ["task:3:1"], ""], ["runs", [], ""], ["templates", ["x"], ""]) == [
-        "#/workflows?open=executions", "#/workflows?open=executions", "#/workflows"]
+        "#/n8n?open=executions", "#/n8n?open=executions", "#/workflows"]
     assert "const moved = MOVED[route.name]?.(route.args, route.q);\n  if (moved) { location.replace(moved); return; }" in webjs.app_js()
 
 
@@ -62,8 +62,9 @@ def test_the_stack_page_holds_the_stack_and_the_rest_is_where_it_belongs_two_tap
     assert "a2aCardHtml()" in v and "packsHtml()" in v and 'id="conncard"' in v      # Connections: Gmail, outside agents, packs
     assert moved(["telemetry", [], ""]) == ["#/system?tab=costs"] and "telemetry" not in views()
     assert 'if (route.q.get("tab") === "guide") { location.replace("#/guide"); return; }' in v
-    home = fn("vHome")                                                              # Home → Overview: the House beside the AI phone
-    assert "${devicesHtml()}${houseCardHtml()}" in home and '["homehouse", houseCardHtml]' in js and 'href="#/house"' in js
+    home = fn("vHome")                                                              # Home → Overview: the House, no AI phone (APP-78)
+    assert "${houseCardHtml()}${sharedCardHtml()}" in home and "devicesHtml" not in home and '["homehouse", houseCardHtml]' in js and 'href="#/house"' in js
+    assert 'href="#/n8n">${ic.flow}n8n</a>' in v   # n8n's editor is the Stack's (APP-69); Code is a place of its own (APP-83)
     memory = fn("vMemory")                                                          # Memory: each store's figures and the weekly tidy
     assert "${memUpkeepHtml()}" in memory and "librarianHtml(S.memory.librarian)" in js
     guide = (STATIC / "guide.js").read_text()
@@ -82,32 +83,44 @@ def test_a_run_is_followed_on_its_task_page_and_the_old_run_screens_land_there()
     for gone in ("vTaskMap", "tmapTimeline", "tmapMode", "#/taskmap", "vTelemetry"):
         assert gone not in js + task, gone
     assert moved(["taskmap", [], "t=7&o=2"], ["taskmap", [], "t=7"], ["live", [], ""], ["live", ["task:7:step:1"], ""]) == [
-        "#/task/7?tab=sources&o=2", "#/task/7?tab=sources", "#/tasks?v=activity", ""]
+        "#/task/7?tab=sources&o=2", "#/task/7?tab=sources", "#/home?tab=activity", ""]
     src = fn("taskSources", task)
     assert 'taskFlowInto($("#tflow", box), t);' in src and "tmapFlow(el, d, tmapGraph(d));" in fn("taskFlowInto", task)
     assert 'href="#/task/${t.id}?tab=sources&o=${r.occ}"' in task and "The run's log" in task and "how it ran" in task
     assert "wfWhereInto($(\"#wfwhere\")" in task                                     # Where it runs, at the top
     assert "taskSrc, wfWhereOf(d)]);" in task and '"files", "file", "task"].includes(route.name)) return render(true);' in js   # opened cold: Where it runs comes with the state
     decisions = (ROOT / "ops/decisions.py").read_text()
-    assert "#/swarm?tab=" not in decisions and '"#/tasks?v=ideas"' in decisions and 'f"#/tasks?v=activity&ctx=' in decisions
+    assert "#/swarm?tab=" not in decisions and '"#/ideas"' in decisions and 'f"#/home?tab=activity&ctx=' in decisions
     seeds = (ROOT / "ops/journeys.py").read_text()
     assert "#/taskmap" not in seeds and "#/telemetry" not in seeds and 'f"#/task/{tid}?tab=sources"' in seeds
 
 
-def test_the_menu_names_the_seven_parts_and_every_part_is_reachable():
-    """Home, Tasks, Workflows (the desk's), Memory, Code, Chat, Stack; the phone's bar the six without Workflows, in the
-    same order. Home has its own address (#/ is whatever the app opens on); the start page offers the same names and
-    reads a choice made under the old ones; what the phone shared has a list, one tap from Home's Overview."""
+def test_the_menu_names_the_six_places_and_every_part_is_reachable():
+    """APP-69: Home, Workflows, Agents, Improve, Chat, Stack, on the phone's bar and the desk's menu alike, in the same
+    order. Every older screen lights the place it lives under; the old Tasks tab's parts land in their places. Home has
+    its own address (#/ is whatever the app opens on); the start page offers the same names and reads a choice made
+    under the old ones; what the phone shared has a list, one tap from Home's Overview."""
     js = webjs.app_js()
     nav = re.search(r"^const NAV = \[(.*?)\];", js, re.M | re.S)[1]
-    assert re.findall(r'\["\w+", "(#/\w+)", "(\w+)"', nav) == [("#/home", "Home"), ("#/tasks", "Tasks"), ("#/workflows", "Workflows"),
-        ("#/memory", "Memory"), ("#/build", "Code"), ("#/chat", "Chat"), ("#/system", "Stack")]
-    assert 'if (k === "workflows" && bottom) return "";' in js and 'href="#/workflows">${ic.flow}Workflows</a>' in js   # the phone: from Tasks
+    assert re.findall(r'\["\w+", "(#/\w+)", "(\w+)"', nav) == [("#/home", "Home"), ("#/workflows", "Workflows"), ("#/agents", "Agents"),
+        ("#/build", "Code"), ("#/chat", "Chat"), ("#/system", "Stack")]   # APP-83: Code back, Improve out of the menu
+    assert "bottom" not in fn("navHtml") and '$("#nav-bottom").innerHTML = navHtml(true);' in js        # one menu, both shapes
+    place = re.search(r"^const NAV_OF = \{.*?\};", js, re.M | re.S)[0]
+    for name, where in (("memory", "agents"), ("wiki", "agents"), ("build", "build"), ("repo", "build"), ("ideas", "build"), ("measures", "workflows"), ("trials", "workflows"),
+                        ("task", "workflows"), ("crew", "workflows"), ("n8n", "workflows"), ("decide", "home")):
+        got = json.loads(subprocess.run(["node", "-e", f"const MEM_ROUTES = [\"memory\"]; {place}\nprocess.stdout.write(JSON.stringify(Object.keys(NAV_OF).find((k) => k === {json.dumps(name)} || NAV_OF[k].includes({json.dumps(name)}))))"],
+                                        check=True, capture_output=True, text=True).stdout)
+        assert got == where, name
+    assert moved(["tasks", [], "v=activity&agents=a,b"], ["tasks", [], "v=team&p=crew"], ["tasks", [], "v=network&m=team"], ["tasks", [], "v=ideas&task=4"],
+                 ["tasks", [], "t=12"], ["tasks", [], "new=1&kind=briefing"], ["tasks", [], "area=upkeep"], ["tasks", [], ""]) == [
+        "#/home?tab=activity&agents=a,b", "#/agents?v=team&p=crew", "#/agents?v=network&m=team", "#/ideas?task=4", "#/task/12",
+        "#/workflows?new=1&kind=briefing", "#/workflows?area=upkeep", "#/workflows"]
     assert 'k === "home" && needs ?' in js and "pending_memory" not in fn("navHtml")
     starts = re.search(r"^const START_PAGES = \[(.*?)\];", js, re.M)[1]
-    assert "Agents" not in starts and "Wiki" not in starts and '["#/tasks", "Tasks"]' in starts and '["#/memory", "Memory"]' in starts
+    assert re.findall(r'\["[^"]*", "(\w+)"\]', starts) == ["Home", "Workflows", "Agents", "Code", "Chat", "Stack"]
+    assert moved(["improve", [], ""], ["improve", [], "task=3"], ["improve", [], "v=scorers"]) == ["#/ideas", "#/ideas?task=3", "#/workflows"]
     html = (APP / "web/index.html").read_text()
-    assert '"#/missions": "#/tasks", "#/wiki": "#/memory"' in html and 'class="brand" href="#/home"' in html
+    assert '"#/tasks": "#/workflows"' in html and '"#/memory": "#/agents"' in html and 'class="brand" href="#/home"' in html
     assert "if (!route.args[0]) return shareList();" in (STATIC / "app-devices.js").read_text() and "${sharedCardHtml()}" in fn("vHome")
     assert 'Route("/api/shares", api_shares)' in (APP / "server.py").read_text()
 
@@ -152,7 +165,7 @@ def test_one_visual_system_every_font_size_is_on_the_type_scale_and_docs_ux_name
     assert "toolPage(" in doc and "function toolPage(" in (STATIC / "app-workflows.js").read_text()
     for step, undo in (("1.12", "0.892857"), ("1.3", "0.769231"), ("1.6", "0.625")):       # a wide screen's zoom, undone on a tool's frame
         assert f"zoom: {step}; --z: {step};" in css and f".tool-frame {{ zoom: {undo};" in css
-    assert "body[data-page=\"workflows\"] .pagehelp, body[data-page=\"traces\"] .pagehelp { display: none; }" in css
+    assert "body[data-page=\"n8n\"] .pagehelp, body[data-page=\"traces\"] .pagehelp { display: none; }" in css
 
 
 def test_a_schedule_held_by_a_workflow_is_shown_read_only_with_the_way_to_its_workflow():
@@ -171,8 +184,8 @@ def test_a_schedule_held_by_a_workflow_is_shown_read_only_with_the_way_to_its_wo
     run = "const esc = (s) => String(s); const ic = { flow: '' }; const when = (x) => 'in 2 h'; const explain = () => '';\n" + src + \
         "\nprocess.stdout.write(JSON.stringify([wfScheduleHtml('daily 04:30', 1, 'w1'), wfScheduleHtml('switched off', null, 'w 2')]));"
     a, b = json.loads(subprocess.run(["node", "-e", run], check=True, capture_output=True, text=True).stdout)
-    assert 'href="#/workflows?open=w1"' in a and "daily 04:30" in a and "next in 2 h" in a
-    assert 'href="#/workflows?open=w%202"' in b and "it does not run until it is switched on" in b
+    assert 'href="#/workflow/w1"' in a and "daily 04:30" in a and "next in 2 h" in a
+    assert 'href="#/workflow/w%202"' in b and "it does not run until it is switched on" in b
     form = (STATIC / "app-runs.js").read_text()
     assert "m.workflow ? `<div class=\"field\"><span>Schedule</span>${wfScheduleHtml(m.schedule_text" in form
     assert "...(sched ? { schedule: sched } : {})" in form                      # the form leaves a workflow's schedule alone

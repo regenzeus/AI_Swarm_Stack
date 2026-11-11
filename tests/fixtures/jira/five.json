@@ -1,0 +1,46 @@
+{
+ "about": "Five tickets of a stand-in Jira project DEMO, in Jira's own REST shapes (issue types, labels, custom fields, issue links, the status changelog), for the records' tests (tests/test_domain_records.py). The toy pack's records.yaml maps them. Made up; no real system's names.",
+ "issues": [
+  {"key": "DEMO-1", "fields": {"summary": "Split exports over 2 GB into parts", "issuetype": {"name": "Change Request"}, "status": {"name": "Approved"},
+    "labels": ["export"], "created": "2026-11-01T10:00:00.000+0100", "updated": "2026-11-03T15:00:00.000+0100", "resolutiondate": null,
+    "customfield_10101": "Exports over 2 GB stop half way", "customfield_10102": "The export module only", "versions": [],
+    "issuelinks": [
+     {"id": "1", "type": {"name": "Satisfies", "outward": "satisfies", "inward": "is satisfied by"}, "outwardIssue": {"key": "DEMO-2"}},
+     {"id": "2", "type": {"name": "Tests", "outward": "tests", "inward": "is tested by"}, "inwardIssue": {"key": "DEMO-5"}}]},
+   "changelog": {"histories": [
+     {"created": "2026-11-02T10:00:00.000+0100", "items": [{"field": "status", "fromString": "Open", "toString": "In Review"}]},
+     {"created": "2026-11-03T15:00:00.000+0100", "items": [{"field": "status", "fromString": "In Review", "toString": "Approved"}]}]}},
+  {"key": "DEMO-2", "fields": {"summary": "The export stops at 2 GB", "issuetype": {"name": "Bug"}, "status": {"name": "Done"},
+    "labels": [], "created": "2026-11-02T09:00:00.000+0100", "updated": "2026-11-05T11:00:00.000+0100", "resolutiondate": "2026-11-05T11:00:00.000+0100",
+    "versions": [{"name": "1.4"}],
+    "issuelinks": [
+     {"id": "1", "type": {"name": "Satisfies", "outward": "satisfies", "inward": "is satisfied by"}, "inwardIssue": {"key": "DEMO-1"}},
+     {"id": "3", "type": {"name": "Tests", "outward": "tests", "inward": "is tested by"}, "inwardIssue": {"key": "DEMO-5"}}]},
+   "changelog": {"histories": [
+     {"created": "2026-11-02T13:00:00.000+0100", "items": [{"field": "status", "fromString": "Open", "toString": "In Progress"}]},
+     {"created": "2026-11-05T11:00:00.000+0100", "items": [{"field": "status", "fromString": "In Progress", "toString": "Done"}, {"field": "resolution", "toString": "Fixed"}]}]}},
+  {"key": "DEMO-3", "fields": {"summary": "Retry sign-in after a token expires", "issuetype": {"name": "Change Request"}, "status": {"name": "In Review"},
+    "labels": [], "created": "2026-11-04T09:30:00.000+0100", "updated": "2026-11-04T12:00:00.000+0100", "resolutiondate": null,
+    "customfield_10101": "Sign-in fails after the update", "customfield_10102": null, "versions": [],
+    "issuelinks": [
+     {"id": "4", "type": {"name": "Blocks", "outward": "blocks", "inward": "is blocked by"}, "inwardIssue": {"key": "DEMO-4"}}]},
+   "changelog": {"histories": [
+     {"created": "2026-11-04T12:00:00.000+0100", "items": [{"field": "status", "fromString": "Open", "toString": "In Review"}]}]}},
+  {"key": "DEMO-4", "fields": {"summary": "Sign-in fails after the update", "issuetype": {"name": "Bug"}, "status": {"name": "Done"},
+    "labels": ["login"], "created": "2026-11-03T08:00:00.000+0100", "updated": "2026-11-06T16:00:00.000+0100", "resolutiondate": "2026-11-06T16:00:00.000+0100",
+    "versions": [],
+    "issuelinks": [
+     {"id": "4", "type": {"name": "Blocks", "outward": "blocks", "inward": "is blocked by"}, "outwardIssue": {"key": "DEMO-3"}}]},
+   "changelog": {"histories": [
+     {"created": "2026-11-04T08:00:00.000+0100", "items": [{"field": "status", "fromString": "Open", "toString": "In Progress"}]},
+     {"created": "2026-11-06T16:00:00.000+0100", "items": [{"field": "status", "fromString": "In Progress", "toString": "Done"}]}]}},
+  {"key": "DEMO-5", "fields": {"summary": "Regression run on extract E-12", "issuetype": {"name": "Test Execution"}, "status": {"name": "Done"},
+    "labels": ["regression"], "created": "2026-11-05T08:00:00.000+0100", "updated": "2026-11-05T10:00:00.000+0100", "resolutiondate": "2026-11-05T10:00:00.000+0100",
+    "customfield_10201": {"value": "Pass"}, "customfield_10202": "E-12", "versions": [],
+    "issuelinks": [
+     {"id": "2", "type": {"name": "Tests", "outward": "tests", "inward": "is tested by"}, "outwardIssue": {"key": "DEMO-1"}},
+     {"id": "3", "type": {"name": "Tests", "outward": "tests", "inward": "is tested by"}, "outwardIssue": {"key": "DEMO-2"}}]},
+   "changelog": {"histories": [
+     {"created": "2026-11-05T10:00:00.000+0100", "items": [{"field": "status", "fromString": "Open", "toString": "Done"}]}]}}
+ ]
+}

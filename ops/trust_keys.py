@@ -20,7 +20,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 SECRETS = "secrets/secrets.enc.yaml"
 NAMES = ("AISTACK_STEP_TOKEN", "N8N_HOOK_TOKEN", "MCP_TOKEN_MISSIONS", "MCP_TOKEN_CLAUDE", "MCP_TOKEN_HOUSE", "MCP_TOKEN_FILES",
-         "MCP_TOKEN_MEMORY", "MCP_TOKEN_MEMORYPUBLIC")
+         "MCP_TOKEN_MEMORY", "MCP_TOKEN_MEMORYPUBLIC", "MCP_TOKEN_STACK")
 
 
 def missing(env=None):

@@ -25,6 +25,7 @@
       ]
     }
   },
+  "factory": "platform",
   "id": "aisc6e2ebeeff0cc",
   "name": "Crew: Upgrade check",
   "nodes": [

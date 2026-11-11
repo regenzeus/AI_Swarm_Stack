@@ -47,6 +47,8 @@ import notify as N                                # OBS-16: the one notification
 import stack_gate as SG                           # PLT-28: is the stack up, and when did this boot begin
 import deployment as DEPLOY                        # this deployment's hosts and paths (deployments/<name>/deployment.env)
 import modelpolicy as MP                          # the Claude CLI's access under this deployment's model policy (GEN-05)
+import areas as AR                                # TSK-52: a job's area, the label its lines carry (OBS-19)
+import notices as NT                              # OBS-20: alerts wait while the stack is updated or restarted
 
 M = I = None                                      # ops/missions.py and ops/improve.py (set by missions.main or run())
 STACK = Path(DEPLOY.STACK_DIR)
@@ -57,71 +59,109 @@ CI_IMAGE = "aistack/ci-runner:13.2.0"
 # TSK-52: each job's area says what it is for (ops/areas.py): Mail, Taxes, Phone, Code, Memory, or Upkeep for the
 # stack's own frequent small jobs, which fold into one row with their health on the Tasks list.
 # A job whose result lives on a page of its own names it ("result": the page and its name); the task links to it.
+# PLT-45: each job names its factory: platform (the platform's own upkeep, on at every site) or home (the household's
+# work, and the jobs whose unit needs home's NAS); a site without home shows and runs none of home's.
 CREW = [
-    {"id": "memory-review", "name": "Memory gatekeeper", "unit": "memory-review", "area": "upkeep",
+    {"id": "memory-review", "name": "Memory gatekeeper", "unit": "memory-review", "area": "upkeep", "factory": "platform",
      "what": "Checks every fact Hermes wants to remember: safe ones are kept, sensitive ones wait for your OK."},
-    {"id": "memory", "name": "Memory Keeper", "unit": "crew-memory", "area": "memory", "agent": True,
+    {"id": "memory", "name": "Memory Keeper", "unit": "crew-memory", "area": "memory", "factory": "platform", "agent": True,
      "what": "Every night, the Memory Keeper looks after every memory: in the long-term memory it retires duplicates, test noise and facts about agents' runs, puts facts into English and dates passing states (only while its trial passes; each change has an Undo), and asks you when two of your facts disagree; a contradiction on a wiki becomes a dispute that a research task settles with sources; it re-checks stale pages agents still read, folds old journal entries and cleans the search index. On Wednesdays it also tidies every wiki (the Librarian: duplicates merged, contradictions marked, hub pages) and checks the subjects wikis share. Nothing is deleted."},
-    {"id": "skills-sync", "name": "Skill keeper", "unit": "skills-sync", "area": "upkeep",
+    {"id": "skills-sync", "name": "Skill keeper", "unit": "skills-sync", "area": "upkeep", "factory": "home",
      "what": "Mirrors Hermes' skills to Forgejo, tags what each one may do, and parks risky learned skills for your OK."},
-    {"id": "curator", "name": "Skill curator", "unit": "curate", "area": "memory",
+    {"id": "curator", "name": "Skill curator", "unit": "curate", "area": "upkeep", "factory": "platform",
      "what": "Weekly: merges and tidies skills, kept only if the benchmark stays as good (otherwise rolled back)."},
-    {"id": "self-review", "name": "Self-review", "thread": "improve", "area": "code",
+    {"id": "self-review", "name": "Self-review", "thread": "improve", "area": "code", "factory": "platform",
      "what": "Weekly: failures, errors, open work and new versions become small ideas in the swarm's Ledger (Agents → Ideas)."},
-    {"id": "maintainability", "name": "Maintainability review", "unit": "crew-maintainability", "area": "code", "agent": True,
+    {"id": "maintainability", "name": "Maintainability review", "unit": "crew-maintainability", "area": "code", "factory": "platform", "agent": True,
      "what": "Weekly: Claude Code reads the code (read-only): hot spots, duplication, dead code, docs drift. Ideas only where code really costs; a known one gets new evidence instead of a copy."},
-    {"id": "tests", "name": "Test agent", "unit": "crew-tests", "area": "code", "agent": True,
+    {"id": "tests", "name": "Test agent", "unit": "crew-tests", "area": "code", "factory": "platform", "agent": True,
      "what": "Weekly: runs the tests three times for flaky ones, finds slow tests and untested functions. Proposals, no model."},
-    {"id": "editor", "name": "Editor", "unit": "crew-editor", "area": "code", "agent": True,
+    {"id": "editor", "name": "Editor", "unit": "crew-editor", "area": "code", "factory": "platform", "agent": True,
      "what": "Daily: reads every open idea against the requirements, the decisions and your past reasons, and sorts each: into a would-be change request, held, covered by planned work, or dropped, with its reason. Changes nothing yet (DEC-47)."},
-    {"id": "doctor", "name": "Health doctor", "unit": "crew-doctor", "area": "upkeep", "agent": True,
+    {"id": "doctor", "name": "Health doctor", "unit": "crew-doctor", "area": "upkeep", "factory": "platform", "agent": True,
      "what": "Every 6 hours and after a new health alert: reviews each open issue with its logs; Claude Code tells expected, noise, external and real faults apart and proposes fixes. Changes nothing."},
-    {"id": "phone-cleanup", "result": ("#/phone", "The AI phone"), "name": "Phone cleanup", "unit": "crew-phone-cleanup", "area": "phone", "agent": True,
+    {"id": "phone-cleanup", "result": ("#/phone", "The AI phone"), "name": "Phone cleanup", "unit": "crew-phone-cleanup", "area": "phone", "factory": "home", "agent": True,
      "what": "Weekly: turns the AI phone's storage into concrete steps (old files by year, unused apps, caches). Each one runs on the phone only after your Approve; it reports the space freed."},
-    {"id": "phone-check", "name": "Phone check", "unit": "crew-phone-check", "area": "phone", "agent": True,
+    {"id": "phone-check", "name": "Phone check", "unit": "crew-phone-check", "area": "phone", "factory": "home", "agent": True,
      "what": "Weekly: battery, storage, security patch, connection and the screen-awake loop of the AI phone. Raises an alert only for a real fault."},
-    {"id": "inbox", "name": "Inbox digest", "unit": "crew-inbox", "area": "mail", "agent": True,
+    {"id": "inbox", "name": "Inbox digest", "unit": "crew-inbox", "area": "mail", "factory": "home", "agent": True,
      "what": "Daily, while you grant Gmail read: files the newsletters and updates worth keeping into your vault (the curator makes wiki pages). Never archives or deletes mail."},
-    {"id": "postmaster", "result": ("#/mail", "Your mail"), "name": "Postmaster", "unit": "crew-postmaster", "area": "mail", "agent": True,
+    {"id": "postmaster", "result": ("#/mail", "Your mail"), "name": "Postmaster", "unit": "crew-postmaster", "area": "mail", "factory": "home", "agent": True,
      "what": "Hourly: files the stack's own mail under the AI Stack label, and watches the copy of your Gmail on the NAS. Reads no message text, removes nothing."},
-    {"id": "mail-sort", "result": ("#/mail", "Your mail"), "name": "Mail sorter", "unit": "crew-mail-sort", "area": "mail", "agent": True,
+    {"id": "mail-sort", "result": ("#/mail", "Your mail"), "name": "Mail sorter", "unit": "crew-mail-sort", "area": "mail", "factory": "home", "agent": True,
      "what": "Weekly, and at once after your tap on Your mail: proposes the senders whose mail you could delete, from the headers alone, and sorts out the mail of the senders you approved under one label, out of the inbox. Starred, important, labelled, with attachments, in a thread you wrote in, younger than 30 days, bank and security mail stays. Nothing is deleted; every batch has an Undo."},
-    {"id": "tax-find", "name": "Tax desk: find papers", "unit": "crew-tax-find", "area": "taxes", "agent": True,
+    {"id": "tax-find", "name": "Tax desk: find papers", "unit": "crew-tax-find", "area": "taxes", "factory": "home", "agent": True,
      "what": "Monthly while a tax year is open, and on Run now: finds the tax papers in the copy of your mail by their headers and takes their text from the NAS for the tax desk's reader. No model; changes no mail."},
-    {"id": "tax-file", "name": "Tax desk: file and prepare", "unit": "crew-tax-file", "area": "taxes", "agent": True,
+    {"id": "tax-file", "name": "Tax desk: file and prepare", "unit": "crew-tax-file", "area": "taxes", "factory": "home", "agent": True,
      "what": "After the reader: copies each tax paper into Steuern on the NAS by year and form, keeps Belege and a draft workbook per year, and asks you what only you know. No model; never submits anything."},
-    {"id": "coach", "name": "Coach", "unit": "crew-coach", "area": "upkeep", "agent": True,
+    {"id": "coach", "name": "Coach", "unit": "crew-coach", "area": "upkeep", "factory": "platform", "agent": True,
      "what": "Monthly: reads every agent's scorecard and turns a real problem (many declined ideas, duplicates, refused writes) into an agent change with its evidence and a target score. Each change is replayed on the agent's past runs first; you tap Build it only after it passed."},
-    {"id": "journeys", "name": "Journey checks", "unit": "crew-journeys", "area": "upkeep", "agent": True,
+    {"id": "journeys", "name": "Journey checks", "unit": "crew-journeys", "area": "upkeep", "factory": "platform", "agent": True,
      "what": "Nightly, without a model: follows your journeys end to end. A task given in a sentence to its result (on replayed answers), a test item decided through the queue, every screen of the app at phone width, the newest briefing's e-mail on a phone, every make target dry-run. A failure is an alert here."},
-    {"id": "checker", "name": "Checker", "unit": "crew-checker", "area": "upkeep", "agent": True,
+    {"id": "checker", "name": "Checker", "unit": "crew-checker", "area": "upkeep", "factory": "platform", "agent": True,
      "what": "Every hour, without a model: checks whether each shipped idea worked (its health issue stays away, CI is green, a log line is gone) and marks it proved, or reopens it with the evidence. Starts ideas your autonomy rules allow, pauses an agent whose runs keep failing."},
-    {"id": "swarm-sync", "name": "Swarm sync", "unit": "swarm-sync", "area": "upkeep",
+    {"id": "swarm-sync", "name": "Swarm sync", "unit": "swarm-sync", "area": "upkeep", "factory": "platform",
      "what": "Every minute: puts the swarm's changes (ideas proposed, refined, decided, shipped) on your timeline and refreshes the ideas list in Code."},
-    {"id": "graphify-sync", "name": "Code graph", "unit": "graphify-sync", "area": "upkeep",
+    {"id": "graphify-sync", "name": "Code graph", "unit": "graphify-sync", "area": "upkeep", "factory": "platform",
      "what": "Rebuilds the code graph of your repositories when they change."},
-    {"id": "repofacts-sync", "name": "Repository facts", "unit": "repofacts-sync", "area": "upkeep",
+    {"id": "repofacts-sync", "name": "Repository facts", "unit": "repofacts-sync", "area": "upkeep", "factory": "platform",
      "what": "Rebuilds the facts of your repositories when they change: where they break, what changes together, who knows them, how healthy they are. Without a model, on a sealed copy."},
-    {"id": "upgrade-check", "name": "Upgrade check", "unit": "upgrade-check", "area": "upkeep",
+    {"id": "upgrade-check", "name": "Upgrade check", "unit": "upgrade-check", "area": "upkeep", "factory": "platform",
      "what": "Monthly: newer releases of every pinned component, for the self-review."},
-    {"id": "backup", "name": "Backup", "unit": "backup", "area": "upkeep",
+    {"id": "backup", "name": "Backup", "unit": "backup", "area": "upkeep", "factory": "home",
      "what": "Nightly: encrypted backup of the stack's data to the NAS; the newest also goes to OneDrive."},
-    {"id": "restore-drill", "name": "Restore drill", "unit": "restore-drill", "area": "upkeep",
+    {"id": "restore-drill", "name": "Restore drill", "unit": "restore-drill", "area": "upkeep", "factory": "home",
      "what": "Weekly: restores the latest backup into a scratch area and checks it is complete."},
-    {"id": "digest", "name": "Daily digest", "unit": "digest", "area": "upkeep",
+    {"id": "digest", "name": "Daily digest", "unit": "digest", "area": "upkeep", "factory": "platform",
      "what": "Every morning: what the stack did, what failed, what waits for you (Telegram)."},
-    {"id": "vault-ingest", "name": "Vault ingest", "unit": "vault-ingest", "area": "upkeep",
+    {"id": "vault-ingest", "name": "Vault ingest", "unit": "vault-ingest", "area": "upkeep", "factory": "platform",
      "what": "Every minute: converts the new files in your vault's inbox and adds them to the search index."},
-    {"id": "rotation", "name": "Trial rotation", "unit": "rotation", "area": "upkeep",
+    {"id": "rotation", "name": "Trial rotation", "unit": "rotation", "area": "upkeep", "factory": "platform",
      "what": "Each night at 01:00 except Sunday: starts that night's trial of the weekly rotation once the stack is idle, or skips the night (TRL-14)."},
-    {"id": "recycle", "name": "Nightly restart", "unit": "recycle", "area": "upkeep",
+    {"id": "recycle", "name": "Nightly restart", "unit": "recycle", "area": "upkeep", "factory": "platform",
      "what": "Each night at 03:50: restarts the services that grow while idle (qmd, Phoenix, Open WebUI) once the stack is idle, so their memory does not pile up in swap (PLT-27)."},
-    {"id": "tracker-poll", "name": "Tracker poll", "unit": "tracker-poll", "area": "upkeep",
+    {"id": "tracker-poll", "name": "Tracker poll", "unit": "tracker-poll", "area": "upkeep", "factory": "platform",
      "what": "Asks the deployment's trackers for changed items every few minutes (5 unless the deployment says otherwise): a new item starts its workflow, a reply wakes the run that waits for it, each change counted once (WFL-19)."},
-    {"id": "token-probe", "name": "Token probe", "unit": "token-probe", "area": "upkeep", "oneoff": True,
+    {"id": "token-probe", "name": "Token probe", "unit": "token-probe", "area": "upkeep", "factory": "platform", "oneoff": True,
      "what": "One-off: measures whether the ChatGPT prompt cache hits after the token fixes."},
 ]
-BY_ID = {a["id"]: a for a in CREW}
+BY_ID = {a["id"]: a for a in CREW}                 # every job, so a run on record keeps its name and area
+
+
+def feature_of(a):
+    """GEN-13: the feature a crew job belongs to, its unit's "# feature:" line (crew-phone-check: phone); core without one."""
+    return DEPLOY.unit_feature_of(a["unit"]) if a.get("unit") else "core"
+
+
+def here(a, on):
+    """GEN-13, PHN-28, PLT-45: whether a job runs at this site: its feature is on and its factory runs (home's only where
+    home is switched on and not refused)."""
+    return feature_of(a) in on and a["factory"] in {"platform"} | ({"home"} & set(on))
+
+
+def jobs(on=None):
+    """GEN-13, PHN-28, PLT-45: the crew jobs of the features that are on and the factories that run here. A job of a
+    feature that is off, or of home on a site without home, is gone: no card, no task, no health item, no Run now; its
+    record stays, and it is back once the feature is."""
+    on = DEPLOY.ON if on is None else on
+    return [a for a in CREW if here(a, on)]
+
+
+ENGINE_FEATURE = {"ai-phone": "phone"}             # a tool's own runs (the AI phone's sessions) belong to its feature
+
+
+def off_ids(on=None):
+    """The crew jobs and engines of the features that are off (PHN-28: phone-check, phone-cleanup, ai-phone)."""
+    on = DEPLOY.ON if on is None else on
+    return {a["id"] for a in CREW if not here(a, on)} | {e for e, f in ENGINE_FEATURE.items() if f not in on}
+
+
+SWITCHED_OFF = "the AI phone is switched off in this deployment (FEATURES has no phone)"
+
+
+def phone_off():
+    """PHN-28: whether this deployment has the AI phone switched off."""
+    return not DEPLOY.has("phone")
 _cache = {"t": 0, "data": []}
 
 
@@ -242,15 +282,15 @@ def status():
     """The crew for state.json, refreshed at most once a minute (a dozen systemctl/journalctl calls)."""
     if time.time() - _cache["t"] < 60:
         return _cache["data"]
-    names = [f"{a['unit']}.{k}" for a in CREW if a.get("unit") for k in ("service", "timer")]
+    names = [f"{a['unit']}.{k}" for a in jobs() if a.get("unit") for k in ("service", "timer")]
     units = parse_show(sh("systemctl", "--user", "show", "--timestamp=unix", "-p",
                           "Id,ActiveState,SubState,Result,ExecMainStartTimestamp,ExecMainExitTimestamp,LoadState,NextElapseUSecRealtime,LastTriggerUSec,UnitFileState",
                           *names))
     import n8n_jobs as NJ
     idx, flow = NJ.index(), last_flow_runs()
     out = []
-    for a in CREW:
-        item = {k: a[k] for k in ("id", "name", "what", "area", "unit") if k in a}    # unit: the app names jobs by it (APP-26)
+    for a in jobs():                                   # GEN-13: a job of a feature that is off has no card (PHN-28)
+        item = {k: a[k] for k in ("id", "name", "what", "area", "factory", "unit") if k in a}    # unit: the app names jobs by it (APP-26)
         if a.get("thread") == "improve" and I:
             s = I.last_scan()
             last = dt.datetime.fromisoformat(s["last"]).timestamp() if s.get("last") else None
@@ -329,6 +369,9 @@ def handle(req, c):
         ag = BY_ID.get(str(req.get("id", "")))
         if not ag:
             raise ValueError("no such crew agent")
+        if ag not in jobs():
+            raise ValueError(f"{ag['name']}: not configured, the feature {feature_of(ag)} is off in this deployment"
+                             if feature_of(ag) not in DEPLOY.ON else f"{ag['name']}: not configured, it is home's and home does not run here")
         if ag.get("thread") == "improve":
             I.save_scan(requested=M.now().isoformat(timespec="seconds"))
         else:
@@ -337,7 +380,7 @@ def handle(req, c):
             if p.returncode:
                 raise ValueError(f"could not start it: {p.stderr.strip()}")
         _cache["t"] = 0
-        M.event("crew", "", f"{ag['name']}: started on request", title="Crew")
+        M.event("crew", "", f"{ag['name']}: started, as you asked", title=area_label(ag["id"]), area=ag.get("area") or "")
         return {"started": ag["id"]}
     if a == "crew_memory_forget":
         return forget(req.get("ids") or [], limit(str(req.get("why", "")), 2000, "the reason"))
@@ -349,11 +392,13 @@ def handle(req, c):
         if cur.get("keeper"):
             save("memory", keeper={**cur["keeper"], "changes": K.changes(40)[::-1]})
         _cache["t"] = 0
-        M.event("memory", "", f"Memory Keeper: undone, as you asked: “{r['fact']}”", title="Crew")
+        M.event("memory", "", f"Memory Keeper: undone, as you asked: “{r['fact']}”", title=area_label("memory"), area="memory")
         return r
     if a == "health_ack":
         return acknowledge([str(k)[:200] for k in (req.get("keys") or [])][:100])  # cap: id
     if a in ("phone_cleanup_do", "phone_cleanup_do_all", "phone_cleanup_dismiss", "phone_cleanup_undo"):
+        if phone_off():
+            raise ValueError(SWITCHED_OFF)
         import phone_agents as PA
         PA.C, PA.M = sys.modules[__name__], M
         _cache["t"] = 0
@@ -391,11 +436,11 @@ def refresh_history(c):
     if time.time() - _hist_t["t"] < 300:
         return
     _hist_t["t"] = time.time()
-    hist = {a["id"]: O.crew_history(a["unit"]) for a in CREW if a.get("unit")}
+    hist = {a["id"]: O.crew_history(a["unit"]) for a in jobs() if a.get("unit")}
     sr = payoff_of(c, "self-review")                    # the self-review runs in a thread, not as a unit
     if sr.get("proposals"):
         _hist["self-review"] = {"payoff": f"{sr['proposals']} proposals: {sr['accepted']} accepted, {sr['built']} built, {sr['dismissed']} dismissed"}
-    for a in CREW:
+    for a in jobs():
         if not a.get("unit"):
             continue
         runs = hist.get(a["id"], [])
@@ -548,12 +593,12 @@ def _merge_runtime(items):
     """The runtime record's problems, rolled up per owning agent, into the mission, crew or engine item."""
     import runtime as RTM
     by = {("mission:" + it["slug"]) if it["kind"] == "mission" else ("crew:" + it["id"]): it for it in items if it["kind"] in ("mission", "crew")}
-    engines = {}
+    engines, off = {}, off_ids()
     for p in RTM.problems(48, by="agent"):
         agent = p.get("agent") or ""
         it = by.get(agent)
-        if not it and agent.startswith(("mission:", "crew:")):
-            continue                                     # an archived mission or a retired crew job: nobody to tell
+        if not it and agent.startswith(("mission:", "crew:")) or agent.removeprefix("crew:") in off:
+            continue                                     # an archived mission, a retired crew job, a feature that is off: nobody to tell
         if not it:
             name = ENGINES.get(agent, agent or "Agent")
             it = engines.setdefault(name, {"name": name, "kind": "engine", "id": name, "status": "issues", "last": None, "runs_7d": None,
@@ -644,8 +689,14 @@ def journeys(c):
 
 
 def quiet():
-    """While the stack starts, or is down (stack_watch says that once), health alerts would only list its symptoms."""
-    return not SG.settled() or bool(SG.why_down())
+    """While the stack starts, is down (stack_watch says that once), or is being updated or restarted and settles
+    (OBS-20), health alerts would only list its symptoms. An issue still open afterwards is alerted then."""
+    return not SG.settled() or bool(SG.why_down()) or bool(NT.change(within=NT.SETTLE_S))
+
+
+def area_label(job):
+    """The label a job's lines carry in Activity: its area's name (ops/areas.py), never "Crew" (OBS-19)."""
+    return AR.AREAS.get((BY_ID.get(job) or {}).get("area") or AR.UPKEEP, AR.AREAS[AR.UPKEEP])
 
 
 def health(c, missions):
@@ -826,6 +877,8 @@ _phone_down = {"since": None}
 def phone_down(now, d=None):
     """FND-116 (the AI phone stuck for 8.5 h, unnoticed): the phone disconnected for PHONE_DOWN_S, or its service not
     writing its state for PHONE_SILENT_S, while the owner has not switched it off -> an issue, else None."""
+    if phone_off():
+        return None                                  # PHN-28: switched off, nothing to miss
     d = d or PHONE_DIR
     try:
         f = d / "state.json"
@@ -906,8 +959,10 @@ def unfinished_notes(items, report=None):
         runs = json.loads((report or M.PUBLIC / "swarm.json").read_text()).get("unfinished") or []
     except (OSError, ValueError, AttributeError):
         return items
-    by = {it["id"]: it for it in items if it.get("kind") == "crew"}
+    by, off = {it["id"]: it for it in items if it.get("kind") == "crew"}, off_ids()
     for u in runs:
+        if u["agent"] in off:                            # GEN-13: a feature that is off has no card to put it on
+            continue
         it = by.get(u["agent"])
         if not it:
             name = ENGINES.get(u["agent"], u["agent"])
@@ -943,7 +998,7 @@ def call_doctor(lines, now=None):
     f.write_text(json.dumps({"t": now, "why": lines[:5]}))
     set_cause("doctor", "alert", "stack", "\n".join(lines[:5]))
     subprocess.run(["systemctl", "--user", "start", "--no-block", "crew-doctor.service"], capture_output=True, timeout=30)
-    M.event("crew", "", f"Health doctor: looking at {len(lines)} new issue{'s' if len(lines) != 1 else ''}", title="Crew")
+    M.event("crew", "", f"Health doctor: looking at {len(lines)} new issue{'s' if len(lines) != 1 else ''}", title=area_label("doctor"), area="upkeep")
     return True
 
 
@@ -1209,7 +1264,7 @@ def memory(c):
          moved=moved, distiller=dist, trials=trials, writes=MW.writes(40)[::-1], writes_total=len(MW.writes()),  # cap: list (the page says how many in all)
          unknown=K.unknown(rep), seconds=round(time.time() - t0), last=time.time())
     if rep.get("changed") or (rep.get("disputes") or {}).get("tasks"):
-        M.event("memory", "", f"Memory Keeper: {res} (its page under Agents lists each change with its Undo)", title="Crew")
+        M.event("memory", "", f"Memory Keeper: {res} (its page under Agents lists each change with its Undo)", title=area_label("memory"), area="memory")
     return len(sug)
 
 
@@ -1231,7 +1286,7 @@ def forget(ids, why=""):
     cur = agent_file("memory")
     save("memory", suggestions=[s for s in cur.get("suggestions", []) if s["id"] not in ids])
     _cache["t"] = 0
-    M.event("memory", "", f"Librarian: {done} fact{'s' if done != 1 else ''} forgotten (reversible)", title="Crew")
+    M.event("memory", "", f"Librarian: {done} fact{'s' if done != 1 else ''} forgotten (reversible)", title=area_label("memory"), area="memory")
     return {"forgotten": done}
 
 
@@ -1245,6 +1300,9 @@ def _journal(name, rid, state, summary, seconds):
 def run(name):
     """Entry point of the crew-*.service units."""
     global M, I
+    if BY_ID.get(name) and BY_ID[name] not in jobs():  # GEN-13: n8n no longer starts it; a unit started by hand stops here
+        print(f"not configured: the feature {feature_of(BY_ID[name])} is off in the deployment {DEPLOY.FOLDER.name}", flush=True)
+        return
     sys.path.insert(0, str(Path(__file__).parent))
     import missions
     import improve
@@ -1294,7 +1352,7 @@ def run(name):
             res += f" · answered {k} request{'s' if k != 1 else ''}" if k else ""
         except Exception as e:
             print(f"answers: {type(e).__name__}: {e}", file=sys.stderr)
-        M.event("crew", "", f"{BY_ID[name]['name']}: {res}", push=bool(n), title="Crew", by=name)
+        M.event("crew", "", f"{BY_ID[name]['name']}: {res}", push=bool(n), title=area_label(name), by=name, area=BY_ID[name].get("area") or "")
         RTM.emit(rid, "say", agent=f"crew:{name}", title="Result", detail=str(res))
         J.end()
         _journal(name, rid, "done", str(res), time.time() - t0)

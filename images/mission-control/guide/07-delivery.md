@@ -30,6 +30,11 @@ Everything the stack tells you, on Telegram or as a push, goes through one path 
 - **Quiet hours.** Between the two times you set, only approvals reach you. The Telegram messages wait and arrive as
   one message when the quiet hours end; the activity feed in the app still shows everything at once.
 - **Once is enough.** The same health issue or failure is not sent again within a day.
+- **In plain words.** A failure says what stopped, why, and whether you need to do anything; the raw error and the
+  workflow's run are under *Details* on its line in Activity, never in the push.
+- **Not during an update.** A failure while the stack is updated or restarted is not pushed. When the same work runs
+  fine within 15 minutes, Activity shows one quiet line ("Repository facts couldn't run during the update at 06:20. It
+  ran fine at 06:23."); otherwise you get the message then, naming the update. Health alerts wait the same way.
 - **What was sent.** Under the settings, *What the stack sent lately* lists each message with its channel and what
   happened to it: sent, held for the quiet hours, off by your setting, or a repeat that was not sent.
 

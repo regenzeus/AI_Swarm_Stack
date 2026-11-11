@@ -58,4 +58,11 @@ file that lacks it and changes nothing else in the file.
 | `task-5-home-assistant-voice-speaker-one-to-try.json` | Task #5: Home Assistant Voice speaker (one to try) | `30 8 * * *` | `run/task-5-home-assistant-voice-speaker-one-to-try` | yes |
 | `task-79-weekly-chinese-automotive-news-email.json` | Task #79: Weekly Chinese Automotive News Email | `0 8 * * 1` | `run/task-79-weekly-chinese-automotive-news-email` | yes |
 
-Every file names its **area** ("area": what it is for, TSK-52, ops/areas.py); ops/n8n_gen.py writes it, and a test fails on a file without one. A canvas export (ops/n8n_sync.py) does not keep it yet: put it back before landing an export.
+Every file names its **area** ("area": what it is for, TSK-52, ops/areas.py); ops/n8n_gen.py writes it, and a test fails on a file without one. A canvas export (ops/n8n_sync.py) keeps the file's area, feature and factory.
+
+Every file also names its **factory** ("factory", PLT-45): `platform` (the platform's own upkeep, on at every site:
+the self-test, the memory upkeep, the code and ideas jobs, the tracker poller) or `home` (the household's work: the
+owner's briefings `task-*`, the tax desk, mail, the AI phone, the inbox's item workflow, and the jobs whose unit needs
+home's NAS). A workflow of home never runs on a site without home, even when a list or a pattern names it; a file that
+names no factory runs nowhere, and `python3 ops/deployment.py check` and `doctor` name it. ops/n8n_gen.py writes the
+factory of the crew job (ops/crew.py), and a new one made on the canvas gets the factory of the site it was made on.

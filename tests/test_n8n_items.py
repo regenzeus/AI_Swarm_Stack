@@ -332,26 +332,31 @@ def test_without_forge_push_a_change_for_an_item_waits_for_the_owner_in_the_app(
 
 
 def test_a_question_for_a_role_says_who_may_answer_refuses_anyone_else_and_records_who_did(W, monkeypatch):
-    import decisions as D
+    import asks as A
     roles = W.tmp / "roles.yaml"
     roles.write_text("default: [lead]\nroles: {reviewer: [lena, lars]}\n")
     monkeypatch.setenv("AISTACK_ROLES", str(roles))
     W.step("q1", kind="ask", question="Ship the fix?", answers=["Ship", "Hold"], role="reviewer")
-    item = next(d for d in D._flows({}) if d["id"] == "flow:q1")
-    assert "Who may answer: lena, lars (reviewer)" in item["why"] and W.told == ["A workflow asks lena, lars: Ship the fix? (Needs you)"]
-    assert FW.answer({"id": "q1", "answer": "Ship", "who": "lead"}) == {"ok": False, "error": "only lena, lars may answer this (reviewer)"}
-    assert FW.answer({"id": "q1", "answer": "Ship", "who": "lars"}) == {"ok": True, "answer": "Ship", "who": "lars"}
+    a = A.by_source("flow:q1")
+    assert A.public(a)["people"] == ["lena", "lars"] and W.told == ["A workflow asks lena, lars: Ship the fix?"]
+    with pytest.raises(ValueError, match="only lena, lars may answer this"):
+        A.answer(a["id"], answer_id="ans-role0001", person="lead", via="app", outcome="ship", chip=True)
+    A.answer(a["id"], answer_id="ans-role0002", person="lars", via="app", outcome="ship", chip=True)
+    A.tick(now=__import__("time").time() + A.HOLD_S + 1)
     W.step("q1", kind="ask", question="Ship the fix?", answers=["Ship", "Hold"], role="reviewer")
-    assert W.resumed[-1][1]["answer"] == "Ship" and W.resumed[-1][1]["by"] == "lars" and W.resumed[-1][1]["role"] == "reviewer"
+    got = W.resumed[-1][1]
+    assert got["answer"] == "Ship" and got["outcome"] == "ship" and got["by"] == got["person"] == "lars" and got["role"] == "reviewer" and got["via"] == "app"
     src = (ROOT / "images/mission-control/server.py").read_text()
-    assert 'body["who"] = request.headers.get("tailscale-user-login") or "owner"' in src             # who, from the sign-in
+    assert 'body["who"] = request.headers.get("tailscale-user-login", "")' in src                   # who, from the sign-in (ASK-04)
 
 
 def test_with_no_map_of_roles_a_question_for_a_role_is_the_owners(W, monkeypatch):
+    import asks as A
     monkeypatch.setenv("AISTACK_ROLES", str(W.tmp / "none.yaml"))
     W.step("q2", kind="ask", question="Go?", role="reviewer")
-    assert W.told == ["A workflow asks you: Go? (Needs you)"]
-    assert FW.answer({"id": "q2", "answer": "Yes", "who": "owner@example"})["ok"]
+    assert W.told == ["A workflow asks you: Go?"]
+    a = A.by_source("flow:q2")
+    assert A.answer(a["id"], answer_id="ans-role0003", person="owner@example", via="app", outcome="yes", chip=True)["label"] == "Yes"
 
 
 def test_the_node_waits_on_an_item_writes_to_it_and_a_timeout_is_a_result_while_a_failure_still_fails():

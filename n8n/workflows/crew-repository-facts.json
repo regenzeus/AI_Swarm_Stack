@@ -25,6 +25,8 @@
       ]
     }
   },
+  "factory": "platform",
+  "feature": "builder",
   "id": "aisc75c771a1fc07",
   "name": "Crew: Repository facts",
   "nodes": [

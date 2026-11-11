@@ -31,7 +31,7 @@ globalThis.fetch = (path, o) => new Promise((_, rej) => o.signal.addEventListene
     err, r, toasts = run(src)
     assert err == "AI Stack did not answer within 0 s" or err.startswith("AI Stack did not answer within")
     assert r is None and toasts[0][1] is True
-    assert "did not answer" in toasts[0][0] and "Look under Missions before trying again" in toasts[0][0]
+    assert "did not answer" in toasts[0][0] and "Look under Workflows before trying again" in toasts[0][0]
 
 
 def test_a_poll_that_stalls_is_retried_and_a_finished_request_still_arrives():

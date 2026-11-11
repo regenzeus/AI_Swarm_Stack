@@ -214,7 +214,7 @@ items:
     status: partial
     parents: [SN-03]
     sources: [DEC-51, docs/N8N-MIGRATION.md]
-    acceptance: 'Test: a finished step is said on Home''s feed with its n8n run; a refused one is pushed.'
+    acceptance: 'Test: a finished step is said on Home''s feed with its n8n run (the line''s detail, OBS-19); a refused one is pushed.'
     gap: the feed names the n8n run by number; the run opens inside the app from its task's or crew job's page (Where it
       runs, WFL-11), not yet from the feed item itself.
     verify: {method: test, by: ['tests/test_flows.py::test_home_hears_how_each_step_of_a_workflow_ended']}
@@ -232,12 +232,12 @@ items:
     status: implemented
     parents: [SN-03]
     sources: [DEC-51, docs/N8N-MIGRATION.md]
-    acceptance: 'Test: the desk menu opens #/workflows with n8n in a frame and the phone menu does not show it; the phone
-      lists the workflows from the runner''s view; task and crew pages show where they run; agent pages list their
+    acceptance: 'Test: n8n''s editor opens inside the app (#/n8n) from Workflows on the desk and from the Stack page; the
+      Workflows list shows each workflow from the runner''s view; task and crew pages show where they run; agent pages list their
       workflows; the runner''s view has every workflow with its schedule, steps and recent runs; the Stack page''s tools
       know n8n''s pages.'
-    verify: {method: test, by: ['tests/test_n8n_ux.py::test_the_desk_menu_opens_n8n_inside_the_app_and_the_phone_menu_does_not_show_it',
-      'tests/test_n8n_ux.py::test_the_phone_lists_each_workflow_with_its_schedule_and_last_run',
+    verify: {method: test, by: ['tests/test_n8n_ux.py::test_n8n_s_editor_opens_inside_the_app_from_workflows_and_the_stack',
+      'tests/test_n8n_ux.py::test_the_list_shows_each_workflow_with_its_trigger_and_last_run',
       'tests/test_n8n_ux.py::test_task_and_crew_pages_show_where_they_run',
       'tests/test_n8n_ux.py::test_an_agents_page_lists_every_workflow_it_is_in',
       'tests/test_n8n_ux.py::test_the_stack_pages_tools_know_n8ns_pages_inside_the_app',

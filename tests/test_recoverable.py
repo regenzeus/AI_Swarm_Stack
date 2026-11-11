@@ -104,7 +104,7 @@ def test_broad_catches_that_drop_the_error_can_only_become_fewer():
     assert "not closed after the restart" in src and "CI status not read" in src
 
 
-def test_an_ai_phone_down_for_half_an_hour_is_an_alert_unless_the_owner_stopped_it(tmp_path, monkeypatch):
+def test_an_ai_phone_down_for_half_an_hour_is_an_alert_unless_the_owner_stopped_it(tmp_path, monkeypatch, phone_on):
     """FND-116: the AI phone stood still for 8.5 hours (a request it could not read) and nothing said so. Disconnected for
     30 minutes, or its service silent for 10, it is an alert on This PC; switched off by the owner, it is not."""
     import os

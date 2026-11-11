@@ -26,7 +26,8 @@ TEST_SOURCES = ("trial:", "probe:", "gate")
 # use: the map's line to that dot; ask: a run of its own, already an ask; memory: the Memory layer; own: the agent's own hands
 TOOL_SERVERS = {"phone": ("use", "phone"), "mail": ("use", "gmail"), "house": ("use", "house"), "missions": ("use", "mission"),
                 "research": ("ask", "scout"), "claude": ("ask", "claude"),
-                "qmd": ("memory", ""), "memory": ("memory", ""), "memorypublic": ("memory", ""), "jobs": ("own", ""), "fetch": ("own", ""), "files": ("own", ""), "browser": ("own", ""), "graphify": ("own", "")}
+                "qmd": ("memory", ""), "memory": ("memory", ""), "memorypublic": ("memory", ""), "jobs": ("own", ""), "fetch": ("own", ""), "files": ("own", ""), "browser": ("own", ""), "graphify": ("own", ""),
+                "stack": ("own", "")}   # WAY-06: the site's runs and Asks through the app, as the command line; no one else at the other end
 ONLY_CHANGES = {"missions": re.compile(r"create|update|run|pause|resume|archive")}   # looking at the list of missions is no use of one
 YOURS = (None, "owner", "voice")                                         # a chat's origin (server.py origin_of): yours, or the stack's own checks and the AI phone
 DRAWN = ("ask", "use", "hand", "talk", "you", "tell", "help")            # what the map draws; work and status have no one at the other end
@@ -46,6 +47,12 @@ SENDERS = {"Health doctor": "doctor", "Inbox digest": "inbox", "Postmaster": "po
 def _task_id(x):
     m = re.match(r"^(?:task:|task-intake:)(\d+)", x or "")
     return int(m[1]) if m else None
+
+
+def task_of(line):
+    """The task a line belongs to (OBS-22): the one it names, or the one its run belongs to; None for a line of no task."""
+    ref = line.get("ref") or {}
+    return ref.get("task") or _task_id(ref.get("run"))
 
 
 def _cause(kind, who="", why="", certainty="recorded"):
@@ -235,7 +242,7 @@ def use_lines(calls, sessions, service, worlds):
     for s in sessions:
         who, node = service.get(s["run"]), "phone" if s["run"].startswith("phone:") else "gmail"
         if who and who != "self" and (who, node) not in used:
-            out.append({"ts": s["started"], "type": "use", "actor": who, "to": [node], "target": node, "verb": "used", "title": "", "text": "One session, matched by its timing", "detail": "", "state": "",
+            out.append({"ts": s["started"], "type": "use", "actor": who, "to": [node], "target": node, "verb": "used", "title": "", "text": "One session, tied to it by its timing", "detail": "", "state": "",
                         "ref": {"run": s["run"]}, "world": "real", "certainty": "matched"})
     return out
 
@@ -387,7 +394,9 @@ def sender_of(r):
 
 
 def tell_lines(rows, since):
-    """What the stack told you. One message on Telegram and as a push is one line; a message switched off never reached you."""
+    """What the stack told you. One message on Telegram and as a push is one line; a message switched off never reached you.
+    A line is the message itself in plain words, its area the quiet label, the raw reason and the run behind a tap
+    (OBS-19); a quiet line (channel activity) was never pushed (OBS-20)."""
     out, last = [], {}
     for r in rows:
         ts = r.get("ts") or 0
@@ -399,8 +408,10 @@ def tell_lines(rows, since):
             prev["ref"]["channels"] = sorted({*prev["ref"]["channels"], r.get("channel")})
             continue
         who = sender_of(r)
-        x = {"ts": ts, "type": "tell", "actor": who, "to": ["you"], "target": "you", "verb": "told", "title": r.get("title") or "", "text": r.get("text") or "", "detail": "",
-             "state": "failed" if r.get("decision") == "failed" else "", "ref": {"channels": [r.get("channel")]}, "world": "real", "certainty": "recorded" if r.get("by") else "matched"}
+        ref = {"channels": [r.get("channel")], **({"task": r["task"]} if r.get("task") else {})}
+        x = {"ts": ts, "type": "tell", "actor": who, "to": ["you"], "target": "you", "verb": "told", "title": r.get("title") or "", "text": r.get("text") or "",
+             "detail": r.get("detail") or "", "detail_label": "Details", "area": r.get("area") or "", "quiet": r.get("decision") == "quiet",
+             "state": "failed" if r.get("decision") == "failed" else "", "ref": ref, "world": "real", "certainty": "recorded" if r.get("by") else "matched"}
         last[key] = x
         out.append(x)
     return out
@@ -460,9 +471,11 @@ def _chats(root):
     return out
 
 
-def build(RT, TR, feed, hours=168, now=None, root="/missions", tests=False, private=True, feed_error=""):
+def build(RT, TR, feed, hours=168, now=None, root="/missions", tests=False, private=True, feed_error="", hide=frozenset()):
     """The whole picture of a window: {lines, edges, nodes, runs, coverage, sources}. private=False (the AI phone) leaves out
-    what you said and what you were told. A source that can't be read is named in `sources`, so nothing silently shows 0."""
+    what you said and what you were told. A source that can't be read is named in `sources`, so nothing silently shows 0.
+    hide: the agents and tools of the features that are off (GEN-13, PHN-28: the AI phone and its crew jobs), whose runs
+    and lines leave the picture; the records keep them."""
     root, now = Path(root), now or time.time()
     since = now - float(hours) * 3600
     tl = RT.timeline(hours, now)
@@ -502,6 +515,13 @@ def build(RT, TR, feed, hours=168, now=None, root="/missions", tests=False, priv
         lines = [x for x in lines if x.get("world") != "test"]
     if not private:
         lines = [x for x in lines if x["type"] != "tell" and x["actor"] != "you"]         # what you said and were told isn't the AI phone's to read
+    if hide:
+        runs = [r for r in runs if r["lane"] not in hide]
+        lines = [x for x in lines if x["actor"] not in hide and not hide & set(x.get("to") or [])]
+    for x in lines:                                    # OBS-22: Activity groups the lines by the task they belong to
+        t = task_of(x)
+        if t:
+            x["task"] = t
     e = edges(lines)
     return {"since": tl["since"], "now": tl["now"], "lines": lines, "edges": e, "nodes": nodes(runs, e, tests), "runs": runs,
             "coverage": coverage(runs), "sources": {k: v for k, v in sources.items() if v}}

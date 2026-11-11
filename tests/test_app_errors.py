@@ -37,7 +37,7 @@ def test_the_server_keeps_each_error_and_the_checks_lint_the_app_s_scripts(tmp_p
     check = (ROOT / "ops/check.sh").read_text()
     assert "python3 ops/app_lint.py" in check
     import app_lint
-    assert [p.name for p in app_lint.scripts()] == ["guide.js", "shop.js", "swarm.js", "task.js", "tax.js", *webjs.APP_PARTS]   # the load order of index.html
+    assert [p.name for p in app_lint.scripts()] == ["guide.js", "shop.js", "swarm.js", "task.js", "tax.js", "measures.js", *webjs.APP_PARTS]   # the load order of index.html
     assert app_lint.RULES["no-undef"] == "error"
     for img in ("images/builder/Dockerfile", "images/ci-runner/Dockerfile"):
         assert "eslint@9.39.1 globals@16.5.0" in (ROOT / img).read_text(), img

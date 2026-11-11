@@ -881,12 +881,15 @@ items:
     the stack itself) as information on it, never as a filter.
   type: functional
   priority: must
-  status: implemented
+  status: deprecated
+  superseded_by: APP-71
+  reason: The Tasks list went with the six places (11 Nov 2026); every workflow is in one list by factory and area, and
+    the platform's upkeep is its own factory group on it (APP-71).
+  verify: {method: test, by: ['tests/test_factory_app.py::test_every_workflow_is_in_one_list_grouped_by_factory_and_area']}
   parents: [SN-02, SN-19]
   sources: ['owner 2026-11-11: I didnt like this rule to begin with. Does it actually make sense to use that split? It just needlessly bisects and makes overview difficult. Can you design this properly and make these exceptions not be exceptions anymore? I want the app to show me whats going on in stack.', DEC-46]
   acceptance: 'Test: the list draws Needs you, Failed, Running now, Recent results and Scheduled in that order, newest
     first in each, with no owner filter; a task says who asked.'
-  verify: {method: test, by: ['tests/test_tax_task.py::test_every_task_is_in_one_list_in_the_order_of_what_matters_now']}
   trace: [ops/tasks.py, images/mission-control/web/static/app-tasks.js, images/mission-control/web/static/task.js]
 - id: TSK-52
   group: Everything is a task
@@ -914,11 +917,14 @@ items:
     job shall also show on its own, and the row shall never be hidden. No other area folds.
   type: functional
   priority: must
-  status: implemented
+  status: deprecated
+  superseded_by: APP-71
+  reason: The Tasks list went with the six places (11 Nov 2026); every workflow is in one list by factory and area, and
+    the platform's upkeep is its own factory group on it (APP-71).
+  verify: {method: test, by: ['tests/test_factory_app.py::test_every_workflow_is_in_one_list_grouped_by_factory_and_area']}
   parents: [SN-02]
   sources: ['owner 2026-11-11: I didnt like this rule to begin with. Does it actually make sense to use that split? It just needlessly bisects and makes overview difficult. Can you design this properly and make these exceptions not be exceptions anymore? I want the app to show me whats going on in stack.']
   acceptance: 'Test: 14 fine upkeep jobs are one row "14 jobs, all fine"; a failing one shows under Failed and in the row.'
-  verify: {method: test, by: ['tests/test_tax_task.py::test_upkeep_is_one_row_with_its_health_and_a_failing_job_shows_alone']}
   trace: [images/mission-control/web/static/app-tasks.js, images/mission-control/web/static/app.css]
 - id: TSK-54
   group: Everything is a task

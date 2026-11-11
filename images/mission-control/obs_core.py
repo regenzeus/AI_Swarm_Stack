@@ -37,7 +37,8 @@ def base(name):
 NO_ARGS = {"skills_list", "todo_list", "initial_instructions",
            "browse_look", "browse_back", "mail_access", "house_status", "health_issues", "missions_overview", "builds_overview",
            "improvement_proposals", "repos_overview", "phone_look", "phone_apps", "phone_storage", "phone_apps_report",
-           "phone_files", "swarm_context", "ledger_find", "board_inbox", "windows_status"}
+           "phone_files", "swarm_context", "ledger_find", "board_inbox", "windows_status",
+           "stack_workflows", "stack_agents", "stack_runs", "stack_asks", "stack_doctor"}
 
 
 def empty_call(e):

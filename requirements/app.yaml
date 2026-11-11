@@ -646,14 +646,17 @@ items:
       for every task; the addresses of the old Agents tab, Tasks page and mission form shall go to their place on it.
     type: functional
     priority: must
-    status: implemented
+    status: deprecated
     parents: [SN-01, SN-19]
     sources: [DEC-46, 'owner 2026-11-08: What is the difference between task and mission? I feel like tasks is better term and we should streamline and unify. ... How long it runs should not define the term. ... I feel we should keep 6 tabs and integrate tasks in agents. But tasks are not an afterthought. ... I want to see how tasks and agents connect ... Can Agents run without tasks? ... I feel like these should just be a special kind of tasks.']
-    verify: {method: test, by: [tests/test_tasks_tab.py::test_the_head_counts_the_tasks_the_list_shows, tests/test_tasks_tab.py::test_the_tasks_tab_has_five_views_and_the_old_addresses_go_there, tests/test_tasks_tab.py::test_new_task_is_one_form_that_sends_only_what_was_set]}
+    superseded_by: APP-69
+    reason: The Tasks tab went with the six places (the factory design, 11 Nov 2026); its list is Workflows (APP-71), its
+      Activity is on Home, Team and Network are on Agents and Ideas is Improve (APP-69).
+    verify: {method: test, by: [tests/test_tasks_tab.py::test_the_old_tasks_tab_s_parts_live_in_the_six_places]}
     trace: [images/mission-control/web/static/app.js, images/mission-control/web/static/swarm.js, images/mission-control/web/static/app.css]
   - id: APP-53
     title: The Network shows which agents work on which tasks
-    statement: The Tasks tab's Network shall draw the tasks and the agents that worked on them in a period as two columns
+    statement: Agents → Who works with whom shall draw the runs and the agents that worked on them in a period as two columns
       with a line for each pair (thicker for more runs, marked while it runs), focus a task or an agent on a tap, show a
       focused task's agents in the order they worked, keep the team map as "Agents together", and count what ran on no task.
     type: functional
@@ -812,14 +815,14 @@ items:
       have its list, one tap from Home's Overview while there is any.
     type: functional
     priority: should
-    status: implemented
+    status: deprecated
     parents: [SN-01, SN-06]
     sources: [DEC-53, docs/N8N-MIGRATION.md]
     rationale: 'The design''s section 4: 6 entries plus 33 more screens behind banners and links; the start page still
       offered "Agents" and "Wiki"; the Home route and Share were linked from nowhere.'
-    verify: {method: test, by: [tests/test_app_after_n8n.py::test_the_menu_names_the_seven_parts_and_every_part_is_reachable,
-      tests/test_server.py::test_the_shared_items_are_listed_newest_first_and_home_counts_them,
-      tests/test_n8n_ux.py::test_the_desk_menu_opens_n8n_inside_the_app_and_the_phone_menu_does_not_show_it]}
+    superseded_by: APP-69
+    reason: The six places (Home, Workflows, Agents, Improve, Chat, Stack) replaced the seven parts on 11 Nov 2026.
+    verify: {method: test, by: [tests/test_app_after_n8n.py::test_the_menu_names_the_six_places_and_every_part_is_reachable]}
     trace: [images/mission-control/web/static/app-base.js, images/mission-control/web/static/app.js, images/mission-control/web/static/app-devices.js,
       images/mission-control/web/static/app-tasks.js, images/mission-control/web/index.html, images/mission-control/server.share.py]
   - id: APP-65
@@ -897,3 +900,242 @@ items:
     trace: [images/mission-control/web/static/app-tasks.js, images/mission-control/web/static/app-runs.js, images/mission-control/web/static/app-workflows.js,
       images/mission-control/web/static/app-base.js, images/mission-control/web/static/app.js, images/mission-control/server.py, ops/crew.py,
       ops/missions.requests.py, ops/missions.py]
+  - id: APP-69
+    title: Six places, the same on the phone and the desk
+    statement: The menu shall be Home, Workflows, Agents, Code, Chat and Stack (APP-83), the same six in the same order on
+      the phone's bar and the desk's menu; every other screen shall light the place it lives under (what agents know under
+      Agents, n8n's editor under Stack, the agents' ideas under Code, measures and benchmarks under Workflows, a workflow's, a run's and an old
+      record's page under Workflows); the old Tasks tab's parts shall live in their places (its list on Workflows,
+      Activity on Home, Team and Network on Agents, Ideas under Code) and its old addresses, and those before it, shall
+      land there; Home shall have its own address apart from the page the app opens on, the choice of that page shall
+      offer the six names and read a choice made under an old one, Home's entry shall count what needs the owner, and
+      what the phone shared shall have its list, one tap from Home's Overview while there is any.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-01, SN-06]
+    sources: ['owner 2026-11-11: We should just have workflow. And every task should always show its n8n schema. ... The UX also currently still sucks.']
+    rationale: 'The factory design, section 6: six places, the same on the phone and the desk; the Tasks tab, Memory and
+      Code were separate entries and the phone had no Workflows.'
+    verify: {method: test, by: [tests/test_app_after_n8n.py::test_the_menu_names_the_six_places_and_every_part_is_reachable,
+      tests/test_tasks_tab.py::test_the_old_tasks_tab_s_parts_live_in_the_six_places,
+      tests/test_app_layout.py::test_the_swarm_s_views_are_under_agents_on_every_screen,
+      tests/test_n8n_ux.py::test_n8n_s_editor_opens_inside_the_app_from_workflows_and_the_stack,
+      tests/test_server.py::test_the_shared_items_are_listed_newest_first_and_home_counts_them]}
+    trace: [images/mission-control/web/static/app-base.js, images/mission-control/web/static/app.js, images/mission-control/web/static/app-agents.js,
+      images/mission-control/web/static/app-tasks.js, images/mission-control/web/static/swarm.js, images/mission-control/web/index.html,
+      images/mission-control/web/static/tools.json, images/mission-control/guide/20-tasks.md, images/mission-control/guide/25-agents.md]
+  - id: APP-70
+    title: The app speaks the factory design's words only
+    statement: No text of the app's scripts that a person reads shall use a word the factory design retired (task,
+      mission, crew, duty, door, occurrence, plan, wave, swarm, team room, conductor); its words are Platform, Factory,
+      Site, Workflow, Standard workflow, Trigger, Run, Step, Agent, Skill, Ask, Result, Ticket, Policy and Scorer, and a
+      check reads every string of the scripts with ESLint's own parser and fails on a retired word in what a person sees
+      of it. Code names (keys, routes, classes, actions) may keep the old words until phase B renames them.
+    type: quality
+    priority: must
+    status: implemented
+    parents: [SN-01]
+    sources: ['owner 2026-11-11: We should just have workflow. And every task should always show its n8n schema. ... The UX also currently still sucks.']
+    rationale: 'The factory design, section 2: eleven words for overlapping things; "Nobody can keep it straight".'
+    verify: {method: test, by: [tests/test_app_words.py::test_the_app_never_says_a_word_the_factory_design_retired,
+      tests/test_app_words.py::test_the_scan_finds_a_retired_word_in_text_and_leaves_code_alone,
+      tests/test_app_words.py::test_the_page_names_the_app_and_its_places_in_the_new_words]}
+    trace: [tests/app_strings.cjs, images/mission-control/web/static/app-base.js, images/mission-control/web/static/app-tasks.js,
+      images/mission-control/web/static/swarm.js, images/mission-control/web/static/task.js, images/mission-control/web/static/guide.js,
+      images/mission-control/web/index.html]
+  - id: APP-71
+    title: Every workflow in one list, by factory and area
+    statement: The Workflows page shall list every workflow of the site in one list, grouped by factory (home, and the
+      platform's own upkeep) and then by area, each card saying in one line each its name, area, trigger, last run, next
+      run, open Asks and its result's first sentence; the old sources without an n8n workflow shall show as the standard
+      workflows they become (Request, Change, Briefing) with their runs; areas filter and a search finds a workflow;
+      New request (the standard Request's Run now) and the triggers that start one on an event shall be on the page.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-01, SN-02, SN-19]
+    sources: ['owner 2026-11-11: We should just have workflow. And every task should always show its n8n schema. ... The UX also currently still sucks.']
+    rationale: 'The factory design, sections 4 and 6: eight ways work entered, six run tables; phase A shows them as one
+      model before phase B moves them onto n8n.'
+    verify: {method: test, by: [tests/test_factory_app.py::test_every_workflow_is_in_one_list_grouped_by_factory_and_area,
+      tests/test_factory_app.py::test_the_workflows_page_lists_by_factory_and_area_and_a_card_says_one_line_each,
+      tests/test_n8n_ux.py::test_the_list_shows_each_workflow_with_its_trigger_and_last_run,
+      tests/test_ux_polish.py::test_the_agents_and_wiki_pages_lead_with_their_lists,
+      tests/test_tasks_tab.py::test_new_task_is_one_form_that_sends_only_what_was_set]}
+    trace: [images/mission-control/server.workflows.py, images/mission-control/server.py, images/mission-control/web/static/app-factory.js,
+      images/mission-control/web/static/app.css, ops/flows_view.py]
+  - id: APP-72
+    title: A workflow's page always shows its diagram
+    statement: A workflow's page shall always show its diagram, drawn by the app from the workflow's n8n nodes and
+      connections (each node with what it is - a trigger in words, an AI Stack step's kind and agent or job, or n8n's own -
+      and an If's two ways out), laid out from its triggers and readable on a phone (one under the other) and on the desk
+      (side by side), every label whole; and its Run now, its result, its runs, its agents and its settings (its schedule
+      and on/off switch read-only, with Edit in n8n on the desk). A standard workflow shows its template's diagram.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-01, SN-03]
+    sources: ['owner 2026-11-11: We should just have workflow. And every task should always show its n8n schema. ... The UX also currently still sucks.']
+    rationale: 'The factory design, rule 4: every workflow always shows its diagram, and every run the path it took.'
+    verify: {method: test, by: [tests/test_factory_app.py::test_a_workflow_s_diagram_is_its_n8n_nodes_and_connections,
+      tests/test_factory_app.py::test_the_diagram_is_drawn_in_layers_from_its_triggers_readable_on_a_phone]}
+    trace: [ops/flows_view.py, images/mission-control/server.workflows.py, images/mission-control/web/static/app-factory.js, images/mission-control/web/static/app.css]
+  - id: APP-73
+    title: A run's page shows the path it took
+    statement: A run's page shall show its workflow's diagram with the path the run took (each step done, running,
+      waiting for the owner or failed, and what it never reached faded), each step's state, times and agent, the run's
+      open Asks answered in place, its cost and its result, and its whole record one tap away; a run of an old source
+      shall show the steps of its standard workflow up to where its record stands, a repeating one each time it ran, and
+      a run started on its schedule shall never say the owner asked.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-01, SN-03]
+    sources: ['owner 2026-11-11: We should just have workflow. And every task should always show its n8n schema. ... The UX also currently still sucks.']
+    rationale: 'The factory design, section 6: a run''s page has the diagram with the path taken, the steps, the Asks, the
+      cost and the result.'
+    verify: {method: test, by: [tests/test_factory_app.py::test_old_sources_are_runs_of_the_standard_workflow_they_become,
+      tests/test_factory_app.py::test_a_run_s_page_has_its_workflow_its_path_and_its_asks]}
+    trace: [images/mission-control/server.workflows.py, images/mission-control/web/static/app-factory.js]
+  - id: APP-74
+    title: Every Ask is answered on its card
+    statement: Every Ask that is not a gate and takes words shall have its reply box on every card it shows on (Home's
+      Needs you included); a build waiting to deploy shall be answered on its card (Deploy or Reject), the review's
+      summary behind the card's (i), with no link to another page as its only answer.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-01]
+    sources: ['lead 2026-11-11: a live screenshot of Home shows the cards with chips, Later and Dismiss but no reply box, and the build card answered only through a Review link']
+    verify: {method: test, by: [tests/test_factory_app.py::test_every_ask_but_a_gate_has_its_reply_box_on_every_card,
+      tests/test_factory_app.py::test_a_build_is_answered_on_its_card]}
+    trace: [images/mission-control/web/static/app-asks.js, ops/decisions.py]
+  - id: APP-76
+    title: An agent's page says where it is used
+    statement: Each agent shall have one page saying what it does, its model, how it runs, its tools, its knowledge (the
+      memory it may read), its skills and its budget, every workflow it is used in (a step names it or one of its jobs),
+      its recent steps and its scores (from phase C), with its health, runs and who it works with below; every link to an
+      agent opens that page.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-01, SN-19]
+    sources: ['owner 2026-11-11: Agents are crafted building blocks in a workflow']
+    verify: {method: test, by: [tests/test_factory_app.py::test_an_agent_s_page_lists_every_workflow_it_is_used_in]}
+    trace: [images/mission-control/web/static/app-agents.js, images/mission-control/web/static/swarm.js, images/mission-control/web/static/app.css]
+  - id: APP-77
+    title: Improve gathers what could be better
+    statement: The Improve place shall hold the proposals (the agents' ideas and agent changes, each with its evidence,
+      nothing changed without the owner's tap), the measures of the records and the benchmarks one tap away in the same
+      row, and the scorers' place, which says what will fill it until scorers come (phase C).
+    type: functional
+    priority: should
+    status: deprecated
+    superseded_by: APP-83
+    reason: The owner, 11 Nov 2026, said Improve was not worth its place; it left the menu until phase C/D gives it substance;
+      its ideas are a page of Code, its measures and benchmarks one tap from Workflows (APP-83).
+    parents: [SN-01]
+    sources: ['owner 2026-11-11: We should just have workflow. And every task should always show its n8n schema.']
+    verify: {method: test, by: [tests/test_factory_app.py::test_ideas_are_a_page_of_code_and_the_measures_are_reached_from_workflows]}
+    trace: [images/mission-control/web/static/app-agents.js, images/mission-control/web/static/swarm.js]
+  - id: APP-78
+    title: Home is the cockpit
+    statement: Home's Today shall be the stop switch, Needs you (the open Asks, answered in place), and what runs, waits for
+      the owner, failed and was done today, each opening its page; the agents' Activity shall be a part of Home; Home
+      shall show no AI phone card.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-01, SN-06]
+    sources: ['owner 2026-11-11: The UX also currently still sucks.']
+    verify: {method: test, by: [tests/test_factory_app.py::test_home_is_the_cockpit_with_activity_and_no_ai_phone,
+      tests/test_tax_task.py::test_home_shows_what_is_going_on_across_the_stack]}
+    trace: [images/mission-control/web/static/app-tasks.js, images/mission-control/web/static/app-asks.js]
+  - id: APP-79
+    title: A card says one short line, and who started it
+    statement: A card's text shall be one short line - a result's first sentence with a visible "…" when more follows, the
+      whole on its page - never a run's whole output; a scheduled job shall be named by its job's name; and a run started
+      on its schedule shall say so, never that the owner asked.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-01]
+    sources: ['the factory design phase A: the Memory Keeper and Your taxes cards showed whole result dumps; a schedule''s run said "you asked"']
+    verify: {method: test, by: [tests/test_factory_app.py::test_a_card_says_one_short_line_and_who_started_it]}
+    trace: [images/mission-control/web/static/app-tasks.js, images/mission-control/web/static/app-factory.js]
+  - id: APP-75
+    title: A text about the owner speaks to them
+    statement: A memory fact or an Ask that names the owner shall read in the second person in the app ("You don't want ...",
+      "Involving - you") and never name the owner; the stored text stays as it is.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-01]
+    sources: ['lead 2026-11-11: a memory fact reads "<the owner> does not want ... Involving: <the owner>"']
+    verify: {method: test, by: [tests/test_factory_app.py::test_a_text_about_the_owner_reads_in_the_second_person]}
+    trace: [images/mission-control/web/static/app-base.js, images/mission-control/web/static/app-memory.js, images/mission-control/web/static/app-asks.js]
+  - id: APP-80
+    title: A workflow shows the whole history its records hold
+    statement: A workflow's page and card shall show every run any record holds - n8n's executions the step service saw,
+      the request's or chain's own runs with their results, and a scheduled job's run history - each run once (matched by
+      its execution, or a start within 30 minutes; a job's within 2), newest first, with the last result; a run only a
+      record holds shows its workflow's one step in the state it ended in.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-01, SN-03]
+    sources: ['lead 2026-11-11, live: a request''s workflow said "Runs 0" and "No result yet" after three runs']
+    verify: {method: test, by: [tests/test_factory_app.py::test_a_workflow_shows_every_run_its_records_hold_newest_first_with_its_last_result]}
+    trace: [images/mission-control/server.workflows.py, images/mission-control/web/static/app-factory.js]
+  - id: APP-81
+    title: The diagram names its nodes by what they do
+    statement: A trigger in a diagram shall read by what it is and when it fires ("On its schedule · Mondays 08:00"),
+      never its cron; a step that holds a request's own steps shall be named by what it does ("Research and write" for a
+      request in a sentence, else its workflow's name), never its record's number, and its detail shall say once that
+      those steps run inside it until phase B.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-01]
+    sources: ['lead 2026-11-11, live: the trigger showed "On its schedule (0 8 * * 1)" and the step "Task #79 ..." with "Request #79"']
+    verify: {method: test, by: [tests/test_factory_app.py::test_the_diagram_names_a_trigger_and_a_step_by_what_it_does]}
+    trace: [images/mission-control/server.workflows.py, images/mission-control/web/static/app-factory.js]
+  - id: APP-82
+    title: Every page draws while the app is connecting
+    statement: Every page of the app (each route, and each part of a place) shall draw while the app has no state yet - a
+      skeleton, or what it can show without it - and draw again when the state comes; no page throws on the missing state.
+    type: quality
+    priority: must
+    status: implemented
+    parents: [SN-01, SN-06]
+    sources: ['the owner on the phone, 11 Nov 2026: Agents -> Health and results while "Connecting..." threw "Cannot read properties of null (reading ''crew'')"']
+    verify: {method: test, by: [tests/test_app_pages.py::test_every_page_draws_while_the_app_is_still_connecting]}
+    trace: [tests/app_pages.cjs, images/mission-control/web/static/app-tasks.js]
+  - id: APP-83
+    title: Code is a place again; Improve waits for its substance
+    statement: Code (repositories, builds, change requests, questions to Claude) shall be one of the six places again, its
+      pages as they were; Improve shall leave the menu until phase C/D gives it substance - the agents' ideas a page of Code
+      (#/ideas), the measures of the records and the benchmarks one tap from Workflows - and an old Improve link shall land
+      on the ideas (its scorers' part on Workflows).
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-01, SN-06]
+    sources: ['the owner on the phone, 11 Nov 2026: We lost code? Why? Code was good. And improve is shit.']
+    verify: {method: test, by: [tests/test_app_after_n8n.py::test_the_menu_names_the_six_places_and_every_part_is_reachable,
+      tests/test_factory_app.py::test_ideas_are_a_page_of_code_and_the_measures_are_reached_from_workflows]}
+    trace: [images/mission-control/web/static/app-base.js, images/mission-control/web/static/app.js, images/mission-control/web/static/app-agents.js,
+      images/mission-control/web/static/app-factory.js, images/mission-control/web/static/swarm.js, images/mission-control/web/index.html, ops/decisions.py,
+      images/mission-control/guide/25-agents.md]
+  - id: APP-84
+    title: A workflow names its agents under its title
+    statement: A workflow's page shall show "Agents in this workflow" right under its title - every agent a step names, and
+      the agent whose card holds a job a step runs - each a chip that opens the agent's page.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-01, SN-19]
+    sources: ['the owner on the phone, 11 Nov 2026: Its agents is very unprominent']
+    verify: {method: test, by: [tests/test_factory_app.py::test_a_workflow_names_its_agents_under_its_title]}
+    trace: [images/mission-control/web/static/app-factory.js, images/mission-control/web/static/app.css]

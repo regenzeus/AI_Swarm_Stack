@@ -46,15 +46,23 @@ def gb(n):
     return f"{n / 1e9:.1f} GB" if n >= 1e8 else f"{n / 1e6:.0f} MB"
 
 
+def phone_on():
+    """PHN-28: whether the deployment has the AI phone switched on (FEATURES names phone)."""
+    import deployment as DEPLOY
+    return DEPLOY.has("phone")
+
+
 def target_of(m):
     t = str(m.get("target") or "").lower()
     if t in ("phone", "pc"):
         return t
-    return "phone" if re.search(r"\bphone|handy|s22|android\b", f"{m.get('title', '')} {m.get('goal', '')}".lower()) else "pc"
+    return "phone" if phone_on() and re.search(r"\bphone|handy|s22|android\b", f"{m.get('title', '')} {m.get('goal', '')}".lower()) else "pc"
 
 
 # ---------- facts ----------
 def phone_facts():
+    if not phone_on():
+        raise RuntimeError("the AI phone is switched off in this deployment (FEATURES has no phone)")
     if Path("/srv/ai/phone/STOP").exists():
         raise RuntimeError("the AI phone is switched off (Stop on the Phone page)")
     st = json.loads(Path("/srv/ai/phone/state.json").read_text())

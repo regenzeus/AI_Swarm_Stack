@@ -311,13 +311,45 @@ items:
       images/mission-control/guide/17-ai-phone.md]
   - id: PHN-27
     title: The AI phone's page is easy to find
-    statement: The AI phone's page shall be one tap away from the top of Home, Agents and Stack and from its cleanup steps, shall be found
-      by searching for pairing or wireless debugging, and Home shall list a long disconnection under what needs the owner.
+    statement: While the deployment chooses the AI phone (PHN-28), the AI phone's page shall be one tap away from the Stack
+      page and from its cleanup steps, shall be found by searching for pairing or wireless debugging, and Home
+      shall list a long disconnection under what needs the owner.
     type: functional
     priority: should
     status: implemented
     parents: [SN-03]
     sources: ['chat 2026-11-04: Where are these apps Phone page? No idea how to find which is itself a big issue. Phone page needs to be
         easier to find.']
-    verify: {method: test, by: [tests/test_phone.py::test_the_phone_page_is_one_tap_from_home_agents_stack_and_search]}
+    verify: {method: test, by: [tests/test_phone.py::test_the_phone_page_is_one_tap_from_stack_and_search]}
     trace: [images/mission-control/web/static/app-base.js, images/mission-control/web/static/tools.json]
+  - id: PHN-28
+    title: The AI phone switched off is gone
+    statement: While a site's deployment does not choose the AI phone (its FEATURES does not name phone), the stack shall show nothing of the AI phone (no banner, card,
+      page, guide chapter, search entry, task, Activity row or Team card), import none of its workflows and unpublish those n8n
+      holds, start none of its crew jobs, grant no key its tool, give the assistant no phone rule, stop its container, and
+      dismiss its waiting questions with the reason "the AI phone is switched off", their history kept; its code and data
+      shall stay, and adding phone to FEATURES again shall bring every part back.
+    type: functional
+    priority: must
+    status: implemented
+    acceptance: 'Test: with phone off, each part is gone and a phone question is dismissed with the reason; with phone on, each is back.'
+    parents: [SN-03, SN-05]
+    sources: ['chat 2026-11-11: Can you remove this ai phone nonsense from the UX. What is its purpose?', 'chat 2026-11-11: I still want
+        AI Stack to be able to use it but I do not want to read anything about it if home example deployment is shut off.', GEN-13]
+    verify: {method: test, by: [tests/test_phone_off.py::test_home_chooses_the_ai_phone_and_a_site_without_it_runs_none_of_its_workflows,
+      tests/test_phone_off.py::test_a_deploy_unpublishes_the_phone_workflows_n8n_still_has,
+      tests/test_phone_off.py::test_off_its_crew_jobs_are_gone_and_refused_and_on_they_are_back,
+      tests/test_phone_off.py::test_off_no_task_of_it_shows_and_the_planner_offers_neither_its_tool_nor_its_agents,
+      tests/test_phone_off.py::test_off_its_asks_are_dismissed_with_the_reason_kept_and_on_they_ask_again,
+      tests/test_phone_off.py::test_off_the_gateway_grants_no_phone_tool_and_the_assistant_s_prompt_has_no_phone_rule,
+      tests/test_phone_off.py::test_on_the_deploy_stops_nothing_of_it,
+      tests/test_phone_off.py::test_off_shopping_offers_buy_it_yourself_and_a_cleanup_reads_the_pc,
+      tests/test_phone_off.py::test_off_the_app_draws_no_phone_banner_card_question_page_or_chapter_and_on_it_does,
+      tests/test_phone_off.py::test_off_activity_and_the_team_show_nothing_of_it,
+      tests/test_phone_off.py::test_the_app_and_the_runner_name_the_same_parts_of_the_phone,
+      tests/test_phone_off.py::test_off_the_front_end_finds_no_phone_page_and_its_links_land_on_home]}
+    trace: [deployments/home/deployment.env, ops/crew.py, ops/tasks.py, ops/decisions.py, ops/asks.py, ops/missions.py, ops/cleanup.py,
+      ops/shopping.py, ops/update-keys.py, ops/deploy.py, config/hermes/configure.sh, compose/apps.yaml,
+      images/mission-control/server.py, images/mission-control/server.devices.py, images/mission-control/interactions.py,
+      images/mission-control/web/static/app-base.js, images/mission-control/web/static/app.js, images/mission-control/web/static/shop.js,
+      images/mission-control/guide/17-ai-phone.md]

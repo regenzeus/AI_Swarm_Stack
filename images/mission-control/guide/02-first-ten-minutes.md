@@ -27,7 +27,7 @@ Briefings are written by the Topic Desk, usually every morning. Open a mission a
 
 ```try
 label: Open your missions
-open: "#/tasks"
+open: "#/workflows"
 note: Tap a mission, then the Results tab. Each report links its sources.
 ```
 

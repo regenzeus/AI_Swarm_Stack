@@ -2,7 +2,9 @@
 // ---------- stack (system) ----------
 // ---------- tools: every tool the stack runs on, its menus one tap away (APP-30; web/static/tools.json is the one list) ----------
 let TOOLS = null, toolQuery = "";
-const toolsHere = (d) => ({ ...d, tools: (d.tools || []).filter((x) => !("host" in x) || (x.host && !/^https?:\/\/(:|\/|$)/.test(x.host))) });   // no address in this deployment: no tile
+const PAGE_FEATURE = { "#/phone": "phone" };   // GEN-13: a page of a feature that is off is not found by the search (PHN-28)
+const toolsHere = (d) => ({ ...d, tools: (d.tools || []).filter((x) => !("host" in x) || (x.host && !/^https?:\/\/(:|\/|$)/.test(x.host))),   // no address in this deployment: no tile
+  pages: (d.pages || []).filter((p) => featureOn(PAGE_FEATURE[p[1]] || "core")) });
 const toolsLoad = () => (TOOLS ? Promise.resolve(TOOLS) : fetch("/static/tools.json").then((r) => r.text()).then((t) => (TOOLS = toolsHere(JSON.parse(t.replace(/\{\{(\w+)\}\}/g, (_, k) => DEPLOY[k] || ""))))).catch(() => ({ tools: [], pages: [] })));
 const toolBase = (t) => (t.host.startsWith("tailnet") ? HOSTURL + t.host.slice(7) : t.host);
 const toolUrl = (t, m) => (t.host === "app" ? m.path : toolBase(t) + m.path);   // host "app": a page of this app (n8n inside it, WFL-13)
@@ -187,9 +189,9 @@ function trackerStart(t) {
 }
 function trackersHtml(T) {
   const need = T.shadow_needed || 0;
-  return `${T.trackers.map((t) => `<div class="card pad"><div class="row between wrap" style="gap:4px 8px"><b class="wrap">${esc(t.name)}</b><span class="pill">${esc(t.kind)}</span></div>
-      <div class="small muted wrap">starts ${t.workflow ? `<a href="#/workflows">${esc(t.workflow)}</a>` : "no workflow"} · ${trackerStart(t)} · read up to ${t.cursor ? esc(dt(t.cursor)) : "nothing yet"}</div>
-      ${t.refused ? `<div class="small err-t wrap">${esc(t.refused)}</div>` : ""}</div>`).join("")}
+  return `${T.trackers.map((t) => `<div class="card pad"><div class="row between wrap" style="gap:4px 8px"><b class="wrap">${esc(t.name)}</b><span class="row wrap" style="gap:6px">${t.write === "off" ? `<span class="pill">read-only</span>` : ""}<span class="pill">${esc(t.kind)}</span></span></div>
+      <div class="small muted wrap">${t.workflow ? `starts <a href="#/workflows">${esc(t.workflow)}</a> · ${trackerStart(t)} · read up to ${t.cursor ? esc(dt(t.cursor)) : "nothing yet"}` : t.records ? "starts no run: read for its records" : `starts no workflow · ${trackerStart(t)}`}</div>
+      ${t.refused ? `<div class="small err-t wrap">${esc(t.refused)}</div>` : ""}${t.records ? `<div class="row wrap mt-2"><a class="btn sm" href="#/measures?tracker=${encodeURIComponent(t.name)}">${ic.list}Measures</a></div>` : ""}</div>`).join("")}
     ${T.kinds.map((k) => `<div class="card pad tk-kind"><div class="row between wrap" style="gap:6px 8px"><b>${esc(k.kind)}</b>
         <span class="row wrap" style="gap:6px"><span class="pill ${k.live ? "ok" : ""}">${k.live ? "live" : "in shadow"}</span>${k.live ? `<button class="btn sm" data-tk-live="0" data-kind="${esc(k.kind)}">Back to shadow</button>`
           : `<button class="btn sm${k.approved >= need ? " primary" : ""}" data-tk-live="1" data-kind="${esc(k.kind)}"${k.approved >= need ? "" : " disabled"}>Go live</button>`}</span></div>
@@ -229,8 +231,8 @@ function bindPacks() {
 // backups), Costs (what was paid, the subscriptions, the agents day by day), Tools, Connections (Gmail, outside agents,
 // packs and trackers) and Settings. The guide has its own page (#/guide), one tap from the title row.
 const STACK_TABS = [["health", "Health"], ["costs", "Costs"], ["tools", "Tools"], ["connections", "Connections"], ["settings", "Settings"]];
-const START_PAGES = [["", "Home"], ["#/tasks", "Tasks"], ["#/workflows", "Workflows"], ["#/memory", "Memory"], ["#/build", "Code"], ["#/chat", "Chat"], ["#/system", "Stack"]];   // APP-49: where the app opens, the menu's names
-const OLD_START = { "#/missions": "#/tasks", "#/wiki": "#/memory" };   // a choice kept from before DEC-46 and the Memory tab
+const START_PAGES = [["", "Home"], ["#/workflows", "Workflows"], ["#/agents", "Agents"], ["#/build", "Code"], ["#/chat", "Chat"], ["#/system", "Stack"]];   // APP-49: where the app opens, the menu's names
+const OLD_START = { "#/missions": "#/workflows", "#/tasks": "#/workflows", "#/wiki": "#/agents", "#/memory": "#/agents", "#/improve": "#/build" };   // a choice kept from before the six places (APP-69)
 let stackTab = "";
 function stackHealthHtml(sy, svc) {
   return `<a class="banner info mb-3" href="#/traces">${ic.search}<span class="grow"><b>Traces</b> · every model call with its prompt and answer (Phoenix)</span>${ic.next}</a>
@@ -246,7 +248,7 @@ function stackHealthHtml(sy, svc) {
       <div class="card grid g2" style="gap:0">${svc.map((s) => `<div class="svc"><span class="dot ${s.state === "running" ? (/unhealthy/.test(s.status) ? "warn" : "ok") : "err"}"></span><span class="n">${esc(s.name)}</span><span class="tiny faint">${esc(s.status.replace(/^Up /, "").replace(/ \(healthy\)/, ""))}</span></div>`).join("")}</div>
     </div>
     <div>
-      <div class="section-h"><h2>Timers without n8n</h2><a class="tiny" href="#/workflows">Every other schedule: Workflows</a>${explain("kept-timers", "The backup, the restore drill and the boot check keep their own timers: they must run when n8n is down. Every other job and task runs on its workflow's schedule.", "Why these")}</div>
+      <div class="section-h"><h2>Timers without n8n</h2><a class="tiny" href="#/workflows">Every other schedule: Workflows</a>${explain("kept-timers", "The backup, the restore drill and the boot check keep their own timers: they must run when n8n is down. Every other job runs on its workflow's schedule.", "Why these")}</div>
       <div class="card list">${(sy.timers || []).map((t) => { const failed = (sy.failed || []).some((f) => f.startsWith(t.unit + ".")); return `<div><div class="ic ${failed ? "err" : ""}">${failed ? ic.alert : ic.clock}</div><div class="grow"><div class="ttl">${esc((S.crew || []).find((c) => c.unit === t.unit)?.name || t.unit)}</div><div class="sub">last ${t.last ? rel(new Date(t.last / 1000).toISOString()) : "–"}</div></div><div class="tiny faint" style="white-space:nowrap">${t.next ? rel(new Date(t.next / 1000).toISOString()) : "–"}</div></div>`; }).join("")}</div>
     </div>
   </div>
@@ -283,7 +285,7 @@ function vSystem() {
   const tab = stackTab, part = (k, html) => `<div data-sp="${k}" ${tab === k ? "" : "hidden"}>${html}</div>`;
   view.innerHTML = `
   <div class="hero stackhero"><div class="grow"><h1>Stack</h1><p>${stackLine(sy, svc)}</p></div>
-    <div class="row wrap stackact"><a class="btn sm" href="#/guide">${ic.doc}Guide</a><a class="btn sm" href="#/files" title="What your tasks made, the space it takes, the trash">${ic.archive}Files · ${fsize(S.files?.usage?.used || 0)}${(S.files?.usage?.pct || 0) >= 80 ? ` <b class="err-t">${S.files.usage.pct} %</b>` : ""}</a></div></div>
+    <div class="row wrap stackact"><a class="btn sm" href="#/n8n">${ic.flow}n8n</a><a class="btn sm" href="#/guide">${ic.doc}Guide</a><a class="btn sm" href="#/files" title="What your tasks made, the space it takes, the trash">${ic.archive}Files · ${fsize(S.files?.usage?.used || 0)}${(S.files?.usage?.pct || 0) >= 80 ? ` <b class="err-t">${S.files.usage.pct} %</b>` : ""}</a></div></div>
   <nav class="seg stackseg" aria-label="Parts of this page">${STACK_TABS.map(([k, l]) => `<button type="button" data-st="${k}" class="${tab === k ? "on" : ""}">${l}</button>`).join("")}</nav>
   ${part("health", stackHealthHtml(sy, svc))}
   ${part("costs", stackCostsHtml(sy))}
@@ -340,7 +342,7 @@ async function deviceCard() {
   const canPush = reg && "PushManager" in window && (!ios || standalone);
   el.innerHTML = `
     ${standalone ? `<div class="row small"><span class="dot ok"></span>Installed as an app</div>` : `<div class="small muted">${ios ? "Install: Share → “Add to Home Screen”." : "Install: browser menu → “Install app” / “Add to Home screen”."}</div>`}
-    <label class="switch" style="margin-top:6px"><span><b>Push notifications</b><div class="small muted">${canPush ? "Finished runs, events, errors, new missions" : ios ? "On iPhone only after installing the app" : "Not supported by this browser"}</div></span><input type="checkbox" id="pushsw" ${sub ? "checked" : ""} ${canPush ? "" : "disabled"}></label>
+    <label class="switch" style="margin-top:6px"><span><b>Push notifications</b><div class="small muted">${canPush ? "Finished runs, events, errors, new workflows" : ios ? "On iPhone only after installing the app" : "Not supported by this browser"}</div></span><input type="checkbox" id="pushsw" ${sub ? "checked" : ""} ${canPush ? "" : "disabled"}></label>
     ${sub ? `<button class="btn sm" id="pushtest" style="margin-top:4px">${ic.bell}Send a test</button>` : ""}`;
   const sw = $("#pushsw");
   if (sw) sw.onchange = async () => {
@@ -370,9 +372,8 @@ function onState(s) {
   S = s;
   lastAlive = Date.now();
   LINK = s.link || LINK;                                 // APP-65: how the runner is, as the app sees it
-  if (first && ["mission", "chat", "wiki", "new", "system", "build", "repo", "guide", "crew", "house", "tasks", "files", "file", "task"].includes(route.name)) return render(true);   // a task page opened cold: its Where it runs needs the state (WFL-11)
-  if (route.name === "tasks" && !first) { tasksUpdate(); chrome(); return; }
-  if (first && route.name === "swarm" && ["improve", "agents"].includes(swTab)) return render(true);   // FND-36: they read S
+  if (first && ["mission", "chat", "wiki", "new", "system", "build", "repo", "guide", "crew", "house", "workflows", "agents", "ideas", "files", "file", "task"].includes(route.name)) return render(true);   // a task page opened cold: its Where it runs needs the state (WFL-11)
+  if (first && ["ideas", "agents"].includes(route.name)) return render(true);   // FND-36: they read S
   if (route.name === "house" && !first) { houseUpdate(); chrome(); return; }
   if (route.name === "memory" && $("#memprobs")) { const p = $("#memprobs"), h = memProbsHtml(); if (p.innerHTML !== h) p.innerHTML = h; }   // the map's problems, as the keepers report them
   if (route.name === "guide") { guideOnState(); chrome(); return; }

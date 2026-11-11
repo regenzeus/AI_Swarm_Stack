@@ -81,7 +81,7 @@ function taxYearHtml(v, d) {
 async function vTax() {
   const y = +route.args[0], what = TAX_PAGES[route.args[1]] ? route.args[1] : "workbook";
   const back = (S?.tasks || []).find((t) => t.door === "flow" && t.result_view === "tax");
-  const backHtml = `<a class="back" href="${back ? `#/task/${back.id}` : "#/tasks"}">${ic.back}${back ? esc(back.title) : "Tasks"}</a>`;
+  const backHtml = `<a class="back" href="${back ? `#/task/${back.id}` : "#/workflows"}">${ic.back}${back ? esc(back.title) : "Workflows"}</a>`;
   view.innerHTML = `${backHtml}<div class="stack"><div class="skeleton" style="height:96px"></div><div class="skeleton" style="height:320px"></div></div>`;
   const d = await taxData();
   if (route.name !== "tax") return;

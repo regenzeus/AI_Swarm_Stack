@@ -98,6 +98,7 @@
       ]
     }
   },
+  "factory": "home",
   "id": "aisItemHomeInbox",
   "name": "Item: home/inbox",
   "nodes": [

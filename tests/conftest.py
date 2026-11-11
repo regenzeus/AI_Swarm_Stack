@@ -13,6 +13,9 @@ for p in (ROOT / "ops", ROOT / "images" / "mission-control", ROOT / "images" / "
     sys.path.insert(0, str(p))
 os.environ.update(GIT_AUTHOR_NAME="test", GIT_AUTHOR_EMAIL="test@example.com",
                   GIT_COMMITTER_NAME="test", GIT_COMMITTER_EMAIL="test@example.com")
+# The tests run as the home deployment unless one names another: a machine that names none runs the platform only
+# (PLT-44), and CI and the builder name none. tests/test_site_doctor.py runs the platform default on its own.
+os.environ.setdefault("AISTACK_DEPLOYMENT", "home")
 
 # Each test process gets a temp folder of its own (QA, parallel tests): code that falls back to the system's temp folder
 # (journal.py's lock without a vault, repofacts' copies) never meets another worker's or another user's files there.
@@ -48,6 +51,23 @@ def runner(tmp_path, monkeypatch):
     monkeypatch.setattr(X, "telegram", lambda *a, **k: True)
     monkeypatch.setattr(X, "telegram_said", lambda *a, **k: "sent")   # what deliver() asks (TSK-50)
     return M
+
+
+@pytest.fixture
+def phone_on(monkeypatch):
+    """The AI phone switched on, as a deployment that chooses it has it (home does): the tests of the phone's own
+    behaviour run with it on whatever the machine's deployment says; tests/test_phone_off.py switches it off and on (PHN-28)."""
+    import deployment as DEPLOY
+    monkeypatch.setattr(DEPLOY, "ON", DEPLOY.ON | {"phone"})
+    return DEPLOY.ON
+
+
+@pytest.fixture
+def phone_off(monkeypatch):
+    """The AI phone switched off, as a site that does not choose it has it (PHN-28), whatever the machine's deployment says."""
+    import deployment as DEPLOY
+    monkeypatch.setattr(DEPLOY, "ON", DEPLOY.ON - {"phone"})
+    return DEPLOY.ON
 
 
 @pytest.fixture
@@ -105,6 +125,7 @@ def no_machine_folders(tmp_path, monkeypatch):
     root = Path(__file__).resolve().parents[1]
     mine = lambda m: str(getattr(m, "__file__", "") or "").startswith((str(root / "ops"), str(root / "images")))
     moved = lambda v: tmp_path / "srv" / str(v).removeprefix("/srv/")
+    monkeypatch.setenv("ASKS_DIR", str(tmp_path.parent / f"{tmp_path.name}-asks"))   # ops/asks.py's store (ASK-01), beside the test's folder
     for mod in {notify, journal, crew, *(m for m in list(sys.modules.values()) if m and mine(m))}:   # review QA-R18: all of them
         for name, value in list(vars(mod).items()):
             if isinstance(value, Path) and str(value).startswith("/srv/"):
@@ -113,6 +134,16 @@ def no_machine_folders(tmp_path, monkeypatch):
                     and any(str(v).startswith("/srv/") for v in value):
                 monkeypatch.setattr(mod, name, type(value)(moved(v) if str(v).startswith("/srv/") else v for v in value))
     yield
+
+
+@pytest.fixture(autouse=True)
+def no_stack_change(tmp_path, monkeypatch):
+    """OBS-20: whether the stack is being updated is read from this machine (the deploy and land locks in the home folder,
+    the runner's start from systemd): a test sees a stack that is not, unless it says otherwise."""
+    import notices
+    monkeypatch.setattr(notices, "DEPLOY_LOCK", tmp_path / "deploy.lock")
+    monkeypatch.setattr(notices, "LAND_LOCK", tmp_path / "land.lock")
+    monkeypatch.setattr(notices, "runner_started", lambda: 0)
 
 
 @pytest.fixture(autouse=True)

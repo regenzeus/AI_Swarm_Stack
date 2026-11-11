@@ -25,6 +25,7 @@
       ]
     }
   },
+  "factory": "platform",
   "id": "aisc02ba5fc96134",
   "name": "Crew: Journey checks",
   "nodes": [

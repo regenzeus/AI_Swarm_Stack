@@ -40,6 +40,7 @@ import swarm_client as SW
 import memory as MEM
 import registry as REG
 import notify as N                                # OBS-16: the one notification path
+import notices as NT                               # OBS-20: a failure during an update waits for its next good run
 import tasks as TK                                # TSK-01 to TSK-04: every piece of work is a task
 import conductor as CD                            # TSK-05 to TSK-09: a task's plan graph, step by step
 import events as EV                               # TSK-10 to TSK-12: the event bus, the owner's rules, breaking news
@@ -57,9 +58,12 @@ import prompts as P                               # MEM-11: the agent prompts li
 import windows_desk as WD                         # PLT-31: asking Windows, through a folder it fetches from
 import changes as CHG                             # CHG-01: change requests
 import repowiki as RW                             # CHG-08: one wiki per repository
+import stack_requests as SR                        # WAY-04, WAY-05: the stack command line's and the stack tools' requests
 import onboard as O                        # onboarding a repository: the whole package (BLD-26)
 import files as FL                                # MIS-23: the files a mission was asked to make (docs/DELIVERABLES.md)
 import decisions as DQ                            # AUT-05: everything that waits for the owner, one ranked list, and its shadow
+import asks as AK                                 # ASK-01..: every question for a person, one durable store; the stop switch
+AK.register_workflow_kinds()                      # a workflow's questions and the records' gates, known before the first state
 import memstack as MS                             # MEM-22 to MEM-34: the memory stack (catalogue, openings, the memory tools)
 import memwrite as MW                             # MEM-35 to MEM-37: what enters memory, and how
 import mailsort as MSORT                          # CNX-10 to CNX-13: the owner's choices of senders whose mail is sorted out
@@ -275,10 +279,17 @@ EVENTS_LOCK = threading.Lock()                     # the event log's writer and 
 EVENT_DAYS, EVENTS = 3, 200                        # Home's feed: three days of events, at most 200 (the newest 80 lost a morning's alerts by evening, APP-37)
 
 
-def event(kind, slug="", text="", push=False, title="", category=None, by=""):
+def event(kind, slug="", text="", push=False, title="", category=None, by="", area="", detail="", task=None, quiet=False):
+    """One line of the activity feed, pushed when asked and allowed. area: the work's area (ops/areas.py), the line's
+    quiet label; detail: the raw reason and the run's place, behind a tap (OBS-19); task: the task it belongs to;
+    quiet: no push, but a line in Activity all the same (a failure during an update that settled, OBS-20)."""
+    by = by or ("mission" if slug else "")
+    more = {k: v for k, v in (("area", area), ("detail", detail), ("task", task)) if v}
     if push:                                       # OBS-16: a push only where the owner's preferences and quiet hours allow it
-        push = N.push_allowed(kind, text, title, category, by=by or ("mission" if slug else ""))
-    e = {"ts": now().isoformat(timespec="seconds"), "kind": kind, "slug": slug, "title": title, "text": text, "push": push}
+        push = N.push_allowed(kind, text, title, category, by=by, **more)
+    elif quiet:
+        N.quiet_line(kind, text, title, category, by=by, **more)
+    e = {"ts": now().isoformat(timespec="seconds"), "kind": kind, "slug": slug, "title": title, "text": text, "push": push, **more}
     with EVENTS_LOCK, open(PUBLIC / "events.jsonl", "a") as f:
         f.write(json.dumps(e, ensure_ascii=False) + "\n")
     log(f"event {kind} {slug}: {text}")
@@ -881,6 +892,8 @@ def worker():
                 c.close()
                 if row and G.why_down():                # PLT-28: it stays queued until the stack is back
                     row = None
+                if row and AK.stopped():                # ASK-08: the stop switch holds it queued
+                    row = None
                 if row:
                     t = threading.Thread(target=_run_thread, args=(row,), daemon=True, name=f"run-{row['id']}")
                     active[row["id"]] = t
@@ -1123,11 +1136,50 @@ def write_state(c, missions):
         state.update(DQ.state(state))
     except Exception as e:
         log(f"decisions: {type(e).__name__}: {e}")
+    try:
+        state.update(AK.published())                # ASK-01: the Asks, the rules, the stop switch, the undo records
+    except Exception as e:
+        log(f"asks: {type(e).__name__}: {e}")
     tmp = PUBLIC / "state.json.tmp"
     tmp.write_text(json.dumps(state, ensure_ascii=False, default=str))
     tmp.replace(PUBLIC / "state.json")
 
 
+def asks_worker():
+    """ASK-01: the Asks' clock, every ASKS_EVERY_S: held answers applied through the runner's own requests, snoozes
+    woken, defaults at their deadline, gate reminders and escalation."""
+    import asks_tickets as AT
+    from domain import records as RC
+    AK.DISPATCH[0], AK.STOP_HOOK[0] = dispatch, stop_switch
+    RC.set_gate(AK.record_gate)                         # ASK-20, REC-08: a gated status asks its role's holder
+    tickets = 0.0
+    while not stop.is_set():
+        try:
+            for line in AK.tick(notify=lambda text, category="asks": notify(text, category)):
+                log(f"asks: {line}")
+            if time.time() - tickets > TICKETS_EVERY_S:   # ASK-17: each Ask and answer to its task's ticket, once
+                tickets = time.time()
+                for line in AT.sync():
+                    log(f"asks: {line}")
+        except Exception as e:                          # logged; the next pass tries again, nothing is lost: the store holds it
+            log(f"asks: {type(e).__name__}: {e}")
+        stop.wait(ASKS_EVERY_S)
+
+
+def asks_reader():
+    """ASK-11: answers in words, read by the interpreter on their own thread, so a model call never holds the clock."""
+    import asks_words as AW
+    ask = AW.model_ask(sys.modules[__name__])
+    while not stop.is_set():
+        try:
+            AW.work(ask, log=log)
+        except Exception as e:                          # logged; the words stay in the store and are read next pass
+            log(f"asks: reading: {type(e).__name__}: {e}")
+        stop.wait(ASKS_EVERY_S)
+
+
+TICKETS_EVERY_S = 60    # limit: paces, the tickets are written once a minute: a tracker is asked at most that often
+ASKS_EVERY_S = 2        # limit: paces, the Asks' clock looks every 2 s, so an answer is applied within seconds of its undo
 RES = {}
 _queue_cache = []
 
@@ -1271,7 +1323,8 @@ def main():
     threading.Thread(target=watcher, daemon=True).start()
     threading.Thread(target=W.worker, daemon=True, name="wiki-summaries").start()
     threading.Thread(target=H.worker, daemon=True, name="house").start()           # Home Assistant status + the Echo bridge
-    threading.Thread(target=phone_watch, daemon=True).start()
+    if DEPLOY.has("phone"):                          # PHN-28: switched off, nothing of the phone's to pass on
+        threading.Thread(target=phone_watch, daemon=True).start()
     threading.Thread(target=resmon, daemon=True).start()
     threading.Thread(target=B.worker, daemon=True).start()
     threading.Thread(target=CT.worker, daemon=True).start()
@@ -1285,6 +1338,8 @@ def main():
     import flows_view as FV                                                        # WFL-11: each workflow's runs, for the app's pages
     FV.start(sys.modules[__name__])
     threading.Thread(target=CD.worker, daemon=True, name="conductor").start()      # plan graphs, step by step (TSK-05)
+    threading.Thread(target=asks_worker, daemon=True, name="asks").start()         # ASK-01: held answers, snoozes, defaults, gates
+    threading.Thread(target=asks_reader, daemon=True, name="asks-words").start()   # ASK-11: answers in words, read by the interpreter
     threading.Thread(target=EV.worker, daemon=True, name="event-bus").start()      # events, rules, breaking news (TSK-10)
     HI.start()                                                                      # the telemetry history, hourly (TSK-25)
     PN.start()                                                                      # growing files pruned, daily (PLT-21)
@@ -1303,6 +1358,7 @@ def main():
                     last_cost = time.time()
                     refresh_costs(c, missions)
                     N.flush()                          # after quiet hours: what was held goes out as one message
+                    NT.due(FW.told_late)               # OBS-20: a failure held during an update that did not settle is told now
                     TK.sync(c, missions)               # every door's work is a task; each task follows its door
                     TK.conduct_all(c, missions)        # TSK-21: one engine for repeating tasks
                     if TK.alerts_to_tasks(c, missions):   # ... and for a briefing's alerts

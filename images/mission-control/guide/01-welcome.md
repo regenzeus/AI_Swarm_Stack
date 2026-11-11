@@ -54,21 +54,15 @@ At the end of every screen, **How this page works** opens the chapter about that
 Home has the box to ask or give a task, then three tabs: **Today** (Needs you and Now), **Results** and
 **Overview** (the AI phone and the day's numbers). The tab you last opened stays open. In order:
 
-- **Needs you**: only decisions that wait for you, each one tap away: builds ready for review, a purchase to approve,
-  AI phone cleanup steps, AI phone approval requests, Gmail Trash batches, agents that need access, memories to
-  confirm or forget, a stopped change, a shipped idea that waits for your "It works", the stack's ideas and changes to
-  its agents, and setup steps only you can do. Review builds show their checks, CI status and AI-review verdict. A kind
-  with many items (22 ideas, say) is one row with its count, so Home stays short and the number at the top is the whole
-  list's. When nothing waits, it says so in one green line. Nothing is approved or deployed just by opening a row.
-  **All** opens the same list in full (**Needs you**, `#/decide`): every decision ranked by what expires first and
-  what costs most to wait, each with why, what the stack would decide, what happens without an answer, and its
-  answers; alike routine ones (AI phone cleanup steps, the Memory Keeper's suggestions) are answered together. A row
-  called **Test item** in the small hours is the nightly journey check taking its own test through this list; it answers
-  and removes itself and changes nothing else. Under it are the list's numbers (how many
-  a day, how fast you answer, how many expired, against the target of at most five a day within twelve hours) and
-  **the shadow**: for every yes-or-no decision the stack records what it would have decided and then what you did. A
-  kind of action can only ever earn acting on its own from that agreement, its exam and your OK; money, people,
-  deleting and security never can.
+- **Needs you**: only what waits for you, each as a card you answer right there: builds ready to deploy, a purchase,
+  AI phone cleanup steps and approval requests, Gmail Trash batches, agents that need access, memories to confirm or
+  forget, a stopped change, a shipped idea that waits for your "It works", the stack's ideas, setup steps only you can
+  do, and questions from tasks, workflows and the tax desk. Tap a chip, or answer in your own words; **Later** and
+  **Dismiss** are on every card, and **Undo** stays for a few seconds after you answer. Cards of one kind fold into one
+  with one answer for all. **Stop everything** above it holds every agent and workflow at once. **All** opens the same
+  list in full (**Needs you**, `#/decide`), ranked by what expires first and what costs most to wait; a card called
+  **Test item** in the small hours is the nightly journey check, which answers and removes itself. How it all works,
+  and what the stack may do without asking, is in **What the stack may do, and how it asks you**.
 - **Now**: the run that is going (with its live log), builds and Claude tasks at work, agents queued for the run
   slot, and what comes up next. Under it, **Stack upkeep** shows what you can read but not answer: the health alerts
   the Health doctor looks at, and the AI phone when it is not connected.

@@ -84,9 +84,9 @@ def blocks(names):
 
 
 FORMAT = re.search(r"// ---------- formatting \(TSK-31\).*?// ---------- end of formatting ----------", JS, re.S)[0]
-NAMES = ("esc", "TSTATUS", "rhythmText", "firstLine", "TGROUPS", "AREAS", "ASKED", "NEEDS_T", "tRepeats", "tOver", "taskAgentOf", "tNeeds",
+NAMES = ("esc", "TSTATUS", "rhythmText", "firstLine", "AREAS", "ASKED", "NEEDS_T", "tRepeats", "tOver", "taskAgentOf", "tNeeds",
          "asksText", "tLive", "tRepeating", "tFailed", "tWhen", "RECENT_MS", "tGroup", "tArea", "tHref", "tMine", "tNext", "KIND_IC", "tIcon",
-         "tAsked", "whenChip", "stateChip", "avatars", "tRow", "tasksGrouped", "upkeepRowHtml", "tasksListHtml", "HOME_GROUPS", "HOME_ROWS",
+         "tAsked", "tTitle", "HOME_GROUPS", "HOME_ROWS",
          "stackWords", "stackHtml", "CREW_AREAS", "CREW_IC", "crewAgent", "agentHealth")
 
 
@@ -122,42 +122,12 @@ def board():
     return {"tasks": tasks, "crew": crew}
 
 
-def test_every_task_is_in_one_list_in_the_order_of_what_matters_now():
-    html = node(board(), "tasksListHtml()")
-    heads = [h for h in ("Needs you", "Failed", "Running now", "Recent results", "Scheduled") if h in html]
-    assert heads == ["Needs you", "Failed", "Running now", "Recent results", "Scheduled"]
-    pos = {x: html.index(x) for x in ("Which kit fits", "Fix the share sheet", "Copper briefing", "RAM upgrade", "Your taxes")}
-    assert sorted(pos, key=pos.get) == ["Which kit fits", "Fix the share sheet", "Copper briefing", "RAM upgrade", "Your taxes"]
-    assert "A chat" not in html                                                 # a chat lives on Chat
-    assert ">Briefings<" in html and ">Taxes<" in html and "you asked" in html   # its area and who asked, as information
-    for gone in ('["you", "User"]', "tasksOwner", "netOwner", "data-to=", "data-no="):
-        assert gone not in JS, gone                                              # no yours/stack filter anywhere
-    body = blocks(["tasksBodyHtml"])[0]
-    assert "data-tarea" in body and "phoneBanner()" in body                     # the areas as an optional filter
-    state = TK.state.__doc__ and Path(TK.__file__).read_text()
-    assert '"area": area_of(c, t), "asked": asked_by(t)' in state
-
-
-def test_upkeep_is_one_row_with_its_health_and_a_failing_job_shows_alone():
-    html = node(board(), "tasksListHtml()")
-    failed = html[html.index("Failed"):html.index("Running now")]
-    assert "Nightly restart" in failed                                           # failure is never folded away
-    row = html[html.index('class="card tupkeep"'):]
-    assert "3 jobs, " in row and "1 failing: Nightly restart" in row and "last run 1 min ago" in row
-    assert all(x in row for x in ("Swarm sync", "Tracker poll"))                 # a tap opens them as rows
-    assert "Swarm sync" not in html[:html.index('class="card tupkeep"')]          # a fine job only in the row
-    fine = board()
-    fine["crew"][2]["state"] = "ok"
-    assert "3 jobs, all fine" in node(fine, "tasksListHtml()")
-    assert 'class="card tupkeep"' not in node(board(), "(tasksArea = 'upkeep', tasksListHtml())")   # picked: its jobs as rows
-
-
 def test_home_shows_what_is_going_on_across_the_stack():
     html = node(board(), "stackHtml()")
     for part, title in (("Running now", "Copper briefing"), ("Waiting for you", "Which kit fits"), ("Failed", "Nightly restart"), ("Done today", "RAM upgrade")):
         assert part in html and title in html, part
     assert 'href="#/task/3"' in html and 'href="#/crew/recycle"' in html         # each row opens its task
-    assert "3 jobs, 1 failing" in html and 'href="#/tasks?area=upkeep"' in html
+    assert "3 jobs, 1 failing" in html and 'href="#/workflows?area=upkeep"' in html
     home = blocks(["vHome"])[0]
     assert "${needsHtml()}${stackHtml()}${nowHtml()}" in home
     assert "NOT_YOURS" not in JS and "const QUIET = (t) => t.area === \"upkeep\"" in JS   # Results: every area, upkeep when it fails

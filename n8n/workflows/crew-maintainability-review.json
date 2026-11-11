@@ -25,6 +25,7 @@
       ]
     }
   },
+  "factory": "platform",
   "id": "aisc1ee127eaeedf",
   "name": "Crew: Maintainability review",
   "nodes": [

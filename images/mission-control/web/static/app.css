@@ -104,6 +104,14 @@ main { flex: 1; min-width: 0; }
 .rburst > summary::-webkit-details-marker { display: none; }
 .rburst[open] > summary { border-bottom: 0; }
 .rburstin { margin-left: 38px; border-left: 2px solid var(--border); padding-left: 10px; }
+/* Activity grouped by task (OBS-22): the task's name and its area over its lines; a message to you reads as the message */
+.rtask + .rtask { margin-top: 16px; }
+.rtask-h { display: flex; justify-content: space-between; align-items: baseline; gap: 4px 10px; flex-wrap: wrap; padding-bottom: 6px;
+  border-bottom: 1px solid var(--border); font-weight: 650; font-size: var(--fs-4); }
+.rtask-h a { color: var(--text); }
+.rtask .rline:last-child { border-bottom: 0; }
+.rtell { white-space: pre-wrap; overflow-wrap: anywhere; min-width: 0; }
+.rline.rquiet .rtell { color: var(--muted); }
 .brand { display: flex; align-items: center; gap: 10px; font-weight: 650; letter-spacing: -.01em; }
 .brand img { width: 28px; height: 28px; border-radius: 8px; }
 .view { max-width: 1180px; margin: 0 auto; padding: calc(env(safe-area-inset-top) + 18px) 16px 12px; }
@@ -1387,9 +1395,6 @@ a.memfact:hover { background: var(--surface-2); }
 .tchip.run { background: var(--run-bg); color: var(--run); }
 .tchip.err { background: var(--err-bg); color: var(--err); }
 .tchip.ok { background: var(--ok-bg); color: var(--ok); }
-.tavs { display: inline-flex; margin-left: auto; padding-left: 8px; }
-.tavs i { font-style: normal; width: 21px; height: 21px; margin-left: -6px; border-radius: 50%; border: 2px solid var(--surface); background: var(--surface-3);
-  display: grid; place-items: center; font-size: var(--fs-1); font-weight: 700; color: var(--accent); }
 .tavs i.live { color: var(--run); box-shadow: 0 0 0 1.5px var(--run); }
 .tavs i.more { color: var(--muted); font-size: var(--fs-1); }
 /* New task: one form; only what you set is decided */
@@ -1593,8 +1598,8 @@ q.quote { quotes: "“" "”"; }
 .tk-item { border-top: 1px solid var(--border); padding-top: 8px; display: flex; flex-direction: column; gap: 6px; }
 /* WFL-11, APP-66: the tools inside the app (n8n, Phoenix). A tool's page gives its frame the content area beside the menu and
    the window's height; a task's or crew job's "Where it runs" shows the run's canvas; a phone gets lists for n8n */
-body[data-page="workflows"] .view, body[data-page="traces"] .view { max-width: none; padding-bottom: 0; }
-body[data-page="workflows"] .pagehelp, body[data-page="traces"] .pagehelp { display: none; }   /* a tool's page is its frame; the chapter is behind its (i) */
+body[data-page="n8n"] .view, body[data-page="traces"] .view { max-width: none; padding-bottom: 0; }
+body[data-page="n8n"] .pagehelp, body[data-page="traces"] .pagehelp { display: none; }   /* a tool's page is its frame; the chapter is behind its (i) */
 .tool-head { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; margin-bottom: 12px; }
 .tool-head h1 { margin: 0 auto 0 0; }
 .tool-frame { display: block; width: 100%; height: max(520px, calc((100dvh / var(--z, 1)) - 104px)); border: 1px solid var(--border); border-radius: var(--r); background: var(--surface); }
@@ -1602,10 +1607,6 @@ body[data-page="workflows"] .pagehelp, body[data-page="traces"] .pagehelp { disp
 .wf-where h2 { margin: 0; }
 .wf-in { align-items: center; }
 .wf-in .tag { overflow-wrap: anywhere; }
-.wf-card > summary { list-style: none; cursor: pointer; padding: 14px 16px; }
-.wf-card > summary::-webkit-details-marker { display: none; }
-.wf-body { padding: 0 16px 14px; display: flex; flex-direction: column; gap: 10px; }
-.wf-run { border-top: 1px solid var(--border); padding-top: 10px; }
 .wf-steps { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .wf-steps li { border-left: 3px solid var(--border); padding: 4px 0 4px 10px; }
 .wf-steps li.st-done { border-left-color: var(--ok); }
@@ -1646,9 +1647,77 @@ body[data-page="workflows"] .pagehelp, body[data-page="traces"] .pagehelp { disp
 /* TSK-52: one Tasks list in the order of what matters now, each task's area as a label; Upkeep as one row */
 .tchip.area { background: var(--surface-3); color: var(--text); font-weight: 600; }
 .tchip.area.a-upkeep { color: var(--muted); }
-.tgroup + .tgroup { margin-top: var(--s-5); }
-.tgroup .section-h { margin-bottom: var(--s-2); }
-.tupkeep > summary { display: flex; gap: var(--s-3); align-items: flex-start; padding: var(--s-3) var(--s-4); cursor: pointer; list-style: none; }
-.tupkeep > summary::-webkit-details-marker { display: none; }
-.tupkeep > .aglist { padding: 0 var(--s-2) var(--s-2); }
 .tfil .chips.tareas { flex-wrap: wrap; overflow: visible; width: 100%; }   /* every area in view: wrapped, never scrolled out of sight */
+
+/* Needs you: the Asks (ASK-13, app-asks.js). Phone first: chips wrap, the reply box takes the row, nothing is cut. */
+.acard { width: 100%; }
+.acard .aq { margin-top: var(--s-1); overflow-wrap: anywhere; }
+.acard .achips .btn { white-space: normal; height: auto; min-height: 36px; padding: 6px 12px; text-align: left; }
+.acard .areply { gap: var(--s-2); margin-top: var(--s-3); }
+.acard .areply .input { flex: 1; min-width: 0; padding: 9px 12px; font-size: var(--fs-5); }
+.acard .astate { margin-top: var(--s-2); padding: 6px 10px; border-radius: 10px; background: var(--surface-2); overflow-wrap: anywhere; }
+.acard .astate.ok { color: var(--ok); background: var(--ok-bg); } .acard .astate.warn { color: var(--warn); background: var(--warn-bg); }
+.acard .astate.bad { color: var(--err); background: var(--err-bg); } .acard .astate.run { color: var(--run); background: var(--run-bg); }
+.acard .aback { margin-top: var(--s-2); overflow-wrap: anywhere; }
+.acard .aquiet .btn { height: 32px; padding: 0 10px; color: var(--muted); font-weight: 550; }
+.acard .aquiet .btn.on { color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.acard .aquiet .asrc { margin-left: auto; align-self: center; }
+.acard.adone { opacity: .78; }
+.agroup .acard { border: 0; padding: var(--s-2) 0 0; border-top: 1px solid var(--border); border-radius: 0; background: none; box-shadow: none; }
+.astop { margin-bottom: var(--s-3); } .astop .btn { flex: none; }
+.astop-off { margin-bottom: var(--s-2); } .astop-off .btn { color: var(--muted); }
+.atoast { display: flex; gap: var(--s-3); align-items: center; }
+.atoast .linkbtn { color: inherit; font-weight: 700; }
+.acard .pill.err, .card .pill.err { color: var(--err); background: var(--err-bg); }
+
+/* REC-06: the Measures view (measures.js): the pack's measures as tiles, two to a row on a phone, more on the desk */
+.msr-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (min-width: 720px) { .msr-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (min-width: 1200px) { .msr-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+.msr { display: flex; flex-direction: column; }
+.msr .kpi-l { flex: 1; }
+.msr-links button .tiny { color: var(--faint); margin-left: 4px; }
+.msr-tpl summary { cursor: pointer; margin-top: 4px; }
+.msr-tpl .md { margin-top: 6px; }
+
+/* The six places (APP-69): a place's parts as one row; a part that is a page of its own is a link in the same row */
+.placeseg { margin-bottom: var(--s-4); }
+/* Workflows (APP-71): grouped by factory and area, the cards in a grid that is one column on a phone */
+.wf-factory + .wf-factory { margin-top: var(--s-6); }
+.wf-factory .hsub { margin: var(--s-3) 0 var(--s-2); }
+.wf-cards { display: grid; gap: var(--s-3); grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); }
+.wfcard .wfline { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; }
+.wfcard .wfline .pill { padding: 1px 7px; }
+/* a workflow's diagram (APP-72): its nodes as cards, its connections as lines; on a run's page (APP-73) the path it took is
+   drawn in the accent and what it did not reach fades */
+.wfdcard { padding: var(--s-3); }
+.wfd-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.wfd { display: block; margin: 0 auto; }
+.wfn { cursor: pointer; outline: none; }
+.wfn rect { fill: var(--surface-2); stroke: var(--border-2); stroke-width: 1.2; }
+.wfn.trig rect { fill: var(--surface-3); stroke-dasharray: 4 3; }
+.wfn.k-agent rect, .wfn.k-crew rect, .wfn.k-task rect { stroke: var(--accent); stroke-width: 1.6; }
+.wfn.k-ask rect { stroke: var(--warn); stroke-width: 1.6; }
+.wfn.own rect { fill: var(--surface); }
+.wfn.st-done rect { stroke: var(--ok); stroke-width: 2.2; }
+.wfn.st-running rect, .wfn.st-waiting rect { stroke: var(--run); stroke-width: 2.6; fill: var(--run-bg); }
+.wfn.st-waiting rect { stroke: var(--warn); fill: var(--warn-bg); }
+.wfn.st-failed rect, .wfn.st-refused rect, .wfn.st-cancelled rect { stroke: var(--err); stroke-width: 2.6; fill: var(--err-bg); }
+.wfn.st-off { opacity: .45; }
+.wfn.pick rect, .wfn:focus-visible rect { stroke-width: 3.2; }
+.wfe { fill: none; stroke: var(--border-2); stroke-width: 1.6; }
+.wfe.on { stroke: var(--accent); stroke-width: 2.6; }
+.wfe.off { opacity: .45; }
+.wfah { fill: var(--border-2); }
+.wfah.on { fill: var(--accent); }
+.wfel { fill: var(--muted); }
+.wfinfo { margin-top: var(--s-2); }
+/* an agent's page (APP-76): its facts in a grid that is one column on a phone */
+.agfacts { display: grid; gap: var(--s-3) var(--s-5); grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); }
+.agfact .tag { margin: 2px 4px 2px 0; }
+/* APP-84: the agents of a workflow, under its title: each a chip that opens its page */
+.agstrip { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2); margin: calc(-1 * var(--s-2)) 0 var(--s-4); }
+.agstrip:empty { display: none; }
+.agchip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 99px; background: var(--accent); color: var(--accent-ink);
+  font-size: var(--fs-3); font-weight: 650; text-decoration: none; overflow-wrap: anywhere; }
+.agchip .ico { width: 15px; height: 15px; }

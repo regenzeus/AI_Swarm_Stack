@@ -25,6 +25,7 @@
       ]
     }
   },
+  "factory": "platform",
   "id": "aisc884734674816",
   "name": "Crew: Checker",
   "nodes": [

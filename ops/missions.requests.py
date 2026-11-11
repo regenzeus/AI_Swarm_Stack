@@ -344,7 +344,7 @@ def memory_move(ids, keep):
             m["kept"] = True
     MOVE_LIST.write_text(json.dumps([m for m in items if m["id"] not in ids]))
     event("memory", "", f"Long-term memory: {len(done)} facts that are not about you moved to the wikis (each has its Undo)"
-          + (f"; {len(gone)} on the list were no longer in long-term memory" if gone else ""), title="Crew")
+          + (f"; {len(gone)} on the list were no longer in long-term memory" if gone else ""), title="Memory", area="memory")
     return {"moved": len(done), "gone": len(gone)}
 
 
@@ -423,18 +423,60 @@ def handle_notify(req):
     return {}
 
 
-def respond(rid, req):
+def dispatch(req):
+    """One request through the same handlers as the inbox's (the Asks apply a chip's act with it). -> {ok, ...}."""
     c = db()
     try:
-        a = req.get("action")
-        res = (__import__("flows").answer(req) if a == "flow_answer" else __import__("tax").answer(req) if a == "tax_answer" else __import__("domain.packs", fromlist=["handle"]).handle(req) if a in ("pack_approve", "pack_refuse") else __import__("domain.trackers", fromlist=["handle"]).handle(req) if a in ("tracker_shadow_approve", "tracker_shadow_reject", "tracker_live") else __import__("domain.places", fromlist=["handle"]).handle(req) if a == "command_approve" else CHG.handle(req, c) if a in CHG.ACTIONS else CT.handle(req, c) if a == "claude_task" else CT.cancel(c, req.get("id")) if a == "claude_cancel" else handle_forgejo_connect(req) if a == "forgejo_connect" else handle_memory(req) if a == "memory" else handle_stack(req) if a in STACK_ACTIONS
+        return {"ok": True, **_handled(req, c)}
+    except Exception as e:
+        log(f"request {req.get('action')} from an Ask failed: {e}")
+        return {"ok": False, "error": str(e)}
+    finally:
+        c.close()
+
+
+def stop_switch(on, person):
+    """ASK-08: the one stop switch. On: the runner starts no run, step, plan step or crew job (each loop asks
+    AK.stopped()), n8n's steps wait in the step service's queue, and the swarm pauses; what runs finishes. Off: all
+    of it goes on. -> the record, with what it held."""
+    c = db()
+    try:
+        queued = c.execute("select count(*) from runs where status in ('queued','waiting')").fetchone()[0]
+        running = c.execute("select count(*) from tasks where status='running'").fetchone()[0]
+    except sqlite3.Error:
+        queued = running = None
+    finally:
+        c.close()
+    import flows as FW
+    steps = len(list(FW.PENDING.glob("*.json"))) if FW.PENDING.is_dir() else 0
+    try:
+        SW.handle({"action": "swarm_pause", "agent": "*", "on": bool(on), "by": "stop switch"}, None)
+        swarm = "paused" if on else "resumed"
+    except Exception as e:                               # the swarm service away: said, the rest still holds
+        swarm = f"not reached: {e}"
+    rec = AK.stop_set(on, person, paused={"agent runs queued": queued, "plan tasks running": running, "workflow steps waiting": steps,
+                                          "swarm": swarm})
+    event("system", "", ("Stopped: no agent or workflow starts until you resume" if on else "Resumed: agents and workflows go on"),
+          title="Stop switch")
+    return rec
+
+
+def _handled(req, c):
+    a = req.get("action")
+    return (AK.handle(req) if a in AK.ACTIONS else __import__("flows").answer(req) if a == "flow_answer" else __import__("tax").answer(req) if a == "tax_answer" else __import__("domain.packs", fromlist=["handle"]).handle(req) if a in ("pack_approve", "pack_refuse") else __import__("domain.trackers", fromlist=["handle"]).handle(req) if a in ("tracker_shadow_approve", "tracker_shadow_reject", "tracker_live") else __import__("domain.places", fromlist=["handle"]).handle(req) if a == "command_approve" else CHG.handle(req, c) if a in CHG.ACTIONS else CT.handle(req, c) if a == "claude_task" else CT.cancel(c, req.get("id")) if a == "claude_cancel" else handle_forgejo_connect(req) if a == "forgejo_connect" else handle_memory(req) if a == "memory" else handle_stack(req) if a in STACK_ACTIONS
                else B.handle(req, c) if a in BUILD_ACTIONS else I.handle(req, c) if a in IMPROVE_ACTIONS
                else R.handle(req, c) if a in REPO_ACTIONS else CR.handle(req, c) if a in CREW_ACTIONS else J.handle(req) if a in J.ACTIONS
                else WD.handle(req) if a in WD.ACTIONS else SH.handle(req, c) if a in SH.ACTIONS else W.handle(req) if a in W.ACTIONS else H.handle(req) if a in H.ACTIONS
                else SW.handle(req, c) if a in SW.ACTIONS else FL.handle(req) if a in FL.ACTIONS else handle_notify(req) if a in ("notify_prefs", "chat_ready") else TK.handle(req, c) if a in TK.ACTIONS else EV.handle(req, c) if a in EV.ACTIONS else A2.handle(req) if a in A2.ACTIONS
                else DQ.handle(req) if a in DQ.ACTIONS else MS.handle(req) if a in MS.ACTIONS else MSORT.handle(req) if a in MSORT.ACTIONS
+               else SR.handle(req, event) if a in SR.ACTIONS
                else handle(req, load_missions(), c))
-        res = {"ok": True, **res}
+
+
+def respond(rid, req):
+    c = db()
+    try:
+        res = {"ok": True, **_handled(req, c)}
     except Exception as e:
         res = {"ok": False, "error": str(e)}
         log(f"request {rid} failed: {e}")
@@ -463,6 +505,8 @@ def process_inbox():
                 with creating:
                     respond(rid, req)
             threading.Thread(target=slow, daemon=True).start()
+        elif req.get("action") in ("stack_doctor", "pack_ask"):   # the doctor, a pack's checkout: their own thread, never in the inbox's way (WAY-05, WAY-08)
+            threading.Thread(target=respond, args=(rid, req), daemon=True).start()
         elif req.get("action") in MS.ACTIONS:             # an agent's memory call: its own thread, never in the inbox's way (MEM-28)
             threading.Thread(target=respond, args=(rid, req), daemon=True).start()
         else:

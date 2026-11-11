@@ -10,7 +10,7 @@ COVERED_BY_PARENT = {"prompts/cases", "eval/results", "eval/qrels", "eval/fixtur
                      "config/hermes/claude-hooks", "config/hermes/plugins/aistack-runtime",   # config/hermes/AGENTS.md
                      "tests/fixtures/packs/toy/.claude-plugin", "tests/fixtures/packs/toy/agents",
                      "tests/fixtures/packs/toy/skills/triage", "tests/fixtures/packs/toy/jobs", "tests/fixtures/packs/toy/workflows",
-                     "tests/fixtures/packs/toy/exams"}   # the toy pack's own folders (its AGENTS.md)
+                     "tests/fixtures/packs/toy/exams", "tests/fixtures/packs/toy/templates"}   # the toy pack's own folders (its AGENTS.md)
 SKIP_PARTS = {".git", "__pycache__", ".pytest_cache"}
 
 

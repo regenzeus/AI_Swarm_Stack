@@ -26,8 +26,8 @@
     {"name": "Access tokens", "path": "/user/settings/applications", "words": "token key"}]},
   {"id": "n8n", "name": "n8n", "what": "Workflows: what runs when, in what order, and every run, inside the app (its own login)", "host": "app",
    "menus": [
-    {"name": "Workflows", "path": "/#/workflows", "words": "workflow automation schedule trigger canvas n8n"},
-    {"name": "Runs", "path": "/#/workflows?open=executions", "words": "runs history execution n8n"},
+    {"name": "Workflows", "path": "/#/n8n", "words": "workflow automation schedule trigger canvas n8n"},
+    {"name": "Runs", "path": "/#/n8n?open=executions", "words": "runs history execution n8n"},
     {"name": "On its own", "path": "/n8n/home/workflows", "words": "n8n full page editor"}]},
   {"id": "hermes", "name": "Hermes admin", "what": "Skills, cron jobs, logs, sessions, settings", "host": "tailnet:8448",
    "menus": [{"name": "Open", "path": "/", "words": "skills cron logs sessions config"}]},
@@ -43,10 +43,10 @@
    "menus": [{"name": "Machines", "path": "/admin/machines", "words": "devices vpn network"}]}
  ],
  "pages": [
-  ["Home", "#/", "feed results"], ["Tasks", "#/tasks", "missions briefings plans repeating"], ["Activity", "#/tasks?v=activity", "chatroom timeline"],
-  ["Team", "#/tasks?v=team", "agents cards roles crew duties"], ["Network", "#/tasks?v=network", "map who works which agents"], ["Ideas", "#/tasks?v=ideas", "proposals"],
-  ["New task", "#/tasks?new=1", "create mission"], ["Chat", "#/chat", "hermes talk voice"], ["Memory", "#/memory", "knowledge vault wiki facts skills journals"],
-  ["Code", "#/build", "builds deploy"], ["Workflows", "#/workflows", "n8n workflow schedule runs executions canvas"], ["Stack", "#/system", "health services resources jobs backup"], ["Costs", "#/system?tab=costs", "paid subscriptions tokens telemetry agents day"], ["Connections", "#/system?tab=connections", "gmail mail a2a outside agents packs trackers"], ["Settings", "#/system?tab=settings", "theme notifications quiet hours device push"], ["House", "#/house", "alexa echo lights voice"],
+  ["Home", "#/", "feed results needs you running failed"], ["Workflows", "#/workflows", "workflow runs briefings requests repeating schedule tasks missions"], ["Activity", "#/home?tab=activity", "chatroom timeline"],
+  ["Agents", "#/agents", "agents cards roles model tools used in"], ["Health and results", "#/agents?v=team", "scheduled jobs health crew duties"], ["Who works with whom", "#/agents?v=network", "map network which agents"],
+  ["Ideas", "#/ideas", "proposals ideas improvements agent changes"], ["New request", "#/workflows?new=1", "create request task mission"], ["Chat", "#/chat", "hermes talk voice"], ["What agents know", "#/memory", "knowledge memory vault wiki facts skills journals"],
+  ["Code", "#/build", "builds deploy repositories"], ["Measures", "#/measures", "records measures tracker numbers"], ["n8n", "#/n8n", "n8n workflow editor canvas executions"], ["Stack", "#/system", "health services resources jobs backup"], ["Costs", "#/system?tab=costs", "paid subscriptions tokens telemetry agents day"], ["Connections", "#/system?tab=connections", "gmail mail a2a outside agents packs trackers"], ["Settings", "#/system?tab=settings", "theme notifications quiet hours device push"], ["House", "#/house", "alexa echo lights voice"],
   ["AI phone", "#/phone", "s22 android phone pair pairing connect wireless debugging approve allow job cleanup"], ["Traces", "#/traces", "phoenix model calls prompts spans observability"], ["Guide", "#/guide", "help how"]
  ]
 }

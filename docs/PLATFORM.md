@@ -26,18 +26,34 @@ behaving exactly as before: every step below lands with home's whole check green
 
 ```
 deployments/<name>/
-  deployment.env    hosts, paths, accounts (today's deployments/home/deployment.env); never a secret
-  features.txt      the features switched on, one per line
+  AGENTS.md         the site's rule first (PLT-48), then what the deployment is
+  deployment.env    hosts, paths, accounts, FEATURES (the features switched on) and REFUSE; never a secret
+  workflows.yaml    the stack's own workflows it runs (PLT-38)
   models.yaml       the model policy: subscription_only or gateway_only, the aliases each role uses
   data.yaml         the data class (personal | customer) and, per repository, an override
   egress.txt        the hosts the work may reach (the egress proxy's list), one per line
-  constraints.yaml  this deployment's values for the constraints that are a deployment's choice (machine, memory, hosts)
+  packs.txt         on the site: the packs it runs, each at a commit approved before use (GEN-21)
 ```
 
-Which deployment a machine runs is one line in `~/.config/aistack/deployment` (default `home`), outside the
-repository, so a pull never switches it. `ops/deployment.py` reads the chosen folder; `deployments/home/deployment.env` stays as
-the file compose and the scripts are given, written from the chosen folder by `ops/deployment.py write`, so no script
-that reads it today changes.
+Which deployment a machine runs is one line in `~/.config/aistack/deployment`, outside the repository, so a pull never
+switches it. A machine that names none runs `deployments/platform/`: the platform only (the app, the engine and the
+platform's upkeep), never home (PLT-44, 11 Nov 2026; until then it was home with everything on). A deploy refuses on a
+machine that names none, so an update never takes a running site down to the platform. `python3 ops/deployment.py new
+<name|path>` makes a new folder from `deployments/platform/`.
+
+**Factories.** The platform holds no factory's work (the factory design's first rule, 11 Nov 2026); in this repository two
+factories are told apart: `platform` (the platform's own upkeep, on at every site) and `home` (on where `FEATURES` names
+`home`). Every workflow file and every job names its factory (PLT-45); a factory that does not run here has nothing
+running or showing. Any other factory is a pack its `packs.txt` names. A site keeps a factory off for good with
+`REFUSE=<name>` (PLT-47): `FEATURES` cannot switch it on, its scripts answer "refused", and a deploy that names it is
+refused before any step; the message names the factory and the setting, never a site.
+
+**The doctor** (`python3 ops/deployment.py doctor`, PLT-46) names everything that keeps a site from running as its
+deployment says: a missing packs file or a pack the trackers need and do not list, a pack not approved at its pinned
+commit, a workflow no factory owns, a listed workflow whose factory does not run, a refused factory switched on, a dead
+or stale runner, workflows not imported or not published as the deployment says, and (from phase B) a pack's override
+of a standard workflow whose template changed since it was last checked. A deploy runs it after its checks and fails
+when it fails, so a site is never left half-published.
 
 ## 3. Features (A)
 
@@ -53,7 +69,7 @@ are hidden, its hosts are not on the egress list, and its scripts exit with "not
 | `mission-control` | the app |
 | `memory` | Hindsight, qmd, the memory agent |
 | `home` | the NAS (backup, Forgejo on the NAS, the mail copy), Home Assistant, the router |
-| `phone` | the AI phone service |
+| `phone` | the AI phone (home's: its service, crew jobs and workflows, its tool and the app's pages of it; a site without it sees none, PHN-28) |
 | `mail` | the mail connector and the postmaster |
 | `voice` | the NAS voice services |
 | `telegram` | messages to Telegram (status only when the data class is customer, F) |
@@ -64,8 +80,11 @@ are hidden, its hosts are not on the egress list, and its scripts exit with "not
 | `windows-desk` | the Windows desk (DEC-43) |
 | `windows-worker` | the Windows worker (D, below) |
 
-Home switches every one on. The minimal step (this change) brings the list, the compose profiles, the timers and the
-checks; the app's pages follow the same list.
+Home switches every one on, the AI phone among them, which is home's and no part of the platform a site must take
+(PHN-28). The minimal step brought the list, the compose
+profiles, the timers and the checks; since PHN-28 a feature's crew jobs, workflows, tool grants and prompt rules follow
+the list too, and a deploy stops a container of a feature switched off (deployments/AGENTS.md). Of the app's pages the
+AI phone's follow it so far (the app gets `FEATURES` from compose); the others are GEN-13's gap.
 
 A feature that is off needs none of its values (GEN-19): compose takes the home's hosts as optional, and
 `python3 ops/deployment.py check` (run by `make up`) names the empty value a switched-on feature needs. A host that ends
@@ -84,6 +103,7 @@ in `.invalid` counts as none. Other settings a deployment may give in its `deplo
 | `BUILD_HTTP_PROXY`, `BUILD_NO_PROXY` | a proxy for image builds only: `ops/deploy.py` hands it to each `docker build` as Docker's proxy build arguments (`http_proxy`, `https_proxy`, `no_proxy`, lower and upper case), which reach every `RUN` and stay out of the image, so no container runs with it, unlike `~/.docker/config.json`'s `proxies` (PLT-42). Pulling the base images is the Docker daemon's own proxy setting | none: builds go out directly |
 | `UA_ENRICH_WORKERS` | explanation calls side by side (at most 8) | 1 |
 | `UA_JSON_MODE` | `1`: the explanation calls ask the model for a JSON object | off |
+| `REFUSE` | the factories (or packs) this site never runs, comma separated, e.g. `home` (PLT-47) | none |
 
 ## 4. The model policy (B)
 

@@ -4,6 +4,8 @@
 
 // This deployment's addresses: the server puts them into the page (deployments/<name>/deployment.env, index.html)
 const DEPLOY = window.DEPLOY || {};
+// GEN-13: a feature this deployment switches off has no page, card or entry here (the AI phone, PHN-28); no list: all on
+const featureOn = (f) => !Array.isArray(DEPLOY.FEATURES) || f === "core" || DEPLOY.FEATURES.includes(f);
 
 // a script error on a phone is invisible from the PC: report it to the server log (docker logs mission-control)
 let errSent = 0;
@@ -16,7 +18,7 @@ const KEEPER_CLASS = { duplicate: "duplicate retired", test_noise: "test noise r
 // MEM-42, MEM-43: what else the memory agent did: the nightly trials, the facts it moved, the week's skill, every write with its Undo
 function memAgentHtml(c) {
   const ws = c.writes || [], t = c.trials || {}, mv = c.moved || {}, sk = (c.distiller || {}).skill;
-  const row = (w) => `<li><div class="small quote">${esc(w.candidate?.text || w.where || "")}</div><div class="row between wrap" style="gap:6px"><span class="tiny muted">${esc(OUTCOME_WORD[w.outcome] || w.outcome)}${w.where ? ` → ${esc(w.where)}` : ""}${w.why ? ` · ${esc(w.why)}` : ""} · ${rel(Date.parse(w.at) / 1000)}</span>${w.undone ? `<span class="tiny muted">undone</span>` : w.undo && ["lesson", "file", "line"].includes(w.undo.kind) ? `<button class="btn sm ghost" data-wundo="${esc(w.id)}">Undo</button>` : ""}</div></li>`;
+  const row = (w) => `<li><div class="small quote">${esc(youText(w.candidate?.text || w.where || ""))}</div><div class="row between wrap" style="gap:6px"><span class="tiny muted">${esc(OUTCOME_WORD[w.outcome] || w.outcome)}${w.where ? ` → ${esc(w.where)}` : ""}${w.why ? ` · ${esc(w.why)}` : ""} · ${rel(Date.parse(w.at) / 1000)}</span>${w.undone ? `<span class="tiny muted">undone</span>` : w.undo && ["lesson", "file", "line"].includes(w.undo.kind) ? `<button class="btn sm ghost" data-wundo="${esc(w.id)}">Undo</button>` : ""}</div></li>`;
   const trialWord = (k) => (t[k] === true ? "passed" : t[k] === false ? "failed" : t[k] === null ? "could not run" : null);
   return `<div class="card pad-l crews" style="margin-bottom:12px"><h2>What entered memory, and the memory agent's other work</h2>
     <div class="tiny muted" style="margin-top:4px">${["coverage", "continuity", "recall"].filter((k) => trialWord(k)).map((k) => `${k} trial ${trialWord(k)}`).join(" · ") || "The trials run with its next night."}${mv.moved ? ` · ${nf(mv.moved)} facts moved out of long-term memory` : mv.waits ? ` · moves wait: ${esc(mv.waits)}` : ""}${sk ? ` · this week's skill: ${esc(sk.decision || sk.why || sk.error || "")}` : ""}</div>
@@ -24,7 +26,7 @@ function memAgentHtml(c) {
 }
 function keeperHtml(k) {
   const ch = k.changes || [], d = k.disputes || {};
-  const row = (e) => `<li><div class="small quote">${esc(e.fact || "")}</div><div class="row between wrap" style="gap:6px"><span class="tiny muted">${esc(KEEPER_CLASS[e.class] || e.class)}${e.after?.text ? ` → “${esc(e.after.text)}”` : ""}${e.after?.occurred_end ? ` (held until ${esc(e.after.occurred_end)})` : ""} · ${esc(e.why || "")} · ${rel(Date.parse(e.at) / 1000)}</span>${e.undone ? `<span class="tiny muted">undone</span>` : `<button class="btn sm ghost" data-kundo="${esc(e.id)}">Undo</button>`}</div></li>`;
+  const row = (e) => `<li><div class="small quote">${esc(youText(e.fact || ""))}</div><div class="row between wrap" style="gap:6px"><span class="tiny muted">${esc(KEEPER_CLASS[e.class] || e.class)}${e.after?.text ? ` → “${esc(youText(e.after.text))}”` : ""}${e.after?.occurred_end ? ` (held until ${esc(e.after.occurred_end)})` : ""} · ${esc(e.why || "")} · ${rel(Date.parse(e.at) / 1000)}</span>${e.undone ? `<span class="tiny muted">undone</span>` : `<button class="btn sm ghost" data-kundo="${esc(e.id)}">Undo</button>`}</div></li>`;
   return `<div class="card pad-l crews" style="margin-bottom:12px"><h2>What the Memory Keeper changed</h2>
     <div class="tiny ${k.gate?.open ? "muted" : "warn-t"}" style="margin-top:4px">${k.gate?.open ? "It fixes duplicates, test noise, agents' runs, other languages, passed states and your facts that a newer one overrides itself: " : "It only suggests, it changes nothing itself: "}${esc(k.gate?.why || "")}</div>
     ${d.open !== undefined ? `<div class="tiny muted">Wiki disputes: ${nf(d.open)} open · ${nf((d.tasks || []).length)} being researched${d.settled ? ` · ${nf(d.settled)} settled` : ""}${d.asked ? ` · ${nf(d.asked)} its research could not settle, left marked on both pages` : ""}</div>` : ""}
@@ -33,6 +35,22 @@ function keeperHtml(k) {
 }
 // APP-57: a name, whole: the first sentence of its first line (every page's scripts load this file)
 const firstSentence = (s) => { const t = String(s || "").trim().split("\n").find((x) => x.trim()) || ""; const m = /^(.+?[.!?])(\s|$)/.exec(t.trim()); return (m ? m[1] : t).trim(); };
+// APP-75: a text about the owner (a memory fact, an Ask about one) reads in the second person and never names them: "Sam
+// does not want …" shows as "You don't want …", "Involving: Sam" as "Involving: you". For display only; the stored text
+// stays as it is. The name is the signed-in owner's (S.viewer_name), whole and its first word.
+function youText(s, name = S?.viewer_name) {
+  let t = String(s ?? "");
+  const full = String(name || "").trim(), names = [...new Set([full, full.split(/\s+/)[0]])].filter((n) => n.length > 1).sort((a, b) => b.length - a.length);
+  const verb = (w) => ({ is: "are", was: "were", has: "have", does: "do" }[w] || (/ies$/.test(w) ? w.slice(0, -3) + "y" : /(sh|ch|x|ss|o)es$/.test(w) ? w.slice(0, -2) : w.slice(0, -1)));
+  for (const n of names) {
+    const N = n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    t = t.replace(new RegExp(`\\b${N}['’]s\\b`, "g"), "your")
+      .replace(new RegExp(`\\b${N} (does not|doesn't|is not|isn't|has not|hasn't|was not|wasn't)\\b`, "g"), (m, v) => `you ${{ "does not": "don't", "doesn't": "don't", "is not": "aren't", "isn't": "aren't", "has not": "haven't", "hasn't": "haven't", "was not": "weren't", "wasn't": "weren't" }[v]}`)
+      .replace(new RegExp(`\\b${N} (is|was|has|does|[a-z]+s)\\b`, "g"), (m, v) => `you ${verb(v)}`)
+      .replace(new RegExp(`\\b${N}\\b`, "g"), "you");
+  }
+  return t.replace(/(^|[.!?:]\s+|\n)(you|your)\b/g, (m, a, w) => (/:\s+$/.test(a) ? m : `${a}${w[0].toUpperCase()}${w.slice(1)}`));
+}
 // APP-61: the app's name, the deployment's
 const APPNAME = () => (typeof DEPLOY === "object" && DEPLOY.APP_NAME) || "AI Stack";
 function moreOf(total, shown) { return total > shown ? `<div class="tiny muted">… and ${nf(total - shown)} more</div>` : ""; }
@@ -107,6 +125,7 @@ const ic = {
   up: I('<path d="M12 19V6M6 12l6-6 6 6"/>'),
   down: I('<path d="M12 5v13M6 12l6 6 6-6"/>'),
   stop: I('<rect x="7" y="7" width="10" height="10" rx="2" fill="currentColor"/>'),
+  rise: I('<path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/>'),
 };
 
 // ---------- formatting (TSK-31): the only place the app turns a date, a time or a number into text, in English ----------
@@ -196,7 +215,7 @@ async function act(req, okMsg) {
   try {
     r = await api("/api/request", { method: "POST", body: JSON.stringify(req), timeout: 30000 });
   } catch (e) {                                          // it may or may not have arrived: say so, and how to check
-    toast(`${e.message}. ${req.action === "create" ? "Look under Missions before trying again (a repeat with the same title is refused)." : "Please try again."}`, true);
+    toast(`${e.message}. ${req.action === "create" ? "Look under Workflows before trying again (a repeat with the same title is refused)." : "Please try again."}`, true);
     return null;
   }
   for (let i = 0, misses = 0; r.pending && i < 150; i++) {   // slow requests (a new briefing): keep asking, up to 5 minutes
@@ -231,24 +250,24 @@ function bars(runs) {
 }
 
 // ---------- navigation ----------
-// one navigation on every screen (no top bar): the agents' views live under Tasks (DEC-46), the live state is a dot on Stack
-// the Memory tab's parts (APP-50); the wikis keep their route
+// one navigation on every screen (no top bar), the live state is a dot on Stack
+// the parts of what agents know (APP-50, under Agents since the six places); the wikis keep their route
 const MEM_ROUTES = ["memory", "howto", "longterm", "codemem", "skills", "journals", "memsearch", "sources"];
-// DEC-53: Home, Tasks, Workflows (the desk's: n8n's canvas is not made for a phone), Memory, Code, Chat, Stack. The phone's
-// bar keeps the other six, in the same order as the desk's menu, each a thumb-wide target (62 px at 375 px). Home is
-// #/home: #/ is the page the app opens on, which may be another one (Settings → Opens on).
-const NAV = [["home", "#/home", "Home", ic.home], ["tasks", "#/tasks", "Tasks", ic.tasks], ["workflows", "#/workflows", "Workflows", ic.flow],
-  ["wiki", "#/memory", "Memory", ic.wiki], ["build", "#/build", "Code", ic.code], ["chat", "#/chat", "Chat", ic.chat], ["system", "#/system", "Stack", ic.layers]];
-function navHtml(bottom) {
-  const needs = S?.decisions && typeof yoursN === "function" ? yoursN() : 0;
+// APP-69, the six places (the factory design, 11 Nov 2026; APP-83: Code, not Improve): Home, Workflows, Agents, Code, Chat, Stack, the same on the
+// phone's bar and the desk's menu, each a thumb-wide target at 375 px. Home is #/home: #/ is the page the app opens on,
+// which may be another one (Settings → Opens on). Every older screen lives under one of the six (NAV_OF).
+const NAV = [["home", "#/home", "Home", ic.home], ["workflows", "#/workflows", "Workflows", ic.flow], ["agents", "#/agents", "Agents", ic.brain],
+  ["build", "#/build", "Code", ic.code], ["chat", "#/chat", "Chat", ic.chat], ["system", "#/system", "Stack", ic.layers]];
+const NAV_OF = { home: ["decide", "policy", "house", "share", "phone"],
+  workflows: ["workflow", "run", "n8n", "task", "mission", "crew", "new", "missions", "tax", "live", "files", "file", "read", "measures", "trials"],
+  agents: ["agent", "swarm", "wiki", ...MEM_ROUTES], build: ["repo", "ideas"], chat: [], system: ["mail", "guide", "traces"] };
+const navPlace = (name) => Object.keys(NAV_OF).find((k) => k === name || NAV_OF[k].includes(name)) || "";
+function navHtml() {
+  const needs = S?.decisions && typeof yoursN === "function" ? yoursN() : 0, place = navPlace(route.name);
   return NAV.map(([k, href, label, icon]) => {
-    if (k === "workflows" && bottom) return "";       // WFL-11: n8n inside the app is the desk's; a phone reaches the list from Tasks and the pages
-    const on = route.name === k || (k === "home" && route.name === "decide")
-      || (k === "tasks" && ["task", "mission", "crew", "new", "swarm", "missions", "trials"].includes(route.name)) || (k === "system" && ["mail", "guide", "traces"].includes(route.name)) || (k === "wiki" && MEM_ROUTES.includes(route.name)) || (k === "build" && route.name === "repo");
-    const toReview = (S?.builds || []).filter((b) => b.status === "review").length;        // the badge = what waits for you
-    const n = k === "home" && needs ? `<span class="tab-n" title="${needs} need you">${needs}</span>` : k === "build" && toReview ? `<span class="tab-n">${toReview}</span>`
+    const n = k === "home" && needs ? `<span class="tab-n" title="${needs} need you">${needs}</span>`
       : k === "system" ? `<span class="tab-dot ${liveState()}" title="${esc(linkWords())}"></span>` : "";
-    return `<a href="${href}" class="${on ? "on" : ""}">${icon}<span>${label}</span>${n}</a>`;
+    return `<a href="${href}" class="${place === k ? "on" : ""}">${icon}<span>${label}</span>${n}</a>`;
   }).join("");
 }
 function chrome() {
@@ -347,16 +366,31 @@ function countView() {
 }
 
 // views that re-render on every state update (forms, chat and wiki do not, so nothing is lost while you work)
-const LIVE = new Set(["home", "decide"]);
+const LIVE = new Set(["home", "decide", "policy"]);
 const typing = () => document.activeElement && ["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement.tagName);
 // Screens that went, and where their old links (notifications, Telegram buttons, the phone's history) land now
 // (DEC-51 to DEC-53: n8n's editor and runs took the engine's screens; packs, trackers and the agents day by day are parts of Stack)
+// APP-69: the old Tasks tab's parts went to the six places: its list to Workflows, Activity to Home, Team and Network to
+// Agents, Ideas to Improve; Memory is under Agents, Code under Stack
+const keepQ = (q, drop = []) => { const p = new URLSearchParams(q); for (const k of ["v", ...drop]) p.delete(k); const s = p.toString().replace(/%2C/g, ","); return s ? `&${s}` : ""; };
+function tasksMoved(a, q) {
+  if (+q.get("t")) return `#/task/${+q.get("t")}`;                   // APP-35: an old task link opens its page
+  const v = q.get("v") || "";
+  if (q.get("new") === "1") return `#/workflows?new=1${keepQ(q, ["new"])}`;
+  if (v === "activity") return `#/home?tab=activity${keepQ(q)}`;
+  if (v === "team" || v === "network") return `#/agents?v=${v}${keepQ(q)}`;
+  if (v === "ideas") return `#/ideas${keepQ(q).replace(/^&/, "?")}`;
+  return `#/workflows${q.get("area") ? `?area=${encodeURIComponent(q.get("area"))}` : ""}`;
+}
 const MOVED = {
-  engine: () => "#/workflows?open=executions", runs: () => "#/workflows?open=executions", templates: () => "#/workflows",
+  engine: () => "#/n8n?open=executions", runs: () => "#/n8n?open=executions", templates: () => "#/workflows",
   packs: (a) => `#/system?tab=connections&at=packs${a[0] ? `&pack=${encodeURIComponent(a[0])}` : ""}`, trackers: () => "#/system?tab=connections&at=packs",
   telemetry: () => "#/system?tab=costs",
-  taskmap: (a, q) => `#/task/${encodeURIComponent(q.get("t") || "")}?tab=sources${q.get("o") ? `&o=${encodeURIComponent(q.get("o"))}` : ""}`,   // the swarm map is the task page's Sources
-  live: (a) => (a[0] ? "" : "#/tasks?v=activity"),   // a run's log needs its run; a bare #/live goes to the agents' work
+  taskmap: (a, q) => `#/task/${encodeURIComponent(q.get("t") || "")}?tab=sources${q.get("o") ? `&o=${encodeURIComponent(q.get("o"))}` : ""}`,   // the map of what a run read is its page's Sources
+  live: (a) => (a[0] ? "" : "#/home?tab=activity"),   // a run's log needs its run; a bare #/live goes to the agents' work
+  improve: (a, q) => (q.get("v") === "scorers" ? "#/workflows" : `#/ideas${q.get("task") ? `?task=${encodeURIComponent(q.get("task"))}` : ""}`),   // APP-83: Improve went into Code
+  tasks: tasksMoved,
+  phone: () => (featureOn("phone") ? "" : "#/"),      // PHN-28: the AI phone switched off: its old links land on Home
 };
 function render(force = false) {
   const moved = MOVED[route.name]?.(route.args, route.q);
@@ -366,12 +400,12 @@ function render(force = false) {
   if (!force && route.name === "repo") return repoLive();
   if (!force && !(LIVE.has(route.name) || (route.name === "files" && !$("#fplan")?.innerHTML && !typing()) || ((route.name === "mission" || route.name === "crew") && agentSigOf() !== agentSig && !typing() && !$(".tl:not([hidden])") && !$("#tabbody details[open]")) || (route.name === "build" && !typing() && !$("#chbox:not([hidden])") && !$("#view details[open]") && !$("#blogbox:not([hidden])") && !$("#nb:not([hidden])") && !$("#addrepo:not([hidden])")))) return;
   // views that load their own data draw at once; the others wait for the first state (they are drawn when it comes)
-  if (!S && !["missions", "new", "mail", "chat", "wiki", "read", "guide", "phone", "share", "live", "swarm", "skills", "memory", "howto", "longterm", "codemem", "journals", "memsearch", "sources", "task", "trials", "workflows", "traces", "tax"].includes(route.name)) { view.innerHTML = noLink() ? offlineHtml() : `<div class="stack"><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div></div>`; return; }
+  if (!S && !["missions", "new", "mail", "chat", "wiki", "read", "guide", "phone", "share", "live", "swarm", "skills", "memory", "howto", "longterm", "codemem", "journals", "memsearch", "sources", "task", "trials", "workflows", "workflow", "run", "n8n", "agents", "agent", "ideas", "traces", "measures", "tax"].includes(route.name)) { view.innerHTML = noLink() ? offlineHtml() : `<div class="stack"><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div></div>`; return; }
   const y = window.scrollY;
   if (force) { document.body.classList.add("anim"); clearTimeout(render.anim); render.anim = setTimeout(() => document.body.classList.remove("anim"), 600); }
   const open = force ? [] : [...view.querySelectorAll("details[open][id], details[open][data-keep]")].map((d) => d.id || d.dataset.keep);
   document.body.dataset.page = route.name;          // APP-56: the stylesheet lays each page out for the width it has
-  const fn = { mail: vMail, decide: vDecide, tasks: vTasks, task: vTask, trials: vTrials, home: vHome, missions: vMissionsGo, mission: vMission, new: vNewGo, chat: vChat, system: vSystem, read: vRead, file: vFile, files: vFiles, wiki: vWiki, build: vBuild, repo: vRepo, guide: vGuide, share: vShare, phone: vPhone, house: vHouse, crew: vCrew, live: vLive, swarm: vSwarm, skills: vSkills, memory: vMemory, howto: vHowto, longterm: vLongTerm, codemem: vCodeMem, journals: vJournals, memsearch: vMemSearch, sources: vSources, workflows: vWorkflows, traces: vTraces, tax: vTax }[route.name] || vHome;
+  const fn = { mail: vMail, decide: vDecide, policy: vPolicy, task: vTask, workflow: vWorkflow, run: vRun, n8n: vN8n, agents: vAgents, agent: vAgentOne, ideas: vIdeas, trials: vTrials, home: vHome, missions: vMissionsGo, mission: vMission, new: vNewGo, chat: vChat, system: vSystem, read: vRead, file: vFile, files: vFiles, wiki: vWiki, build: vBuild, repo: vRepo, guide: vGuide, share: vShare, phone: vPhone, house: vHouse, crew: vCrew, live: vLive, swarm: vSwarm, skills: vSkills, memory: vMemory, howto: vHowto, longterm: vLongTerm, codemem: vCodeMem, journals: vJournals, memsearch: vMemSearch, sources: vSources, measures: vMeasures, workflows: vWorkflows, traces: vTraces, tax: vTax }[route.name] || vHome;
   if (force) {                                      // a page that loads for a moment: not the page you left under the new tab's name
     const was = view.firstChild, n = (render.nav = (render.nav || 0) + 1);
     setTimeout(() => { if (render.nav === n && view.firstChild === was) view.innerHTML = `<div class="stack"><div class="skeleton" style="height:96px"></div><div class="skeleton" style="height:280px"></div></div>`; }, 180);
@@ -615,25 +649,7 @@ document.addEventListener("click", async (e) => {                     // grant b
 
 // the way to the AI phone's page, on Agents and Stack too (PHN-27)
 const phoneBanner = () => (S.phone ? `<a class="banner info mb-3" href="#/phone">${ic.bolt}<span class="grow"><b>AI phone</b> · ${S.phone.stopped ? "stopped" : S.phone.connected ? "connected" : "not connected"}${S.phone.pending ? ` · ${S.phone.pending} waiting for your OK` : ""}</span>${ic.next}</a>` : "");
-// ---------- your devices on Home: the AI phone's state and its allowance in one tap ----------
-function devicesHtml() {
-  const p = S.phone;
-  if (!p) return '<div id="homedev" hidden></div>';
-  const now = Date.now() / 1000, trust = p.trust_until > now, forever = p.trust_until > now + 365 * 86400;
-  const state = p.stopped ? ["failed", "Stopped"] : p.connected ? ["ok", "Connected"] : ["paused", "Not connected"];
-  return `<div id="homedev" class="card pad-l devcard" data-href="#/phone" style="margin-bottom:14px">
-    <div class="row between wrap" style="gap:8px;align-items:center">
-      <a class="row" style="gap:10px;align-items:center" href="#/phone"><div class="repo-ic">${ic.bolt}</div><div><b>AI phone</b> <span class="small muted">${esc(p.model || "")}</span>
-        <div class="row wrap small muted" style="gap:6px;align-items:center"><span class="pill ${state[0]}" style="padding:1px 7px">${state[1]}</span>${p.connected ? esc(p.foreground || "home screen") : ""}${p.pending ? ` · <b class="err-t">${p.pending} waiting for your OK</b>` : ""}</div></div></a>
-      <a class="btn sm ghost" href="#/phone">Open ${ic.next}</a></div>
-    ${p.connected && !p.stopped ? `<div class="row wrap" style="gap:6px;margin-top:10px;align-items:center">
-      ${trust ? `<span class="small"><b>Works without asking ${forever ? "until you stop it" : "until " + clock(p.trust_until)}</b></span><button class="btn sm ghost" data-devtrust="0">Ask me again</button>`
-        : `<span class="small muted">Let it work without asking:</span>${[[10, "10 min"], [60, "1 hour"], [-1, "Until I stop it"]].map(([m, l]) => `<button class="btn sm" data-devtrust="${m}">${l}</button>`).join("")}`}
-      <button class="btn sm ghost danger" data-devstop="1">${ic.pause}Stop</button></div>
-      <div class="tiny faint" style="margin-top:6px">Then just tell Hermes in Chat what to do on the AI phone. Spending money always asks you.</div>` : ""}
-  </div>`;
-}
-// the House on Home, beside the AI phone (DEC-53: it was a banner on Stack): its state in one line, one tap to its page
+// the House on Home's Overview (DEC-53: it was a banner on Stack): its state in one line, one tap to its page
 const houseCardHtml = () => (!S?.house ? '<div id="homehouse" hidden></div>' : `<a id="homehouse" class="banner info mb-3" href="#/house">${ic.house}<span class="grow"><b>House</b> · ${S.house.connected ? `${nf((S.house.things || []).length)} things, ${nf((S.house.echos || []).length)} Echos` : S.house.reachable ? "setup not finished" : "Home Assistant not reachable"}</span>${ic.next}</a>`);
 // APP-15: what the phone shared, one tap away while there is any (kept two weeks)
 const sharedCardHtml = () => (!S?.shared ? '<div id="homeshared" hidden></div>' : `<a id="homeshared" class="banner info mb-3" href="#/share">${ic.clip}<span class="grow"><b>Shared from your phone</b> · ${nf(S.shared)}</span>${ic.next}</a>`);
@@ -643,22 +659,15 @@ document.addEventListener("click", (e) => {
   if (!card || e.target.closest("a,button,summary,details,input,select,textarea,label,form") || String(getSelection() || "")) return;
   location.hash = card.dataset.href;
 });
-document.addEventListener("click", async (e) => {                     // the devices card is redrawn live: delegate
-  const t = e.target.closest("[data-devtrust],[data-devstop]");
-  if (!t) return;
-  const body = t.dataset.devstop ? { do: "stop" } : { do: "trust", minutes: +t.dataset.devtrust };
-  const r = await api("/api/phone/control", { method: "POST", body: JSON.stringify(body) }).catch((err) => ({ error: err.message }));
-  toast(r.error || (body.do === "stop" ? "AI phone stopped" : body.minutes === 0 ? "It asks you once for each job again" : body.minutes < 0 ? "Works without asking until you stop it" : `Works without asking for ${body.minutes} minutes`), !!r.error);
-});
 
 // ---------- Tasks (TSK-01 to TSK-04): give a task in a sentence, or with its details set; every task on one board ----------
-const TSTATUS = { intake: "being planned", planning: "being planned", planned: "starting", needs_answer: "has a question", waiting_approval: "waits for your OK",
-  waiting_owner: "waits for your review", running: "running", after: "waits for another task", scheduled: "scheduled", done: "done", failed: "failed", cancelled: "cancelled" };
+const TSTATUS = { intake: "working out its steps", planning: "working out its steps", planned: "starting", needs_answer: "has a question", waiting_approval: "waits for your OK",
+  waiting_owner: "waits for your review", running: "running", after: "waits for another run", scheduled: "scheduled", done: "done", failed: "failed", cancelled: "cancelled" };
 const TKINDS = { tax: "Taxes", change: "Change request", coding: "Coding", code_question: "Question about code", research: "Research", analysis: "Analysis", watching: "Watching", briefing: "Briefing", shopping: "Shopping", errand: "Errand", cleanup: "Cleanup" };
-const TDOOR = { mission: (r) => [`#/mission/${encodeURIComponent(r)}`, "Open the mission"], build: (r) => [`#/build/${r}`, `Open build #${r}`],
-  claude: (r) => [`#/live/claude-task:${r}`, `Open Claude task #${r}`], chat: (r) => [`#/chat?c=${r}`, "Open the chat"] };
+const TDOOR = { mission: (r) => [`#/mission/${encodeURIComponent(r)}`, "Open its page"], build: (r) => [`#/build/${r}`, `Open build #${r}`],
+  claude: (r) => [`#/live/claude-task:${r}`, `Open Claude run #${r}`], chat: (r) => [`#/chat?c=${r}`, "Open the chat"] };
 const rhythmText = (r, after) => r?.type === "schedule" ? r.schedule + (r.triggers?.length ? ` · ${rhythmText({ type: "event", triggers: r.triggers })}` : "") : r?.type === "event" ? `on ${(r.triggers || []).map((x) => x.type === "news" ? `news on “${x.query}”` : x.type === "price_move" ? `a ${x.pct} % move of ${x.symbol}` : `SEC filings of ${(x.tickers || []).join(", ")}`).join(", ")}`
-  : r?.type === "after" || after ? `after task #${r?.task || after}` : "once";
+  : r?.type === "after" || after ? `after request #${r?.task || after}` : "once";
 // FND-77: a scheduled task says what its last run did and when the next one comes, so "scheduled" never reads as "waiting";
 // the date in English like the rest of the app (DEC-02), in the browser's time zone
 const nextText = dt;
@@ -722,15 +731,15 @@ function ideaOrigins() {
   return ideaOrig.p;
 }
 const ideasOfTask = (m, tid) => [...(m?.values() || [])].filter((x) => x.task === tid);
-const ideaTaskName = (o) => (S?.tasks || []).find((t) => t.id === o.task)?.title || `task #${o.task}`;
+const ideaTaskName = (o) => (S?.tasks || []).find((t) => t.id === o.task)?.title || `request #${o.task}`;
 const ED_WORD = { in: "into a change request", held: "held", covered: "covered", dropped: "dropped" };
 function editorHtml(v) {                                 // ACR-02: the Editor's verdict on an idea, its reason one tap away
   if (!v) return "";
   return `<span class="tag ed-${v.verdict}" title="${esc(v.reason)}">Editor: ${esc(ED_WORD[v.verdict] || v.verdict)}${v.verdict === "in" ? ` · ${esc(v.request)}` : v.covered_by ? ` by ${esc(v.covered_by)}` : ""}</span>`;
 }
 function ideaFromHtml(o) {                               // one line: which task's run saw it first, and how often since
-  if (!o?.first_run) return o?.task ? `from <a href="#/task/${o.task}">${esc(ideaTaskName(o))}</a> · its writer's duty; no run recorded` : "";
-  return `${o.task ? `from <a href="#/task/${o.task}">${esc(ideaTaskName(o))}</a>` : "from a run on no task"} · first seen ${esc(when(new Date(o.first_at * 1000).toISOString()))}${o.first_actor ? ` by ${esc(agentName(o.first_actor))}` : ""}${o.runs > 1 ? ` · seen in ${nf(o.runs)} runs` : ""}`;
+  if (!o?.first_run) return o?.task ? `from <a href="#/task/${o.task}">${esc(ideaTaskName(o))}</a> · its writer's scheduled job; no run recorded` : "";
+  return `${o.task ? `from <a href="#/task/${o.task}">${esc(ideaTaskName(o))}</a>` : "from a run of no workflow"} · first seen ${esc(when(new Date(o.first_at * 1000).toISOString()))}${o.first_actor ? ` by ${esc(agentName(o.first_actor))}` : ""}${o.runs > 1 ? ` · seen in ${nf(o.runs)} runs` : ""}`;
 }
 async function fillIdeaFrom(box) {                       // every [data-iorig] in box gets its line; a task filter hides the others
   const els = $$("[data-iorig]", box);
@@ -750,12 +759,12 @@ async function fillIdeaFrom(box) {                       // every [data-iorig] i
       ${E.missing.length ? `<div class="tiny warn-t" style="margin-top:8px">Not sorted: ${E.missing.map((i) => `#${i}`).join(" ")}</div>` : ""}</details>`;
   }
   const hd = $("#ionly", box);
-  if (hd && only) hd.innerHTML = `<div class="banner info" style="margin-top:10px">${ic.target}<span class="grow">Ideas from <a href="#/task/${only}">${esc(ideaTaskName({ task: only }))}</a> · ${nf(ideasOfTask(m, only).filter((x) => ["open", "ready"].includes(x.state)).length)} open</span><a class="small" href="#/tasks?v=ideas">All ideas</a></div>`;
+  if (hd && only) hd.innerHTML = `<div class="banner info" style="margin-top:10px">${ic.target}<span class="grow">Ideas from <a href="#/task/${only}">${esc(ideaTaskName({ task: only }))}</a> · ${nf(ideasOfTask(m, only).filter((x) => ["open", "ready"].includes(x.state)).length)} open</span><a class="small" href="#/ideas">All ideas</a></div>`;
 }
 async function fillTaskIdeas(el, tid) {                  // a task's page: one quiet line to the ideas its runs had
   if (!el || !tid) return;
   const xs = ideasOfTask(await ideaOrigins(), tid);
-  if (el.isConnected && xs.length) el.innerHTML = `<a class="tiny faint" href="#/tasks?v=ideas&task=${tid}"><span class="idot"></span>${nf(xs.length)} idea${xs.length === 1 ? "" : "s"} from its runs${xs.some((x) => ["open", "ready"].includes(x.state)) ? ` · ${nf(xs.filter((x) => ["open", "ready"].includes(x.state)).length)} open` : ""} ›</a>`;
+  if (el.isConnected && xs.length) el.innerHTML = `<a class="tiny faint" href="#/ideas?task=${tid}"><span class="idot"></span>${nf(xs.length)} idea${xs.length === 1 ? "" : "s"} from its runs${xs.some((x) => ["open", "ready"].includes(x.state)) ? ` · ${nf(xs.filter((x) => ["open", "ready"].includes(x.state)).length)} open` : ""} ›</a>`;
 }
 const svgTspans = (ls, x, y, lh) => ls.map((l, k) => `<tspan x="${x}" ${k ? `dy="${lh}"` : `y="${y}"`}>${esc(l)}</tspan>`).join("");   // wrapped lines in one <text>
 const tmOpen = (a) => !a ? "" : a.uri.startsWith("http") ? `<a class="btn sm" href="${esc(a.uri)}" target="_blank" rel="noopener noreferrer">${ic.next}Open the page</a>`
@@ -855,14 +864,14 @@ function a2aCardHtml() {
   const a = S?.a2a || { enabled: false, agents: [] };
   return `<div class="card pad" id="a2acard"><div class="row between wrap" style="gap:8px;padding-right:32px"><b>Outside agents (A2A)</b>
       <label class="tag"><input type="checkbox" data-a2aon${a.enabled ? " checked" : ""}> ${a.enabled ? "on" : "off"}</label></div>
-    ${explain("agents-on-your-tailnet-c", `Agents on your tailnet can give the stack a task over A2A, each with its own token; every task from outside waits for your OK on Tasks. Nothing outside the tailnet reaches it.`, "About this")}
+    ${explain("agents-on-your-tailnet-c", `Agents on your tailnet can give the stack a request over A2A, each with its own token; every request from outside waits for your OK in Needs you. Nothing outside the tailnet reaches it.`, "About this")}
     ${a.agents.length ? `<div class="list" style="margin-top:8px">${a.agents.map((x) => `<div><b class="grow">${esc(x.name)}</b><span class="tiny faint">added ${rel(x.created)}</span><button class="btn sm ghost danger" data-a2arevoke="${esc(x.name)}">Revoke</button></div>`).join("")}</div>` : ""}
     <form class="row wrap" id="a2aform" style="gap:6px;margin-top:8px"><input class="input grow" name="name" placeholder="Name of an outside agent, e.g. laptop-claude" pattern="[a-z0-9][a-z0-9-]{1,30}" style="min-width:180px"><button class="btn sm">Add</button></form>
     <div id="a2atok"></div></div>`;
 }
 function bindA2a() {
   const on = $("[data-a2aon]");
-  if (on) on.onchange = () => act({ action: "a2a_settings", on: on.checked }, on.checked ? "A2A is on: agents you add can send tasks, each waits for your OK" : "A2A is off: outside agents cannot reach the stack");
+  if (on) on.onchange = () => act({ action: "a2a_settings", on: on.checked }, on.checked ? "A2A is on: agents you add can send requests, each waits for your OK" : "A2A is off: outside agents cannot reach the stack");
   $$("[data-a2arevoke]").forEach((b) => (b.onclick = () => confirm(`Revoke ${b.dataset.a2arevoke}? Its token stops working at once.`) && act({ action: "a2a_revoke", name: b.dataset.a2arevoke }, "Revoked: its token stops working now")));
   const f = $("#a2aform");
   if (f) f.onsubmit = async (e) => {
@@ -916,10 +925,10 @@ async function telInto(box) {
   for (const r of rows) (byAgent[r.agent] ??= []).push(r);
   const agents = Object.entries(byAgent).map(([a, rs]) => [a, telSum(rs), rs]).sort((x, y) => y[1].runs - x[1].runs);
   const judged = s.met + s.partly + s.not_met;
-  box.innerHTML = `<div class="section-h section"><h2>The agents, day by day</h2>${explain("telemetry-numbers", `Runs, how many ended well, the judge's verdicts, tokens, time, and what the tokens would cost at list price (the subscriptions cost $0 a call).${telData.prices?.date ? ` Prices of ${esc(telData.prices.date)}, from the gateway's table.` : ""} A row is one day of one agent on one model, harness and kind of work, kept for a year; a verdict counts on the day its task was judged. ${how("telemetry")}`, "What these numbers are")}<a class="btn sm ghost" href="#/trials">${ic.target}Trials</a></div>
+  box.innerHTML = `<div class="section-h section"><h2>The agents, day by day</h2>${explain("telemetry-numbers", `Runs, how many ended well, the judge's verdicts, tokens, time, and what the tokens would cost at list price (the subscriptions cost $0 a call).${telData.prices?.date ? ` Prices of ${esc(telData.prices.date)}, from the gateway's table.` : ""} A row is one day of one agent on one model, harness and kind of work, kept for a year; a verdict counts on the day its run was judged. ${how("telemetry")}`, "What these numbers are")}<a class="btn sm ghost" href="#/trials">${ic.target}Trials</a></div>
   ${telData.error ? `<div class="card pad small muted">${esc(telData.error)}</div>` : ""}
   <div class="row wrap telf"><div class="seg">${[7, 30, 90, 365].map((d) => `<button data-td="${d}" class="${telF.days === d ? "on" : ""}">${d === 365 ? "Year" : d + " days"}</button>`).join("")}</div>${sel("agent", "Agent")}${sel("model", "Model")}${sel("kind", "Kind")}</div>
-  <div class="tmnums" style="margin-top:12px">${[[nf(s.runs), "runs", ""], [pct(s.ok, s.runs), `ended well (${nf(s.failed)} failed)`, ""], [judged ? pct(s.met + 0.5 * s.partly, judged) : "–", `of ${nf(judged)} judged tasks met`, ""],
+  <div class="tmnums" style="margin-top:12px">${[[nf(s.runs), "runs", ""], [pct(s.ok, s.runs), `ended well (${nf(s.failed)} failed)`, ""], [judged ? pct(s.met + 0.5 * s.partly, judged) : "–", `of ${nf(judged)} judged runs met`, ""],
     [tok(s.tin + s.tout), "tokens", ""], [ifPaid(s.cost) || "–", "at list price", ""], [s.runs ? dur(s.p50) : "–", `median run · p95 ${s.runs ? dur(s.p95) : "–"}`, ""]]
     .map(([v, l]) => `<div class="card pad tmnum"><b>${esc(v)}</b><span class="tiny faint">${esc(l)}</span></div>`).join("")}</div>
   <div class="stack section">${telBars(rows, (r) => r.runs, "Runs", nf)}${telBars(rows, (r) => (r.tin || 0) + (r.tout || 0), "Tokens", tok)}</div>

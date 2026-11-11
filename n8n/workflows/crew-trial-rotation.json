@@ -25,6 +25,7 @@
       ]
     }
   },
+  "factory": "platform",
   "id": "aisce839b1f70773",
   "name": "Crew: Trial rotation",
   "nodes": [

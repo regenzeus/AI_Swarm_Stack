@@ -347,6 +347,7 @@ services:
       PHONE_HOST: ${PHONE_HOST:-}
       PC_TAILNET_HOST: ${PC_TAILNET_HOST:-}
       APP_NAME: ${APP_NAME:-AI Stack}                 # the app's name (APP-61)
+      FEATURES: ${FEATURES:-}                         # GEN-13: the app shows nothing of a feature that is off (the AI phone, PHN-28)
       APP_GATE: ${APP_GATE:-tailnet}                  # WFL-16: tailnet (Tailscale's login) or local (this PC only, no tailnet)
       # SEC-24..26: log (the default) refuses nothing and logs what it would refuse; on refuses it. The lead switches it on
       # in the deployment's deployment.env after a deploy in log mode (docs/SECURITY.md, "Switching the trust boundary on")
@@ -358,6 +359,7 @@ services:
       MCP_TOKEN_FILES: ${MCP_TOKEN_FILES:-}
       MCP_TOKEN_MEMORY: ${MCP_TOKEN_MEMORY:-}
       MCP_TOKEN_MEMORYPUBLIC: ${MCP_TOKEN_MEMORYPUBLIC:-}
+      MCP_TOKEN_STACK: ${MCP_TOKEN_STACK:-}
       NAS_HOST: ${NAS_HOST:-}
       HA_URL: ${HA_URL:-}
       ROUTER_URL: ${ROUTER_URL:-}

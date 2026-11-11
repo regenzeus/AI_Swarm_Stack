@@ -107,9 +107,9 @@ def test_the_agents_tab_is_five_views_and_none_of_the_ten_is_lost():
     agent with its own page) and Ideas (ideas, the task graph, the loop's numbers); links to the old views land on the new place."""
     app = webjs.app_js()
     swarm = (ROOT / "images/mission-control/web/static/swarm.js").read_text()
-    assert '[["tasks", "Tasks"], ["activity", "Activity"], ["team", "Team"], ["network", "Network"], ["ideas", "Ideas"]]' in app   # the Tasks tab (DEC-46)
-    assert '<div id="ovnow"></div>' in app and '<div id="ovmap">' not in app and '<div id="ovmap">' in swarm and "swOverview();" in app
-    assert 'swRender($("#netteam"), "map")' in app and 'swRender(box, "agents")' in app and 'swRender(b, "improve"' in app
+    assert '[["agents", "Agents"], ["team", "Health and results"], ["network", "Who works with whom"]]' in app   # Agents (APP-69)
+    assert '<div id="ovnow"></div>' in app and '<div id="ovmap">' not in app and '<div id="ovmap">' in swarm and "swOverview();" in app   # Activity on Home
+    assert 'swRender($("#netteam"), "map")' in app and 'swRender(b, "agents")' in app and 'swRender($("#tvbody"), "improve"' in app
     for part in ("async function swTimeline(", "function swMapCard(", "async function swAgents(", "async function swAgentPanel(", "/api/swarm/timeline",
                  "/api/swarm/interactions", "/api/swarm/room?hours=", "'s answer", "Show earlier (", "Show all (", "can send data out",
                  "Merge queue", "Files held by builds", "Being built", "The improvement loop in numbers", "Ideas two or more work on", "Worked alone"):
@@ -157,8 +157,8 @@ process.stdout.write(JSON.stringify(res));""")
     assert out[0] == [["mission", "scout"], 168, True, False, False]                    # only what passed between them
     assert out[1] == [["mission", "scout"], "", True]
     assert out[2] == [[], "", 24, True, False]
-    assert out[3] == [True, "#/tasks?v=activity&agents=scout&h=168", "#/crew/doctor?tab=team", "#/swarm/agent/scout", "",
-                      "#/tasks?v=activity&agents=a,b&h=72", "#/swarm/agent/curator"]   # the team's curator is not the skills job "curator"
+    assert out[3] == [True, "#/home?tab=activity&agents=scout&h=168", "#/crew/doctor?tab=team", "#/agent/scout", "",
+                      "#/home?tab=activity&agents=a,b&h=72", "#/agent/curator"]   # the team's curator is not the skills job "curator"
 
 
 def test_the_map_is_agents_as_dots_and_lines_that_open_activity():
@@ -233,12 +233,12 @@ def test_every_team_agent_has_one_page():
     as its Team tab; any other team agent has #/swarm/agent/<id>; every card opens it."""
     app = webjs.app_js()
     assert 'kind === "crew" && swIsCrew(c.id) && (S?.swarm?.cards || []).includes(c.id) ? [["team", "Its work"]] : []' in app
-    assert 'if (route.args[0] === "agent") return swAgentPage(view, decodeURIComponent(route.args[1] || ""));' in SWARM_JS
+    assert 'if (route.args[0] === "agent") return location.replace(`#/agent/' in SWARM_JS and "swAgentPanel($(\"#swagent\"), id, false, false);" in webjs.app_js()
     tile = re.search(r"^function swTile\(.*?^\}$", SWARM_JS, re.M | re.S)[0]
     assert 'data-href="${href}"' in tile and "Its activity" in tile
     panel = re.search(r"^async function swAgentPanel\(.*?^\}$", SWARM_JS, re.M | re.S)[0]
     for part in ("swDaysHtml(", "Works with", "Runs in the last 7 days", "What it said and did", "Ideas it worked on", "swTelemetry()",
-                 "<h2>Health", "Tasks it did steps for", "<h2>Memory", "agents/${id}/MEMORY.md", "i.id === SW_ENGINE[id]"):
+                 "<h2>Health", "Runs it did steps for", "<h2>Memory", "agents/${id}/MEMORY.md", "i.id === SW_ENGINE[id]"):
         assert part in panel, part
     assert "team: (box) => swAgentPanel(box, c.id, true, false)" in app                       # its housekeeping page shows issues and memory already
     assert 'setTimeout(() => swMissionDays($("#mdays", body), m.slug), 0);' in app      # a mission's History: its last 30 days

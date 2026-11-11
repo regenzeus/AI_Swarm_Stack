@@ -227,7 +227,7 @@ process.stdout.write(JSON.stringify({ bad, map, pair }));"""
     assert out["bad"] == [], out
     assert out["pair"] == ["below", "above"]                                # the smaller wiki's name moves up, not onto the other
     assert 'at = wikiMapLabels(nodes, rad, W, H, (d) => wikiShort(d.title));' in APP_JS and "if (!at.clashes || H >= 520) break;" in APP_JS
-    assert "of archived missions (kept, not on the map)" in APP_JS
+    assert "of archived workflows (kept, not on the map)" in APP_JS
 
 
 def test_memory_says_where_its_content_comes_from_and_never_calls_it_true():
@@ -280,7 +280,7 @@ def test_the_memory_tab_has_one_home_per_kind_and_one_search():
     """APP-50: the owner asked for the kinds of memory, not for the agents, history and health pages over again."""
     tabs = re.search(r"const MEM_TABS = \[(.*?)\];", APP_JS).group(1)
     assert [x for x in re.findall(r'\["(\w+)", "#/', tabs)] == ["memory", "wiki", "longterm", "codemem", "howto", "journals"]   # MEM-45: All first
-    assert 'Memory", ic.wiki]' in APP_JS and 'data-sp="knowledge"' not in APP_JS
+    assert '["#/memory", "What agents know"]' in APP_JS and 'data-sp="knowledge"' not in APP_JS   # under Agents (APP-69)
     for fn in ("vLongTerm", "vCodeMem", "vJournals", "vSources", "vMemSearch"):
         assert f"{fn}" in APP_JS
     assert "api_journals" in pysrc.server()

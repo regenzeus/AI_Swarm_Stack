@@ -25,6 +25,7 @@
       ]
     }
   },
+  "factory": "platform",
   "id": "aisca246bc5f4e87",
   "name": "Crew: Health doctor",
   "nodes": [

@@ -194,7 +194,7 @@ def test_the_desk_and_the_scout_read_their_prompts_from_the_mount_and_the_desk_h
     assert "the scout's brief (prompts/scout.md) could not be read" in research                     # no brief, no research
 
 
-def test_the_deploy_hands_each_configure_script_its_soul_text_from_the_prompts_file():
+def test_the_deploy_hands_each_configure_script_its_soul_text_from_the_prompts_file(phone_on):
     import deploy as D
     assert D.configure_scripts(["prompts/mission.md"]) == ["config/hermes/configure-mission.sh"]
     assert D.configure_scripts(["prompts/main.md", "config/hermes/configure-scout.sh"]) == ["config/hermes/configure.sh", "config/hermes/configure-scout.sh"]

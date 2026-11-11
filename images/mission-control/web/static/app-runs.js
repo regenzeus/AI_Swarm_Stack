@@ -237,10 +237,10 @@ let rtES = null, rtTimer = null;
 // TAX-12: an agent card's own readable name (config/agents.yaml name: "Tax reader"), from the agents the board offers
 const cardName = (a) => ((S?.task_agents || []).find((x) => x.id === a) || {}).name || "";
 function agentName(a) {
-  return ({ main: "Hermes (chat)", mission: "Hermes (tasks)", scout: "Scout", curator: "Curator", builder: "Builder (ChatGPT)", "claude-builder": "Builder (Claude Code)",
-            "claude-task": "Claude task", "claude-review": "Claude review", "claude-maintainability": "Claude review (Crew)", "ai-phone": "AI phone", mail: "Gmail", runner: "Runner" })[a]
-    || (String(a || "").startsWith("mission:") ? (S?.missions || []).find((m) => "mission:" + m.slug === a)?.title || "Mission " + a.slice(8)
-    : String(a || "").startsWith("crew:") ? (S?.crew || []).find((c) => "crew:" + c.id === a)?.name || "Crew: " + a.slice(5)
+  return ({ main: "Hermes (chat)", mission: "Hermes (workflow steps)", scout: "Scout", curator: "Curator", builder: "Builder (ChatGPT)", "claude-builder": "Builder (Claude Code)",
+            "claude-task": "Claude question", "claude-review": "Claude review", "claude-maintainability": "Claude review (scheduled)", "ai-phone": "AI phone", mail: "Gmail", runner: "Runner" })[a]
+    || (String(a || "").startsWith("mission:") ? (S?.missions || []).find((m) => "mission:" + m.slug === a)?.title || "Briefing " + a.slice(8)
+    : String(a || "").startsWith("crew:") ? (S?.crew || []).find((c) => "crew:" + c.id === a)?.name || "Scheduled: " + a.slice(5)
     : { claude: "Claude Code", phone: "AI phone", gmail: "Gmail", house: "House", "self-review": "Self-review", "phone-check": "Phone check", "phone-cleanup": "Phone cleanup" }[a]
     || cardName(a) || String(a || "").replace(/^\w/, (x) => x.toUpperCase()));
 }
@@ -286,7 +286,7 @@ async function vLive() {
   view.innerHTML = `<a class="back" href="javascript:history.back()">${ic.back}Back</a><div id="lv"><div class="skeleton" style="height:240px"></div></div>`;
   // a bare #/live names no run: nothing to fetch, the empty state at once
   if (!(id && await mountRun($("#lv"), id)) && $("#lv")) $("#lv").innerHTML = emptyState("No run record for this yet. Runs show here from the moment they start (recorded from 28 October on).",
-    `<a class="btn sm" href="#/tasks?v=activity">${ic.history}Every run on the timeline</a>`, "card pad-l");
+    `<a class="btn sm" href="#/home?tab=activity">${ic.history}Every run on the timeline</a>`, "card pad-l");
 }
 
 // MEM-46: what memory a run was given (by collection), which items it used, what it yielded; a chat turn's long-term memory
@@ -454,7 +454,7 @@ function settingsForm(body, m) {
     <label class="field" style="margin-top:0"><span>Title</span><input class="input" name="title" value="${esc(m.title)}" maxlength="80"></label>
     ${m.workflow ? `<div class="field"><span>Schedule</span>${wfScheduleHtml(m.schedule_text, m.status === "active" ? m.next_run : null, m.workflow)}</div>` : schedHtml(m.schedule)}
     ${trigEditor(m.triggers)}
-    ${m.type === "task" ? `<div class="card pad" style="margin-top:16px;padding-top:4px;padding-bottom:4px"><label class="switch"><span><b>Deep research</b><div class="small muted">Every run plans 3–5 research steps, works through them, then combines the findings</div></span><input type="checkbox" name="deep" ${m.depth === "deep" ? "checked" : ""}></label></div>` : ""}
+    ${m.type === "task" ? `<div class="card pad" style="margin-top:16px;padding-top:4px;padding-bottom:4px"><label class="switch"><span><b>Deep research</b><div class="small muted">Every run sets out 3–5 research steps, works through them, then combines the findings</div></span><input type="checkbox" name="deep" ${m.depth === "deep" ? "checked" : ""}></label></div>` : ""}
     <div class="field"><span>Cost</span><small style="font-size:13.5px">Runs only on your ChatGPT subscription: $0. If ChatGPT pauses the stack, runs wait and retry every 30 minutes.</small></div>
     ${deliverHtml(m.deliver || [])}
     ${m.type === "task" ? `<label class="field"><span>Goal</span><textarea class="input" name="goal" rows="7">${esc(m.goal)}</textarea></label>
@@ -626,7 +626,7 @@ const modelName = (id) => (MODELS?.models || []).find((m) => m.id === id)?.name 
 
 // ---------- APP-39: what a chat made (docs/CHAT-MADE.md): a card under the message that made it, the Made here sheet, the way back ----------
 const MADE_IC = { mission: "rocket", build: "code", claude: "brain", repo: "layers", note: "doc", email: "send" };
-const MADE_KIND = { mission: "Mission", build: "Build", claude: "Claude task", repo: "Repository", note: "Note in the vault", email: "E-mail" };
+const MADE_KIND = { mission: "Workflow", build: "Build", claude: "Claude question", repo: "Repository", note: "Note in the vault", email: "E-mail" };
 const MADE_STATE = { creating: ["queued", "Being created"], queued: ["queued", "Queued"], running: ["running", "Running"], done: ["ok", "Done"],
   waits: ["paused", "Waits for you"], failed: ["failed", "Failed"], paused: ["paused", "Paused"], sent: ["ok", "Sent"], made: ["ok", "Made"],
   gone: ["archived", "No longer there"] };
@@ -747,7 +747,7 @@ async function vChat() {
   pending = draft.pending || [];
   const mis = mslug || cur?.mission;
   const m = mis && S ? S.missions.find((x) => x.slug === mis) : null;
-  const sugg = m ? [`What does this mission track right now?`, `Make it focus more on `, `Add a key question about `, `Alert me when ${m.brief?.filings?.[0] || "the company"} files with the SEC`]
+  const sugg = m ? [`What does this workflow track right now?`, `Make it focus more on `, `Add a key question about `, `Alert me when ${m.brief?.filings?.[0] || "the company"} files with the SEC`]
     : ["What are my agents doing?", "What changed in my repositories this week?", "Research a company and e-mail me an analysis", "Watch a share and tell me if it moves 8 % in a day"];
   view.innerHTML = `<div class="chatwrap">
     <div class="cscrim" id="cscrim" hidden></div>
@@ -776,7 +776,7 @@ async function vChat() {
         <button type="button" class="err-t" data-cm="delete">${ic.trash}Delete</button>
       </div>` : ""}
       <div class="madesheet card" id="madesheet" hidden></div>
-      ${m ? `<div class="banner info" style="margin:0 0 10px">${ic.tune}<span class="grow small">Focus chat for <b>${esc(m.title)}</b>: say what to track more or less; it changes the mission.</span></div>` : ""}
+      ${m ? `<div class="banner info" style="margin:0 0 10px">${ic.tune}<span class="grow small">Focus chat for <b>${esc(m.title)}</b>: say what to track more or less; it changes the workflow.</span></div>` : ""}
       <div class="msgs" id="msgs">${(cur?.messages || []).length ? "" : `<div class="empty-chat"><h2 class="chello">What can I do for you?</h2><div class="suggest">${sugg.map((x) => `<button type="button">${esc(x)}</button>`).join("")}</div></div>`}</div>
       <div class="tobwrap"><button type="button" class="tobottom" id="tobottom" aria-label="Go to the newest message" hidden>${ic.down}</button></div>
       <div class="cquick" id="cquick">

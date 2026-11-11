@@ -47,6 +47,8 @@
       ]
     }
   },
+  "factory": "home",
+  "feature": "mail",
   "id": "aiscaf4e4e143a94",
   "name": "Tax desk",
   "nodes": [

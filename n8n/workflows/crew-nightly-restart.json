@@ -25,6 +25,7 @@
       ]
     }
   },
+  "factory": "platform",
   "id": "aisc492c3313fd67",
   "name": "Crew: Nightly restart",
   "nodes": [

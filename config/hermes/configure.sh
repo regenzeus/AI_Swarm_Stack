@@ -49,10 +49,12 @@ c delegation.max_iterations 25
 # SOUL_<R>; each sits in its own marked block, rewritten on every run. Run by hand without them, a rule stays as it is.
 # web: web questions go to the research tool. missions: missions are run through the missions tools. shopping: wishes
 # become shopping agents; buying needs the owner's own tap. language: always English. phone: the AI phone and what it leaves
-# to the owner. claude: what to give Claude Code and what to do yourself.
+# to the owner. claude: what to give Claude Code and what to do yourself. A rule handed in empty (the phone rule while the
+# deployment has the AI phone switched off, PHN-28) is removed and not written.
 for r in web missions shopping language phone claude; do
   v=$(printenv "SOUL_$(echo "$r" | tr a-z A-Z)") || { echo "$r rule kept: no SOUL_$r given (ops/deploy.py hands it in from prompts/main.md)"; continue; }
   sed -i "/BEGIN ai-stack $r rule/,/END ai-stack $r rule/d" /opt/data/SOUL.md 2>/dev/null || true
+  [ -n "$v" ] || { echo "$r rule removed: its feature is off"; continue; }
   printf '\n<!-- BEGIN ai-stack %s rule -->\n%s\n<!-- END ai-stack %s rule -->\n' "$r" "$v" "$r" >> /opt/data/SOUL.md
 done
 # Deleting a block leaves the blank line before it: squeeze repeated blank lines, or they pile up with every run.

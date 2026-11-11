@@ -1,11 +1,11 @@
 ---
-title: "Workflows: n8n inside the app"
+title: "n8n inside the app"
 kicker: What runs when, and in what order
 part: Under the hood
 icon: flow
 minutes: 4
 summary: n8n decides when each piece of work starts and in what order; the stack's agents do the work. Its editor opens inside the app, every task shows where it runs, and every agent the workflows it is in.
-views: [workflows]
+views: [n8n]
 ---
 **n8n** is the stack's workflow tool. A workflow says when work starts (a schedule, a call, an event) and in what
 order its steps run. Its **AI Stack steps** hand the work to the stack: an agent, a crew job, a plan task, a question
@@ -22,7 +22,7 @@ runs, and its last runs with the steps the stack ran and how each ended. n8n's c
 
 ```try
 label: See the workflows
-open: "#/workflows"
+open: "#/n8n"
 note: On the desk n8n's editor opens here; on a phone each workflow's last run and its steps.
 ```
 
@@ -51,7 +51,7 @@ Each workflow is a canvas of blocks: a trigger on the left (a schedule, a messag
 
 ```try
 label: Find a crew job's workflow
-open: "#/tasks?v=team&p=crew"
+open: "#/agents?v=team&p=crew"
 note: Open a crew job. Where it runs names its workflow; “its old schedule runs it” means n8n does not start it yet.
 ```
 

@@ -177,7 +177,7 @@ memory_public_mcp = memory_server("memorypublic", "public")
 # ---------- MCP tools for Hermes ----------
 mcp = MCPServer("missions")
 WINDOWS = M / "windows"
-NOT_YOUR_CHAT = "Windows answers only while the owner is chatting with you in Mission Control. Tell him to ask there."
+NOT_YOUR_CHAT = "Windows answers only while the owner is chatting with you in Mission Control. Tell them to ask there."
 
 
 def owner_chat_running():
@@ -267,7 +267,7 @@ def line(m):
 FILES_DOC = ("files: the documents the owner asks the mission to deliver, each {'name': 'bullet-heaven-spec.md', 'what': 'one line'}; "
              "the mission saves them, its page shows them (open, download), the e-mail attaches them and Telegram sends them "
              "as documents. The stack can make .md, .csv, .json and .txt files only, up to 2 MB each: NOT Word, PDF, "
-             "images or archives, and it sends only to the owner himself. When the owner asks for anything else, tell him BEFORE you "
+             "images or archives, and it sends only to the owner. When the owner asks for anything else, tell them BEFORE you "
              "create the mission and offer Markdown; never promise a delivery the stack cannot make.")
 
 
@@ -344,11 +344,11 @@ async def mission_details(slug: str) -> str:
     "works on in repeated runs, keeping notes between runs, e.g. 'watch X', 'research Y over the next weeks'; deep=True "
     "makes each run a multi-step research (plan, several research steps, synthesis). kind='shopping': a shopping agent for a wish "
     "(it works out what fits from the PC's own facts, compares several shops incl. shipping and delivery, decides buy now "
-    "or wait, and sends the owner a purchase proposal he approves himself in Mission Control; it never buys without that "
-    "approval; put his budget and deadline in the description); watch_price=True re-checks daily and only reports a price drop of 5 % or more. kind='cleanup': where the space "
+    "or wait, and sends the owner a purchase proposal they approve themselves in Mission Control; it never buys without that "
+    "approval; put their budget and deadline in the description); watch_price=True re-checks daily and only reports a price drop of 5 % or more. kind='cleanup': where the space "
     "goes and what could go, on the AI phone (target='phone': storage, folders, unused apps, caches) or the PC "
     "(target='pc': a TreeSize-like scan of the Windows drives, safe/caution/never labels); it NEVER deletes. description: everything the owner said "
-    "about what he wants. Default schedule: briefing 'daily 06:30', task 'manual'. " + SCHEDULES + " " + TRIGGERS +
+    "about what they want. Default schedule: briefing 'daily 06:30', task 'manual'. " + SCHEDULES + " " + TRIGGERS +
     " once=True makes a one-off job: it runs now, delivers its result and then archives itself (use it for 'research X "
     "and send me the result'). deliver: any of 'telegram', 'app', 'email' (default telegram+app; add 'email' when the owner "
     "wants it by e-mail). This returns at once; the mission appears within about a minute. Call it ONCE per request, "
@@ -434,8 +434,8 @@ async def mission_set_triggers(slug: str, triggers: list[dict]) -> str:
 
 @mcp.tool()
 async def send_email(subject: str, markdown: str) -> str:
-    """Send the owner an e-mail (to his own address only) in the designed report layout. markdown: the full content, starting
-    with '# Headline'; use headings, bullets, tables and source links. Use it when he asks to get something by e-mail."""
+    """Send the owner an e-mail (to their own address only) in the designed report layout. markdown: the full content, starting
+    with '# Headline'; use headings, bullets, tables and source links. Use it when they ask to get something by e-mail."""
     r = await submit({"action": "email", "subject": TC.fit(subject, 150), "markdown": TC.cut(markdown, 100000), "source": "chat"}, wait=60)  # cap: untrusted
     if r.get("pending"):
         return "Sending..."
@@ -472,7 +472,7 @@ async def build_assign(repo: str, title: str, description: str, engine: str = ""
     AI stack itself: Mission Control, missions, configs, scripts) or a repo in ~/code that lives on Forgejo (e.g.
     'TestRepo'). description: exactly what to build or fix, with acceptance criteria. The builder works on a branch,
     runs the checks, CI runs; the owner reviews the diff in Mission Control (Build) and taps Approve, which merges and
-    deploys with a smoke test and automatic rollback. Nothing goes live without his tap. Returns the build number.
+    deploys with a smoke test and automatic rollback. Nothing goes live without the owner's tap. Returns the build number.
     engine: leave empty (Claude Code when it is connected: better at code, and it spares the ChatGPT limit), 'claude'
     or 'hermes' (the builder on the ChatGPT subscription) when the owner asks for one."""
     r = await submit({"action": "build_assign", "repo": repo, "title": title, "description": description, "engine": engine,
@@ -541,7 +541,7 @@ async def task_start(text: str) -> str:
 @mcp.tool()
 async def build_request_changes(id: int, feedback: str) -> str:
     """Send a build in review (or failed) back to the builder with what to change, exactly as the owner's 'Request changes'
-    button does. Only when the owner asks for it in this chat; write his points as clear, numbered instructions. You can
+    button does. Only when the owner asks for it in this chat; write their points as clear, numbered instructions. You can
     never approve or deploy a build: that is the owner's tap in Mission Control."""
     r = await submit({"action": "build_revise", "id": int(id), "feedback": feedback, "source": "chat"})
     return f"Build #{id} goes back to the builder with your feedback." + made("build", id, "changed") if r.get("ok") else f"Error: {r.get('error')}"
@@ -568,7 +568,7 @@ async def build_switch_engine(id: int, engine: str) -> str:
 async def improvement_proposals(scan_now: bool = False) -> str:
     """The stack's own improvement ideas (the swarm's Ledger: from the crew and the weekly self-review): id, state (open,
     ready, active = being built, checking = shipped, declined, merged, gone), the agent that proposed it, title, and the
-    owner's reason when he decided. The owner decides in Mission Control (Code) whether an idea becomes a build.
+    owner's reason when they decided. The owner decides in Mission Control (Code) whether an idea becomes a build.
     scan_now=True starts a new self-review now (takes a minute or two)."""
     if scan_now:
         await submit({"action": "improve_scan", "source": "hermes"}, wait=1)

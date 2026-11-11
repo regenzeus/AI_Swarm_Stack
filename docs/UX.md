@@ -10,29 +10,28 @@ patterns, and the dated reviews (`REVIEW-*.md`, [UX-REVIEW-2026-10-30.md](UX-REV
 |---|---|---|
 | Morning, on the phone | Sees what needs a yes or no, what ran overnight, what is next | **Home**: Needs you, Now, Results |
 | Any time, one-handed | Answers a question, approves a purchase, a pack commit, a memory | **Home → Needs you** (`#/decide` for all of them) |
-| Any time | Gives a task in a sentence, follows it | **Home**'s ask bar, **Tasks**, a task's page |
-| At the desk | Shapes routines, sees every run of a workflow | **Workflows** (n8n inside the app) |
-| At the desk | Reviews and approves code changes | **Code** |
-| Now and then | Reads what the stack knows | **Memory** |
+| Any time | Gives a request in a sentence, follows its run | **Home**'s ask bar, **Workflows** → New request, a run's page |
+| Any time | Sees every workflow, its diagram and its runs | **Workflows** (the app's own list; n8n's editor one tap away on the desk) |
+| At the desk | Reviews and approves code changes | **Stack → Code** |
+| Now and then | Reads what the agents know, what could be better | **Agents → What agents know**, **Improve** |
 | When something is off | Health, costs, tools, connections | **Stack** |
 | When curious | A model call's whole prompt and answer | **Traces** (Phoenix inside the app) |
 
 ## 2. Information architecture
 
-**The menu** (DEC-53, APP-64): Home, Tasks, Workflows (desk), Memory, Code, Chat, Stack. The phone's bottom bar holds the
-same in the same order without Workflows (n8n's canvas is not made for a phone; Tasks has a Workflows button, and a
-workflow's runs show as a list there). Six thumb-wide targets (62 px at 375 px), the badge on Home counts what needs the
-owner, the dot on Stack is the stack's state.
+**The menu** (the six places, APP-69, 11 Nov 2026): Home, Workflows, Agents, Improve, Chat, Stack, the same on the
+phone's bottom bar and the desk's menu. Six thumb-wide targets (62 px at 375 px), the badge on Home counts what needs
+the owner, the dot on Stack is the stack's state. The app speaks only the factory design's words (APP-70: Workflow,
+Run, Step, Agent, Ask, Trigger, Result; never task, mission, crew, plan, swarm).
 
 | Menu | Holds | Reached from it, at most two taps |
 |---|---|---|
-| Home | Needs you, Now, Results, Overview (AI phone, House, what the phone shared, numbers) | `#/decide`, `#/house`, `#/phone`, `#/share` |
-| Tasks | Tasks, Activity, Team (crew, measured), Network, Ideas | a task's page (`#/task/<id>`), an agent's page, a crew job's page, `#/trials` |
-| Workflows | n8n's editor and its runs (desk); the list of workflows with their last runs (phone) | n8n "On its own" |
-| Memory | All, Wikis, Long-term, Code, How-to, Journals; sizes, limits and the weekly tidy | a wiki, a skill, a journal |
-| Code | Repositories, builds, change requests | a repository's page, a build |
+| Home | Today (Needs you, In the stack, Now), Activity, Results, Overview (House, what the phone shared, numbers) | `#/decide`, `#/house`, `#/share` |
+| Workflows | Every workflow by factory and area; New request; triggers | a workflow's page (`#/workflow/<id>`: diagram, runs, result, agents, settings), a run's page (`#/run/<workflow>/<run>`), an old record's page (`#/task/<id>`), `#/n8n` |
+| Agents | Agents, Health and results, Who works with whom, What agents know (All, Wikis, Long-term, Code, How-to, Journals) | an agent's page, a scheduled job's page, a wiki, a skill |
+| Improve | Proposals, Scorers, Measures, Benchmarks | an idea's page, `#/measures`, `#/trials` |
 | Chat | Hermes, with history | what a chat made |
-| Stack | Health (incl. Traces), Costs, Tools, Connections (Gmail, outside agents, packs and trackers), Settings | `#/traces`, `#/guide`, `#/files`, `#/mail` |
+| Stack | Health (incl. Traces), Costs, Tools, Connections (Gmail, outside agents, packs and trackers), Settings; Code and n8n's editor | `#/build`, `#/n8n`, `#/traces`, `#/guide`, `#/files`, `#/mail` |
 
 **One place for a run** (APP-63): a run is followed on its task's page: *Where it runs* (the workflow, the run, its
 state, the step; on the desk n8n's canvas of the run), its steps each with its own log (`#/live/<run>`, the one view of

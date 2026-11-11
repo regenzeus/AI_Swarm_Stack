@@ -117,6 +117,38 @@ def steps_of(wf):
     return out
 
 
+TRIGGER_TYPES = ("n8n-nodes-base.scheduleTrigger", "n8n-nodes-base.webhook", "n8n-nodes-base.manualTrigger")
+
+
+def graph_of(wf):
+    """APP-72: the workflow's diagram as the app draws it (every workflow always shows it): each node with its place on
+    n8n's canvas and what it is (a trigger in words, an AI Stack step with its kind and its agent or job, or one of n8n's
+    own nodes), and each connection as [from, to, output] (an If node's first output is its yes, the second its no)."""
+    nodes = []
+    for n in wf.get("nodes") or []:
+        if not n.get("name"):
+            continue
+        t, p = str(n.get("type") or ""), n.get("parameters") or {}
+        at = n.get("position") or [0, 0]
+        x = {"name": n["name"], "type": t.rsplit(".", 1)[-1], "at": [at[0], at[1]] if len(at) > 1 else [0, 0]}
+        if t == STEP:
+            x["kind"] = p.get("kind") or "agent"
+            x["title"] = str(p.get("title") or n["name"])
+            for k in ("agent", "job"):
+                if p.get(k):
+                    x[k] = str(p[k])
+            if str(p.get("task", "")).isdigit():
+                x["task"] = int(p["task"])
+        elif t in TRIGGER_TYPES or "trigger" in t.lower():
+            x["trigger"] = (schedule_of({"nodes": [n]}) if t != "n8n-nodes-base.webhook"
+                            else "Run now" if str(p.get("path", "")).startswith("run/") else "when called")
+        nodes.append(x)
+    names = {x["name"] for x in nodes}
+    edges = [[a, c["node"], i] for a, v in (wf.get("connections") or {}).items() if a in names
+             for i, outs in enumerate((v or {}).get("main") or []) for c in (outs or []) if c.get("node") in names]
+    return {"nodes": nodes, "edges": edges}
+
+
 def look(seen, pending=None):
     """Every new request in the pending folder that names its workflow and run -> seen[id]. -> how many were new."""
     new = 0
@@ -180,7 +212,8 @@ def runs(seen, done=None):
 
 
 def view(repo=None, seen=None, done=None, made=None):
-    """-> {"generated", "workflows": [{"id", "name", "active", "schedule", "for", "steps", "agents", "crew", "runs", "runs_total"}]};
+    """-> {"generated", "workflows": [{"id", "name", "file", "area", "factory", "graph", "active", "schedule", "for", "steps",
+    "agents", "crew", "runs", "runs_total"}]};
     the repository's workflows and those the runner made since the last export (ops/n8n_jobs.py)."""
     import n8n_jobs as NJ
     rs = runs(seen if seen is not None else load(), done)
@@ -192,7 +225,8 @@ def view(repo=None, seen=None, done=None, made=None):
         except (ValueError, KeyError, TypeError):
             continue
         steps, mine = steps_of(wf), rs.get(str(wf.get("id")), [])
-        out.append({"id": str(wf.get("id")), "name": wf.get("name") or p.stem, "active": bool(wf.get("active")),
+        out.append({"id": str(wf.get("id")), "name": wf.get("name") or p.stem, "file": p.stem, "area": wf.get("area") or "",
+                    "factory": wf.get("factory") or "", "graph": graph_of(wf), "active": bool(wf.get("active")),
                     "schedule": schedule_of(wf), "for": f"{kind}:{key}" if kind else "", "steps": steps,
                     "agents": sorted({s["agent"] for s in steps if s.get("agent")}), "crew": sorted({s["job"] for s in steps if s.get("job")}),
                     "runs": mine[:RUNS_SHOWN], "runs_total": len(mine)})   # cap: list, RUNS_SHOWN above; runs_total counts every one

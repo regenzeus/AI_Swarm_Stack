@@ -1,5 +1,5 @@
 ---
-title: "Repeating tasks: briefings, research, price watches"
+title: "Briefings, research and price watches"
 kicker: Work that runs by itself
 part: Everyday use
 icon: target
@@ -25,7 +25,7 @@ why in one line. An archived task is under **Done**.
 
 ```try
 label: Only what runs right now
-open: "#/tasks?v=activity"
+open: "#/home?tab=activity"
 note: Every agent that is working at this moment; tap one to watch its log.
 ```
 
@@ -61,7 +61,7 @@ result, and for a write the change itself (added lines green, removed red).
 The chips above the log count each kind; tap one to see only those lines. **Summary**, **Steps** and **Everything**
 choose the detail (Everything adds every single model call). Builds (Code) and chats show the same log.
 
-## Two kinds of missions
+## Briefings and research
 
 **Daily briefing.** The Topic Desk reads news sources, filings and prices for a topic and writes a structured
 report: what happened, why it matters, sources. Good for markets, companies, industries.
@@ -123,7 +123,7 @@ Or use the form:
 
 ```try
 label: Open the New task form
-open: "#/tasks?new=1"
+open: "#/workflows?new=1"
 note: Choose briefing or task, give it a title and a goal, pick a schedule and where results go.
 ```
 

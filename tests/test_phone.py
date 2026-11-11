@@ -591,13 +591,14 @@ def test_a_setting_goes_ahead_when_the_owner_is_still_in_settings(P):
     assert "blocked app" in asyncio.run(P.guard("phone_tap", {"label": "x"}, "w"))
 
 
-def test_the_phone_page_is_one_tap_from_home_agents_stack_and_search():
+def test_the_phone_page_is_one_tap_from_stack_and_search():
     root = Path(__file__).resolve().parent.parent / "images/mission-control/web/static"
     app = webjs.app_js()
     home = app.split("function vHome()", 1)[1].split("\n}", 1)[0]
-    assert 'data-hp="overview"' in home and "${devicesHtml()}" in home.split('data-hp="overview"', 1)[1]   # Home's Overview tab (8 Nov)
+    assert 'data-hp="overview"' in home and "devicesHtml" not in home                    # APP-78: Home has no AI phone card
     assert app.split("function vSystem()", 1)[1].count("phoneBanner()") == 1
-    assert "phoneBanner()" in app.split("function tasksBodyHtml()", 1)[1].split("\n}", 1)[0]          # on the Tasks list (8 Nov)
     assert 'i.kind === "phone-down"' in app and "AI phone page" in app.split("function phoneStepsHtml(c)", 1)[1].split("function bindCrew()", 1)[0]
     page = next(x for x in json.loads((root / "tools.json").read_text())["pages"] if x[1] == "#/phone")
     assert "pair" in page[2] and "wireless" in page[2]
+
+

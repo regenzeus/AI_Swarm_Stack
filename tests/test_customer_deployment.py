@@ -128,4 +128,4 @@ def test_n8ns_database_and_volume_stay_on_the_pc_and_the_backup_stays_off_for_cu
             os.symlink(shutil.which(tool), bin_ / tool)
     p = subprocess.run(["bash", "ops/backup.sh"], cwd=ROOT, capture_output=True, text=True, timeout=60,
                        env={"PATH": str(bin_), "HOME": str(tmp_path), "AISTACK_DEPLOYMENT": "example-work"})
-    assert p.returncode == 0 and "not configured: the feature home is off in the deployment example-work" in p.stdout, p.stdout + p.stderr
+    assert p.returncode == 0 and "refused: the deployment example-work refuses home (REFUSE in its deployment.env)" in p.stdout, p.stdout + p.stderr   # PLT-47

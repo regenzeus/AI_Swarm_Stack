@@ -8,6 +8,8 @@ into `requirements/findings.yaml`.
 
 | Document | What it covers |
 |---|---|
+| [PLATFORM-DESIGN.md](PLATFORM-DESIGN.md) | The master design (11 Nov 2026, 1.3): the end state of the platform, the core objects, the decisions D1 to D9, the reliability contract, evaluation, security, repositories, the big-bang roadmap with the import of the old data, what is kept and what goes, and the gaps to a full AI software factory. Where an older document disagrees, this one is the target |
+| [FACTORY-DESIGN.md](FACTORY-DESIGN.md) | The design's UX chapter: terms, the live Run page, workflows and runs, the n8n canvas, an agent's context, Asks, the six places |
 | [MISSION-CONTROL.md](MISSION-CONTROL.md) | The app and the host runner: how they talk, missions, events, deep research, wikis, chat, builds |
 | [DELIVERABLES.md](DELIVERABLES.md) | A mission's files: what you asked for first under Results, real e-mail attachments, the Files page, versions, trash and the daily cleanup |
 | [CHAT-MADE.md](CHAT-MADE.md) | What a chat made (missions, builds, Claude tasks, notes): its card under the answer, Made here, From a chat, the line when it ends |
@@ -27,6 +29,8 @@ into `requirements/findings.yaml`.
 | [GENERALISATION.md](GENERALISATION.md) | Generalising the stack: core, domains and deployment, from an audit of the code |
 | [N8N-MIGRATION.md](N8N-MIGRATION.md) | n8n as the stack's workflow pillar (DEC-51): what it replaces and what stays, the step service, the app's integration and what in it is outdated, how requirements and code change, the plan in five phases and where each stands |
 | [TAX-DESK.md](TAX-DESK.md) | The tax desk: German income tax papers from the mail copy, filed as copies in the NAS share Steuern and prepared per year as a draft for the owner's own ELSTER return; only Hermes with ChatGPT reads them; the figures the law sets for 2025 and 2026 with their sources; in the app the task Your taxes with its result per year, for the owner only (TAX-01 to TAX-12) |
+| [CLI.md](CLI.md) | The `stack` command line and the stack MCP tools: how an agent on a site starts and inspects runs, answers an Ask that is no gate and asks for a pack's approval through the app's API, what the app takes from it, and the doctor (WAY-01 to WAY-08) |
+| [ASKS.md](ASKS.md) | How the stack asks a person: tiers and standing rules, the stop switch, the Ask and its answers in your own words, roles and human-only gates, tickets, channels, the data rule, the n8n Ask block and the records' gate (ASK-01 to ASK-20) |
 | [AI-STACK.md](AI-STACK.md) | How the AI Stack is built now: the app, n8n deciding what runs when, the step service, the workers, what a domain's work uses (packs, places, trackers, roles, saved files, the record), knowledge, models and the platform |
 | [MEMORY-TAB.md](MEMORY-TAB.md) | The memory concept: one home per kind of knowledge, the Memory tab, the leak in long-term memory, and what helps a coding task |
 | [MEMORY-STACK.md](MEMORY-STACK.md) | The memory stack, decided and built 7 November 2026 (DEC-44): sectors, layers and collections, subscriptions by role, the opening chosen for each task within a budget, one memory tool, the write gate, the autonomous memory agent, coding memory, the trials (MEM-22 to MEM-49) |

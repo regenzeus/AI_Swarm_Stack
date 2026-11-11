@@ -395,6 +395,8 @@ def tell(m, p):
     if p["status"] == "proposed":
         head = "🛒 <b>Purchase proposal</b>: buy now?"
         buttons = [[("✅ Approve purchase", go + "approve"), ("⏸ Not now", go + "not_now")], [("✏️ Change", go + "change"), ("🔍 Details", go)]]
+        if not phone_on() and str(p.get("url") or "").startswith("http"):   # PHN-28: nothing buys for you: the shop's own page
+            buttons = [[("🛒 Buy it yourself", p["url"]), ("⏸ Not now", go + "not_now")], [("✏️ Change", go + "change"), ("🔍 Details", go)]]
         M.event("shop_proposal", m["slug"], f"Purchase proposal: {p['item']} for {p['total_eur']:.2f} € at {p['shop']}: approve or not", push=True, title=m["title"])
     elif p["status"] == "watching":
         v = p["verdict"]
@@ -411,9 +413,18 @@ def tell(m, p):
     step("told the owner (Telegram + Mission Control)", p["status"], kind="stage")
 
 
+def phone_on():
+    """PHN-28: whether the deployment has the AI phone switched on; off, a purchase is the owner's own (buy it yourself)."""
+    import deployment as DEPLOY
+    return DEPLOY.has("phone")
+
+
 def app_check(m, p):
     """Look the pick up in the shop's app on the AI phone (read-only search, no taps), as evidence on the card. The run
     parks while the phone asks the owner, so other missions run meanwhile."""
+    if not phone_on():
+        step("AI phone app check skipped", "the AI phone is switched off", kind="stage")
+        return
     pkg = SHOP_APPS.get(p.get("shop") or "")
     try:
         st = json.loads((PHONE / "state.json").read_text())
@@ -502,6 +513,8 @@ def approve(p, m, by, c):
         raise ValueError("set the delivery-address check first (shopping agent → Settings → Limits: your postcode)")
     if not (p.get("match") or {}).get("item"):
         raise ValueError("the proposal has no words to check the item on the final screen: ask for a change")
+    if not phone_on():
+        raise ValueError("the AI phone is switched off: buy it yourself")
     if p["shop"] not in SHOP_APPS:
         raise ValueError(f"no shop app for {p['shop']} on the AI phone: buy it yourself")
     ceiling = round(min(p["total_eur"] * 1.03 + 1, lim["per_purchase_eur"]), 2)

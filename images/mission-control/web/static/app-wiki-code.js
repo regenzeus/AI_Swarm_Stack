@@ -16,7 +16,7 @@ function wikiIndex() {
   const live = wikiRoots.filter((r) => !r.archived && !r.repo), old = wikiRoots.filter((r) => r.archived);
   const pages = live.reduce((n, r) => n + (r.pages || 0), 0);
   const row = (r) => `<a href="#/wiki?root=${encodeURIComponent(r.root)}"><div class="ic">${r.mission ? ic.target : ic.brain}</div><div class="grow" style="min-width:0"><div class="ttl wrap">${esc(r.title)}</div>
-    <div class="sub wrap">${r.pages} pages · ${r.links} links${r.mission ? "" : " · your vault"}${r.archived ? " · its mission is archived" : ""}</div><div class="sub wrap wuse" data-wuse="${esc(r.root)}"></div></div>${ic.next}</a>`;
+    <div class="sub wrap">${r.pages} pages · ${r.links} links${r.mission ? "" : " · your vault"}${r.archived ? " · its workflow is archived" : ""}</div><div class="sub wrap wuse" data-wuse="${esc(r.root)}"></div></div>${ic.next}</a>`;
   view.innerHTML = `${memFrame("wiki")}<div class="row between wrap" style="gap:10px;margin-bottom:10px">
     <div class="row wrap" style="gap:8px"><button class="btn sm" id="wnewb">${ic.plus}New wiki</button><button class="btn sm" id="vaddb">${ic.plus}Add to the vault</button><a class="btn sm ghost" href="#/sources">${ic.doc}Filed sources</a></div></div>
     <div class="tiny faint" style="margin-bottom:10px">${live.length} wiki${live.length === 1 ? "" : "s"} · ${pages} page${pages === 1 ? "" : "s"}</div>
@@ -24,7 +24,7 @@ function wikiIndex() {
   ${wikiNewForm()}
   <div class="wgrid"><div>
   <div class="card list wikis">${live.map(row).join("") || `<div class="pad small muted">No wiki yet. New wiki starts one; every agent's results build its own.</div>`}</div>
-  ${old.length ? `<details class="section"><summary class="small muted">${old.length} wiki${old.length > 1 ? "s" : ""} of archived missions (kept, not on the map)</summary><div class="card list wikis" style="margin-top:8px">${old.map(row).join("")}</div></details>` : ""}
+  ${old.length ? `<details class="section"><summary class="small muted">${old.length} wiki${old.length > 1 ? "s" : ""} of archived workflows (kept, not on the map)</summary><div class="card list wikis" style="margin-top:8px">${old.map(row).join("")}</div></details>` : ""}
   </div>
   <div class="card pad-l wmap"><div class="section-h" style="margin:0"><h2>How they connect</h2></div>
     <div id="wmapsvg" class="wmapsvg"><div class="skeleton" style="height:260px"></div></div><div id="wmapinfo" class="small"></div></div>
@@ -138,7 +138,7 @@ async function vWiki() {
   const owner = info.mission ? `#/mission/${encodeURIComponent(info.mission)}` : "";
   view.innerHTML = `<a class="back" href="${back ? esc(wikiBack) : "#/wiki"}">${ic.back}${back ? esc(back) : "All wikis"}</a>
   <div class="hero heading" style="margin-bottom:14px"><h1 class="wh1">${esc(info.title)}</h1>
-    <p>${graph.nodes.length} pages · ${graph.links.length} links${owner ? ` · <a class="wl" href="${owner}">its agent</a>` : info.task ? ` · <a class="wl" href="#/task/${info.task}">its task</a>` : " · your vault"}</p></div>
+    <p>${graph.nodes.length} pages · ${graph.links.length} links${owner ? ` · <a class="wl" href="${owner}">its agent</a>` : info.task ? ` · <a class="wl" href="#/task/${info.task}">its run</a>` : " · your vault"}</p></div>
   <div class="row wrap wacts"><button class="btn sm primary" id="wrefb">${ic.tune}Improve this wiki</button>${owner ? `<a class="btn sm" href="${owner}">${ic.target}Its agent</a>` : ""}${info.mission ? `<button class="btn sm ghost danger" id="wdel">${ic.trash}Delete wiki</button>` : ""}</div>
   ${refineForm("wiki")}
   <div class="wsearch card">${ic.search}<input class="input" id="wq" type="search" placeholder="Search this wiki"></div>
@@ -176,7 +176,7 @@ async function vWiki() {
 const REFINE = { wiki: ["Check its facts and fix the mistakes", "Research what is missing", "Bring it up to date"],
   page: ["Check its facts and fix the mistakes", "Research more about this", "Bring it up to date"] };
 const refineForm = (scope) => `<form class="card pad-l wref" id="wref" hidden><h2>${scope === "page" ? "Correct or research this page" : "Improve this wiki"}</h2>
-    ${explain("say-what-is-wrong-or-wha", `Say what is wrong or what to find out. It becomes a task: research agents look into it with sources, then the wiki's writer corrects ${scope === "page" ? "this page" : "the pages"} (an old fact stays, marked superseded) and adds what is new. You follow it on Tasks.`, "About this")}
+    ${explain("say-what-is-wrong-or-wha", `Say what is wrong or what to find out. It becomes a request: research agents look into it with sources, then the wiki's writer corrects ${scope === "page" ? "this page" : "the pages"} (an old fact stays, marked superseded) and adds what is new. You follow it on its run's page.`, "About this")}
     <div class="chips" style="margin-top:10px">${REFINE[scope].map((x) => `<button type="button" class="tag" data-rq="${esc(x)}">${esc(x)}</button>`).join("")}</div>
     <textarea class="input" name="text" rows="3" maxlength="3000" required placeholder="${scope === "page" ? "e.g. The capacity figure is wrong: check the newest quarterly report" : "e.g. Add the Kazakh producers and check every price"}" style="margin-top:8px"></textarea>
     <div class="row wrap" style="gap:8px;margin-top:10px"><button class="btn primary" type="submit">${ic.rocket}Do it</button><button class="btn ghost" type="button" data-rx>Cancel</button></div></form>`;
@@ -190,7 +190,7 @@ function bindRefine(root, page) {
     e.preventDefault();
     const sub = $("[type=submit]", f);
     sub.disabled = true;
-    const r = await act({ action: "task_create", text: f.text.value.trim(), kind: "research", wiki: { root, page } }, (x) => `Task #${x.task} is being planned: its steps show on Tasks`);
+    const r = await act({ action: "task_create", text: f.text.value.trim(), kind: "research", wiki: { root, page } }, (x) => `Request #${x.task} started: its steps show on its run's page`);
     sub.disabled = false;
     if (!r) return;
     location.hash = `#/task/${r.task}`;
@@ -360,7 +360,7 @@ function drawGraph(el, g, root, focus, small = false, opts = {}) {
 const BSTEPS = [["queued", "Queued"], ["working", "Building"], ["review", "Review"], ["deploying", "Deploying"], ["deployed", "Live"]];
 const BSTATUS = { waiting: "Waiting for ChatGPT", queued: "Queued", working: "Building", review: "Ready for review", approved: "Approved", deploying: "Deploying",
   deployed: "Deployed", merged: "Merged", rolled_back: "Rolled back", failed: "Failed", rejected: "Rejected", recheck: "Checks queued", checking: "Checking",
-  planning: "Being planned", planned: "Waits for its dependencies", cancelled: "Cancelled", reverting: "Being reverted", reverted: "Reverted" };
+  planning: "Working out its steps", planned: "Waits for its dependencies", cancelled: "Cancelled", reverting: "Being reverted", reverted: "Reverted" };
 const bcls = (s) => ({ deployed: "ok", merged: "ok", review: "running", working: "running", deploying: "running", approved: "running",
   queued: "queued", waiting: "paused", failed: "failed", rolled_back: "failed", rejected: "archived", planning: "running", planned: "queued", cancelled: "archived",
   reverting: "running", reverted: "archived" }[s] || "queued");
@@ -373,7 +373,7 @@ function stepper(st) {
 
 // The stack's own improvement ideas: the swarm's Ledger (ops/swarm_client.publish -> S.swarm.board). Agents propose by
 // identity key and refine instead of copying; open ideas are ranked by impact, confidence, recurrence and effort.
-// the owner taps "Build it" (the idea becomes a builder assignment, review and tap-to-deploy still follow) or "Dismiss".
+// The owner taps "Build it" (the idea becomes a builder assignment, review and tap-to-deploy still follow) or "Dismiss".
 const IDEA_STATE = { active: ["run", "building"], checking: ["ok", "shipped, being checked"], done: ["ok", "proved"], declined: ["archived", "dismissed"],
   merged: ["archived", "merged"], gone: ["archived", "gone"], blocked: ["warn", "blocked"], snoozed: ["archived", "snoozed"] };
 // ---------- ideas (the Ledger): the stack's own fixes (crew, self-review, doctor) in one list with the Coach's agent
@@ -477,7 +477,7 @@ function repoDir(repos) {
 
 // A change is one row here, however many builds its steps are: its task page has them all
 const CHANGE_ASKS = ["needs_answer", "waiting_approval"], CHANGE_WORKS = ["intake", "planning", "running"];
-const CHANGE_LABEL = { intake: "Writing the specification", planning: "Planning", running: "Working", needs_answer: "Has a question", waiting_approval: "Waits for your Go", failed: "Stopped" };
+const CHANGE_LABEL = { intake: "Writing the specification", planning: "Working out its steps", running: "Working", needs_answer: "Has a question", waiting_approval: "Waits for your Go", failed: "Stopped" };
 const STEP_BUILD = /^(builder|tester|breaker): /;
 function changeRow(t) {
   const st = t.steps || [], i = st.findIndex((x) => !["done", "skipped"].includes(x.status)), cur = st[i];
@@ -509,7 +509,7 @@ function claudeCard() {
       <li>Paste the token it then prints (starts with <code>sk-ant-oat</code>) when it asks. It stays hidden and is saved encrypted.</li>
       <li>That's it: this card disappears, and <b>Claude Code</b> becomes an engine choice for builds.</li>
     </ol>
-    ${explain("claude-builds-run-in-the", `Claude builds run in the same sandbox, with the same checks, review and tap-to-deploy. That repository's code is sent to Anthropic for those builds; usage counts against your Claude plan.`, "About this")}</details>`;
+    ${explain("claude-builds-run-in-the", `Claude builds run in the same sandbox, with the same checks, review and tap-to-deploy. That repository's code is sent to Anthropic for those builds; usage counts against your Claude subscription.`, "About this")}</details>`;
 }
 
 function vBuild() {
@@ -563,7 +563,7 @@ function vBuild() {
       ${working.length || busy.length ? `<div class="section-h section"><h2>Working · ${working.length + busy.length}</h2>${how("builder")}</div><div class="card list">${working.map(changeRow).join("")}${busy.map(buildRow).join("")}</div>` : ""}
       ${stoppedChanges.length || stopped.length ? `<div class="section-h section"><h2>Stopped · ${stoppedChanges.length + stopped.length}</h2></div><div class="card list">${stoppedChanges.map(changeRow).join("")}${stopped.map(buildRow).join("")}</div>` : ""}
       ${forgejoCard()}${claudeCard()}
-      <a class="banner info section" href="#/tasks?v=ideas">${ic.radar}<span class="grow">${ideasWaiting() ? `<b>${ideasWaiting()} idea${ideasWaiting() > 1 ? "s" : ""} wait for your tap</b>` : "No open ideas"} · the stack's own fixes, in Agents → Ideas</span>${ic.next}</a>
+      <a class="banner info section" href="#/ideas">${ic.radar}<span class="grow">${ideasWaiting() ? `<b>${ideasWaiting()} idea${ideasWaiting() > 1 ? "s" : ""} wait for your tap</b>` : "No open ideas"} · the stack's own fixes and the agents' changes</span>${ic.next}</a>
       ${done.length ? `<details class="section codehist" data-keep="builds"><summary class="section-h"><h2>Earlier builds · ${done.length}</h2></summary><div class="card list">${done.map(buildRow).join("")}</div></details>` : ""}
       ${(S.claude_tasks || []).length ? `<details class="section codehist" data-keep="questions"><summary class="section-h"><h2>Questions to Claude Code · ${S.claude_tasks.length}</h2></summary>
         <div class="card list">${S.claude_tasks.map(ctRow).join("")}</div></details>` : ""}

@@ -219,3 +219,82 @@ items:
         tests/test_runtime.py::test_two_scout_steps_started_together_each_get_their_own_run_by_its_prompt_s_head,
         tests/test_conductor.py::test_a_hermes_step_s_prompt_starts_with_its_run]}
     trace: [images/mission-control/runrecord.py, ops/conductor.py]
+
+  - id: OBS-19
+    title: A failure is told in plain words
+    statement: A workflow step's or crew job's failure shall be told as what stopped, why in plain words and whether the
+      owner needs to do anything, under its area's name (ops/areas.py) as its title; the raw reason and the n8n run
+      shall be the line's detail, one tap away in Activity, and never in the push. Event and message titles shall name
+      an area, never "Crew".
+    type: quality
+    priority: must
+    status: implemented
+    parents: [SN-18, SN-07]
+    sources: ['the owner''s screenshots of 11 Nov 2026: "Crew: Repository facts: failed (n8n run 4424)" and a systemd error
+        text pushed; the owner: "Not great information coming there. Barely readable."', 'the owner''s interaction design of 11 Nov 2026, section 5']
+    verify: {method: test, by: [tests/test_notices.py::test_a_failure_says_what_stopped_why_and_whether_to_act,
+        tests/test_notices.py::test_a_step_s_failure_is_pushed_in_plain_words_under_its_area,
+        tests/test_flows.py::test_home_hears_how_each_step_of_a_workflow_ended]}
+    trace: [ops/notices.py, ops/flows.py, ops/missions.py, ops/notify.py, ops/crew.py, ops/phone_agents.py, ops/missions.requests.py]
+  - id: OBS-20
+    title: A failure during an update that recovers is not pushed
+    statement: A workflow step's failure while the stack is being changed (a deploy or a landing holds its lock, or a
+      deploy ended, the nightly restart ran or the runner started less than 5 minutes ago) shall not be pushed. Its
+      source's next good run within 15 minutes shall settle it as one quiet line in Activity that says it could not run
+      during the update and when it ran fine; without such a run it shall be pushed after the 15 minutes, naming the
+      update. The health board's alerts shall wait the same 15 minutes after a change, and an issue still open then
+      shall be alerted.
+    type: quality
+    priority: must
+    status: implemented
+    parents: [SN-18]
+    sources: ['the owner''s screenshots of 11 Nov 2026: a graphify-sync failure pushed during a deploy that recovered a
+        minute later', 'the owner''s interaction design of 11 Nov 2026, section 5']
+    verify: {method: test, by: [tests/test_notices.py::test_a_failure_during_an_update_that_recovers_is_one_quiet_line,
+        tests/test_notices.py::test_a_failure_during_an_update_that_does_not_recover_is_told_after_it,
+        tests/test_notices.py::test_a_change_is_known_from_the_deploy_lock_the_record_and_the_runner_start,
+        tests/test_notices.py::test_health_alerts_wait_while_the_stack_is_updated,
+        tests/test_notices.py::test_a_quiet_line_reaches_activity_and_is_never_pushed]}
+    trace: [ops/notices.py, ops/flows.py, ops/crew.py, ops/missions.py, ops/notify.py, images/mission-control/interactions.py]
+  - id: OBS-21
+    title: One agent's request to another is one line
+    statement: In Activity, a request one agent sends another (the Health doctor asking Claude) shall be one line that
+      says who asked whom and, when it is at most 140 characters, the request's first sentence; the whole request and
+      the whole answer shall each be one tap away, never cut.
+    type: quality
+    priority: should
+    status: implemented
+    parents: [SN-07, SN-17]
+    sources: ['the owner''s screenshots of 11 Nov 2026: "doctor asks Claude tasks" followed by the doctor''s whole prompt',
+      'the owner''s interaction design of 11 Nov 2026, section 7']
+    verify: {method: test, by: [tests/test_notices.py::test_an_agent_s_request_to_another_is_one_line_with_the_request_behind_a_tap]}
+    trace: [images/mission-control/teamroom.py, images/mission-control/web/static/swarm.js]
+  - id: OBS-22
+    title: Activity is grouped by task, with area labels
+    statement: Activity shall group its lines by the task each belongs to (the task it names, its run's task, or the
+      crew job's own duty), the task with the newest line first and its lines newest first, under the task's name with
+      its area as a quiet label; a message to the owner shall read as the message itself, without the words "told you",
+      "Message to you", its channels or "matched".
+    type: quality
+    priority: should
+    status: implemented
+    parents: [SN-07]
+    sources: ['the owner''s interaction design of 11 Nov 2026, section 7', 'the owner''s screenshots of 11 Nov 2026: "mission told you · Workflows ·
+        … · Message to you · push · matched"']
+    verify: {method: test, by: [tests/test_notices.py::test_activity_groups_lines_by_task_newest_first_with_area_labels,
+        tests/test_notices.py::test_a_quiet_line_reaches_activity_and_is_never_pushed]}
+    trace: [images/mission-control/interactions.py, images/mission-control/web/static/swarm.js, images/mission-control/web/static/app.css]
+  - id: OBS-23
+    title: No owner's name and no internal words in what the stack says
+    statement: The runner's event and message texts, the app's scripts, the app's server texts and the in-app guide shall
+      hold no owner's name, and the event and message texts and the app's own words shall hold none of detector, crew
+      (in a notice), matched, shadow (in a notice), "mission told you" or "n8n run", so the product reads the same for
+      any owner.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-18]
+    sources: ['the owner, 11 Nov 2026: "This should be professional, maybe used by many people"', 'the owner''s interaction design of 11 Nov 2026, section 5']
+    verify: {method: test, by: [tests/test_notices.py::test_no_owner_name_or_internal_words_in_notices_or_the_app]}
+    trace: [images/mission-control/server.mcp.py, images/mission-control/server.devices.py, images/mission-control/server.chat.py,
+      images/mission-control/guide/18-crew.md, images/mission-control/guide/19-swarm.md]

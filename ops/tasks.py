@@ -194,7 +194,7 @@ def discover_crew(c):
     except Exception as e:                             # no systemd (a test, a fresh machine): the duties are still tasks
         print(f"tasks: the crew's schedules not read ({type(e).__name__})", flush=True)
         sched = {}
-    for a in CR.CREW:
+    for a in CR.jobs():                                # GEN-13: a duty of a feature that is off is no task (PHN-28)
         if a.get("oneoff"):
             continue
         r = {"type": "schedule", "schedule": sched.get(a["id"]) or "on its workflow"}
@@ -475,10 +475,16 @@ def code_readers():
 
 def cards():
     """Each agent with what it does and what it can reach, so the plan gives a step to an agent that can do it (task
-    #104 went to an agent without the phone, 1 Nov 2026)."""
+    #104 went to an agent without the phone, 1 Nov 2026). A tool of a feature that is off is not offered, nor an agent
+    whose every job belongs to one (GEN-13, PHN-28: no AI phone while FEATURES has no phone)."""
+    import deployment as DEPLOY
+    import modelpolicy as MP
     reg = yaml.safe_load((ROOT / "config/agents.yaml").read_text())
-    return {a["id"]: a["purpose"] + (f" Its tools: {'; '.join(TOOL_WORDS[x] for x in a.get('tools') or [] if x in TOOL_WORDS)}."
-                                     if any(x in TOOL_WORDS for x in a.get("tools") or []) else "") for a in reg["agents"]}
+    words = {k: v for k, v in TOOL_WORDS.items() if MP.SERVER_FEATURE.get(k, "core") in DEPLOY.ON}
+    live = [a for a in reg["agents"] if not a.get("jobs") or any(DEPLOY.workflow_feature(ROOT / "n8n/workflows" / f"{j}.json") in DEPLOY.ON
+                                                                for j in a["jobs"])]
+    return {a["id"]: a["purpose"] + (f" Its tools: {'; '.join(words[x] for x in a.get('tools') or [] if x in words)}."
+                                     if any(x in words for x in a.get("tools") or []) else "") for a in live}
 
 
 def intake_prompt(t, repos, agents):
@@ -1023,6 +1029,10 @@ def state(c):
         M.log(f"tasks: flow tasks: {type(e).__name__}: {e}")
         held = set()
     rows = [r for r in rows if r["id"] not in held]
+    import crew as CR
+    off = CR.off_ids()                                # GEN-13, PHN-28: a duty of a feature that is off leaves the board; its row stays
+    gone = {x["id"] for x in c.execute("select id, ref from tasks where door='crew'").fetchall() if x["ref"] in off} if off else set()
+    rows = [r for r in rows if r["id"] not in gone]
     stepped = CD.state(c, [r["id"] for r in rows if c.execute("select door from tasks where id=?", (r["id"],)).fetchone()["door"] == "plan"])
     when = NJ.index()                                 # WFL-09: a task's next run is its n8n workflow's
     for r in rows:

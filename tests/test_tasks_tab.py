@@ -72,7 +72,7 @@ def test_each_crew_duty_is_the_stack_s_repeating_task(K, monkeypatch):
     TK.discover_crew(K)
     TK.discover_crew(K)                                                     # once per duty
     rows = {r["ref"]: dict(r) for r in K.execute("select ref, title, status, rhythm, owner, source from tasks where door='crew'")}
-    want = {a["id"] for a in CR.CREW if not a.get("oneoff")}
+    want = {a["id"] for a in CR.jobs() if not a.get("oneoff")}          # the duties of the features that are on (PHN-28)
     assert set(rows) == want and all(r["status"] == "scheduled" and r["source"] == "crew" for r in rows.values())
     assert all(r["owner"] == ("stack" if CR.BY_ID[k]["area"] == "upkeep" else "you") for k, r in rows.items())   # who asked: information (TSK-51)
     assert rows["memory"]["title"] == "Memory Keeper" and json.loads(rows["memory"]["rhythm"])["schedule"] == "daily 04:30"
@@ -129,21 +129,19 @@ def test_the_network_names_each_run_s_task_and_keeps_tools_and_the_conductor_apa
     assert by["scout"]["tasks"] == [5, 11] and "conductor" not in by and "phone" not in by
 
 
-def test_the_tasks_tab_has_five_views_and_the_old_addresses_go_there():
+def test_the_old_tasks_tab_s_parts_live_in_the_six_places():
+    """APP-69: the Tasks tab went; its list is Workflows, Activity is on Home, Team and Network are on Agents, Ideas is
+    Improve; its old addresses and the older ones still land there."""
     nav = re.search(r"^const NAV = .*?;$", JS, re.M | re.S)[0]
-    assert '["tasks", "#/tasks", "Tasks", ic.tasks]' in nav and '"#/missions"' not in nav and len(re.findall(r'\["\w+", "#/', nav)) == 7   # Workflows (n8n inside the app, WFL-11) is the seventh
-    assert re.search(r'const TVIEWS = \[\["tasks", "Tasks"\], \["activity", "Activity"\], \["team", "Team"\], \["network", "Network"\], \["ideas", "Ideas"\]\];', JS)
-    assert 'const TGROUPS = [["needs", "Needs you"], ["failed", "Failed"], ["running", "Running now"], ["recent", "Recent results"], ["scheduled", "Scheduled"]];' in JS   # TSK-51: one list
+    assert '"#/tasks"' not in nav and '"#/missions"' not in nav and len(re.findall(r'\["\w+", "#/', nav)) == 6
+    assert "tasks: tasksMoved" in JS and "function vTasks()" not in JS and "TVIEWS" not in JS and "TGROUPS" not in JS
     assert "missions: vMissionsGo" in JS and "new: vNewGo" in JS and "function vMissions()" not in JS and "function vNew()" not in JS
     go = JS.split("function vMissionsGo() {", 1)[1].split("\n}", 1)[0]
-    assert '"#/tasks?v=team&p=crew"' in go and '"#/tasks?v=activity"' in go
+    assert '"#/agents?v=team&p=crew"' in go and '"#/home?tab=activity"' in go and '"#/workflows"' in go
     assert 'location.replace("#/tasks?" + q.toString()' in SWARM and 'const SW_VIEW = { activity: "activity", agents: "team", map: "network", improve: "ideas"' in SWARM
-    assert 'swOn("activity")' in SWARM and 'route.name === "swarm" && swTab' not in SWARM            # the agents' views live in the Tasks tab now
-    row = JS.split("function tRow(t) {", 1)[1].split("\n}", 1)[0]
-    assert all(x in row for x in ("stateChip(t, A)", "whenChip(t)", "avatars(t)", "tHref(t)"))     # where it stands, its When, its agents
-    assert 'const tMine = (t) => t.door !== "chat";' in JS                               # every task but a chat, which lives on Chat
-    assert "[\"agents\", \"Agents\"]" in JS and "taskAgentsInto(box, task.id)" in JS                # a mission's page is its task's page
-    assert '#/tasks?v=team&p=crew" : "#/tasks"' in JS
+    assert 'swOn("activity")' in SWARM and 'const SW_PLACE = { activity: "home", ideas: "ideas", network: "agents"' in SWARM
+    assert 'const tMine = (t) => t.door !== "chat";' in JS                               # Home's lists: everything but a chat, which lives on Chat
+    assert "[\"agents\", \"Agents\"]" in JS and "taskAgentsInto(box, task.id)" in JS                # a briefing's page is its record's page
 
 
 def test_new_task_is_one_form_that_sends_only_what_was_set():
@@ -265,7 +263,7 @@ def test_an_idea_shows_where_it_came_from_and_a_task_its_ideas():
     assert 'data-iorig="${p.id}"' in app and "fillIdeaFrom(body)" in SWARM and '<div id="ionly"></div>' in SWARM
     assert '<div id="iorigin"></div>' in SWARM and "How it came about" in SWARM and "no run of it was recorded" in SWARM
     assert '<div data-tideas="${t.id}"></div>' in (STATIC / "task.js").read_text() and "fillTaskIdeas($(`[data-tideas=\"${task.id}\"]`), task.id)" in app
-    assert "#/tasks?v=ideas&task=${tid}" in app and 'route.q.get("task")' in app and 'class="netidea"' in app
+    assert "#/ideas?task=${tid}" in app and 'route.q.get("task")' in app and 'class="netidea"' in app
 
 
 def test_the_network_draws_tasks_and_agents_from_the_run_record():
@@ -273,7 +271,7 @@ def test_the_network_draws_tasks_and_agents_from_the_run_record():
     assert any(getattr(r, "path", "") == "/api/tasks/network" for r in server.app.routes) and server.NET_DAYS == (1, 7, 30, 90)
     draw = JS.split("function netDraw() {", 1)[1].split("\nfunction netBind", 1)[0]
     assert "api(`/api/tasks/network?days=${netDays}`)" in JS and 'class="netl${g.live ? " live" : ""}' in draw
-    assert "Math.log2(1 + g.runs)" in draw and "data-nt=" in draw and "data-na=" in draw and "Not on any task" in draw
+    assert "Math.log2(1 + g.runs)" in draw and "data-nt=" in draw and "data-na=" in draw and "Outside any workflow" in draw
     assert 'swRender($("#netteam"), "map")' in draw                                       # "Agents together": who works with whom
     info = JS.split("function netInfo(byId) {", 1)[1].split("\n}", 1)[0]
     assert "steps.map(([a, s, st])" in info and '.join("<i>→</i>")' in info               # a task's agents in the order they worked
@@ -284,7 +282,7 @@ def test_home_counts_what_is_yours_and_the_ideas_apart():
     assert 'const IDEA_CLS = new Set(["ideas", "agent-change"]);' in JS
     head = JS.split("function homeHeadHtml() {", 1)[1].split("\n}", 1)[0]
     assert "const n = yoursN(), ideas = ideasN()" in head and '${ideas ? ` · ${ideas} idea' in head
-    assert '<h2>Needs you <span class="hcount">${yoursN()}</span></h2>' in JS and 'IDEA_CLS.has(x.kind) ? \' class="quiet"\'' in JS
+    assert '<h2>Needs you <span class="hcount">${mine.length}</span></h2>' in JS and "!IDEA_CLS.has(a.cls || a.kind)" in JS   # ASK-13
     assert "hquick" not in JS.split("function vHome() {", 1)[1].split("\n}", 1)[0]        # no quick link the tab bar has
 
 
@@ -297,11 +295,4 @@ def test_the_stack_s_own_browsers_are_not_counted_as_visits(tmp_path, monkeypatc
     assert c.post("/api/view", content=json.dumps({"name": "tasks"}), headers={"Tailscale-User-Login": "owner@example.com"}).json() == {"ok": True}
     assert server.screen_views(path=tmp_path / "views.json") == {"tasks": 1}
 
-
-def test_the_head_counts_the_tasks_the_list_shows():
-    """A work site, 9 Nov 2026: the stack's weekly task stood under Repeating while the head said "0 repeating": the head
-    counted only the owner's tasks whichever owner the list showed."""
-    js = (Path(__file__).resolve().parents[1] / "images/mission-control/web/static/app-tasks.js").read_text()
-    head = js.split("function tasksHeadHtml() {", 1)[1].split("\n}", 1)[0]
-    assert "(S.tasks || []).filter(tMine)" in head and 't.owner !== "stack"' not in head
 

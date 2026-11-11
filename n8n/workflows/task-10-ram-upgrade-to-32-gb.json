@@ -25,6 +25,7 @@
       ]
     }
   },
+  "factory": "home",
   "id": "aistee5542210225",
   "name": "Task #10: RAM upgrade to 32 GB",
   "nodes": [

@@ -55,7 +55,7 @@ def test_memory_replaces_qmd_graphify_and_agent_note_in_every_grant():
 
 def test_the_memory_tab_shows_the_catalogue_by_sector():
     assert 'const MEM_TABS = [["memory", "#/memory", "All"]' in APP and '["howto", "#/howto", "How-to"]' in APP
-    assert '["wiki", "#/memory", "Memory", ic.wiki]' in APP and "memory: vMemory, howto: vHowto" in APP
+    assert '["#/memory", "What agents know"]' in APP and "memory: vMemory, howto: vHowto" in APP
     v = APP.split("async function vMemory()")[1].split("async function vHowto()")[0]
     assert '"/api/memory/catalogue"' in v and "c.answers" in v and "TRUST_WORD[c.trust]" in v and "given to ${nf(g.runs)} run" in v and "emptyState(" in v
     assert 'Route("/api/memory/catalogue", api_memory_catalogue)' in SERVER and 'Route("/api/memory/lessons", api_memory_lessons)' in SERVER

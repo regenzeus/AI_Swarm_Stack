@@ -266,6 +266,13 @@
    ]
   }
  ],
+ "intake/INTERPRET": [
+  {
+   "at": "2026-11-11",
+   "baseline": "new prompt: a person's answer in their own words to one Ask, read as JSON (ASK-11); replayed live on gpt-sub-fast: its 5 cases (prompts/cases/intake.INTERPRET.json) read as expected",
+   "sha": "e11e5e386a2c"
+  }
+ ],
  "intake/RULE_CHECK": [
   {
    "at": "2026-10-31",
@@ -551,7 +558,7 @@
  "memory/KEEPER_FACTS": [
   {
    "at": "2026-11-02",
-   "baseline": "new prompt: the Memory Keeper’s look at the owner’s long-term facts (MEM-21, replaces FACTS); tried 3 times in the memory trial (eval/trials/memory.yaml, 32 planted facts): precision 1.0 each time, recall 0.87 to 1.0, no true fact touched",
+   "baseline": "new prompt: the Memory Keeper\u2019s look at the owner\u2019s long-term facts (MEM-21, replaces FACTS); tried 3 times in the memory trial (eval/trials/memory.yaml, 32 planted facts): precision 1.0 each time, recall 0.87 to 1.0, no true fact touched",
    "sha": "304b84691fa0"
   },
   {

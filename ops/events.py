@@ -28,7 +28,6 @@ import textcap as TC                              # visible caps (AGENTS.md, tru
 import json
 import os
 import re
-import sqlite3
 import subprocess
 import time
 from pathlib import Path
@@ -101,14 +100,14 @@ def status(source, found=0, error=None, off=None):
 # ---------- the log (TSK-10) ----------
 def record(c, source, kind, key, title, detail="", url="", param="", data=None, ts=None, baseline=False):
     """One event; the same (source, key) is recorded once. -> its id, or None when it was already there."""
-    try:
-        cur = c.execute("insert into bus (source, kind, key, ts, title, detail, url, param, data, baseline) values (?,?,?,?,?,?,?,?,?,?)",
-                        (source, kind, f"{source}|{key}", ts or iso(), TC.cut(str(title), 500), TC.cut(str(detail), 4000), url or "", param or "",  # cap: store
-                         json.dumps(data or {}), 1 if baseline else 0))
-    except sqlite3.IntegrityError:               # seen before (by its unique key)
-        return None
+    # PLT-40 (11 Nov 2026): the insert used to raise IntegrityError for an event seen before, after sqlite3 had begun its
+    # implicit transaction; nothing committed it, and the worker's connection slept in an open transaction until its pass
+    # ended. "or ignore" never raises, and the commit always ends what the insert began.
+    cur = c.execute("insert or ignore into bus (source, kind, key, ts, title, detail, url, param, data, baseline) values (?,?,?,?,?,?,?,?,?,?)",
+                    (source, kind, f"{source}|{key}", ts or iso(), TC.cut(str(title), 500), TC.cut(str(detail), 4000), url or "", param or "",  # cap: store
+                     json.dumps(data or {}), 1 if baseline else 0))
     c.commit()
-    return cur.lastrowid
+    return cur.lastrowid if cur.rowcount else None     # 0 rows: seen before (by its unique key)
 
 
 def fresh(base, eid):

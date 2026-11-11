@@ -5,7 +5,10 @@ repository there): a Claude Code plugin manifest, two agents, a skill, MCP serve
 any egress list), `stack.yaml` (harness, model, grants), two job kinds of the worker protocol (`toy.reproduce`, and
 `toy.soak`, a stand-in for a licensed tool that runs for hours on the item's input file, its parameter `input` of type
 file), three n8n workflows (`workflows/*.json`, as n8n exports them, named `toy/<name>`, webhooks under `toy/` and
-`item/toy/`) and an exam set with known outcomes.
+`item/toy/`), an exam set with known outcomes, and `records.yaml` (REC-01): the record types (change request,
+problem, analysis, review record, test report, release notes, with `templates/`), the link types (satisfies, blocks,
+implements, verified_by, derived_from), a gate (a change request to Approved, role approver) and five measures, mapped
+onto the stand-in Jira's issue types, labels, custom fields and link phrases in `tests/fixtures/jira/five.json`.
 
 `workflows/ticket.json` is the toy's one item workflow, the one the end-to-end tests drive
 (`tests/test_work_deployment.py`, GEN-44, GEN-46): webhook `item/toy/ticket` answering with its execution →

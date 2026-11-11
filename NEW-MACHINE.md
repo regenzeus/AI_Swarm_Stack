@@ -17,7 +17,10 @@ it the backups cannot be opened.
 4. NAS access for owner: create an SSH key in WSL (`ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519_synology`) and add
    its .pub to the NAS user (DSM: user regenzeus, ~/.ssh/authorized_keys) and to Forgejo (Settings, SSH keys).
    Then copy the `Host synology` / `Host forgejo` entries from the old ~/.ssh/config.
-5. Stage 2 for a move: `wsl -d Ubuntu-24.04 -u owner -- bash -lc 'bash ~/ai-stack/ops/new-machine.sh'`. It sets up
+5. Name the deployment first: `wsl -d Ubuntu-24.04 -u owner -- bash -lc 'mkdir -p ~/.config/aistack && echo home >
+   ~/.config/aistack/deployment'`. A machine that names none runs the platform only (PLT-44), so new-machine.sh and a
+   deploy refuse there.
+   Stage 2 for a move: `wsl -d Ubuntu-24.04 -u owner -- bash -lc 'bash ~/ai-stack/ops/new-machine.sh'`. It sets up
    rootless Docker, builds the `aistack/*` images (Hermes before the builder, with the base pins; it stops on a failed
    build), restores the newest backup in ~/restore (or from the NAS), and enables the timers and `missions.service`.
    Secrets come from the repo, encrypted to your age key, so nothing needs re-entering. It does not configure the

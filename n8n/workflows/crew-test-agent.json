@@ -25,6 +25,7 @@
       ]
     }
   },
+  "factory": "platform",
   "id": "aisc5f110c2bd73f",
   "name": "Crew: Test agent",
   "nodes": [

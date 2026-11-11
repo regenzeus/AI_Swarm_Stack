@@ -27,6 +27,23 @@ boundary is checked, GEN-44).
   its write id), keep it back, or wrong (WFL-29). The summary edits only the comment whose id the stack kept when it
   wrote it (WFL-30); attach, transition and label are done when the item holds them already (WFL-31). Events carry
   the comments' texts (`said`) for the run register; a pull request's comments are their own source (WFL-32).
+- `records.py`: the read cache of a tracker of record (REC-01 to REC-08). A tracker in trackers.yaml names the pack
+  whose `records.yaml` types its items (`records: <pack>`); `write: off` makes a tracker read-only (trackers.py
+  `read_only`: every write is kept in the stack, its answer says `off`; the adapter's `put` refuses; a shadow write
+  from before cannot be sent), and a tracker without a workflow is read for its records only and starts no run. The
+  tracker poller (`runreg.poll`) calls `records.refresh`: one pass of `sync` (each tracker's own cursor, `adapter.record`
+  of each changed item, nothing written to the tracker) and the app's view (`public/records.json`). Queries:
+  `missing_work_products`, `missing_link(tracker, link, types)`, `missing_fields`, `links_of`; `measures` computes the
+  pack's measures with the records behind each number. CLI: `python3 ops/domain/records.py sync|view|measures|missing`.
+  **The gated transition hook**, for the Ask system's gate: `records.set_gate(fn)` once where the runner starts;
+  `trackers.write` of a transition asks `records.check_transition(tracker, key, to)`, which finds the pack's gate for
+  the record's type and status (`gate_of`: `{id: gate:<tracker>/<key>/<to>, gate: true, tracker, key, type, to, role,
+  question}`; a record not in the cache meets every gate on that status) and calls `fn(need)`. `fn` answers `{state:
+  approved|waiting|refused, person, role, chip, ask, at, why}`; the write goes on (into shadow, as every write) only
+  for `state: approved`, `chip: true`, no `interpreted_as`, `by_default` or `rule`, and a person `roles.may` lets hold
+  the role; the approval is kept in the cache's `gates` table and shown on the record. Otherwise the write answers
+  `{refused: true, gate: need, why}`, so the caller opens the gate Ask and writes again once it is answered; with no
+  `fn` set every gated transition is refused with the reason.
 - `roles.py`: who decides for a role (GEN-27). `artifacts.py`: saved files by hash (GEN-29). `record.py`: a run's
   bundle (`export_run`, from the run register) and a pack's exams (GEN-31).
 
@@ -43,4 +60,5 @@ stated exception is a draft pull request (DEC-54): a change for an item, with FO
 workflow go out as drafts directly, because a draft changes nothing people use until they merge it, and the stack
 never merges. State files are written whole or not at all (`ops/statefile.py`). The queue reads `decisions()` of
 packs, trackers and places (ops/decisions.py); the app's actions reach `handle()` through ops/missions.requests.py.
-Tests: tests/test_domain_*.py, and the whole path in tests/test_work_deployment.py.
+Tests: tests/test_domain_*.py (records: tests/test_domain_records.py, on the toy pack and a stand-in Jira in
+tests/fixtures/jira/five.json), and the whole path in tests/test_work_deployment.py.

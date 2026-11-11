@@ -9,3 +9,9 @@ trackers:
     url: https://jira.example.com
     query: project = DEMO AND labels = ai-stack
     workflow: demo/bug
+  - name: records                    # the tracker of record (REC-01 to REC-08): read one way for the Measures view
+    kind: jira
+    url: https://jira.example.com
+    query: project = DEMO
+    write: off                       # read-only: the stack never writes to it; its Asks live in the app
+    records: demo                    # the pack whose records.yaml types its items, links, gates and measures

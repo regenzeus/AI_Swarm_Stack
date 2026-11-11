@@ -63,15 +63,15 @@ const ARCH = [
     ["Phone & PC", `${(window.DEPLOY && DEPLOY.APP_NAME) || "AI Stack"} app, push`, null, "first-ten-minutes", "5. Put it on your phone", "This app, installed on your phone and PC. Everything here is reachable only from your own devices over Tailscale."],
     ["Telegram", "chat, briefings, digest", null, "delivery", "Telegram", "Hermes on Telegram: chat with it there, get briefings with buttons into this app, and the morning digest."]]],
   ["What you open", [
-    [(window.DEPLOY && DEPLOY.APP_NAME) || "AI Stack", "this app + its tools", "mission-control", "welcome", "The app at a glance", "This app and its API, plus the tools Hermes uses to manage missions, builds and repositories. It never runs jobs itself: the runner does.", "#/"],
+    [(window.DEPLOY && DEPLOY.APP_NAME) || "AI Stack", "this app + its tools", "mission-control", "welcome", "The app at a glance", "This app and its API, plus the tools Hermes uses to manage workflows, builds and repositories. It never runs jobs itself: the runner does.", "#/"],
     ["Open WebUI", "classic chat", "openwebui", "technology", "Tools you can open", "A classic chat interface to Hermes. You are signed in through your Tailscale login.", "443"],
     ["Hermes admin", "skills, sessions, logs", "hermes-dashboard", "technology", "Tools you can open", "Hermes' own dashboard: its skills, sessions, logs and settings. No password: your Tailscale login lets you in.", "8448"],
     ["OpenCode", "code editor", "opencode", "code", "The other code tools", "A coding app in the browser for hands-on changes to your repositories.", "8445"],
     ["Sign-in gate", "your Tailscale login, no passwords", "gate-hermes-dashboard", "safety", "Private by default", "Single sign-in: a small gate in front of the apps that have their own login (Hermes admin, the code map). It lets in only requests carrying your Tailscale login, so there are no passwords or tokens to remember."]]],
   ["Agents", [
-    ["Hermes", "main · scout · curator · mission", "hermes", "chat", "What Hermes can do here", "Your assistant, in four roles: main (chat, Telegram), scout (the only one on the web), curator (tidies the knowledge weekly) and mission (works on long-term tasks).", "#/chat"],
-    ["Runner", "schedules, triggers, builds", "@runner", "missions", "Two kinds of missions", "The one place that runs jobs: mission schedules and triggers, deep research, builds and deploys, the weekly self-review and resource monitoring.", "#/missions"],
-    ["Topic Desk", "writes briefings", null, "missions", "Two kinds of missions", "Writes the daily briefings: reads news, filings and prices for a topic and files a report. Runs on demand, so it has no status dot."],
+    ["Hermes", "main · scout · curator · workflow steps", "hermes", "chat", "What Hermes can do here", "Your assistant, in four roles: main (chat, Telegram), scout (the only one on the web), curator (tidies the knowledge weekly) and a fourth one that does the steps of briefing and research workflows.", "#/chat"],
+    ["Runner", "schedules, triggers, builds", "@runner", "missions", "Briefings and research", "The one place that runs jobs: the steps n8n hands it, deep research, builds and deploys, the weekly self-review and resource monitoring.", "#/missions"],
+    ["Topic Desk", "writes briefings", null, "missions", "Briefings and research", "Writes the daily briefings: reads news, filings and prices for a topic and files a report. Runs on demand, so it has no status dot."],
     ["Builder", "codes in a sandbox", "builder", "builder", "The flow", "The coding agent (ChatGPT via Hermes, or Claude Code) in a sandbox: no secrets, no deploy rights. You review and tap to deploy.", "#/build"]]],
   ["Gateway", [
     ["LiteLLM", "every model call, keys, tools", "litellm", "technology", "The layers", "Every model call of every agent goes through here: per-agent keys and limits, tool access, cost tracking. Subscription models only."],
@@ -134,21 +134,21 @@ const TOOL_HELP = {
   windows_status: "Says how your Windows PC is: memory, disks, the folders Claude may read there, and whether Claude is signed in.",
   windows_ask: "Asks Claude Code on your Windows PC about your files there: it can only read, only in the folders you allow.",
   windows_result: "Fetches the answer from your Windows PC (and waits a little while Claude is still reading).",
-  claude_task: "Hands a code question, a review or a long document to Claude Code (read-only, on your Claude plan).",
-  claude_task_result: "Fetches Claude Code's answer to a task (and waits a little while it is still working).",
+  claude_task: "Hands a code question, a review or a long document to Claude Code (read-only, on your Claude subscription).",
+  claude_task_result: "Fetches Claude Code's answer to a question (and waits a little while it is still working).",
   health_issues: "Lists the open health issues of every agent (alerts and notes) with the run that shows each one.",
   agent_note: "The old standing-note tool, in runs before 7 Nov 2026. An agent now keeps a lesson with the memory tool's note.",
-  missions_overview: "Lists all your missions with status, schedule, triggers, next run and costs.",
-  mission_details: "Reads one mission in full: goal, brief, notes, recent runs and where its files are.",
-  mission_create: "Starts a new briefing or task, including one-off and deep research jobs, with the files it must deliver.",
-  file_save: "A mission saves a file it was asked to deliver (Markdown, CSV, JSON, text): on its Results, attached to its e-mail.",
-  mission_control: "Runs, pauses, resumes or archives a mission.",
-  mission_update: "Changes a mission: goal, questions, sources, schedule, delivery or depth.",
-  mission_set_triggers: "Sets the events a mission reacts to: SEC filings, price moves, news.",
+  missions_overview: "Lists your briefing and research workflows with status, schedule, triggers, next run and costs.",
+  mission_details: "Reads one briefing or research workflow in full: goal, brief, notes, recent runs and where its files are.",
+  mission_create: "Starts a new briefing or request, including one-off and deep research jobs, with the files it must deliver.",
+  file_save: "A workflow saves a file it was asked to deliver (Markdown, CSV, JSON, text): on its Results, attached to its e-mail.",
+  mission_control: "Runs, pauses, resumes or archives a briefing or research workflow.",
+  mission_update: "Changes a briefing or research workflow: goal, questions, sources, schedule, delivery or depth.",
+  mission_set_triggers: "Sets the events a briefing or research workflow reacts to: SEC filings, price moves, news.",
   send_email: "E-mails you a designed report (only ever to your own address).",
   vault_add: "Saves a note or a web page into your vault, where search finds it.",
-  change_request: "Starts a change request: the swarm specifies, tests, implements and checks it, and comes back with one branch for your review.",
-  task_start: "Start a task for a job of several steps: it is planned, done and followed on its page",
+  change_request: "Starts a change request: the agents specify, test, implement and check it, and come back with one branch for your review.",
+  task_start: "Start a request for a job of several steps: its steps are worked out, done and followed on its run's page",
   build_assign: "Gives the builder a coding assignment on one of your repositories.",
   builds_overview: "Lists the builder's assignments and what's waiting for your review, with the AI review's verdict.",
   build_details: "Reads one build in full: assignment, summary, files, checks, CI, every AI-review finding, and the diff if you ask.",
@@ -160,6 +160,15 @@ const TOOL_HELP = {
   repos_overview: "Lists your repositories: which ones the builder may change, their graphs and code maps.",
   repo_create: "Creates a new private repository on your Forgejo, ready for the builder.",
   repo_make_buildable: "Moves a studied GitHub repository to your Forgejo so the builder can change it.",
+  stack_workflows: "Lists every workflow on this site: when it starts, whether it is on, its agents and its last run.",
+  stack_agents: "Lists the agents and, for each, every workflow that has a step with it.",
+  stack_runs: "Lists the newest runs, newest first, of every workflow or of one, by state.",
+  stack_run_show: "Shows one run: its steps, the questions it waits on and where it is in n8n.",
+  stack_run: "Starts a run of one workflow now, as Run now does; refused while the stop switch is on.",
+  stack_asks: "Lists the questions that wait for you (Needs you); private ones without their figures.",
+  stack_answer: "Answers a question for you with what you said in the chat; never a gate, never a private one.",
+  stack_pack_approve: "Asks you to approve a new version of a pack: a gate only your tap in the app answers.",
+  stack_doctor: "Says what keeps this site from running as its deployment says, each thing by name.",
 };
 const LIVEB = {
   architecture: archHtml,
@@ -169,7 +178,7 @@ const LIVEB = {
     if (!S) return loading;
     const ms = S.missions.filter((m) => m.status === "active");
     return ms.length ? `<div class="gl-list">${ms.map((m) => `<a href="#/mission/${encodeURIComponent(m.slug)}"><span class="type-ic sm">${typeIcon(m.type)}</span><span class="grow"><b>${esc(m.title)}</b><span class="tiny muted">${typeName(m.type)} · ${esc(m.schedule_text)}${m.triggers?.length ? ` · ${m.triggers.length} trigger${m.triggers.length > 1 ? "s" : ""}` : ""}</span></span><span class="tiny faint">${m.stats.runs} runs</span></a>`).join("")}</div>`
-      : `<div class="small muted">No active missions yet. The examples below create your first one.</div>`;
+      : `<div class="small muted">No briefing or research workflow yet. The examples below create your first one.</div>`;
   },
   repos: () => !S ? loading : `<div class="gl-list">${(S.code?.repos || []).map((r) => `<a href="#/repo/${encodeURIComponent(r.name)}"><span class="type-ic sm">${ic.code}</span><span class="grow"><b>${esc(r.name)}</b><span class="tiny muted">${r.buildable ? "builder can change it" : "studied"} · ${r.graph ? `graph ${nf(r.graph.nodes)} nodes` : "no graph yet"}${r.codemap ? " · code map" : ""}</span></span></a>`).join("") || `<span class="small muted">No repositories yet.</span>`}</div>`,
   skills: () => !S ? loading : `<div class="chips">${(S.system?.skills || []).map((k) => `<span class="tag">${esc(k)}</span>`).join("") || `<span class="small muted">No skills yet</span>`}</div><div class="tiny faint" style="margin-top:8px">${(S.system?.skills || []).length} skills right now</div>`,
@@ -283,7 +292,7 @@ function vGuideChapter(id) {
   const i = GUIDE.findIndex((c) => c.id === id), c = GUIDE[i];
   if (!c) { location.replace("#/guide"); return; }
   const { html, tries } = guideHtml(c), prev = GUIDE[i - 1], next = GUIDE[i + 1];
-  const VNAMES = { home: "Home", tasks: "Tasks", task: "A task", mission: "A repeating task", new: "New task", read: "Reports", wiki: "Wiki", build: "Build", chat: "Chat", system: "Stack" };
+  const VNAMES = { home: "Home", workflows: "Workflows", workflow: "A workflow", run: "A run", agents: "Agents", agent: "An agent", ideas: "Ideas", task: "A run", mission: "A briefing", new: "New request", read: "Reports", wiki: "Wiki", build: "Build", chat: "Chat", system: "Stack" };
   const views = [...new Set((c.views || []).map((v) => VNAMES[v]).filter(Boolean))];
   view.innerHTML = `
   <div class="gbar"><i id="gbar"></i></div>

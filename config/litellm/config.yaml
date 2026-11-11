@@ -99,6 +99,13 @@ mcp_servers:
     transport: "http"
     timeout: 120
     description: "The stack's memory without the owner's facts, private wikis or journals: search, open, subscribe, note."
+  stack:                  # WAY-06: runs, Asks and a pack's approval Ask for agents, the MCP side of the stack command line
+    url: "http://mission-control:8100/mcp"
+    auth_type: "bearer_token"
+    authentication_token: "os.environ/MCP_TOKEN_STACK"
+    transport: "http"
+    timeout: 150          # stack_doctor waits up to 120 s for the runner's doctor
+    description: "The site's workflows, runs and Asks: start a run, answer an Ask that is no gate with the owner's words, ask for a pack's approval (a gate a person taps), the doctor."
 
 general_settings:
   master_key: os.environ/LITELLM_MASTER_KEY

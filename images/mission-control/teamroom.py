@@ -14,7 +14,9 @@ interactions.py adds use, hand and tell, and your chat turns, and every line say
 lines and the pair filter are counted from that (target is only what the line's head shows).
 """
 import json
+import re
 
+GIST_CHARS = 140                                       # a first sentence longer than this is no one-line gist: the line says the request's length
 TYPES = ("ask", "help", "talk", "work", "you", "status")
 KIND = {"idea": "idea", "agent_change": "agent change", "task": "task", "finding": "finding", "report": "report", "build": "build",
         "wiki": "wiki", "purchase": "purchase"}
@@ -94,9 +96,21 @@ def message_line(m):
             "ref": {"context": ctx, **({"artifact": m["artifact_id"]} if m.get("artifact_id") else {})}}
 
 
+def gist(text):
+    """An agent's request to another as one line (OBS-21): its first sentence when that is short, or "" (the line then
+    says how long the request is). The whole request stays one tap away, never cut."""
+    first = next((s for s in (ln.strip(" #*->") for ln in str(text or "").splitlines()) if s), "")
+    m = re.match(r"(.+?[.?!])(?:\s|$)", first)
+    s = (m.group(1) if m else first).rstrip(":")
+    return s if len(s) <= GIST_CHARS else ""
+
+
 def ask_line(x):
-    """A tool call between agents (runrecord.delegations): the question, and the answer whole in detail."""
-    return {"ts": x["ts"], "type": "ask", "actor": x["from"], "target": x["to"], "to": [x["to"]], "verb": "asks", "title": "", "text": x.get("ask") or "",
+    """A tool call between agents (runrecord.delegations): one line that says who asked whom and, when it is short, what;
+    the request (text) and the answer (detail) are whole behind a tap each (OBS-21)."""
+    ask = x.get("ask") or ""
+    return {"ts": x["ts"], "type": "ask", "actor": x["from"], "target": x["to"], "to": [x["to"]], "verb": "asked", "title": "", "text": ask,
+            "summary": gist(ask), "words": len(ask.split()),
             "detail": x.get("answer") or "", "state": x.get("state") or "", "ref": {"run": x["run"]}, "world": x.get("world") or "real", "certainty": x.get("certainty") or "recorded"}
 
 

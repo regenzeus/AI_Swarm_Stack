@@ -25,6 +25,8 @@
       ]
     }
   },
+  "factory": "home",
+  "feature": "phone",
   "id": "aisc20bc6a042ea4",
   "name": "Crew: Phone cleanup",
   "nodes": [

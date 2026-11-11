@@ -57,6 +57,13 @@ mcp_servers:
     transport: http
     timeout: 120
     description: 'The stack''s memory without the owner''s facts, private wikis or journals: search, open, subscribe, note.'
+  stack:
+    url: http://mission-control:8100/mcp
+    auth_type: bearer_token
+    authentication_token: os.environ/MCP_TOKEN_STACK
+    transport: http
+    timeout: 150
+    description: 'The site''s workflows, runs and Asks: start a run, answer an Ask that is no gate with the owner''s words, ask for a pack''s approval (a gate a person taps), the doctor.'
 general_settings:
   master_key: os.environ/LITELLM_MASTER_KEY
   database_url: os.environ/DATABASE_URL

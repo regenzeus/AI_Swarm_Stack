@@ -17,8 +17,9 @@ docs it points to. `README.md` is the product overview; `docs/` holds architectu
 | `n8n/custom/` | The stack's own n8n node, AI Stack step (WFL-06) | [n8n/custom/AGENTS.md](n8n/custom/AGENTS.md) |
 | `n8n/workflows/` | One workflow per file | [n8n/workflows/AGENTS.md](n8n/workflows/AGENTS.md) |
 | `config/n8n/` | n8n's database setup (the workflow pillar, docs/N8N-MIGRATION.md) | [config/n8n/AGENTS.md](config/n8n/AGENTS.md) |
-| `deployments/` | One folder per deployment of the platform: home, and an example of a work deployment (DEC-45) | [deployments/AGENTS.md](deployments/AGENTS.md) |
-| `deployments/home/` | The home deployment: every feature on, subscriptions only | [deployments/home/AGENTS.md](deployments/home/AGENTS.md) |
+| `deployments/` | One folder per deployment of the platform: the platform only, home, and an example of a work deployment (DEC-45) | [deployments/AGENTS.md](deployments/AGENTS.md) |
+| `deployments/platform/` | The platform only: the app, the engine and the platform's upkeep; what a machine that names no deployment runs | [deployments/platform/AGENTS.md](deployments/platform/AGENTS.md) |
+| `deployments/home/` | The home deployment: the home factory on, subscriptions only | [deployments/home/AGENTS.md](deployments/home/AGENTS.md) |
 | `deployments/example-work/` | An example work deployment: the Windows worker, a company gateway, no home features | [deployments/example-work/AGENTS.md](deployments/example-work/AGENTS.md) |
 | `deployments/example-work/checks/` | The judge's checks a deployment adds for a repository | [deployments/example-work/checks/AGENTS.md](deployments/example-work/checks/AGENTS.md) |
 | `config/hermes/` | One idempotent script per Hermes profile | [config/hermes/AGENTS.md](config/hermes/AGENTS.md) |
@@ -47,6 +48,7 @@ docs it points to. `README.md` is the product overview; `docs/` holds architectu
 | `ops/swarm-probes/` | The agent swarm's phase 0 proofs, re-runnable after upgrades | [ops/swarm-probes/AGENTS.md](ops/swarm-probes/AGENTS.md) |
 | `tests/` | Unit tests (pytest, all fakes) and docs-coverage tests | [tests/AGENTS.md](tests/AGENTS.md) |
 | `tests/fixtures/packs/toy/` | The toy pack the tests and the preview load | [tests/fixtures/packs/toy/AGENTS.md](tests/fixtures/packs/toy/AGENTS.md) |
+| `tests/fixtures/jira/` | A stand-in Jira project: five tickets in Jira's own shapes for the records' tests | [tests/fixtures/jira/AGENTS.md](tests/fixtures/jira/AGENTS.md) |
 | `.forgejo/workflows/` | CI | [.forgejo/workflows/AGENTS.md](.forgejo/workflows/AGENTS.md) |
 | `docs/` | Architecture, security model, reviews | [docs/AGENTS.md](docs/AGENTS.md) |
 | `docs/screenshots/` | The public page's pictures, never of real data | [docs/screenshots/AGENTS.md](docs/screenshots/AGENTS.md) |
@@ -197,6 +199,22 @@ turned out to refuse repositories over 150 source files: a number nobody asked f
   the owner's tap, with smoke test and automatic rollback.
 - Subscription models only: no paid model in LiteLLM, ever.
 - Every service port binds `127.0.0.1`; outside access only through `tailscale serve`.
+
+## Sites and deployments (PLT-44 to PLT-48)
+
+**The rule of every site.** All work is a workflow run. People act through Asks; agents start and look at runs with
+`stack` (or its MCP tools). A change to a factory is a commit to its pack, approved before it is used. Never edit files
+on a site by hand: use `stack`. Every deployment folder's AGENTS.md opens with this rule; `python3 ops/deployment.py new
+<name|path>` writes it for a new one.
+
+- A machine that names no deployment runs the platform only (`deployments/platform/`), never home; a deploy refuses on
+  it until `~/.config/aistack/deployment` names one.
+- Every workflow file of `n8n/workflows/` and every job of `ops/crew.py` names its factory (`platform` or `home`). A
+  new one gets it from `ops/n8n_gen.py`, and an export keeps it; a file without one runs nowhere and fails the doctor.
+- A site refuses a factory with the generic setting `REFUSE=<factory>` in its `deployment.env`; no file, message or
+  commit names a site, a company or a product.
+- `python3 ops/deployment.py doctor` names everything that keeps a site from running as its deployment says, and a
+  deploy fails when it fails (deployments/AGENTS.md).
 
 ## Checks
 

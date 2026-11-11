@@ -38,6 +38,7 @@ import shlex
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 from textcap import tail
@@ -49,7 +50,9 @@ CHOSEN = "/home/node/.n8n/chosen"                 # inside n8n: the deployment's
 VOLATILE = ("createdAt", "updatedAt", "versionId", "activeVersionId", "triggerCount", "shared", "tags", "pinData",
             "staticData", "meta", "isArchived", "versionCounter", "activeVersion", "parentFolder", "description")
 PACK = "pack"                                     # a pack's workflow ids start with it; the stack's start with "ais"
+PUBLISH_AGAIN_S = 5                               # limit: waits, before a publish that exited 1 is tried once more
 HOOKED = ("n8n-nodes-base.webhook", "n8n-nodes-base.wait", "n8n-nodes-base.formTrigger", "CUSTOM.aistackStep")
+KEPT = ("area", "feature", "factory")             # the stack's own keys of a workflow file, which n8n's export does not carry
 
 
 def n8n(*args, run=subprocess.run):
@@ -117,6 +120,9 @@ def import_all(repo=REPO, run=subprocess.run, made=None, names=None):
     for _, w in sorted(mine.items(), key=lambda x: x[1]["file"]):
         wf = w["wf"]
         q = n8n("publish:workflow" if wf.get("active") else "unpublish:workflow", f"--id={wf['id']}", run=run)
+        if q.returncode:                                   # limit: waits, one more try after 5 s: on 11 Nov two publishes right after a
+            time.sleep(PUBLISH_AGAIN_S)                    # restart exited 1 without a word (n8n's migration lock); by hand both went through
+            q = n8n("publish:workflow" if wf.get("active") else "unpublish:workflow", f"--id={wf['id']}", run=run)
         print(f"{'published' if wf.get('active') else 'unpublished'} {wf['name']}" if not q.returncode else
               f"{wf['name']}: {tail((q.stderr or q.stdout).strip(), 300)}")   # cap: preview, n8n's reason; the journal has it all
         bad += q.returncode != 0
@@ -319,6 +325,14 @@ def write_stable(files, dest, packs=()):
         wf = G.hook_auth(stable(json.loads(Path(f).read_text())))   # SEC-27: a webhook made on the canvas gets the runner's header
         if is_pack(wf, packs):
             continue
+        try:                                                        # n8n keeps no area or feature: the file in git does (TSK-52, PHN-28)
+            mine = json.loads((dest / file_name(wf)).read_text())
+        except (OSError, ValueError):
+            mine = {}
+        wf.update({k: mine[k] for k in KEPT if k in mine and k not in wf})
+        if not wf.get("factory"):                                   # PLT-45: one made on the canvas here is this site's factory's
+            import deployment as DEPLOY
+            wf["factory"] = DEPLOY.default_factory()
         (dest / file_name(wf)).write_text(json.dumps(wf, indent=2, ensure_ascii=False, sort_keys=True) + "\n")
         names.append(file_name(wf))
     return names

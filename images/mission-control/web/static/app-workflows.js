@@ -26,11 +26,11 @@ async function wfView(fresh = false) {                 // the runner rewrites it
 const wfOf = (v, id) => (v?.workflows || []).find((w) => w.id === id);
 function wfPageOf(w) {                                 // the app's own page of what the workflow runs
   const [k, key] = String(w.for || "").split(":");
-  return k === "crew" ? [`#/crew/${encodeURIComponent(key)}`, "Its crew job"] : k === "task" ? [`#/task/${encodeURIComponent(key)}`, `Task #${key}`] : null;
+  return k === "crew" ? [`#/crew/${encodeURIComponent(key)}`, "Its scheduled job"] : k === "task" ? [`#/task/${encodeURIComponent(key)}`, `Request #${key}`] : null;
 }
 function wfWho(s) {                                    // who does a step, linked to their page in the app
   if (s.kind === "crew" && s.job) return `<a href="#/crew/${encodeURIComponent(s.job)}">${esc((S?.crew || []).find((c) => c.id === s.job)?.name || s.job)}</a>`;
-  if (s.kind === "task" && s.task) return `<a href="#/task/${encodeURIComponent(s.task)}">task #${esc(s.task)}</a>`;
+  if (s.kind === "task" && s.task) return `<a href="#/task/${encodeURIComponent(s.task)}">request #${esc(s.task)}</a>`;
   if (s.kind === "agent" && s.agent) { const h = typeof swAgentHref === "function" ? swAgentHref(s.agent) : ""; return h ? `<a href="${h}">${esc(s.agent)}</a>` : esc(s.agent); }
   return { ask: "a question for you", notify: "a message to you" }[s.kind] || esc(s.kind || "");
 }
@@ -60,11 +60,10 @@ function toolPage(title, src, segs, about) {
   <iframe class="tool-frame" data-src="${esc(src)}" src="${esc(src)}" title="${esc(title)}"></iframe>`;
 }
 
-// ---------- the Workflows page ----------
-function vWorkflows() {
+// ---------- n8n's editor inside the app (#/n8n, the desk's "Edit in n8n"; ?open=<workflow id>, ?open=executions) ----------
+function vN8n() {
   const open = route.q.get("open") || "";
-  if (!wfDesk()) return wfList(open);
-  toolPage("Workflows", n8nPath(open), [["#/workflows", "Workflows", open !== "executions"], ["#/workflows?open=executions", "Runs", open === "executions"]],
+  toolPage("n8n", n8nPath(open), [["#/n8n", "Workflows", open !== "executions"], ["#/n8n?open=executions", "Runs", open === "executions"]],
     explain("wf-what", `n8n decides when each piece of work starts and in what order; the stack's agents do the work. This is n8n's own editor, inside the app: sign in to it once with its own account. Its AI Stack steps hand work to the stack and wait for the answer. ${how("workflows")}`, "About n8n"));
 }
 
@@ -75,29 +74,7 @@ function vTraces() {
   const open = route.q.get("open") || "";
   const path = /^\/[\w\-/.=?&%]*$/.test(open) ? open : "/projects";          // only a path inside Phoenix
   toolPage("Traces", `/phoenix${path}`, [],
-    explain("traces-what", `Phoenix keeps every model call the stack made through its gateway: the whole prompt, the answer, the tokens and the time, grouped into traces (a task's run is one trace). Open in Phoenix on a step's log jumps to that call. ${how("telemetry")}`, "About traces"));
-}
-
-async function wfList(open) {
-  if (!WFV) view.innerHTML = `<h1>Workflows</h1><div class="stack"><div class="skeleton" style="height:96px"></div><div class="skeleton" style="height:96px"></div></div>`;
-  const v = await wfView();
-  if (route.name !== "workflows" || wfDesk()) return;
-  const last = (w) => w.runs?.[0]?.started || "";
-  const ws = [...(v.workflows || [])].sort((a, b) => (b.active - a.active) || last(b).localeCompare(last(a)) || a.name.localeCompare(b.name));
-  const on = ws.filter((w) => w.active).length;
-  view.innerHTML = `<div class="hero"><div class="grow"><h1>Workflows</h1><p>${nf(on)} of ${nf(ws.length)} on n8n</p></div>${explain("wf-phone", `n8n decides when each piece of work starts; the stack's agents do it. Each workflow shows its schedule and its last runs, with the steps the stack ran. Its canvas opens on the desk. ${how("workflows")}`, "About workflows")}</div>
-    ${ws.length ? `<div class="stack wf-list">${ws.map((w) => wfCard(w, w.id === open)).join("")}</div>` : emptyState("Workflows come from the repository's n8n folder: each deploy brings them in.", `<a class="btn sm" href="#/guide/workflows">${ic.doc}How workflows come in</a>`)}`;
-  if (open) $(`[data-wf="${CSS.escape(open)}"]`)?.scrollIntoView({ block: "start" });
-}
-function wfCard(w, isOpen) {
-  const r = w.runs?.[0], page = wfPageOf(w), more = (w.runs_total || 0) - (w.runs || []).length;
-  return `<details class="card wf-card" data-wf="${esc(w.id)}"${isOpen ? " open" : ""}><summary>
-    <div class="row between wrap" style="gap:4px 8px"><b class="wrap">${esc(w.name)}</b>${wfOnPill(w)}</div>
-    <div class="small muted wrap" style="margin-top:4px">${ic.clock}${esc(w.schedule)} · ${r ? `last run ${wfStatePill(r.state)} ${esc(when(r.started))}` : "no run yet"}</div></summary>
-    <div class="wf-body">${(w.runs || []).map((x, i) => `<div class="wf-run"><div class="small row wrap" style="gap:4px 8px">${wfRunLine(x)}</div>${i === 0 ? wfStepsHtml(w, x) : ""}</div>`).join("")
-      || `<div class="small muted">No run has reached the stack yet. Its steps:</div>${wfStepsHtml(w, null)}`}
-      ${more > 0 ? `<div class="tiny faint">${nf(more)} older run${more > 1 ? "s" : ""} in n8n's list of runs, on the desk.</div>` : ""}
-      ${page ? `<a class="btn sm" href="${page[0]}" style="margin-top:8px">${ic.next}${esc(page[1])}</a>` : ""}</div></details>`;
+    explain("traces-what", `Phoenix keeps every model call the stack made through its gateway: the whole prompt, the answer, the tokens and the time, grouped into traces (a run is one trace). Open in Phoenix on a step's log jumps to that call. ${how("telemetry")}`, "About traces"));
 }
 
 // ---------- Where it runs (a task's page, a crew job's page) and In workflows (an agent's page) ----------
@@ -123,8 +100,8 @@ async function wfWhereInto(el, wid, ex = "", inList = null, keep = null) {
   if (!el.isConnected) { keep?.remove(); return; }
   const w = wfOf(v, wid), r = ex ? (w?.runs || []).find((x) => x.execution === ex) : w?.runs?.[0], run = ex || r?.execution || "";
   const src = n8nPath(wid, run), list = inList || (w ? [w] : []);
-  const names = list.length ? list.map((x) => `<a class="tag" href="#/workflows?open=${encodeURIComponent(x.id)}">${ic.flow}${esc(x.name)}</a>`).join("")
-    : `<a class="tag" href="#/workflows?open=${encodeURIComponent(wid)}">${ic.flow}${esc(wid)}</a>`;
+  const names = list.length ? list.map((x) => `<a class="tag" href="#/workflow/${encodeURIComponent(x.id)}">${ic.flow}${esc(x.name)}</a>`).join("")
+    : `<a class="tag" href="#/workflow/${encodeURIComponent(wid)}">${ic.flow}${esc(wid)}</a>`;
   el.innerHTML = `<div class="card pad wf-where"><div class="row between wrap" style="gap:6px"><h2>Where it runs</h2>${explain("wf-where", `n8n starts it and the stack does the work. ${wfDesk() ? "Below is the run on n8n's canvas: each node's state, its input and its output." : "On the desk the run opens on n8n's canvas."} ${how("workflows")}`, "About where it runs")}</div>
     <div class="chips wf-in" style="margin-top:6px">${inList ? `<span class="small muted">In workflows</span>` : ""}${names}${w && !inList ? wfOnPill(w) : ""}</div>
     <div class="small row wrap" style="gap:4px 8px;margin-top:8px">${r ? wfRunLine(r) : run ? `<span>run ${esc(run)}</span>` : `<span class="muted">No run yet${w ? ` · ${esc(w.schedule)}` : ""}</span>`}</div>
@@ -137,8 +114,8 @@ async function wfWhereInto(el, wid, ex = "", inList = null, keep = null) {
 // change it: the workflow inside the app (its schedule trigger, its Active switch)
 function wfScheduleHtml(text, next, wid) {
   return `<div class="card pad wf-sched mt-2"><div class="row between wrap gap-2"><b class="wrap">${esc(text || "when called")}</b>
-      <a class="btn sm" href="#/workflows?open=${encodeURIComponent(wid)}">${ic.flow}Its workflow</a></div>
-    <div class="small muted mt-1">${next ? `next ${esc(when(next))}` : text === "switched off" ? "it does not run until it is switched on" : "no run planned on a schedule"}</div>
+      <a class="btn sm" href="#/workflow/${encodeURIComponent(wid)}">${ic.flow}Its workflow</a></div>
+    <div class="small muted mt-1">${next ? `next ${esc(when(next))}` : text === "switched off" ? "it does not run until it is switched on" : "no run comes on a schedule"}</div>
     ${explain("wf-sched", "Its workflow starts it: change the schedule on n8n's canvas (its schedule trigger), or switch it off there (its Active switch).", "Where to change it")}</div>`;
 }
 async function wfInInto(el, kind, id) {                // kind: "agent" (an agent card) or "crew" (a crew job)
@@ -146,7 +123,7 @@ async function wfInInto(el, kind, id) {                // kind: "agent" (an agen
   const v = await wfView();
   if (!el.isConnected) return;
   const ws = (v.workflows || []).filter((w) => (kind === "crew" ? w.crew : w.agents)?.includes(id));
-  el.innerHTML = ws.length ? `<div class="chips wf-in"><span class="small muted">In workflows</span>${ws.map((w) => `<a class="tag" href="#/workflows?open=${encodeURIComponent(w.id)}">${ic.flow}${esc(w.name)}</a>`).join("")}</div>` : "";
+  el.innerHTML = ws.length ? `<div class="chips wf-in"><span class="small muted">In workflows</span>${ws.map((w) => `<a class="tag" href="#/workflow/${encodeURIComponent(w.id)}">${ic.flow}${esc(w.name)}</a>`).join("")}</div>` : "";
 }
 async function wfCrewInto(el, id, keep = null) {       // a crew job's page: its own workflow's last run, and every workflow it is in
   if (!el) { keep?.remove(); return; }

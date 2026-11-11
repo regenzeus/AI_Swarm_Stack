@@ -1,0 +1,142 @@
+# Records, links and measures: a read cache of a deployment's tracker of record, typed by its pack (phase 2 of the Ask
+# system, docs/AI-STACK.md §6, ops/domain/records.py). The stack names no record type, link type or measure; the tests
+# use the toy pack's and a stand-in Jira.
+area: Records
+prefix: REC
+items:
+  - id: REC-01
+    title: A pack declares its record types, link types, gates and measures
+    statement: "A pack's records.yaml shall declare the record types of its tracker of record (each from issue types and
+      labels, with a template, required fields, required work products as a linked record of a type through a link
+      type, and required links), its link types (each from the phrases a tracker shows on the two items it links), the
+      statuses only a role's holder approves, and its measures; the pack check shall name each part that cannot be used
+      (an unknown type, link, field or filter, a template outside the pack, a measure without an id or kind), and a
+      tracker whose pack's records.yaml has a problem shall not be read for records, with the reason."
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-20]
+    sources: [docs/AI-STACK.md, 'CR of 11 Nov 2026 (roles, gates, typed records, links and measures), items 3 and 4']
+    rationale: The work side keeps its process in a tracker; the stack has the mechanism, the deployment's pack names
+      the types (SEC-22).
+    acceptance: 'Test: the toy pack declares six record types, five link types, a gate and five measures without a
+      problem; a broken records.yaml names each problem and its tracker is not read.'
+    verify: {method: test, by: ['tests/test_domain_records.py::test_the_toy_pack_declares_record_types_link_types_a_gate_and_measures',
+      'tests/test_domain_records.py::test_a_records_declaration_that_cannot_be_used_is_named_with_its_reason']}
+    trace: [ops/domain/records.py, ops/domain/packs.py, tests/fixtures/packs/toy/records.yaml, tests/fixtures/packs/toy/templates]
+  - id: REC-02
+    title: The records cache reads its tracker one way
+    statement: "The tracker poller shall keep a read cache of each tracker that names its pack's records: on each pass it
+      shall read only the items changed since that tracker's own cursor, keep each as a record with its type, status,
+      title, the fields the pack names, its status history and its links, and call no tracker operation but reads; a
+      pack commit whose records declaration differs shall read the tracker again from its start."
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-05]
+    sources: [docs/AI-STACK.md, 'CR of 11 Nov 2026, item 7 and its update (the tracker of record, one-way sync)']
+    acceptance: 'Test, on five tickets of a stand-in Jira in Jira''s own shapes: the cache types them by the toy pack,
+      asks Jira for reads only, reads nothing again without a change and one ticket after one change; a new declaration
+      reads all five again; the poller writes the view.'
+    verify: {method: test, by: ['tests/test_domain_records.py::test_the_cache_reads_five_stand_in_jira_tickets_one_way_and_types_them_by_the_pack',
+      'tests/test_domain_records.py::test_a_new_pack_commit_whose_records_differ_reads_the_tracker_again',
+      'tests/test_domain_records.py::test_the_tracker_poller_reads_the_records_and_writes_the_view']}
+    trace: [ops/domain/records.py, ops/domain/trackers.py, ops/runreg.py, tests/fixtures/jira/five.json]
+  - id: REC-03
+    title: Records missing a work product or a link are found
+    statement: "The records cache shall answer two queries: the records whose type needs a work product (a record of a
+      type linked by a link type) they lack, with the missing work product named; and the records missing a link of a
+      given type in either direction, of the given types, else of the types that need that link, else of every type. A
+      link read from either of its two items shall be kept once and asked from both."
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-20]
+    sources: [docs/AI-STACK.md, 'CR of 11 Nov 2026, item 4 and its acceptance (records missing a mandatory work product, a change request with a missing link)']
+    acceptance: 'Test, on the five stand-in tickets: one change request lacks its test report, one lacks its link
+      "satisfies", one problem lacks a test report; each link kept once and found from both ends; a link taken away in
+      the tracker is gone after the next pass.'
+    verify: {method: test, by: ['tests/test_domain_records.py::test_records_missing_a_required_work_product_on_five_stand_in_tickets',
+      'tests/test_domain_records.py::test_records_missing_a_link_of_a_type_on_five_stand_in_tickets',
+      'tests/test_domain_records.py::test_a_link_is_kept_once_and_asked_from_either_end']}
+    trace: [ops/domain/records.py]
+  - id: REC-04
+    title: Measures are computed from the records, never typed
+    statement: "The records cache shall compute each measure its pack declares (a share, a count or a duration between
+      two points of a record, each optionally per field values) from the cached records on every pass, and keep with each
+      number the keys of the records behind it; no measure shall take a value from anywhere else."
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-07]
+    sources: [docs/AI-STACK.md, 'CR of 11 Nov 2026, item 8 (conformance share, traceability share, reaction times, fix-with-test share, regression result per extract)']
+    acceptance: 'Test, on the five stand-in tickets: conformance 1 of 2, traceability 1 of 2, reaction median 14 hours
+      (4 and 24), fix with test 1 of 2, regression per extract one passed run; a test report linked in the tracker moves
+      the fix-with-test share to 1 on the next pass; the view holds each tracker with its records and queries.'
+    verify: {method: test, by: ['tests/test_domain_records.py::test_the_measures_on_five_stand_in_tickets_are_computed_with_the_records_behind_each',
+      'tests/test_domain_records.py::test_the_measures_view_holds_each_tracker_with_its_records_queries_and_measures']}
+    trace: [ops/domain/records.py]
+  - id: REC-05
+    title: A tracker with write off is never written to
+    statement: "A tracker with write: off in trackers.yaml shall never be written to by the stack: each of its writes,
+      of every kind and also of a kind the owner let go live, shall be kept in the stack once by its write id and answer
+      off; a shadow write made before shall not be sent; its adapter shall refuse a write; a write value other than on or
+      off shall refuse the tracker's entry with the reason."
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05]
+    sources: [docs/AI-STACK.md, 'CR of 11 Nov 2026, item 7 (source systems read-only, no write until agreed)']
+    acceptance: 'Test: a stand-in tracker with write: off is byte for byte the same after a write of each kind twice, a
+      kind gone live, an attempt to send an old shadow write, and a direct write through its adapter.'
+    verify: {method: test, by: ['tests/test_domain_records.py::test_a_tracker_with_write_off_never_writes',
+      'tests/test_domain_records.py::test_a_trackers_write_is_on_or_off']}
+    trace: [ops/domain/trackers.py, deployments/example-work/trackers.yaml]
+  - id: REC-06
+    title: The Measures view on the phone and the desk
+    statement: "The app shall show a Measures view per tracker of record: each measure's number, a tap from the records
+      counted and not counted; the records missing a work product, a link of a chosen type, or a required field; the
+      record types with their templates and gates; and each record with its fields, its links in both directions and
+      its status history; its data shall be served to a signed-in session only, never to the AI phone and never cached."
+    type: interface
+    priority: must
+    status: implemented
+    parents: [SN-06]
+    sources: [docs/AI-STACK.md, 'CR of 11 Nov 2026, item 8 (a measures view) and its acceptance (every capability visible in the app)']
+    acceptance: 'Test: GET /api/records refuses no sign-in and the AI phone, serves the poller''s view uncached and says
+      when it cannot be read; the view is the app''s route, script and guide chapter. Screenshots at 375 and 1280 px,
+      light and dark, on demo data.'
+    verify: {method: test, by: ['tests/test_domain_records.py::test_the_records_view_is_served_to_a_signed_in_session_and_never_to_the_ai_phone',
+      'tests/test_domain_records.py::test_the_measures_view_is_the_apps_on_the_phone_and_the_desk']}
+    trace: [images/mission-control/server.records.py, images/mission-control/web/static/measures.js,
+      images/mission-control/guide/24-measures.md]
+  - id: REC-07
+    title: A tracker read for its records only starts no run
+    statement: "A tracker in trackers.yaml that names no workflow shall start no run and keep no poll cursor: the tracker
+      poller shall read it for its records only."
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-20]
+    sources: [docs/AI-STACK.md]
+    rationale: A tracker of record is read for its records; without this its every change would wait in the run
+      register's outbox for a workflow it does not have.
+    verify: {method: test, by: ['tests/test_domain_records.py::test_the_tracker_poller_reads_the_records_and_writes_the_view']}
+    trace: [ops/domain/trackers.py, ops/runreg.py]
+  - id: REC-08
+    title: A gated status change waits for a chip of the role's holder
+    statement: "When the stack writes a status change that the record's pack gates, the tracker write shall go on only
+      after the Ask system's gate answered approved by an explicit chip tap of a person holding the gate's role; an
+      answer from words, a default or a standing rule, a person outside the role, a waiting gate, or no gate set up
+      shall refuse the write with the gate it needs and the reason; a record the cache does not hold shall meet every
+      gate on that status; each approval shall be kept with its person, role, Ask and time."
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-02]
+    sources: [docs/AI-STACK.md, ops/domain/AGENTS.md, 'CR of 11 Nov 2026, items 2 and 5 (human-only gates)']
+    acceptance: 'Test, with the owner as the role''s holder until the Ask system''s roles land: no gate, waiting, words,
+      a default, a rule and a person outside the role are each refused; a chip by the owner writes it into shadow and is
+      kept; a status or type the pack does not gate is not asked.'
+    verify: {method: test, by: ['tests/test_domain_records.py::test_a_gated_transition_waits_for_a_chip_of_the_roles_holder']}
+    trace: [ops/domain/records.py, ops/domain/trackers.py, ops/domain/roles.py]

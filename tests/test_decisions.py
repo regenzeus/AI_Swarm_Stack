@@ -47,7 +47,7 @@ def state(**kw):
     return st
 
 
-def test_every_source_s_waits_are_one_ranked_list_with_what_why_and_a_recommendation(DQ):
+def test_every_source_s_waits_are_one_ranked_list_with_what_why_and_a_recommendation(DQ, phone_on):
     ds = DQ.gather(state(), now=T0)
     ids = [d["id"] for d in ds]
     assert set(ids) == {"build:4", "shop:p-1", "phone-step:a1", "phone-step:a2", "memory:m1", "task:9", "task-q:10", "ask:3",
@@ -65,7 +65,7 @@ def test_every_source_s_waits_are_one_ranked_list_with_what_why_and_a_recommenda
     assert all(d["what"] and d["href"] and "unanswered" in d for d in ds)
 
 
-def test_the_shadow_records_once_and_then_the_owner_s_outcome(DQ):
+def test_the_shadow_records_once_and_then_the_owner_s_outcome(DQ, phone_on):
     st = state()
     DQ.shadow(DQ.gather(st, T0), st, T0)
     DQ.shadow(DQ.gather(st, T0 + 60), st, T0 + 60)                           # seen once, not every pass
@@ -149,7 +149,7 @@ def test_what_the_owner_must_answer_reaches_the_queue_and_a_state_does_not(DQ):
     assert all(d["cls"] in DQ.classes() for d in ds)
 
 
-def test_every_item_in_the_queue_has_a_working_way_to_act(DQ):
+def test_every_item_in_the_queue_has_a_working_way_to_act(DQ, phone_on):
     """GEN-02: a tap the server lets through and the runner handles, or a link to a screen the app has."""
     import changes as CHG
     import server as SV
@@ -166,7 +166,8 @@ def test_every_item_in_the_queue_has_a_working_way_to_act(DQ):
                                                    "access", "phone-ask", "gmail-trash"}
     routes = {x.split(":")[0].strip() for x in re.search(r"const fn = \{(.*?)\}\[route\.name\]", APP_JS)[1].split(",")}
     crew = set(re.search(r"^CREW_ACTIONS = \{(.*?)\}", pysrc.missions(), re.M)[1].replace('"', "").replace(" ", "").split(","))
-    runner = CHG.ACTIONS | TK.ACTIONS | SW.ACTIONS | DQ.ACTIONS | crew | {"memory"}
+    builds = set(re.search(r"^BUILD_ACTIONS = \{(.*?)\}", (ROOT / "ops/missions.requests.py").read_text(), re.M | re.S)[1].replace('"', "").replace(" ", "").replace("\n", "").split(","))
+    runner = CHG.ACTIONS | TK.ACTIONS | SW.ACTIONS | DQ.ACTIONS | crew | builds | {"memory"}   # a build is answered on its card (APP-74)
     for d in ds:
         assert d["answers"], d["id"]
         assert re.match(r"#/(\w+)", d["href"])[1] in routes, d["href"]
@@ -182,7 +183,7 @@ def test_every_item_in_the_queue_has_a_working_way_to_act(DQ):
 
 def test_a_link_to_an_agent_s_question_keeps_its_context(DQ):
     got = DQ.gather({"swarm": {"owner_requests": [{"id": 1, "sender": "coach", "context": "calls:mission+scout"}]}}, now=T0)[0]
-    assert got["href"] == "#/tasks?v=activity&ctx=calls%3Amission%2Bscout" == got["answers"][0]["href"]
+    assert got["href"] == "#/home?tab=activity&ctx=calls%3Amission%2Bscout" == got["answers"][0]["href"]
 
 
 def test_the_test_item_is_marked_and_changes_nothing_but_itself(DQ, tmp_path, monkeypatch):
@@ -248,14 +249,9 @@ def test_the_server_adds_the_waits_only_it_sees_and_the_app_draws_the_list():
     out = ns["owner_decisions"]({"phone": {"pending": 2}, "connections": {"pending": 1}, "decisions": [{"id": "build:4"}]})
     assert [d["id"] for d in out] == ["phone-ask", "gmail-trash", "build:4"] and out[0]["what"] == "The AI phone asks for 2 approvals"
     assert src.count('["decisions"] = owner_decisions(') == 1 and "full_state(request, ph, cs)" in src   # one shape for the state and the stream
-    js = "\n".join([re.search(rf"^function {n}\(.*?^\}}", APP_JS, re.M | re.S)[0] for n in ("decideGroups",)]) + """
-const g = decideGroups([{ id: "a", cls: "phone-routine", routine: true }, { id: "b", cls: "coding" }, { id: "c", cls: "phone-routine", routine: true },
-  { id: "d", cls: "memory", routine: true }]);
-const ids = (x, l) => ({ label: l || "Approve", act: { action: "phone_cleanup_do_all", ids: [x] } });
-const all = [decideAll([{ answers: [ids("a")] }, { answers: [ids("b")] }]), decideAll([{ answers: [ids("a")] }, { answers: [{ label: "Remember", act: { action: "memory", id: 1 } }] }]), decideAll([{ answers: [{ href: "#/x" }] }])];
-process.stdout.write(JSON.stringify([g.map((x) => x.one ? x.one.id : x.items.map((i) => i.id)), all]));"""
-    js = re.search(r"^function decideAll\(.*?^\}", APP_JS, re.M | re.S)[0] + js
-    grouped, together = json.loads(subprocess.run(["node", "-e", js], check=True, capture_output=True, text=True).stdout)
-    assert grouped == [["a", "c"], "b", "d"]
-    assert together == [{"label": "Approve", "act": {"action": "phone_cleanup_do_all", "ids": ["a", "b"]}}, None, None]   # a mixed group is answered one by one
-    assert "decide: vDecide" in APP_JS and 'const LIVE = new Set(["home", "decide"])' in APP_JS and 'href="#/decide"' in APP_JS
+    js = re.search(r"^function askGroups\(.*?^\}", APP_JS, re.M | re.S)[0] + """
+const g = askGroups([{ id: "a", kind: "phone-routine", group: true }, { id: "b", kind: "coding", gate: true, group: false }, { id: "c", kind: "phone-routine", group: true },
+  { id: "d", kind: "memory", group: true }, { id: "e", kind: "srv", app_only: true }]);
+process.stdout.write(JSON.stringify(g.map((x) => x.one ? x.one.id : x.items.map((i) => i.id))));"""
+    grouped = json.loads(subprocess.run(["node", "-e", js], check=True, capture_output=True, text=True).stdout)
+    assert grouped == [["a", "c"], "b", "d", "e"]                       # ASK-15: a kind folds into one card; a gate never does

@@ -10,6 +10,7 @@ A pack is a Claude Code plugin folder plus what only the stack knows:
     jobs/<file>.json             job kinds of the worker protocol (ops/winjobs.py) -> named <pack>.<kind>
     workflows/<name>.json        n8n workflows, as n8n exports them             -> named <pack>/<name>
     exams/<set>.yaml             cases with their known outcome
+    records.yaml                 record types, link types, gated statuses and measures of its tracker of record (REC-01)
 
 The deployment lists its packs in packs.txt beside its deployment.env, one per line: name, source (a git URL or a
 folder holding a git repository), commit. Each commit is checked out once, read-only, under CACHE/<name>@<commit>.
@@ -328,20 +329,25 @@ def read(name, commit, folder, allow="deployment"):
     except (OSError, ValueError):
         mcp = []
     exams = sorted(f.stem for f in (folder / "exams").glob("*.yaml"))
+    from domain import records as RC
+    records = RC.declared(folder)                    # REC-01: its record types, links, gates and measures, if it has them
+    problems += [f"records.yaml: {x}" for x in (records or {}).get("problems") or []]
     return {"name": name, "commit": commit, "dir": str(folder), "version": str(man.get("version") or ""),
             "about": str(man.get("description") or ""), "agents": agents, "skills": skills, "jobs": jobs,
-            "workflows": workflows, "mcp": mcp, "exams": exams, "problems": problems}
+            "workflows": workflows, "mcp": mcp, "exams": exams, "records": records, "problems": problems}
 
 
 def load(txt=None, base=None, approvals=None):
     """The deployment's packs: those that run (each at its approved commit), the commits waiting for the owner, and
     what is refused with its reason."""
-    core, seen = core_names(), set()
+    import deployment as D
+    core, seen, no = core_names(), set(), D.refused()
     packs, pending, refused = [], [], []
     rec = _approvals(approvals)
     for e in entries(txt):
         name = e["name"]
         why = ("its name is letters, digits and dashes, starting with a letter" if not NAME.fullmatch(name)
+               else "this deployment refuses it (REFUSE in its deployment.env)" if name in no      # PLT-47
                else "a core agent or a name of the core has that name" if name in core
                else "another pack in packs.txt has that name" if name in seen else "")
         if why:

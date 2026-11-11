@@ -6,7 +6,8 @@ the port answers only what comes through its published port (SEC-24, server.trus
 A deployment without the tailnet sets APP_GATE=local: the app is reached on the PC itself (http://127.0.0.1:8090), and
 a request by a loopback address is the owner's (WFL-16).
 Port 8091: MCP tools (missions_overview, mission_create, mission_update, ...) for Hermes, reached only by LiteLLM on
-the internal "mcnet" network (granted per key in ops/keys.sh), with the server's own bearer token (SEC-26).
+the internal "mcnet" network (granted per key in ops/keys.sh), with the server's own bearer token (SEC-26). Port 8100: the
+stack tools (runs, Asks, a pack's approval Ask) for agents, the MCP side of the `stack` command line (server.stack.py).
 This container never starts anything itself: it reads the runner's state (/missions/public/state.json) and drops
 requests into /missions/inbox; ops/missions.py on the host validates and executes them. Chats are kept in
 /missions/app/chats (one JSON file each), so every device sees the same history. The wiki views read the vault.
@@ -49,13 +50,15 @@ ACTIONS = {"flow_answer", "tax_answer", "pack_approve", "pack_refuse", "tracker_
            "notify_prefs", "chat_ready",           # notify_*: the owner's notification preferences; chat_ready: from the app itself
            "task_create", "task_answer", "task_approve", "task_cancel", "task_retry", "task_run", "task_conduct",   # task_*: the task kernel (TSK-01 to TSK-04, TSK-21, TSK-22)
            "change_request", "change_go", "change_resume", "change_leave", "change_rule",   # change_*: change requests (CHG-01, ops/changes.py)
+           "ask_answer", "ask_undo", "ask_dismiss", "ask_later", "ask_group", "ask_rule_save", "ask_rule_delete", "ask_stop", "ask_undo_action",   # ASK-01..: ops/asks.py
            "decision_test_answer",                 # GEN-03: the tap on the nightly journey's test item; it changes only that item (ops/decisions.py)
            "rule_save", "rule_toggle", "rule_delete", "event_rate", "calendar_set", "calendar_clear",   # the event bus's rules and ratings (TSK-10 to TSK-12)
            "a2a_settings", "a2a_token", "a2a_revoke",   # TSK-19: outside agents (A2A)
            "wiki_delete",                          # ops/wikis.py: from the app only (refused from the AI phone above)
            "mailsort_go", "mailsort_keep", "mailsort_undo",   # CNX-10 to CNX-13: the owner's choice of senders whose mail is sorted out (ops/mailsort.py)
            "file_save", "file_delete", "file_restore", "file_pin", "files_cleanup", "files_asked",   # MIS-23 to MIS-26: mission files (ops/files.py)
-           "mem_search", "mem_open", "mem_subscribe", "mem_note", "mem_undo", "mem_chat"}   # mem_*: the memory MCP servers (MEM-28), the app's Undo (MEM-35) and a chat turn's memory (MEM-46)
+           "mem_search", "mem_open", "mem_subscribe", "mem_note", "mem_undo", "mem_chat",   # mem_*: the memory MCP servers (MEM-28), the app's Undo (MEM-35) and a chat turn's memory (MEM-46)
+           "workflow_run", "pack_ask", "stack_doctor"}   # WAY-04, WAY-05: the command line's and the stack tools' requests (ops/stack_requests.py)
 BUILDS = M / "builds"
 MAPS = M / "public/maps"                          # TSK-24: each task run's swarm map (ops/provenance.py)
 TASK_PAGES = M / "public/tasks"                        # APP-35: each task page's data, written by the runner (ops/tasks.py publish)
@@ -99,6 +102,7 @@ def _part(name):
 
 
 _part("server.trust.py")   # who may speak to the app: its published port, LiteLLM with the tools' tokens, n8n's step node (SEC-24..26)
+_part("server.asks.py")    # the Asks only the app sees, and the answers that wait for the runner (ASK-12, ASK-13)
 
 # ---------- app API ----------
 # WFL-16: the app's front door, by the deployment. tailnet (home): tailscale serve adds the owner's login to each
@@ -134,7 +138,7 @@ class TailnetOnly(BaseHTTPMiddleware):
                 return JSONResponse({"error": "only reachable on this PC, at http://127.0.0.1:8090"}, status_code=403)
         elif request.url.path.startswith(("/api/", "/share", *(f"/{n}" for n in FRAMES))) and not request.headers.get("tailscale-user-login"):
             return JSONResponse({"error": "only reachable through Tailscale"}, status_code=403)
-        # SEC-20: tailscale serve adds the owner's login to whatever his browser sends, a page of another site included;
+        # SEC-20: tailscale serve adds the owner's login to whatever their browser sends, a page of another site included;
         # a browser names where a request comes from (Sec-Fetch-Site), so a write from anywhere but this app is refused.
         # /share is the phone's share sheet (its own reasoning, APP share inbox); programs send no Sec-Fetch-Site.
         if (request.method not in ("GET", "HEAD", "OPTIONS") and request.url.path.startswith(("/api/", *(f"/{n}" for n in FRAMES)))
@@ -226,8 +230,11 @@ def full_state(request, ph=None, cs=None):
     s["phone"] = phone_summary() if ph is None else ph
     s["connections"] = conn_summary() if cs is None else cs
     s["viewer"] = request.headers.get("tailscale-user-name") or request.headers.get("tailscale-user-login", "")
+    s["viewer_login"] = request.headers.get("tailscale-user-login", "")   # ASK-04: the card says who can answer
     s["viewer_name"] = display_name(request.headers.get("tailscale-user-name", ""), request.headers.get("tailscale-user-login", ""))
     s["decisions"] = owner_decisions(s)
+    s["decisions"] = app_asks(s["decisions"], s.get("asks_hidden"))   # ASK-12: the app's own waits as Asks, dismissed ones out
+    s["asks_queued"] = queued_answers()                  # ASK-13: answers kept while the runner has not taken them
     try:                                                 # WFL-11: which job has which n8n workflow (ops/flows.py catalog)
         s["workflows"] = json.loads((STATE.parent / "workflows.json").read_text())
     except (OSError, ValueError):
@@ -292,9 +299,10 @@ async def api_request(request):
         return JSONResponse({"ok": False, "error": "asked in a chat, through the assistant's tool"}, status_code=403)
     if body.get("action") == "chat_ready":                                 # sent by the app itself when a waiting chat is answered
         return JSONResponse({"ok": False, "error": "not a request the app's screens make"}, status_code=403)
-    body["source"] = "app"
-    if body.get("action") in ("flow_answer", "tax_answer"):                 # GEN-27: who answered, from the sign-in, never from the page
-        body["who"] = request.headers.get("tailscale-user-login") or "owner"
+    refused = stack_via(request, body)                                     # WAY-03: the app, or the command line with its actions only
+    if refused:
+        return JSONResponse({"ok": False, "error": refused[1]}, status_code=refused[0])
+    body["who"] = request.headers.get("tailscale-user-login", "")           # GEN-27, ASK-04: who acts, from the sign-in, never from the page
     note_owner(str(body.get("action", "")))
     return JSONResponse(await submit(body))
 
@@ -413,7 +421,7 @@ def _swarm_app(op, args):
 
 
 async def api_swarm(request):
-    """The Swarm page reads through the Swarm service's read-only door (the owner sees every thread); his posts go to the
+    """The Swarm page reads through the Swarm service's read-only door (the owner sees every thread); their posts go to the
     runner as action swarm_post."""
     try:
         body = await request.json()
@@ -422,7 +430,10 @@ async def api_swarm(request):
     if body.get("op") not in SWARM_READ:
         return JSONResponse({"ok": False, "error": "read-only"}, status_code=403)
     try:
-        return JSONResponse(await asyncio.to_thread(_swarm_app, body["op"], body.get("args") or {}))
+        r = await asyncio.to_thread(_swarm_app, body["op"], body.get("args") or {})
+        if body["op"] == "who" and isinstance(r.get("result"), list) and (off := off_ids()):   # GEN-13: no card or tool of a feature that is off
+            r["result"] = [{**a, "tools": [t for t in a.get("tools") or [] if t not in off]} for a in r["result"] if a.get("id") not in off]
+        return JSONResponse(r)
     except Exception as e:
         return JSONResponse({"ok": False, "error": f"the swarm is not reachable ({type(e).__name__})"}, status_code=502)
 
@@ -453,7 +464,7 @@ def swarm_picture(hours, tests, private):
         feed = _swarm_app("feed", {"since": now - hours * 3600}).get("result") or {}
     except Exception as e:
         feed, err = {}, f"the swarm is not reachable ({type(e).__name__}): its events and messages are missing"
-    out = IX.build(RT, TR, feed, hours, now, M, tests=tests, private=private, feed_error=err)
+    out = IX.build(RT, TR, feed, hours, now, M, tests=tests, private=private, feed_error=err, hide=off_ids())
     _picture.clear() if len(_picture) > 16 else None
     _picture[key] = (now, out)
     return out
@@ -670,6 +681,7 @@ _part("server.wiki.py")   # the wiki views (PLT-25)
 
 _part("server.flows.py")   # the step service n8n calls (WFL-05, port 8099)
 _part("server.n8n.py")   # the workflows' runs for the app's pages (WFL-14)
+_part("server.workflows.py")   # everything as workflows and runs, read-only (APP-71 to APP-73)
 _part("server.frames.py")   # the stack's tools inside the app: n8n under /n8n/, Phoenix under /phoenix/ (WFL-14, APP-66)
 
 
@@ -680,6 +692,8 @@ _part("server.devices.py")   # push notifications, the AI phone, app connections
 
 
 _part("server.tax.py")   # the tax desk's result for the owner's own session (TAX-10, TAX-11)
+_part("server.records.py")   # the deployment's records, links and measures (REC-06)
+_part("server.stack.py")   # the ways in for a site's agents: the command line's rules and reads, the stack MCP tools (WAY-01..)
 
 
 # ---------- static ----------
@@ -726,6 +740,22 @@ def read_crew_file(aid):
 DEPLOY = {k: ("" if os.environ.get(k, "").endswith(".invalid") else os.environ.get(k, ""))   # *.invalid: a placeholder, no host
           for k in ("PC_TAILNET_HOST", "NAS_HOST", "HA_URL", "ROUTER_URL", "FORGEJO_URL", "FORGEJO_OWNER", "DEPLOY_USER", "STACK_DIR", "APP_NAME")}
 DEPLOY["APP_NAME"] = DEPLOY.get("APP_NAME", "").strip() or "AI Stack"   # APP-61: the app's name, the deployment's to choose
+# GEN-13: the features this deployment switches on (compose hands FEATURES over). Without the variable (a test, a compose
+# from before it) every feature counts as on. The page carries the list, so the app draws nothing of a feature that is off.
+FEATURES = None if os.environ.get("FEATURES") is None else {f for f in re.split(r"[\s,]+", os.environ["FEATURES"]) if f}
+# What the app names of a feature beyond its pages: its tool, its engine and its crew jobs (ops/crew.py ENGINE_FEATURE, the
+# crew units' "# feature:" lines; tests/test_phone_off.py keeps them in step)
+FEATURE_IDS = {"phone": frozenset({"phone", "ai-phone", "phone-check", "phone-cleanup"})}
+
+
+def feature_on(name):
+    """GEN-13: whether this deployment switches the feature on (core always is)."""
+    return FEATURES is None or name == "core" or name in FEATURES
+
+
+def off_ids():
+    """The tools, engines and crew jobs of the features that are off (PHN-28: the AI phone's)."""
+    return frozenset().union(*(ids for f, ids in FEATURE_IDS.items() if not feature_on(f)))
 
 
 def app_name():
@@ -736,7 +766,7 @@ def app_name():
 async def index(request):
     """The app's page (index.html) with this deployment's addresses in it, always revalidated."""
     # the page carries the version it was served with, so an app opened from the offline cache knows it is old (review APP-R15)
-    page = (WEB / "index.html").read_text().replace("{{APP_NAME}}", html.escape(app_name())).replace("{/*DEPLOY*/};", json.dumps(DEPLOY).replace("<", "\\u003c") + "; "
+    page = (WEB / "index.html").read_text().replace("{{APP_NAME}}", html.escape(app_name())).replace("{/*DEPLOY*/};", json.dumps({**DEPLOY, **({} if FEATURES is None else {"FEATURES": sorted(FEATURES)})}).replace("<", "\\u003c") + "; "
                                                     f"window.APP_VERSION = {json.dumps(APP_VERSION)};", 1)
     return HTMLResponse(page, headers={"Cache-Control": "no-cache"})
 
@@ -1007,13 +1037,15 @@ _guide = {"key": None, "chapters": []}
 def guide_chapters():
     """Parsed chapters, ordered by file name (NN-id.md): front matter + body + its section headings and examples."""
     files = sorted(GUIDE.glob("[0-9][0-9]-*.md"))
-    key = tuple((f.name, f.stat().st_mtime) for f in files)
+    key = (tuple((f.name, f.stat().st_mtime) for f in files), FEATURES and tuple(sorted(FEATURES)))
     if _guide["key"] != key:
         out = []
         for f in files:
             text = f.read_text()
             m = re.match(r"^---\n(.*?)\n---\n", text, re.S)
             meta = yaml.safe_load(m[1]) if m else {}
+            if not feature_on(meta.get("feature") or "core"):       # GEN-13: a chapter of a feature that is off (the AI phone's)
+                continue
             body = text[m.end():] if m else text
             body = body.replace("{{APP_NAME}}", app_name())          # APP-61: the guide says the app's name
             out.append({"id": f.stem.split("-", 1)[1], "title": meta.get("title", f.stem), "kicker": meta.get("kicker", ""),
@@ -1106,7 +1138,11 @@ app = Starlette(routes=[
     Route("/api/state", api_state), Route("/api/stream", api_stream), Route("/api/version", api_version),
     Route("/api/request", api_request, methods=["POST"]), Route("/api/result/{rid}", api_result),
     *FRAME_ROUTES, Route("/api/workflows", api_workflows),   # WFL-13
+    Route("/api/stack/workflows", api_stack_workflows), Route("/api/stack/runs", api_stack_runs), Route("/api/stack/run/{rid}", api_stack_run),
+    Route("/api/stack/agents", api_stack_agents), Route("/api/stack/asks", api_stack_asks),   # WAY-01, WAY-02: the command line's reads
     *TAX_ROUTES,   # TAX-10: the owner's tax drafts
+    *RECORDS_ROUTES,   # REC-06: the Measures view's records
+    *FACTORY_ROUTES,   # APP-71 to APP-73: the workflows, a workflow's page, a run's page
     Route("/api/file", api_file), Route("/api/runlog/{rid}", api_runlog), Route("/api/run/{rid}/timeline", api_run_timeline), Route("/api/rt/runs", api_rt_runs), Route("/api/task/{tid:int}", api_task),
     Route("/api/agent/{aid}/tasks", api_agent_tasks), Route("/api/trials", api_trials), Route("/api/usage", api_usage), Route("/api/rt/run/{run}", api_rt_run),
     Route("/api/rt/run/{run}/stream", api_rt_stream), Route("/api/crew/{cid}", api_crew_one), Route("/api/swarm", api_swarm, methods=["POST"]), Route("/api/swarm/tokens", api_swarm_tokens), Route("/api/swarm/now", api_swarm_now), Route("/api/swarm/timeline", api_swarm_timeline), Route("/api/swarm/interactions", api_swarm_interactions), Route("/api/swarm/delegations", api_swarm_delegations), Route("/api/swarm/room", api_swarm_room), Route("/api/health/issues", api_health_issues), Route("/api/claude/{tid}", api_claude_task), Route("/api/phoenix", api_phoenix), Route("/api/build/{bid}/{kind}", api_build_file),
@@ -1321,6 +1357,8 @@ async def main():
             allowed_hosts=["mission-control:8097"], allowed_origins=[])), "memory"), host="0.0.0.0", port=8097, log_level="warning")).serve(),   # MEM-28
         uvicorn.Server(uvicorn.Config(mcp_guard(memory_public_mcp.streamable_http_app(transport_security=TransportSecuritySettings(
             allowed_hosts=["mission-control:8098"], allowed_origins=[])), "memorypublic"), host="0.0.0.0", port=8098, log_level="warning")).serve(),   # MEM-30
+        uvicorn.Server(uvicorn.Config(mcp_guard(stack_mcp.streamable_http_app(transport_security=TransportSecuritySettings(
+            allowed_hosts=["mission-control:8100"], allowed_origins=[])), "stack"), host="0.0.0.0", port=8100, log_level="warning")).serve(),   # WAY-06
         uvicorn.Server(uvicorn.Config(rt_app, host="0.0.0.0", port=8093, log_level="warning")).serve(),   # runtime ingest
         uvicorn.Server(uvicorn.Config(flows_app, host="0.0.0.0", port=8099, log_level="warning")).serve(),   # WFL-05: n8n only (stepnet), with its token (SEC-25)
         uvicorn.Server(uvicorn.Config(voice_app, host="0.0.0.0", port=8095, log_level="warning")).serve(),  # the voice gateway (VOI-03)

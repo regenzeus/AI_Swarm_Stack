@@ -166,7 +166,7 @@ def approve(req):
         raise ValueError(f"this step is {s['status']}")
     _hand_over(s, req, time.time() + BATCH_MAX_S)
     C.save("phone-cleanup", actions=acts)
-    M.event("phone", "", f"Phone cleanup: approved “{s['title']}” ({gb(s['size'])}); it waits its turn on the AI phone", title="Crew")
+    M.event("phone", "", f"Phone cleanup: approved “{s['title']}” ({gb(s['size'])}); it waits its turn on the AI phone", title="Phone", area="phone")
     return {"approved": sid}
 
 
@@ -184,7 +184,7 @@ def approve_all(req):
         _hand_over(s, req, expires)
     C.save("phone-cleanup", actions=acts)
     size = sum(s.get("size") or 0 for s in todo)
-    M.event("phone", "", f"Phone cleanup: approved all {len(todo)} steps ({gb(size)}); the AI phone does them one after another", title="Crew")
+    M.event("phone", "", f"Phone cleanup: approved all {len(todo)} steps ({gb(size)}); the AI phone does them one after another", title="Phone", area="phone")
     return {"approved": [s["id"] for s in todo], "bytes": size}
 
 
@@ -202,7 +202,7 @@ def undo(req):
     (cdir() / f"{name}.json").unlink(missing_ok=True)
     s.update(status="open", result="", started=False)
     C.save("phone-cleanup", actions=acts)
-    M.event("phone", "", f"Phone cleanup: approval of “{s['title']}” undone; nothing ran", title="Crew")
+    M.event("phone", "", f"Phone cleanup: approval of “{s['title']}” undone; nothing ran", title="Phone", area="phone")
     return {"undone": sid}
 
 
@@ -244,7 +244,7 @@ def sync():
                 continue
             s.update(status="done" if r.get("ok") else "failed", result=r.get("text", ""), freed=r.get("freed", 0), ended=time.time())
             M.event("phone", "", f"Phone cleanup: {s['title']}: " + (f"done, {gb(r.get('freed') or 0)} freed" if r.get("ok") else f"not done ({r.get('text', '')})"),
-                    push=not r.get("ok"), title="Crew")
+                    push=not r.get("ok"), title="Phone", area="phone")
             changed = True
         elif time.time() > s.get("expires", s.get("approved", time.time()) + APPROVAL_S) + 300:
             s.update(status="failed", result="The AI phone did not pick it up in time (switched off or not connected?). Approve again to retry.")

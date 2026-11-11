@@ -25,6 +25,8 @@
       ]
     }
   },
+  "factory": "platform",
+  "feature": "builder",
   "id": "aisc0b7ea12b54d0",
   "name": "Crew: Code graph",
   "nodes": [

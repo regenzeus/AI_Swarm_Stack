@@ -137,6 +137,8 @@ def phone_pending():
 
 
 def phone_summary():
+    if not feature_on("phone"):                       # PHN-28: switched off: no banner, no card, no question
+        return None
     st = phone_state()
     return {"on": bool(st), "connected": bool(st and st.get("connected")), "stopped": (PHONE / "STOP").exists(),
             "pending": len(phone_pending()), "model": st.get("model", ""), "foreground": st.get("foreground", ""),
@@ -274,7 +276,7 @@ def not_from_ai_phone(request):
 
 
 async def api_forgejo_connect(request):
-    """The owner pastes his Forgejo token in the app: it goes to the runner (checked, stored encrypted), never to Hermes.
+    """The owner pastes their Forgejo token in the app: it goes to the runner (checked, stored encrypted), never to Hermes.
     Not an MCP tool, so no AI can relay or set it; refused from the AI phone."""
     if from_ai_phone(request):
         return JSONResponse({"ok": False, "error": "not from the AI phone"}, status_code=403)
@@ -299,7 +301,7 @@ def app_base(request):
 
 async def api_house_connect(request):
     """Connect Home Assistant: off to its own sign-in page (OAuth, IndieAuth: this app's URL is the client id). The owner
-    signs in there; Home Assistant sends him back to /api/house/callback with a one-time code."""
+    signs in there; Home Assistant sends them back to /api/house/callback with a one-time code."""
     if from_ai_phone(request):
         return JSONResponse({"ok": False, "error": "not from the AI phone"}, status_code=403)
     base = app_base(request)
@@ -341,7 +343,7 @@ async def api_house(request):
 
 
 async def api_shop_decide(request):
-    """The owner's answer to a purchase proposal: approve, not_now or change (with a note). Only from his own device in this
+    """The owner's answer to a purchase proposal: approve, not_now or change (with a note). Only from their own device in this
     app: refused from the AI phone, and not an MCP tool, so no agent can approve a purchase (ops/shopping.py)."""
     if from_ai_phone(request):
         return JSONResponse({"ok": False, "error": "the AI phone cannot approve purchases"}, status_code=403)
@@ -469,6 +471,8 @@ def keep_client_error(e):
 
 async def api_phone(request):
     """The AI phone's state, its waiting requests and recent log."""
+    if not feature_on("phone"):                       # PHN-28: switched off in this deployment
+        return JSONResponse({"installed": False, "off": True})
     st = phone_state()
     if phone_pending():
         phone_seen(request, "page with a waiting request")
@@ -516,6 +520,8 @@ async def api_phone_control(request):
     if from_ai_phone(request) and b.get("do") != "stop":                # it may switch itself off, nothing else
         return JSONResponse({"ok": False, "error": "not from the AI phone"}, status_code=403)
     do = b.get("do")
+    if not feature_on("phone") and do != "stop":                        # PHN-28: switched off in this deployment; Stop still holds
+        return JSONResponse({"ok": False, "error": "the AI phone is switched off in this deployment"}, status_code=409)
     if do == "stop":
         write_atomic(PHONE / "STOP", time.strftime("%Y-%m-%dT%H:%M:%S%z"))
     elif do == "resume":
@@ -553,7 +559,7 @@ async def push_phone():
     while True:
         await asyncio.sleep(2)
         try:
-            for p in phone_pending():
+            for p in phone_pending() if feature_on("phone") else []:
                 if p["id"] not in seen:
                     seen.add(p["id"])
                     if subs():

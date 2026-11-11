@@ -25,6 +25,7 @@
       ]
     }
   },
+  "factory": "platform",
   "id": "aisc87723853354a",
   "name": "Crew: Vault ingest",
   "nodes": [

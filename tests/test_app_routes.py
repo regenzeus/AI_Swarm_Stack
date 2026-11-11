@@ -75,8 +75,8 @@ def test_a_page_that_loads_draws_only_while_you_are_still_on_it():
 
 def test_a_live_redraw_never_scrolls_the_page():
     """FND-96: the Agents page jumped up while you read it: a redraw centred its view tabs with scrollIntoView, which
-    scrolled the whole page to the row. The Tasks tab's live redraw (8 Nov 2026) moves nothing: no scrollIntoView in it."""
-    for name in ("function tasksDraw(", "function tasksUpdate(", "function teamDraw(", "function netDraw("):
+    scrolled the whole page to the row. The places' live parts (Agents, Home's Activity) move nothing: no scrollIntoView in them."""
+    for name in ("function agentsDraw(", "function homeActivity(", "function teamDraw(", "function netDraw("):
         i = APP_JS.index(name)
         body = APP_JS[i:APP_JS.index("\n}\n", i)]
         assert "scrollIntoView" not in body, name

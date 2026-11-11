@@ -68,7 +68,7 @@ class AistackStep {
             { name: 'Coding change', value: 'build', description: 'The coder works in the sandbox on a repository: a branch or pull request, checks and your review included' },
             { name: 'Crew job', value: 'crew', description: 'A housekeeping job, as Run now starts it' },
             { name: 'Plan task', value: 'task', description: 'One run of a plan task (a briefing, a price watch)' },
-            { name: 'Ask the owner', value: 'ask', description: 'A question in Needs you; the tap is the answer' },
+            { name: 'Ask a person', value: 'ask', description: 'A question in Needs you, answered with a tap or in words; branch on its outcome with If or Switch. Use it instead of a Send and Wait node: it reaches the app, the ticket and Telegram' },
             { name: 'Notify the owner', value: 'notify', description: "A message through the stack's notifications (Telegram, the app), quiet hours respected" },
             { name: 'Recall', value: 'recall', description: "Search the stack's memory; the hits are the answer" },
             { name: 'Remember', value: 'remember', description: 'A lesson, fact, failure or skill for memory; it enters only after the memory gate checks it' },
@@ -94,7 +94,19 @@ class AistackStep {
         { displayName: 'Why', name: 'why', type: 'string', default: '', displayOptions: show('ask'),
           description: 'One line the owner reads under the question' },
         { displayName: 'Answers', name: 'answers', type: 'string', default: 'Yes, No', displayOptions: show('ask'),
-          description: 'Up to four, separated by commas; each is a button in Needs you' },
+          description: 'Up to six, separated by commas; each is a chip in Needs you, and its outcome is the label in lower case with dashes' },
+        { displayName: 'Type', name: 'type', type: 'string', default: '', displayOptions: show('ask'),
+          description: "A registered kind of question (its chips and values come from it); empty: this step's own answers" },
+        { displayName: 'Answer in words', name: 'allow_words', type: 'boolean', default: true, displayOptions: show('ask'),
+          description: 'A reply box beside the chips; the stack reads the words into one of the answers (never at a gate)' },
+        { displayName: 'Default', name: 'default', type: 'string', default: '', displayOptions: show('ask'),
+          description: 'The answer that applies at the deadline when nobody answered (never at a gate); empty: it expires' },
+        { displayName: 'Deadline (hours)', name: 'deadline_hours', type: 'number', default: 0, displayOptions: show('ask'),
+          description: '0: no deadline. At a gate the deadline reminds, then goes to the next person in the role' },
+        { displayName: 'Gate', name: 'gate', type: 'boolean', default: false, displayOptions: show('ask'),
+          description: 'Only a tap by a person in the role answers it: no words, rule, default or deadline ever does' },
+        { displayName: 'Sensitivity', name: 'sensitivity', type: 'options', default: 'normal', displayOptions: show('ask'),
+          options: [{ name: 'Normal', value: 'normal' }, { name: 'Private', value: 'private', description: 'Its text stays in the app: tickets and messages only say a question waits' }] },
         { displayName: 'Message', name: 'message', type: 'string', default: '', typeOptions: { rows: 3 }, displayOptions: show('notify') },
         { displayName: 'Search for', name: 'query', type: 'string', default: '', displayOptions: show('recall') },
         { displayName: 'Where', name: 'scope', type: 'string', default: '', displayOptions: show('recall'),
@@ -194,8 +206,10 @@ class AistackStep {
     if (kind === 'crew') body.job = p('job');
     if (kind === 'task') body.task = Number(p('task'));
     if (kind === 'notify') body.message = p('message');
-    if (kind === 'ask') Object.assign(body, { question: p('question'), why: p('why', ''),
-      answers: String(p('answers', 'Yes, No')).split(',').map((s) => s.trim()).filter(Boolean), role: p('role', '') || undefined });
+    if (kind === 'ask') Object.assign(body, { question: p('question'), why: p('why', ''),   // ASK-19: the answer is {status, outcome, values, words, person, role, via, interpreted_as}
+      choices: String(p('answers', 'Yes, No')).split(',').map((s) => s.trim()).filter(Boolean), role: p('role', '') || undefined,
+      type: p('type', '') || undefined, allow_words: p('allow_words', true), default: p('default', '') || undefined,
+      deadline_hours: Number(p('deadline_hours', 0)) || undefined, gate: p('gate', false), sensitivity: p('sensitivity', 'normal') });
     if (kind === 'recall') Object.assign(body, { query: p('query'), scope: p('scope', '') });
     if (kind === 'remember') Object.assign(body, { note: p('note'), text: p('text'), evidence: p('evidence', ''),
       agent: p('agent', '') || undefined, repo: p('repo', '') || undefined });

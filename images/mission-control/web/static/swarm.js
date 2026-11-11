@@ -1,8 +1,8 @@
-// The agents' views, drawn inside the Tasks tab (app.js vTasks, since 8 Nov 2026, DEC-46): Activity (the room: what the
-// agents do together, with filters, and the run timeline under them; "working now" above it), Team (every agent, each
-// with its own page, #/swarm/agent/<id> or its housekeeping page's Team tab), the team map inside Network (who works
-// with whom) and Ideas (ideas, the task graph, the loop's numbers); an idea's full timeline is #/swarm/artifact/<id>.
-// #/swarm?tab=<view> is an old address: it goes to that view on the Tasks tab. Reads through /api/swarm (Mission
+// The agents' views, drawn inside the six places (APP-67): Activity on Home (the room: what the agents do together, with
+// filters, and the run timeline under them; "working now" above it), the agents on Agents (each with its own page,
+// #/swarm/agent/<id> or its scheduled job's page), the map inside Agents → Who works with whom, and the proposals on
+// Improve (ideas, the graph of approved ideas, the loop's numbers); an idea's full timeline is #/swarm/artifact/<id>.
+// #/swarm?tab=<view> is an old address: it goes to that view's place (through #/tasks, app-base.js MOVED). Reads through /api/swarm (Mission
 // Control's read-only door to the Swarm service); the owner's posts go through the runner (action swarm_post), like every
 // other action of the owner's. Requirements SWM-10, SWM-11, SWM-57, SWM-58.
 // Phase 4: Now (who works on what this minute, the merge queue, the file leases: SWM-97, SWM-92, SWM-93), Tasks (the task
@@ -13,7 +13,7 @@ let swTab = "now", swCtx = "", swTimer = null, swLastSig = "";
 
 async function swApi(op, args = {}) {
   const r = await api("/api/swarm", { method: "POST", body: JSON.stringify({ op, args }) });
-  if (!r || r.ok === false) throw new Error(r?.refused || r?.error || "the swarm is not reachable");
+  if (!r || r.ok === false) throw new Error(r?.refused || r?.error || "the agents' Ledger is not reachable");
   return r.result;
 }
 
@@ -34,7 +34,7 @@ const SW_VIEW = { activity: "activity", agents: "team", map: "network", improve:
 function vSwarm() {                                  // render() calls views without arguments; view is app.js's #view
   clearInterval(swTimer);
   if (route.args[0] === "artifact") return swArtifact(view, +route.args[1]);
-  if (route.args[0] === "agent") return swAgentPage(view, decodeURIComponent(route.args[1] || ""));
+  if (route.args[0] === "agent") return location.replace(`#/agent/${encodeURIComponent(decodeURIComponent(route.args[1] || ""))}`);   // an old address: its page (APP-76)
   const asked = route.q.get("tab") || "activity", q = new URLSearchParams(route.q);
   q.delete("tab");
   q.set("v", SW_VIEW[SW_ALIAS[asked] || asked] || "activity");
@@ -42,9 +42,10 @@ function vSwarm() {                                  // render() calls views wit
   if (["tasks", "flow"].includes(asked)) q.set("at", asked);
   location.replace("#/tasks?" + q.toString().replace(/%2C/g, ","));
 }
-// is the Tasks tab still showing this view of the agents? (a view's timer stops when you leave it)
-const swOn = (v) => route.name === "tasks" && tasksView === v;
-async function swRender(body, tab, asked = "") {     // the agents' views, drawn into a box of the Tasks tab
+// is its place still showing this view of the agents? (a view's timer stops when you leave it)
+const SW_PLACE = { activity: "home", ideas: "ideas", network: "agents", team: "agents", agents: "agents" };
+const swOn = (v) => route.name === SW_PLACE[v] && tasksView === v && (v !== "activity" || homeTab === "activity");
+async function swRender(body, tab, asked = "") {     // the agents' views, drawn into a box of their place
   clearInterval(swTimer);
   swTab = tab;
   if (tab === "activity") swActivityFromUrl();
@@ -57,7 +58,7 @@ async function swRender(body, tab, asked = "") {     // the agents' views, drawn
       return;
     }
     if (tab === "improve") {
-      body.innerHTML = `<div id="swideas"></div><div class="section-h section" id="swtasksh"><h2>Being built</h2><span class="tiny faint">approved ideas split into tasks</span></div><div id="swtasks"></div>
+      body.innerHTML = `<div id="swideas"></div><div class="section-h section" id="swtasksh"><h2>Being built</h2><span class="tiny faint">approved ideas split into parts</span></div><div id="swtasks"></div>
         <details class="card pad-l section" id="swflowd"${asked === "flow" ? " open" : ""}><summary><b>The improvement loop in numbers</b> <span class="small muted">ideas per week, replay sets, failures, requirements</span></summary><div id="swflow" style="margin-top:8px"></div></details>`;
       swIdeas($("#swideas"));
       swTasks($("#swtasks"));
@@ -87,13 +88,13 @@ function swActivityFromUrl() {
   swLastSig = "";
 }
 function swSyncUrl() {
-  const p = new URLSearchParams({ v: "activity" });
+  const p = new URLSearchParams({ tab: "activity" });
   if (swRoomF.agents.size) p.set("agents", [...swRoomF.agents].join(","));
   if (swRoomF.hours !== 24) p.set("h", swRoomF.hours);
   if (swRoomF.tests) p.set("tests", "1");
   if (swCtx) p.set("ctx", swCtx);
   route.q = p;
-  history.replaceState(history.state, "", "#/tasks?" + p.toString().replace(/%2C/g, ","));
+  history.replaceState(history.state, "", "#/home?" + p.toString().replace(/%2C/g, ","));
 }
 let swTlBox = null;                                  // the run timeline sits under the filters, which it shares with the room
 async function swActivity(body, poll = false) {
@@ -111,7 +112,7 @@ function swRunOn(r) {                                // what a live run works on
   const m = /^build:(\d+)/.exec(r.run || r.ref || "");
   if (m) {
     const b = (S?.builds || []).find((x) => x.id === +m[1]);
-    return b ? `<a href="#/build/${b.id}">build #${b.id} ${esc(b.title)}</a>${b.task ? ` · task <a href="#/swarm/artifact/${b.task}">#${b.task}</a>` : ""}${b.idea ? ` of idea <a href="#/swarm/artifact/${b.idea}">#${b.idea}</a>` : ""}${b.slot ? ` · slot ${b.slot}` : ""}` : `build #${m[1]}`;
+    return b ? `<a href="#/build/${b.id}">build #${b.id} ${esc(b.title)}</a>${b.task ? ` · part <a href="#/swarm/artifact/${b.task}">#${b.task}</a>` : ""}${b.idea ? ` of idea <a href="#/swarm/artifact/${b.idea}">#${b.idea}</a>` : ""}${b.slot ? ` · slot ${b.slot}` : ""}` : `build #${m[1]}`;
   }
   return esc(r.title || r.name || "");
 }
@@ -135,8 +136,8 @@ async function swNow(body) {
         <div class="sub">${esc(BSTATUS[b.status] || b.status)}${b.approve_on_ci ? " · waits for CI" : ""}${b.note ? ` · ${esc(b.note)}` : ""}</div></div>${ic.next}</a>`).join("")}</div>` : `<div class="small muted">Empty.</div>`}
       <div class="small" style="margin-top:10px"><b>Waiting to start</b></div>${waiting.length ? `<div class="list" style="margin-top:4px">${waiting.map((b) => `<a href="#/build/${b.id}"><div class="grow"><div class="ttl">#${b.id} ${esc(b.title)}</div>
         <div class="sub">${esc(BSTATUS[b.status] || b.status)}${b.note ? ` · ${esc(b.note)}` : ""}</div></div>${ic.next}</a>`).join("")}</div>` : `<div class="small muted">Nothing waits.</div>`}
-      <div class="small" style="margin-top:10px"><b>Files held by builds</b> <span class="muted">A build holds the files of its task while it works, so parallel builders never change the same file; a lease ends with its build or after 4 hours.</span></div>
-      ${leases.length ? `<div class="list" style="margin-top:4px">${leases.map((l) => `<div style="padding:6px 2px"><div class="grow"><span class="mono small">${esc(l.path)}</span> <span class="tiny faint">${esc(l.repo)} · ${esc(l.holder)}${l.task ? ` · task #${l.task}` : ""} · until ${swTime(l.expires)}</span></div></div>`).join("")}</div>` : `<div class="small muted">No files are held.</div>`}
+      <div class="small" style="margin-top:10px"><b>Files held by builds</b> <span class="muted">A build holds the files of its part while it works, so parallel builders never change the same file; a lease ends with its build or after 4 hours.</span></div>
+      ${leases.length ? `<div class="list" style="margin-top:4px">${leases.map((l) => `<div style="padding:6px 2px"><div class="grow"><span class="mono small">${esc(l.path)}</span> <span class="tiny faint">${esc(l.repo)} · ${esc(l.holder)}${l.task ? ` · part #${l.task}` : ""} · until ${swTime(l.expires)}</span></div></div>`).join("")}</div>` : `<div class="small muted">No files are held.</div>`}
     </details></div>`;
   const d = $("details.swbuilds", body);
   if (d) d.ontoggle = () => { swNow.open = d.open; };
@@ -154,7 +155,7 @@ function swTasks(body) {
       <div class="swcols">${SW_COL.map(([st, label]) => `<div class="swcol"><div class="tiny faint" style="margin-bottom:4px">${label}</div>${ts.filter((t) => t.state === st || (st === "open" && ["blocked", "draft"].includes(t.state))).map((t) => `<a class="swtask" href="#/swarm/artifact/${t.id}">
         <div class="small"><b>#${t.id}</b> ${esc(t.title)}</div><div class="tiny faint wrap">${t.files.map(esc).join(", ") || "no files named"}</div>
         ${t.depends_on.length ? `<div class="tiny">after ${t.depends_on.map(name).join(", ")}</div>` : ""}${t.builds.length ? `<div class="tiny">build ${t.builds.map((b) => "#" + b).join(", ")}</div>` : ""}</a>`).join("") || `<div class="tiny faint">–</div>`}</div>`).join("")}</div></div>`;
-  }).join("") : `<div class="card pad-l small muted">No task graph yet: when you tap Build it on an idea whose files span more than one area, the planner splits it into tasks here, and builders take the ready ones at the same time.</div>`;
+  }).join("") : `<div class="card pad-l small muted">Nothing split yet: when you tap Build it on an idea whose files span more than one area, it is split into parts here, and builders take the ready ones at the same time.</div>`;
 }
 
 // ---------- flow metrics (SWM-99) ----------
@@ -194,7 +195,7 @@ function swIdeas(body, quiet) {
   const sig = JSON.stringify([(b?.open || []).map((p) => [p.id, p.state, p.evidence]), (b?.recent || []).map((p) => [p.id, p.state]), ch.map((a) => [a.id, a.state, a.version]), S?.swarm?.autonomy, S?.swarm?.paused, imp]);
   if (quiet && sig === swIdeaSig) return;
   swIdeaSig = sig;
-  if (!b) { body.innerHTML = `<div class="card pad-l small muted">The swarm's Ledger is not reachable right now; the ideas come back when it is.</div>`; return; }
+  if (!b) { body.innerHTML = `<div class="card pad-l small muted">The agents' Ledger is not reachable right now; the ideas come back when it is.</div>`; return; }
   const st = { draft: "draft", open: "back to the Coach", ready: "ready", active: "being built", checking: "shipped, watched", done: "held", declined: "declined", gone: "withdrawn" };
   const change = (a) => {
     const p = a.plan || {}, ex = a.experiment, build = (a.builds || []).slice(-1)[0];
@@ -223,7 +224,7 @@ function swIdeas(body, quiet) {
   body.innerHTML = `<div class="card pad-l"><div class="row between wrap" style="gap:10px"><div class="grow" style="min-width:200px"><h2>Ideas</h2>
       ${explain("what-the-agents-propose-", `What the agents propose to make the stack and themselves better. A problem seen again raises its rank instead of making a copy; nothing starts without your tap.`, "About this")}</div>
       <button class="btn sm" id="iscan" ${scanning ? "disabled" : ""}>${scanning ? '<span class="spin" style="width:13px;height:13px"></span>Reviewing…' : `${ic.search}Look for improvements`}</button></div>
-    <div class="tiny faint" style="margin-top:6px">Stack ideas: the crew and the weekly self-review (last ${imp.last ? rel(imp.last) : "not yet"}). Agent changes: the Coach, monthly, tested on past runs first.</div>
+    <div class="tiny faint" style="margin-top:6px">Stack ideas: the scheduled jobs and the weekly self-review (last ${imp.last ? rel(imp.last) : "not yet"}). Agent changes: the Coach, monthly, tested on past runs first.</div>
     <div class="chips" style="margin-top:10px">${[["all", "All"], ["stack", "The stack"], ["agent", "The agents"]].map(([k, l]) => `<button type="button" class="tag ${swIdeaKind === k ? "on" : ""}" data-ik="${k}">${l} <span class="faint">${count(k)}</span></button>`).join("")}</div></div>
     <div id="ionly"></div><div id="ieditor"></div>
     ${shown.map(([, h]) => h).join("") || `<div class="card pad-l section small muted">No open ideas${swIdeaKind === "all" ? "" : " of this kind"}.</div>`}
@@ -263,15 +264,15 @@ function swLoopNumbers() {
 }
 
 // ---------- the team: names, groups and colours shared by the timeline, the map, the Chatroom and the agent map ----------
-const SW_GROUP = [["owner", "You"], ["assistant", "Your assistant"], ["research", "Research"], ["missions", "Missions and briefings"],
+const SW_GROUP = [["owner", "You"], ["assistant", "Your assistant"], ["research", "Research"], ["missions", "Briefings and research"],
   ["knowledge", "Knowledge and memory"], ["code", "Code"], ["reviewers", "Reviews and improvement"], ["health", "Health"], ["phone", "AI phone"],
   ["mail", "Mail"], ["other", "Other"]];
 const SW_GCOL = { owner: "var(--ok)", assistant: "#60a5fa", research: "#2dd4bf", missions: "#fbbf24", knowledge: "#a78bfa", code: "#f472b6",
   reviewers: "#fb923c", health: "#a3e635", phone: "#94a3b8", mail: "#f87171", other: "var(--faint)" };
 const SW_ROLEG = { assistant: "assistant", research: "research", missions: "missions", briefings: "missions", knowledge: "knowledge", memory: "knowledge",
   code: "code", tests: "code", reviewers: "reviewers", health: "health", phone: "phone", mail: "mail" };
-const SW_LANE = { you: ["you", "owner"], claude: ["Claude tasks", "code"], evals: ["experiments", "reviewers"], reviewers: ["build reviewers", "reviewers"],
-  gmail: ["Gmail", "mail"], phone: ["AI phone", "phone"], windows: ["Windows PC", "other"], hermes: ["Hermes (your assistant or a mission)", "assistant"] };
+const SW_LANE = { you: ["you", "owner"], claude: ["Claude questions", "code"], evals: ["experiments", "reviewers"], reviewers: ["build reviewers", "reviewers"],
+  gmail: ["Gmail", "mail"], phone: ["AI phone", "phone"], windows: ["Windows PC", "other"], hermes: ["Hermes (your assistant or a workflow's agent)", "assistant"] };
 let swCards = null;
 async function swWhoCards() {
   if (!swCards) swCards = await swApi("who").catch(() => []);
@@ -282,7 +283,7 @@ function swGroupOf(id) {
   const c = (swCards || []).find((x) => x.id === id);
   return SW_ROLEG[(c?.roles || [])[0]] || "other";
 }
-const swName = (id) => (SW_LANE[id] ? SW_LANE[id][0] : id === "main" ? "main (your assistant)" : (typeof cardName === "function" && cardName(id)) || id);
+const swName = (id) => (SW_LANE[id] ? SW_LANE[id][0] : id === "main" ? "main (your assistant)" : (typeof cardName === "function" && cardName(id)) || (S?.crew || []).find((c) => c.id === id)?.name || id);
 const swAgo = (ts) => { const s = Date.now() / 1000 - ts; return s < 90 ? "just now" : s < 5400 ? `${Math.round(s / 60)} min ago` : s < 129600 ? `${Math.round(s / 3600)} h ago` : `${Math.round(s / 86400)} days ago`; };
 const swDur = (s) => dur(s);
 const SW_STATE = { done: ["var(--ok)", "done"], running: ["var(--run)", "running"], failed: ["var(--err)", "failed"], stalled: ["var(--err)", "stuck", true],
@@ -359,7 +360,7 @@ const swCauseWords = (c) => ({ you: "started by you", clock: "started by its tim
   unrecorded: "timer, Run now or an alert: not recorded for this run", unknown: "nothing on record says what started it", agent: `started by ${swName(c.who)}` }[c.kind] || "");
 const SW_ROLE = { stack: "the stack itself: its runner and its upkeep", you: "you, in chat and in the app", claude: "Claude Code, a read-only analysis in the sandbox", evals: "replays of agents' past runs (agent-change tests)",
   reviewers: "reviews of a build by the other engine", gmail: "your Gmail, through its connector", phone: "the AI phone", windows: "your Windows PC, read-only",
-  hermes: "Hermes, your assistant or a mission's agent", conductor: "the Conductor, which runs a task's plan step by step" };
+  hermes: "Hermes, your assistant or a workflow's agent", conductor: "the runner, which runs a request's steps one by one" };
 function swRole(id) {
   if (SW_ROLE[id]) return SW_ROLE[id];
   const c = (swCards || []).find((x) => x.id === id);
@@ -369,7 +370,7 @@ function swVerb(e) {                                     // what the connection 
   if (e.kind === "ask") return [{ scout: "asked to research", claude: "asked Claude Code for an analysis", evals: "replayed through" }[e.to] || "started a run of", "→"];
   return [{ talk: "wrote on the Board to", you: e.to === "main" ? "talked to" : "asked or decided for", tell: "told", use: "used", hand: "handed over to", help: "helped" }[e.kind] || e.kind, "→"];
 }
-const swShort = (id) => ({ stack: "The stack", you: "You", claude: "Claude tasks", evals: "experiments", gmail: "Gmail", phone: "AI phone", windows: "Windows PC", reviewers: "reviewers" }[id] || id);   // a dot's name
+const swShort = (id) => ({ stack: "The stack", you: "You", claude: "Claude questions", evals: "experiments", gmail: "Gmail", phone: "AI phone", windows: "Windows PC", reviewers: "reviewers" }[id] || id);   // a dot's name
 // APP-57: the idea's whole title, wrapped
 const swIdeaLabel = (x) => `#${x.id} ${String(x.title || "").split(/\s+/).filter(Boolean).join(" ")}`;
 async function swMapData() {
@@ -510,7 +511,7 @@ function swMapCard(ph, { it, g, edges: every }) {
   const alone = agentIds.filter((id) => !used.has(id));
   const shared = Object.entries(g.shared || {});
   card.innerHTML = `<div class="row between wrap" style="gap:8px"><h2>Who works with whom</h2><div class="chips">${[[24, "24 h"], [72, "3 days"], [168, "7 days"]].map(([h, l]) => `<button type="button" class="tag ${swMapHours === h ? "on" : ""}" data-mh="${h}">${l}</button>`).join("")}</div></div>
-    ${explain("each-dot-is-an-agent-the", `Each dot is an agent: the bigger, the more real work it did; a red ring means its newest run failed. An arrow says who asked or told whom and how often. A dashed line is a Board message, a dotted line is a hand-over through a file or a plan. <b>Tap a dot or a line</b> for exactly what the number counts. ${CHART_HINT}. <span class="row wrap" style="gap:10px;margin-top:6px">${groups.map((k) => `<span class="row" style="gap:5px"><span class="swdot" style="background:${SW_GCOL[k]}"></span>${esc((SW_GROUP.find(([x]) => x === k) || [, k])[1])}</span>`).join("")}</span>`, "How to read this")}
+    ${explain("each-dot-is-an-agent-the", `Each dot is an agent: the bigger, the more real work it did; a red ring means its newest run failed. An arrow says who asked or told whom and how often. A dashed line is a Board message, a dotted line is a hand-over through a file or a list of steps. <b>Tap a dot or a line</b> for exactly what the number counts. ${CHART_HINT}. <span class="row wrap" style="gap:10px;margin-top:6px">${groups.map((k) => `<span class="row" style="gap:5px"><span class="swdot" style="background:${SW_GCOL[k]}"></span>${esc((SW_GROUP.find(([x]) => x === k) || [, k])[1])}</span>`).join("")}</span>`, "How to read this")}
     <div class="chips" style="margin-top:8px"><button type="button" class="tag ${swMapIdeas ? "on" : ""}" data-mideas>Ideas too</button>${told.length ? `<button type="button" class="tag ${swMapTold ? "on" : ""}" data-mtold>Messages to you <span class="faint">${told.reduce((n, e) => n + e.n, 0)}</span></button>` : ""}${it.coverage?.tests || swMapTests ? `<button type="button" class="tag ${swMapTests ? "on" : ""}" data-mtests>Tests${it.coverage?.tests ? ` <span class="faint">${it.coverage.tests}</span>` : ""}</button>` : ""}</div>
     <div class="swmapsvg" style="margin-top:6px"></div>
     ${it.coverage?.runs ? `<div class="tiny faint" style="margin-top:6px">${esc(swCoverage(it.coverage))}</div>` : ""}
@@ -589,13 +590,13 @@ function swMapCard(ph, { it, g, edges: every }) {
 // long-term memory (a Hermes profile); the job called "curator" curates the skills
 const SW_OTHER_CREW = new Set(["curator"]);
 const swIsCrew = (id) => !SW_OTHER_CREW.has(id) && (S?.crew || []).some((c) => c.id === id);
-const SW_ENGINE = { main: "Hermes (chat)", mission: "Hermes (tasks)", scout: "Research (scout)", curator: "Wiki curator", builder: "Builder" };   // ops/crew.py ENGINES
+const SW_ENGINE = { main: "Hermes (chat)", mission: "Hermes (workflow steps)", scout: "Research (scout)", curator: "Wiki curator", builder: "Builder" };   // ops/crew.py ENGINES
 function swAgentHref(id) {
   if (swIsCrew(id)) return `#/crew/${encodeURIComponent(id)}?tab=team`;
-  if ((S?.swarm?.cards || []).includes(id) || (swCards || []).some((c) => c.id === id)) return `#/swarm/agent/${encodeURIComponent(id)}`;
+  if ((S?.swarm?.cards || []).includes(id) || (swCards || []).some((c) => c.id === id)) return `#/agent/${encodeURIComponent(id)}`;   // APP-76: its page
   return "";
 }
-const swActHref = (ids, hours, tests) => `#/tasks?v=activity&agents=${ids.map(encodeURIComponent).join(",")}${hours ? `&h=${hours}` : ""}${tests ? "&tests=1" : ""}`;
+const swActHref = (ids, hours, tests) => `#/home?tab=activity&agents=${ids.map(encodeURIComponent).join(",")}${hours ? `&h=${hours}` : ""}${tests ? "&tests=1" : ""}`;
 async function swTeamData() {
   const who = await swWhoCards();
   const [tokens, it] = await Promise.all([api("/api/swarm/tokens").catch(() => ({})), api("/api/swarm/interactions?hours=168").catch(() => ({ nodes: [], edges: [] }))]);
@@ -611,7 +612,7 @@ function swDaysHtml(rows, all = rows) {             // telemetry rows (ops/histo
     if (r.p50_s != null) d.p50.push(r.p50_s);
   }
   const dayRows = Object.entries(days).sort((p, q) => (p[0] < q[0] ? 1 : -1));
-  const first = all.reduce((m, r) => (r.day < m ? r.day : m), "9999"), young = first > dayKey(Date.now() - 30 * 86400e3);   // a history younger than 30 days says so
+  const first = all.reduce((m, r) => (r.day < m ? r.day : m), "9999"), young = first !== "9999" && first > dayKey(Date.now() - 30 * 86400e3);   // a history younger than 30 days says so; none is no date
   return `<div class="card pad-l section"><h2>${young ? `Since ${day(first)}` : "Last 30 days"} <span class="hcount">${dayRows.reduce((s, [, d]) => s + d.runs, 0)} runs</span></h2>
     ${dayRows.length ? `<div style="overflow-x:auto;margin-top:6px"><table class="swflow"><thead><tr><th>Day</th><th>Runs</th><th>Failed</th><th>Judged met</th><th>Tokens</th><th>Typical time</th><th>If paid</th></tr></thead><tbody>
       ${dayRows.map(([dd, d]) => `<tr><td>${day(dd)}</td><td>${d.runs}</td><td class="${d.failed ? "err-t" : ""}">${d.failed}</td><td>${d.met + d.partly + d.not_met ? `${d.met} of ${d.met + d.partly + d.not_met}` : "–"}</td><td>${tok(d.tokens)}</td><td>${d.p50.length ? dur(d.p50.sort((p, q) => p - q)[Math.floor(d.p50.length / 2)]) : "–"}</td><td>${d.cost ? ifPaid(d.cost) : "–"}</td></tr>`).join("")}</tbody></table></div>
@@ -623,10 +624,6 @@ async function swMissionDays(el, slug) {              // a mission's History tab
   if (!el) return;
   const tel = await swTelemetry();
   if (el.isConnected) el.outerHTML = swDaysHtml((tel.rows || []).filter((r) => r.agent === "mission:" + slug), tel.rows || []);
-}
-async function swAgentPage(view, id) {
-  view.innerHTML = `<a class="back" href="#/tasks?v=team">${ic.back}Team</a><div class="page-h"><h1>${esc(swName(id))}</h1></div><div id="swagent"></div>`;
-  await swAgentPanel($("#swagent"), id);
 }
 // what a team agent is (its card), how its last 30 days went (telemetry), with whom it works, its runs, what it said and
 // did, and the ideas it worked on; the same panel on its own page and on a housekeeping agent's page (Team tab)
@@ -645,9 +642,9 @@ async function swAgentPanel(box, id, crew = false, tile = true) {    // crew: on
   const journalHtml = journal ? `<div class="small" style="margin-top:6px"><b>Standing notes</b></div><ul class="jlist">${journal.notes.map((x) => `<li class="small">${esc(x)}</li>`).join("") || `<li class="small muted">none</li>`}</ul>
       <div class="small" style="margin-top:6px"><b>Last entries</b></div>${journal.entries.slice(-3).reverse().map((e) => `<div class="jentry"><div class="tiny muted jhead">${esc(e.head)}</div><ul class="jlist">${e.lines.map((x) => `<li class="small">${esc(x)}</li>`).join("")}</ul></div>`).join("") || `<div class="small muted">none yet</div>`}
       <div class="tiny faint" style="margin-top:4px"><span class="mono">agents/${esc(id)}/MEMORY.md</span> in the vault, read at the start of every run</div>`
-    : id === "mission" ? `<div class="small muted" style="margin-top:6px">It keeps a journal per mission, read at the start of that mission's runs:</div><div class="list" style="margin-top:4px">${(S?.missions || []).filter((m) => !m.archived && m.status !== "archived").map((m) => `<a href="#/mission/${encodeURIComponent(m.slug)}?tab=memory"><div class="grow"><div class="ttl wrap">${esc(m.title)}</div><div class="sub">its standing notes and journal</div></div>${ic.next}</a>`).join("") || `<div class="small muted">No mission yet.</div>`}</div>`
+    : id === "mission" ? `<div class="small muted" style="margin-top:6px">It keeps a journal per workflow, read at the start of that workflow's runs:</div><div class="list" style="margin-top:4px">${(S?.missions || []).filter((m) => !m.archived && m.status !== "archived").map((m) => `<a href="#/mission/${encodeURIComponent(m.slug)}?tab=memory"><div class="grow"><div class="ttl wrap">${esc(m.title)}</div><div class="sub">its standing notes and journal</div></div>${ic.next}</a>`).join("") || `<div class="small muted">No briefing or research workflow yet.</div>`}</div>`
     : id === "main" ? `<div class="small muted" style="margin-top:6px">Its memory is Hermes' own: its notes about you and the long-term memory of your conversations. Search or forget it on the <a href="#/system">Stack page</a>; a fact it wants to keep waits there for your OK when it is sensitive.</div>`
-    : `${explain("it-keeps-no-journal-of-i", `It keeps no journal of its own: each run starts from its card, its standing instructions and the Board. Missions and housekeeping jobs keep journals.`, "About this")}`;
+    : `${explain("it-keeps-no-journal-of-i", `It keeps no journal of its own: each run starts from its card, its standing instructions and the Board. Briefings, research and scheduled jobs keep journals.`, "About this")}`;
   const edges = (x.it.edges || []).filter((e) => e.from === id || e.to === id);
   const runs = (tl.runs || []).filter((r) => r.lane === id || r.agent === id).sort((p, q) => q.started - p.started);
   const lines = (room.lines || []).filter((l) => swInvolved(l).includes(id)).reverse();
@@ -657,7 +654,7 @@ async function swAgentPanel(box, id, crew = false, tile = true) {    // crew: on
     return `<a href="#/live/${encodeURIComponent(r.run)}"><div class="grow" style="min-width:0"><div class="ttl wrap">${esc(r.name)}</div>
       <div class="sub">${swTime(r.started)} · ${swDur((r.ended || tl.now) - r.started)}${r.by ? ` · started by ${esc(swName(r.by))}` : ""}${r.tokens ? ` · ${tok(r.tokens)} tokens` : ""}</div></div>${swPill(r.state)}</a>`; };
   box.innerHTML = `${!tile ? "" : a ? `<div class="swteam one">${swTile(a, x, false)}</div>` : `<div class="card pad-l small muted">${esc(swName(id))} has no card in the team (config/agents.yaml): it is a tool or a service the agents use.</div>`}
-    ${crew ? "" : `<div id="swwfin" style="margin-top:12px"></div>`}
+    ${crew || !tile ? "" : `<div id="swwfin" style="margin-top:12px"></div>`}
     ${crew ? "" : `<div class="card pad-l section"><h2>Health <span class="hcount">${issues.length}</span></h2>
       ${issues.length ? issues.map((x) => `<div class="banner ${x.severity === "alert" ? "" : "note"} agissue" style="margin-top:8px">${ic.alert}<span class="grow wrap">${esc(x.text)}${x.run ? ` · <a href="#/live/${encodeURIComponent(x.run)}">the run</a>` : ""}<span class="tiny faint"> · ${x.severity === "alert" ? "alert" : "note"}</span></span>${x.key ? `<button class="btn sm ghost" data-ack="${esc(x.key)}" title="Hides it here, from its count and from the Health doctor until it happens again. Nothing is fixed or deleted.">Seen</button>` : ""}</div>`).join("")
         : `<div class="small muted" style="margin-top:6px">No open issue on the health board.</div>`}</div>`}
@@ -672,17 +669,17 @@ async function swAgentPanel(box, id, crew = false, tile = true) {    // crew: on
     <div class="card pad-l section"><div class="row between wrap" style="gap:8px"><h2>What it said and did <span class="hcount">${lines.length}</span></h2><a class="btn sm" href="${swActHref([id], 168)}">All of it in Activity</a></div>
       ${lines.length ? `<div class="rroom" style="margin-top:6px">${lines.slice(0, 12).map(swRoomLine).join("")}</div>${lines.length > 12 ? `<a class="small" href="${swActHref([id], 168)}">${lines.length - 12} more in Activity</a>` : ""}`
         : `<div class="small muted" style="margin-top:6px">Nothing in the last 7 days.</div>`}</div>
-    <div class="card pad-l section"><h2>Tasks it did steps for <span class="hcount">${tasks.length}</span></h2>
+    <div class="card pad-l section"><h2>Runs it did steps for <span class="hcount">${tasks.length}</span></h2>
       ${tasks.length ? `<div class="list" style="margin-top:6px">${tasks.map(({ t, steps }) => `<a href="#/task/${t.id}"><div class="grow" style="min-width:0"><div class="ttl wrap">#${t.id} ${esc(t.title)}</div>
         <div class="sub wrap">${steps.map((s) => `step ${s.idx}${s.occ > 1 ? ` (run ${s.occ})` : ""}: ${esc(s.title)} · ${esc(s.status)}`).join("; ")}</div></div><span class="pill ${t.status === "done" ? "ok" : t.status === "failed" ? "failed" : "running"}">${esc(t.status)}</span></a>`).join("")}</div>`
-        : `<div class="small muted" style="margin-top:6px">No task on the board (open or of the last 7 days) gave it a step.</div>`}</div>
+        : `<div class="small muted" style="margin-top:6px">No run (open or of the last 7 days) gave it a step.</div>`}</div>
     ${crew ? "" : `<div class="card pad-l section"><h2>Memory</h2>${journalHtml}</div>`}
     <div class="card pad-l section"><h2>Ideas it worked on <span class="hcount">${ideas.length}</span></h2>
       ${ideas.length ? `<div class="list" style="margin-top:6px">${ideas.map((i) => `<a href="#/swarm/artifact/${i.id}"><div class="grow"><div class="ttl">#${i.id} ${esc(i.title)}</div><div class="sub">${esc(i.state)}</div></div>${ic.next}</a>`).join("")}</div>`
         : `<div class="small muted" style="margin-top:6px">None in the last 30 days.</div>`}</div>`;
   swBindTiles(x.who);
   $$("[data-ack]", box).forEach((b) => (b.onclick = () => ackIssues(b.dataset.ack.split(" ").filter(Boolean), b)));
-  if (!crew) wfInInto($("#swwfin", box), "agent", id);   // WFL-11: every workflow the agent is a step of
+  if (!crew && tile) wfInInto($("#swwfin", box), "agent", id);   // WFL-11: every workflow the agent is a step of (its own page has Used in, APP-76)
 }
 
 // ---------- the Chatroom: the team room (SWM-107) ----------
@@ -700,7 +697,7 @@ const SW_ROOM_TYPES = [["you", "You"], ["ask", "Asks"], ["hand", "Hand-overs"], 
 // a chip's lines: tool use counts under Asks, messages to you under You
 const SW_KIND = { use: "ask", tell: "you" };
 const swKind = (l) => SW_KIND[l.type] || l.type;
-const SW_LINE = { ask: "Ask", use: "Uses", hand: "Hand-over", tell: "Message to you", you: "You", talk: "Board", work: "Work", status: "Status" };
+const SW_LINE = { ask: "Ask", use: "Uses", hand: "Hand-over", you: "You", talk: "Board", work: "Work", status: "Status" };
 const swRoomF = { types: new Set(), agents: new Set(), topic: "", hours: 24, q: "", tests: false };
 let swRoom = { t: 0, h: 0, d: null }, swRoomShow = 120;
 async function swRoomLoad(force) {
@@ -723,22 +720,53 @@ function swRoomMatch(l, skip) {
   return true;
 }
 let swJudged = {};                                     // help seq -> the latest verdict line on it (SWM-109)
+// a line's time: the clock today, the day and the clock before (the lines of one task span days)
+const swLineTime = (ts) => { const iso = new Date(ts * 1000).toISOString(), d = dayOf(iso); return d === "Today" ? clockOf(iso) : `${d} ${clockOf(iso)}`; };
+// OBS-19: what the stack told you is the message itself, in plain words; the raw reason and the run are one tap away
+function swTellLine(l, col, name) {
+  const who = ["stack", "mission"].includes(l.actor) || swTaskFor({ actor: l.actor }) ? "" : name;   // its group already names a crew job
+  return `<div class="rline t-tell${l.quiet ? " rquiet" : ""}"><span class="rav" style="background:${col}" aria-hidden="true">${esc(name.slice(0, 1).toUpperCase())}</span>
+    <div class="grow" style="min-width:0">
+      <div class="rhead"><span class="rtell">${swFold(l.text, 600)}</span><span class="tiny faint rtime">${swLineTime(l.ts)}</span></div>
+      ${l.detail ? `<details class="rdet"><summary class="tiny muted">${esc(l.detail_label || "Details")}</summary><div class="small rtext">${swFold(l.detail)}</div></details>` : ""}
+      ${who || l.state === "failed" ? `<div class="tiny faint rmeta">${who ? `From ${esc(who)}` : ""}${who && l.state === "failed" ? " · " : ""}${l.state === "failed" ? `<span class="err-t">not delivered</span>` : ""}</div>` : ""}
+    </div></div>`;
+}
 function swRoomLine(l) {
   const g = swGroupOf(l.actor === "you" ? "you" : l.actor), col = SW_GCOL[g] || "var(--faint)", name = l.actor === "you" ? "You" : swName(l.actor);
+  if (l.type === "tell") return swTellLine(l, col, name);
   const [scol, slabel] = l.state ? SW_STATE[l.state] || [null, l.state] : [null, ""];
+  // OBS-21: one agent's request to another is one line; the request and the answer are one tap each
+  const asked = l.type === "ask", request = asked && l.text && String(l.text).trim() !== l.summary;
   const art = l.ref?.artifact, links = [art ? `<a href="#/swarm/artifact/${art}">#${art}'s timeline</a>` : "", l.ref?.run ? `<a href="#/live/${encodeURIComponent(l.ref.run)}">its log</a>` : "",
-    l.ref?.chat ? `<a href="#/chat?c=${encodeURIComponent(l.ref.chat)}">the chat</a>` : "", l.ref?.task ? `<a href="#/task/${l.ref.task}">the task</a>` : "", l.ref?.build ? `<a href="#/build/${l.ref.build}">the build</a>` : "",
+    l.ref?.chat ? `<a href="#/chat?c=${encodeURIComponent(l.ref.chat)}">the chat</a>` : "", l.ref?.task ? `<a href="#/task/${l.ref.task}">the run</a>` : "", l.ref?.build ? `<a href="#/build/${l.ref.build}">the build</a>` : "",
     l.ref?.context && !swCtx ? `<a href="#" data-rctx="${esc(l.ref.context)}">this conversation</a>` : ""].filter(Boolean);
   return `<div class="rline t-${l.type}"><span class="rav" style="background:${col}" aria-hidden="true">${esc(name.slice(0, 1).toUpperCase())}</span>
     <div class="grow" style="min-width:0">
-      <div class="rhead"><span class="wrap"><b>${esc(name)}</b> ${esc(l.verb)}${l.target ? ` <b>${esc(l.target.split(", ").map((x) => (x.startsWith("#") ? x : x === "you" ? "you" : swName(x))).join(", "))}</b>` : ""}</span><span class="tiny faint rtime">${clockOf(new Date(l.ts * 1000).toISOString())}</span></div>
+      <div class="rhead"><span class="wrap"><b>${esc(name)}</b> ${esc(l.verb)}${l.target ? ` <b>${esc(l.target.split(", ").map((x) => (x.startsWith("#") ? x : x === "you" ? "you" : swName(x))).join(", "))}</b>` : ""}${asked ? (l.summary ? `: ${esc(l.summary)}` : ` for help`) : ""}</span><span class="tiny faint rtime">${swLineTime(l.ts)}</span></div>
       ${l.title ? `<div class="small rtitle wrap">${art ? `<a href="#/swarm/artifact/${art}">${esc(l.title)}</a>` : esc(l.title)}</div>` : ""}
-      ${l.text ? `<div class="small rtext">${swFold(l.text, 600)}</div>` : ""}
-      ${l.detail ? `<details class="rdet"><summary class="tiny muted">${l.type === "ask" ? `${esc(swName(l.target))}'s answer` : esc(l.detail_label || "More")}</summary><div class="small rtext">${swFold(l.detail)}</div></details>` : ""}
+      ${request ? `<details class="rdet"><summary class="tiny muted">The request${l.words ? ` (${nf(l.words)} words)` : ""}</summary><div class="small rtext">${swFold(l.text)}</div></details>` : l.text && !asked ? `<div class="small rtext">${swFold(l.text, 600)}</div>` : ""}
+      ${l.detail ? `<details class="rdet"><summary class="tiny muted">${asked ? `${esc(swName(l.target))}'s answer` : esc(l.detail_label || "More")}</summary><div class="small rtext">${swFold(l.detail)}</div></details>` : ""}
       ${l.ref?.help ? (swJudged[l.ref.help] ? `<div class="tiny rjudged">${esc(swJudged[l.ref.help].actor === "you" ? "You" : swName(swJudged[l.ref.help].actor))} ${esc(swJudged[l.ref.help].verb.replace(/^judged /, "judged this "))}</div>`
         : `<div class="row wrap" style="gap:6px;margin-top:6px"><span class="tiny faint">Was it useful to ${esc(swName(l.target))}?</span><button type="button" class="btn sm" data-hv="${l.ref.help}" data-useful="1">Useful</button><button type="button" class="btn sm ghost" data-hv="${l.ref.help}" data-useful="0">Not useful</button></div>`) : ""}
-      <div class="tiny faint rmeta">${l.type === "help" ? `<span class="rhelp">helps ${esc(swName(l.target))}</span>` : `<span>${esc(SW_LINE[l.type] || l.type)}</span>`}${l.via ? ` · ${esc(l.via)}` : ""}${l.ref?.channels ? ` · ${esc(l.ref.channels.join(", "))}` : ""}${l.certainty === "matched" ? ` · <span title="Worked out from the timing, not recorded">matched</span>` : ""}${l.world === "test" ? " · test" : ""}${slabel ? ` · <span style="color:${scol || "inherit"}">${esc(slabel)}</span>` : ""}${links.length ? " · " + links.join(" · ") : ""}</div>
+      <div class="tiny faint rmeta">${l.type === "help" ? `<span class="rhelp">helps ${esc(swName(l.target))}</span>` : `<span>${esc(SW_LINE[l.type] || l.type)}</span>`}${l.via ? ` · ${esc(l.via)}` : ""}${l.certainty === "matched" ? " · worked out from the timing" : ""}${l.world === "test" ? " · test" : ""}${slabel ? ` · <span style="color:${scol || "inherit"}">${esc(slabel)}</span>` : ""}${links.length ? " · " + links.join(" · ") : ""}</div>
     </div></div>`;
+}
+// OBS-22: the task a line belongs to: the one it names (interactions.task_of), or its agent's own duty (a crew job is a task)
+function swTaskFor(l) {
+  const ts = S?.tasks || [];
+  return (l.task && ts.find((t) => t.id === +l.task)) || ts.find((t) => t.door === "crew" && t.ref === l.actor) || null;
+}
+const swAreaName = (a) => (a && typeof AREAS === "object" && AREAS[a]) || "";
+function swTaskKey(l) {
+  const t = swTaskFor(l);
+  return t ? `task:${t.id}` : l.task ? `task:${l.task}` : l.type === "tell" && (l.area || l.title) ? `area:${l.area || l.title}` : `who:${l.actor}`;
+}
+function swTaskHead(l) {                               // the group's head: the task's name, a link to it, and its area as a quiet label
+  const t = swTaskFor(l), id = t?.id || l.task, area = swAreaName(t?.area || l.area);
+  const name = t ? t.title : id ? `Run #${id}` : l.type === "tell" && (l.area || l.title) ? area || l.title : l.actor === "you" ? "You" : swName(l.actor);
+  const href = id ? `#/task/${id}` : l.actor !== "you" && l.type !== "tell" ? swAgentHref(l.actor) : "";
+  return `<div class="rtask-h"><span class="wrap">${href ? `<a href="${href}">${esc(name)}</a>` : esc(name)}</span>${area && area !== name ? `<span class="tiny faint">${esc(area)}</span>` : ""}</div>`;
 }
 async function swChat(body, poll = false) {
   await swWhoCards();
@@ -756,21 +784,25 @@ async function swChat(body, poll = false) {
   for (const a of swRoomF.agents) agents[a] = agents[a] || 0;            // a picked agent keeps its chip, also with nothing to show
   const topics = {};
   for (const l of all.filter((l) => swRoomMatch(l, "topic"))) { const t = swTopicOf(l); topics[t] = (topics[t] || 0) + 1; }
-  let day = "";
-  const groups = [];                                            // a burst of asks between the same two agents: one line that opens
-  for (const l of page) {
-    const g = groups.at(-1), same = g && l.type === "ask" && g[0].type === "ask" && g[0].actor === l.actor && g[0].target === l.target
-      && g.at(-1).ts - l.ts < 900 && dayOf(new Date(l.ts * 1000).toISOString()) === dayOf(new Date(g[0].ts * 1000).toISOString());
-    same ? g.push(l) : groups.push([l]);
-  }
-  const rows = groups.map((g) => {
-    const l = g[0], dd = dayOf(new Date(l.ts * 1000).toISOString()), head = dd !== day ? `<div class="fday">${esc((day = dd))}</div>` : "";
-    if (g.length < 3) return head + g.map(swRoomLine).join("");
-    const col = SW_GCOL[swGroupOf(l.actor)] || "var(--faint)", span = clockOf(new Date(g.at(-1).ts * 1000).toISOString()) + "–" + clockOf(new Date(l.ts * 1000).toISOString());
-    return `${head}<details class="rburst"><summary class="rline t-ask"><span class="rav" style="background:${col}" aria-hidden="true">${esc(swName(l.actor).slice(0, 1).toUpperCase())}</span>
-      <div class="grow" style="min-width:0"><div class="rhead"><span class="wrap"><b>${esc(swName(l.actor))}</b> asked <b>${esc(swName(l.target))}</b> ${g.length} times</span><span class="tiny faint rtime">${span}</span></div>
-      <div class="small rtext">${esc(String(l.text).split("\n")[0])}${g.length > 1 ? " …" : ""}</div><div class="tiny faint rmeta">Asks · tap for each question and its answer</div></div></summary>
-      <div class="rburstin">${g.map(swRoomLine).join("")}</div></details>`;
+  // OBS-22: grouped by the task each line belongs to, the task with the newest line first and its lines newest first,
+  // under the task's name and its area; a line of no task goes with its agent's duty, else its area or its agent
+  const byTask = new Map();
+  for (const l of page) { const k = swTaskKey(l); if (!byTask.has(k)) byTask.set(k, []); byTask.get(k).push(l); }
+  const rows = [...byTask.values()].map((ls) => {
+    const bursts = [];                                          // a burst of asks between the same two agents: one line that opens
+    for (const l of ls) {
+      const g = bursts.at(-1), same = g && l.type === "ask" && g[0].type === "ask" && g[0].actor === l.actor && g[0].target === l.target && g.at(-1).ts - l.ts < 900;
+      same ? g.push(l) : bursts.push([l]);
+    }
+    return `<div class="rtask">${swTaskHead(ls[0])}${bursts.map((g) => {
+      const l = g[0];
+      if (g.length < 3) return g.map(swRoomLine).join("");
+      const col = SW_GCOL[swGroupOf(l.actor)] || "var(--faint)", span = swLineTime(g.at(-1).ts) + "–" + clockOf(new Date(l.ts * 1000).toISOString());
+      return `<details class="rburst"><summary class="rline t-ask"><span class="rav" style="background:${col}" aria-hidden="true">${esc(swName(l.actor).slice(0, 1).toUpperCase())}</span>
+        <div class="grow" style="min-width:0"><div class="rhead"><span class="wrap"><b>${esc(swName(l.actor))}</b> asked <b>${esc(swName(l.target))}</b> ${g.length} times</span><span class="tiny faint rtime">${span}</span></div>
+        <div class="tiny faint rmeta">Asks · tap for each request and its answer</div></div></summary>
+        <div class="rburstin">${g.map(swRoomLine).join("")}</div></details>`;
+    }).join("")}</div>`;
   }).join("");
   const cards = S?.swarm?.cards || [], rooms = ["all", "health", "code", "research", "house", "shopping", "ops"];
   const kinds = SW_ROOM_TYPES.map(([k, l]) => [k, l, count((x) => swKind(x) === k && swRoomMatch(x, "type"))]).filter(([k, , n]) => n || swRoomF.types.has(k));
@@ -780,7 +812,7 @@ async function swChat(body, poll = false) {
   body.innerHTML = `<div class="card pad-l rfilters">
       <div class="row rfirst" style="gap:8px"><input class="input grow" id="rq" type="search" placeholder="Search" aria-label="Search what they said" value="${esc(swRoomF.q)}">
         <select class="input rsel" data-rh aria-label="Time window">${[[6, "6 h"], [24, "24 h"], [72, "3 days"], [168, "7 days"]].map(([h, l]) => `<option value="${h}"${swRoomF.hours === h ? " selected" : ""}>${l}</option>`).join("")}</select></div>
-      ${explain("activity-what-passes", `Everything that passes between your agents and you, drawn from their work: nobody has to post here. Pick one name for what involves it, two for what passed between them. <b>Helps</b> are the rare steps into another agent's lane.${[...swRoomF.agents].some(swAgentHref) ? ` Open ${[...swRoomF.agents].filter(swAgentHref).map((a) => `<a href="${swAgentHref(a)}">${esc(swName(a))}'s page</a>`).join(" · ")}.` : ""}`, "About Activity")}
+      ${explain("activity-what-passes", `Everything that passes between your agents and you, drawn from their work: nobody has to post here. It is grouped by the run each line belongs to, the newest first, with its area beside its name; a request from one agent to another and the raw reason of a failure are one tap away. Pick one name for what involves it, two for what passed between them. <b>Helps</b> are the rare steps into another agent's lane.${[...swRoomF.agents].some(swAgentHref) ? ` Open ${[...swRoomF.agents].filter(swAgentHref).map((a) => `<a href="${swAgentHref(a)}">${esc(swName(a))}'s page</a>`).join(" · ")}.` : ""}`, "About Activity")}
       <div class="chips scroll-x"><button type="button" class="tag ${swRoomF.types.size ? "" : "on"}" data-rt="">All</button>${kinds.map(([k, l, n]) => `<button type="button" class="tag ${swRoomF.types.has(k) ? "on" : ""}" data-rt="${k}">${l} <span class="faint">${n}</span></button>`).join("")}${cov.tests ? `<button type="button" class="tag ${swRoomF.tests ? "on" : ""}" data-rtests>Tests <span class="faint">${cov.tests}</span></button>` : ""}</div>
       ${people.length ? `<div class="chips scroll-x">${topicList.length > 1 || swRoomF.topic ? `<select class="input rsel rtopic" data-rtop aria-label="Topic"><option value="">All topics</option>${topicList.map(([k, l]) => `<option value="${k}"${swRoomF.topic === k ? " selected" : ""}>${esc(l)}</option>`).join("")}</select>` : ""}${people.map(([a, n]) => `<button type="button" class="tag ${swRoomF.agents.has(a) ? "on" : ""}" data-ra="${esc(a)}"><span class="fdot" style="background:${SW_GCOL[swGroupOf(a)] || "var(--faint)"}"></span>${esc(a === "you" ? "You" : swName(a))} ${swRoomF.agents.has(a) ? "×" : `<span class="faint">${n}</span>`}</button>`).join("")}</div>` : ""}
       ${swCtx ? `<div class="chips"><button type="button" class="tag on" data-rctx="">${esc(swCtxName(swCtx))} ×</button></div>` : ""}
@@ -813,7 +845,7 @@ async function swChat(body, poll = false) {
     const useful = b.dataset.useful === "1", reason = useful ? "" : prompt("What made it not useful? (optional: the agent's scorecard keeps it)", "");
     if (reason === null) return;
     b.disabled = true;
-    if (await act({ action: "swarm_help_verdict", seq: +b.dataset.hv, useful, reason }, useful ? "Marked useful: the swarm records it for this agent" : "Marked not useful: the swarm records it for this agent")) { swLastSig = ""; swChat(body); }
+    if (await act({ action: "swarm_help_verdict", seq: +b.dataset.hv, useful, reason }, useful ? "Marked useful: recorded for this agent" : "Marked not useful: recorded for this agent")) { swLastSig = ""; swChat(body); }
     else b.disabled = false;
   }));
   if ($("#rmore")) $("#rmore").onclick = () => { swRoomShow += 120; redraw(); };
@@ -844,7 +876,7 @@ function swCheck(c) {
 // ---------- the agents ----------
 // ---------- the agent map: the team by job, what each one can reach, how it is doing (SWM-106) ----------
 const SW_REACH = { fetch: "the web", browser: "a web browser", research: "web research (asks the scout)", mail: "your Gmail", phone: "the AI phone",
-  house: "your house (Home Assistant)", qmd: "your vault (notes and wiki)", missions: "your missions", claude: "Claude Code tasks", graphify: "the code map",
+  house: "your house (Home Assistant)", qmd: "your vault (notes and wiki)", missions: "your workflows", claude: "Claude Code questions", graphify: "the code map",
   swarm: "the Board and the Ledger" };
 const SW_PRIVATE = ["mail", "qmd", "house", "missions", "phone"], SW_UNTRUSTED = ["fetch", "browser", "research", "mail"], SW_OUT = ["fetch", "browser", "phone"];
 const SW_WAKE = { never: "others cannot wake it", on_request: "wakes when an agent asks it", digest: "wakes for requests, at most every 6 h", always: "always on" };
@@ -928,7 +960,7 @@ function swSettings(a, box) {
     sub.disabled = false;
     if (!r) return;
     swCards = null;
-    location.hash = "#/tasks?v=ideas";
+    location.hash = "#/ideas";
   };
 }
 
@@ -940,7 +972,7 @@ async function swArtifact(view, id) {
   const a = h.artifact, prog = (S?.swarm?.checks || {})[String(id)];
   const items = [...h.events.filter((e) => e.kind !== "message").map((e) => ({ ts: e.ts, who: e.actor, what: e.kind, text: e.reason || "", p: JSON.parse(e.payload || "{}") })),
     ...h.thread.map((m) => ({ ts: m.ts, who: m.sender, what: m.act, text: m.text, msg: true }))].sort((x, y) => x.ts - y.ts);
-  view.innerHTML = `<a class="back" href="#/tasks?v=ideas">${ic.back || "‹"} Ideas</a>
+  view.innerHTML = `<a class="back" href="#/ideas">${ic.back || "‹"} Ideas</a>
     <div class="page-h"><h1>#${a.id} ${esc(a.title)}</h1><div class="small muted">${esc(a.kind)} · ${esc(a.state)} · owner ${esc(a.owner)} · priority ${nf(+a.priority, 2)}${a.recurrence ? ` · came back ${a.recurrence}×` : ""}</div></div>
     <div id="iorigin"></div>
     ${a.check ? `<div class="card pad-l section small">Success check: <b>${esc(swCheck(a.check))}</b>${prog ? `<div class="tiny faint">Checker: ${esc(prog)}</div>` : ""}</div>` : ""}
@@ -954,10 +986,10 @@ async function swArtifact(view, id) {
     const o = m.get(+a.id), el = $("#iorigin");
     if (!el || !o) return;
     if (!o.first_run) {                                     // written outside a recorded run (the weekly self-review): its writer's duty
-      if (o.task) el.innerHTML = `<div class="card pad-l section"><h2>How it came about</h2><div class="small" style="margin-top:6px">Written by ${esc(agentName(o.owner))} during its duty <a href="#/task/${o.task}">${esc(ideaTaskName(o))}</a>; no run of it was recorded.</div></div>`;
+      if (o.task) el.innerHTML = `<div class="card pad-l section"><h2>How it came about</h2><div class="small" style="margin-top:6px">Written by ${esc(agentName(o.owner))} during its scheduled job <a href="#/task/${o.task}">${esc(ideaTaskName(o))}</a>; no run of it was recorded.</div></div>`;
       return;
     }
-    el.innerHTML = `<div class="card pad-l section"><h2>How it came about</h2><div class="small" style="margin-top:6px">First seen ${esc(when(new Date(o.first_at * 1000).toISOString()))}${o.first_actor ? ` by ${esc(agentName(o.first_actor))}` : ""} in <a href="#/live/${encodeURIComponent(o.first_run)}">a run</a>${o.task ? ` of the task <a href="#/task/${o.task}">${esc(ideaTaskName(o))}</a>` : ", on no task"}.
+    el.innerHTML = `<div class="card pad-l section"><h2>How it came about</h2><div class="small" style="margin-top:6px">First seen ${esc(when(new Date(o.first_at * 1000).toISOString()))}${o.first_actor ? ` by ${esc(agentName(o.first_actor))}` : ""} in <a href="#/live/${encodeURIComponent(o.first_run)}">a run</a>${o.task ? ` of <a href="#/task/${o.task}">${esc(ideaTaskName(o))}</a>` : ", outside any workflow"}.
       ${o.runs > 1 ? `Seen in ${nf(o.runs)} runs, the last ${esc(when(new Date(o.last_at * 1000).toISOString()))}.` : "Seen in that run only."} Every sighting is under Evidence.</div>
       ${o.editor ? `<div class="small" style="margin-top:8px">${editorHtml(o.editor)} <span class="muted">${esc(o.editor.reason)}</span></div>` : ""}</div>`;
   });

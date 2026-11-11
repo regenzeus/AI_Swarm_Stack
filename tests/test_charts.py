@@ -65,11 +65,11 @@ def test_explanations_fold_and_stay_open_through_redraws():
 
 
 def test_a_live_update_redraws_the_agents_page_only_when_its_list_changed():
-    """APP-32: the Tasks tab's live parts update in place; its list is redrawn only when what it lists changed, and
-    never under a field you type in."""
-    d = fn(APP, "tasksDraw")
-    assert "if (!force && sig === tasksSig) return;" in d and '(typing() && b.contains(document.activeElement)) || $("#tnew")' in d
-    assert 'if (route.name === "tasks" && !first) { tasksUpdate(); chrome(); return; }' in fn(APP, "onState")
+    """APP-32: a live update redraws only Home, the decisions and the policy, and Home only the parts whose content
+    changed, never under a field you type in; Workflows, Agents and Improve draw when opened and keep their place."""
+    d = fn(APP, "homeUpdate")
+    assert "if (!el || homeLast[id] === html) continue;" in d and "typingIn(el)" in d
+    assert 'const LIVE = new Set(["home", "decide", "policy"]);' in APP and "tasksUpdate" not in APP and "tasksDraw" not in APP
 
 
 def test_back_returns_to_where_you_were_and_a_new_page_starts_at_the_top():

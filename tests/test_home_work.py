@@ -11,14 +11,17 @@ ROOT = Path(__file__).resolve().parent.parent
 MC = ROOT / "images/mission-control"
 APP_JS = webjs.app_js()
 GUIDE = (MC / "guide/01-welcome.md").read_text()
-FUNCS = ("needsRows", "needsRow", "needsHtml", "nowHtml", "upkeepHtml", "healthAlerts", "feedItems", "feedHtml", "workBuildRow", "statusPill", "runningCard", "stepsHtml", "dayOf")
-CONSTS = ("RKIND", "QUIET", "esc", "BSTATUS", "bcls", "VERDICT", "STATUS", "typeIcon", "toIso", "clockOf", "HOME_ICON", "homeMany", "CREW_IC", "TRIG", "firstLine", "firstSentence", "ctAsker", "ctTitle", "ideasWaiting",
+FUNCS = ("needsHtml", "nowHtml", "upkeepHtml", "healthAlerts", "feedItems", "feedHtml", "workBuildRow", "statusPill", "runningCard", "stepsHtml", "dayOf", "youText", "oneLine")
+CONSTS = ("RKIND", "QUIET", "esc", "BSTATUS", "bcls", "VERDICT", "STATUS", "typeIcon", "toIso", "clockOf", "HOME_ICON", "homeMany", "CREW_IC", "TRIG", "firstLine", "firstSentence", "tTitle", "ctAsker", "ctTitle", "ideasWaiting",
           "IDEA_CLS", "yoursN", "ideasN")
+ASKS_JS = (MC / "web/static/app-asks.js").read_text()   # ASK-13: Home's Needs you is the Asks
 FORMAT = re.search(r"// ---------- formatting \(TSK-31\).*?// ---------- end of formatting ----------", APP_JS, re.S)[0]   # the app's own helpers
 
 
 def item(id, cls, what, href, why="", routine=False):
-    return {"id": id, "cls": cls, "what": what, "why": why, "href": href, "answers": [{"label": "Look", "href": href}], "routine": routine}
+    """One waiting Ask as the runner publishes it (ASK-12): its question, its why, a link chip to its page."""
+    return {"id": id, "kind": cls, "cls": cls, "question": what, "why": why, "href": href, "status": "open", "group": routine,
+            "choices": [{"id": "look", "label": "Look", "href": href}]}
 
 
 def run(state, expr):
@@ -30,8 +33,9 @@ def run(state, expr):
         "let homeFilter = 'all', homeShow = 40; const homeEx = new Map();",
         f"let S = {json.dumps({'missions': [], **state})};",
         "const shopProposals = () => (S.shopping || {}).proposals || [];",
-        "const notConnected = () => false;",
-        *constants, *functions, f"process.stdout.write(String({expr}));"])
+        "const notConnected = () => false, linkWords = () => '', APPNAME = () => 'the app', $ = () => null, $$ = () => [];",
+        "const explain = (k, html, label) => `<details class='explain'>${html}</details>`;",
+        *constants, ASKS_JS, *functions, f"process.stdout.write(String({expr}));"])
     return subprocess.run(["node", "-e", script], check=True, capture_output=True, text=True).stdout
 
 
@@ -55,47 +59,47 @@ def test_needs_you_lists_only_decisions_and_says_so_when_there_are_none():
     html = run({"builds": [{"id": 1, "status": "review", "title": "Review <me>", "checks_ok": True, "checks": "x", "ci": "success"},
                            {"id": 2, "status": "working", "title": "Busy"}],
                 "shopping": {"proposals": [{"id": "p-2", "slug": "ram", "status": "watching", "item": "Other", "total_eur": 189}]},
-                "decisions": [item("build:1", "coding", "Deploy build #1: Review <me>", "#/build/1"), item("shop:p-1", "shopping-buy", "Buy RAM kit for EUR 99 at Alternate?", "#/mission/ram?shop=p-1"),
-                              item("phone-step:a1", "phone-routine", "AI phone cleanup: caches", "#/crew/phone-cleanup", why="frees 2.0 GB"),
-                              item("phone-ask", "phone", "The AI phone asks for 2 approvals", "#/phone")],
+                "asks": [item("build:1", "coding", "Deploy build #1: Review <me>", "#/build/1"), item("shop:p-1", "shopping-buy", "Buy RAM kit for EUR 99 at Alternate?", "#/mission/ram?shop=p-1"),
+                         item("phone-step:a1", "phone-routine", "AI phone cleanup: caches", "#/crew/phone-cleanup", why="frees 2.0 GB")],
+                "decisions": [{"id": "phone-ask", "cls": "phone", "what": "The AI phone asks for 2 approvals", "href": "#/phone", "ask": "x1", "source_key": "srv:phone-ask",
+                               "answers": [{"label": "Look", "href": "#/phone"}]}],
                 "health": {"alerts": 1}, "proposals": [{"status": "proposed", "title": "Fix the watchdog"}]},
                "needsHtml()")
     for want in ('href="#/build/1"', "Review &lt;me&gt;", "#/mission/ram?shop=p-1", "AI phone cleanup: caches", "2.0 GB",
-                 "2 approvals", '<span class="hcount">4</span>', 'href="#/decide"'):
+                 "2 approvals", '<span class="hcount">4</span>', 'href="#/decide"', 'data-adismiss="build:1"', 'data-alater="build:1"'):
         assert want in html, want
     assert "#/build/2" not in html and "p-2" not in html           # working builds are Now, a watched price is not a decision
     assert "health alert" not in html and "improvement" not in html  # the stack's own upkeep is not the owner's decision
 
 
 def test_home_and_the_queue_draw_one_list_and_a_kind_with_many_items_is_a_count_row():
-    """GEN-02: Home built its own list and left out ideas and agent changes. Now both read S.decisions; the rows add up to it."""
+    """GEN-02, ASK-15: Home and #/decide draw the one list of Asks; a kind with many items is one card with its count and
+    every item in it, so the cards add up to the list."""
     assert "const n = yoursN(), ideas = ideasN()" in re.search(r"^function homeHeadHtml\(.*?^\}", APP_JS, re.M | re.S)[0]   # the stack's ideas counted apart (APP-54)
-    for src in ("needsRows", "needsHtml"):
+    for src in ("askNeedsHtml", "vDecide"):
         body = re.search(rf"^function {src}\(.*?^\}}", APP_JS, re.M | re.S)[0]
-        assert "S.decisions" in body and "S.builds || []).filter" not in body and "S.tasks" not in body and "S.swarm" not in body, src
-    assert "S.decisions" in re.search(r"^function vDecide\(.*?^\}", APP_JS, re.M | re.S)[0]
+        assert "askWaiting()" in body and "S.builds || []).filter" not in body and "S.tasks" not in body and "S.swarm" not in body, src
     assert "needsItems" not in APP_JS and "ideasWaiting" not in re.search(r"^function upkeepHtml\(.*?^\}", APP_JS, re.M | re.S)[0]
-    ideas = [item(f"idea:{n}", "ideas", f"Take this idea? {n}", "#/swarm?tab=improve") for n in range(22)]
+    ideas = [item(f"idea:{n}", "ideas", f"Take this idea? {n}", "#/swarm?tab=improve", routine=True) for n in range(22)]
     ds = [item("build:1", "coding", "Deploy build #1", "#/build/1"), item("phone-step:a", "phone-routine", "Cache a", "#/crew/phone-cleanup", routine=True),
           item("agent-1", "agent-change", "Take the change to scout?", "#/swarm?tab=improve"), item("phone-step:b", "phone-routine", "Cache b", "#/crew/phone-cleanup", routine=True),
           item("memory:1", "memory", "Remember this?", "#/system", routine=True), item("keeper:1", "memory", "Forget this?", "#/crew/memory", routine=True), *ideas,
           item("test:abc", "journey-test", "Test item", "#/decide")]
-    state = {"decisions": ds, "decide": {"classes": {"ideas": {"title": "Ideas"}, "phone-routine": {"title": "Phone routine"}, "memory": {"title": "Memory"}}}}
-    rows = json.loads(run(state, "JSON.stringify(needsRows().map((x) => [x.title, x.n, x.href]))"))
-    assert rows == [["Deploy build #1", 1, "#/build/1"], ["Phone routine · 2 waiting", 2, "#/crew/phone-cleanup"], ["Take the change to scout?", 1, "#/swarm?tab=improve"],
-                    ["Memory · 2 waiting", 2, "#/decide"], ["Ideas · 22 waiting", 22, "#/swarm?tab=improve"], ["Test item", 1, "#/decide"]]
-    assert sum(r[1] for r in rows) == len(ds)                      # nothing is hidden: the rows add up to the queue
+    state = {"asks": ds, "ask_policy": {"kinds": [{"kind": "ideas", "title": "Ideas"}, {"kind": "phone-routine", "title": "Phone routine"}, {"kind": "memory", "title": "Memory"}]}}
+    groups = json.loads(run(state, "JSON.stringify(askGroups(askWaiting()).map((g) => g.one ? [g.one.question, 1] : [g.kind, g.items.length]))"))
+    assert groups == [["Deploy build #1", 1], ["phone-routine", 2], ["Take the change to scout?", 1], ["memory", 2], ["ideas", 22], ["Test item", 1]]
+    assert sum(g[1] for g in groups) == len(ds)                    # nothing is hidden: the cards add up to the list
     html = run(state, "needsHtml()")
     yours = [d for d in ds if d["cls"] not in ("ideas", "agent-change")]         # the stack's ideas wait in the list, counted apart (APP-54)
-    assert f'<span class="hcount">{len(yours)}</span>' in html and len(yours) < len(ds) and "first: Take this idea? 0" in html
-    few = run({"decisions": ideas[:3]}, "JSON.stringify(needsRows().map((x) => x.title))")
-    assert json.loads(few) == [d["what"] for d in ideas[:3]]       # three of a kind are still rows of their own
+    assert f'<span class="hcount">{len(yours)}</span>' in html and "Ideas · 22 waiting" in html and "Take this idea? 21" in html
+    few = run({"asks": [dict(i, group=False) for i in ideas[:3]]}, "JSON.stringify(askGroups(askWaiting()).map((g) => g.one.question))")
+    assert json.loads(few) == [d["question"] for d in ideas[:3]]   # Asks that do not fold are cards of their own
 
 
 def test_what_the_owner_cannot_answer_stays_on_the_health_board_and_under_stack_upkeep():
     """GEN-02: the AI phone being down and health alerts are states: not in the queue, still one tap from Home."""
     state = {"health": {"alerts": 1, "items": [{"kind": "crew", "id": "phone-check", "issues": [{"severity": "alert", "kind": "phone-down", "text": "The AI phone: disconnected"}]}]},
-             "crew": [{"id": "phone-check", "name": "Phone check"}], "decisions": []}
+             "crew": [{"id": "phone-check", "name": "Phone check"}], "decisions": [], "asks": []}
     assert "Nothing needs you" in run(state, "needsHtml()")
     html = run(state, "upkeepHtml()")
     assert "The AI phone is not connected" in html and 'href="#/phone"' in html and "1 health alert" in html
@@ -112,14 +116,14 @@ def test_stack_upkeep_sits_under_now_not_needs_you():
     two = run({"health": {"alerts": 2, "items": [{"kind": "crew", "id": "a", "issues": [{"severity": "alert", "text": "x"}]},
                                                  {"kind": "mission", "slug": "m", "issues": [{"severity": "alert", "text": "y"}]}]},
                "crew": [{"id": "a", "name": "A"}], "missions": [{"slug": "m", "title": "M"}]}, "upkeepHtml()")
-    assert 'href="#/tasks?v=team&p=crew"' in two and "A: x · M: y" in two   # several: Team → Crew, with their health
+    assert 'href="#/agents?v=team&p=crew"' in two and "A: x · M: y" in two   # several: Agents → Health and results
 
 
 def test_now_shows_work_in_progress_and_whats_next():
     html = run({"builds": [{"id": 2, "status": "working", "title": "Busy"}], "queue": [{"slug": "q", "status": "queued"}],
                 "missions": [{"slug": "q", "title": "Queued one", "type": "task", "status": "active", "next_run": "2026-10-29T06:30:00+01:00"}],
                 "claude_tasks": [{"id": 7, "status": "running", "question": "Why?\nmore"}]}, "nowHtml()")
-    for want in ('href="#/build/2"', "Queued one", "waits for the run slot", "Claude task #7", "Up next", "working"):
+    for want in ('href="#/build/2"', "Queued one", "waits for the run slot", "Claude question #7", "Up next", "working"):
         assert want in html, want
     assert "all quiet" in run({}, "nowHtml()")
 

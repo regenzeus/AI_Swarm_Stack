@@ -402,7 +402,7 @@ def test_a_requirement_file_change_creates_or_updates_its_artifact_and_a_violate
 def test_the_swarm_tabs_that_read_the_state_draw_again_when_it_first_arrives():
     js = webjs.app_js()
     body = js[js.index("function onState(s)"):][:1500]
-    assert 'route.name === "swarm" && ["improve", "agents"].includes(swTab)) return render(true)' in body   # FND-36
+    assert 'if (first && ["ideas", "agents"].includes(route.name)) return render(true);' in body   # FND-36: Ideas and Agents read S
     sw = (ROOT / "images/mission-control/web/static/swarm.js").read_text()
     assert 'swIdeas($("#swideas"));' in sw and "let swTab" in sw
 

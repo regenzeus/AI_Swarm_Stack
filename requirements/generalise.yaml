@@ -84,7 +84,7 @@ items:
     parents: [SN-05]
     sources: [docs/GENERALISATION.md, docs/PLATFORM.md]
     gap: 'A deployment is one folder, chosen per machine, and compose, the scripts and the timers follow it; the clean install from it has not been rehearsed, and the constraint values, model policy and data class are not in it yet.'
-    verify: {method: test, by: [tests/test_features.py::test_a_machine_runs_home_unless_it_names_another_deployment]}
+    verify: {method: test, by: [tests/test_features.py::test_a_machine_runs_the_platform_only_unless_it_names_a_deployment]}
     trace: [ops/deployment.py, deployments/AGENTS.md, ops/bootstrap-wsl-1-root.sh]
   - id: GEN-09
     title: Domains own their pages and routes
@@ -136,9 +136,9 @@ items:
     acceptance: 'Test: with a feature off its services, timers and pages are gone, its checks say not configured, and its scripts exit before any network call; home with every feature on behaves as before.'
     parents: [SN-05]
     sources: [docs/PLATFORM.md, DEC-45]
-    gap: 'The feature list, the compose profiles, the timers and the scripts of a feature follow it; the app''s pages and the health board''s checks do not yet (a check of a feature that is off still runs).'
-    verify: {method: test, by: [tests/test_features.py::test_a_feature_is_known_or_refused_and_core_is_always_on, tests/test_features.py::test_home_switches_every_feature_on_and_every_deployment_hands_its_features_to_compose, tests/test_features.py::test_each_service_of_a_feature_names_it_as_its_profile_and_core_has_none, tests/test_features.py::test_a_service_depends_only_on_what_its_deployments_start, tests/test_features.py::test_each_unit_names_a_known_feature_and_a_deployment_starts_only_its_timers, tests/test_features.py::test_a_script_of_a_feature_that_is_off_says_not_configured_before_any_network_call]}
-    trace: [ops/deployment.py, deployments/home/deployment.env, deployments/example-work/deployment.env, compose/apps.yaml, ops/deploy.py, ops/new-machine.sh, ops/ci-compose-check.sh]
+    gap: 'The feature list, the compose profiles (a container of a feature switched off is stopped by the deploy), the timers, the scripts, the crew jobs and their tasks and health items, the workflows (a file names its feature), the keys'' tool grants and the assistant''s prompt rules of a feature follow it; of the app''s pages only the AI phone''s do so far (PHN-28): the mail, House and tax pages still show when their feature is off.'
+    verify: {method: test, by: [tests/test_features.py::test_a_feature_is_known_or_refused_and_core_is_always_on, tests/test_features.py::test_home_switches_every_feature_on_and_every_deployment_hands_its_features_to_compose, tests/test_features.py::test_each_service_of_a_feature_names_it_as_its_profile_and_core_has_none, tests/test_features.py::test_a_service_depends_only_on_what_its_deployments_start, tests/test_features.py::test_each_unit_names_a_known_feature_and_a_deployment_starts_only_its_timers, tests/test_features.py::test_a_script_of_a_feature_that_is_off_says_not_configured_before_any_network_call, tests/test_phone_off.py::test_a_workflow_says_the_feature_of_its_crew_jobs_and_an_export_keeps_it, tests/test_phone_off.py::test_off_its_crew_jobs_are_gone_and_refused_and_on_they_are_back, tests/test_phone_off.py::test_off_the_gateway_grants_no_phone_tool_and_the_assistant_s_prompt_has_no_phone_rule]}
+    trace: [ops/deployment.py, deployments/home/deployment.env, deployments/example-work/deployment.env, compose/apps.yaml, ops/deploy.py, ops/new-machine.sh, ops/ci-compose-check.sh, ops/n8n_gen.py, ops/n8n_sync.py, ops/crew.py, ops/update-keys.py]
   - id: GEN-14
     title: Customer data stays in, by the network
     statement: In a deployment with an egress list, no container and no host-side process of the stack shall reach a host
@@ -639,3 +639,15 @@ items:
       by the check.'
     verify: {method: test, by: ['tests/test_features.py::test_the_ci_runner_is_its_own_feature_on_only_where_forgejo_is']}
     trace: [ops/deployment.py, compose/apps.yaml, deployments/home/deployment.env, docs/PLATFORM.md, images/ci-runner/AGENTS.md]
+  - id: GEN-48
+    title: Only home publishes to GitHub
+    statement: Only a deployment whose FEATURES switch publish on shall push the public snapshot or tag a release on
+      GitHub; any other deployment (a work site) shall be refused before a snapshot is built.
+    type: constraint
+    priority: must
+    status: implemented
+    acceptance: 'Test: a deployment without publish is refused by push and by release, and builds nothing; one with publish passes.'
+    parents: [SN-05]
+    sources: [docs/PLATFORM-DESIGN.md]
+    verify: {method: test, by: [tests/test_publish.py::test_only_a_deployment_that_switches_publish_on_pushes_to_github]}
+    trace: [ops/publish.py]

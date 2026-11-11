@@ -73,11 +73,16 @@ def workflows(repo=REPO, made=MADE, names=None):
     (names, default chosen(repo); ["*"] for every file), with the runner's newer word over it (the runner made it
     here, so it is always this deployment's). -> {id: {"wf", "file", "made"}}"""
     import fnmatch
+    import deployment as DEPLOY
     names = chosen(repo) if names is None else names
+    # PLT-44: of the stack's own folder only the files of a factory that runs here (home's never run without home);
+    # every file when all are asked for (["*"]: what to unpublish) or the folder is another (a test's)
+    mine_only = Path(repo).resolve() == REPO.resolve() and list(names) != ["*"]
     out = {}
     for src, folder in ((False, repo), (True, made)):
         for name, wf in _files(folder).items():
-            if wf.get("id") and (src or any(fnmatch.fnmatchcase(name.removesuffix(".json"), n) for n in names)):
+            if wf.get("id") and (src or (any(fnmatch.fnmatchcase(name.removesuffix(".json"), n) for n in names)
+                                         and (not mine_only or DEPLOY.owned(wf)))):
                 out[str(wf["id"])] = {"wf": wf, "file": name, "made": src}
     return out
 

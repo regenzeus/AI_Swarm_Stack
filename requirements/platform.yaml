@@ -531,7 +531,9 @@ items:
       to the running deployment's list, the app's workflows and schedules shall show only the chosen ones, a changed
       deployment folder shall start an import, and the deployment check shall refuse a listed name that matches no file.
       Home's list and tracker shall choose every workflow home ran before (28 jobs, the self-test, the tracker poller and
-      the inbox's item workflow); the example work deployment shall choose only the self-test and the tracker poller."
+      the inbox's item workflow); the example work deployment shall choose only the self-test and the tracker poller.
+      Since 11 Nov 2026 a workflow whose factory does not run at the site is left out too, whatever the list or a
+      pattern says (PLT-44, PLT-45)."
     type: functional
     priority: must
     status: implemented
@@ -591,7 +593,7 @@ items:
       35 s later."
     parents: [SN-13]
     sources: ['owner 2026-11-10: Yes, inbox repo']
-    verify: {method: test, by: ['tests/test_runner.py::test_a_pass_that_leaves_a_write_open_is_committed_and_named',
+    verify: {method: test, by: ['tests/test_events.py::test_an_event_seen_before_leaves_no_transaction_open', 'tests/test_runner.py::test_a_pass_that_leaves_a_write_open_is_committed_and_named',
       'tests/test_runner.py::test_every_loop_that_keeps_one_connection_rests_through_end_pass',
       'tests/test_runner.py::test_the_lock_report_names_each_connection_s_open_write',
       'tests/test_runner.py::test_the_title_repair_commits_what_it_changed']}
@@ -663,3 +665,112 @@ items:
       'tests/test_deploy_main.py::test_the_rollback_after_a_failed_update_tells_the_deploy_it_is_one',
       'tests/test_deploy_main.py::test_putting_back_touches_only_the_diffs_timers_and_says_what_it_cannot']}
     trace: [ops/deploy.py, ops/update.py]
+  - id: PLT-44
+    title: A site without home runs the platform only
+    statement: "A machine that names no deployment ($AISTACK_DEPLOYMENT, ~/.config/aistack/deployment) shall run
+      deployments/platform/, the platform only (the app, the engine and the platform's upkeep: FEATURES mission-control
+      and memory, no factory), never home; a deployment whose FEATURES do not name home shall run none of home's
+      workflows or jobs, whatever its workflows.yaml or a pattern names, and its check and doctor shall name each listed
+      one; a deploy on a machine that names no deployment shall be refused before any step. Home's compose
+      configuration and workflow selection shall stay as they were."
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-05, SN-09]
+    sources: [docs/PLATFORM.md, 'Phase A of the factory design, P3 (the owner, 11 Nov 2026): a fresh install runs the platform only']
+    rationale: 'Until 11 Nov 2026 "no deployment chosen" meant home with every feature on, so a site that forgot its name
+      ran the household. The home PC itself named none; it names home from this change on (a landing step).'
+    acceptance: 'Test: with nothing named, deployment.py runs platform, its workflows are the platform upkeep only and its
+      check passes; a site with mail and phone but without home runs neither the postmaster nor task-* nor the inbox
+      item workflow, and the doctor names the two listed ones; no home job is among its jobs; home chooses the 31
+      files it chose before; a deploy on a machine that names none is refused.'
+    verify: {method: test, by: ['tests/test_site_doctor.py::test_a_machine_that_names_no_deployment_runs_the_platform_only',
+      'tests/test_site_doctor.py::test_a_site_without_home_runs_none_of_homes_workflows_or_jobs_and_home_keeps_its_own',
+      'tests/test_site_doctor.py::test_home_chooses_exactly_what_it_chose_before_the_factories',
+      'tests/test_site_doctor.py::test_a_deploy_refuses_on_a_machine_that_names_no_deployment',
+      'tests/test_features.py::test_a_machine_runs_the_platform_only_unless_it_names_a_deployment']}
+    trace: [ops/deployment.py, ops/n8n_jobs.py, ops/deploy.py, ops/crew.py, deployments/platform/deployment.env,
+      deployments/platform/workflows.yaml, deployments/platform/models.yaml, deployments/platform/data.yaml,
+      deployments/platform/AGENTS.md, tests/conftest.py]
+  - id: PLT-45
+    title: Every workflow and job names its factory
+    statement: "Every workflow file of n8n/workflows/ and every job of ops/crew.py shall name its factory, platform or
+      home; the generic jobs (the ideas sync, the vault ingest, the skill curator, the trial rotation) shall be the
+      platform's, in the area upkeep; a new workflow shall get its factory from the generator (a job's own, otherwise
+      the site's), and a canvas export shall keep the file's factory; a file that names no factory shall run nowhere and
+      the check and the doctor shall name it."
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-05, SN-09]
+    sources: [docs/PLATFORM.md, 'The work side, 11 Nov 2026: home workflows showed on their site because nothing tagged them']
+    acceptance: 'Test: the lists of home jobs and platform jobs are exact and none is untagged; each crew workflow names
+      its job''s factory, the briefings, the tax desk and the inbox item workflow are home''s; an untagged file and one
+      naming an unknown factory are named and run nowhere; the generator and an export carry the factory.'
+    verify: {method: test, by: ['tests/test_site_doctor.py::test_every_job_and_workflow_names_its_factory_and_the_lists_say_which',
+      'tests/test_site_doctor.py::test_a_workflow_no_factory_owns_runs_nowhere_and_is_named',
+      'tests/test_site_doctor.py::test_new_workflows_and_exports_carry_their_factory']}
+    trace: [ops/crew.py, ops/n8n_gen.py, ops/n8n_sync.py, ops/deployment.py, n8n/workflows/AGENTS.md]
+  - id: PLT-46
+    title: The doctor names why a site does not run as its deployment says, and the deploy fails on it
+    statement: "python3 ops/deployment.py doctor (--json for stack doctor) shall fail, naming each reason: a value a
+      switched-on feature needs, a listed workflow that does not exist or whose factory does not run, a refused factory
+      switched on, a workflow file no factory owns, a pack the trackers need that packs.txt does not list or no packs.txt
+      at all, a pack not approved at its pinned commit or refused, a pack's override of a standard workflow whose
+      template version changed since it was last checked, a workflow not imported or not published in n8n as the
+      deployment says or published though the deployment does not run it, and a dead or stale runner (the runner's
+      service, the CI runner where forgejo-ci is on, the wsl-host and Windows workers' status older than a minute, a
+      request waiting at the wsl place without an answering worker), and /mnt/c mounted or holding what was written there
+      from WSL, named with its deepest path, owner and time (the smoke test names it the same way). ops/deploy.py shall run it after its checks and
+      fail (exit 1, the usual revert) when it fails; every deploy shall install the stack command line (stack doctor runs
+      this doctor) once ops/stack_cli.py exists."
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-05, SN-13]
+    sources: [docs/PLATFORM.md, 'The work side, 11 Nov 2026: no packs file and nothing warned; a dead runner went unnoticed']
+    acceptance: 'Test: each reason is named in its words with stand-ins for n8n, systemd and docker; a Windows worker that
+      never answered is a note; home''s files give no problem; a broken site gets its refusal, its home workflow and its
+      missing packs.txt named; the deploy runs the doctor after the smoke test and fails when it fails; the override
+      check names a changed and a missing template.'
+    verify: {method: test, by: ['tests/test_site_doctor.py::test_the_doctor_names_a_missing_packs_file_a_pack_not_listed_and_one_not_approved_at_its_pin',
+      'tests/test_site_doctor.py::test_the_doctor_names_a_dead_runner_a_stale_worker_and_a_stopped_ci_runner',
+      'tests/test_site_doctor.py::test_the_doctor_names_what_was_written_into_the_windows_drive_folder_with_its_owner_and_time',
+      'tests/test_site_doctor.py::test_the_doctor_names_workflows_not_imported_or_published_as_the_deployment_says',
+      'tests/test_site_doctor.py::test_an_override_whose_standard_workflow_changed_since_its_check_is_named',
+      'tests/test_site_doctor.py::test_the_doctor_of_home_from_its_files_finds_nothing_and_of_a_broken_site_names_every_reason',
+      'tests/test_site_doctor.py::test_the_deploy_runs_the_doctor_last_and_a_failing_doctor_fails_it']}
+    trace: [ops/deployment.py, ops/deploy.py, deployments/AGENTS.md, docs/PLATFORM.md, smoke/smoke.sh]
+  - id: PLT-47
+    title: A site refuses a factory by a generic setting
+    statement: "REFUSE=<factory or pack> in a deployment.env shall keep that factory off for good: FEATURES shall not
+      switch it on, a pack of that name shall be refused before it is fetched, deployment.py need shall answer refused
+      so the factory's scripts stop, and a deploy whose FEATURES name it shall be refused before any step; the messages
+      shall name only the factory and the setting. It replaces a site's private marker file: nothing in the repository
+      names a site, a company or a product."
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-05]
+    sources: [docs/PLATFORM.md, 'The work side, 11 Nov 2026: their site refused home through a private marker file whose messages named their company']
+    acceptance: 'Test: FEATURES with home and REFUSE=home leave home off and the check names it; need home answers the
+      generic refusal; REFUSE=platform is named; a refused pack is refused by name before any fetch.'
+    verify: {method: test, by: ['tests/test_site_doctor.py::test_a_refused_factory_never_switches_on_and_its_scripts_and_the_deploy_refuse',
+      'tests/test_site_doctor.py::test_a_refused_pack_is_refused_by_name_before_it_is_fetched']}
+    trace: [ops/deployment.py, ops/domain/packs.py, ops/deploy.py, deployments/example-work/deployment.env]
+  - id: PLT-48
+    title: Every deployment folder opens with the site's rule
+    statement: "Every deployment folder's AGENTS.md shall open, right under its title, with the site's rule: all work is
+      a workflow run; people act through Asks; a change to a factory is a commit to its pack, approved before it is used;
+      never edit files on a site by hand, use stack. python3 ops/deployment.py new <name|path> shall make a new
+      deployment folder from deployments/platform/ with that AGENTS.md, and refuse a folder that holds files."
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-05]
+    sources: ['Phase A of the factory design, P3 (the owner, 11 Nov 2026): agents on a site had no way in except editing files']
+    acceptance: 'Test: home, example-work and platform open with the rule; a new folder gets the platform''s files, the
+      rule and its own name, and its doctor finds nothing; a folder with files and a bad name are refused.'
+    verify: {method: test, by: ['tests/test_site_doctor.py::test_every_deployment_folder_opens_with_the_sites_rule_and_a_new_one_gets_it']}
+    trace: [ops/deployment.py, deployments/AGENTS.md, deployments/home/AGENTS.md, deployments/example-work/AGENTS.md,
+      deployments/platform/AGENTS.md, AGENTS.md]

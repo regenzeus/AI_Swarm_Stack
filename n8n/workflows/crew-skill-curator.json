@@ -1,6 +1,6 @@
 {
   "active": true,
-  "area": "memory",
+  "area": "upkeep",
   "connections": {
     "On its schedule (0 4 * * 0)": {
       "main": [
@@ -25,6 +25,8 @@
       ]
     }
   },
+  "factory": "platform",
+  "feature": "memory",
   "id": "aisc59aa71067c22",
   "name": "Crew: Skill curator",
   "nodes": [

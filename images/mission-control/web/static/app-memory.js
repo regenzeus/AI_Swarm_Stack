@@ -1,12 +1,12 @@
 // The app, part of app-base.js, app-tasks.js, app-runs.js, app-devices.js, app-wiki-code.js, app-memory.js, app-workflows.js, app.js (PLT-25): Memory, skills, Claude tasks and the repository page. Loaded in that order; one global scope.
 // ---------- Memory (APP-50): what the stack knows and can look up. Each kind of knowledge has one home ----------
 const MEM_TABS = [["memory", "#/memory", "All"], ["wiki", "#/wiki", "Wikis"], ["longterm", "#/longterm", "Long-term"], ["codemem", "#/codemem", "Code"], ["howto", "#/howto", "How-to"], ["journals", "#/journals", "Journals"]];
-const MEM_HOW = `<ol class="memflow">${[["Before a run", "An agent is subscribed to the memory its role needs. Its opening is chosen for its task from those, within a budget; what does not fit is listed so it can open it, and other memory that matches is offered."],
+const MEM_HOW = `<ol class="memflow">${[["Before a run", "An agent is subscribed to the memory its role needs. Its opening is chosen for its step from those, within a budget; what does not fit is listed so it can open it, and other memory that matches is offered."],
   ["During a run", "One memory tool: search everything it may read, open one entry, subscribe to more, note a lesson, fact or failure. A coder gets a note on each file the first time it reads it."],
   ["After a run", "What it was given and what it used are measured. Its notes and results enter memory only after a check, each with its Undo."],
   ["Every night and week", "The memory agent retires duplicates, settles your facts by date, moves what is not about you to the wikis, splits wikis that grew too big and turns repeated work into lessons and skills. Nothing is deleted."]].map(([t, d]) => `<li><b>${t}</b><span>${d}</span></li>`).join("")}</ol>`;
 function memFrame(cur) {
-  return `<div class="hero heading" style="margin-bottom:10px"><div class="row between" style="gap:10px"><h1>Memory</h1>${how("knowledge")}</div></div>
+  return `<a class="back" href="#/agents">${ic.back}Agents</a><div class="hero heading" style="margin-bottom:10px"><div class="row between" style="gap:10px"><h1>What agents know</h1>${how("knowledge")}</div></div>
     <form class="wsearch memsearch" id="memq">${ic.search}<input class="input" name="q" autocomplete="off" placeholder="What does it know about…" value="${esc(route.name === "memsearch" ? route.q.get("q") || "" : "")}"></form>
     <nav class="seg memtabs" aria-label="Kinds of memory">${MEM_TABS.map(([k, h, l]) => `<a class="${cur === k ? "on" : ""}" href="${h}">${l}</a>`).join("")}</nav>
     ${explain("memory-how", MEM_HOW, "How memory reaches an agent")}`;
@@ -20,7 +20,7 @@ function bindMemFrame() {
 const FACT_KIND = { world: "Fact", experience: "Something that happened", observation: "Drawn from several" };
 const factSource = (f) => (f.chat ? `<a class="memfrom" href="#/chat?c=${encodeURIComponent(f.chat)}">from a chat ${ic.next}</a>` : f.source === "agent journal" ? `<span class="tiny faint">from an agent's journal</span>` : f.type === "observation" ? `<span class="tiny faint">from other facts</span>` : `<span class="tiny faint">source not recorded</span>`);
 const factRow = (f, tools = true) => `<div class="memfact" data-fact="${esc(f.id)}"><div class="row wrap" style="gap:6px"><span class="tag">${esc(FACT_KIND[f.type] || f.type)}</span><span class="tiny faint">${esc(f.date)}</span>${factSource(f)}</div>
-  <div class="small wrap" style="margin-top:4px">${esc(f.text)}</div>${(f.entities || []).length ? `<div class="tiny faint wrap" style="margin-top:3px">${f.entities.map(esc).join(" · ")}</div>` : ""}
+  <div class="small wrap" style="margin-top:4px">${esc(youText(f.text))}</div>${(f.entities || []).length ? `<div class="tiny faint wrap" style="margin-top:3px">${f.entities.map((e) => esc(youText(e))).join(" · ")}</div>` : ""}
   ${tools ? `<button type="button" class="linkbtn tiny" data-forget="${esc(f.id)}">Forget</button>` : ""}</div>`;
 let ltShow = "all";
 async function vLongTerm() {
@@ -74,12 +74,12 @@ const SECTOR_HREF = (c) => {
   if (id === "howto:skills") return "#/skills";
   if (id.startsWith("howto:lessons/")) return `#/howto?role=${encodeURIComponent(id.slice(14))}`;
   if (id.startsWith("agent:")) return journalHref(id.slice(6));
-  if (id === "work:ledger") return "#/tasks?v=ideas";
+  if (id === "work:ledger") return "#/ideas";
   return "#/memory";
 };
 const TRUST_WORD = { exact: "exact record", compiled: "compiled from sources", extracted: "extracted by a model" };
-const ACCESS_WORD = { private: "private: its mission only", own: "its agent only", owner: "you; matched recall for agents" };
-const KIND_WORD = { code: "Coding steps", review: "Review steps", mission: "Missions", crew: "Crew jobs", task: "Other steps" };
+const ACCESS_WORD = { private: "private: its workflow only", own: "its agent only", owner: "you; agents recall what fits their question" };
+const KIND_WORD = { code: "Coding steps", review: "Review steps", mission: "Briefings and research", crew: "Scheduled jobs", task: "Other steps" };
 function memStatusHtml(st) {
   const h = st?.health || {}, kinds = Object.keys(h);
   if (!kinds.length) return `<div class="tiny faint" style="margin-bottom:12px">Given and used are measured from the first runs after this memory went live.</div>`;
@@ -317,9 +317,9 @@ function ctRow(t) {
 }
 document.addEventListener("click", async (e) => {                     // TSK-46: withdraw a Claude task (the list is redrawn live)
   const b = e.target.closest("[data-ctcancel]");
-  if (!b || !confirm(`Cancel Claude task #${b.dataset.ctcancel}? A running one stops at its next step.`)) return;
+  if (!b || !confirm(`Cancel Claude question #${b.dataset.ctcancel}? A running one stops at its next step.`)) return;
   b.disabled = true;
-  await act({ action: "claude_cancel", id: +b.dataset.ctcancel }, (r) => (r?.cancelled ? `Claude task #${b.dataset.ctcancel} cancelled` : "It had already ended"));
+  await act({ action: "claude_cancel", id: +b.dataset.ctcancel }, (r) => (r?.cancelled ? `Claude question #${b.dataset.ctcancel} cancelled` : "It had already ended"));
 });
 // an answer in JSON (the Health doctor's diagnoses) is shown as findings, any other as Markdown; nothing is left out
 function ctAnswer(a) {
@@ -764,7 +764,7 @@ function repoOverviewHtml(name, r, bs) {
   ${bs.some((b) => b.status === "review") ? `<div class="section"><div class="section-h"><h2>Waiting for you</h2></div><div class="card list waiting">${bs.filter((b) => b.status === "review").map(buildRow).join("")}</div></div>` : ""}
   ${r.buildable ? `<details class="card pad-l section" id="rchange"><summary><b>Request a change</b></summary>
     <form id="rchform" class="stack" style="margin-top:10px"><textarea class="input" name="text" rows="3" required minlength="8" placeholder="What should change"></textarea>
-      <div class="row between wrap" style="gap:8px">${explain("request-a-change-", "The swarm writes a specification, then tests and code in this repository's way, checks them against the suite as it was before, and comes back with one branch, the evidence and a pull request. A medium or large change waits for your Go on the specification. Nothing lands without your tap.", "How a change request works")}<button class="btn primary sm">${ic.rocket}Send</button></div></form></details>` : ""}
+      <div class="row between wrap" style="gap:8px">${explain("request-a-change-", "The agents write a specification, then tests and code in this repository's way, check them against the suite as it was before, and come back with one branch, the evidence and a pull request. A medium or large change waits for your Go on the specification. Nothing lands without your tap.", "How a change request works")}<button class="btn primary sm">${ic.rocket}Send</button></div></form></details>` : ""}
   <div id="ronboard">${onboardHtml(r)}</div>
   <div class="grid g2 g4 section">
     <div class="card kpi" data-href="${mapHref}"><div class="kpi-l">Code graph</div><div class="kpi-v">${g ? nf(g.nodes) : "–"}</div><div class="kpi-s">${g ? `${nf(g.links)} links · ${g.communities} groups` : r.no_code ? "no code to graph" : "not built yet"}</div></div>
@@ -917,8 +917,8 @@ function planHtml(b) {
   const lease = (S.swarm?.leases || []).filter((l) => l.holder === `build:${b.id}`);
   const board = [...(S.swarm?.board?.open || []), ...(S.swarm?.board?.recent || [])];   // builds from before phase 4: the Ledger's ref
   const idea = b.idea || board.find((x) => (x.refs || []).some((r) => r.system === "build" && r.ref === String(b.id)))?.id;
-  return `<div class="card pad-l" id="bplan"><h2>Plan, files and blast radius</h2>
-    <div class="small" style="margin-top:8px">${b.task ? `Task <a href="#/swarm/artifact/${b.task}">#${b.task}</a> of idea <a href="#/swarm/artifact/${idea}">#${idea}</a>` : idea ? `For idea <a href="#/swarm/artifact/${idea}">#${idea}</a>` : "A direct assignment (no idea behind it)"}${b.note ? ` · ${esc(b.note)}` : ""}${b.slot ? ` · slot ${b.slot}` : ""}${b.queue_pos ? ` · <b>merge queue: ${b.queue_pos === 1 ? "next" : "#" + b.queue_pos}</b>` : ""}</div>
+  return `<div class="card pad-l" id="bplan"><h2>Steps, files and blast radius</h2>
+    <div class="small" style="margin-top:8px">${b.task ? `Part <a href="#/swarm/artifact/${b.task}">#${b.task}</a> of idea <a href="#/swarm/artifact/${idea}">#${idea}</a>` : idea ? `For idea <a href="#/swarm/artifact/${idea}">#${idea}</a>` : "A direct assignment (no idea behind it)"}${b.note ? ` · ${esc(b.note)}` : ""}${b.slot ? ` · slot ${b.slot}` : ""}${b.queue_pos ? ` · <b>merge queue: ${b.queue_pos === 1 ? "next" : "#" + b.queue_pos}</b>` : ""}</div>
     ${b.files_plan?.length ? `<div class="tiny faint" style="margin-top:6px">Its files: ${b.files_plan.map((f) => `<span class="mono">${esc(f)}</span>`).join(", ")}${lease.length ? " · held for this build" : ""}</div>` : ""}
     ${b.proof ? `<details class="tools" style="margin-top:8px" ${/NOT PROVEN/.test(b.proof) ? "open" : ""}><summary>Requirements it names: ${b.requirements?.length ? b.requirements.map(esc).join(", ") : "none"} · ${/REQUIREMENTS PROVEN/.test(b.proof) ? "proven" : "not proven"}</summary><div class="log">${esc(b.proof)}</div></details>` : ""}
     <div id="bblast" style="margin-top:10px"><div class="small muted">Loading the blast radius…</div></div></div>`;
@@ -926,7 +926,7 @@ function planHtml(b) {
 function blastHtml(ctx) {
   const p = ctx?.changed?.files && Object.keys(ctx.changed.files).length ? ctx.changed : ctx?.planned;
   if (!p?.files || !Object.keys(p.files).length) return `<div class="small muted">No blast radius yet (it is drawn from the files a build names or changes).</div>`;
-  return `<div class="tiny faint">${p === ctx.changed ? "Of the files it changed" : "Of the files it plans to change"}, from the code graph of main:</div><div class="list" style="margin-top:4px">${Object.entries(p.files).map(([f, d]) => `<div style="padding:6px 2px;display:block">
+  return `<div class="tiny faint">${p === ctx.changed ? "Of the files it changed" : "Of the files it means to change"}, from the code graph of main:</div><div class="list" style="margin-top:4px">${Object.entries(p.files).map(([f, d]) => `<div style="padding:6px 2px;display:block">
     <div class="mono small">${esc(f)}</div><div class="tiny faint">${d.callers.length ? `used by ${d.callers.map(esc).join(", ")}${d.more_callers ? ` +${d.more_callers}` : ""}` : "no callers in the graph"}${d.callees.length ? ` · uses ${d.callees.map(esc).join(", ")}` : ""}</div>
     <div class="tiny">tests: ${d.tests.length ? d.tests.map(esc).join(", ") : "<b>none found</b>"}${d.requirements.length ? ` · requirements: ${d.requirements.map(esc).join(", ")}` : ""}</div></div>`).join("")}</div>`;
 }

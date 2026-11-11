@@ -45,7 +45,12 @@ for r in ai-stack vault hermes-skills; do
   git ls-remote "forgejo:${FORGEJO_USER:-$FORGEJO_OWNER}/$r.git" >/dev/null 2>&1 && ok "Forgejo repo $r reachable" || bad "Forgejo repo $r"
 done
 
-[ -z "$(ls -A /mnt/c 2>/dev/null)" ] && ok "Windows drives not auto-mounted" || bad "automount still on"
+# DEC-43: no Windows drive in WSL. A drive there is automount on; a folder there is something that wrote to /mnt/c from
+# WSL by mistake (it never reaches Windows), named with its owner and time so the cause shows at once (11 Nov 2026)
+if grep -qs " /mnt/c " /proc/mounts; then bad "automount still on" "/mnt/c is a mounted Windows drive"
+elif [ -n "$(ls -A /mnt/c 2>/dev/null)" ]; then
+  bad "/mnt/c holds what something wrote there from WSL" "$(find /mnt/c -mindepth 1 -printf '%d %p (made by %u, %TY-%Tm-%Td %TH:%TM)\n' 2>/dev/null | sort -n | tail -n 1 | cut -d' ' -f2-); remove it"
+else ok "Windows drives not auto-mounted"; fi
 # single sign-in: the Hermes dashboard gate refuses anything without the Tailscale identity header, lets it in with it
 g=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:9119/); gi=$(curl -s -o /dev/null -w "%{http_code}" -H "Tailscale-User-Login: smoke@test" http://127.0.0.1:9119/)
 [ "$g" = 403 ] && [ "$gi" != 403 ] && [ "$gi" != 000 ] && ok "dashboard gate: no Tailscale login refused, with it let in" || bad "dashboard gate" "without login HTTP $g, with login HTTP $gi"

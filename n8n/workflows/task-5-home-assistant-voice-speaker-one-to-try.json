@@ -25,6 +25,7 @@
       ]
     }
   },
+  "factory": "home",
   "id": "aist238e0bb5aa21",
   "name": "Task #5: Home Assistant Voice speaker (one to try)",
   "nodes": [

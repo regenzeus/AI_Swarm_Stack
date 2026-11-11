@@ -6,6 +6,12 @@ LiteLLM (`mcp_servers.phone`, granted to `vk-main` in `ops/keys.sh`): `phone_loo
 `phone_swipe`, `phone_key`, `phone_open`, `phone_url`, `phone_apps`, `phone_done`, `phone_storage` and `phone_apps_report` (read-only cleanup facts: sizes, counts, dates, never file contents; also run by `ops/cleanup.py`), `phone_files` (biggest files and old data by year: names, sizes, dates; the S22 is no longer the owner's private phone), `phone_delete` (a file or folder on /sdcard, optionally only files older than N days; the approval shows files, size and dates), `phone_uninstall` and `phone_trim_caches` (each asks the owner every time, even inside his time window, like spending money; never blocked or system apps) (a summary to Telegram
 via the host runner, `done/`).
 
+It is home's, not the platform's: the feature `phone` of a deployment's `FEATURES` (GEN-13), which home chooses. A site
+that leaves it out sees nothing of it (PHN-28; the owner, 11 Nov 2026: "I still want AI Stack to be able to use it but I
+do not want to read anything about it if home example deployment is shut off"): no container, crew jobs or workflows, no
+`vk-main` grant, no phone rule for the assistant, no page of it in the app, and its waiting questions are dismissed.
+Nothing here is deleted; `phone` in `FEATURES` and a deploy bring it all back.
+
 Shared folder `/srv/ai/phone` (`/phone` here and in Mission Control): `state.json`, `pending/` (approval
 requests), `decisions/` and `control/` (written by Mission Control: the owner's answers, pair/connect requests),
 `STOP`, `log.jsonl`, `shots/`, `blocklist.txt`, `home/.android` (the ADB pairing key, this user only).

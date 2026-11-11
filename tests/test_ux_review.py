@@ -45,7 +45,7 @@ def test_the_home_feed_filters_by_kind_and_each_card_names_its_kind():
     """APP-38: the stack's own work left Home (it was there under its chips); the results filter by what they are."""
     assert 'let homeFilter = "all"' in APP
     js = "\n".join(["let homeFilter = 'all', homeShow = 40; const homeEx = new Map(); const ic = new Proxy({}, {get: () => '<svg></svg>'});",
-        "const esc = (s) => String(s ?? '');", "const toIso = (x) => x, dayOf = () => 'Today', clockOf = () => '10:00';",
+        "const esc = (s) => String(s ?? '');", "const toIso = (x) => x, dayOf = () => 'Today', clockOf = () => '10:00', oneLine = (s) => String(s), youText = (s) => String(s);",
         re.search(r"^const RKIND = .*?;$", APP, re.M | re.S)[0],
         "const items = [{ ts: '3', kind: 'briefing', agent: 'Copper', head: 'the briefing', href: '#' }, { ts: '2', kind: 'alert', agent: 'Task #113', head: 'the alert', href: '#' },",
         "  { ts: '1', kind: 'failed', agent: 'Task #121', head: 'did not finish', tone: 'err', href: '#' }];",

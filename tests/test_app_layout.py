@@ -32,16 +32,16 @@ def test_an_icon_in_text_is_one_line_high_and_no_page_has_an_app_top_bar():
 
 
 def test_the_swarm_s_views_are_under_agents_on_every_screen():
-    """Since 8 Nov 2026 (DEC-46) the agents' views are views of the Tasks tab, which lights up on every page of a task,
-    a mission, a crew duty, an agent and the old addresses."""
-    assert '["swarm", "#/swarm"' not in JS                                              # no section of its own, hidden on a phone
-    assert '(k === "tasks" && ["task", "mission", "crew", "new", "swarm", "missions", "trials"].includes(route.name))' in JS
-    assert '(k === "home" && route.name === "decide")' in JS                             # decided on Home (AUT-05)
-    assert '"read", "swarm"' not in JS                    # a result opened from the Wiki or Home is no Agents page (FND-95)
-    views = re.search(r"^const TVIEWS = .*?;$", JS, re.M | re.S)[0]
-    for label in ("Tasks", "Activity", "Team", "Network", "Ideas"):
+    """APP-69: the agents' views are parts of the six places: the agents, their health and results and who works with
+    whom on Agents (with what agents know one tap away), Activity on Home, the proposals on Improve."""
+    assert '["swarm", "#/swarm"' not in JS and '"read", "swarm"' not in JS               # no section of its own (FND-95)
+    place = re.search(r"^const NAV_OF = \{.*?\};", JS, re.M | re.S)[0]
+    assert '"swarm"' in place.split("agents:")[1].split("improve:")[0] and '"decide"' in place.split("workflows:")[0]   # decided on Home (AUT-05)
+    views = re.search(r"^const AGENT_VIEWS = .*?;$", JS, re.M | re.S)[0]
+    for label in ("Agents", "Health and results", "Who works with whom"):
         assert f'"{label}"]' in views
-    assert "async function swRender(body, tab" in SWARM and "<h1>Agents</h1>" not in SWARM and "<h1>Tasks</h1>" in JS
+    assert '["#/memory", "What agents know"]' in JS and 'swRender(b, "agents")' in JS and 'swRender($("#tvsw"), "activity")' in JS
+    assert "async function swRender(body, tab" in SWARM and "<h1>Agents</h1>" not in SWARM and "<h1>Agents</h1>" in JS
 
 
 def test_new_chat_starts_afresh_and_attaching_is_a_clip():
@@ -79,13 +79,13 @@ def test_a_crew_agent_s_claude_task_is_named_after_it_and_keeps_its_whole_questi
 
 
 def test_every_idea_is_in_one_list_under_agents():
-    assert '["ideas", "Ideas"]' in JS and 'swRender(b, "improve"' in JS and "function proposalsHtml" not in JS and "The stack suggests" not in JS
+    assert "function vIdeas()" in JS and 'swRender($("#tvbody"), "improve"' in JS   # Ideas, a page of Code (APP-83) and "function proposalsHtml" not in JS and "The stack suggests" not in JS
     ideas = SWARM[SWARM.index("function swIdeas(body, quiet) {"):SWARM.index("// the numbers behind the improvement loop")]
     assert "stackIdeaCard(p, n)" in ideas and "change(a)" in ideas and "ideaRulesHtml()" in ideas and "Decided lately" in ideas
     assert '[["all", "All"], ["stack", "The stack"], ["agent", "The agents"]]' in ideas
     assert ideas.index("changesOpen.filter(passed)") < ideas.index("(b.open || []).map((p, n)") < ideas.index("changesOpen.filter((a) => !passed(a))")
     assert "function swImprove" not in SWARM and "${swLoopNumbers()}" in SWARM                   # its numbers are under Flow
-    assert JS.count('href="#/tasks?v=ideas"') >= 2 and "ideasWaiting()" in JS   # Code only links to it; Home's count row comes from the queue (GEN-02)
+    assert JS.count('href="#/ideas"') >= 2 and "ideasWaiting()" in JS   # Code only links to it; Home's count row comes from the queue (GEN-02)
 
 
 def test_the_phone_chat_is_pinned_to_the_screen_and_the_title_has_its_own_width():
@@ -170,8 +170,8 @@ def test_an_agent_s_own_sentence_shows_dates_the_app_s_way_and_quotes_as_quotes(
     left it threw; a task's run picker scrolled the phone sideways."""
     app = webjs.app_js() + (STATIC / "task.js").read_text()
     assert "const prose = (text) => esc(String(text ?? \"\")).replace(ISO_IN_TEXT" in app and '<q class="quote">$1</q>' in app
-    for spot in ('<div class="tiny faint psig">${ic.radar}${prose(p.signal || "")}', '<div class="sub wrap">${prose(d.why)}</div>',
-                 '<div class="fi-x small muted wrap">${prose(x.sub)}</div>', '<div class="sub">${prose(r.text || "")}</div>',
+    for spot in ('<div class="tiny faint psig">${ic.radar}${prose(p.signal || "")}', '<div>${prose(youText(a.why))}</div>',
+                 '<div class="fi-x small muted wrap">${prose(oneLine(x.sub, 200))}</div>', '<div class="sub">${prose(r.text || "")}</div>',
                  '<div class="small muted agwhat">${prose(t.goal)}</div>', '${prose(i.text)}</div>'):
         assert spot in app, spot
     assert 'const d = $("#doc"); if (d) d.textContent = "Not readable.";' in app

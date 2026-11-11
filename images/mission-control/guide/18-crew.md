@@ -14,7 +14,7 @@ agent's.
 
 ```try
 label: Meet the crew
-open: "#/tasks?v=team&p=crew"
+open: "#/agents?v=team&p=crew"
 note: A red edge means its last run failed: open it and look at Now or History. Amber counts memories waiting for you.
 ```
 
@@ -99,12 +99,12 @@ each repository's page.
 Every 6 hours, and within minutes of a new alert (at most once every 30 minutes), the **Health doctor** looks at
 every open issue. For each one it gathers the evidence: the run's record, the runner's journal, the Docker logs
 and the gateway's failed calls around that time (keys and tokens are blanked out), and where in the code the
-detector that raised it lives. Then Claude Code, read-only on a copy of the code, diagnoses every issue, sceptical
-first: is this **expected** (the deploy's smoke test is refused on purpose), **noise** (the detector fires on
+check that raised it lives. Then Claude Code, read-only on a copy of the code, diagnoses every issue, sceptical
+first: is this **expected** (the deploy's smoke test is refused on purpose), **noise** (the check fires on
 something harmless), **external** (a usage limit, a website timing out) or a **real** fault?
 
 - **Real fault**: an idea under *Tasks → Ideas*, ready to build: numbered steps, the files, the test.
-- **Noise or expected**: an idea to tune the detector, and a **Seen** button next to the finding. The
+- **Noise or expected**: an idea to tune the check, and a **Seen** button next to the finding. The
   next run that meets the same issue adds to that idea instead of proposing it again.
 - **External**: explained, nothing to build.
 

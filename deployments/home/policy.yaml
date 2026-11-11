@@ -1,0 +1,5 @@
+# deployments/home/policy.yaml: what the home deployment changes of the stack's policy (config/policy.yaml, ASK-01).
+# Home has one person: every role is the owner's (no roles.yaml here). Its Asks reach the app, the task's ticket on
+# home's Forgejo inbox and Telegram.
+channels: [app, ticket, telegram]
+tickets: {tracker: inbox}

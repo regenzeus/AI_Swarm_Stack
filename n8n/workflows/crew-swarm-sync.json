@@ -25,6 +25,7 @@
       ]
     }
   },
+  "factory": "platform",
   "id": "aisc33b90ad7380d",
   "name": "Crew: Swarm sync",
   "nodes": [

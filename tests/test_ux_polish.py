@@ -32,10 +32,10 @@ def test_the_stack_page_shows_one_part_at_a_time_and_jobs_carry_their_names():
 
 
 def test_the_agents_and_wiki_pages_lead_with_their_lists():
-    """APP-47: the map stood 1,300 pixels above the missions and 900 above the wikis. The Tasks tab opens on its list;
-    the team map is under Network → Agents together (8 Nov 2026)."""
-    tasks = re.search(r"^function tasksBodyHtml\(\).*?^\}$", APP, re.M | re.S)[0]
-    assert "ovmap" not in tasks and '["team", "Agents together"]' in APP
+    """APP-47: the map stood 1,300 pixels above the missions and 900 above the wikis. Workflows opens on its list; the
+    team map is under Agents → Who works with whom → Agents together."""
+    wf = re.search(r"^async function vWorkflows\(\).*?^\}$", APP, re.M | re.S)[0]
+    assert "ovmap" not in wf and wf.index('id="wflist"') < wf.index("wfTriggersHtml()") and '["team", "Agents together"]' in APP
     swarm = (ROOT / "images/mission-control/web/static/swarm.js").read_text()
     assert 'tab === "map"' in swarm and '<div id="ovmap">' in swarm
     wiki = re.search(r"^function wikiIndex\(\).*?^\}$", APP, re.M | re.S)[0]

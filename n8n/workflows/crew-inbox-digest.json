@@ -25,6 +25,8 @@
       ]
     }
   },
+  "factory": "home",
+  "feature": "mail",
   "id": "aisc8ebfeb9cc8ef",
   "name": "Crew: Inbox digest",
   "nodes": [

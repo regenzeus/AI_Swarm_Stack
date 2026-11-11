@@ -25,6 +25,7 @@
       ]
     }
   },
+  "factory": "platform",
   "id": "aisc96a4ea15a47b",
   "name": "Crew: Editor",
   "nodes": [

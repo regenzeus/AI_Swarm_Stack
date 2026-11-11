@@ -1,0 +1,348 @@
+# Asks: everything that waits for a person, one durable kind of question, under a policy of tiers, standing rules,
+# roles and human-only gates (docs/ASKS.md; the owner, 11 Nov 2026: "Yes build it. Best practise. Robust durable
+# interaction system.").
+area: Asks
+prefix: ASK
+items:
+  - id: ASK-01
+    title: Every question for a person is an Ask in one durable store
+    statement: The Ask store shall keep every Ask and every answer in its own SQLite store under /srv/ai/asks (write-ahead
+      log, each write committed whole), open each Ask once per source key, keep an answer by its answer id so that the
+      same answer again changes nothing, hold a person's answer for 15 s with a one-tap undo before the stack acts on it,
+      and reopen the Ask with the reason when its source refuses the answer.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-02, SN-09]
+    sources: [docs/ASKS.md]
+    acceptance: 'Test: an Ask opened twice by its source is one Ask; an answer read back by a second connection after a
+      restart is there; the same answer id twice is applied once; an undo within the hold stops it; a refusal reopens it
+      with the reason.'
+    verify: {method: test, by: ['tests/test_asks.py::test_an_ask_and_its_answer_survive_a_restart_and_an_answer_id_applies_once',
+      'tests/test_asks.py::test_an_answer_is_held_for_its_undo_then_applied_and_a_refusal_reopens_it']}
+    trace: [ops/asks.py, ops/missions.py, ops/missions.requests.py]
+  - id: ASK-02
+    title: Every kind of action has a tier
+    statement: Every kind of action the stack can take shall have a tier (do, tell, ask or never) from config/policy.yaml,
+      overridden by the deployment's policy.yaml and by the owner's standing rules; a do or tell tier acts at once with an
+      undo record (what, how to undo, until when), tell adds one line to the activity, ask opens an Ask, and never refuses.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-02, SN-05]
+    sources: [docs/ASKS.md]
+    acceptance: 'Test: the same kind at each tier asks, acts or refuses; do and tell leave an undo record that undoes it
+      through its source; home and the example work deployment override the stack defaults.'
+    verify: {method: test, by: ['tests/test_asks.py::test_tiers_do_and_tell_act_with_an_undo_record_ask_asks_never_refuses',
+      'tests/test_asks.py::test_the_stack_policy_names_a_tier_for_every_action_kind_and_a_deployment_overrides_it']}
+    trace: [ops/asks.py, config/policy.yaml, deployments/home/policy.yaml, deployments/example-work/policy.yaml]
+  - id: ASK-03
+    title: Answers become standing rules
+    statement: The owner shall be able to make a standing rule from an answer ("Yes, and always for this kind") or on the
+      policy page, which allows a kind (under a limit on one of its facts) or answers it with a default; each rule says
+      who made it and when, and can be removed.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-02]
+    sources: [docs/ASKS.md]
+    acceptance: 'Test: a rule under 1 GB answers the small Ask and leaves the big one waiting; it names who made it; an
+      answer with always makes one; removing it asks again.'
+    verify: {method: test, by: ['tests/test_asks.py::test_a_standing_rule_answers_its_kind_under_its_limit_and_says_who_made_it']}
+    trace: [ops/asks.py]
+  - id: ASK-04
+    title: An answer names the signed-in person and their role
+    statement: An answer shall record the person from the app's sign-in (never from the page), their role, the channel and
+      the time; a person outside the Ask's role, or a request without a signed-in person, shall be refused with who may
+      answer; the deployment's roles.yaml (deployments/<name>/roles.yaml) maps each role to sign-in logins and an
+      escalation order, and without one every role is the owner's.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-05, SN-02]
+    sources: [docs/ASKS.md, docs/REVIEW-2026-11-10.md]
+    acceptance: 'Test: an answer without a person, or with the word owner, is refused; a deployment that names the
+      owner''s login refuses anyone else; the work example''s roles file is read and escalates to its lead and the owner.'
+    verify: {method: test, by: ['tests/test_asks.py::test_roles_come_from_the_deployment_and_nobody_answers_without_a_sign_in']}
+    trace: [ops/asks.py, ops/domain/roles.py, deployments/example-work/roles.yaml, images/mission-control/server.py]
+  - id: ASK-05
+    title: Only a role holder's explicit tap resolves a gate
+    statement: An Ask marked as a gate shall be resolved only by an explicit tap on one of its chips in the app by a person
+      who holds its role; no tier, standing rule, default, interpreter, group answer, digest or deadline shall resolve it;
+      words are kept as a comment, the interpreter may only suggest a chip, and at its deadline it reminds, then after
+      24 h goes to the next in its role's escalation order and the owner last, never proceeding.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-05, SN-02]
+    sources: [docs/ASKS.md]
+    acceptance: 'Test, one per path: free text is a comment; the interpreter only suggests; a do tier still asks; a
+      standing rule is refused and one written by hand is ignored; a deadline reminds and escalates and never proceeds; a
+      group answer leaves it; only a holder''s chip in the app answers it.'
+    verify: {method: test, by: ['tests/test_asks.py::test_only_a_role_holders_explicit_chip_tap_in_the_app_resolves_a_gate',
+      'tests/test_asks.py::test_a_gate_is_never_resolved_by_free_text',
+      'tests/test_asks.py::test_a_gate_is_never_resolved_by_the_interpreter_only_a_suggested_chip',
+      'tests/test_asks.py::test_a_gate_is_never_resolved_by_a_tier_policy',
+      'tests/test_asks.py::test_a_gate_is_never_resolved_by_a_standing_rule',
+      'tests/test_asks.py::test_a_gate_has_no_default_and_its_deadline_reminds_then_escalates_and_never_proceeds',
+      'tests/test_asks.py::test_a_gate_is_never_resolved_by_a_group_answer_or_digest']}
+    trace: [ops/asks.py]
+  - id: ASK-06
+    title: Dismiss, Later and a default on every Ask
+    statement: Every Ask shall take Dismiss (with optional words) and Later (until a time, "tomorrow morning" included); an
+      Ask with a default shall apply it at its deadline and record that it was applied by default, and one without a
+      default shall expire at its deadline.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-02]
+    sources: [docs/ASKS.md]
+    acceptance: 'Test: a dismissed Ask stays dismissed while its source lists it; Later wakes it at the time asked; a
+      default is applied at the deadline and says so; one without expires.'
+    verify: {method: test, by: ['tests/test_asks.py::test_dismiss_and_later_work_on_every_ask_and_later_understands_tomorrow_morning',
+      'tests/test_asks.py::test_a_default_applies_at_its_deadline_and_says_so_and_one_without_expires']}
+    trace: [ops/asks.py]
+  - id: ASK-07
+    title: The data rule keeps content out of Asks
+    statement: The text of an Ask, an answer or a record shall be refused over the deployment's cap (2,000 characters by
+      default) or when it names a path of extracted content, with the reason; content goes by reference to a local path;
+      a text with a private marker makes its Ask private, and a private Ask carries no figure to a ticket, push, log or
+      n8n.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-04, SN-05]
+    sources: [docs/ASKS.md]
+    acceptance: 'Test: the work example refuses an extract path and a text over its cap, marks a confidential text
+      private and says only that a private question waits.'
+    verify: {method: test, by: ['tests/test_asks.py::test_the_data_rule_refuses_extracts_and_over_the_cap_and_marks_private']}
+    trace: [ops/asks.py, deployments/example-work/policy.yaml]
+  - id: ASK-08
+    title: One stop switch holds every agent, workflow and crew job
+    statement: The stop switch shall hold at one tap every agent run, workflow step, plan step and crew job the runner
+      would start and pause the swarm, record who switched it, when and what it held, and on a second tap let all of it
+      go on.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-05]
+    sources: [docs/ASKS.md]
+    acceptance: 'Test: the switch records who and when, and is off again after the second tap.'
+    verify: {method: test, by: ['tests/test_asks.py::test_the_stop_switch_records_who_and_what_it_paused']}
+    trace: [ops/asks.py, ops/missions.py, ops/missions.requests.py, ops/flows.py, ops/conductor.py]
+  - id: ASK-09
+    title: Channels are declared per deployment
+    statement: Each deployment shall declare the channels its Asks use (home app, ticket, Telegram; the work example app,
+      ticket, mail); a channel the deployment does not declare, or whose feature is off, shall send nothing.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-18]
+    sources: [docs/ASKS.md]
+    acceptance: 'Test: Telegram with its feature off is no channel; an unknown channel is none.'
+    verify: {method: test, by: ['tests/test_asks.py::test_a_channel_that_is_off_sends_nothing']}
+    trace: [ops/asks.py, deployments/home/policy.yaml]
+  - id: ASK-10
+    title: Answers in your own words
+    statement: Every Ask except a gate shall take an answer in words, which waits for the interpreter and is then held with
+      what it was understood as, or answered with one short question in the card when the reading is unsure.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-02]
+    sources: [docs/ASKS.md]
+    acceptance: 'Test: words wait for the interpreter; its reading is held with Understood as and only the type''s values;
+      an unsure reading asks back.'
+    verify: {method: test, by: ['tests/test_asks.py::test_words_wait_for_the_interpreter_and_its_reading_is_held_with_understood_as']}
+    trace: [ops/asks.py]
+  - id: ASK-11
+    title: The interpreter reads words into an allowed answer or asks back
+    statement: The interpreter shall read a person's words with the Ask's question, allowed answers and values schema in
+      one model call without tools (prompts/intake.md INTERPRET, gpt-sub-fast) and return one allowed outcome with only the
+      values the Ask takes, or one short question back when the outcome is not allowed, a value is unclear or its
+      confidence is under 0.7; an instruction in the words becomes a snooze, a standing rule (never at a gate) or a note to
+      the asking task; a reading that fails three times asks the person to tap an answer or say it another way.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-02]
+    sources: [docs/ASKS.md, prompts/AGENTS.md]
+    acceptance: 'Test: each of the prompt''s replay cases cleans into what it expects; an outcome the Ask does not offer,
+      an extra value and a low confidence ask back; a failing model asks back after three tries; a snooze in words snoozes.
+      Replayed live on gpt-sub-fast, 11 Nov 2026: 5 of 5 cases as expected.'
+    verify: {method: test, by: ['tests/test_asks_words.py::test_the_interpreter_s_cases_read_as_they_should',
+      'tests/test_asks_words.py::test_the_prompt_names_the_allowed_answers_and_keeps_the_words_inside_their_markers',
+      'tests/test_asks_words.py::test_a_reading_keeps_to_what_the_ask_allows_and_a_doubt_asks_back',
+      'tests/test_asks_words.py::test_words_are_read_held_with_understood_as_or_asked_back_and_a_model_that_fails_asks_after_three_tries']}
+    trace: [ops/asks_words.py, prompts/intake.md, prompts/cases/intake.INTERPRET.json, ops/missions.py]
+  - id: ASK-12
+    title: Every Needs you source is an Ask
+    statement: Every item of every source of Needs you (ops/decisions.py and the three only the app sees) shall be an Ask of
+      a registered kind, with its answers as chips that run the item's own request and its links kept as links; a floor
+      class shall be a gate; Needs you shall list only the items whose Ask waits, so a dismissed, put-off or answered item
+      leaves it; an item its source no longer lists shall be settled, and listed again it opens a new round; an item the
+      store cannot take shall stay in the list with the reason in the log.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-02, SN-09]
+    sources: [docs/ASKS.md]
+    acceptance: 'Test: every item of a full state opens one Ask with the same question, chips and links, and a second pass
+      changes nothing; a dismissed and a put-off item leave the list, the put-off one comes back at its time; a chip runs
+      the item''s request with the signed-in person; a chip that takes words carries them; a dropped item is settled and
+      comes back as a new round; an item the store refuses stays; the app''s own waits are Asks it hides when dismissed,
+      and answers the runner has not taken are listed as kept.'
+    verify: {method: test, by: ['tests/test_asks_migration.py::test_every_needs_you_source_becomes_an_ask_and_none_is_lost',
+      'tests/test_asks_migration.py::test_a_dismissed_or_put_off_item_leaves_needs_you_and_an_answer_runs_the_items_own_request',
+      'tests/test_asks_migration.py::test_a_chip_that_takes_words_carries_them_into_its_request',
+      'tests/test_asks_migration.py::test_an_item_its_source_dropped_is_settled_and_comes_back_as_a_new_round',
+      'tests/test_asks_migration.py::test_an_item_the_store_cannot_take_stays_in_the_list',
+      'tests/test_asks_migration.py::test_the_apps_own_waits_are_asks_it_hides_when_dismissed_and_answers_wait_in_the_inbox']}
+    trace: [ops/decisions.py, ops/asks.py, images/mission-control/server.asks.py, images/mission-control/server.py]
+  - id: ASK-13
+    title: Needs you answers in place and at once
+    statement: Needs you (on Home and in its full list) shall show every waiting Ask as a card answered in place, with its question
+      first, its why, facts and what happens without an answer behind its info control, its chips, a reply box in words
+      (a comment at a gate), Later, Dismiss and its page as a quiet link; a tap shall show on the card before the network
+      answers, an answer shall then show with a one-tap Undo while the stack holds it, an answer the runner has not taken
+      shall show as kept, an answer the app cannot send shall be kept on the device and sent when the app is back, and a
+      live update shall never replace a card you are typing in.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-02, SN-06]
+    sources: [docs/ASKS.md]
+    acceptance: 'Test: a card carries its chips, reply box, Later, Dismiss, Always and its page; a tap reads "Sending" before
+      the network answers; a failed send is kept on the device and an undo there takes it back; held, kept, asked-back and
+      suggested states read on the card; an undo that arrives before its answer stops it.'
+    verify: {method: test, by: ['tests/test_asks_app.py::test_a_card_answers_in_place_with_chips_words_later_dismiss_and_its_page_as_a_quiet_link',
+      'tests/test_asks_app.py::test_a_tap_shows_on_the_card_before_the_network_answers_and_a_failed_send_is_kept_on_the_device',
+      'tests/test_asks_app.py::test_the_card_reads_the_runners_held_queued_asked_back_and_suggested_states',
+      'tests/test_asks_app.py::test_an_undo_of_an_answer_that_never_left_the_device_is_taken_back_there',
+      'tests/test_asks.py::test_an_undo_that_arrives_before_its_answer_keeps_the_answer_from_acting_and_the_app_sees_who_answers',
+      'tests/test_asks_app.py::test_the_app_loads_its_asks_part_after_tasks_and_caches_it']}
+    trace: [images/mission-control/web/static/app-asks.js, images/mission-control/web/static/app-tasks.js, images/mission-control/web/static/app-base.js,
+      images/mission-control/web/static/app.css, images/mission-control/web/index.html, images/mission-control/web/sw.js,
+      images/mission-control/guide/01-welcome.md]
+  - id: ASK-14
+    title: A gate's card takes a tap only and says who can answer
+    statement: The card of a gate shall offer its chips and a comment box, never "Always for this kind", and the card of
+      an Ask whose role the signed-in person does not hold shall say who can answer it and offer no answer.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-05]
+    sources: [docs/ASKS.md]
+    acceptance: 'Test: a gate''s card has its chips and says a gate counts only a tap, without Always; a reviewer''s card
+      seen by someone else names the reviewer and has no chips or box.'
+    verify: {method: test, by: ['tests/test_asks_app.py::test_a_gate_takes_a_tap_only_never_always_and_says_who_can_answer']}
+    trace: [images/mission-control/web/static/app-asks.js, ops/asks.py]
+  - id: ASK-15
+    title: Asks of one kind fold into one card
+    statement: Needs you shall fold the waiting Asks of one kind into one card with one answer for all of them and every
+      item with its own chips shown from the start; a gate and the app's own waits shall never fold.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-02]
+    sources: [docs/ASKS.md]
+    acceptance: 'Test: two phone cleanup Asks fold, a gate and an app wait stay on their own.'
+    verify: {method: test, by: ['tests/test_decisions.py::test_the_server_adds_the_waits_only_it_sees_and_the_app_draws_the_list']}
+    trace: [images/mission-control/web/static/app-asks.js]
+  - id: ASK-16
+    title: The policy page and the stop switch in the app
+    statement: The policy page (#/policy, What the stack may do) shall show each kind of question with its tier or as a
+      gate, every standing rule with who made it, when and a Remove, what the stack did on its own with its Undo while its
+      window is open, and the stop switch, which Home shows too; the stopped switch shall say since when and what it held.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-02, SN-05]
+    sources: [docs/ASKS.md]
+    acceptance: 'Test: the page shows a kind''s tier and a gate, a rule with its limit and who made it, an undo record with
+      Undo, and the stopped switch with what it held and Resume.'
+    verify: {method: test, by: ['tests/test_asks_app.py::test_the_policy_page_shows_tiers_rules_undo_records_and_the_stop_switch']}
+    trace: [images/mission-control/web/static/app-asks.js, images/mission-control/guide/24-what-the-stack-may-do.md]
+  - id: ASK-17
+    title: An Ask and its answer are written to its task's ticket
+    statement: The Asks shall keep one ticket per task or decision in the tracker the deployment names, never one per Ask
+      (an Ask's task, else its kind's one ticket, and none for a kind without one, such as ideas); a pass shall write one
+      comment per ticket with its new Asks and each answer back once with the person, the role, the channel and how the
+      words were read; opening a ticket shall be a tracker write of its own kind (open) under the tracker's shadow, live and
+      write off modes as comments are; an Ask created before tickets began (a migration) shall never get a ticket; a private
+      Ask's ticket shall carry only a line that a private question waits in the app; where nothing may go outward the Ask's
+      history shall say why.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-09, SN-04]
+    sources: [docs/ASKS.md]
+    acceptance: 'Test (11 Nov 2026 live: 89 Asks of a migration opened 89 issues): three tax questions share one "Your taxes"
+      ticket with one comment a pass, two Asks of one workflow run share theirs, an idea opens none; the opening waits in
+      shadow once until the owner sends it, a read-only tracker keeps it; an Ask that waited before tickets began gets
+      none, nor its answer; a private Ask''s figure never reaches the ticket.'
+    verify: {method: test, by: ['tests/test_asks_tickets.py::test_asks_of_one_kind_or_task_share_one_ticket_with_one_comment_a_pass',
+      'tests/test_asks_tickets.py::test_opening_a_ticket_is_a_write_under_the_shadow_and_write_off_as_comments_are',
+      'tests/test_asks_tickets.py::test_what_waited_before_tickets_began_never_gets_a_ticket',
+      'tests/test_asks_tickets.py::test_a_private_ask_puts_only_a_line_on_its_ticket']}
+    trace: [ops/asks_tickets.py, ops/domain/trackers.py, ops/missions.py, config/autonomy.yaml]
+  - id: ASK-18
+    title: A reply on the ticket answers the Ask
+    statement: A new comment on an Ask's ticket shall be an answer in words by its author through the same path as words in
+      the app (the interpreter reads it), once per comment, when that Ask is the only one waiting on the ticket; at a gate
+      it shall be kept as a comment.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-02]
+    sources: [docs/ASKS.md]
+    acceptance: 'Test: a reply waits for the interpreter as a ticket answer, the same comment twice answers once, and a
+      reply to a gate is a comment.'
+    verify: {method: test, by: ['tests/test_asks_tickets.py::test_a_reply_on_the_ticket_is_an_answer_in_words_and_at_a_gate_a_comment']}
+    trace: [ops/asks_tickets.py, ops/runreg.py]
+  - id: ASK-19
+    title: The n8n Ask block
+    statement: The AI Stack step's ask kind shall take a type, a question, its choices, whether words are taken, a default,
+      a deadline, a role, a gate flag and a sensitivity, open one Ask for the step, and answer the waiting workflow with
+      status (done, dismissed or expired), outcome, values, words, person, role, channel and what the words were understood
+      as, so a workflow branches with If and Switch; inputs the store would refuse shall be refused before anything waits.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-02, SN-19]
+    sources: [docs/ASKS.md]
+    acceptance: 'Test: a default at its deadline, a dismissal and a private question reach the workflow as such; a gate
+      takes no words; the node sends every input; bad inputs are refused with the reason.'
+    verify: {method: test, by: ['tests/test_n8n_ask.py::test_the_ask_block_s_inputs_reach_the_ask_and_its_answer_reaches_the_workflow',
+      'tests/test_n8n_ask.py::test_a_question_is_checked_before_it_is_asked']}
+    trace: [ops/flows.py, n8n/custom/AistackStep.node.js, ops/asks.py, ops/decisions.py]
+  - id: ASK-20
+    title: A record's gated status is asked through a gate Ask
+    statement: The Asks shall be the records gate (records.set_gate), so a transition to a status a pack gates shall open one
+      gate Ask for the pack's role, a workflow's tracker step shall wait on it, only a tap on Approve by a person holding the
+      role and applied after its hold shall let the write through, and Not now or a dismissal shall refuse it.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-05]
+    sources: [docs/ASKS.md, ops/domain/AGENTS.md]
+    acceptance: 'Test: the toy pack''s change request to Approved waits on one gate Ask; words and someone outside the role
+      do not approve; the approver''s tap lets it through and the cache records who; Not now refuses it.'
+    verify: {method: test, by: ['tests/test_asks_records_gate.py::test_a_gated_status_waits_for_its_role_holders_tap_and_never_for_words_or_another_person',
+      'tests/test_asks_records_gate.py::test_not_now_at_a_records_gate_refuses_the_transition']}
+    trace: [ops/asks.py, ops/flows.py, ops/missions.py]
+  - id: ASK-21
+    title: Each thread keeps one connection to the Ask store
+    statement: Each thread of the runner shall keep one connection to the Ask store and never use another thread's; the
+      store's file, its write-ahead log and its tables shall be set up once per process under a lock, and its writes shall
+      run under the module's lock.
+    type: quality
+    priority: must
+    status: implemented
+    parents: [SN-13]
+    sources: [docs/ASKS.md]
+    acceptance: 'Test (11 Nov 2026 live: the runner died twice with SIGSEGV during the first sync): eight threads writing at
+      once each keep one connection, lose nothing and apply each answer once; a connection used from another thread is
+      refused.'
+    verify: {method: test, by: ['tests/test_asks.py::test_threads_each_keep_one_connection_and_write_together_with_nothing_lost_or_applied_twice']}
+    trace: [ops/asks.py]

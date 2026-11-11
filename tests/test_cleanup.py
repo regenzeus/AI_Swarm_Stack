@@ -49,7 +49,7 @@ def test_pc_report_labels_and_summary(runner):
     assert "Nothing was deleted" in body
 
 
-def test_target_is_guessed_from_the_words(runner):
+def test_target_is_guessed_from_the_words(runner, phone_on):
     import cleanup as CL
     assert CL.target_of({"title": "Clean up the AI phone"}) == "phone"
     assert CL.target_of({"title": "Where does my disk space go", "goal": "TreeSize on the PC"}) == "pc"

@@ -50,7 +50,7 @@ def test_only_the_creation_script_writes_the_keys_table():
 
 def test_update_keys_only_reads_the_table():
     src = (ROOT / "ops/update-keys.py").read_text()
-    assert 'open("ops/keys.sh").read()' in src and "write" not in src.replace("urllib", "")
+    assert 'KEYS.read_text()' in src and "write" not in src.replace("urllib", "")
 
 
 

@@ -39,7 +39,7 @@ agents:
     contact: ["*"]
     wake: never                       # takes requests from the owner only; agents' requests to it are declined (SEC)
     budgets: {wakes_per_day: 0, messages_per_hour: 20}
-    tools: [memory, research, missions, phone, claude, mail, house, swarm]
+    tools: [memory, research, missions, phone, claude, mail, house, swarm, stack]
     autonomy: {}
   - id: scout
     purpose: The only agent that reads the web; research behind the research tool.

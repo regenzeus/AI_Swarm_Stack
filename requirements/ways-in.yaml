@@ -1,0 +1,146 @@
+# Ways in: how an agent on a site, or the stack's own assistant, works through the system instead of around it: the
+# `stack` command line and the stack MCP tools (phase A of the factory design, the owner's go of 11 Nov 2026; docs/CLI.md).
+# All work is a workflow run, people act through Asks, and nobody edits files on a site by hand.
+area: Ways in
+prefix: WAY
+items:
+  - id: WAY-01
+    title: The command line shows the site's workflows, agents and runs
+    statement: The stack command line shall list the site's workflows (trigger, on or off, agents, last run), its agents
+      (harness, purpose and every workflow that has a step with each), the newest runs newest first (filtered by one
+      workflow and by one state of running, waiting, done or failed) and one run (its steps, the Asks it waits on and
+      its place in n8n), read through the app's API (GET /api/stack/workflows, runs, run/<id>, agents), in words by default
+      and as the API's JSON with --json; a workflow, state or run that is not there shall be refused with exit code 1
+      and the reason.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-07, SN-15]
+    sources: [docs/CLI.md]
+    rationale: The work side, 11 Nov 2026 - agents on a site had no way in except editing files.
+    acceptance: 'Test: against the app''s test client the command lists the demo workflows, agents with used in, runs
+      newest first and by workflow and state, one run with its steps and its Ask and its n8n link, the JSON form, and
+      refuses an unknown workflow and run.'
+    verify: {method: test, by: [tests/test_stack_cli.py::test_the_command_line_lists_workflows_agents_runs_and_one_run_from_the_app_s_api]}
+    trace: [ops/stack_cli.py, images/mission-control/server.stack.py, images/mission-control/server.py, docs/CLI.md,
+      images/mission-control/guide/25-stack-command.md]
+  - id: WAY-02
+    title: The command line lists and answers the Asks that are no gate
+    statement: The stack command line shall list the open Asks (with --all the put-off ones too) with their choices,
+      gate and role, and answer one by its id or its first four or more characters with one of its choices (by id or
+      label) or, where the Ask takes words, the person's words for the interpreter, as the operator's sign-in with via
+      cli; a private Ask shall show no question text, why or facts through it and shall be refused with the reason, and
+      so shall a gate.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-02, SN-04]
+    sources: [docs/CLI.md, docs/ASKS.md]
+    acceptance: 'Test: the open Asks list with their choices, the gate with its role, and the private one without its
+      figure; an answer by a short id is held as a chip by the operator via cli; a gate and a private Ask are refused
+      before the runner.'
+    verify: {method: test, by: [tests/test_stack_cli.py::test_the_command_line_lists_the_open_asks_and_a_private_one_shows_no_figure,
+      tests/test_stack_cli.py::test_an_answer_by_the_command_line_is_a_chip_or_words_by_the_operator_via_cli_and_a_gate_is_refused]}
+    trace: [ops/stack_cli.py, images/mission-control/server.stack.py]
+  - id: WAY-03
+    title: The app takes only the command line's actions from it
+    statement: When a request to /api/request carries the header X-Aistack-Via with the value cli, the app shall take only
+      workflow_run, ask_answer (with a reply, never a standing rule) and pack_ask, refuse every other action with 403 and
+      the reason, and hand the runner the request with source cli and via cli; a request without the header shall have
+      source app, and a via or source in the body shall never be believed.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05]
+    sources: [docs/CLI.md, docs/SECURITY.md]
+    acceptance: 'Test: an approval, a build, a standing rule, the stop switch and a tracker switch from the command line are
+      refused and nothing reaches the inbox; an unknown way in is refused; an answer drops its always; the page''s own
+      via and source are replaced by app.'
+    verify: {method: test, by: [tests/test_stack_cli.py::test_the_app_takes_only_the_command_line_s_actions_and_never_the_page_s_word_for_who_or_how]}
+    trace: [images/mission-control/server.stack.py, images/mission-control/server.py]
+  - id: WAY-04
+    title: A run starts through its Run now trigger
+    statement: The runner shall start a run of a workflow the deployment runs (or a running pack's), named by its file
+      name, n8n id or name in any case, by posting to its Run now webhook with the runner's header X-Aistack-Hook and the
+      body {input, by, via}, and record one activity line naming who started it and how; it shall refuse with the reason
+      a workflow that is switched off, one without a Run now trigger, a name that matches none or two, an input name that
+      is not a short word, and any start while the stop switch is on. The command line shall then name the run once it
+      shows in the runner's view, waiting up to 30 s.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-01, SN-19]
+    sources: [docs/CLI.md, docs/N8N-MIGRATION.md]
+    acceptance: 'Test: the webhook gets the header, the inputs and who; each refusal says why and posts nothing; the
+      command line names run 702 after the start.'
+    verify: {method: test, by: [tests/test_stack_cli.py::test_a_run_starts_through_its_run_now_webhook_with_the_runner_s_header_and_the_inputs,
+      tests/test_stack_cli.py::test_stack_run_starts_a_run_and_names_it_once_its_first_step_reports]}
+    trace: [ops/stack_requests.py, ops/stack_cli.py, ops/missions.py, ops/missions.requests.py]
+  - id: WAY-05
+    title: A pack's approval is asked for, never given, by the command line
+    statement: The command stack pack approve and the tool stack_pack_approve shall open one gate Ask of the kind
+      pack-commit for a commit of a pack the deployment's packs.txt names (with what it brings, Approve whose act is
+      pack_approve as the person who taps it, Not now, and a link to the Stack page), say so when that commit is approved
+      already or its pinned Ask waits, and refuse a refused commit, an unknown pack and a commit that is not in the
+      pack's repository with the reason; neither shall ever send pack_approve itself.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05, SN-02]
+    sources: [docs/CLI.md, docs/ASKS.md]
+    acceptance: 'Test: on the toy pack a new commit gets one gate Ask, asked again the same one, and no approval; the
+      command line''s answer to it is refused; a tap in the app applies pack_approve as that person; approved and refused
+      commits and an unknown pack are said so.'
+    verify: {method: test, by: [tests/test_stack_cli.py::test_a_pack_s_approval_is_a_gate_ask_and_the_command_line_never_approves]}
+    trace: [ops/stack_requests.py, ops/stack_cli.py]
+  - id: WAY-06
+    title: The same as MCP tools for agents
+    statement: Mission Control's MCP server stack (port 8100) shall offer stack_workflows, stack_agents, stack_runs,
+      stack_run_show, stack_run, stack_asks, stack_answer, stack_pack_approve and stack_doctor with the same reads and
+      actions as the command line, its requests reaching the runner with source mcp, via mcp and the login
+      stack-agents, refusing a gate and a private Ask before the runner; it shall answer only LiteLLM with its own
+      token MCP_TOKEN_STACK (SEC-26), and ops/keys.sh shall grant it to vk-main only.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-01, SN-05]
+    sources: [docs/CLI.md, docs/SECURITY.md]
+    acceptance: 'Test: the nine tools are listed and read the demo; a gate and a private Ask are refused with nothing in
+      the inbox; an answer in words and a run start reach the inbox as via mcp by the agents'' login.'
+    verify: {method: test, by: [tests/test_stack_cli.py::test_the_stack_tools_read_and_act_as_the_agents_login_and_never_at_a_gate,
+      tests/test_trust.py::test_an_mcp_server_answers_only_litellm_with_its_token]}
+    trace: [images/mission-control/server.stack.py, images/mission-control/server.py, images/mission-control/server.trust.py,
+      config/litellm/config.yaml, deployments/example-work/litellm.yaml, ops/keys.sh, config/agents.yaml, ops/trust_keys.py,
+      ops/modelpolicy.py, compose/core.yaml, compose/apps.yaml, images/mission-control/web/static/guide.js]
+  - id: WAY-07
+    title: A gate refuses the command line and the agents' tools whole
+    statement: The Ask store shall refuse an answer (a chip or words), a dismissal and a later that come by cli or mcp at
+      a gate, with the role that answers it, and change nothing; at an Ask that is no gate it shall take them as from any
+      other channel.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-02, SN-05]
+    sources: [docs/ASKS.md, docs/CLI.md]
+    acceptance: 'Test: each of the four paths by cli and by mcp at a gate raises and the gate stays open with nothing
+      pending; a chip by cli at an Ask that is no gate is held.'
+    verify: {method: test, by: [tests/test_stack_cli.py::test_a_gate_refuses_the_command_line_and_the_agents_tools_whole]}
+    trace: [ops/asks.py]
+  - id: WAY-08
+    title: The doctor and the installed command
+    statement: The command stack doctor shall run python3 ops/deployment.py doctor where the site has it, else the checks
+      the site has (python3 ops/deployment.py check, the runner's state and the packs that wait or were refused) and say
+      so, and end with exit code 1 when any of them finds a problem; python3 ops/stack_cli.py install shall write
+      ~/.local/bin/stack, a script that runs the command line, and leave it as it is when it is current.
+    type: functional
+    priority: must
+    status: partial
+    gap: The site's own doctor (python3 ops/deployment.py doctor) is phase A's P3; until it lands the fallback checks run.
+      The deploy does not run the install yet (ops/deploy.py is P3's); the lead adds that line when landing.
+    parents: [SN-13, SN-07]
+    sources: [docs/CLI.md]
+    acceptance: 'Test: without a doctor the fallback runs deployment.py check and names a pack that waits; with one, its
+      words and exit code; the installed script runs the command''s help and a second install changes nothing.'
+    verify: {method: test, by: [tests/test_stack_cli.py::test_the_doctor_runs_the_site_s_doctor_or_says_which_checks_it_has,
+      tests/test_stack_cli.py::test_install_puts_a_runnable_stack_command_in_place_once]}
+    trace: [ops/stack_cli.py, ops/stack_requests.py]

@@ -216,7 +216,7 @@ def test_n8n_starts_one_run_of_a_missions_task_and_waits_for_it(runner):
     assert FW.run_task(c, "r9", 5, sleep=sleep)["run"] == a["run"]                    # the same request: the same run, not a second
 
 
-def test_nothing_but_n8n_and_the_kept_timers_starts_work_on_a_schedule():
+def test_nothing_but_n8n_and_the_kept_timers_starts_work_on_a_schedule(phone_on):
     """WFL-12: the crew's timers, the Conductor's schedule path, the missions' own schedules and the event bus's time
     source are gone; every crew job that ran on a timer has its workflow; what systemd still starts says why."""
     timers = {p.name for p in (ROOT / "ops/systemd").glob("*.timer")}

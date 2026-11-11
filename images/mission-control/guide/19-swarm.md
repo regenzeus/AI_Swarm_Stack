@@ -51,10 +51,12 @@ failed, stuck, waited for a usage limit, running, stopped; a run the shutdown cu
 research is started by the mission) and what it started, with lines to them. *Open its log* shows every step; *What
 they said* filters the room to the two agents.
 
-The team room: one timeline of what your agents do together, newest first. Nobody has to post here; it is drawn from
-their work, so an agent that stays in its own lane only shows up with its own work. Each line says who did what to whom:
-- **Asks**: one agent asks another through a tool (a mission asks the scout a research question), with the answer one tap
-  away and the run's log. A burst of questions between the same two agents folds into one line ("mission asked scout 5
+The team room: one timeline of what your agents do together, grouped by the task each line belongs to: the task with
+the newest line first, under its name with its area beside it, its lines newest first. Nobody has to post here; it is
+drawn from their work, so an agent that stays in its own lane only shows up with its own work. A message the stack sent
+you reads as the message itself, with *Details* for the raw reason. Each line says who did what to whom:
+- **Asks**: one agent asks another through a tool (a mission asks the scout a research question): one line with the
+  request's first sentence, the whole request and the answer one tap away each, and the run's log. A burst of questions between the same two agents folds into one line ("mission asked scout 5
   times"); tap it for each question and its answer.
 - **Helps**: an agent works on another agent's idea or finding (adds evidence, links it, updates it), marked
   *helps doctor*, with why it says the owner would not see it. Tap **Useful** or **Not useful** (your word counts over
@@ -132,7 +134,7 @@ assistant reads the Board but takes requests only from you.
 
 ```try
 label: Read what the agents did today
-open: "#/tasks?v=activity"
+open: "#/home?tab=activity"
 note: Open #health to see what the Checker proved or reopened today, or write to an agent yourself.
 ```
 

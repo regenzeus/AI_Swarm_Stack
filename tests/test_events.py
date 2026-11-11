@@ -182,3 +182,16 @@ def test_rules_are_checked_when_saved_and_a_time_is_no_source():
     assert "schedule" not in EV.SOURCES and not hasattr(EV, "schedules")
     app = "".join(webjs.app_js().split("rule_save")[1:2])
     assert "when: f.source.value" in app[:200]                                    # the form sends "when", which the server leaves alone
+
+
+def test_an_event_seen_before_leaves_no_transaction_open():
+    """PLT-40 (11 Nov 2026): the insert of an event seen before raised after sqlite3 had begun its transaction, and
+    nothing committed it; the worker's pass left a write open ("insert into bus"). Now nothing stays open."""
+    import sqlite3
+    import events as EV
+    c = sqlite3.connect(":memory:")
+    c.row_factory = sqlite3.Row
+    EV.table(c)
+    assert EV.record(c, "house", "state", "k1", "A light went on") and not c.in_transaction
+    assert EV.record(c, "house", "state", "k1", "A light went on") is None and not c.in_transaction
+    assert c.execute("select count(*) from bus").fetchone()[0] == 1

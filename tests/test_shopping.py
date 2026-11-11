@@ -209,7 +209,7 @@ def test_sales_ahead_know_black_friday(SH):
     assert sales["Black Friday"] == dt.date(2026, 11, 27) and sales["Cyber Monday"] == dt.date(2026, 11, 30)
 
 
-def test_a_run_ends_in_a_proposal_card(SH, runner, tmp_path, monkeypatch):
+def test_a_run_ends_in_a_proposal_card(SH, runner, tmp_path, monkeypatch, phone_on):
     monkeypatch.setattr(runner, "hermes_z", lambda prompt, timeout=0: report())
     m = mission(runner)
     assert SH.run(m, tmp_path / "run.log")[0] == "ok"
@@ -248,7 +248,7 @@ def proposed(SH, runner, tmp_path, monkeypatch):
     return SH.proposals("ram")[0]
 
 
-def test_only_the_owner_approves_and_the_phone_gets_exactly_that(SH, runner, tmp_path, monkeypatch):
+def test_only_the_owner_approves_and_the_phone_gets_exactly_that(SH, runner, tmp_path, monkeypatch, phone_on):
     p = proposed(SH, runner, tmp_path, monkeypatch)
     c = runner.db()
     for src in ("app", "chat", None):                                         # generic app requests, Hermes' tools
@@ -287,7 +287,7 @@ def test_not_now_keeps_watching_and_change_looks_again(SH, runner, tmp_path, mon
     assert r["rerun"] and json.loads(c.execute("select event from runs where slug='ram'").fetchone()[0])["summary"] == "white, please"
 
 
-def test_buy_run_reports_the_order(SH, runner, tmp_path, monkeypatch):
+def test_buy_run_reports_the_order(SH, runner, tmp_path, monkeypatch, phone_on):
     p = proposed(SH, runner, tmp_path, monkeypatch)
     c = runner.db()
     SH.handle({"action": "shop_limits", "address_words": ["12345"], "source": "owner"}, c)
@@ -305,7 +305,7 @@ def test_buy_run_reports_the_order(SH, runner, tmp_path, monkeypatch):
     assert "Ordered" in SH.sent["telegram"][-1]
 
 
-def test_a_stopped_purchase_asks_the_owner(SH, runner, tmp_path, monkeypatch):
+def test_a_stopped_purchase_asks_the_owner(SH, runner, tmp_path, monkeypatch, phone_on):
     p = proposed(SH, runner, tmp_path, monkeypatch)
     c = runner.db()
     SH.handle({"action": "shop_limits", "address_words": ["12345"], "source": "owner"}, c)

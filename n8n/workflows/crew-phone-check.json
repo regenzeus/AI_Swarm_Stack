@@ -25,6 +25,8 @@
       ]
     }
   },
+  "factory": "home",
+  "feature": "phone",
   "id": "aisc85193f7a4d55",
   "name": "Crew: Phone check",
   "nodes": [

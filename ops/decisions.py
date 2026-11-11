@@ -1,5 +1,11 @@
 """The decision queue and its shadow (AUT-05, AUT-07, docs/NEXT-PHASE.md Part 1).
 
+Since 11 Nov 2026 every item of every source is an Ask (ops/asks.py, ASK-12, docs/ASKS.md): asks_sync() opens one Ask
+per item (by its id), with its answers as chips (a tap runs the item's own request; a link stays a link), registers each
+class as a kind of Ask once (a floor class is a gate: only the owner's tap), and settles the Ask of an item its source no
+longer lists. What waits is then the Asks that are open: a dismissed, put-off or answered item leaves the list. This
+module stays the sources' adapter; the list below is drawn from the Asks.
+
 Everything that waits for the owner is one ranked list, `decisions` in state.json. #/decide and Home's "Needs you" both
 draw that list and build none of their own, so they cannot disagree (GEN-02). Each item has what, why, the stack's
 recommendation, what happens without an answer and when, and its answers: a tap, or a link to where the owner acts. The
@@ -34,6 +40,7 @@ from urllib.parse import quote
 import yaml
 
 import textcap as TC                              # visible caps (AGENTS.md, truncation)
+import asks as AK                                 # ASK-12: every item is an Ask
 
 ROOT = Path(__file__).resolve().parent.parent
 CONFIG = ROOT / "config/autonomy.yaml"
@@ -88,12 +95,17 @@ def _builds(st):
         rv, missing = (b.get("ai_review") or {}).get("verdict"), (b.get("ai_review") or {}).get("missing") or []
         ok = b.get("checks_ok") and rv == "approve" and not missing and str(b.get("ci") or "").lower() in ("passed", "success", "green")   # QA-26
         cls = "coding" if b.get("sensitive") else "coding-low-risk"
+        summary = str((b.get("ai_review") or {}).get("summary") or "").strip()
+        # APP-74: answered on its card (Deploy or Reject), the review's summary behind the card's (i); the build's page
+        # stays one quiet link away, never the only way to answer
         yield _d(f"build:{b['id']}", cls, f"Deploy build #{b['id']}: {b.get('title') or ''}",
                  f"checks {'passed' if b.get('checks_ok') else 'failed' if b.get('checks') else 'not run'}, CI {b.get('ci') or 'not pushed'}, "
-                 f"AI review {rv or 'not done'}" + (f", not done: {', '.join(missing)}" if missing else ""), f"#/build/{b['id']}", would="yes" if ok else "no",
+                 f"AI review {rv or 'not done'}" + (f", not done: {', '.join(missing)}" if missing else "") + (f". The review: {summary}" if summary else ""),
+                 f"#/build/{b['id']}", would="yes" if ok else "no",
                  because="its checks, CI and AI review all passed" if ok else "not every check passed",
                  unanswered="it waits; nothing deploys without you", created=b.get("updated") or b.get("created"),
-                 answers=[{"label": "Review", "href": f"#/build/{b['id']}"}], weight=2)
+                 answers=[{"label": "Deploy", "act": {"action": "build_approve", "id": b["id"]}},
+                          {"label": "Reject", "act": {"action": "build_reject", "id": b["id"]}}], weight=2)
 
 
 def _purchases(st):
@@ -109,6 +121,8 @@ def _purchases(st):
 
 
 def _phone_steps(st):
+    if _off("phone"):                                # PHN-28: switched off, its steps ask nothing (their Asks are closed)
+        return
     steps = [a for a in next((x.get("actions") or [] for x in st.get("crew") or [] if x.get("id") == "phone-cleanup"), []) if a.get("status") == "open"]
     for a in steps:
         app = a.get("kind") == "uninstall"            # removing an app is the owner's choice; caches and old files are the routine
@@ -153,21 +167,21 @@ def _tasks(st):
 def _swarm(st):
     sw = st.get("swarm") or {}
     for m in sw.get("owner_requests") or []:
-        room = f"#/tasks?v=activity&ctx={quote(str(m.get('context') or ''), safe='')}"     # a context holds ":" and "+": a link must keep them
+        room = f"#/home?tab=activity&ctx={quote(str(m.get('context') or ''), safe='')}"     # a context holds ":" and "+": a link must keep them
         yield _d(f"ask:{m.get('id') or m.get('context')}", "agent-request", f"{m.get('sender')} asks you", m.get("text") or "",
                  room, unanswered="the agent waits", created=m.get("ts"), answers=[{"label": "Answer", "href": room}])
     for i in (sw.get("board") or {}).get("open") or []:
         dispute = i.get("kind") == "dispute"
         good = (i.get("priority") or 0) >= 4 and i.get("effort") in ("small", None)
         yield _d(f"idea:{i['id']}", "memory" if dispute else "ideas", ("Which is true? " if dispute else "Take this idea? ") + (i.get("title") or ""),
-                 (i.get("signal") or i.get("owner") or ""), "#/tasks?v=ideas", would=None if dispute else "yes" if good else "no",
+                 (i.get("signal") or i.get("owner") or ""), "#/ideas", would=None if dispute else "yes" if good else "no",
                  because="" if dispute else "high priority and small" if good else "low priority or not small",
-                 unanswered="it stays on the board", created=i.get("created"), answers=[{"label": "Decide", "href": "#/tasks?v=ideas"}], weight=0)
+                 unanswered="it stays on the board", created=i.get("created"), answers=[{"label": "Decide", "href": "#/ideas"}], weight=0)
     for a in sw.get("changes") or []:
         if a.get("state") == "ready" and (a.get("experiment") or {}).get("passed") and a["experiment"].get("version") == a.get("version"):
             yield _d(f"change:{a.get('id')}:{a.get('version')}", "agent-change", f"Take the change to {a.get('agent') or a.get('id')}?",
-                     a.get("summary") or a.get("why") or "its experiment passed", "#/tasks?v=ideas", would="yes", because="its experiment passed",
-                     unanswered="the agent stays as it is", created=a.get("updated"), answers=[{"label": "Decide", "href": "#/tasks?v=ideas"}], weight=0)
+                     a.get("summary") or a.get("why") or "its experiment passed", "#/ideas", would="yes", because="its experiment passed",
+                     unanswered="the agent stays as it is", created=a.get("updated"), answers=[{"label": "Decide", "href": "#/ideas"}], weight=0)
     for a in sw.get("to_confirm") or []:
         yield _d(f"confirm:{a['id']}", "owner-confirm", f"Does it work? {a.get('title') or ''}", (sw.get("checks") or {}).get(str(a["id"])) or "it shipped, and its check is your word",
                  f"#/swarm/artifact/{a['id']}", unanswered="it stays unproved: the Checker waits for your word", created=a.get("state_since"),
@@ -233,18 +247,6 @@ def _commands(st):
     yield from PL.decisions(_d)
 
 
-def _flows(st):
-    """A workflow's question (WFL-07): its own answers as buttons; the tap resumes the workflow. A question for a role
-    says who may answer it (GEN-27)."""
-    import flows as FW
-    for q in FW.waiting():
-        people = q.get("people") or ["owner"]
-        who = "" if people == ["owner"] else f" Who may answer: {', '.join(people)} ({q.get('role') or 'its role'})."
-        yield _d(f"flow:{q['id']}", "agent-request", q["question"], (q.get("why") or "A workflow waits for your answer") + who, "#/decide",
-                 unanswered="the workflow waits", created=q.get("created"),
-                 answers=[{"label": a, "act": {"action": "flow_answer", "id": q["id"], "answer": a}} for a in q["answers"]])
-
-
 def _mail_sort(st):
     """CNX-11: senders whose mail could be deleted, new since the owner last chose, wait for a look on Your mail; nothing
     moves before the owner's tap there."""
@@ -264,8 +266,20 @@ def _tax(st):
     yield from TX.decisions(_d)
 
 
-SOURCES = (_builds, _purchases, _phone_steps, _memory, _tasks, _swarm, _keeper, _memory_move, _house, _test_item, _packs, _trackers, _commands, _flows,
-           _mail_sort, _tax)
+def _off(feature):
+    try:
+        import deployment as DEPLOY
+        return not DEPLOY.has(feature)
+    except (ImportError, SystemExit, OSError):       # no deployment (a bare test): every source as before
+        return False
+
+
+# GEN-13, PHN-28: the Asks of a source whose feature is off are closed with these words (dismissed, history kept)
+OFF_ASKS = {"phone": ("dq:phone-step:", "the AI phone is switched off")}
+
+
+SOURCES = (_builds, _purchases, _phone_steps, _memory, _tasks, _swarm, _keeper, _memory_move, _house, _test_item, _packs, _trackers, _commands,
+           _mail_sort, _tax)   # a workflow's question is an Ask of its own (ops/flows.py ask, ASK-19)
 
 
 def rank(items, now=None):
@@ -382,8 +396,93 @@ def stats(now=None, recs=None):
             "expired": sum(r.get("owner") == "expired" for r in ans), "target": TARGET, "agreement": agree, "days": round(days, 1)}
 
 
+# ---------- every item an Ask (ASK-12) ----------
+ACTION = {"coding": "deploy", "coding-low-risk": "deploy", "shopping-buy": "buy", "shopping-pick": "buy", "phone-routine": "phone-cleanup",
+          "phone": "phone", "memory": "memory-forget", "wiki": "memory-forget", "research": "task-start", "task-start": "task-start",
+          "task-questions": "answer", "briefing": "task-start", "agent-request": "answer", "ideas": "idea", "agent-change": "agent-change",
+          "owner-confirm": "confirm", "mail-sort": "mail-sort", "delete": "delete", "access": "access", "tax": "answer", "setup": "setup",
+          "command": "command", "pack-commit": "pack", "journey-test": "test", "coding-review": "deploy"}
+KIND_OF = {"memory": "memory-remember", "keeper": "memory-forget", "memory-move": "memory-move", "stopped": "task-resume",
+           "flow": "workflow", "error": "source-error", "build": None}   # an item's kind by its id's prefix, where its class is too wide
+EXTRA_KINDS = {"memory-remember": ("Remember this", "memory-keep"), "memory-forget": ("Forget a fact", "memory-forget"),
+               "memory-move": ("Move facts out of memory", "memory-move"), "task-resume": ("A change that stopped", "task-resume"),
+               "workflow": ("A workflow asks", "workflow"), "source-error": ("A source of questions", "answer")}
+PRIVATE = {"tax"}                                    # their figures stay in the app (TAX-11): a ticket gets a link only
+VALUES = {"tax": {"answer": "number"}}               # what a typed answer to a kind may carry
+
+
+def register_kinds(cs=None):
+    """Each class of config/autonomy.yaml as a kind of Ask, once: a floor class is a gate (only the owner's tap; AUT-04:
+    the floor is never licensed), the others take words, Dismiss, Later and standing rules."""
+    cs = cs or classes()
+    for k, v in cs.items():
+        if k not in AK.TYPES:
+            AK.register(k, v.get("title") or k, action=ACTION.get(k) or ("tracker-write" if k.startswith("tracker-") else "answer"),
+                        outcomes=(), gate=bool(v.get("floor")), own_choices=True, values=VALUES.get(k))
+    for k, (title, action) in EXTRA_KINDS.items():
+        if k not in AK.TYPES:
+            AK.register(k, title, action=action, outcomes=(), own_choices=True)
+
+
+def kind_of(d):
+    k = KIND_OF.get(d["id"].split(":")[0])
+    return k if k and k in AK.TYPES else d["cls"] if d["cls"] in AK.TYPES else "source-error"
+
+
+def _slug(label, taken):
+    s = re.sub(r"[^a-z0-9]+", "-", str(label).lower()).strip("-")[:40] or "answer"     # cap: id
+    while s in taken:
+        s += "-2"
+    taken.add(s)
+    return s
+
+
+def ask_spec(d, rank):
+    """One item as an Ask: its answers as chips (an act runs the item's own request when the chip is tapped; a link stays
+    a link to its page), its why, what happens without an answer, its rank, the stack's recommendation."""
+    chips, acts, taken = [], {}, set()
+    for x in d.get("answers") or []:
+        cid = _slug(x.get("label"), taken)
+        if x.get("act"):
+            acts[cid] = {**x["act"], **({"_into": x["into"]} if x.get("into") else {})}
+            chips.append({"id": cid, "label": x["label"], **({"words": x["ask"]} if x.get("ask") else {})})
+        elif x.get("href"):
+            chips.append({"id": cid, "label": x["label"], "href": x["href"]})
+    k = kind_of(d)
+    return {"kind": k, "source": f"dq:{d['id']}", "question": d["what"], "why": d.get("why") or "", "choices": chips, "acts": acts,
+            "href": d.get("href") or "", "unanswered": d.get("unanswered") or "", "weight": d.get("weight", 1), "rank": rank,
+            "recommend": d.get("recommend"), "routine": bool(d.get("routine")), "expires": d.get("expires"), "cls": d["cls"],
+            "since": d.get("created"), "test": bool(d.get("test")), "sensitivity": "private" if k in PRIVATE else "normal"}
+
+
+def asks_sync(items, now=None, log=print):
+    """ASK-12: each item opens (or refreshes) its Ask; an Ask whose item is gone is settled where it lives. -> the items
+    still waiting, each with its Ask's id. An item the store cannot take stays in the list as it is (nothing is lost) and
+    the log says why."""
+    register_kinds()
+    c = AK.connect()
+    out, present = [], set()
+    for i, d in enumerate(items):
+        spec = ask_spec(d, i)
+        present.add(spec["source"])
+        try:
+            a = AK.open_ask(spec, now=now, c=c)
+        except Exception as e:                       # the item stays as it is, with no Ask
+            log(f"decisions: {d['id']} is no Ask: {type(e).__name__}: {e}")
+            out.append(d)
+            continue
+        if a["status"] in AK.SHOWN and not (a.get("pending") or {}).get("state") == "held":
+            out.append({**d, "ask": a["id"]})
+    for f, (prefix, words) in OFF_ASKS.items():
+        if _off(f):
+            AK.close_off(prefix, words, now=now, c=c)
+    AK.sync_gone("dq:", present, now=now, c=c)
+    return out
+
+
 def state(st, now=None):
-    """For state.json: the queue, its numbers, and each class's level (AUT-05, AUT-07)."""
+    """For state.json: the queue, its numbers, and each class's level (AUT-05, AUT-07). The queue is what waits as an Ask
+    (ASK-12)."""
     test = test_record()
     items = gather({**st, "decision_test": test}, now)
     try:
@@ -391,6 +490,10 @@ def state(st, now=None):
     except Exception as e:
         print(f"decisions: shadow not recorded: {type(e).__name__}: {e}", file=sys.stderr)
     cs = classes()
+    try:
+        items = asks_sync(items, now)
+    except Exception as e:                           # the store away: the list as the sources give it, nothing lost
+        print(f"decisions: the Asks could not be synced: {type(e).__name__}: {e}", file=sys.stderr)
     return {"decisions": items, "decision_test": test, "decide": {**stats(now), "classes": {k: {"title": v.get("title"), "level": level(k, cs), "floor": v.get("floor"),
                                                                       "exam": v.get("exam"), "what": v.get("what")} for k, v in cs.items()}}}
 

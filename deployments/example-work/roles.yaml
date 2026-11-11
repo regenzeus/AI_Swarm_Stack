@@ -1,0 +1,9 @@
+# deployments/example-work/roles.yaml: who holds each role in an example work deployment (GEN-27, ASK-04), with
+# placeholder sign-in logins. A real work deployment keeps this file in its own folder, off the repository: no person's
+# name is ever in git. A role names its people (sign-in logins) and its escalation order: when a gate's deadline passes
+# without an answer, it goes to the next role or person in that order, and to the owner last.
+owner: [owner@example.com]
+default: [owner@example.com]
+roles:
+  reviewer: {people: [anna@example.com, friend@example.org], escalate: [lead]}
+  lead: {people: [a@example.com]}

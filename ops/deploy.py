@@ -12,7 +12,10 @@ What changed -> what happens:
                             rollback leaves the diff's timers enabled as it found them (PLT-43)
   ops/keys.sh, agents.yaml  swarm identities (swarm_setup.py agents), key models/budgets/grants (update-keys.py), restart Hermes
   ops/missions.py etc., deployments/   restart the runner (RESTART_RUNNER)
-Then: smoke test (smoke/smoke.sh) and health of Hermes, LiteLLM and Mission Control.
+Then: smoke test (smoke/smoke.sh) and health of Hermes, LiteLLM and Mission Control, and last the site's doctor
+(python3 ops/deployment.py doctor, PLT-46): a missing or unapproved pack, a workflow no factory owns, a dead runner or a
+workflow not imported or published as the deployment says fails the deploy instead of leaving the site half-published.
+Before any step: a machine that names no deployment, or switches on a factory it refuses, is refused (PLT-44, PLT-47).
 One deploy at a time (PLT-10): every deploy, from the builder or a session, holds ~/.aistack-deploy.lock; a second one
 waits up to LOCK_WAIT seconds and then gives up without touching the stack (exit 1). Sessions also hold
 ~/.aistack-land.lock around merge + deploy; that is a different file, so the two never deadlock.
@@ -36,15 +39,41 @@ SOUL_OF = {"config/hermes/configure.sh": ("main", {f"SOUL_{r}": f"{r}_RULE" for 
            "config/hermes/configure-tax.sh": ("tax", {"SOUL_TEXT": "SOUL"})}
 
 
-def soul(script):
-    """(`-e NAME` arguments, env) that hand a configure script its SOUL text from prompts/<owner>.md."""
+RULE_FEATURE = {"PHONE_RULE": "phone"}      # PHN-28: a rule of a feature that is off goes in empty, so its block is removed
+
+
+def soul(script, on=None):
+    """(`-e NAME` arguments, env) that hand a configure script its SOUL text from prompts/<owner>.md; a rule of a feature
+    that is off is handed in empty (GEN-13: the assistant's prompt says nothing of a switched-off AI phone)."""
     owner, names = SOUL_OF.get(script, (None, {}))
     if not owner:
         return [], {}
     sys.path.insert(0, str(R / "ops"))
     import prompts as P
-    env = {var: str(P.text(owner, name)) for var, name in names.items()}
+    on = DEPLOY.ON if on is None else on
+    env = {var: "" if RULE_FEATURE.get(name, "core") not in on else str(P.text(owner, name)) for var, name in names.items()}
     return [a for var in env for a in ("-e", var)], env
+
+
+def features_changed(changed):
+    """GEN-13: whether this deploy changes the deployment's own file (its FEATURES): its profile and its keys follow."""
+    try:
+        return str(DEPLOY.FILE.resolve().relative_to(R)) in changed
+    except ValueError:                                    # a deployment folder outside the repository changes by hand
+        return False
+
+
+def off_services():
+    """GEN-13, PHN-28: the compose services of the features that are off (each names its feature as its profile). A
+    container of one left from before the feature went off is stopped and removed: compose up starts only the switched-on
+    profiles and leaves the others' containers running."""
+    import yaml
+    out = []
+    for f in ("compose/core.yaml", "compose/apps.yaml"):
+        text = (R / f).read_text()
+        doc = yaml.safe_load(text.replace("!reset ", "").replace("!override ", ""))
+        out += [n for n, s in (doc.get("services") or {}).items() if (s.get("profiles") or ["core"])[0] not in DEPLOY.ON]
+    return sorted(out)
 
 
 def configure_scripts(changed):
@@ -52,9 +81,10 @@ def configure_scripts(changed):
     agents' keys changed (a new or rotated key reaches its profile only through its script: on 10 Nov 2026 the tax
     desk's new vk-tax landed without reaching the tax profile, and its first run was refused for want of a key)."""
     keys = KEYS_FILE in changed
+    feats = features_changed(changed)                      # GEN-13: a feature switched on or off changes main's rules (PHN-28)
     return [s for s in ["config/hermes/configure.sh", "config/hermes/configure-scout.sh", "config/hermes/configure-curator.sh",
                         "config/hermes/configure-mission.sh", "config/hermes/configure-builder.sh", "config/hermes/configure-tax.sh"]
-            if keys or s in changed or (s in SOUL_OF and f"prompts/{SOUL_OF[s][0]}.md" in changed)]
+            if keys or s in changed or (s in SOUL_OF and f"prompts/{SOUL_OF[s][0]}.md" in changed) or (feats and s in SOUL_OF and s.endswith("/configure.sh"))]
 
 
 KEYS_FILE = "secrets/agent-keys.enc.yaml"            # the agents' gateway keys, sops-encrypted; made by `make keys`
@@ -335,10 +365,20 @@ def pinned_by(changed, old, new):
 
 def main(old, new):
     global ok
+    refused = DEPLOY.deploy_refusals()                    # PLT-44, PLT-47: before anything changes
+    if refused:
+        print("\n".join(f"refused: {x}" for x in refused) + "\nDEPLOY FAILED: nothing was changed", flush=True)
+        record(old, new, False, 0)
+        return 1
     try:                                                  # SEC-22: the stack's repository keeps its never-in-git hooks, every deploy
         subprocess.run([sys.executable, str(R / "ops/termguard.py"), "install", str(R)], cwd=R, capture_output=True, timeout=30, check=True)
     except (OSError, subprocess.SubprocessError) as e:
         print(f"the never-in-git hooks were not installed: {e}", flush=True)
+    if (R / "ops/stack_cli.py").is_file():                # the `stack` command line in ~/.local/bin, every deploy (its doctor: PLT-46)
+        try:
+            subprocess.run([sys.executable, str(R / "ops/stack_cli.py"), "install"], cwd=R, capture_output=True, timeout=30)
+        except (OSError, subprocess.SubprocessError) as e:
+            print(f"the stack command line was not installed: {e}", flush=True)
     changed = subprocess.run(["git", "diff", "--name-only", old, new], cwd=R, capture_output=True, text=True).stdout.split()
     print(f"{len(changed)} files changed {old[:8]}..{new[:8]}", flush=True)
     before, back = enabled_timers(), rolls_back(old, new)          # PLT-43: what a failed deploy or a rollback leaves enabled
@@ -349,6 +389,9 @@ def main(old, new):
         build(name)
     if images or any(f.startswith(COMPOSE_INPUTS) for f in changed):
         run(*COMPOSE, "up", "-d", "--remove-orphans")
+        off = off_services()
+        if off:                                           # GEN-13: a feature switched off stops its containers (the AI phone, PHN-28)
+            run(*COMPOSE, "rm", "--stop", "--force", *off)
     upgrade = n8n_upgrade(changed, old, new)
     if upgrade:                                           # compose up recreated n8n on the new image: it migrates, then starts
         print("\n".join(upgrade), flush=True)
@@ -381,7 +424,7 @@ def main(old, new):
         hermes_restart = True
     if swarm_restart(changed):
         run("docker", "restart", "aistack-swarm-1")
-    if any(f in ("ops/keys.sh", "config/agents.yaml", "ops/swarm_setup.py", "ops/update-keys.py") for f in changed):
+    if any(f in ("ops/keys.sh", "config/agents.yaml", "ops/swarm_setup.py", "ops/update-keys.py") for f in changed) or features_changed(changed):
         healthy("http://127.0.0.1:4000/health/liveliness")      # a LiteLLM restart above may still be starting
         run("python3", "ops/swarm_setup.py", "agents")            # swarm identities first: a grant of an unknown server is dropped
         run("python3", "ops/update-keys.py")
@@ -423,6 +466,10 @@ def main(old, new):
     run("bash", "smoke/smoke.sh", timeout=900)
     if any(f.startswith(("images/litellm/", "config/litellm/", "versions.env")) for f in changed):
         run("python3", "ops/probe_tool_calls.py", timeout=600)   # the gateway changed: tool calls must keep their arguments
+    if ok:                                                # PLT-46: a site left half-published fails the deploy, loud
+        healthy(N8N_READY)                                # an import above restarted n8n
+        if not run("python3", "ops/deployment.py", "doctor", timeout=900):   # limit: stops, a doctor that hangs fails the deploy
+            print("the doctor named what is wrong: this deploy fails, and its caller reverts it", flush=True)
     settle_units(back, gone, fresh, before, {Path(f).name for f in changed if f.startswith("ops/systemd/") and f.endswith(".timer")}, dest)
     print("DEPLOY OK" if ok else "DEPLOY FAILED", flush=True)
     record(old, new, ok, len(changed))

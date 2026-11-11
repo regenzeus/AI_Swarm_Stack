@@ -1,0 +1,13 @@
+# deployments/platform/workflows.yaml: the platform's own workflows a site without a factory runs (PLT-38, PLT-44), each a
+# file of n8n/workflows/ without .json whose "factory" is platform: the self-test and the upkeep that needs no more than
+# the app and memory. A home workflow listed here would not run (its factory is off); the doctor names it.
+workflows:
+  - stack-self-test
+  - memory-keeper
+  - crew-memory-gatekeeper
+  - crew-skill-curator
+  - crew-vault-ingest
+  - crew-swarm-sync
+  - crew-trial-rotation
+  - crew-nightly-restart
+  - crew-upgrade-check

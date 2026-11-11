@@ -25,6 +25,7 @@
       ]
     }
   },
+  "factory": "platform",
   "id": "aisc8ff11e7f1aa3",
   "name": "Crew: Coach",
   "nodes": [

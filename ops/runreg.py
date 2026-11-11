@@ -30,7 +30,8 @@ every write of the stack ends with (trackers.own, WFL-26), so the owner's reply 
 with the owner's account. A wait's answer carries reminded: how often a wait of that node in this run timed out before
 (WFL-33), so a workflow reminds a set number of times and then ends.
 
-    python3 ops/runreg.py poll                        one pass of the tracker poller (the crew job tracker-poll)
+    python3 ops/runreg.py poll                        one pass of the tracker poller (the crew job tracker-poll); it also
+                                                      reads the records of the trackers that name them (ops/domain/records.py)
     python3 ops/runreg.py export <execution> <zip>    a run's one zip (ops/domain/record.py export_run)
     python3 ops/runreg.py                             the register's items and runs
 """
@@ -272,6 +273,11 @@ def hand(events):
         box = _read(ROOT / "outbox.json", [])
         box += [e for e in events if e not in box]
         _write(ROOT / "outbox.json", box)
+    try:                                             # ASK-18: a reply on an Ask's ticket answers it, as words in the app do
+        import asks_tickets as AT
+        AT.replies(events)
+    except Exception as e:                           # the Asks' store away: the events still go to their runs
+        print(f"runreg: replies to Asks not read: {type(e).__name__}: {e}", flush=True)
 
 
 def n8n_status(execution, run=subprocess.run):
@@ -401,6 +407,11 @@ def poll(cfg=None, forge=None, post=None, status=None, now=None):
         return {"result": f"not due (every {cfg['poll_minutes']:g} minutes)"}
     TR.poll(cfg, hand=hand)
     problems = TR.problems(cfg)
+    from domain import records as RC
+    try:
+        unread = RC.refresh(cfg)                     # REC-02: the read cache of the trackers that name records, and the Measures view
+    except Exception as e:                           # the cache is read again on the next pass; the runs go on
+        unread = [f"{type(e).__name__}: {e}"]
     if forge is None:
         import forge as F
         forge = F.FORGE
@@ -409,8 +420,8 @@ def poll(cfg=None, forge=None, post=None, status=None, now=None):
     with locked():
         _write(ROOT / "poller.json", {"last": now or _now(), "at": _iso(now)})
     words = ", ".join(f"{n} {k}" for k, n in sorted(said.items())) or "no new events"
-    return {"result": words + (f"; {len(problems)} trackers refused: " + "; ".join(problems) if problems else ""), "said": said,
-            "problems": problems}
+    return {"result": words + (f"; {len(problems)} trackers refused: " + "; ".join(problems) if problems else "")
+            + ("; the records were not read: " + "; ".join(unread) if unread else ""), "said": said, "problems": problems + unread}
 
 
 def main(argv):

@@ -5,6 +5,8 @@
 | `hermes/` | The Hermes profiles (main, scout, curator, mission, tax) and the builder | `ops/deploy.py` and `make up` run the scripts inside the containers |
 | `litellm/` | The model gateway | mounted into the `litellm` container; `make restart` or a deploy reloads it |
 | `tax.yaml` | The tax desk's generic rules: the years, the mail window, the forms and their folders, the header words and sender classes (no names of the owner's employer, places or providers; the owner's own rules are in /srv/ai/tax/rules.yaml) | read by `ops/tax.py` |
+| `policy.yaml` | What the stack may do (ASK-02): each kind of action's tier (do, tell, ask, never), the channels, the data rule and the tickets' tracker, generic; a deployment's `policy.yaml` overrides it | read by `ops/asks.py` |
+| `roles.yaml` | Who decides each role when the deployment has no roles file (GEN-27): the owner | read by `ops/domain/roles.py` |
 | `agents.yaml` | The agent registry: one card per agent (job, harness, model, key, roles, rooms, policies) | checked by `ops/registry.py`; mounted read-only into the `swarm` container |
 | `gate/` | The sign-in gates (Caddy) for the Hermes dashboard and the code map | mounted read-only into the gate containers |
 

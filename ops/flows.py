@@ -14,10 +14,11 @@ mission, answered when that run has finished. A task that is not waiting for a r
 The runner makes a task's workflow when the task gets its schedule and switches it off when the task is over
 (ops/n8n_jobs.py reconcile, every minute in this worker).
 
-A question for the owner (WFL-07) waits in Needs you (ops/decisions.py, source _flows) with the answers the workflow
-offers; the owner's tap there (the action flow_answer) is the step's answer, and the workflow goes on. A question may
-name a role (GEN-27, ops/domain/roles.py): Needs you then says who may answer, only they can, and the answer records
-who did. With no map of roles, every role is the owner's.
+A question (WFL-07, ASK-19) is an Ask of the store (ops/asks.py): the Ask block's type, question, choices, words allowed,
+default, deadline, role, gate and sensitivity; it waits in Needs you until a person who holds its role answers (a chip,
+or words the interpreter reads), dismisses it, or its deadline applies its default; the step's answer is {status,
+outcome, values, words, person, role, via, interpreted_as}, so the workflow branches with n8n's If and Switch. A
+tracker step's transition to a status a pack gates waits for that gate's Ask (ASK-20).
 
 Every step is kept in the run register (ops/runreg.py, WFL-23): its request, its whole answer, its files and its
 times, by its n8n run. In a customer-class deployment n8n gets a lean answer (WFL-22: status, ids and a short summary);
@@ -93,7 +94,6 @@ KINDS = ("agent", "crew", "task", "ask", "notify", "build", "recall", "remember"
 NOTE_MAX = 2000                                      # limit: refuses, a message from a workflow is a note, not a report
 ASKS = ROOT / "asks"
 JOBS = ROOT / "jobs"                                 # a command's job at its place, per request: submitted once, also after a restart
-ANSWERS_MAX = 4                                      # limit: refuses, a question offers at most four answers (Needs you shows them as buttons)
 BRIEF_MAX = 20000                                    # limit: refuses, a step's brief is instructions, not a document
 QUERY_MAX = 500                                      # limit: refuses, a memory search is words, as the memory tool's search takes them
 MEMO_MAX = 2000                                      # limit: refuses, a note to memory is kept whole or not at all (the gate reads it whole, as the memory tool's note)
@@ -153,11 +153,9 @@ def validate(req, cards, crew, repos=None):
         if not isinstance(m, str) or not m.strip() or len(m) > NOTE_MAX:   # limit: refuses, NOTE_MAX above
             return f"a message needs its text, at most {NOTE_MAX:,} characters"
     if kind == "ask":
-        q, ans = req.get("question"), req.get("answers") or ["Yes", "No"]
-        if not isinstance(q, str) or not q.strip() or len(q) > 500:   # limit: refuses, a question fits a card (500 characters)
-            return "a question needs its text, at most 500 characters"
-        if not isinstance(ans, list) or not 1 <= len(ans) <= ANSWERS_MAX or not all(isinstance(a, str) and 0 < len(a) <= 40 for a in ans):   # limit: refuses, ANSWERS_MAX buttons of 40 characters
-            return f"answers are 1 to {ANSWERS_MAX} labels of at most 40 characters"
+        why = ask_problem(req)
+        if why:
+            return why
     if kind == "build":
         if _brief(req):
             return _brief(req).replace("the step", "a coding change")
@@ -825,26 +823,95 @@ def people_of(role):
     return RL.people(role) if role else [RL.OWNER]
 
 
+ASK_INPUTS = ("type", "question", "why", "choices", "answers", "allow_words", "default", "deadline", "deadline_hours", "role", "gate",
+              "sensitivity", "facts")
+
+
+def _chip_id(label):
+    """A chip's id from its label, as ops/asks.py makes it for a workflow's own chips."""
+    return re.sub(r"[^a-z0-9]+", "-", str(label).lower()).strip("-")
+
+
+def ask_spec(rid, req):
+    """ASK-19: the Ask block's inputs as an Ask of the store (ops/asks.py): its kind (a registered type, else a workflow's
+    own), its question and why, its chips (choices, or the older answers), words allowed or not, its default and
+    deadline, its role, gate and sensitivity."""
+    import asks as AK
+    AK.register_workflow_kinds()
+    kind = req.get("type") if req.get("type") in AK.TYPES else "workflow"
+    labels = req.get("choices") or req.get("answers") or ["Yes", "No"]
+    chips = [c if isinstance(c, dict) else {"label": str(c)} for c in labels] if kind == "workflow" else req.get("choices")
+    dl = req.get("deadline")
+    if dl in (None, "") and req.get("deadline_hours"):
+        dl = time.time() + float(req["deadline_hours"]) * 3600
+    default = req.get("default")
+    if isinstance(default, str) and default:
+        default = {"outcome": default if kind != "workflow" else _chip_id(default)}
+    return {"kind": kind, "source": f"flow:{rid}", "question": str(req.get("question") or ""), "why": str(req.get("why") or ""),
+            "choices": chips, "allow_words": req.get("allow_words", True) is not False, "default": default or None,
+            "deadline": dl, "role": req.get("role") or None, "gate": bool(req.get("gate")), "sensitivity": req.get("sensitivity") or "normal",
+            "facts": req.get("facts") or {}, "href": "#/workflows", "task": f"n8n:{req.get('workflow') or ''}/{req.get('execution') or rid}"}
+
+
+def ask_problem(req):
+    """The Ask block's inputs in words, or "" (SEC-11): checked as the store will check them, before anything waits."""
+    import asks as AK
+    if not isinstance(req.get("question"), str) or not req["question"].strip():
+        return "a question needs its text"
+    if req.get("type") not in (None, "", "workflow"):
+        AK.register_workflow_kinds()
+        if req["type"] not in AK.TYPES:
+            return f"no kind of question {req['type']!r} is registered"
+    for k in ("choices", "answers"):
+        if req.get(k) is not None and not isinstance(req[k], list):
+            return f"{k} is a list of answers"
+    if req.get("sensitivity") not in (None, "", *AK.SENSITIVITY):
+        return f"sensitivity is one of {', '.join(AK.SENSITIVITY)}"
+    if req.get("role") and not NAME.fullmatch(str(req["role"])):
+        return "a role is a name"
+    try:
+        spec = ask_spec("check", req)
+        AK.check_spec(spec)
+    except ValueError as e:
+        return str(e)
+    return ""
+
+
 def ask(rid, req, notify=None):
-    """The question waits in Needs you until one who may answer does. -> the answer, or None while there is none."""
-    ASKS.mkdir(parents=True, exist_ok=True)
-    got = ASKS / f"{rid}.answer.json"
-    a = SF.load(got)
-    if a is None and got.exists():
-        _say(f"flows: {rid}: its answer file was empty or unreadable; the question waits again")
-        got.unlink(missing_ok=True)
-    if a is not None:
-        return {"status": "done", "answer": a["answer"], "answered": a.get("at", ""), "by": a.get("who") or "owner",
-                **({"role": req["role"]} if req.get("role") else {})}
-    q = ASKS / f"{rid}.json"
-    if SF.load(q) is None:
-        people = people_of(req.get("role"))
-        SF.save(q, {"id": rid, "question": req["question"], "why": req.get("why") or "", "answers": req.get("answers") or ["Yes", "No"],
-                    "role": req.get("role") or "", "people": people, "workflow": req.get("workflow"), "execution": req.get("execution"),
-                    "created": time.strftime("%Y-%m-%dT%H:%M:%S%z")})
-        if notify:
-            notify(f"A workflow asks {'you' if people == ['owner'] else ', '.join(people)}: {req['question']} (Needs you)")
-    return None
+    """WFL-07, ASK-19: the question is an Ask in the store, in Needs you until it is answered, dismissed, expired or
+    answered by its default. -> the answer the workflow branches on, or None while it waits. A question asked before the
+    Ask store (its answer file under asks/) keeps its answer."""
+    import asks as AK
+    got = SF.load(ASKS / f"{rid}.answer.json")
+    if got is not None:
+        return {"status": "done", "outcome": _chip_id(got["answer"]), "answer": got["answer"], "answered": got.get("at", ""),
+                "by": got.get("who") or "", "person": got.get("who") or "", "via": "app", **({"role": req["role"]} if req.get("role") else {})}
+    new = AK.by_source(f"flow:{rid}") is None
+    try:
+        a = AK.open_ask(ask_spec(rid, req))
+    except ValueError as e:
+        return {"status": "refused", "error": str(e)}
+    if new and notify and a["status"] in AK.SHOWN and "telegram" in AK.channels():
+        people = AK.public(a)["people"]
+        notify(f"A workflow asks {'you' if people in (['owner'], []) or a['role'] == 'owner' else ', '.join(people)}: {AK.outward(a)}")
+    return answer_out(a)
+
+
+def answer_out(a):
+    """An Ask's end as the workflow's answer: {status, outcome, values, words, person, role, via, interpreted_as}; None
+    while it waits (an answer held for its undo still waits)."""
+    if a["status"] in ("open", "escalated", "snoozed") or (a.get("pending") or {}).get("state") == "held":
+        return None
+    ans = a.get("answer") or {}
+    base = {"words": ans.get("words") or "", "person": ans.get("person") or "", "role": ans.get("role") or a.get("role"),
+            "via": ans.get("via") or "", "answered": ans.get("at")}
+    if a["status"] == "dismissed":
+        return {"status": "dismissed", "outcome": None, **base}
+    if a["status"] == "expired":
+        return {"status": "expired", "outcome": None, **base}
+    label = next((c["label"] for c in a.get("choices") or [] if c["id"] == ans.get("outcome")), ans.get("outcome"))
+    return {"status": "done", "outcome": ans.get("outcome"), "answer": label, "values": ans.get("values") or {},
+            "interpreted_as": ans.get("interpreted_as"), "by": ans.get("person") or "", **base}
 
 
 def answer(req):
@@ -881,30 +948,79 @@ def answer_of(task, s):
             "output": s.get("output") or "", "error": s.get("error") or "", "agent": s.get("agent"), "harness": s.get("harness")}
 
 
-WORD = {"done": "done", "failed": "failed", "refused": "refused", "cancelled": "cancelled"}
-WHAT = {"crew": lambda r: f"crew job {r['job']}", "task": lambda r: f"task #{r['task']}", "build": lambda r: f"a coding change in {r['repo']}",
-        "recall": lambda r: "a memory search", "remember": lambda r: f"a {r['note']} for memory",
-        "command": lambda r: f"{r['command']} at {r['place']}", "plan": lambda r: f"a plan of {len(r['steps'])} steps",
-        "wait_item": lambda r: f"a wait on {r['tracker']}/{r['key']}", "tracker": lambda r: f"a {r['write']} on {r['tracker']}/{r['key']}",
-        "item": lambda r: f"a read of {r['tracker']}/{r['key']}"}
+WHAT = {"crew": lambda r: r["job"], "task": lambda r: f"Task #{r['task']}", "build": lambda r: f"A coding change in {r['repo']}",
+        "recall": lambda r: "A memory search", "remember": lambda r: f"A {r['note']} for memory",
+        "command": lambda r: f"{r['command']} at {r['place']}", "plan": lambda r: f"A plan of {len(r['steps'])} steps",
+        "wait_item": lambda r: f"A wait on {r['tracker']}/{r['key']}", "tracker": lambda r: f"A {r['write']} on {r['tracker']}/{r['key']}",
+        "item": lambda r: f"A read of {r['tracker']}/{r['key']}"}
 
 
-def report(req, answer):
-    """WFL-10: Home's feed hears how each step of a workflow ended, in the owner's words, with the run's place in n8n."""
+def step_name(req, crew=None):
+    """What a step is called where you read it: its crew job's own name, its title without the workflow's "Crew: "."""
+    if req.get("kind") == "crew" and req.get("job"):
+        import crew as CR
+        named = ((crew if crew is not None else CR.BY_ID).get(req["job"]) or {}).get("name")
+        if named:
+            return named
+    try:
+        return str(req.get("title") or WHAT[req["kind"]](req)).removeprefix("Crew: ")
+    except (KeyError, TypeError):
+        return req.get("agent") or "A step"
+
+
+def step_area(req, crew=None):
+    """The step's area (ops/areas.py): its crew job's, else its workflow's; "" when neither says."""
+    if req.get("kind") == "crew" and req.get("job"):
+        import crew as CR
+        area = ((crew if crew is not None else CR.BY_ID).get(req["job"]) or {}).get("area")
+        if area:
+            return area
+    if req.get("workflow"):
+        import flow_tasks as FT
+        try:
+            wf = FT.workflow_of_run(f"n8n:{req['workflow']}/")
+        except (OSError, ValueError):
+            wf = None
+        return FT.area_of_workflow(wf) if wf else ""
+    return ""
+
+
+def report(req, answer, crew=None, now=None):
+    """WFL-10, OBS-19, OBS-20: Activity hears how each step of a workflow ended, in plain words, under its area; the raw
+    reason and the n8n run are the line's detail. A failure is pushed, unless the stack is being updated or restarted:
+    then it waits for the step's next good run (one quiet line) or is told once it has waited (ops/notices.py)."""
     ev = getattr(M, "event", None)
     if not ev or req.get("kind") == "ask":
         return
-    try:
-        what = req.get("title") or WHAT[req["kind"]](req)
-    except (KeyError, TypeError):
-        what = req.get("agent") or "a step"
-    st = WORD.get(answer.get("status"), answer.get("status"))
-    why = f": {answer['error']}" if answer.get("error") and st != "done" else ""
-    run = f" (n8n run {req['execution']})" if req.get("execution") else ""
-    ev("workflow", "", f"{what}: {st}{why}{run}", title="Workflows", push=st in ("failed", "refused"))
+    import areas as AR
+    import notices as NT
+    name, area = step_name(req, crew), step_area(req, crew)
+    st = answer.get("status")
+    where = f"n8n run {req['execution']}" if req.get("execution") else ""
+    line = {"title": AR.AREAS.get(area, "Workflows"), "area": area, "task": answer.get("task"), "by": req.get("job") or req.get("agent") or ""}
+    key = f"flow:{req.get('workflow') or ''}:{req.get('job') or req.get('node') or name}"
+    if st in ("done", "skipped"):
+        quiet = NT.settled(key, now)
+        if quiet:
+            return ev("workflow", "", quiet["text"], quiet=True, detail=quiet.get("detail") or where, **line)
+        return ev("workflow", "", f"{name} ran fine.", detail=where, **line)
+    if st == "cancelled":
+        return ev("workflow", "", f"{name} was stopped.", detail=where, **line)
+    f = NT.failure(name, answer.get("error") or st, state=st)
+    detail = "; ".join(x for x in (f["detail"], where) if x)
+    ch = NT.change(now)
+    if ch:
+        return NT.hold(key, {**line, "name": name, "head": f["head"], "tail": f["tail"], "text": f["text"], "detail": detail}, ch, now)
+    ev("workflow", "", f["text"], push=True, detail=detail, **line)
 
 
-LEAN = ("status", "outcome", "task", "step", "occ", "run", "build", "state", "branch", "base", "changed", "pr", "pr_number", "draft",
+def told_late(n):
+    """notices.due's emit: a failure held during an update that did not settle, told now as it would have been."""
+    M.event("workflow", "", n["text"], push=True, title=n.get("title") or "Workflows", area=n.get("area") or "",
+            detail=n.get("detail") or "", task=n.get("task"), by=n.get("by") or "")
+
+
+LEAN = ("status", "outcome", "values", "words", "person", "via", "interpreted_as", "task", "step", "occ", "run", "build", "state", "branch", "base", "changed", "pr", "pr_number", "draft",
         "ci", "job", "place", "command", "artifacts", "artifact_ids", "comments", "ref", "shadow", "again", "answer", "answered", "by",
         "role", "kept", "sent", "tracker", "key", "write", "waited_hours", "agent", "harness", "verdict", "source", "reminded", "attach_to",
         "data_class")
@@ -995,6 +1111,12 @@ def tracker_write(rid, req):
         body = f"{body}\n\n{said}" if body else said
     r = TR.write({"tracker": req["tracker"], "kind": req["write"], "key": req["key"], "body": body, "write_id": f"n8n/{rid}",
                   "run": str(req.get("execution") or ""), "node": req.get("node") or req.get("title") or ""})
+    if r.get("refused") and r.get("gate"):              # ASK-20: a gated status waits for its gate's Ask; a no refuses
+        import asks as AK
+        st = AK.record_gate(r["gate"])
+        if st.get("state") == "waiting":
+            return None
+        return {"status": "refused", "error": r["why"], "gate": st.get("ask")}
     if r.get("refused"):
         return {"status": "refused", "error": r["why"]}
     return {"status": "done", "tracker": req["tracker"], "key": req["key"], "write": req["write"], "shadow": bool(r.get("shadow")),
@@ -1220,7 +1342,8 @@ def worker():
                 write_catalog(M.PUBLIC)
             except Exception as e:                      # logged; the pages show no link meanwhile
                 M.log(f"flows: catalog: {type(e).__name__}: {e}")
-        for f in sorted(PENDING.glob("*.json")):
+        import asks as AK
+        for f in ([] if AK.stopped() else sorted(PENDING.glob("*.json"))):   # ASK-08: the stop switch: steps wait in the queue
             rid = f.stem
             if not re.fullmatch(r"[A-Za-z0-9_-]{1,64}", rid):
                 continue

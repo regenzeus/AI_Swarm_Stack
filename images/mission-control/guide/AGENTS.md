@@ -18,6 +18,9 @@ views: [chat]                       # app routes this chapter explains (for each
 ---
 ```
 
+Optional: `feature: phone` for a chapter about one feature (`ops/deployment.py` KNOWN). A deployment that switches the
+feature off does not list the chapter (GEN-13, PHN-28).
+
 ## Building blocks
 
 - **Try it** example: one per feature, ideally 2 to 4 per chapter.

@@ -25,6 +25,7 @@
       ]
     }
   },
+  "factory": "platform",
   "id": "aisc341c439edb6a",
   "name": "Crew: Tracker poll",
   "nodes": [

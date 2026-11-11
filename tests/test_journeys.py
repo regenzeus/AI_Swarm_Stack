@@ -169,7 +169,7 @@ def stack(tmp_path, monkeypatch):
         return rep
     t = threading.Thread(target=runner, daemon=True)
     t.start()
-    yield types.SimpleNamespace(DQ=DQ, MM=MM, SV=SV, tap=tap, run=lambda: JY.check_decide(tap=tap, inbox=m / "inbox", results=m / "public/results", state=m / "public/state.json", wait=2))
+    yield types.SimpleNamespace(DQ=DQ, MM=MM, SV=SV, tap=tap, run=lambda: JY.check_decide(tap=tap, inbox=m / "inbox", results=m / "public/results", state=m / "public/state.json", wait=20))   # limit: waits, a ceiling: a busy test machine (6 workers) answered after 2 s; a good run returns at once
     stop.set()
     t.join(5)
 

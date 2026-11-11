@@ -25,6 +25,8 @@
       ]
     }
   },
+  "factory": "home",
+  "feature": "mail",
   "id": "aisc7adc0f5bc5b0",
   "name": "Crew: Mail sorter",
   "nodes": [

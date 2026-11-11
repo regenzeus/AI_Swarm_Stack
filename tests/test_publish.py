@@ -204,3 +204,15 @@ def test_a_generated_file_stays_what_its_generator_makes_after_the_name_swap():
     dump = lambda c: yaml.safe_dump(c, sort_keys=False, allow_unicode=True, width=10**6)
     swapped = yaml.safe_load(P.redact(dump(cfg), TERMS))
     assert P.redact(dump(cfg), TERMS) == dump(swapped)
+
+
+def test_only_a_deployment_that_switches_publish_on_pushes_to_github(monkeypatch, capsys):
+    """GEN-48: a work deployment (no publish in FEATURES) is refused before anything is built; home passes."""
+    assert P.may_publish({"DEPLOYMENT": "home", "FEATURES": "mission-control,publish"}) is None
+    no = P.may_publish({"DEPLOYMENT": "site", "FEATURES": "builder,mission-control"})
+    assert no and no.startswith("refused") and "publish" in no
+    monkeypatch.setattr(P, "may_publish", lambda values=None: "refused: no publish here")
+    monkeypatch.setattr(P, "committed", lambda: pytest.fail("a refused push built a snapshot"))
+    assert P.main("push") == 1
+    assert "refused" in capsys.readouterr().out
+    assert P.release("v2026.11.11").startswith("refused")

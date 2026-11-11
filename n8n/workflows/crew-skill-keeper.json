@@ -25,6 +25,8 @@
       ]
     }
   },
+  "factory": "home",
+  "feature": "home",
   "id": "aisce0b4e399844e",
   "name": "Crew: Skill keeper",
   "nodes": [

@@ -114,7 +114,7 @@ def test_an_mcp_server_answers_only_litellm_with_its_token(S, monkeypatch):
     for env in S.MCP_TOKENS.values():
         assert core["litellm"]["environment"][env] == apps["mission-control"]["environment"][env] == f"${{{env}:-}}"
     server = (ROOT / "images/mission-control/server.py").read_text()
-    assert server.count("uvicorn.Config(mcp_guard(") == len(S.MCP_TOKENS) == 6
+    assert server.count("uvicorn.Config(mcp_guard(") == len(S.MCP_TOKENS) == 7
 
 
 def test_the_step_service_refuses_a_step_without_its_token(S, monkeypatch):

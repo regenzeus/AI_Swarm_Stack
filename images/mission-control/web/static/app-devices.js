@@ -69,7 +69,7 @@ function phoneHtml(P) {
 function phoneTaskHtml(st) {
   const t = st.task;
   if (!t || t.until < Date.now() / 1000) return "";
-  return `<div class="card pad-l"><div class="row between wrap" style="gap:4px 8px;align-items:center"><h2>Task allowed once</h2><button class="btn sm ghost" id="phendtask">End task</button></div>
+  return `<div class="card pad-l"><div class="row between wrap" style="gap:4px 8px;align-items:center"><h2>This job allowed once</h2><button class="btn sm ghost" id="phendtask">End this job</button></div>
     <div class="small" style="margin-top:6px"><b>${esc(t.task)}</b></div>
     <div class="small muted" style="margin-top:4px">In ${esc((t.apps || []).join(", "))} · types ${t.texts?.length ? esc(t.texts.join("; ")) : "nothing"} · until ${clock(t.until)} · ${nf(t.actions || 0)} action${t.actions === 1 ? "" : "s"} so far without asking</div></div>`;
 }
@@ -96,7 +96,7 @@ function bindPhone(P) {
   $("#phconnect") && ($("#phconnect").onclick = (e) => { e.target.disabled = true; ctl({ do: "connect" }).then(() => toast("Connecting…")); });
   $("#phboot") && ($("#phboot").onclick = (e) => { e.target.disabled = true; ctl({ do: "boot_setup" }).then((r) => r.ok && toast("Asking for your OK on each setting…")); });
   $("#phuntrust") && ($("#phuntrust").onclick = () => ctl({ do: "trust", minutes: 0 }));
-  $("#phendtask") && ($("#phendtask").onclick = () => ctl({ do: "end_task" }).then((r) => r.ok && toast("Task ended: every action asks again")));
+  $("#phendtask") && ($("#phendtask").onclick = () => ctl({ do: "end_task" }).then((r) => r.ok && toast("Ended: every action asks again")));
   $$("[data-phscreen]").forEach((b) => (b.onclick = () => ctl({ do: "screen", minutes: +b.dataset.phscreen }).then((r) => r.ok && toast(+b.dataset.phscreen ? "The screen stays on for 10 minutes" : "The screen turns off"))));
   const trustFor = (m) => ctl({ do: "trust", minutes: m }).then((r) => r.ok && toast(m < 0 ? "Allowed until you stop it" : `Allowed for ${m} minutes`));
   $$("[data-trust]").forEach((b) => (b.onclick = () => trustFor(+b.dataset.trust)));
@@ -256,7 +256,7 @@ async function vShare() {
   const ctx = about ? `\n\n${about}` : "";
   const ask = (q, send) => `#/chat?share=${s.id}&prompt=${encodeURIComponent(q + ctx)}${send ? "&send=1" : ""}`;
   const quick = [["Summarise this", "Summarise this for me: the key points and why it matters."],
-    ["What should I do?", "What should I do with this? Suggest next steps, and say if a mission or a reminder would help."],
+    ["What should I do?", "What should I do with this? Suggest next steps, and say if a workflow or a reminder would help."],
     ["Explain it simply", "Explain this simply, as to a smart friend outside the field."]];
   view.innerHTML = `<div class="stack">
     <div class="card pad-l">
@@ -270,7 +270,7 @@ async function vShare() {
     <div class="card pad-l"><h2>Or</h2><div class="stack" style="margin-top:10px;gap:8px">
       <a class="btn" href="${ask("", false)}">${ic.chat}Ask Hermes about it…</a>
       <button class="btn" id="shsave">${ic.wiki}Save to my knowledge</button>
-      <a class="btn" href="#/tasks?new=1&text=${encodeURIComponent(about.slice(0, 1500) /* cap: api: a link carries at most this much */)}">${ic.rocket}Make it a task</a>
+      <a class="btn" href="#/workflows?new=1&text=${encodeURIComponent(about.slice(0, 1500) /* cap: api: a link carries at most this much */)}">${ic.rocket}Make it a request</a>
     </div></div>
   </div>`;
   $("#shsave").onclick = async (e) => {

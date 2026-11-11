@@ -1159,8 +1159,12 @@ def worker():
     c = M.db()
     table(c)
     recover(c)
+    import asks as AK
     while not M.stop.is_set():
         try:
+            if AK.stopped():                              # ASK-08: the stop switch: no step starts; what runs finishes
+                M.rest(c, "conductor", 5)
+                continue
             with lock:
                 tick(c)
         except Exception as e:                            # the next pass tries again; it is logged

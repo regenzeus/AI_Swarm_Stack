@@ -11,7 +11,7 @@ KEYS=(
   # Subscription only: no paid models exist in LiteLLM any more (2026-10-27).
   # alias | models | daily budget (USD) | MCP servers (lethal-trifecta split: see docs in the vault/plan)
   # swarm: the agent swarm's Board and Ledger, each key with its own identity (ops/swarm_setup.py agents, SWM-89)
-  "vk-main|gpt-sub,gpt-sub-fast|0.15|memory,research,missions,phone,claude,mail,house,swarm"
+  "vk-main|gpt-sub,gpt-sub-fast|0.15|memory,research,missions,phone,claude,mail,house,swarm,stack"   # stack: runs, Asks, a pack approval Ask (WAY-06)
   "vk-code|gpt-sub,gpt-sub-fast|0.10|memorypublic"
   "vk-curator|gpt-sub-fast|0.10|memory,swarm"
   "vk-scout|gpt-sub-fast|0.05|fetch,jobs,browser,swarm,memorypublic"

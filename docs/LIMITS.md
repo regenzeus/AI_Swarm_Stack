@@ -8,7 +8,7 @@ on this page being out of date (QA-22). Text cut for length is a different list:
 the asker is told at once with the limit named. **stops**: a run past this ends and is reported. **drops**: something is
 left out, and the reason says where that is shown.
 
-## waits (13)
+## waits (21)
 
 | Where | Limit | Why |
 |---|---|---|
@@ -17,16 +17,24 @@ left out, and the reason says where that is shown.
 | `images/mission-control/server.share.py` | `LIMIT_RETRY` | a chat that met a usage limit is tried again this often (AST-12) |
 | `images/swarm/ledger.py` | `n >= WIP` | work in progress per kind: it stays ready at its rank (SWM-40) |
 | `images/swarm/swarm.py` | `REPEAT` | a pack asked again this soon is the same run asking twice; the cursor stays, nothing is lost (FND-63) |
+| `ops/asks.py` | `HOLD_S` | an answer waits 15 s for its one-tap undo before the stack acts on it |
+| `ops/asks.py` | `ESCALATE_H` | a gate reminded at its deadline goes to the next person in its role 24 h later |
 | `ops/conductor.py` | `SLOTS` | steps at once: the PC's memory and the subscriptions decide (DEC-24) |
 | `ops/conductor.py` | `LIMIT_REST_S` | (a step at a usage limit tries again after 30 minutes, as missions do) |
 | `ops/conductor.py` | `WINDOWS_FLOOR_GB` | Windows itself this short: nothing starts, whatever WSL holds (the owner's PC comes first) |
+| `ops/domain/records.py` | `DB_WAIT_S` | a pass waits 30 s for another writer of the cache, then fails with the reason; the next pass reads again |
 | `ops/domain/trackers.py` | `SHADOW_NEEDED` | approved shadow items a kind of write needs before it may go live (the deployment may set more) |
 | `ops/mailsort_nas.py` | `YOUNG_S` | a mail younger than this stays where it is; a later run sorts it once it is older |
 | `ops/memtrials.py` | `MAX_AGE_DAYS` | a trial result older than this keeps the memory agent's structural changes waiting until the trials run again |
+| `ops/n8n_sync.py` | `PUBLISH_AGAIN_S` | before a publish that exited 1 is tried once more |
+| `ops/notices.py` | `AFTER_S` | a deploy or a restart counts as going on for this long after it ended: services come back one by one |
+| `ops/notices.py` | `SETTLE_S` | a failure held during a change waits this long for its source's good run before it is told after all |
 | `ops/onboard.py` | `NEED_GB` | the PC's available memory before the code map's container starts (= conductor NEED_GB opencode) |
 | `ops/repofacts.py` | `NEED_GB` | the PC's available memory before a facts run starts (measured: 736 MiB at peak on click; its container is capped at 2 GB) |
+| `ops/stack_cli.py` | `RESULT_S` | the runner takes a request within seconds; after 2 minutes the command says it waits still |
+| `ops/stack_cli.py` | `RUN_FIND_S` | a started run shows once its first step reports; after 30 s the command says where to look |
 
-## paces (27)
+## paces (29)
 
 | Where | Limit | Why |
 |---|---|---|
@@ -49,6 +57,8 @@ left out, and the reason says where that is shown.
 | `ops/librarian.py` | `LIMIT` | a wiki over this is flagged as an issue; nothing is removed |
 | `ops/mailsort.py` | `BATCH` | the mail connector takes at most 200 mails a call (its MAX_BATCH); the rest goes in the next batch |
 | `ops/mailsort.py` | `PAUSE_S` | a pause between batches keeps the sorter well under Gmail's IMAP allowance, which the NAS's copy shares |
+| `ops/missions.py` | `TICKETS_EVERY_S` | the tickets are written once a minute: a tracker is asked at most that often |
+| `ops/missions.py` | `ASKS_EVERY_S` | the Asks' clock looks every 2 s, so an answer is applied within seconds of its undo |
 | `ops/planner.py` | `MAX_TASKS` | a planner's answer with more falls back to one build, which does all of it |
 | `ops/postmaster.py` | `STALE_S` | a copy silent this long is said once a day |
 | `ops/repofacts.py` | `RETRY` | facts with an unknown part are tried again a day later, or at the next commit |
@@ -58,7 +68,7 @@ left out, and the reason says where that is shown.
 | `ops/ua_enrich.py` | `WORKERS_MAX` | at most this many whatever the deployment says |
 | `ops/wikis.py` | `len(done) >= PER_PASS` | wiki summaries a pass; the rest the next pass |
 
-## refuses (70)
+## refuses (74)
 
 | Where | Limit | Why |
 |---|---|---|
@@ -94,6 +104,12 @@ left out, and the reason says where that is shown.
 | `images/swarm/ledger.py` | `self.db.execute("select count(*) from messages where sender=? and ts>?", (me, now - 3600)).fetchone()[0] >= PER_HOUR` | as PER_HOUR above (per sender; the room's check follows) |
 | `images/swarm/ledger.py` | `self.db.execute("select count(*) from messages where context=? and ts>?", (ctx, now - 86400)).fetchone()[0] >= PER_THREAD_DAY` | as PER_THREAD_DAY above |
 | `images/swarm/ledger.py` | `h > EXPIRY_MAX_H` | as EXPIRY_MAX_H above |
+| `ops/asks.py` | `QUESTION_MAX` | a question is one sentence that fits a card |
+| `ops/asks.py` | `WHY_MAX` | why it matters is a short line |
+| `ops/asks.py` | `WORDS_MAX` | an answer in words is a few sentences |
+| `ops/asks.py` | `FACTS_MAX` | an Ask carries its key facts; the rest stays on its source |
+| `ops/asks.py` | `CHOICES_MAX` | chips that fit a phone's card |
+| `ops/asks.py` | `LABEL_MAX` | a chip's label |
 | `ops/claude_tasks.py` | `history < 0 or history > HISTORY_MAX` | HISTORY_MAX commits of history at most |
 | `ops/claude_tasks.py` | `HISTORY_MAX` | commits of history a task's copy may bring (a review of recent work, not the whole past) |
 | `ops/conductor.py` | `EACH` | a plan fanning out over more names the limit on the task: the pools pace the copies |
@@ -104,7 +120,6 @@ left out, and the reason says where that is shown.
 | `ops/files.py` | `len(out) > 20` | files asked of one mission, with the limit (MIS-23) |
 | `ops/files.py` | `len(data) > MAX_BYTES` | as MAX_BYTES |
 | `ops/flows.py` | `NOTE_MAX` | a message from a workflow is a note, not a report |
-| `ops/flows.py` | `ANSWERS_MAX` | a question offers at most four answers (Needs you shows them as buttons) |
 | `ops/flows.py` | `BRIEF_MAX` | a step's brief is instructions, not a document |
 | `ops/flows.py` | `QUERY_MAX` | a memory search is words, as the memory tool's search takes them |
 | `ops/flows.py` | `MEMO_MAX` | a note to memory is kept whole or not at all (the gate reads it whole, as the memory tool's note) |
@@ -113,7 +128,6 @@ left out, and the reason says where that is shown.
 | `ops/flows.py` | `ATTACH_MB` | an attachment over 50 MB is not fetched (the place's worker copies back as much, localworker ARTIFACTS_MB) |
 | `ops/flows.py` | `len(brief) > BRIEF_MAX` | BRIEF_MAX above |
 | `ops/flows.py` | `not isinstance(m, str) or not m.strip() or len(m) > NOTE_MAX` | NOTE_MAX above |
-| `ops/flows.py` | `not isinstance(q, str) or not q.strip() or len(q) > 500` | a question fits a card (500 characters) |
 | `ops/flows.py` | `not isinstance(q, str) or not q.strip() or len(q) > QUERY_MAX` | QUERY_MAX above |
 | `ops/flows.py` | `not isinstance(t, str) or not t.strip() or len(t) > MEMO_MAX` | MEMO_MAX above |
 | `ops/flows.py` | `not isinstance(ev, str) or len(ev) > EVIDENCE_MAX` | EVIDENCE_MAX above |
@@ -133,7 +147,7 @@ left out, and the reason says where that is shown.
 | `ops/winjobs.py` | `MINUTES_MAX` | a job kind's time limit: a day at most; its own minutes stop it sooner |
 | `ops/winworker.py` | `FILES_KB` | a request's files (a patch) stay small: a patch past this is no change a person reviews |
 
-## stops (45)
+## stops (50)
 
 | Where | Limit | Why |
 |---|---|---|
@@ -141,6 +155,8 @@ left out, and the reason says where that is shown.
 | `images/mission-control/server.share.py` | `LIMIT_GIVE_UP` | a chat still limited after a day stops waiting and says so (AST-12) |
 | `images/phone/phone.py` | `SCREEN_WAIT_MAX` | the AI phone's screen stays on at most this while an action waits for the owner's OK |
 | `images/phone/phone.py` | `TASK_MAX` | one task approval on the AI phone lasts at most this; the card names it |
+| `ops/asks_words.py` | `TRIES` | a reading that fails three times asks the person to tap or say it another way |
+| `ops/asks_words.py` | `TIMEOUT_S` | one reading waits a minute for the model; then it is tried again |
 | `ops/backup.sh` | `[ "$rc" -le 1 ]` | tar's exit above 1 is a real failure; 1 only says a file changed while it was read |
 | `ops/builds.py` | `TIMEOUT` | one build past this fails with its log and can be asked again |
 | `ops/builds.py` | `--max-turns` | a Claude Code build past 200 turns is reported with its turn limit and can be asked again |
@@ -179,11 +195,14 @@ left out, and the reason says where that is shown.
 | `ops/replay.py` | `HOURS` | one run past its hours is cancelled and scored as it stands |
 | `ops/repofacts.py` | `TOOL_TIMEOUT` | one tool that hangs: its results are unknown, which errors says |
 | `ops/repofacts.py` | `HISTORY_TIMEOUT` | fetching a shallow clone's history: the facts say the history is truncated |
+| `ops/stack_cli.py` | `CALL_S` | the app answers a read at once; one that is silent for 30 s is said so |
+| `ops/stack_cli.py` | `DOCTOR_S` | a doctor that runs longer than 10 minutes is said to hang |
+| `ops/stack_requests.py` | `RUN_POST_S` | n8n answers a Run now webhook at once; a silent n8n is said so |
 | `ops/staffing.py` | `TEMP_BUDGET` | a temporary agent key's daily budget; subscription models cost nothing, so it only bites if a paid model appears |
 | `ops/tax.py` | `NAS_TIMEOUT_S` | one call on the NAS gets 15 minutes; the run reports it and the next run goes on |
 | `ops/ua_map_in.py` | `NODE_TIMEOUT` | s for one plugin script (the structure of one batch, the merge of all); counts as a failed try |
 
-## drops (48)
+## drops (51)
 
 | Where | Limit | Why |
 |---|---|---|
@@ -204,6 +223,9 @@ left out, and the reason says where that is shown.
 | `images/mission-control/runrecord.py` | `MAX_DETAIL` | one step's detail past this in the run record, marked |
 | `images/mission-control/server.chat.py` | `len(r.pages) > 300` | PDF pages past 300 in an attachment; the text says how many it has |
 | `images/mission-control/server.chat.py` | `len(wb.worksheets) > 10` | sheets past 10 in an attachment; the text says how many it left out |
+| `images/mission-control/server.workflows.py` | `RUNS_PAGE` | a workflow's page lists its 60 newest runs; their total is said, every older one keeps its own page |
+| `images/mission-control/server.workflows.py` | `SAME_RUN_S` | a record's run that started within 30 min of an n8n run is that run, not a second one |
+| `images/mission-control/server.workflows.py` | `SAME_JOB_S` | a scheduled job's run that started within 2 min of a run already listed is that run |
 | `images/swarm/ledger.py` | `used + n > PACK_CHARS` | context pack items past the pack's size (SWM-60); the pack lists what it left out |
 | `ops/builds.py` | `len(out) > 300` | a build's oldest log steps in the app; it says how many and the full log has them |
 | `ops/claude_tasks.py` | `TAG_FAMILIES` | tag families past these get no tag on a task's copy (a project uses one or two) |

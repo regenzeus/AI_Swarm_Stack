@@ -13,11 +13,11 @@ const TPILL = { done: "ok", failed: "failed", cancelled: "archived", running: "r
 const TACT = { run: "started", call: "used", say: "said", error: "error", stage: "stage", propose: "proposed", read: "read", wait: "waits", end: "ended" };
 const LIVE_T = ["intake", "planning", "running", "needs_answer", "waiting_approval", "waiting_owner", "after"];
 // an agent's part in the task, as the map colours it (validated: blue, orange, aqua; dark and light, all pairs)
-const TPART = { coord: ["var(--tp-coord)", "planned it or ran the plan"], step: ["var(--tp-step)", "did a step"], call: ["var(--tp-call)", "called in by another agent"] };
-const TVERB = { started: "gave a step to", called: "called in", handed: "handed its results to", planned: "made the plan for", checked: "had the plan checked by" };
-const MSTORE = { wiki: ["Wikis", "the topic's, the missions' and your vault's wiki pages"], notes: ["Your notes", "the vault: its searches and files"],
+const TPART = { coord: ["var(--tp-coord)", "set out the steps or ran them"], step: ["var(--tp-step)", "did a step"], call: ["var(--tp-call)", "called in by another agent"] };
+const TVERB = { started: "gave a step to", called: "called in", handed: "handed its results to", planned: "set out the steps for", checked: "had the steps checked by" };
+const MSTORE = { wiki: ["Wikis", "the topic's, the workflows' and your vault's wiki pages"], notes: ["Your notes", "the vault: its searches and files"],
   journal: ["Journals", "the agents' work journals"], "long-term": ["Long-term memory", "Hindsight's facts about you and the stack"],
-  board: ["The swarm's board", "the ledger: the ideas, findings and messages agents share"], lessons: ["Lessons", "the agents' notes to themselves"] };
+  board: ["The agents' board", "the ledger: the ideas, findings and messages agents share"], lessons: ["Lessons", "the agents' notes to themselves"] };
 const TSKIND = { page: "web page", item: "news item", job: "job ad", note: "note", memory: "memory", search: "search" };
 const TMADE = { result: "The answer", report: "Reports", wiki: "Wiki pages", file: "Files written", delivery: "Delivered", finding: "Step findings" };
 
@@ -53,14 +53,14 @@ const taskLink = (href, html) => (!href ? html : /^https?:/.test(href) ? `<a hre
 async function vTask() {
   clearTimeout(taskTimer);
   const id = +route.args[0];
-  if (!id) { view.innerHTML = `<a class="back" href="#/tasks">${ic.back}Tasks</a><div class="card empty">No task named. <a href="#/tasks">All tasks</a></div>`; return; }
+  if (!id) { view.innerHTML = `<a class="back" href="#/workflows">${ic.back}Workflows</a><div class="card empty">No run named. <a href="#/workflows">All workflows</a></div>`; return; }
   if (route.q.get("tab")) { ttab = TTABS.some(([k]) => k === route.q.get("tab")) ? route.q.get("tab") : "overview"; route.q.delete("tab"); }
   if (+route.q.get("o")) { taskOcc[id] = +route.q.get("o"); route.q.delete("o"); }
-  if (!taskData[id]) view.innerHTML = `<a class="back" href="#/tasks">${ic.back}Tasks</a><div class="stack"><div class="skeleton" style="height:120px"></div><div class="skeleton" style="height:320px"></div></div>`;
+  if (!taskData[id]) view.innerHTML = `<a class="back" href="#/workflows">${ic.back}Workflows</a><div class="stack"><div class="skeleton" style="height:120px"></div><div class="skeleton" style="height:320px"></div></div>`;
   const d = await api(`/api/task/${id}${taskOcc[id] ? `?o=${taskOcc[id]}` : ""}`).catch((e) => ({ error: e.message }));
   if (route.name !== "task" || +route.args[0] !== id) return;
   if (d.error && !d.id) {                                 // the API's error; a failed task has an error of its own and is drawn
-    view.innerHTML = `<a class="back" href="#/tasks">${ic.back}Tasks</a><div class="card empty">${esc(d.error)} <a href="#/tasks">All tasks</a></div>`; return;
+    view.innerHTML = `<a class="back" href="#/workflows">${ic.back}Workflows</a><div class="card empty">${esc(d.error)} <a href="#/workflows">All workflows</a></div>`; return;
   }
   const sig = JSON.stringify([d.status, d.updated, d.occ, d.activity?.actions_total, d.prov?.numbers, (d.runs || []).map((r) => [r.status, r.verdict]), ttab, taskAgent, taskSrc, wfWhereOf(d)]);   // its workflow is known once the state came
   if (taskData[id]?.sig !== sig || !$("#taskpage")) {
@@ -88,7 +88,7 @@ function taskPage(t) {
   const tabs = TTABS.filter(([k]) => (k !== "runs" || (t.runs || []).length > 1) && (k !== "sources" || t.prov));
   if (!tabs.some(([k]) => k === ttab)) ttab = "overview";
   const many = (t.runs || []).length > 1, wf = wfWhereOf(t), keepWf = wfKeepFrame();   // WFL-11: where it runs in n8n
-  view.innerHTML = `<a class="back" href="#/tasks">${ic.back}Tasks</a><div id="taskpage">
+  view.innerHTML = `<a class="back" href="#/workflows">${ic.back}Workflows</a><div id="taskpage">
   <div class="aghead h-${["failed", "cancelled"].includes(t.status) ? "bad" : t.status === "done" ? "ok" : "warn"}"><div class="agic lg">${ic.target}</div><div class="grow" style="min-width:0">
     <h1 class="agh1">${esc(t.title)}</h1>
     <div class="row wrap small muted" style="gap:4px 8px;margin-top:6px"><span class="pill ${TPILL[t.status] || ""}">${LIVE_T.includes(t.status) && t.status !== "needs_answer" ? '<span class="dot run"></span>' : ""}${esc(tstat(t))}</span>
@@ -108,7 +108,7 @@ function taskPage(t) {
     ${t.status === "waiting_approval" && t.kind !== "change" ? `<button class="btn primary" data-tok="${t.id}">${ic.check}Start it</button>` : ""}
     ${t.door === "plan" && t.kind !== "change" && ["scheduled", "done", "failed"].includes(t.status) && (t.runs || []).length ? `<button class="btn" data-trun="${t.id}">${ic.play}Run again now</button>` : ""}
     ${t.door === "flow" && t.status !== "running" ? `<button class="btn primary" data-tflow="${t.id}">${ic.play}Run now</button>` : ""}
-    ${["failed", "cancelled"].includes(t.status) && t.door === "plan" && t.kind !== "change" ? `<button class="btn" data-tretry="${t.id}">${ic.repeat}Plan it again</button>` : ""}
+    ${["failed", "cancelled"].includes(t.status) && t.door === "plan" && t.kind !== "change" ? `<button class="btn" data-tretry="${t.id}">${ic.repeat}Work out its steps again</button>` : ""}
     ${!["done", "failed", "cancelled"].includes(t.status) && (t.door === "plan" || !t.ref) ? `<button class="btn ghost danger" data-tcancel="${t.id}">${ic.x}Cancel</button>` : ""}</div>
   <div class="seg agtabs">${tabs.map(([k, l]) => `<button data-tt="${k}" class="${ttab === k ? "on" : ""}">${l}${k === "agents" ? ` · ${a.agents.length}` : k === "memory" ? ` · ${a.memory.read.length + a.memory.write.length}` : k === "sources" ? ` · ${(t.prov?.sources || []).filter((s) => s.kind !== "search").length}` : k === "runs" ? ` · ${t.runs.length}` : ""}</button>`).join("")}</div>
   <div id="ttbody" class="section" style="margin-top:14px"></div></div>`;
@@ -136,7 +136,7 @@ function taskStepList(steps) {
 function taskPart(g) {
   const r = g.roles || [];
   if (r.some((x) => x.startsWith("step") || x === "did it")) return "step";
-  if (r.some((x) => ["planned it", "ran the plan", "checked the plan between waves"].includes(x))) return "coord";
+  if (r.some((x) => /^(planned it|ran the plan|checked the plan between waves)$/.test(x))) return "coord";   // the runner's own words for it
   return "call";
 }
 function taskLinks(a, steps) {                    // who worked with whom: the run record's starts and calls, and the plan's hand-offs
@@ -181,7 +181,7 @@ function taskBubbles(box, t, a, steps, H) {
     ${links.length ? `<ul class="small" style="margin-top:8px">${links.map((l) => `<li>${esc(taskLinkWords(l))}${l.what.length ? `<div class="tiny faint">${l.what.map(esc).join("<br>")}</div>` : ""}</li>`).join("")}</ul>` : `<div class="small muted" style="margin-top:6px">No agent started, called in or handed results to another.</div>`}</details>`;
   box.innerHTML = `<div class="tbub" style="height:${H}px"></div><div class="tiny faint" style="margin-top:4px">${CHART_HINT} or a line</div>
     <div class="tkey tiny faint">${Object.values(TPART).map(([c, l]) => `<span><i class="tsw" style="background:${c}"></i>${l}</span>`).join("")}
-      <span><i class="tline" style="border-color:var(--accent)"></i>handed its results on</span><span><i class="tline"></i>called in</span><span><i class="tline dash"></i>gave a step, planned, checked</span>
+      <span><i class="tline" style="border-color:var(--accent)"></i>handed its results on</span><span><i class="tline"></i>called in</span><span><i class="tline dash"></i>gave a step, set out the steps, checked</span>
       <span>a bubble's size: the tokens of its own model calls</span></div><div class="tbsel"></div>${words}`;
   const el = $(".tbub", box), sel = $(".tbsel", box);
   if (!window.d3) { el.innerHTML = `<div class="small muted pad">The chart library did not load: the agents are listed in words below.</div>`; return; }
@@ -324,7 +324,7 @@ function taskOverview(box, t, a, steps) {
     : t.answer ? `<div class="card pad-l" id="tanswer"><div class="row between wrap" style="gap:8px"><h2>The answer${(t.runs || []).length > 1 ? ` · run ${t.occ}` : ""}</h2><a class="btn sm ghost" href="#/read?path=${encodeURIComponent(t.result)}">${ic.doc}Open as a page</a></div>
         <div class="tfold${taskUnfold ? " open" : ""}" id="tfold"><div class="md" style="margin-top:8px">${md(body)}</div></div>
         <button class="btn sm ghost" id="tunfold" hidden>${taskUnfold ? "Fold it again" : `Show the whole answer · ${nf(words(body))} words`}</button></div>`
-      : `<div class="card pad small muted">${LIVE_T.includes(t.status) ? "No answer yet: it comes when the last step is done." : t.status === "failed" ? "No answer: the task did not finish. Its problems and steps below say why." : "This task has no written answer."}</div>`}
+      : `<div class="card pad small muted">${LIVE_T.includes(t.status) ? "No answer yet: it comes when the last step is done." : t.status === "failed" ? "No answer: the run did not finish. Its problems and steps below say why." : "This run has no written answer."}</div>`}
     <div class="tmnums section">${(t.numbers || []).map(([x, l]) => `<div class="card pad tmnum"><b>${esc(x)}</b><span class="tiny faint">${esc(l)}</span></div>`).join("")}</div>
     ${t.text && t.text !== t.goal ? `<p class="faint small wrap section">You wrote: “${esc(t.text)}”</p>` : ""}
     <div class="card pad-l section"><div class="row between wrap" style="gap:8px"><h2>Who worked on it</h2><a class="tiny" href="#" data-tab-go="agents">Each agent in full</a></div>
@@ -347,12 +347,12 @@ function taskOverview(box, t, a, steps) {
     ${a.agents.some((g) => g.tokens) ? `<div class="card pad section"><h2>Cost and time</h2><div class="tiny faint">${[taskSecs(t) != null && `${dur(taskSecs(t))} from start to end`, n.parallel && `${n.parallel} agent${n.parallel === 1 ? "" : "s"} at once at most`, n.cost != null && ifPaid(n.cost)].filter(Boolean).join(" · ")}</div>
       ${taskBars(a.agents.filter((g) => g.tokens).sort((x, y) => y.tokens - x.tokens).map((g) => [esc(taskWho(g.agent)), g.tokens, (t.prov?.by_agent?.[g.agent]?.models || []).join(", ")]), (x) => `${tok(x)} tokens`)}
       <div class="tiny faint" style="margin-top:6px">the tokens of each agent's own model calls; an agent that hands its work to Claude Code shows none, the run it called in carries them</div></div>` : ""}
-    ${(t.checkpoints || []).length ? `<div class="card pad section"><h2>The Orchestrator's checkpoints · ${t.checkpoints.length}</h2><div class="tiny faint">after each wave of steps it reads what they found and keeps or changes the rest of the plan</div>
-      <ul class="tjudge">${t.checkpoints.map((k) => `<li class="${k.kept ? "" : "warn-t"}">${k.kept ? "Kept the plan" : "Changed the plan"} after step ${esc(k.after.join(", "))} <span class="tiny faint">${rel(k.at)}${(t.runs || []).length > 1 ? ` · run ${k.occ}` : ""}</span>
+    ${(t.checkpoints || []).length ? `<div class="card pad section"><h2>The Orchestrator's checkpoints · ${t.checkpoints.length}</h2><div class="tiny faint">after each round of steps it reads what they found and keeps or changes the steps still to come</div>
+      <ul class="tjudge">${t.checkpoints.map((k) => `<li class="${k.kept ? "" : "warn-t"}">${k.kept ? "Kept the steps" : "Changed the steps"} after step ${esc(k.after.join(", "))} <span class="tiny faint">${rel(k.at)}${(t.runs || []).length > 1 ? ` · run ${k.occ}` : ""}</span>
         ${k.changes.length ? `<ul>${k.changes.map((c) => `<li>${esc(c)}</li>`).join("")}</ul>` : ""}${k.why ? `<div class="faint">${esc(k.why)}</div>` : ""}</li>`).join("")}</ul></div>` : ""}
-    ${steps.length ? `<div class="card pad section"><h2>Plan and steps${(t.runs || []).length > 1 ? ` · run ${t.occ}` : ""}</h2>${taskStepList(steps.map((s) => ({ ...s, task: t.id })))}</div>`
-      : (t.plan || []).length ? `<div class="card pad section"><h2>Plan</h2><ol class="tplan">${t.plan.map((p) => `<li><b>${esc(p.step)}</b> <span class="agent">${esc(p.agent)}</span><div class="faint">${esc(p.why || "")}</div></li>`).join("")}</ol></div>` : ""}
-    <div class="tiny faint section">${t.door === "plan" ? `<a href="#/live/${encodeURIComponent(`task-intake:${t.id}-${(t.answers || []).length}`)}">How it was planned</a> · ` : ""}updated ${rel(t.updated)}</div>`;
+    ${steps.length ? `<div class="card pad section"><h2>Steps${(t.runs || []).length > 1 ? ` · run ${t.occ}` : ""}</h2>${taskStepList(steps.map((s) => ({ ...s, task: t.id })))}</div>`
+      : (t.plan || []).length ? `<div class="card pad section"><h2>Its steps</h2><ol class="tplan">${t.plan.map((p) => `<li><b>${esc(p.step)}</b> <span class="agent">${esc(p.agent)}</span><div class="faint">${esc(p.why || "")}</div></li>`).join("")}</ol></div>` : ""}
+    <div class="tiny faint section">${t.door === "plan" ? `<a href="#/live/${encodeURIComponent(`task-intake:${t.id}-${(t.answers || []).length}`)}">How its steps were set out</a> · ` : ""}updated ${rel(t.updated)}</div>`;
   const f = $("#tfold", box), u = $("#tunfold", box);
   if (f && u) {
     if (f.scrollHeight > f.clientHeight + 40 || taskUnfold) u.hidden = false; else f.classList.add("open");
@@ -376,14 +376,14 @@ function taskMadeHtml(t, made, steps) {
     return `<div class="small"><b>${TMADE[k]}${xs.length > 1 ? ` · ${xs.length}` : ""}</b><ul class="tiny" style="margin:2px 0 0">${xs.map((x) => `<li class="wrap">${taskLink(taskSrcHref(x), esc(x.uri.replace(/^vault:/, "")))}</li>`).join("")}</ul></div>`;
   });
   const outs = steps.filter((s) => s.output).length;
-  return rows.length ? `<div class="stack" style="gap:6px;margin-top:6px">${rows.join("")}</div>` : outs ? `<div class="small muted">${outs} step result${outs === 1 ? "" : "s"}, under Plan and steps.</div>` : `<div class="small muted">Nothing yet.</div>`;
+  return rows.length ? `<div class="stack" style="gap:6px;margin-top:6px">${rows.join("")}</div>` : outs ? `<div class="small muted">${outs} step result${outs === 1 ? "" : "s"}, under Steps.</div>` : `<div class="small muted">Nothing yet.</div>`;
 }
 
 function taskTimeline(box, t, a) {
   const lanes = (a.lanes || []).filter((l) => l.started);
   const who = [...new Set(a.actions.map((x) => x.agent))];
   const acts = a.actions.filter((x) => !taskAgent || x.agent === taskAgent);
-  if (!lanes.length && !acts.length) { box.innerHTML = `<div class="card pad small muted">Nothing is recorded for this task yet: its agents' work shows here as they run.</div>`; return; }
+  if (!lanes.length && !acts.length) { box.innerHTML = `<div class="card pad small muted">Nothing is recorded for this run yet: its agents' work shows here as they run.</div>`; return; }
   const nowS = Date.now() / 1000, t0 = Math.min(...lanes.map((l) => l.started)), t1 = Math.max(...lanes.map((l) => l.ended || nowS), t0 + 1);
   const LW = 130, W = Math.max((box.clientWidth || 340) - 24, 300), LH = 24, LL = lanes.map((l) => wrapWords(`${l.depth ? "↳ " : ""}${taskWho(l.agent)}`, (s) => svgTextWidth(s, l.depth ? "tms" : "tml", box) <= LW - (l.depth ? 10 * Math.min(l.depth, 3) : 0) - 6)),
     RH = LL.map((ls) => Math.max(LH, ls.length * 13 + 6)), RT = RH.reduce((o, h, i) => (o.push(i ? o[i - 1] + RH[i - 1] : 20), o), []), H = 22 + RH.reduce((s, h) => s + h, 0), x = (s) => LW + (s - t0) / (t1 - t0) * (W - LW - 10);
@@ -470,7 +470,7 @@ async function vTrials() {
   const delta = (a, b, f, unit) => (a == null || b == null || a === b ? "" : `${a > b ? "+" : "−"}${f(Math.abs(a - b))}${unit}`);
   const runRow = (r, prev) => { const v = r.verdict && (VWORD[r.verdict] || [r.verdict, ""]), keyOk = r.total && r.passed === r.total;
     const judgeOff = (r.verdict === "met" && !keyOk) || (["not met", "partly"].includes(r.verdict) && keyOk);
-    return `<div class="card pad"><div class="row between wrap" style="gap:8px"><b>${esc(r.started || r.run)}</b><span class="tiny faint">${r.version ? `code ${esc(r.version)} · ` : ""}${r.task ? `<a href="#/task/${r.task}">task #${r.task}</a>` : ""}</span></div>
+    return `<div class="card pad"><div class="row between wrap" style="gap:8px"><b>${esc(r.started || r.run)}</b><span class="tiny faint">${r.version ? `code ${esc(r.version)} · ` : ""}${r.task ? `<a href="#/task/${r.task}">run #${r.task}</a>` : ""}</span></div>
       <div class="tmnums" style="margin-top:8px">${[[r.total ? `${r.passed} of ${r.total}` : "–", r.total ? `${pctOf(r)} % of the key's cases${prev ? ` · ${delta(r.passed, prev.passed, (x) => x, " cases") || "same"}` : ""}` : esc(r.error || "no score")],
         [r.clean == null ? "–" : r.clean ? "clean" : `${r.forbidden} forbidden`, "clean room"], [r.similarity == null ? "–" : `${Math.round(100 * r.similarity)} %`, "like upstream"],
         [r.minutes != null ? dur(60 * r.minutes) : "–", prev ? delta(r.minutes, prev.minutes, (x) => dur(60 * x), "") || "time" : "time"],
@@ -479,9 +479,9 @@ async function vTrials() {
         .map(([x, l]) => `<div class="card pad tmnum"><b>${esc(String(x))}</b><span class="tiny faint">${esc(l)}</span></div>`).join("")}</div>
       ${Object.keys(r.areas || {}).length ? `<div class="chips" style="margin-top:8px">${Object.entries(r.areas).sort().map(([a, [p, n]]) => `<span class="tag${p === n ? "" : " warn"}">${esc(a)} ${p}/${n}</span>`).join("")}</div>` : ""}
       <div class="tiny faint" style="margin-top:6px">${[r.agents != null && `${r.agents} agent${r.agents === 1 ? "" : "s"}, ${r.parallel} at once at most`, r.read ? `${r.read} sources read, ${r.cited} cited` : "", r.steps != null && `${r.steps} step${r.steps === 1 ? "" : "s"}`, r.builds && `${r.builds} build${r.builds === 1 ? "" : "s"}`, r.asked && `${r.asked} question${r.asked === 1 ? "" : "s"} asked`, r.over_budget && "stopped at its budget", r.review && `${r.review} gap${r.review === 1 ? "" : "s"} beyond the key, for review`, r.rescored && `rescored ${r.rescored}`, judgeOff && "the model judge disagrees with the answer key"].filter(Boolean).map(esc).join(" · ")}</div>
-      <div class="row wrap" style="gap:6px;margin-top:8px"><a class="btn sm" href="#/read?path=${encodeURIComponent(r.report)}">${ic.doc}The report</a>${r.task ? `<a class="btn sm ghost" href="#/task/${r.task}">${ic.target}Its task</a>` : ""}</div></div>`; };
+      <div class="row wrap" style="gap:6px;margin-top:8px"><a class="btn sm" href="#/read?path=${encodeURIComponent(r.report)}">${ic.doc}The report</a>${r.task ? `<a class="btn sm ghost" href="#/task/${r.task}">${ic.target}Its run</a>` : ""}</div></div>`; };
   view.innerHTML = `<a class="back" href="#/system?tab=costs">${ic.back}Costs</a>
-  <div class="hero heading"><h1>Trials</h1><p>Practice runs for the swarm: each trial gives it a real job and scores the result against an answer key no agent can read. Runs of a trial stand side by side, so a change to an agent or to the code shows as a better or worse run.</p></div>
+  <div class="hero heading"><h1>Benchmarks</h1><p>Practice runs for the agents: each trial gives them a real job and scores the result against an answer key no agent can read. Runs of a trial stand side by side, so a change to an agent or to the code shows as a better or worse run.</p></div>
   ${d.error ? `<div class="card pad small muted">${esc(d.error)}</div>` : ""}
   ${pick ? `<div class="chips" style="margin-bottom:10px"><a class="tag" href="#/trials">All trials</a></div>` : ""}
   ${names.map((n) => { const rs = (d.runs || []).filter((r) => r.trial === n);

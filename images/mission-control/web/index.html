@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
 <title>{{APP_NAME}}</title>
-<meta name="description" content="Missions, agents, knowledge and costs of your AI stack">
+<meta name="description" content="Workflows, agents, knowledge and costs of your AI stack">
 <meta name="theme-color" id="themecolor" content="#0c1115">
 <script>
 // the theme before the first paint, so a light page never flashes dark: this device's choice, else the system's
@@ -18,14 +18,14 @@
   var saved = function () { try { return localStorage.getItem("mc-theme"); } catch (e) { return null; } };
   applyTheme(saved());
   mq.addEventListener("change", function () { applyTheme(saved()); });
-  try { var start = localStorage.getItem("mc-start"); start = ({ "#/missions": "#/tasks", "#/wiki": "#/memory" })[start] || start;   // names from before DEC-46 and the Memory tab
+  try { var start = localStorage.getItem("mc-start"); start = ({ "#/missions": "#/workflows", "#/tasks": "#/workflows", "#/wiki": "#/agents", "#/memory": "#/agents", "#/improve": "#/build" })[start] || start;   // names from before the six places (APP-69)
     if (start && (!location.hash || location.hash === "#/")) location.replace(start); } catch (e) {}
 })();
 </script>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Mission">
+<meta name="apple-mobile-web-app-title" content="{{APP_NAME}}">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" href="/static/icons/icon-192.png">
 <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png">
@@ -56,13 +56,17 @@
 <script src="/static/swarm.js"></script>
 <script src="/static/task.js"></script>
 <script src="/static/tax.js"></script>
+<script src="/static/measures.js"></script>
 <script src="/static/app-base.js"></script>
 <script src="/static/app-tasks.js"></script>
+<script src="/static/app-asks.js"></script>
 <script src="/static/app-runs.js"></script>
 <script src="/static/app-devices.js"></script>
 <script src="/static/app-wiki-code.js"></script>
 <script src="/static/app-memory.js"></script>
 <script src="/static/app-workflows.js"></script>
+<script src="/static/app-factory.js"></script>
+<script src="/static/app-agents.js"></script>
 <script src="/static/app.js"></script>
 </body>
 </html>

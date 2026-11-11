@@ -96,7 +96,7 @@ def claude_ready(p=None, environ=os.environ):
 # Which feature each of the gateway's tool servers belongs to. A deployment's gateway lists a server only when its feature
 # is on, and never one that sends data out when the deployment holds customer data (a work site, 9 Nov 2026: its gateway
 # listed home's jobs, mail, phone, house, fetch, research and browser). A server missing here stops the writer.
-SERVER_FEATURE = {"qmd": "memory", "memory": "memory", "memorypublic": "memory", "missions": "mission-control", "files": "mission-control",
+SERVER_FEATURE = {"qmd": "memory", "memory": "memory", "memorypublic": "memory", "missions": "mission-control", "files": "mission-control", "stack": "mission-control",
                   "claude": "builder", "graphify": "builder", "fetch": "web", "jobs": "web", "research": "web", "browser": "web",
                   "mail": "mail", "phone": "phone", "house": "home"}
 # The gateway container reads the token under this one name; make fills it from the secret models.yaml names (a work site,

@@ -14,6 +14,7 @@ function shopProposals(slug) {
 
 function shopCard(p, m) {
   const [pill, label] = SHOP_STATE[p.status] || ["paused", p.status];
+  const buys = featureOn("phone");               // PHN-28: without the AI phone nothing buys for you: the shop's own page instead
   const v = p.verdict || {}, hist = (p.history || []).map((h) => h.total_eur);
   const gm = S.connections?.gmail?.grants?.read;
   const shot = (sid) => (sid ? `<a class="btn sm ghost" href="/api/phone/shot/${encodeURIComponent(sid)}" target="_blank" rel="noopener">Screenshot</a>` : "");
@@ -34,13 +35,13 @@ function shopCard(p, m) {
     ${p.status === "needs_owner" ? `<div class="banner" style="margin-top:10px">${ic.alert}<span class="grow">Nothing was bought: ${esc(p.stopped_reason || "")}</span>${shot(p.stopped_shot)}</div>` : ""}
     ${p.order ? `<div class="small" style="margin-top:8px"><b>Order</b> ${esc(p.order)}${p.shipping?.status ? ` · ${esc(p.shipping.status)}${p.shipping.carrier ? " · " + esc(p.shipping.carrier) : ""}${p.shipping.eta ? " · expected " + esc(p.shipping.eta) : ""}` : ""} ${shot(p.order_shot)}</div>` : ""}
     <div class="row wrap" style="gap:8px;margin-top:12px">
-      ${p.status === "proposed" ? `<button class="btn primary" data-shop="approve:${p.id}">${ic.check}Approve purchase</button><button class="btn" data-shop="not_now:${p.id}">Not now</button><button class="btn ghost" data-shop="change:${p.id}">${ic.tune}Change</button>` : ""}
+      ${p.status === "proposed" ? `${buys ? `<button class="btn primary" data-shop="approve:${p.id}">${ic.check}Approve purchase</button>` : ""}<button class="btn" data-shop="not_now:${p.id}">Not now</button><button class="btn ghost" data-shop="change:${p.id}">${ic.tune}Change</button>` : ""}
       ${["watching", "over_limit", "needs_owner"].includes(p.status) ? `<button class="btn ghost" data-shop="change:${p.id}">${ic.tune}Change</button>` : ""}
-      ${p.url && ["over_limit", "needs_owner", "watching", "proposed"].includes(p.status) ? `<a class="btn ${p.status === "over_limit" ? "primary" : "ghost"}" href="${esc(safeUrl(p.url))}" target="_blank" rel="noopener">Buy it yourself</a>` : ""}
+      ${p.url && ["over_limit", "needs_owner", "watching", "proposed"].includes(p.status) ? `<a class="btn ${p.status === "over_limit" || (!buys && p.status === "proposed") ? "primary" : "ghost"}" href="${esc(safeUrl(p.url))}" target="_blank" rel="noopener">Buy it yourself</a>` : ""}
       ${p.report ? `<a class="btn ghost" href="#/read?path=${encodeURIComponent(p.report)}&m=${encodeURIComponent(p.slug)}">${ic.doc}Report</a>` : ""}
     </div>
     ${["proposed", "bought", "shipped"].includes(p.status) ? `<div style="margin-top:12px"><div class="tiny faint" style="margin-bottom:6px">To follow the order (confirmation and shipping mails) it needs Gmail read access:</div>${grantRow("gmail", "read", "read the order's mails", gm, m.slug)}</div>` : ""}
-    ${p.status === "proposed" ? `<div class="tiny faint" style="margin-top:8px">Approving lets the AI phone put exactly this in the cart and go to checkout. It taps the final buy button once, only if the final screen shows this item, variant and seller, a total of at most ${eur(Math.min((p.total_eur || 0) * 1.03 + 1, S.shopping?.limits?.per_purchase_eur || 150))} and your address; otherwise it stops and asks you. It never types payment data or passwords and never changes the address or payment method.</div>` : ""}
+    ${p.status === "proposed" && buys ? `<div class="tiny faint" style="margin-top:8px">Approving lets the AI phone put exactly this in the cart and go to checkout. It taps the final buy button once, only if the final screen shows this item, variant and seller, a total of at most ${eur(Math.min((p.total_eur || 0) * 1.03 + 1, S.shopping?.limits?.per_purchase_eur || 150))} and your address; otherwise it stops and asks you. It never types payment data or passwords and never changes the address or payment method.</div>` : ""}
     ${p.offers?.length > 1 ? `<details style="margin-top:10px"><summary class="small muted">All offers compared · ${p.offers.length}</summary><div class="tablewrap"><table class="tbl small"><tr><th>Product</th><th>Shop · seller</th><th>Total</th><th>Delivery</th></tr>${p.offers.map((o) => `<tr><td>${o.url ? `<a href="${esc(safeUrl(o.url))}" target="_blank" rel="noopener">${esc(o.product)}</a>` : esc(o.product)}<div class="tiny faint">${esc(o.variant || "")}</div></td><td>${esc(o.shop)} · ${esc(o.seller || "?")}${o.rating ? `<div class="tiny faint">★ ${esc(o.rating)}</div>` : ""}</td><td>${eur(o.total_eur)}</td><td>${esc(o.delivery || "")}</td></tr>`).join("")}</table></div></details>` : ""}
     ${p.journal?.length ? `<details style="margin-top:6px"><summary class="small muted">What happened · ${p.journal.length}</summary><ul class="phlog">${p.journal.slice().reverse().map((j) => `<li><span class="tiny faint">${dt(j.at)}</span> ${esc(j.text)}</li>`).join("")}</ul></details>` : ""}
   </div>`;

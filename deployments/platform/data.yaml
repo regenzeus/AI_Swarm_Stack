@@ -1,0 +1,3 @@
+# The platform's data class (GEN-14): the owner's own data. No feature that sends data out is on here. A site that works
+# on customer data writes class: customer and an egress.txt (deployments/example-work shows both).
+class: personal

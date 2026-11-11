@@ -25,6 +25,8 @@
       ]
     }
   },
+  "factory": "platform",
+  "feature": "memory",
   "id": "aistackMemKeeper",
   "name": "Memory Keeper",
   "nodes": [

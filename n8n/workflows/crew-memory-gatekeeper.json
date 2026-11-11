@@ -25,6 +25,8 @@
       ]
     }
   },
+  "factory": "platform",
+  "feature": "memory",
   "id": "aisc541809c0d8a7",
   "name": "Crew: Memory gatekeeper",
   "nodes": [

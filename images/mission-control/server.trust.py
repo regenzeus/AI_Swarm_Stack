@@ -10,7 +10,7 @@
 #   gateway, the default route in the app);  n8n (stepnet) -> 172.30.128.3;  Phoenix (obs) -> 172.22.0.2;
 #   LiteLLM (mcnet) -> 172.26.0.4. Docker numbers its networks when it makes them, so the rule is the gateway the
 #   container's own route table names (/proc/net/route), read at start and again when a request's peer differs.
-# The MCP servers (8091, 8092, 8094, 8096, 8097, 8098) answer only LiteLLM (Docker's DNS names the peer) with the
+# The MCP servers (8091, 8092, 8094, 8096, 8097, 8098, 8100) answer only LiteLLM (Docker's DNS names the peer) with the
 # server's own bearer token; the step service (8099) only the AI Stack step node with its token.
 #
 # APP_TRUST (the deployment's setting, compose: ${APP_TRUST:-log}): log refuses nothing and logs every request it would
@@ -28,7 +28,7 @@ TRUST_ON = trust_on(os.environ.get("APP_TRUST", "log"))
 ROUTE = Path("/proc/net/route")
 _gate = {"addr": None}
 MCP_TOKENS = {"missions": "MCP_TOKEN_MISSIONS", "claude": "MCP_TOKEN_CLAUDE", "house": "MCP_TOKEN_HOUSE", "files": "MCP_TOKEN_FILES",
-              "memory": "MCP_TOKEN_MEMORY", "memorypublic": "MCP_TOKEN_MEMORYPUBLIC"}   # the server's name -> its token's (sops)
+              "memory": "MCP_TOKEN_MEMORY", "memorypublic": "MCP_TOKEN_MEMORYPUBLIC", "stack": "MCP_TOKEN_STACK"}   # the server's name -> its token's (sops)
 LITELLM = "litellm"                                  # the one caller of the MCP servers, by its service name
 STEP_TOKEN = os.environ.get("AISTACK_STEP_TOKEN", "")
 

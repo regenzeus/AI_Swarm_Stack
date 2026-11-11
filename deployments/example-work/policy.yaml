@@ -1,0 +1,13 @@
+# deployments/example-work/policy.yaml: what an example work deployment changes of the stack's policy
+# (config/policy.yaml, ASK-01), with placeholders. Asks reach the app, the task's ticket and mail through the company's
+# own routes; Telegram is off. The data rule keeps extracts out of every Ask, answer and record: content goes by
+# reference to a local path.
+channels: [app, ticket, mail]
+tickets: {tracker: bugs}
+tiers:
+  deploy: never           # the work deployment never deploys; it opens draft pull requests
+  buy: never
+data:
+  text_max: 2000
+  extract_paths: ['(^|/)extracts?/', '\.(csv|xlsx|parquet)\b']
+  private_markers: ['\bconfidential\b', '\binternal only\b']

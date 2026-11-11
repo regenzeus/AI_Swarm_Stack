@@ -62,6 +62,7 @@ services:
       MCP_TOKEN_FILES: ${MCP_TOKEN_FILES:-}
       MCP_TOKEN_MEMORY: ${MCP_TOKEN_MEMORY:-}
       MCP_TOKEN_MEMORYPUBLIC: ${MCP_TOKEN_MEMORYPUBLIC:-}
+      MCP_TOKEN_STACK: ${MCP_TOKEN_STACK:-}
     volumes:
       - ${LITELLM_CONFIG:-../config/litellm/config.yaml}:/app/config.yaml:ro   # a gateway deployment's own (GEN-05)
       - litellm-auth:/root/.config/litellm

@@ -49,7 +49,7 @@ def test_requests_go_to_the_inbox_and_unknown_actions_are_refused(app):
     r = c.post("/api/request", headers=H, json={"action": "run", "slug": "u"}).json()
     assert r["pending"] is True
     req = json.loads((app.INBOX / f"{r['id']}.json").read_text())
-    assert req == {"action": "run", "slug": "u", "source": "app"}
+    assert req == {"action": "run", "slug": "u", "source": "app", "who": "owner@test"}      # ASK-04: who acts, from the sign-in
     assert c.post("/api/request", headers=H, json={"action": "rm -rf"}).json()["ok"] is False
 
 

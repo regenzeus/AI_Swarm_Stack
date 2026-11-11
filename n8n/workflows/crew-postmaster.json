@@ -25,6 +25,8 @@
       ]
     }
   },
+  "factory": "home",
+  "feature": "mail",
   "id": "aisc487a1dd9df8f",
   "name": "Crew: Postmaster",
   "nodes": [

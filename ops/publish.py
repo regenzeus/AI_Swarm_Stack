@@ -304,7 +304,21 @@ def scan_only(head):
     return scan({**files, **{p: "" for p in assets}}, terms) + asset_problems(assets)
 
 
+def may_publish(values=None):
+    """GEN-48: only a deployment whose FEATURES switch publish on (home) pushes to GitHub or tags a release there; a
+    work deployment never does, whatever it is asked. -> None when allowed, else the refusal."""
+    import deployment as D
+    v = D.VALUES if values is None else values
+    if "publish" in D.features(v):
+        return None
+    return (f"refused: the deployment {v.get('DEPLOYMENT') or 'here'} does not switch publish on (FEATURES in its "
+            "deployment.env), so nothing of it goes to GitHub")
+
+
 def main(mode, fresh=False):
+    if mode == "push" and (no := may_publish()):
+        print(no)
+        return 1
     head = committed()
     terms = load_map()
     assets = {}
@@ -340,6 +354,8 @@ def release(tag):
     newest commit, pushed. Signed with the owner's own key (git config gpg.format ssh, user.signingkey): only the owner
     runs this. A work deployment takes this tag and nothing else (ops/update.py)."""
     import update as U
+    if no := may_publish():
+        return no
     if not U.TAG.fullmatch(tag):
         return f"{tag!r} is no release tag: vYYYY.MM.DD"
     repo = WORK / "repo"

@@ -106,13 +106,35 @@ def area_of(kind, key, area=None):
     return "research"
 
 
+def feature_of(kind, key):
+    """GEN-13, PHN-28: the feature a crew job's workflow belongs to, its unit's (ops/systemd "# feature:"); {} for core.
+    A deployment with that feature off leaves the workflow out (ops/deployment.py workflow_names)."""
+    if kind != "crew":
+        return {}
+    import crew as CR
+    import deployment as DEPLOY
+    f = DEPLOY.unit_feature_of((CR.BY_ID.get(key) or {}).get("unit") or "")
+    return {} if f == "core" else {"feature": f}
+
+
+def factory_of(kind, key):
+    """PLT-45: the factory a new workflow belongs to: a crew job's its job's (ops/crew.py), any other the factory of
+    work made here (home where home runs, else the platform)."""
+    import deployment as DEPLOY
+    if kind == "crew":
+        import crew as CR
+        return (CR.BY_ID.get(key) or {}).get("factory") or DEPLOY.default_factory()
+    return DEPLOY.default_factory()
+
+
 def workflow(kind, key, name, cron, params, note, area=None):
     """A Schedule trigger, a Run now trigger and one AI Stack step, which sends the step and waits for its answer."""
     import n8n_sync as NS
     w = wid(kind, key)
     trig, step = f"On its schedule ({cron})", name
     return run_now({
-        "active": False, "id": w, "name": name, "area": area_of(kind, key, area), "settings": settings(cron),
+        "active": False, "id": w, "name": name, "area": area_of(kind, key, area), "factory": factory_of(kind, key),
+        **feature_of(kind, key), "settings": settings(cron),
         "connections": {trig: {"main": [[{"index": 0, "node": step, "type": "main"}]]}},
         "nodes": [
             {"id": node_id(w, trig), "name": trig, "parameters": {"rule": {"interval": [{"expression": cron, "field": "cronExpression"}]}},
@@ -190,7 +212,8 @@ def chain(name, cron, steps, out=None, folder=None, area=None):
             raise SystemExit(f"no crew job with a unit or agent card for {spec!r}")
     w = wid("chain", name)
     trig = f"On its schedule ({cron})"
-    wf = {"active": False, "id": w, "name": name, "area": area, "settings": settings(cron), "connections": {}, "nodes": [
+    wf = {"active": False, "id": w, "name": name, "area": area, "factory": factory_of("chain", name), "settings": settings(cron),
+          "connections": {}, "nodes": [
         {"id": node_id(w, trig), "name": trig, "parameters": {"rule": {"interval": [{"expression": cron, "field": "cronExpression"}]}},
          "position": [0, 0], "type": "n8n-nodes-base.scheduleTrigger", "typeVersion": 1.2}]}
     before = trig

@@ -1,0 +1,7 @@
+# The platform's model policy (GEN-05): subscriptions only, so no key can spend money until the site says otherwise.
+# A site behind a company gateway writes gateway_only here (deployments/example-work/models.yaml shows how).
+policy: subscription_only
+aliases:
+  gpt-sub: {served_by: chatgpt-subscription}           # LiteLLM, config/litellm/config.yaml (the device login)
+  gpt-sub-fast: {served_by: chatgpt-subscription}
+  claude-subscription: {served_by: claude-oauth}       # the Claude CLI roles, with CLAUDE_CODE_OAUTH_TOKEN

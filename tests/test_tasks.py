@@ -388,7 +388,7 @@ def test_the_intake_keeps_a_check_s_fix_loop_and_a_budget_preset():
         TK.preset_of({"agents": ["nobody"]})
 
 
-def test_the_plan_sees_what_each_agent_can_reach():
+def test_the_plan_sees_what_each_agent_can_reach(phone_on):
     """TSK-35: the intake gave the AI phone's steps to an agent without the phone (task #104); the agents it plans with
     name their tools in words, so a phone step goes to the agent that holds the phone."""
     import tasks as T

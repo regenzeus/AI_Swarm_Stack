@@ -74,7 +74,7 @@ def test_a_line_may_name_a_line_above_and_the_environment_wins(tmp_path):
 
 def test_shell_and_python_read_the_same_values_and_the_environment_wins_in_the_shell_too():
     values = DEPLOY.load(env={})
-    clean = {"PATH": os.environ["PATH"]}
+    clean = {"PATH": os.environ["PATH"], "AISTACK_DEPLOYMENT": str(DEPLOY.FOLDER)}     # the deployment the tests run as (PLT-44)
     plain = subprocess.run(["bash", "-c", f"set -a; . {DEPLOY.FILE}; env"], cwd=ROOT, env=clean, capture_output=True, text=True, check=True).stdout
     assert values.items() <= dict(ln.split("=", 1) for ln in plain.splitlines() if "=" in ln).items()
     script = f'eval "$("{sys.executable}" ops/deployment.py shell)"; printf "%s %s" "$NAS_HOST" "$FORGEJO_URL"'

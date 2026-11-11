@@ -36,7 +36,7 @@ Your Gmail and the mail copy never change; nothing is deleted.
 
 ```try
 label: Open Your taxes
-open: "#/tasks"
+open: "#/workflows"
 note: Your taxes is under Needs you while it has a question for you, then Running now, Recent results or Scheduled; tap Taxes to see only it.
 ```
 

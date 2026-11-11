@@ -332,7 +332,7 @@ items:
   - id: SEC-26
     title: The app's tools answer only the model gateway with their tokens
     statement: Each of Mission Control's MCP servers (missions 8091, claude 8092, house 8094, files 8096, memory 8097,
-      memorypublic 8098) shall answer only LiteLLM (its service name resolves to the peer, or Docker's DNS names the peer
+      memorypublic 8098, stack 8100) shall answer only LiteLLM (its service name resolves to the peer, or Docker's DNS names the peer
       <project>-litellm-<n>) with that server's own bearer token (MCP_TOKEN_<SERVER>, sops), which LiteLLM sends
       (auth_type bearer_token); with APP_TRUST on any other call shall be refused (401), and in log mode logged.
     type: constraint
@@ -346,7 +346,7 @@ items:
       and the swarm on the app's networks without a key.
     acceptance: 'Test: LiteLLM with the token passes, also from its other shared network; a wrong token, none, or the right
       token from n8n is refused; with no token set nothing passes; both gateway configs send each server''s own token and
-      compose gives it to both sides; all six servers are wrapped.'
+      compose gives it to both sides; all seven servers are wrapped.'
     verify: {method: test, by: [tests/test_trust.py::test_an_mcp_server_answers_only_litellm_with_its_token]}
     trace: [images/mission-control/server.trust.py, images/mission-control/server.py, config/litellm/config.yaml, deployments/example-work/litellm.yaml, compose/core.yaml, compose/apps.yaml]
   - id: SEC-27
