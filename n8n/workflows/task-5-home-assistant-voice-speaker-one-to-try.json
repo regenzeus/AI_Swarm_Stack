@@ -1,5 +1,6 @@
 {
   "active": true,
+  "area": "shopping",
   "connections": {
     "On its schedule (30 8 * * *)": {
       "main": [
@@ -65,10 +66,17 @@
       "webhookId": "b15a1ed7-f506-c64f-30e0-aa696e8c3987"
     },
     {
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "aistackRunHook01",
+          "name": "AI Stack runner"
+        }
+      },
       "id": "47d2abe1-2f15-4b57-c1a7-34f8c89e9d36",
       "name": "Run now",
       "notes": "Starts the job now, as its schedule would (POST).",
       "parameters": {
+        "authentication": "headerAuth",
         "httpMethod": "POST",
         "options": {},
         "path": "run/task-5-home-assistant-voice-speaker-one-to-try"

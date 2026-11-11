@@ -179,3 +179,82 @@ def test_every_source_file_is_traced_or_listed_with_a_reason(tmp_path):
     assert "untraced-files.txt: images/app/app.py is traced now; remove it" in p and "ops/gone.py no longer exists" in p
     (root / "requirements" / "untraced-files.txt").write_text("ops/tool.py\n")
     assert "untraced-files.txt: ops/tool.py needs its reason after a #" in problems(root)
+
+
+def _git(root, *args):
+    import os
+    import subprocess
+    env = {**os.environ, "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "test@example.com", "GIT_COMMITTER_NAME": "t",
+           "GIT_COMMITTER_EMAIL": "test@example.com"}
+    return subprocess.run(["git", "-C", str(root), *args], check=True, capture_output=True, text=True, env=env).stdout.strip()
+
+
+SECOND = AREA + """
+  - id: XX-02
+    title: It remembers
+    statement: When asked twice, the runner shall answer the second time from its record.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-01]
+    sources: [README.md]
+    verify: {method: test, by: [tests/test_a.py::test_one]}
+"""
+
+
+def _landing(tmp_path, area):
+    """A target branch with XX-01 and XX-02, then the branch that lands with `area` instead -> (base, problems)."""
+    root = repo(tmp_path, area=SECOND)
+    _git(root, "init", "-q")
+    _git(root, "add", "-A")
+    _git(root, "commit", "-qm", "main")
+    base = _git(root, "rev-parse", "HEAD")
+    (root / "requirements" / "example.yaml").write_text(textwrap.dedent(area))
+    _git(root, "commit", "-qam", "the branch")
+    return base, req.kept(root, base, "HEAD")
+
+
+def test_an_id_on_the_target_branch_may_be_added_to_or_deprecated_but_never_renumbered_reused_or_removed(tmp_path):
+    """QA-28 (review 10 Nov 2026, D2): WFL-15..19 became WFL-19..23 in one day and commit trailers pointed at other
+    requirements; a landing that changes what an id of main means stops, with the ids named."""
+    added = SECOND + """
+  - id: XX-03
+    title: It forgets on request
+    statement: When the owner asks, the runner shall delete its record within 1 minute.
+    type: functional
+    priority: could
+    status: proposed
+    parents: [SN-01]
+    sources: [README.md]
+"""
+    assert _landing(tmp_path / "a", added)[1] == []
+    deprecated = SECOND.replace("    status: implemented\n    parents: [SN-01]\n    sources: [README.md]\n",
+                                "    status: deprecated\n    reason: the record is gone\n    parents: [SN-01]\n    sources: [README.md]\n")
+    assert "deprecated" in deprecated and _landing(tmp_path / "b", deprecated)[1] == []
+
+    renumbered = SECOND.replace("id: XX-02", "id: XX-04")
+    base, problems = _landing(tmp_path / "c", renumbered)
+    assert len(problems) == 1 and problems[0].startswith(f'XX-02 ("It remembers") is on {base} and gone here')
+    assert "its title is now at XX-04: renumbered?" in problems[0]
+
+    reused = SECOND.replace("title: It remembers", "title: It sends a summary")
+    problems = _landing(tmp_path / "d", reused)[1]
+    assert len(problems) == 1 and '"It remembers"' in problems[0] and '"It sends a summary"' in problems[0]
+    assert "never reused" in problems[0]
+
+    removed = AREA
+    problems = _landing(tmp_path / "e", removed)[1]
+    assert len(problems) == 1 and "XX-02" in problems[0] and "never removed" in problems[0]
+
+
+def test_a_title_changes_in_words_only_with_the_old_one_kept_and_an_unreadable_branch_is_no_pass(tmp_path):
+    reworded = SECOND.replace("title: It remembers", "title: It remembers what it answered\n    titles_before: [It remembers]")
+    assert _landing(tmp_path / "a", reworded)[1] == []
+    root = tmp_path / "a"
+    (root / "requirements" / "REQUIREMENTS.md").write_text(req.render(root))
+    assert req.check(root) == [] and "Earlier titles: `It remembers`" in req.render(root)
+    bad = SECOND.replace("title: It remembers", "title: It remembers\n    titles_before: It was")
+    (root / "requirements" / "example.yaml").write_text(textwrap.dedent(bad))
+    assert any("titles_before is a list" in p for p in req.check(root))
+    problems = req.kept(root, "no-such-branch", "HEAD")
+    assert problems == ["no-such-branch could not be read, so whether every requirement id kept its meaning is not known"]

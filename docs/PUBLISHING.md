@@ -45,7 +45,7 @@ Such a copy moves its branch instead: keep a backup branch, `git fetch origin`, 
 
 | Date | Snapshot | Why |
 |---|---|---|
-| 9 Nov 2026 | 81df652 | the owner asked that names of a work deployment never appear in any history; both histories were rewritten (SEC-22) |
+| 9 Nov 2026 | 81df652 | the owner asked that names of a work deployment never appear in any history; both histories were rewritten (SEC-22, DEC-55: what it covered and what may still hold old commits) |
 
 ## The private files
 

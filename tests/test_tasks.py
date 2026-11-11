@@ -40,6 +40,7 @@ def K(tmp_path, monkeypatch):
     monkeypatch.setattr(TK, "B_repos", lambda: ["ai-stack", "testrepo"])
     monkeypatch.setattr(TK, "CHATS", tmp_path / "chats")
     monkeypatch.setattr(TK, "discover_crew", lambda c: None)          # the crew's duties are tasks too (test_tasks_tab.py)
+    monkeypatch.setattr(TK, "discover_flows", lambda c: None)         # a workflow that is your task (test_tax_task.py)
     monkeypatch.setattr(B, "handle", lambda req, c: started.append(("build", req)) or {"id": 7})
     monkeypatch.setattr(CT, "handle", lambda req, c: started.append(("claude", req)) or {"id": 3})
     for f in ("start", "end", "set_ref"):

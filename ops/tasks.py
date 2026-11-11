@@ -31,8 +31,9 @@ KINDS = {"change": "change", "coding": "build", "code_question": "claude", "rese
          "watching": "mission", "briefing": "mission", "shopping": "mission", "cleanup": "mission"}   # cleanup: only when the owner picks it
 MISSION_TYPE = {"briefing": "briefing", "shopping": "shopping", "cleanup": "cleanup"}   # every other mission kind is a task mission
 DELIVER = ("telegram", "app", "email")
-# TSK-40: work the stack gives itself (trials, probes, gates, the crew's duties and questions, onboarding) is the stack's;
-# everything else is yours. Your Tasks list shows yours; the stack's are a filter away, never hidden.
+# TSK-52 (TSK-40's split superseded): every task is in one list, labelled by its area (ops/areas.py). Who asked stays as
+# information on a task, never a filter: work the stack gives itself (trials, probes, gates, onboarding, its upkeep)
+# is the stack's, everything else yours.
 STACK_SOURCE = re.compile(r"^(trial|probe|gate|crew|onboard|commission)\b")
 EFFORTS = ("light", "standard", "deep")
 REPLAN_H = 6                                       # a planning a restart cut off is planned again within this; older, it fails and says why
@@ -68,9 +69,16 @@ def table(c):
 
 
 def owner_of(c, source, door=None, ref=None):
-    """TSK-40: "stack" for the work the stack gives itself, else "you". A question to Claude is the stack's when one of
-    its own asked it (the Health doctor, an onboarding)."""
-    if door == "crew" or STACK_SOURCE.match(str(source or "")):
+    """Who asked (TSK-52: information, never a filter): "stack" for the work the stack gives itself, else "you". A crew
+    duty and a workflow's run are the stack's when their area is Upkeep (ops/crew.py, the workflow's file); a question to
+    Claude is the stack's when one of its own asked it (the Health doctor, an onboarding)."""
+    if door == "crew":
+        import crew as CR
+        return "stack" if (CR.BY_ID.get(str(ref)) or {}).get("area", "upkeep") == "upkeep" else "you"
+    if door == "workflow":
+        import flow_tasks as FT
+        return "stack" if FT.area_of_run(ref) == "upkeep" else "you"
+    if STACK_SOURCE.match(str(source or "")):
         return "stack"
     if door == "claude" and str(ref or "").isdigit() and _has(c, "claude_tasks"):
         q = c.execute("select source from claude_tasks where id=?", (int(ref),)).fetchone()
@@ -151,6 +159,8 @@ def discover(c, missions, now_ts=None):
         if not m.get("task"):                                             # a task's own shopping agent is that task
             register(c, "mission", m["slug"], m.get("goal") or m["title"], m["title"], done=[DONE_OF.get(m.get("type"), DONE_OF["task"])],
                      rhythm=rhythm_of_mission(m), created=m.get("created"), status="done" if m.get("status") == "archived" else "running")
+            if MISSION_TYPE.get(m.get("type")):                            # TSK-52: its area follows its kind
+                c.execute("update tasks set kind=? where door='mission' and ref=? and kind is null", (m["type"], m["slug"]))
     held = {(r["kind"], r["ref"]) for r in c.execute("select kind, ref from step_refs")} if _has(c, "step_refs") else set()   # FND-91
     for b in c.execute("select id, title, description, created from builds").fetchall() if _has(c, "builds") else []:
         if _recent(b["created"], now_ts) and ("build", str(b["id"])) not in held:
@@ -188,10 +198,60 @@ def discover_crew(c):
         if a.get("oneoff"):
             continue
         r = {"type": "schedule", "schedule": sched.get(a["id"]) or "on its workflow"}
+        who = owner_of(c, "crew", "crew", a["id"])       # who asked follows the job's area (TSK-52)
         if register(c, "crew", a["id"], a["what"], a["name"], done=[DONE_OF["crew"]], rhythm=r, status="scheduled",
-                    source="crew", owner="stack") is None and sched.get(a["id"]):
+                    source="crew", owner=who) is None and sched.get(a["id"]):
             c.execute("update tasks set rhythm=? where door='crew' and ref=? and rhythm<>?", (json.dumps(r), a["id"], json.dumps(r)))
+        c.execute("update tasks set owner=? where door='crew' and ref=? and owner is not ?", (who, a["id"], who))
     c.commit()
+
+
+def area_of(c, t):
+    """TSK-52: what a task is for (ops/areas.py): a crew duty's and a workflow's their declared area, a task's own
+    workflow the task's, code work Code, a mission's its type, a task given in a sentence its kind's, a trial Code."""
+    import areas as AR
+    door, ref, src = t.get("door"), str(t.get("ref") or ""), str(t.get("source") or "")
+    if door == "crew":
+        import crew as CR
+        return (CR.BY_ID.get(ref) or {}).get("area") or AR.UPKEEP
+    if door in ("flow", "workflow"):
+        import flow_tasks as FT
+        wf = FT.workflow(ref) if door == "flow" else FT.workflow_of_run(ref)
+        return FT.area_of_workflow(wf) if wf else "research"
+    if door in ("build", "claude") or src.startswith(("trial", "onboard")):
+        return "code"
+    if src.startswith(("probe", "gate", "commission")):
+        return AR.UPKEEP
+    return AR.of_kind(t.get("kind"))                  # a mission's task has its type as its kind (discover)
+
+
+def asked_by(t):
+    """Who asked for it, in a word the list shows: you, a rule of yours, an outside agent, the inbox, or the stack."""
+    src = str(t.get("source") or "")
+    if src.startswith("rule:"):
+        return "rule"
+    if src.startswith("a2a:"):
+        return "agent"
+    return "stack" if t.get("owner") == "stack" else "you"
+
+
+def crew_result(t):
+    """A crew duty's result where it has a page of its own (ops/crew.py "result": the mail sorter's Your mail)."""
+    if t.get("door") != "crew":
+        return {}
+    import crew as CR
+    r = (CR.BY_ID.get(str(t.get("ref"))) or {}).get("result")
+    return {"result_href": r[0], "result_label": r[1]} if r else {}
+
+
+def discover_flows(c):
+    """TAX-09: a workflow that is one of the owner's tasks (ops/flow_tasks.py: the tax desk's Your taxes) has its task,
+    its When and its state from the workflow's runs."""
+    import flow_tasks as FT
+    try:
+        FT.sync(c)
+    except Exception as e:                             # logged; the board shows the rest
+        M.log(f"tasks: flow tasks: {type(e).__name__}: {e}")
 
 
 def own(c):
@@ -242,6 +302,7 @@ def sync(c, missions):
     with lock:
         discover(c, missions)
         discover_crew(c)
+        discover_flows(c)
         own(c)
         for r in c.execute(f"select id from tasks where status in ({','.join('?' * len(OPEN))})", OPEN).fetchall():
             try:
@@ -831,6 +892,8 @@ def handle(req, c):
         if not t["after"]:
             dispatch(c, row(c, t["id"]))
         return {"task": t["id"]}
+    if a == "task_cancel" and t["door"] == "flow":      # TAX-09: a workflow's own task stops with its workflow
+        raise ValueError("it runs from its workflow: switch that off in Workflows (its Active switch)")
     if a == "task_cancel":
         if t["status"] not in OPEN:
             raise ValueError("this task is over already")
@@ -849,6 +912,9 @@ def handle(req, c):
         return {"task": t["id"]}
     if a == "task_conduct":
         return conduct(c, t)
+    if a == "task_run" and t["door"] == "flow":         # TAX-09: Run now starts the task's workflow
+        import flow_tasks as FT
+        return FT.run(c, t)
     if a == "task_run":                                  # TSK-22: run a plan task again now, outside its schedule
         if t["door"] != "plan" or t["status"] not in ("scheduled", "done", "failed"):
             raise ValueError("it is running now" if t["status"] == "running" else "only a planned task that is not running can run again")
@@ -907,9 +973,16 @@ def detail(c, tid):
     every run with their full results. The app adds what the run record holds (agents, actions, memory)."""
     import conductor as CD
     t = row(c, tid)
+    if t["door"] == "flow":                            # TAX-09: its runs are its workflow's runs, their steps the workflow's
+        import flow_tasks as FT
+        x = FT.extra(c, t)
+        return {k: t.get(k) for k in FIELDS} | {"judgement": None, "result": None, "plan": x["plan"], "runs": x["runs"], "steps": x["steps_of"],
+                                                "checkpoints": [], "workflow": x["workflow"], "result_view": x.get("result_view"), "agent": x.get("agent"),
+                                                "result_href": x.get("result_href"), "result_label": x.get("result_label"), "asks": x.get("asks", 0),
+                                                "area": x.get("area"), "asked": asked_by(t)}
     occs = CD.occurrences(c, tid) if t["door"] == "plan" else []
     sp = t["spec"]
-    return ({k: t.get(k) for k in FIELDS} | {"judgement": sp.get("judgement"), "plan": sp.get("plan") or [], "result": sp.get("result"),
+    return ({k: t.get(k) for k in FIELDS} | {"area": area_of(c, t), "asked": asked_by(t), "judgement": sp.get("judgement"), "plan": sp.get("plan") or [], "result": sp.get("result"),
                                            "repo": sp.get("repo"), "budget": sp.get("budget"), "shop": sp.get("shop"), "topic": sp.get("topic"), "change": sp.get("change"),
                                            "wiki": sp.get("wiki"), "runs": occs, "checkpoints": sp.get("checkpoints") or [],
                                            "steps": {str(o["occ"]): CD.steps(c, tid, o["occ"]) for o in occs}})
@@ -942,7 +1015,14 @@ def state(c):
                      (*OPEN, since)).fetchall()
     out = []
     import conductor as CD
+    import flow_tasks as FT
     import n8n_jobs as NJ
+    try:
+        held = FT.folded(c)                           # TAX-09: the work a flow task holds as its steps is not a task of its own
+    except Exception as e:                             # logged; the board shows them as before
+        M.log(f"tasks: flow tasks: {type(e).__name__}: {e}")
+        held = set()
+    rows = [r for r in rows if r["id"] not in held]
     stepped = CD.state(c, [r["id"] for r in rows if c.execute("select door from tasks where id=?", (r["id"],)).fetchone()["door"] == "plan"])
     when = NJ.index()                                 # WFL-09: a task's next run is its n8n workflow's
     for r in rows:
@@ -955,6 +1035,14 @@ def state(c):
             if t["status"] in ("scheduled", "running"):
                 nxt = NJ.next_run("task", t["id"], idx=when)
         runs = []
+        if t["door"] == "flow":                       # TAX-09: its workflow's runs, the latest one's steps, its next run
+            x = FT.extra(c, t, RUNS)
+            out.append({k: t.get(k) for k in FIELDS} | {"judgement": None, "plan": x["plan"], "steps": x["steps"], "result": None,
+                                                        "last_run": x["last_run"], "next_run": x["next_run"], "runs": x["runs"], "shop": None,
+                                                        "topic": None, "workflow": x["workflow"], "result_view": x.get("result_view"), "agent": x.get("agent"),
+                                                        "result_href": x.get("result_href"), "result_label": x.get("result_label"), "asks": x.get("asks", 0),
+                                                        "area": x.get("area"), "asked": asked_by(t)})
+            continue
         if t["door"] == "plan":                       # the Conductor's: its latest occurrence, and the next on its schedule
             runs = CD.occurrences(c, t["id"])
             occ = (runs or [None])[0]
@@ -970,8 +1058,9 @@ def state(c):
             runs = runs[:RUNS]                            # cap: list (the card's run history; every run stays in task_occ)
         out.append({k: t.get(k) for k in FIELDS} | {"judgement": t["spec"].get("judgement")}
                    | {"plan": t["spec"].get("plan") or [], "steps": stepped.get(t["id"], []), "result": t["spec"].get("result"),
-                      "last_run": last, "next_run": nxt, "runs": runs, "shop": t["spec"].get("shop"), "topic": t["spec"].get("topic")})
-    agents = [{k: a.get(k) for k in ("id", "purpose", "harness", "model")} for a in CD.cards().values() if CD.runs_steps(a)]
+                      "last_run": last, "next_run": nxt, "runs": runs, "shop": t["spec"].get("shop"), "topic": t["spec"].get("topic"),
+                      "area": area_of(c, t), "asked": asked_by(t), **crew_result(t)})
+    agents = [{k: a.get(k) for k in ("id", "name", "purpose", "harness", "model")} for a in CD.cards().values() if CD.runs_steps(a)]
     publish(c, [t["id"] for t in out] if _published else [r["id"] for r in c.execute("select id from tasks")])
     return {"tasks": out, "task_agents": agents}                 # TSK-30: the agents the composer offers
 

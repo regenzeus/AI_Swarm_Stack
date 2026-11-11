@@ -234,13 +234,15 @@ function obsBlocks(files, detail) {
 const RT_STATE = { done: ["ok", "Done"], failed: ["failed", "Failed"], stopped: ["paused", "Stopped"], stalled: ["failed", "Stalled"], limit: ["paused", "Usage limit"] };
 let rtES = null, rtTimer = null;
 
+// TAX-12: an agent card's own readable name (config/agents.yaml name: "Tax reader"), from the agents the board offers
+const cardName = (a) => ((S?.task_agents || []).find((x) => x.id === a) || {}).name || "";
 function agentName(a) {
   return ({ main: "Hermes (chat)", mission: "Hermes (tasks)", scout: "Scout", curator: "Curator", builder: "Builder (ChatGPT)", "claude-builder": "Builder (Claude Code)",
             "claude-task": "Claude task", "claude-review": "Claude review", "claude-maintainability": "Claude review (Crew)", "ai-phone": "AI phone", mail: "Gmail", runner: "Runner" })[a]
     || (String(a || "").startsWith("mission:") ? (S?.missions || []).find((m) => "mission:" + m.slug === a)?.title || "Mission " + a.slice(8)
     : String(a || "").startsWith("crew:") ? (S?.crew || []).find((c) => "crew:" + c.id === a)?.name || "Crew: " + a.slice(5)
     : { claude: "Claude Code", phone: "AI phone", gmail: "Gmail", house: "House", "self-review": "Self-review", "phone-check": "Phone check", "phone-cleanup": "Phone cleanup" }[a]
-    || String(a || "").replace(/^\w/, (x) => x.toUpperCase()));
+    || cardName(a) || String(a || "").replace(/^\w/, (x) => x.toUpperCase()));
 }
 // a link to a thing's newest run (build:7, claude-task:3, mission-run:15, phone, mail): opens the run view
 function liveLink(id, label = "Run view") { return `<a class="btn sm" href="#/live/${encodeURIComponent(id)}">${ic.pulse}${label}</a>`; }

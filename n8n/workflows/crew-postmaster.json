@@ -1,5 +1,6 @@
 {
   "active": true,
+  "area": "mail",
   "connections": {
     "On its schedule (0 * * * *)": {
       "main": [
@@ -65,10 +66,17 @@
       "webhookId": "06e0bc47-8fef-17fb-89b7-e208bb048a88"
     },
     {
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "aistackRunHook01",
+          "name": "AI Stack runner"
+        }
+      },
       "id": "db39d460-44d3-15b7-99f3-2bade60fe05a",
       "name": "Run now",
       "notes": "Starts the job now, as its schedule would (POST).",
       "parameters": {
+        "authentication": "headerAuth",
         "httpMethod": "POST",
         "options": {},
         "path": "run/crew-postmaster"

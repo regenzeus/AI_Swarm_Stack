@@ -19,6 +19,61 @@ data or doing damage. The design keeps the "lethal trifecta" (untrusted input + 
 | Secrets | sops + age; decrypted into a process environment per command (`make`, systemd units), never written to disk or printed. Age key copies: NAS, `F:\AI-backup`, OneDrive (separate folder). |
 | Requests from the app / chat | The runner validates every request (allow-listed actions, slugs, schedules, sizes); e-mail goes only to the owner's address. |
 
+### n8n, the step service and the frames (as built on 11 Nov 2026)
+
+The review of 10 Nov 2026 found the workflow pillar missing from this model and the app owner-equivalent to anything on
+its networks (O1-O4 in [REVIEW-2026-11-10.md](REVIEW-2026-11-10.md)). This is the boundary built for it (SEC-24 to
+SEC-28). The app-side refusals start in **log mode**: they refuse nothing and log what they would refuse, until the lead
+switches them on (below).
+
+| Part | What holds it |
+|---|---|
+| The app's port 8090 (SEC-24) | Answers only what comes through its published port, the path the owner's browser takes (tailscale serve → Windows' `127.0.0.1:8090` → wslrelay → WSL's `127.0.0.1:8090` → Docker's published port). The identity header (or the local gate's loopback host) of any other peer is never believed: in `on` mode such a request is refused whole (403). The rule is the gateway of the app's default route, read from its own route table (`server.trust.py`). |
+| The MCP servers 8091, 8092, 8094, 8096, 8097, 8098 (SEC-26) | Answer only LiteLLM (Docker's DNS names the peer: `litellm` resolves to it, or its address is `<project>-litellm-<n>`) with the server's own bearer token (`MCP_TOKEN_<SERVER>`, sops), which LiteLLM sends (`auth_type: bearer_token` in `config/litellm`). They still listen on every network of the app: Docker numbers its networks when it makes them, and binding to one address would need LiteLLM up before the app; the refusal by peer and token is the same boundary one layer up. |
+| The step service (`server.flows.py`, :8099, SEC-25) | Only on `stepnet` (n8n and the app), only the Host `mission-control`, and only with its token (`AISTACK_STEP_TOKEN`, sops), which the AI Stack step node sends from n8n's environment. It stays in the app's process: a container of its own would not take n8n off the app's networks (the editor inside the app needs `stepnet`), so the peer rule and the token are the boundary; what remains is that a fault in the step service is a fault in the owner's API process. |
+| n8n's webhooks (SEC-27) | Every Webhook trigger (Run now `run/<stem>`, the items' `item/<...>`, the inbox, the self-test, a pack's) takes only a call with the runner's header `X-Aistack-Hook` (n8n's Header Auth credential "AI Stack runner", written by every import from the secret `N8N_HOOK_TOKEN`); the runner and the tracker poller send it. An import without the secret stops before it changes anything. n8n's resume links (`/webhook-waiting/...`) are signed by n8n itself. |
+| n8n's networks and ports (SEC-27) | `n8ndb` (its database in Postgres, internal), `flows` (the integrations it is given) and `stepnet` (the step service); no longer the flat `backend` with the builder's sandbox. Its port 5678 is on 127.0.0.1 for the runner; the tailnet port 8450 serves only `/webhook-waiting` (`ops/windows/host-setup.ps1`); the editor is inside the app behind its gate. |
+| n8n itself (SEC-28) | Pinned by digest; read-only root (`/tmp` and its compile cache in memory), every capability dropped, no new privileges, its public API off (nothing uses it: the runner uses its command line; on 2.44.7 that means no API key is accepted and its routes answer 401, and its docs page is off); its own owner login; Execute Command off; its credentials encrypted with `N8N_ENCRYPTION_KEY` (sops). **Open:** the SSH and Git nodes are on at home; Postgres' superuser (LiteLLM's role) owns n8n's database (moving it is a live migration, left for a maintenance window). |
+| The frames (`server.frames.py`) | n8n and Phoenix are served on the app's own origin, behind its gate; the AI phone is refused; the tools' own policy is kept (all but its framing rule), and a page a workflow wrote is sandboxed (SEC-23). **Open:** one origin for app and tools. |
+| `APP_GATE=local` (work) | The app is on 127.0.0.1 only and a request naming a loopback host or `mission-control` is the owner's (WFL-16), and only through the published port (SEC-24): a container naming the app is not this PC. |
+| Tracker text | Reaches agents inside an untrusted label (WFL-25). |
+
+**What the app sees, measured on the home PC on 11 Nov 2026** (rootless Docker 29.9.2, rootlesskit's builtin port
+driver, docker-proxy on; read from `/proc/net/tcp` inside the app while each connection was held open):
+
+| Path | Source address the app sees |
+|---|---|
+| WSL's `127.0.0.1:8090` and `:8093` (the runner, deploy's health check) | 172.27.0.1, the gateway of `mcui`, the app's default route |
+| Windows' `127.0.0.1:8090` (wslrelay) and tailscale serve `https://<pc>:8447` | 172.27.0.1 |
+| A container with `--network host` (rootlesskit's namespace: the journeys browser) | 172.27.0.1 |
+| n8n on `stepnet` (to 8090 and 8099) | an address of its own on stepnet |
+| Phoenix on `obs` | 172.22.0.2 |
+| LiteLLM on `mcnet` (to 8090 and 8091) | 172.26.0.4 |
+| The builder (on `backend`) | no route to the app at all |
+
+Docker publishes a container's ports on the network of its default route and connects from that network's gateway, so
+the rule holds when Docker renumbers its networks; a root-mode Docker with docker-proxy behaves the same way. A setup
+where the source differs (a Docker without docker-proxy, IPv6 publishing) shows it in log mode first: every refusal it
+would make is logged with the peer and the published port's address.
+
+#### Switching the trust boundary on (the lead's steps, in order)
+
+1. **Secrets, before landing:** `make trust-keys` (makes `AISTACK_STEP_TOKEN`, `N8N_HOOK_TOKEN` and the six
+   `MCP_TOKEN_*` once, in `secrets/secrets.enc.yaml`; values never printed). Without `N8N_HOOK_TOKEN` the landing
+   deploy's n8n import stops, and the deploy fails and rolls back.
+2. **Land in log mode** (the default, `APP_TRUST` unset): the deploy recreates n8n (networks, hardening), LiteLLM and
+   the app, imports the workflows with their header and writes n8n's credential; the runner restarts and sends the
+   header. Then on Windows run the two 8450 lines of `ops/windows/host-setup.ps1` (an owner step).
+3. **Watch the log for a day:** `docker logs aistack-mission-control-1 2>&1 | grep -E "^trust"`. The first line says the
+   mode, the published port's address (172.27.0.1 at home) and any token that is missing; a line "would refuse"
+   names what, the peer and the path. Expect none: open the app from the phone and the PC, start a crew job from the
+   app, a chat that uses a tool (missions, memory, house), and the Workflows and Traces pages.
+4. **Switch on:** `APP_TRUST=on` in `deployments/home/deployment.env`, land it (a deploy recreates the app). Check the
+   app from the phone at once.
+5. **Back off in one step** (the owner locked out, or tools refused): `APP_TRUST=log make up` puts the app back in log
+   mode at once without a landing; then revert the line in git. n8n's webhook header and its network move are not part
+   of the switch: rolling those back is a revert of the branch and a deploy.
+
 ### The Swarm service (phases 1 to 4)
 
 - **No way in from outside:** no published port and no internet. The MCP tools sit on the internal network `swarmmcp`, which

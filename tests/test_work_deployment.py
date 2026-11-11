@@ -273,6 +273,7 @@ def builds_standin(tmp, conn):
 @pytest.fixture
 def world(K, tmp_path, monkeypatch):
     """The customer-class test deployment around the toy pack."""
+    monkeypatch.setenv("N8N_HOOK_TOKEN", "hook-test")          # SEC-27: the runner's header for n8n's webhooks
     w = types.SimpleNamespace(tmp=tmp_path, clock={"now": T0}, logs=[], told=[], errors=[], threads={}, lock=threading.Lock(), n8n_restarts=0)
     # the deployment: example-work's data class and n8n settings (no tailnet, its logic nodes)
     work = DEPLOY.load(WORK / "deployment.env", env={})

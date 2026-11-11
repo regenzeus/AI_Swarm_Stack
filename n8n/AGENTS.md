@@ -10,9 +10,12 @@ through the stack's own node, which waits for the answer.
 | `custom/` | the stack's own node, AI Stack step (WFL-06), loaded by n8n when it starts |
 
 The editor lives inside the app: **Workflows** in the desk menu (`#/workflows`), served by the app under `/n8n/`
-behind its gate (WFL-13, `images/mission-control/server.frames.py`). Webhooks and resume URLs stay at n8n's root on its
-own tailnet port 8450 (`WEBHOOK_URL`), which is also the direct fallback when the app is down
-(`https://<pc>:8450/n8n/`); without the tailnet they stay on `http://127.0.0.1:5678/` (WFL-15). A step's title is how
+behind its gate (WFL-13, `images/mission-control/server.frames.py`). Webhooks and resume URLs stay at n8n's root
+(`WEBHOOK_URL`); its own tailnet port 8450 serves only the resume links (`/webhook-waiting/...`, signed by n8n), and the
+runner calls the webhooks on this PC (`http://127.0.0.1:5678/`); without the tailnet everything stays there (WFL-15).
+Every Webhook trigger asks for the runner's header `X-Aistack-Hook` (SEC-27): `ops/n8n_gen.py hook_auth` puts n8n's
+Header Auth credential "AI Stack runner" on it, every import writes that credential from the secret `N8N_HOOK_TOKEN`
+first, a pack's workflow and an export get it too, and a test fails on a file in git without it. A step's title is how
 the app's pages name it: keep it equal to the node's name, as `ops/n8n_gen.py` does, so a run's steps line up with the
 workflow's nodes (`ops/flows_view.py`).
 

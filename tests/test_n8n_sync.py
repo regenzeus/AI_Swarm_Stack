@@ -49,10 +49,12 @@ def test_a_deploy_imports_the_repositorys_workflows_each_as_its_file_says(monkey
     calls = []
     run = lambda cmd, **k: calls.append(cmd) or types.SimpleNamespace(returncode=0, stdout="Successfully imported 2 workflows.", stderr="")
     monkeypatch.setattr(NS, "sync_packs", lambda *a, **k: [])
+    monkeypatch.setenv("N8N_HOOK_TOKEN", "hook-test")          # SEC-27: the webhooks' credential is written first
     assert NS.import_all(run=run, made=Path("/nonexistent")) == 0
     ex = ["docker", "exec", "-u", "node", "aistack-n8n-1", "n8n"]
-    assert f"cp {' '.join(f.name for f in WF)} /home/node/.n8n/chosen/" in calls[0][-1]     # home: every file (PLT-38)
-    assert "n8n import:workflow --separate --input=/home/node/.n8n/chosen" in calls[0][-1]
+    assert "n8n import:credentials --input=/tmp/hook.json" in calls[0][-1]            # SEC-27: the webhooks' credential first
+    assert f"cp {' '.join(f.name for f in WF)} /home/node/.n8n/chosen/" in calls[1][-1]     # home: every file (PLT-38)
+    assert "n8n import:workflow --separate --input=/home/node/.n8n/chosen" in calls[1][-1]
     off = {c[7] for c in calls if len(c) > 7 and c[6] == "unpublish:workflow"}       # only the files that say inactive
     assert off == {f"--id={json.loads(f.read_text())['id']}" for f in WF if not json.loads(f.read_text())["active"]}
     assert ex + ["publish:workflow", "--id=aistackSelfTest1"] in calls and ex + ["publish:workflow", "--id=aistackMemKeeper"] in calls

@@ -24,6 +24,9 @@ by name.
 The Agent, Crew job, Place (also Fetch its files for), Repository, Tracker and Role pickers are n8n `loadOptions` methods that read
 `GET http://mission-control:8099/catalog` (the lists the runner writes every minute, public/step-catalog.json).
 
+Both calls carry the step service's token, `Authorization: Bearer $AISTACK_STEP_TOKEN` from n8n's own environment
+(compose/core.yaml, sops; SEC-25): the node's code reads it, workflow expressions cannot (`N8N_BLOCK_ENV_ACCESS_IN_NODE`).
+
 Rules:
 - A new kind goes into ops/flows.py first (validated, run through the stack's own code, reported, tested), then here
   with its fields; `tests/test_n8n_sync.py` checks that every kind of the step service is offered.

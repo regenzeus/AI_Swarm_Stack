@@ -16,12 +16,44 @@ One n8n workflow, **Tax desk** (`n8n/workflows/tax-desk.json`, made by `ops/n8n_
 
 | Step | What | Model |
 |---|---|---|
-| **Find tax papers** (crew job `tax-find`, `ops/tax.py find`) | The mail copy's index on the NAS (`index.sqlite`, opened read-only) from `window_from` on, by subject and sender only, against `config/tax.yaml` and the owner's own `/srv/ai/tax/rules.yaml` (keep, ignore). Each new candidate's text and its attachments' text (pdftotext on the NAS; a PDF without text is "needs OCR") come to `/srv/ai/tax/work/` (owner-only). The owner's earlier returns in `Steuern/<year>/` (HTML or PDF at the year's top level) too. | none |
-| **Read them (Hermes, ChatGPT)** (agent `tax`, step kind `tax-read`, `ops/tax.py run_read`) | Each mail and each earlier return is one turn of the Hermes profile `tax` through the Conductor's Hermes adapter, marked as data. The answer per document is JSON: relevant, tax year, form and line, kind, role, amounts, date, issuer, § 35a labour share, reason, confidence. | ChatGPT through Hermes, nothing else |
-| **File copies and prepare the drafts** (crew job `tax-file`, `ops/tax.py file`) | Copies on the NAS, Belege, the workbook per year, the questions. | none |
+| **Find the tax papers** (crew job `tax-find`, `ops/tax.py find`) | The mail copy's index on the NAS (`index.sqlite`, opened read-only) from `window_from` on, by subject and sender only, against `config/tax.yaml` and the owner's own `/srv/ai/tax/rules.yaml` (keep, ignore). Each new candidate's text and its attachments' text (pdftotext on the NAS; a PDF without text is "needs OCR") come to `/srv/ai/tax/work/` (owner-only). The owner's earlier returns in `Steuern/<year>/` (HTML or PDF at the year's top level) too. | none |
+| **Read the papers (ChatGPT)** (agent `tax`, the Tax reader, step kind `tax-read`, `ops/tax.py run_read`) | Each mail and each earlier return is one turn of the Hermes profile `tax` through the Conductor's Hermes adapter, marked as data. The answer per document is JSON: relevant, tax year, form and line, kind, role, amounts, date, issuer, § 35a labour share, reason, confidence. | ChatGPT through Hermes, nothing else |
+| **File the copies and prepare the drafts** (crew job `tax-file`, `ops/tax.py file`) | Copies on the NAS, Belege, the workbook per year, the questions. | none |
 
 `ops/tax_nas.py` is what runs on the NAS: it travels with each ssh call (python3 there, standard library), reads the
 mail copy only, and writes only under the Steuern share, never over a file.
+
+## In the app: Your taxes (TAX-09 to TAX-12)
+
+The owner, 11 Nov 2026: "Why do i not see agent and task for tax stuff? Did you create it in new system with n8n? Where
+can i see result?" The workflow had shown as three tasks of the stack's (two crew duties and a new task per run of the
+reader, titled "Read them") and its result only on the NAS.
+
+- **One task:** **Your taxes** in Tasks, area Taxes (under Needs you while it asks you something, else where it stands). Its When is
+  the workflow's schedule, its runs are the workflow's runs (one each, numbered from the first), each with the three
+  steps above in order, their state, times and answer (counts only); the reader's own log is one tap from its step,
+  the crew jobs' runs on their pages. **Where it runs** shows the run in n8n. **Run now** starts the workflow through
+  its Run now webhook (WFL-13); while the workflow is switched off it says so (switch it on in Workflows). The crew
+  duties tax-find and tax-file and the reader's task per run are not listed as tasks of their own any more
+  (`ops/flow_tasks.py`: a workflow that is one task of the owner's; their pages stay).
+- **The result:** the task's page shows **Your tax drafts** per year under the draft's disclaimer: the papers found per
+  form, the sums per form line, what the earlier returns lead to expect that is missing, the questions with the way
+  to Needs you, the earlier return as read, and the files: the workbook and the earlier return as pages
+  (`#/tax/<year>/workbook`, `#/tax/<year>/return`), Belege as a list with each paper's file name
+  (`#/tax/<year>/belege`), each with its path on the share (`\\<NAS>\Shared_Data\Steuern\...`, copied with one
+  tap). A paper itself opens from the share: the app has no way to the NAS, so it shows the path, never the file.
+- **Built without a model and without the NAS** (`ops/tax_view.py`): the same books as the share's, from the papers
+  read, the owner's corrections and answers in `/srv/ai/tax`, after every filing run and every answer;
+  `python3 ops/tax_view.py` builds it now.
+- **Only for the owner (TAX-11):** the view lies in `/srv/ai/missions/tax/view.json`, inside the app's one mount but
+  outside `public/`: the folder is mode 700 and the file 600, each with a POSIX access ACL entry for the app's user
+  alone (the owner of `/srv/ai/missions/app`, the app's own data folder), no group and no others. No other user of
+  the PC and no other container reads it; a filesystem that takes no ACL gets no view. The app serves it at
+  `GET /api/tax` only to the owner's signed-in session: never to the AI phone (PHN-07), never to the stack's own checks
+  and previews (`*@stack.local`), with `Cache-Control: no-store`; it is not in the state every screen gets, not in a
+  task's page data, a log, Home, a push or an n8n answer (the board names a count of questions only).
+- **The Tax reader** (card `tax`, `name: Tax reader`): its card says it reads the papers of the Tax desk, ChatGPT only,
+  no tools; its page lists the workflow it is a step of and the task it does steps for.
 
 ## Only ChatGPT reads tax content (TAX-02)
 
@@ -119,3 +151,4 @@ a run with no open year finds nothing.
 - Papers the owner drops into a form folder by hand are not read (only the earlier returns at a year's top level).
 - Scanned PDFs are named "needs OCR", not read.
 - The first live run on real mail is the lead's (see the landing notes in the branch's report).
+- A paper does not open inside the app: the app cannot reach the NAS, so it shows the paper's path on the share.

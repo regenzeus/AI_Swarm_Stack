@@ -9,6 +9,9 @@
 const STEPS = 'http://mission-control:8099/steps';
 const CATALOG = 'http://mission-control:8099/catalog';
 const WAIT_INDEFINITELY = new Date('3000-01-01T00:00:00.000Z');   // n8n's own "until resumed" (n8n-workflow)
+// SEC-25: the step service answers only a caller with its token (AISTACK_STEP_TOKEN in n8n's environment, from sops,
+// compose/core.yaml). Read by this node's own code: n8n keeps it from workflow expressions (N8N_BLOCK_ENV_ACCESS_IN_NODE).
+const stepAuth = () => (process.env.AISTACK_STEP_TOKEN ? { Authorization: `Bearer ${process.env.AISTACK_STEP_TOKEN}` } : {});
 
 const show = (...kinds) => ({ show: { kind: kinds } });
 const FAILED = ['failed', 'refused', 'cancelled'];
@@ -16,7 +19,7 @@ const succeeded = (a) => a.status === 'done' || (a.outcome !== undefined && !FAI
 
 // One of the stack's lists as a picker's options: the full name, the id it sends, what it is for.
 async function pick(fns, list) {
-  const got = await fns.helpers.httpRequest({ method: 'GET', url: CATALOG, json: true });
+  const got = await fns.helpers.httpRequest({ method: 'GET', url: CATALOG, headers: stepAuth(), json: true });
   if (!got || !got.ok) throw new Error(`the stack's lists are not there: ${(got && got.error) || 'no answer'}`);
   return (got[list] || []).map((x) => ({
     name: x.name && x.name !== x.id ? `${x.name} (${x.id})` : x.id,
@@ -203,7 +206,7 @@ class AistackStep {
     if (kind === 'item') Object.assign(body, { tracker: p('tracker'), key: String(p('key')), attach_to: p('attach_to', '') || undefined,
       attachments: String(p('attachments', '')).split(',').map((s) => s.trim()).filter(Boolean) });
     if (kind === 'tracker') Object.assign(body, { tracker: p('tracker'), key: String(p('key')), write: p('write'), body: p('body', ''), from_step: p('from_step', '') || undefined });
-    const got = await this.helpers.httpRequest({ method: 'POST', url: STEPS, body, json: true });
+    const got = await this.helpers.httpRequest({ method: 'POST', url: STEPS, headers: stepAuth(), body, json: true });
     if (!got || !got.ok) throw new Error(`the step service refused the step: ${(got && got.error) || 'no answer'}`);
     await this.putExecutionToWait(WAIT_INDEFINITELY);
     return [this.getInputData()];

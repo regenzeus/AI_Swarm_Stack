@@ -29,8 +29,7 @@ def test_home_runs_every_workflow_it_ran_before_the_list():
     at home. The tax desk (TAX-08) joined on 10 Nov 2026, unpublished until its first live run."""
     every = sorted(p.name for p in REPO.glob("*.json"))
     assert chosen("home") == every and len(every) == 33
-    assert all(json.loads((REPO / f).read_text())["active"] for f in every if f != "tax-desk.json")
-    assert json.loads((REPO / "tax-desk.json").read_text())["active"] is False
+    assert all(json.loads((REPO / f).read_text())["active"] for f in every)   # the tax desk too, on since its first run (10 Nov)
     names = DEPLOY.workflow_names(ROOT / "deployments/home")
     assert "crew-tracker-poll" in names and "item-home-inbox" in names          # from trackers.yaml, not listed
     assert DEPLOY.workflow_problems(ROOT / "deployments/home") == []
@@ -68,6 +67,7 @@ def test_a_deploy_imports_only_the_deployments_workflows_and_unpublishes_the_one
     flow(repo, "crew-phone-check", "aiscQ", True)                  # never imported here: n8n does not have it
     flow(made, "task-9-x", "aistT", True)                          # the runner made it here: always this deployment's
     monkeypatch.setattr(NS, "sync_packs", lambda *a, **k: [])
+    monkeypatch.setenv("N8N_HOOK_TOKEN", "hook-test")          # SEC-27: the webhooks' credential is written first
     calls = []
 
     def run(cmd, **k):
@@ -76,8 +76,8 @@ def test_a_deploy_imports_only_the_deployments_workflows_and_unpublishes_the_one
         return types.SimpleNamespace(returncode=0, stdout=out, stderr="")
 
     assert NS.import_all(repo, run=run, made=made, names=["crew-a", "crew-b"]) == 0
-    script = calls[0][-1]
-    assert calls[0][:6] == ["docker", "exec", "-u", "node", "aistack-n8n-1", "sh"]
+    script = calls[1][-1]                                                       # calls[0]: the webhooks' credential (SEC-27)
+    assert calls[1][:6] == ["docker", "exec", "-u", "node", "aistack-n8n-1", "sh"]
     assert "cp crew-a.json crew-b.json /home/node/.n8n/chosen/" in script and "--input=/home/node/.n8n/chosen" in script
     ex = ["docker", "exec", "-u", "node", "aistack-n8n-1", "n8n"]
     assert ex + ["publish:workflow", "--id=aiscA"] in calls and ex + ["unpublish:workflow", "--id=aiscB"] in calls

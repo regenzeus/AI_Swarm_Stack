@@ -148,7 +148,8 @@ def test_a_task_that_gets_a_schedule_gets_its_workflow_once_and_a_cancelled_ones
     assert not (made / "task-44-task-44.json").exists()                                           # no file, made again next pass
 
 
-def test_the_runners_word_wins_until_git_holds_it_and_a_deploy_keeps_it(tmp_path):
+def test_the_runners_word_wins_until_git_holds_it_and_a_deploy_keeps_it(tmp_path, monkeypatch):
+    monkeypatch.setenv("N8N_HOOK_TOKEN", "hook-test")          # SEC-27: the webhooks' credential is written first
     repo, made = tmp_path / "repo", tmp_path / "made"
     repo.mkdir()
     made.mkdir()

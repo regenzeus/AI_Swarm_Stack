@@ -45,8 +45,11 @@ if [ "$MODE" = drill ]; then
   docker exec -i $pg psql -q -U postgres -f - < $W/postgres.sql >/dev/null 2>$W/pg.err || true
   n=$(docker exec $pg psql -U postgres -d litellm -tAc "select count(*) from information_schema.tables where table_schema=current_schema()")
   keys=$(docker exec $pg psql -U postgres -d litellm -tAc "select count(*) from \"LiteLLM_VerificationToken\"")
+  # n8n, the one scheduler, keeps its workflows and credentials in the same server (review 10 Nov, OPS2-R2)
+  wf=$(docker exec $pg psql -U postgres -d n8n -tAc "select count(*) from workflow_entity" 2>/dev/null || echo none)
   docker stop $pg >/dev/null
-  echo "2/4 postgres dump loads: $n tables, $keys virtual keys"
+  echo "2/4 postgres dump loads: $n tables, $keys virtual keys, $wf n8n workflows"
+  case "$wf" in ''|none|0) echo "    n8n's workflows restore nothing"; bad=1 ;; esac
   if [ -f $W/hindsight.sql ]; then                # long-term memory (backups from 2026-10-25 on)
     hs=drill-hs-$$
     docker run -d --rm --name $hs --network none -e POSTGRES_PASSWORD=drill $(docker inspect -f "{{.Config.Image}}" aistack-hindsight-db-1) >/dev/null   # the live one's image (OPS-R9)
@@ -93,7 +96,11 @@ fi
 [ -n "${REHEARSAL:-}" ] || bash ops/hindsight-models.sh >/dev/null   # not in the backup (rebuildable); rehearsal runs no Hindsight
 make up >/dev/null; until docker exec aistack-postgres-1 pg_isready -q 2>/dev/null; do sleep 2; done
 docker stop aistack-litellm-1 >/dev/null
-docker exec aistack-postgres-1 psql -q -U litellm -d postgres -c "drop database litellm with (force)" -c "create database litellm"
+# n8n made a database of its own on its first start just now: the backup's replaces it whole, else the dump's rows collide
+# with the fresh ones and the restore stops incomplete (review 10 Nov, OPS2-R1). make restart below starts n8n again.
+docker stop aistack-n8n-1 >/dev/null 2>&1 || true
+docker exec aistack-postgres-1 psql -q -U litellm -d postgres -c "drop database litellm with (force)" -c "drop database if exists n8n with (force)" \
+  -c "create database litellm"
 docker exec -i aistack-postgres-1 psql -q -U litellm -d litellm -f - < $W/postgres.sql >/dev/null 2>$W/pg.err || true
 if [ -f $W/hindsight.sql ]; then
   docker stop aistack-hindsight-1 >/dev/null 2>&1 || true     # not running in a rehearsal

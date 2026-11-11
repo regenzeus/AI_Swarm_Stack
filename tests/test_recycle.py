@@ -17,6 +17,7 @@ def test_busy_names_what_runs_and_ignores_a_stale_task():
     assert R.busy({"builds": [{"id": 7, "status": "deploying"}]}, []) == "build #7 is deploying"
     assert R.busy({}, ["trial-stack-night.service", "docker.service"]) == "trial-stack-night.service is running"
     assert R.busy({}, ["docker.service", "missions.service"]) == ""
+    assert R.busy({}, ["graphify-sync.service"]) == "graphify-sync.service is running"   # the code graph's merge (review O9)
 
 
 def test_an_idle_night_restarts_the_three_and_logs_memory_before_and_after(tmp_path):

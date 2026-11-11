@@ -14,7 +14,7 @@ def test_the_desk_menu_opens_n8n_inside_the_app_and_the_phone_menu_does_not_show
     js = (STATIC / "app-base.js").read_text()
     assert '["workflows", "#/workflows", "Workflows", ic.flow]' in js
     assert 'if (k === "workflows" && bottom) return "";' in js and ":8450" not in js and "n8nUrl" not in js
-    assert "workflows: vWorkflows, traces: vTraces }[route.name]" in js and "  flow: I(" in js
+    assert "workflows: vWorkflows, traces: vTraces, tax: vTax }[route.name]" in js and "  flow: I(" in js
     wf = (STATIC / "app-workflows.js").read_text()
     assert 'const wfDesk = () => matchMedia("(min-width: 960px)").matches;' in wf
     assert "if (!wfDesk()) return wfList(open);" in wf                                   # a phone: the list

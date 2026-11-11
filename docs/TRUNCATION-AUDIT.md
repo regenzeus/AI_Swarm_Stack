@@ -145,7 +145,7 @@ What the audit found, and what happened to it:
 | Health (`rfList`) | eight rows, then "Show all N" | every row |
 | Health's chart | drawn only from parts with a health score: none for code without one | at a glance, then every part with each measure (APP-58) |
 | Network | the 14 busiest tasks, then "Show all N tasks" | every task; Yours, the stack's or All, All first |
-| Tasks list | yours or the stack's | All first, then yours or the stack's |
+| Tasks list | yours or the stack's | one list since 11 Nov 2026 (TSK-51): by what matters now, areas as a filter |
 | a node's neighbours | 14, then "show all" | every one |
 | a run's problems | 30, then "… and N more" | every one |
 | a mission's latest result | folded to 340 px behind "Show all" | whole, "Show less" folds it |

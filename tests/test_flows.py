@@ -52,7 +52,10 @@ def F(K, tmp_path, monkeypatch):
     monkeypatch.setattr(FW, "DONE", tmp_path / "flows/done")
     monkeypatch.setattr(__import__("runreg"), "ROOT", tmp_path / "flows/register")
     FW.PENDING.mkdir(parents=True)
-    told = []
+    monkeypatch.setattr(CD, "headroom", lambda *a, **k: None)   # the PC's free memory is no input of these tests: on a busy PC
+    told = []                                                    # a step waited for headroom and failed "did not settle" (11 Nov)
+    monkeypatch.setattr(CD, "slots", threading.BoundedSemaphore(CD.SLOTS))   # the Conductor's slots and rests are module state:
+    monkeypatch.setattr(CD, "resting", {})                                   # an earlier test in this worker must not hold one (QA2-R9)
     FW.M = types.SimpleNamespace(db=K.conn, stop=CD.M.stop, log=print, notify=lambda text, *a: told.append(text))
     K.told = told
     return K
@@ -99,7 +102,7 @@ def test_an_agent_step_runs_through_the_conductors_own_runner_and_n8n_gets_the_a
     assert (t["door"], t["kind"], t["ref"], t["status"]) == ("workflow", "workflow", "n8n:W1/731", "done")
     row = CD.steps(F.c, answer["task"], 1)[0]
     assert row["harness"] == "hermes" and "You find facts." in row["why"] and "Find three facts about RAM." in row["why"]
-    assert TK.owner_of(F.c, t["source"], t["door"]) == "stack"
+    assert TK.owner_of(F.c, t["source"], t["door"], t["ref"]) == "you"   # who asked (TSK-51): a workflow that declares no upkeep area is asked for
 
 
 def test_an_answer_n8n_did_not_take_is_sent_again_after_a_restart_without_running_the_step_again(F):
@@ -411,7 +414,8 @@ def test_a_plan_runs_in_waves_through_the_agent_path_and_answers_every_steps_out
     post, sent = took()
     FW.handle("p1", p, cards=CARDS, crew=CREW, post=post, sleep=lambda s: None)
     a = sent[0][1]
-    assert a["status"] == "done" and a["output"] == "result of step 3" and [s["output"] for s in a["steps"]] == [f"result of step {i}" for i in (1, 2, 3)]
+    assert a["status"] == "done", (a.get("error"), [(s.get("status"), s.get("error")) for s in a.get("steps") or []])
+    assert a["output"] == "result of step 3" and [s["output"] for s in a["steps"]] == [f"result of step {i}" for i in (1, 2, 3)]
     assert not together.broken                                                        # one wave: steps 1 and 2 together, step 3 after them
     together.abort()
     assert "Your step (3 of 3): Advice: Recommend one kit." in prompts[3] and "result of step 1" in prompts[3] and "result of step 2" in prompts[3]

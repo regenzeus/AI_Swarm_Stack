@@ -221,9 +221,10 @@ def judge(name, kind, runs, now=None, interval=None, enabled=True, up_since=None
 
 
 def notify(items, path, send, every=86400, grace=6 * 3600):
-    """Send each new issue once (again only after `every` seconds). send(text) delivers. An issue that leaves the board
-    is forgotten only after `grace` seconds away: one that flickers (a deploy restarts the app, the run record is out
-    of reach for a moment and the issue drops off for one check) is not sent again when it comes back."""
+    """Send each new issue once (again only after `every` seconds, never while it stays when it says `once`: an episode,
+    such as a missing backup, PLT-41). send(text) delivers. An issue that leaves the board is forgotten only after `grace`
+    seconds away: one that flickers (a deploy restarts the app, the run record is out of reach for a moment and the issue
+    drops off for one check) is not sent again when it comes back."""
     try:
         seen = json.loads(Path(path).read_text())
     except (OSError, ValueError):
@@ -235,7 +236,7 @@ def notify(items, path, send, every=86400, grace=6 * 3600):
             key = f"{it['kind']}:{it['name']}:{i['kind']}"
             rec = cur.setdefault(key, {"sent": 0})
             rec["seen"] = now
-            if now - rec["sent"] > every:
+            if now - rec["sent"] > every and not (i.get("once") and rec["sent"]):
                 send(f"{it['name']}: {i['text']}")
                 rec["sent"] = now
                 sent += 1

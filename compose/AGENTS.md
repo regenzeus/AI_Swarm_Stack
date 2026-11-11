@@ -15,17 +15,17 @@ gets what it needs under `environment:`, as `${NAME:?run via make}`.
 
 | Service | File | What it is |
 |---|---|---|
-| `postgres` | core | LiteLLM's database (keys, spend logs), and n8n's database under its own role |
+| `postgres` | core | LiteLLM's database (keys, spend logs), and n8n's database under its own role (n8n reaches it on `n8ndb` only) |
 | `litellm` | core | the model gateway: every model call and MCP tool server, one virtual key per agent |
 | `phoenix` | core | traces of the model calls and task runs |
 | `ollama` | core | the smoke test's tiny model, reachable only through LiteLLM with vk-smoke |
 | `n8n-db` | core | one-shot at each start: n8n's role and database in `postgres`, safe to repeat (WFL-02) |
-| `n8n` | core | the workflow pillar (n8n, DEC-51): schedules, triggers, waits and the canvas; on 127.0.0.1:5678 for the runner and tailscale serve's direct port only; its editor is inside the app (`N8N_PATH=/n8n/`, SSE live updates, Mission Control proxies it on `stepnet`, WFL-14); the stack's steps through Mission Control's step service on `stepnet` (WFL-01, WFL-05). Without the tailnet its addresses are the deployment's, on 127.0.0.1 (`N8N_EDITOR_URL`, `N8N_WEBHOOK_URL`, WFL-15), and customer data loads only the deployment's `N8N_NODES_INCLUDE` (WFL-17) |
+| `n8n` | core | the workflow pillar (n8n, DEC-51): schedules, triggers, waits and the canvas; on 127.0.0.1:5678 for the runner and tailscale serve's port 8450 for its resume links only; networks `n8ndb` (its database), `flows`, `stepnet`, never `backend` (SEC-27); read-only root, no capabilities, its public API off (SEC-28); every webhook asks for the runner's header (SEC-27); its editor is inside the app (`N8N_PATH=/n8n/`, SSE live updates, Mission Control proxies it on `stepnet`, WFL-14); the stack's steps through Mission Control's step service on `stepnet` (WFL-01, WFL-05). Without the tailnet its addresses are the deployment's, on 127.0.0.1 (`N8N_EDITOR_URL`, `N8N_WEBHOOK_URL`, WFL-15), and customer data loads only the deployment's `N8N_NODES_INCLUDE` (WFL-17) |
 | `hermes` | apps | the assistant (Hermes Agent) with its profiles: main, scout, mission, curator |
 | `hermes-dashboard` | apps | Hermes' own admin UI, in Hermes' network namespace |
 | `gate-hermes-dashboard` | apps | the tailnet sign-in gate in front of the Hermes dashboard |
 | `openwebui` | apps | Open WebUI, the second chat front end |
-| `mission-control` | apps | the app (phone and desktop), its MCP servers, the run record's ingest and the voice gateway |
+| `mission-control` | apps | the app (phone and desktop), its MCP servers, the run record's ingest and the voice gateway; port 8090 answers only through its published port, its MCP servers only LiteLLM with their tokens, its step service only n8n's node with its token (`APP_TRUST`, SEC-24 to SEC-26) |
 | `qmd` | apps | the vault's search index (keywords and meaning) as MCP |
 | `research` | apps | the research tool: one question to the scout profile |
 | `fetch` | apps | the scout's page reader, internet only through its egress firewall |

@@ -43,11 +43,15 @@ mcp_servers:
     description: "Web research by the isolated scout agent; returns a cited summary (untrusted web content)."
   claude:
     url: "http://mission-control:8092/mcp"
+    auth_type: "bearer_token"   # SEC-26: each of the app's MCP servers answers only its own token
+    authentication_token: "os.environ/MCP_TOKEN_CLAUDE"
     transport: "http"
     timeout: 120          # claude_task_result waits up to 50 s
     description: "Claude Code as a worker: code questions, reviews, analysing code or long documents, hard reasoning (read-only)."
   missions:
     url: "http://mission-control:8091/mcp"
+    auth_type: "bearer_token"
+    authentication_token: "os.environ/MCP_TOKEN_MISSIONS"
     transport: "http"
     description: "Mission Control: list, start, change, pause or stop the owner's missions (daily briefings, long-term agent tasks)."
   mail:
@@ -62,10 +66,14 @@ mcp_servers:
     description: "The AI phone (the owner's old Android test phone): look at the screen, tap, type, scroll, open apps. Ask the owner once per task with phone_task (its apps and exact texts); money always asks, passwords are never typed."
   files:
     url: "http://mission-control:8096/mcp"
+    auth_type: "bearer_token"
+    authentication_token: "os.environ/MCP_TOKEN_FILES"
     transport: "http"
     description: "A mission saves the files it was asked to deliver (Markdown, CSV, JSON, text): shown on its page, attached to its e-mail."
   house:
     url: "http://mission-control:8094/mcp"
+    auth_type: "bearer_token"
+    authentication_token: "os.environ/MCP_TOKEN_HOUSE"
     transport: "http"
     description: "The owner's flat through Home Assistant: lights, plugs, shutters, Alexa commands and speaking on the Echos (protected plugs refused)."
   browser:
@@ -79,11 +87,15 @@ mcp_servers:
     description: "Query the code knowledge graph of the repos in ~/code (callers, paths, explanations)."
   memory:                 # MEM-28: the memory stack's four tools; every agent with tools holds it in place of qmd, graphify and agent_note
     url: "http://mission-control:8097/mcp"
+    auth_type: "bearer_token"
+    authentication_token: "os.environ/MCP_TOKEN_MEMORY"
     transport: "http"
     timeout: 120          # a search reads the vault's index and the code's facts; a note may wait for the rubric's model
     description: "The stack's memory: search everything you may read, open one entry whole, subscribe to a collection for your task, note a lesson, fact, failure or skill (it enters memory after a check)."
   memorypublic:           # MEM-30: the same tools for the scout, reading only the World (not private), Code and How-to
     url: "http://mission-control:8098/mcp"
+    auth_type: "bearer_token"
+    authentication_token: "os.environ/MCP_TOKEN_MEMORYPUBLIC"
     transport: "http"
     timeout: 120
     description: "The stack's memory without the owner's facts, private wikis or journals: search, open, subscribe, note."

@@ -356,3 +356,23 @@ items:
     answer, files and times; a run''s record is made from it, and n8n gives time and order only, never through its
     internal API.', sources: ['owner 2026-11-10: Do it as the CR says directly. Update our design, requirements, everything.',
       docs/N8N-MIGRATION.md]}
+- {id: DEC-55, date: '2026-11-09', title: 'The one rewrite of history: a work deployment''s names out of git',
+    decision: 'What the owner asked on 9 Nov 2026: no name of the employer or of a work deployment in any git history. So,
+    as the one exception to AGENTS.md''s "never rewrite history", both histories were rewritten that day (recorded on
+    11 Nov 2026, review D1): the private repository (13 of its 718 commits changed, so every commit after the first of
+    them has a new hash) and the public snapshot on GitHub (its 5 snapshots replaced by one, 81df652, docs/PUBLISHING.md).
+    Since then the never-in-git guard (SEC-22) refuses such a name in every commit and push. Hashes written before the
+    rewrite (reviews, notes, trailers) may point at nothing. Measured on 11 Nov 2026: the live repository and its
+    worktrees hold no commit older than 9 Nov outside the new history, and one quote in SEC-22''s own rationale, written
+    the same day, still named the employer; it is reworded, and its text stays in the history from 9 Nov on. What may
+    still hold old commits, and what to do (the owner''s steps, nothing done here): Forgejo on the NAS keeps each pull
+    request''s head (refs/pull/<n>/head), which a force push does not move, and old objects until its garbage collection:
+    list the pull requests opened before 9 Nov, close and delete those whose heads are old commits, then run the
+    repository''s garbage collection from Forgejo''s site administration; the NAS''s nightly backups made before the
+    rewrite hold the old history inside home.tar (the 14 newest are kept; the last of them, aistack-20261109-0330, leaves
+    after 13 more good nights, about 24 Nov 2026), and so do OneDrive''s copies of them: let them rotate out, or delete
+    them earlier on the owner''s word; the Bitbucket mirror''s head d2b239d (24 Oct) is in no history here, so it holds the
+    old one until its next sync replaces it and Bitbucket collects the rest; GitHub may serve a replaced snapshot by its
+    hash until its own clean-up, which GitHub support can be asked to speed up. Another rewrite needs its own decision.',
+  sources: ['owner 2026-11-09: our git and repo never mention [the work tool] or anything [employer] specific right? We devel
+      a platform here', docs/PUBLISHING.md, docs/REVIEW-2026-11-10.md]}

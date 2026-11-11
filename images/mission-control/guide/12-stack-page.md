@@ -49,6 +49,8 @@ new versions and every repeating task): **Workflows** shows them all, and a crew
 schedule with the way to its workflow. **Timers without n8n** lists the three jobs that keep their own timer because
 they must run when n8n is down: the nightly encrypted backup to the NAS (and a copy to OneDrive), the weekly restore
 test that proves the backups work, and the boot check. The last backup and its restore test are at the top of Health.
+When a night's backup does not arrive (the PC was off, WSL stopped under it), the Backup card says which one is missing
+a few hours after its time, and you hear it once, however long it stays missing; the next good backup clears it.
 
 ## Checks (CI)
 

@@ -246,7 +246,7 @@ def wants(c, repo=REPO, made=MADE):
     -> [(task row, its schedule)]"""
     have = index(repo, made)
     out = []
-    for r in c.execute("select id, title, door, ref, status, rhythm from tasks where door in ('plan', 'mission') "
+    for r in c.execute("select id, title, kind, door, ref, status, rhythm from tasks where door in ('plan', 'mission') "
                        "and status in (?, ?) order by id", LIVE).fetchall():
         try:
             rh = json.loads(r["rhythm"] or "{}")
@@ -265,8 +265,10 @@ def make(t, sched, run=subprocess.run, made=MADE):
     cron = cron_of_rhythm(sched)
     if not cron:
         raise ValueError(f"its schedule {sched!r} is not one n8n can take")
+    import areas as AR
     wf = G.workflow("task", t["id"], f"Task #{t['id']}: {t['title']}", cron, {"kind": "task", "task": t["id"]},
-                    f"Made by the runner when the task got its schedule ({sched}); one run of the task (WFL-05).")
+                    f"Made by the runner when the task got its schedule ({sched}); one run of the task (WFL-05).",
+                    area=AR.of_kind(t.get("kind")))   # TSK-52: what it is for, from its task's kind
     import n8n_sync as NS
     Path(made).mkdir(parents=True, exist_ok=True)
     p = Path(made) / NS.file_name(wf)

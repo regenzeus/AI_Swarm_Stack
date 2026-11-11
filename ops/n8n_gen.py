@@ -5,15 +5,19 @@ its switch (ops/n8n_switch.py). n8n starts every scheduled job of the stack; thi
     python3 ops/n8n_gen.py crew <job> '<cron>'   write n8n/workflows/crew-<name>.json for a crew job of ops/crew.py
                                                  (an existing file stays as it is) and list it in this deployment's
                                                  workflows.yaml (PLT-38)
-    python3 ops/n8n_gen.py chain '<name>' '<cron>' crew:<job>=<title> agent:<card>=<title> ...
+    python3 ops/n8n_gen.py chain '<name>' '<cron>' --area=<area> crew:<job>=<title> agent:<card>=<title> ...
                                                  write n8n/workflows/<name>.json: the steps in that order, each waiting
                                                  for the one before (an existing file stays as it is), listed in this
-                                                 deployment's workflows.yaml; the tax desk's is one (TAX-08)
+                                                 deployment's workflows.yaml; the tax desk's is one (TAX-08); its
+                                                 area says what it is for (TSK-52, ops/areas.py)
     python3 ops/n8n_gen.py --run-now             Run now for every crew-* and task-* file that lacks it (its id,
                                                  "active" and canvas changes kept)
+    python3 ops/n8n_gen.py --hook-auth           the runner's header auth on every Webhook trigger of every file
+                                                 that lacks it (SEC-27; everything else in the file kept)
 
 A workflow is a Schedule trigger, a Run now Webhook (WFL-13: POST <n8n>/webhook/run/<file stem>) and one AI Stack step
-(WFL-06), which goes through the step service and waits. A task's workflow is made by the runner when the task gets
+(WFL-06), which goes through the step service and waits. Every Webhook trigger takes only a call that carries the runner's
+header (SEC-27: HOOK_HEADER with the secret N8N_HOOK_TOKEN, held in n8n as the credential HOOK_CRED, ops/n8n_sync.py). A task's workflow is made by the runner when the task gets
 its schedule (ops/n8n_jobs.py). What systemd still starts, and why, is in ops/systemd/AGENTS.md.
 """
 import hashlib
@@ -45,6 +49,31 @@ def node_id(w, n):
 
 
 STEP = "CUSTOM.aistackStep"                           # the stack's own node (n8n/custom, WFL-06)
+WEBHOOK = "n8n-nodes-base.webhook"
+HOOK_CRED = {"id": "aistackRunHook01", "name": "AI Stack runner"}   # SEC-27: n8n's Header Auth credential (ops/n8n_sync.py writes it)
+HOOK_HEADER = "X-Aistack-Hook"                       # the header it checks; its value is the secret N8N_HOOK_TOKEN (sops)
+
+
+def hook_auth(wf):
+    """SEC-27: every Webhook trigger of the workflow takes only a call with the runner's header (n8n's Header Auth with
+    HOOK_CRED); a webhook that named another credential or none gets this one. -> the workflow (changed in place)."""
+    for n in wf.get("nodes") or []:
+        if n.get("type") == WEBHOOK:
+            n.setdefault("parameters", {})["authentication"] = "headerAuth"
+            n["credentials"] = {"httpHeaderAuth": dict(HOOK_CRED)}
+    return wf
+
+
+def add_hook_auth(out=None):
+    """SEC-27 on every workflow file in git whose Webhook triggers lack it. -> the files changed."""
+    changed = []
+    for p in sorted(Path(out or OUT).glob("*.json")):
+        wf = json.loads(p.read_text())
+        before = json.dumps(wf, sort_keys=True)
+        if json.dumps(hook_auth(wf), sort_keys=True) != before:
+            p.write_text(json.dumps(wf, indent=2, ensure_ascii=False, sort_keys=True) + "\n")
+            changed.append(p.name)
+    return changed
 
 
 RUN_NOW = "Run now"
@@ -58,20 +87,32 @@ def run_now(wf, stem):
         return wf
     step = next(n for n in wf["nodes"] if n["type"] == STEP)
     w = wf["id"]
-    wf["nodes"].append({"id": node_id(w, RUN_NOW), "name": RUN_NOW, "notes": "Starts the job now, as its schedule would (POST).",
+    wf["nodes"].append({"id": node_id(w, RUN_NOW), "name": RUN_NOW, "notes": "Starts the job now, as its schedule would (POST, with the runner's header).",
                         "parameters": {"httpMethod": "POST", "options": {}, "path": f"run/{stem}"},
-                        "position": [0, 160], "type": "n8n-nodes-base.webhook", "typeVersion": 2, "webhookId": node_id(w, RUN_NOW + "/hook")})
+                        "position": [0, 160], "type": WEBHOOK, "typeVersion": 2, "webhookId": node_id(w, RUN_NOW + "/hook")})
     wf["connections"][RUN_NOW] = {"main": [[{"index": 0, "node": step["name"], "type": "main"}]]}
-    return wf
+    return hook_auth(wf)
 
 
-def workflow(kind, key, name, cron, params, note):
+def area_of(kind, key, area=None):
+    """TSK-52: what a new workflow is for (ops/areas.py): a crew job's its job's area (ops/crew.py), a task's the area
+    its task's kind gives (the runner says it), else research."""
+    import areas as AR
+    if area:
+        return AR.check(area, f"the workflow of {kind} {key}")
+    if kind == "crew":
+        import crew as CR
+        return AR.check((CR.BY_ID.get(key) or {}).get("area"), f"crew job {key}")
+    return "research"
+
+
+def workflow(kind, key, name, cron, params, note, area=None):
     """A Schedule trigger, a Run now trigger and one AI Stack step, which sends the step and waits for its answer."""
     import n8n_sync as NS
     w = wid(kind, key)
     trig, step = f"On its schedule ({cron})", name
     return run_now({
-        "active": False, "id": w, "name": name, "settings": settings(cron),
+        "active": False, "id": w, "name": name, "area": area_of(kind, key, area), "settings": settings(cron),
         "connections": {trig: {"main": [[{"index": 0, "node": step, "type": "main"}]]}},
         "nodes": [
             {"id": node_id(w, trig), "name": trig, "parameters": {"rule": {"interval": [{"expression": cron, "field": "cronExpression"}]}},
@@ -119,11 +160,14 @@ def crew(job, cron, out=None, folder=None):
     return p
 
 
-def chain(name, cron, steps, out=None, folder=None):
+def chain(name, cron, steps, out=None, folder=None, area=None):
     """A workflow of AI Stack steps in a row (crew jobs and agent steps), behind a Schedule and a Run now trigger,
     inactive until its switch, in n8n/workflows and listed in the deployment's workflows.yaml (folder, default this
     deployment's). steps: ["crew:<job>=<title>" | "agent:<card>=<title>"]; an agent step's brief is its card's purpose.
-    -> the file, or None when it exists."""
+    area (TSK-52): what it is for (ops/areas.py), required. -> the file, or None when it exists."""
+    import areas as AR
+    if area not in AR.AREAS:
+        raise SystemExit(f"say what the workflow is for: --area one of {', '.join(AR.AREAS)}")
     import crew as CR
     import n8n_jobs as NJ
     import n8n_sync as NS
@@ -146,7 +190,7 @@ def chain(name, cron, steps, out=None, folder=None):
             raise SystemExit(f"no crew job with a unit or agent card for {spec!r}")
     w = wid("chain", name)
     trig = f"On its schedule ({cron})"
-    wf = {"active": False, "id": w, "name": name, "settings": settings(cron), "connections": {}, "nodes": [
+    wf = {"active": False, "id": w, "name": name, "area": area, "settings": settings(cron), "connections": {}, "nodes": [
         {"id": node_id(w, trig), "name": trig, "parameters": {"rule": {"interval": [{"expression": cron, "field": "cronExpression"}]}},
          "position": [0, 0], "type": "n8n-nodes-base.scheduleTrigger", "typeVersion": 1.2}]}
     before = trig
@@ -171,13 +215,17 @@ def main(argv):
         for name in add_run_now():
             print(f"Run now added to {name}")
         return 0
+    if argv[1:2] == ["--hook-auth"]:
+        for name in add_hook_auth():
+            print(f"the runner's header auth on the webhooks of {name}")
+        return 0
     if len(argv) == 4 and argv[1] == "crew":
         p = crew(argv[2], argv[3])
         print(f"wrote {p.relative_to(R)}, listed in this deployment's workflows.yaml (inactive: ops/n8n_switch.py "
               f"{p.relative_to(R)} on)" if p else "it has a workflow already")
         return 0
-    if len(argv) >= 5 and argv[1] == "chain":
-        p = chain(argv[2], argv[3], argv[4:])
+    if len(argv) >= 6 and argv[1] == "chain" and argv[4].startswith("--area="):
+        p = chain(argv[2], argv[3], argv[5:], area=argv[4].split("=", 1)[1])
         print(f"wrote {p.relative_to(R)}, listed in this deployment's workflows.yaml (inactive: ops/n8n_switch.py "
               f"{p.relative_to(R)} on)" if p else "it has a workflow already")
         return 0

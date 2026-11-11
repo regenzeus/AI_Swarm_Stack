@@ -1,5 +1,6 @@
 {
   "active": true,
+  "area": "briefings",
   "connections": {
     "On its schedule (30 6 * * *)": {
       "main": [
@@ -65,10 +66,17 @@
       "webhookId": "b6101e74-ae8e-547c-a166-2db8dc1c4464"
     },
     {
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "aistackRunHook01",
+          "name": "AI Stack runner"
+        }
+      },
       "id": "55be4e4d-0d43-0066-7429-e524df66daa7",
       "name": "Run now",
       "notes": "Starts the job now, as its schedule would (POST).",
       "parameters": {
+        "authentication": "headerAuth",
         "httpMethod": "POST",
         "options": {},
         "path": "run/task-2-beta-materials-aspi-investment-news-briefing"

@@ -384,7 +384,7 @@ def test_the_tax_desk_workflow_finds_reads_and_files_in_that_order():
     while order[-1] in chain:
         order.append(chain[order[-1]]["main"][0][0]["node"])
     assert order == list(steps)
-    assert wf["active"] is False and any(n["parameters"].get("path") == "run/tax-desk" for n in wf["nodes"])
+    assert wf["active"] is True and any(n["parameters"].get("path") == "run/tax-desk" for n in wf["nodes"])
     assert "tax-desk" in yaml.safe_load((ROOT / "deployments/home/workflows.yaml").read_text())["workflows"]
     import crew as CR
     assert CR.BY_ID["tax-find"]["unit"] == "crew-tax-find" and CR.BY_ID["tax-file"]["unit"] == "crew-tax-file"
@@ -403,10 +403,10 @@ def test_a_run_with_no_open_year_finds_nothing(tmp_path, monkeypatch):
 
 def test_n8n_gen_makes_a_chain_of_steps(tmp_path):
     import n8n_gen as G
-    p = G.chain("Chain test", "0 6 * * 1", ["crew:tax-find=First", "agent:tax=Second"], out=tmp_path)
+    p = G.chain("Chain test", "0 6 * * 1", ["crew:tax-find=First", "agent:tax=Second"], out=tmp_path, area="taxes")
     wf = json.loads(p.read_text())
     assert p.name == "chain-test.json" and wf["connections"]["First"]["main"][0][0]["node"] == "Second"
     assert next(n for n in wf["nodes"] if n["name"] == "Second")["parameters"]["brief"] == card()["purpose"]
-    assert G.chain("Chain test", "0 6 * * 1", ["crew:tax-find=First"], out=tmp_path) is None
+    assert G.chain("Chain test", "0 6 * * 1", ["crew:tax-find=First"], out=tmp_path, area="taxes") is None
     with pytest.raises(SystemExit):
-        G.chain("Bad", "0 6 * * 1", ["crew:nope=X"], out=tmp_path)
+        G.chain("Bad", "0 6 * * 1", ["crew:nope=X"], out=tmp_path, area="taxes")

@@ -1,5 +1,6 @@
 """Recoverable and reproducible (PLT-15, PLT-20, PLT-23, CST-14, QA-17; review 2026-10-30, FND-66 to FND-68, FND-74):
-the board says when no restore drill has passed for 8 days, when swap is full, when a container runs another build
+the board says when no restore drill has passed for 8 days, when the newest backup is older than its schedule allows
+(PLT-41), when swap is full, when a container runs another build
 than its tag or the lock file lacks it, and when a container is cut off from the network it shares; failed writes are
 logged, and silent broad catches can only become fewer."""
 import pysrc
@@ -192,3 +193,78 @@ def test_the_ci_runner_has_an_init_that_reaps_what_its_jobs_leave_behind():
     import yaml
     apps = yaml.safe_load((ROOT / "compose/apps.yaml").read_text())
     assert apps["services"]["ci-runner"]["init"] is True
+
+
+def backup_item():
+    return {"kind": "crew", "id": "backup", "name": "Backup", "issues": []}
+
+
+def at(*a):
+    import datetime as dt
+    return dt.datetime(*a).timestamp()                 # local time, as the timer's 03:30 is
+
+
+def test_the_backups_schedule_is_read_from_its_units():
+    """The time a run may take: the timer's random delay, the gate's slot after a boot, its wait and the run's timeout."""
+    timer, service = (ROOT / "ops/systemd/backup.timer").read_text(), (ROOT / "ops/systemd/backup.service").read_text()
+    assert "OnCalendar=*-*-* 03:30" in timer and "RandomizedDelaySec=5min" in timer
+    assert "--wait 1800 --slot 15" in service and "TimeoutStartSec=2h" in service
+    assert crew.backup_due() == (3, 30, 5 * 60 + 15 * 60 + 1800 + 2 * 3600)
+
+
+def test_a_missing_nights_backup_is_an_alert_on_the_backup_heard_once_per_episode(tmp_path, monkeypatch):
+    """Review 10 Nov 2026, O10: WSL died at 03:36 on 10 Nov, the night's backup was lost, and nothing said so. The board
+    raises it once the night's run is overdue, keeps the same moment through the episode (one push, an Acknowledge
+    holds), and a good backup ends it."""
+    import observe as O
+    due = crew.backup_due()
+    log = tmp_path / "backups.jsonl"
+    log.write_text(json.dumps({"ts": at(2026, 11, 9, 3, 30, 11), "kind": "backup", "file": "aistack-20261109-0330.tar.gz.age", "size": "1.7G"}) + "\n"
+                   + json.dumps({"ts": at(2026, 11, 8, 5, 30), "kind": "restore-drill", "result": "ok"}) + "\n")
+
+    def board(now, up_since):
+        it = backup_item()
+        crew.recovery_alarms([it], now=now, backups=log, meminfo="", drift="", nets=[], phone={}, due=due, up_since=up_since)
+        return it["issues"]
+
+    up = at(2026, 11, 1, 8, 0)                                         # the PC up all along: due by 06:20 on 10 Nov
+    assert board(at(2026, 11, 9, 22, 0), up) == [] and board(at(2026, 11, 10, 6, 10), up) == []
+    [i] = board(at(2026, 11, 10, 6, 25), up)
+    assert i["kind"] == "backup-old" and "backup-old" in crew.ALERTS and i["once"] and i["at"] == at(2026, 11, 10, 6, 20)
+    assert "no backup since 09 Nov 03:30 (1.7G)" in i["text"] and "the one due 10 Nov 03:30 did not arrive" in i["text"]
+    assert "journalctl --user -u backup" in i["text"] and "make backup" in i["text"]
+
+    reboot = at(2026, 11, 10, 3, 45)                                   # WSL restarted after the night's start: from then
+    assert board(at(2026, 11, 10, 6, 25), reboot) == []
+    [late] = board(at(2026, 11, 10, 6, 40), reboot)
+    [later] = board(at(2026, 11, 11, 2, 0), reboot)
+    assert late["at"] == later["at"] == reboot + due[2]                # one episode, one moment
+
+    sent, t = [], [at(2026, 11, 10, 6, 40)]
+    monkeypatch.setattr(O.time, "time", lambda: t[0])
+    item = lambda issues: [{**backup_item(), "issues": issues}]
+    assert O.notify(item([late]), tmp_path / "n.json", sent.append) == 1
+    t[0] += 30 * 3600                                                  # a day and more later, still missing: not again
+    assert O.notify(item([later]), tmp_path / "n.json", sent.append) == 0 and len(sent) == 1
+    assert sent[0].startswith("Backup: no backup since 09 Nov 03:30")
+
+    with open(log, "a") as f:                                          # the next night's backup ends the episode
+        f.write(json.dumps({"ts": at(2026, 11, 11, 3, 36), "kind": "backup", "size": "1.8G"}) + "\n")
+    assert board(at(2026, 11, 11, 7, 0), reboot) == []
+    t[0] += 7 * 3600
+    assert O.notify(item([]), tmp_path / "n.json", sent.append) == 0
+    [again] = board(at(2026, 11, 12, 7, 0), up)                        # a new episode is heard again
+    assert "the one due 12 Nov 03:30" in again["text"] and O.notify(item([again]), tmp_path / "n.json", sent.append) == 1
+
+
+def test_an_unreadable_backup_schedule_says_so_and_no_backup_logged_yet_is_quiet(tmp_path, monkeypatch):
+    log = tmp_path / "backups.jsonl"
+    log.write_text(json.dumps({"ts": at(2026, 11, 9, 3, 30), "kind": "backup", "size": "1G"}) + "\n")
+    monkeypatch.setattr(crew, "backup_due", lambda: None)
+    it = backup_item()
+    crew.recovery_alarms([it], now=at(2026, 11, 12, 7, 0), backups=log, meminfo="", drift="", nets=[], phone={})
+    assert [i["kind"] for i in it["issues"]] == ["check-unknown"] and "schedule could not be read" in it["issues"][0]["text"]
+    log.write_text(json.dumps({"ts": at(2026, 11, 8, 5, 30), "kind": "restore-drill", "result": "ok"}) + "\n")
+    it = backup_item()
+    crew.recovery_alarms([it], now=at(2026, 11, 12, 7, 0), backups=log, meminfo="", drift="", nets=[], phone={}, due=(3, 30, 60))
+    assert it["issues"] == []

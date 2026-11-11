@@ -264,8 +264,8 @@ items:
   - id: WFL-13
     title: Run now through n8n
     statement: Every scheduled workflow of the repository shall have a second trigger, a webhook Run now (POST, path
-      run/<its file's stem>, ids derived from the workflow's id) on the same AI Stack step, so a job can be started on
-      demand through n8n as its schedule would start it; generating the workflows again adds it once and keeps each
+      run/<its file's stem>, ids derived from the workflow's id, taking only a call with the runner's header, SEC-27) on
+      the same AI Stack step, so a job can be started on demand through n8n as its schedule would start it; generating the workflows again adds it once and keeps each
       file's id, active state and canvas changes.
     type: functional
     priority: should
@@ -325,8 +325,9 @@ items:
     statement: "The app's front door shall admit by the deployment's gate: with the tailnet (APP_GATE tailnet, the
       default), only a request with Tailscale's identity header; without it (APP_GATE local), only a request that names
       the PC itself (127.0.0.1, localhost, ::1, or the app's service name), which shall be the owner's under one local
-      login whatever Tailscale header it brings; under both, a write from another site shall be refused, and n8n inside
-      the app shall be told the scheme the browser used."
+      login whatever Tailscale header it brings; under both, only a request through the app's published port shall
+      count (SEC-24), a write from another site shall be refused, and n8n inside the app shall be told the scheme the
+      browser used."
     type: constraint
     priority: must
     status: implemented
@@ -500,7 +501,8 @@ items:
       stack's own comments marked as its own and the others by their author, without the stack's write marks), its text
       kept from the start and its comments from the newest within the prompt's caps; an item that cannot be read shall
       fail the step with the reason, and a tracker the deployment does not have shall be refused before anything runs.
-      The AI Stack step node shall offer the item for an agent step (Read the item of, Item).
+      The AI Stack step node shall offer the item for an agent step (Read the item of, Item). The item's text and comments
+      shall reach the agent inside an untrusted label they cannot close (review of 10 Nov 2026, SEC2-R3).
     type: functional
     priority: should
     status: implemented
@@ -511,6 +513,7 @@ items:
       owner''s reply; an item the forge does not have fails the step with the reason; an unknown tracker is refused;
       the node sends the item of an agent step.'
     verify: {method: test, by: ['tests/test_domain_trackers.py::test_an_agent_step_reads_its_item_with_the_stacks_own_comments_marked_as_its_own',
+      'tests/test_domain_trackers.py::test_an_items_text_reaches_an_agent_labelled_and_cannot_end_its_label',
       'tests/test_home_inbox.py::test_an_agent_step_whose_item_cannot_be_read_fails_with_the_reason_and_an_unknown_tracker_is_refused',
       'tests/test_home_inbox.py::test_the_node_lets_an_agent_step_read_its_item',
       'tests/test_home_inbox.py::test_an_issue_in_the_inbox_is_answered_waits_for_the_owners_reply_and_is_closed']}

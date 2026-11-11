@@ -1,5 +1,6 @@
 {
   "active": true,
+  "area": "upkeep",
   "connections": {
     "On its schedule (0 1 * * *)": {
       "main": [
@@ -65,10 +66,17 @@
       "webhookId": "27afd901-60ed-7ea4-d811-5010a1a9d400"
     },
     {
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "aistackRunHook01",
+          "name": "AI Stack runner"
+        }
+      },
       "id": "2848cfe7-b926-cc87-e19f-6a53437665da",
       "name": "Run now",
       "notes": "Starts the job now, as its schedule would (POST).",
       "parameters": {
+        "authentication": "headerAuth",
         "httpMethod": "POST",
         "options": {},
         "path": "run/crew-trial-rotation"

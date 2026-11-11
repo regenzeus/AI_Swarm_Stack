@@ -5,6 +5,7 @@
   python3 ops/req.py render       rewrite requirements/REQUIREMENTS.md from the YAML files
   python3 ops/req.py show <id>    one record with everything that points at it
   python3 ops/req.py prove [--base REF] [--ids A,B]   a build's named requirements each have a test its change runs (SWM-96)
+  python3 ops/req.py kept [--base REF] [--head REF]   every id on the target branch keeps its meaning (QA-28; ops/land.sh)
 
 Reads only the repository and changes nothing but REQUIREMENTS.md (on render). Stdlib and PyYAML only.
 """
@@ -225,6 +226,9 @@ def check(root=ROOT):
             problems.append(f"{where}: {status} needs a gap")
         if status == "violated" and not r.get("findings"):
             problems.append(f"{where}: violated needs a finding")
+        tb = r.get("titles_before")
+        if tb is not None and not (isinstance(tb, list) and all(isinstance(t, str) and t.strip() for t in tb)):
+            problems.append(f"{where}: titles_before is a list of the earlier titles")
         if status == "deprecated":
             sup = r.get("superseded_by")
             if not sup and not r.get("reason"):
@@ -355,7 +359,8 @@ def render(root=ROOT):
             if "phase" in r:
                 rows.append(("Phase", f"{r['phase']} {one_line(a['phases'].get(r['phase'], ''))}".strip()))
             for key, label in (("acceptance", "Acceptance"), ("trace", "Trace"), ("gap", "Gap"), ("rationale", "Rationale"), ("reason", "Reason"),
-                               ("superseded_by", "Superseded by"), ("findings", "Findings"), ("refined_by", None)):
+                               ("superseded_by", "Superseded by"), ("findings", "Findings"), ("titles_before", "Earlier titles"),
+                               ("refined_by", None)):
                 if label and r.get(key):
                     rows.append((label, links(r[key]) if isinstance(r[key], list) or key == "superseded_by" else one_line(r[key])))
             kids = sorted(by_parent.get(r["id"], []))
@@ -403,6 +408,52 @@ def git_out(root, *args):
     return p.stdout if p.returncode == 0 else ""
 
 
+def records_at(root, ref):
+    """{id: record} of requirements/*.yaml as committed at a git ref; None when the ref cannot be read."""
+    if not git_out(root, "rev-parse", "--verify", "-q", f"{ref}^{{commit}}").strip():
+        return None
+    out = {}
+    for name in git_out(root, "ls-tree", "--name-only", f"{ref}:{REQ}").split():
+        if not name.endswith(".yaml"):
+            continue
+        try:
+            doc = yaml.safe_load(git_out(root, "show", f"{ref}:{REQ}/{name}")) or {}
+        except yaml.YAMLError:
+            continue                                       # the check of that commit names it; here it holds no ids
+        for it in (doc.get("items") or []) if isinstance(doc, dict) else []:
+            if isinstance(it, dict) and it.get("id"):
+                out[str(it["id"])] = it
+    return out
+
+
+def kept(root=ROOT, base="origin/main", head="HEAD"):
+    """QA-28 (review 10 Nov 2026, D2: WFL-15..19 became 19..23, GEN-40/41 and PLT-38 moved, in one day, and commit trailers
+    pointed at other requirements): every id on the target branch keeps its meaning on the branch that lands. An id may be
+    added, deprecated or superseded; it is never removed, renumbered or reused. Its meaning is its title: a title may
+    change only with the old one kept in the record's titles_before (the words changed, not the requirement), which a
+    reviewer reads in the diff. -> problems, each naming the ids."""
+    old, new = records_at(root, base), records_at(root, head)
+    if old is None or new is None:
+        return [f"{base if old is None else head} could not be read, so whether every requirement id kept its meaning is not known"]
+    where = {}
+    for rid, r in new.items():
+        where.setdefault(one_line(r.get("title")), []).append(rid)
+    problems = []
+    for rid, r in sorted(old.items()):
+        was = one_line(r.get("title"))
+        moved = [x for x in where.get(was, []) if x != rid]
+        hint = f"; its title is now at {', '.join(moved)}: renumbered? An id is never renumbered" if moved else ""
+        if rid not in new:
+            problems.append(f"{rid} (\"{was}\") is on {base} and gone here: an id is never removed; mark it deprecated with "
+                            f"superseded_by or a reason{hint}")
+            continue
+        now = one_line(new[rid].get("title"))
+        if now != was and was not in [one_line(t) for t in new[rid].get("titles_before") or []]:
+            problems.append(f"{rid}: \"{was}\" on {base} is \"{now}\" here: an id is never reused for another requirement; give "
+                            f"that one the next free id, or, when only the words changed, keep the old title in titles_before{hint}")
+    return problems
+
+
 def prove(root=ROOT, base="origin/main", head="HEAD", ids=None):
     """SWM-96: a build names the requirements it implements or changes ("Requirements: SWM-12, ..." in a commit message,
     as AGENTS.md asks), and each named requirement has a test that the build's change runs: the test file is changed by
@@ -439,7 +490,7 @@ def prove(root=ROOT, base="origin/main", head="HEAD", ids=None):
             continue
         if not [t for t in real if t.split("::")[0] in files or t.split("::")[0] in covering]:
             problems.append(f"{rid}: none of its tests ({', '.join(real[:3])}) is changed by this build or covers a file it changed")
-    return ids, files, problems
+    return ids, files, problems + kept(root, base, head)
 
 
 def main(argv):
@@ -452,6 +503,14 @@ def main(argv):
         for p in problems:
             print(f"   NOT PROVEN: {p}")
         print("   REQUIREMENTS PROVEN" if not problems else f"   {len(problems)} requirement problem{'s' if len(problems) != 1 else ''}")
+        return 1 if problems else 0
+    if cmd == "kept":
+        base = argv[argv.index("--base") + 1] if "--base" in argv else "origin/main"
+        head = argv[argv.index("--head") + 1] if "--head" in argv else "HEAD"
+        problems = kept(ROOT, base, head)
+        for p in problems:
+            print(f"   ID CHANGED: {p}")
+        print("   every requirement id keeps its meaning" if not problems else f"   {len(problems)} requirement id{'s' if len(problems) != 1 else ''} changed")
         return 1 if problems else 0
     if cmd == "render":
         (ROOT / REQ / OUT).write_text(render())

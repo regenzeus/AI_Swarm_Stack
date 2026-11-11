@@ -11,33 +11,33 @@ Method, statuses and rules: [README.md](README.md). Names of the parts: [glossar
 | [App](#app-app) (APP) | 65 | 63 | 1 | 0 | 0 | 0 | 1 |
 | [Assistant](#ast-assistant) (AST) | 14 | 13 | 1 | 0 | 0 | 0 | 0 |
 | [Autonomy](#aut-autonomy) (AUT) | 8 | 2 | 2 | 0 | 0 | 4 | 0 |
-| [Builder](#bld-builder) (BLD) | 39 | 38 | 0 | 0 | 0 | 1 | 0 |
+| [Builder](#bld-builder) (BLD) | 40 | 39 | 0 | 0 | 0 | 1 | 0 |
 | [Change requests](#chg-change-requests) (CHG) | 20 | 18 | 2 | 0 | 0 | 0 | 0 |
 | [Connections](#cnx-connections) (CNX) | 13 | 13 | 0 | 0 | 0 | 0 | 0 |
 | [Constraints](#cst-constraints) (CST) | 15 | 11 | 2 | 1 | 0 | 1 | 0 |
 | [Crew](#crw-crew) (CRW) | 13 | 11 | 0 | 0 | 0 | 0 | 2 |
 | [Gateway](#gw-gateway) (GW) | 9 | 8 | 0 | 0 | 0 | 1 | 0 |
-| [Generalisation](#gen-generalisation) (GEN) | 46 | 19 | 12 | 0 | 2 | 3 | 10 |
+| [Generalisation](#gen-generalisation) (GEN) | 47 | 20 | 12 | 0 | 2 | 3 | 10 |
 | [House](#hse-house) (HSE) | 9 | 9 | 0 | 0 | 0 | 0 | 0 |
 | [Knowledge](#knw-knowledge) (KNW) | 15 | 15 | 0 | 0 | 0 | 0 | 0 |
 | [Memory](#mem-memory) (MEM) | 51 | 49 | 0 | 0 | 0 | 0 | 2 |
 | [Missions](#mis-missions) (MIS) | 28 | 24 | 1 | 0 | 0 | 1 | 2 |
 | [Observability](#obs-observability) (OBS) | 18 | 18 | 0 | 0 | 0 | 0 | 0 |
 | [AI phone](#phn-ai-phone) (PHN) | 27 | 27 | 0 | 0 | 0 | 0 | 0 |
-| [Platform](#plt-platform) (PLT) | 40 | 36 | 3 | 0 | 0 | 1 | 0 |
-| [Quality and process](#qa-quality-and-process) (QA) | 27 | 25 | 1 | 0 | 0 | 1 | 0 |
+| [Platform](#plt-platform) (PLT) | 43 | 39 | 3 | 0 | 0 | 1 | 0 |
+| [Quality and process](#qa-quality-and-process) (QA) | 28 | 26 | 1 | 0 | 0 | 1 | 0 |
 | [Research](#res-research) (RES) | 7 | 6 | 1 | 0 | 0 | 0 | 0 |
-| [Security](#sec-security) (SEC) | 22 | 20 | 2 | 0 | 0 | 0 | 0 |
+| [Security](#sec-security) (SEC) | 28 | 22 | 6 | 0 | 0 | 0 | 0 |
 | [Shopping](#shp-shopping) (SHP) | 13 | 12 | 0 | 0 | 0 | 1 | 0 |
 | [Agent swarm](#swm-agent-swarm) (SWM) | 115 | 103 | 8 | 0 | 2 | 0 | 2 |
-| [Task engine](#tsk-task-engine) (TSK) | 47 | 41 | 6 | 0 | 0 | 0 | 0 |
-| [Tax desk](#tax-tax-desk) (TAX) | 8 | 8 | 0 | 0 | 0 | 0 | 0 |
+| [Task engine](#tsk-task-engine) (TSK) | 52 | 45 | 6 | 0 | 0 | 0 | 1 |
+| [Tax desk](#tax-tax-desk) (TAX) | 12 | 12 | 0 | 0 | 0 | 0 | 0 |
 | [Trials](#trl-trials) (TRL) | 17 | 13 | 2 | 0 | 0 | 2 | 0 |
 | [Voice](#voi-voice) (VOI) | 9 | 8 | 0 | 0 | 0 | 1 | 0 |
 | [Workflows](#wfl-workflows) (WFL) | 34 | 31 | 3 | 0 | 0 | 0 | 0 |
-| **All** | **731** | **643** | **47** | **1** | **4** | **17** | **19** |
+| **All** | **752** | **659** | **51** | **1** | **4** | **17** | **20** |
 
-Unit tests claimed by a requirement: 1542 of 1542.
+Unit tests claimed by a requirement: 1591 of 1591.
 
 ## Findings
 
@@ -1534,24 +1534,24 @@ The trial's build #11 appeared on the Tasks board as task #89 (source door) besi
 | Need | Priority | Refined by |
 |---|---|---|
 | <a id="sn-01"></a>**SN-01** A personal AI team that works by itself: Agents read the news, research companies and topics, watch filings and prices, and deliver briefings, alerts and research results on their own, so that the owner mostly just reads results. | must | [APP-05](#app-05), [APP-25](#app-25), [APP-26](#app-26), [APP-30](#app-30), [APP-31](#app-31), [APP-32](#app-32), [APP-33](#app-33), [APP-34](#app-34), [APP-35](#app-35), [APP-46](#app-46), [APP-47](#app-47), [APP-48](#app-48), [APP-49](#app-49), [APP-50](#app-50), [APP-51](#app-51), [APP-52](#app-52), [APP-62](#app-62), [APP-63](#app-63), [APP-64](#app-64), [APP-65](#app-65), [APP-66](#app-66), [APP-67](#app-67), [APP-68](#app-68), [AST-01](#ast-01), [AST-05](#ast-05), [AST-07](#ast-07), [AST-13](#ast-13), [BLD-25](#bld-25), [CST-01](#cst-01), [MIS-01](#mis-01), [MIS-02](#mis-02), [MIS-06](#mis-06), [MIS-08](#mis-08), [MIS-09](#mis-09), [MIS-10](#mis-10), [MIS-11](#mis-11), [MIS-13](#mis-13), [MIS-14](#mis-14), [MIS-15](#mis-15), [MIS-21](#mis-21), [MIS-22](#mis-22), [MIS-23](#mis-23), [RES-02](#res-02), [RES-03](#res-03), [RES-04](#res-04), [RES-05](#res-05), [SHP-13](#shp-13), [VOI-09](#voi-09) |
-| <a id="sn-02"></a>**SN-02** Out of the loop except for real decisions: the owner is asked only for decisions that are really his (approvals of spending, deploys, deletions, settings, grants), each one tap away with enough context to decide; no scripts to run, no busywork, nothing shown as needing him that does not. | must | [APP-04](#app-04), [APP-05](#app-05), [APP-06](#app-06), [APP-07](#app-07), [APP-13](#app-13), [APP-14](#app-14), [APP-21](#app-21), [APP-25](#app-25), [APP-26](#app-26), [APP-30](#app-30), [APP-31](#app-31), [APP-54](#app-54), [APP-68](#app-68), [AST-06](#ast-06), [AST-12](#ast-12), [AUT-01](#aut-01), [AUT-02](#aut-02), [AUT-05](#aut-05), [AUT-07](#aut-07), [AUT-08](#aut-08), [CHG-02](#chg-02), [CHG-03](#chg-03), [CNX-02](#cnx-02), [CRW-02](#crw-02), [CRW-05](#crw-05), [CRW-06](#crw-06), [CST-03](#cst-03), [MEM-42](#mem-42), [MIS-07](#mis-07), [MIS-20](#mis-20), [PHN-02](#phn-02), [PHN-11](#phn-11), [PHN-12](#phn-12), [PHN-18](#phn-18), [PHN-20](#phn-20), [PHN-21](#phn-21), [PHN-22](#phn-22), [PHN-24](#phn-24), [PHN-25](#phn-25), [PHN-26](#phn-26), [SHP-01](#shp-01), [SHP-03](#shp-03), [SHP-08](#shp-08), [SWM-05](#swm-05), [SWM-06](#swm-06), [SWM-08](#swm-08), [SWM-33](#swm-33), [SWM-38](#swm-38), [SWM-39](#swm-39), [SWM-40](#swm-40), [SWM-42](#swm-42), [SWM-43](#swm-43), [SWM-44](#swm-44), [SWM-54](#swm-54), [SWM-55](#swm-55), [SWM-61](#swm-61), [SWM-87](#swm-87), [TRL-15](#trl-15), [TSK-03](#tsk-03), [TSK-20](#tsk-20), [TSK-40](#tsk-40), [VOI-08](#voi-08) |
+| <a id="sn-02"></a>**SN-02** Out of the loop except for real decisions: the owner is asked only for decisions that are really his (approvals of spending, deploys, deletions, settings, grants), each one tap away with enough context to decide; no scripts to run, no busywork, nothing shown as needing him that does not. | must | [APP-04](#app-04), [APP-05](#app-05), [APP-06](#app-06), [APP-07](#app-07), [APP-13](#app-13), [APP-14](#app-14), [APP-21](#app-21), [APP-25](#app-25), [APP-26](#app-26), [APP-30](#app-30), [APP-31](#app-31), [APP-54](#app-54), [APP-68](#app-68), [AST-06](#ast-06), [AST-12](#ast-12), [AUT-01](#aut-01), [AUT-02](#aut-02), [AUT-05](#aut-05), [AUT-07](#aut-07), [AUT-08](#aut-08), [CHG-02](#chg-02), [CHG-03](#chg-03), [CNX-02](#cnx-02), [CRW-02](#crw-02), [CRW-05](#crw-05), [CRW-06](#crw-06), [CST-03](#cst-03), [MEM-42](#mem-42), [MIS-07](#mis-07), [MIS-20](#mis-20), [PHN-02](#phn-02), [PHN-11](#phn-11), [PHN-12](#phn-12), [PHN-18](#phn-18), [PHN-20](#phn-20), [PHN-21](#phn-21), [PHN-22](#phn-22), [PHN-24](#phn-24), [PHN-25](#phn-25), [PHN-26](#phn-26), [SHP-01](#shp-01), [SHP-03](#shp-03), [SHP-08](#shp-08), [SWM-05](#swm-05), [SWM-06](#swm-06), [SWM-08](#swm-08), [SWM-33](#swm-33), [SWM-38](#swm-38), [SWM-39](#swm-39), [SWM-40](#swm-40), [SWM-42](#swm-42), [SWM-43](#swm-43), [SWM-44](#swm-44), [SWM-54](#swm-54), [SWM-55](#swm-55), [SWM-61](#swm-61), [SWM-87](#swm-87), [TRL-15](#trl-15), [TSK-03](#tsk-03), [TSK-20](#tsk-20), [TSK-40](#tsk-40), [TSK-51](#tsk-51), [TSK-52](#tsk-52), [TSK-53](#tsk-53), [TSK-54](#tsk-54), [TSK-55](#tsk-55), [VOI-08](#voi-08) |
 | <a id="sn-03"></a>**SN-03** Costs nothing to run: Running the stack costs $0 beyond the subscriptions the owner already pays; nothing can spend money by accident. | must | [APP-40](#app-40), [APP-41](#app-41), [APP-42](#app-42), [APP-43](#app-43), [APP-44](#app-44), [APP-45](#app-45), [AST-02](#ast-02), [AST-08](#ast-08), [BLD-06](#bld-06), [CST-02](#cst-02), [CST-15](#cst-15), [GW-02](#gw-02), [GW-04](#gw-04), [GW-09](#gw-09), [MEM-26](#mem-26), [MEM-44](#mem-44), [MIS-04](#mis-04), [MIS-16](#mis-16), [PHN-27](#phn-27), [PLT-11](#plt-11), [PLT-26](#plt-26), [PLT-27](#plt-27), [RES-07](#res-07), [SHP-05](#shp-05), [SWM-13](#swm-13), [SWM-14](#swm-14), [SWM-29](#swm-29), [SWM-40](#swm-40), [SWM-53](#swm-53), [SWM-60](#swm-60), [SWM-62](#swm-62), [SWM-81](#swm-81), [WFL-07](#wfl-07), [WFL-10](#wfl-10), [WFL-11](#wfl-11), [WFL-14](#wfl-14) |
 | <a id="sn-04"></a>**SN-04** Private data stays home: Notes, reports, memory, chats, mail and files stay on the PC and the NAS; only the model calls leave, and The owner knows which provider sees what. | must | [AUT-03](#aut-03), [CST-04](#cst-04), [CST-06](#cst-06), [GEN-14](#gen-14), [HSE-07](#hse-07), [KNW-05](#knw-05), [KNW-07](#knw-07), [MEM-06](#mem-06), [MEM-18](#mem-18), [MEM-30](#mem-30), [PHN-16](#phn-16), [PHN-19](#phn-19), [RES-01](#res-01), [SEC-03](#sec-03), [SEC-04](#sec-04), [SEC-06](#sec-06), [SEC-17](#sec-17), [SEC-18](#sec-18), [SEC-19](#sec-19), [SEC-22](#sec-22), [SWM-67](#swm-67), [WFL-15](#wfl-15), [WFL-16](#wfl-16), [WFL-17](#wfl-17), [WFL-18](#wfl-18) |
-| <a id="sn-05"></a>**SN-05** Agents cannot do damage: No agent can spend money, delete data for good, leak private data, change the NAS, the router or phone and PC security settings, or deploy code without the owner's approval; prompt injection from the web or mail cannot steer an agent into any of it. | must | [APP-10](#app-10), [APP-20](#app-20), [APP-61](#app-61), [AST-08](#ast-08), [AST-09](#ast-09), [AST-10](#ast-10), [AST-14](#ast-14), [AUT-01](#aut-01), [AUT-03](#aut-03), [BLD-02](#bld-02), [BLD-07](#bld-07), [BLD-10](#bld-10), [BLD-13](#bld-13), [BLD-16](#bld-16), [BLD-18](#bld-18), [BLD-27](#bld-27), [BLD-28](#bld-28), [BLD-39](#bld-39), [CHG-05](#chg-05), [CHG-12](#chg-12), [CHG-13](#chg-13), [CHG-15](#chg-15), [CNX-01](#cnx-01), [CNX-03](#cnx-03), [CNX-04](#cnx-04), [CNX-05](#cnx-05), [CNX-07](#cnx-07), [CNX-08](#cnx-08), [CNX-09](#cnx-09), [CNX-10](#cnx-10), [CNX-11](#cnx-11), [CNX-12](#cnx-12), [CNX-13](#cnx-13), [CRW-04](#crw-04), [CRW-10](#crw-10), [CRW-11](#crw-11), [CRW-13](#crw-13), [CST-04](#cst-04), [CST-05](#cst-05), [CST-06](#cst-06), [CST-07](#cst-07), [CST-10](#cst-10), [CST-11](#cst-11), [CST-12](#cst-12), [GEN-01](#gen-01), [GEN-02](#gen-02), [GEN-03](#gen-03), [GEN-04](#gen-04), [GEN-05](#gen-05), [GEN-06](#gen-06), [GEN-07](#gen-07), [GEN-08](#gen-08), [GEN-09](#gen-09), [GEN-10](#gen-10), [GEN-11](#gen-11), [GEN-12](#gen-12), [GEN-13](#gen-13), [GEN-14](#gen-14), [GEN-15](#gen-15), [GEN-16](#gen-16), [GEN-17](#gen-17), [GEN-18](#gen-18), [GEN-19](#gen-19), [GEN-20](#gen-20), [GEN-21](#gen-21), [GEN-22](#gen-22), [GEN-23](#gen-23), [GEN-24](#gen-24), [GEN-25](#gen-25), [GEN-26](#gen-26), [GEN-27](#gen-27), [GEN-28](#gen-28), [GEN-29](#gen-29), [GEN-30](#gen-30), [GEN-31](#gen-31), [GEN-32](#gen-32), [GEN-33](#gen-33), [GEN-34](#gen-34), [GEN-35](#gen-35), [GEN-36](#gen-36), [GEN-37](#gen-37), [GEN-38](#gen-38), [GEN-39](#gen-39), [GEN-40](#gen-40), [GEN-41](#gen-41), [GEN-42](#gen-42), [GEN-43](#gen-43), [GEN-44](#gen-44), [GEN-45](#gen-45), [GEN-46](#gen-46), [GW-05](#gw-05), [HSE-04](#hse-04), [HSE-05](#hse-05), [HSE-08](#hse-08), [HSE-09](#hse-09), [KNW-04](#knw-04), [KNW-06](#knw-06), [KNW-11](#knw-11), [MEM-04](#mem-04), [MEM-29](#mem-29), [MEM-30](#mem-30), [MEM-39](#mem-39), [MEM-49](#mem-49), [MIS-17](#mis-17), [MIS-28](#mis-28), [PHN-01](#phn-01), [PHN-03](#phn-03), [PHN-04](#phn-04), [PHN-05](#phn-05), [PHN-06](#phn-06), [PHN-07](#phn-07), [PHN-08](#phn-08), [PHN-15](#phn-15), [PLT-02](#plt-02), [PLT-03](#plt-03), [PLT-09](#plt-09), [PLT-39](#plt-39), [QA-23](#qa-23), [QA-24](#qa-24), [QA-25](#qa-25), [QA-26](#qa-26), [RES-01](#res-01), [RES-03](#res-03), [RES-04](#res-04), [RES-06](#res-06), [SEC-01](#sec-01), [SEC-02](#sec-02), [SEC-03](#sec-03), [SEC-04](#sec-04), [SEC-05](#sec-05), [SEC-06](#sec-06), [SEC-07](#sec-07), [SEC-08](#sec-08), [SEC-09](#sec-09), [SEC-10](#sec-10), [SEC-11](#sec-11), [SEC-12](#sec-12), [SEC-13](#sec-13), [SEC-14](#sec-14), [SEC-15](#sec-15), [SEC-16](#sec-16), [SEC-20](#sec-20), [SEC-21](#sec-21), [SEC-22](#sec-22), [SHP-05](#shp-05), [SHP-06](#shp-06), [SHP-07](#shp-07), [SHP-09](#shp-09), [SHP-10](#shp-10), [SWM-06](#swm-06), [SWM-109](#swm-109), [SWM-11](#swm-11), [SWM-15](#swm-15), [SWM-23](#swm-23), [SWM-24](#swm-24), [SWM-26](#swm-26), [SWM-42](#swm-42), [SWM-43](#swm-43), [SWM-46](#swm-46), [SWM-51](#swm-51), [SWM-58](#swm-58), [SWM-66](#swm-66), [SWM-67](#swm-67), [SWM-68](#swm-68), [SWM-69](#swm-69), [SWM-70](#swm-70), [SWM-77](#swm-77), [SWM-89](#swm-89), [TAX-01](#tax-01), [TAX-02](#tax-02), [TAX-03](#tax-03), [TAX-04](#tax-04), [TAX-05](#tax-05), [TAX-06](#tax-06), [TAX-07](#tax-07), [TRL-05](#trl-05), [TSK-15](#tsk-15), [TSK-20](#tsk-20), [VOI-01](#voi-01), [VOI-03](#voi-03), [VOI-07](#voi-07), [WFL-01](#wfl-01), [WFL-02](#wfl-02), [WFL-05](#wfl-05), [WFL-06](#wfl-06), [WFL-08](#wfl-08), [WFL-09](#wfl-09), [WFL-12](#wfl-12), [WFL-13](#wfl-13), [WFL-15](#wfl-15), [WFL-17](#wfl-17), [WFL-19](#wfl-19), [WFL-20](#wfl-20), [WFL-21](#wfl-21), [WFL-22](#wfl-22), [WFL-23](#wfl-23), [WFL-24](#wfl-24), [WFL-25](#wfl-25), [WFL-26](#wfl-26), [WFL-27](#wfl-27), [WFL-28](#wfl-28), [WFL-29](#wfl-29), [WFL-30](#wfl-30), [WFL-31](#wfl-31), [WFL-32](#wfl-32), [WFL-33](#wfl-33), [WFL-34](#wfl-34) |
-| <a id="sn-06"></a>**SN-06** Usable from the phone, anywhere, one sign-in: Everything is usable and decidable from the owner's phone (installable app, push, Telegram), from anywhere on his tailnet, with his Tailscale login as the only sign-in. | must | [APP-01](#app-01), [APP-02](#app-02), [APP-03](#app-03), [APP-04](#app-04), [APP-08](#app-08), [APP-09](#app-09), [APP-15](#app-15), [APP-17](#app-17), [APP-19](#app-19), [APP-20](#app-20), [APP-37](#app-37), [APP-38](#app-38), [APP-39](#app-39), [APP-62](#app-62), [APP-64](#app-64), [APP-65](#app-65), [APP-66](#app-66), [AST-01](#ast-01), [AST-03](#ast-03), [AUT-05](#aut-05), [AUT-06](#aut-06), [MIS-15](#mis-15), [MIS-23](#mis-23), [QA-16](#qa-16), [QA-21](#qa-21), [QA-22](#qa-22), [SEC-01](#sec-01), [SEC-02](#sec-02), [SEC-20](#sec-20), [SWM-11](#swm-11), [SWM-57](#swm-57), [SWM-93](#swm-93), [SWM-95](#swm-95), [TSK-02](#tsk-02), [VOI-09](#voi-09) |
+| <a id="sn-05"></a>**SN-05** Agents cannot do damage: No agent can spend money, delete data for good, leak private data, change the NAS, the router or phone and PC security settings, or deploy code without the owner's approval; prompt injection from the web or mail cannot steer an agent into any of it. | must | [APP-10](#app-10), [APP-20](#app-20), [APP-61](#app-61), [AST-08](#ast-08), [AST-09](#ast-09), [AST-10](#ast-10), [AST-14](#ast-14), [AUT-01](#aut-01), [AUT-03](#aut-03), [BLD-02](#bld-02), [BLD-07](#bld-07), [BLD-10](#bld-10), [BLD-13](#bld-13), [BLD-16](#bld-16), [BLD-18](#bld-18), [BLD-27](#bld-27), [BLD-28](#bld-28), [BLD-39](#bld-39), [CHG-05](#chg-05), [CHG-12](#chg-12), [CHG-13](#chg-13), [CHG-15](#chg-15), [CNX-01](#cnx-01), [CNX-03](#cnx-03), [CNX-04](#cnx-04), [CNX-05](#cnx-05), [CNX-07](#cnx-07), [CNX-08](#cnx-08), [CNX-09](#cnx-09), [CNX-10](#cnx-10), [CNX-11](#cnx-11), [CNX-12](#cnx-12), [CNX-13](#cnx-13), [CRW-04](#crw-04), [CRW-10](#crw-10), [CRW-11](#crw-11), [CRW-13](#crw-13), [CST-04](#cst-04), [CST-05](#cst-05), [CST-06](#cst-06), [CST-07](#cst-07), [CST-10](#cst-10), [CST-11](#cst-11), [CST-12](#cst-12), [GEN-01](#gen-01), [GEN-02](#gen-02), [GEN-03](#gen-03), [GEN-04](#gen-04), [GEN-05](#gen-05), [GEN-06](#gen-06), [GEN-07](#gen-07), [GEN-08](#gen-08), [GEN-09](#gen-09), [GEN-10](#gen-10), [GEN-11](#gen-11), [GEN-12](#gen-12), [GEN-13](#gen-13), [GEN-14](#gen-14), [GEN-15](#gen-15), [GEN-16](#gen-16), [GEN-17](#gen-17), [GEN-18](#gen-18), [GEN-19](#gen-19), [GEN-20](#gen-20), [GEN-21](#gen-21), [GEN-22](#gen-22), [GEN-23](#gen-23), [GEN-24](#gen-24), [GEN-25](#gen-25), [GEN-26](#gen-26), [GEN-27](#gen-27), [GEN-28](#gen-28), [GEN-29](#gen-29), [GEN-30](#gen-30), [GEN-31](#gen-31), [GEN-32](#gen-32), [GEN-33](#gen-33), [GEN-34](#gen-34), [GEN-35](#gen-35), [GEN-36](#gen-36), [GEN-37](#gen-37), [GEN-38](#gen-38), [GEN-39](#gen-39), [GEN-40](#gen-40), [GEN-41](#gen-41), [GEN-42](#gen-42), [GEN-43](#gen-43), [GEN-44](#gen-44), [GEN-45](#gen-45), [GEN-46](#gen-46), [GEN-47](#gen-47), [GW-05](#gw-05), [HSE-04](#hse-04), [HSE-05](#hse-05), [HSE-08](#hse-08), [HSE-09](#hse-09), [KNW-04](#knw-04), [KNW-06](#knw-06), [KNW-11](#knw-11), [MEM-04](#mem-04), [MEM-29](#mem-29), [MEM-30](#mem-30), [MEM-39](#mem-39), [MEM-49](#mem-49), [MIS-17](#mis-17), [MIS-28](#mis-28), [PHN-01](#phn-01), [PHN-03](#phn-03), [PHN-04](#phn-04), [PHN-05](#phn-05), [PHN-06](#phn-06), [PHN-07](#phn-07), [PHN-08](#phn-08), [PHN-15](#phn-15), [PLT-02](#plt-02), [PLT-03](#plt-03), [PLT-09](#plt-09), [PLT-39](#plt-39), [PLT-42](#plt-42), [PLT-43](#plt-43), [QA-23](#qa-23), [QA-24](#qa-24), [QA-25](#qa-25), [QA-26](#qa-26), [RES-01](#res-01), [RES-03](#res-03), [RES-04](#res-04), [RES-06](#res-06), [SEC-01](#sec-01), [SEC-02](#sec-02), [SEC-03](#sec-03), [SEC-04](#sec-04), [SEC-05](#sec-05), [SEC-06](#sec-06), [SEC-07](#sec-07), [SEC-08](#sec-08), [SEC-09](#sec-09), [SEC-10](#sec-10), [SEC-11](#sec-11), [SEC-12](#sec-12), [SEC-13](#sec-13), [SEC-14](#sec-14), [SEC-15](#sec-15), [SEC-16](#sec-16), [SEC-20](#sec-20), [SEC-21](#sec-21), [SEC-22](#sec-22), [SEC-23](#sec-23), [SEC-24](#sec-24), [SEC-25](#sec-25), [SEC-26](#sec-26), [SEC-27](#sec-27), [SEC-28](#sec-28), [SHP-05](#shp-05), [SHP-06](#shp-06), [SHP-07](#shp-07), [SHP-09](#shp-09), [SHP-10](#shp-10), [SWM-06](#swm-06), [SWM-109](#swm-109), [SWM-11](#swm-11), [SWM-15](#swm-15), [SWM-23](#swm-23), [SWM-24](#swm-24), [SWM-26](#swm-26), [SWM-42](#swm-42), [SWM-43](#swm-43), [SWM-46](#swm-46), [SWM-51](#swm-51), [SWM-58](#swm-58), [SWM-66](#swm-66), [SWM-67](#swm-67), [SWM-68](#swm-68), [SWM-69](#swm-69), [SWM-70](#swm-70), [SWM-77](#swm-77), [SWM-89](#swm-89), [TAX-01](#tax-01), [TAX-02](#tax-02), [TAX-03](#tax-03), [TAX-04](#tax-04), [TAX-05](#tax-05), [TAX-06](#tax-06), [TAX-07](#tax-07), [TAX-09](#tax-09), [TAX-10](#tax-10), [TAX-11](#tax-11), [TAX-12](#tax-12), [TRL-05](#trl-05), [TSK-15](#tsk-15), [TSK-20](#tsk-20), [VOI-01](#voi-01), [VOI-03](#voi-03), [VOI-07](#voi-07), [WFL-01](#wfl-01), [WFL-02](#wfl-02), [WFL-05](#wfl-05), [WFL-06](#wfl-06), [WFL-08](#wfl-08), [WFL-09](#wfl-09), [WFL-12](#wfl-12), [WFL-13](#wfl-13), [WFL-15](#wfl-15), [WFL-17](#wfl-17), [WFL-19](#wfl-19), [WFL-20](#wfl-20), [WFL-21](#wfl-21), [WFL-22](#wfl-22), [WFL-23](#wfl-23), [WFL-24](#wfl-24), [WFL-25](#wfl-25), [WFL-26](#wfl-26), [WFL-27](#wfl-27), [WFL-28](#wfl-28), [WFL-29](#wfl-29), [WFL-30](#wfl-30), [WFL-31](#wfl-31), [WFL-32](#wfl-32), [WFL-33](#wfl-33), [WFL-34](#wfl-34) |
+| <a id="sn-06"></a>**SN-06** Usable from the phone, anywhere, one sign-in: Everything is usable and decidable from the owner's phone (installable app, push, Telegram), from anywhere on his tailnet, with his Tailscale login as the only sign-in. | must | [APP-01](#app-01), [APP-02](#app-02), [APP-03](#app-03), [APP-04](#app-04), [APP-08](#app-08), [APP-09](#app-09), [APP-15](#app-15), [APP-17](#app-17), [APP-19](#app-19), [APP-20](#app-20), [APP-37](#app-37), [APP-38](#app-38), [APP-39](#app-39), [APP-62](#app-62), [APP-64](#app-64), [APP-65](#app-65), [APP-66](#app-66), [AST-01](#ast-01), [AST-03](#ast-03), [AUT-05](#aut-05), [AUT-06](#aut-06), [MIS-15](#mis-15), [MIS-23](#mis-23), [QA-16](#qa-16), [QA-21](#qa-21), [QA-22](#qa-22), [SEC-01](#sec-01), [SEC-02](#sec-02), [SEC-20](#sec-20), [SEC-23](#sec-23), [SEC-24](#sec-24), [SWM-11](#swm-11), [SWM-57](#swm-57), [SWM-93](#swm-93), [SWM-95](#swm-95), [TSK-02](#tsk-02), [VOI-09](#voi-09) |
 | <a id="sn-07"></a>**SN-07** See what every agent does: For every agent, mission, crew job, build and tool the owner can see what it did step by step, what it read and changed, what it produced, what it cost and when something went wrong, without having to look for it. | must | [APP-07](#app-07), [APP-11](#app-11), [APP-12](#app-12), [APP-16](#app-16), [APP-19](#app-19), [APP-22](#app-22), [APP-23](#app-23), [APP-24](#app-24), [APP-35](#app-35), [APP-36](#app-36), [APP-53](#app-53), [AST-04](#ast-04), [AUT-04](#aut-04), [AUT-07](#aut-07), [BLD-14](#bld-14), [BLD-20](#bld-20), [CHG-16](#chg-16), [CHG-20](#chg-20), [CRW-01](#crw-01), [CRW-02](#crw-02), [CRW-09](#crw-09), [CRW-12](#crw-12), [GW-01](#gw-01), [GW-07](#gw-07), [HSE-02](#hse-02), [MEM-01](#mem-01), [MEM-07](#mem-07), [MEM-09](#mem-09), [MEM-10](#mem-10), [MEM-19](#mem-19), [MEM-22](#mem-22), [MEM-27](#mem-27), [MEM-44](#mem-44), [MEM-45](#mem-45), [MEM-46](#mem-46), [MIS-16](#mis-16), [OBS-01](#obs-01), [OBS-02](#obs-02), [OBS-03](#obs-03), [OBS-04](#obs-04), [OBS-05](#obs-05), [OBS-06](#obs-06), [OBS-07](#obs-07), [OBS-08](#obs-08), [OBS-09](#obs-09), [OBS-10](#obs-10), [OBS-14](#obs-14), [OBS-15](#obs-15), [OBS-18](#obs-18), [PLT-24](#plt-24), [PLT-30](#plt-30), [QA-17](#qa-17), [RES-05](#res-05), [SEC-07](#sec-07), [SHP-11](#shp-11), [SWM-103](#swm-103), [SWM-104](#swm-104), [SWM-105](#swm-105), [SWM-106](#swm-106), [SWM-107](#swm-107), [SWM-110](#swm-110), [SWM-111](#swm-111), [SWM-112](#swm-112), [SWM-113](#swm-113), [SWM-114](#swm-114), [SWM-115](#swm-115), [SWM-17](#swm-17), [SWM-23](#swm-23), [SWM-25](#swm-25), [SWM-30](#swm-30), [SWM-57](#swm-57), [SWM-58](#swm-58), [SWM-64](#swm-64), [SWM-78](#swm-78), [SWM-79](#swm-79), [SWM-80](#swm-80), [SWM-81](#swm-81), [SWM-82](#swm-82), [SWM-84](#swm-84), [SWM-90](#swm-90), [SWM-96](#swm-96), [SWM-99](#swm-99), [TSK-04](#tsk-04), [TSK-09](#tsk-09), [TSK-17](#tsk-17), [TSK-35](#tsk-35), [TSK-42](#tsk-42), [TSK-43](#tsk-43), [TSK-50](#tsk-50) |
 | <a id="sn-08"></a>**SN-08** The stack maintains and improves itself: Housekeeping agents keep the stack healthy, and the stack proposes and builds its own improvements; the owner approves what ships. | must | [APP-21](#app-21), [AST-11](#ast-11), [AUT-02](#aut-02), [BLD-01](#bld-01), [BLD-03](#bld-03), [BLD-04](#bld-04), [BLD-05](#bld-05), [BLD-08](#bld-08), [BLD-10](#bld-10), [BLD-21](#bld-21), [BLD-22](#bld-22), [BLD-24](#bld-24), [CHG-11](#chg-11), [CHG-15](#chg-15), [CHG-17](#chg-17), [CHG-18](#chg-18), [CHG-19](#chg-19), [CRW-01](#crw-01), [CRW-03](#crw-03), [CRW-04](#crw-04), [CRW-07](#crw-07), [CRW-08](#crw-08), [CRW-09](#crw-09), [CRW-10](#crw-10), [CST-07](#cst-07), [GW-09](#gw-09), [KNW-08](#knw-08), [MEM-11](#mem-11), [MEM-13](#mem-13), [MEM-20](#mem-20), [MEM-38](#mem-38), [MEM-39](#mem-39), [MEM-42](#mem-42), [MEM-43](#mem-43), [MEM-47](#mem-47), [MEM-50](#mem-50), [OBS-13](#obs-13), [PLT-08](#plt-08), [PLT-19](#plt-19), [QA-07](#qa-07), [SEC-08](#sec-08), [SWM-07](#swm-07), [SWM-102](#swm-102), [SWM-18](#swm-18), [SWM-38](#swm-38), [SWM-44](#swm-44), [SWM-45](#swm-45), [SWM-46](#swm-46), [SWM-47](#swm-47), [SWM-61](#swm-61), [SWM-70](#swm-70), [SWM-82](#swm-82), [SWM-83](#swm-83), [SWM-84](#swm-84), [SWM-91](#swm-91), [SWM-92](#swm-92), [SWM-93](#swm-93), [SWM-94](#swm-94), [SWM-95](#swm-95), [SWM-96](#swm-96), [TRL-14](#trl-14), [TRL-15](#trl-15), [TRL-16](#trl-16), [TRL-17](#trl-17), [TSK-13](#tsk-13), [TSK-16](#tsk-16), [TSK-17](#tsk-17), [TSK-42](#tsk-42), [TSK-50](#tsk-50), [WFL-03](#wfl-03) |
-| <a id="sn-09"></a>**SN-09** Nothing is ever lost: Data and configuration are backed up, the backups are proven to restore, and the whole stack can move to a new PC. | must | [AST-10](#ast-10), [AUT-04](#aut-04), [CNX-03](#cnx-03), [CST-05](#cst-05), [KNW-01](#knw-01), [KNW-11](#knw-11), [MEM-08](#mem-08), [MEM-12](#mem-12), [MEM-14](#mem-14), [MEM-17](#mem-17), [MEM-21](#mem-21), [MEM-35](#mem-35), [MEM-48](#mem-48), [PLT-12](#plt-12), [PLT-13](#plt-13), [PLT-14](#plt-14), [PLT-15](#plt-15), [PLT-16](#plt-16), [PLT-17](#plt-17), [PLT-33](#plt-33), [PLT-34](#plt-34), [PLT-38](#plt-38), [SWM-30](#swm-30), [SWM-35](#swm-35), [SWM-36](#swm-36), [SWM-73](#swm-73), [SWM-76](#swm-76), [TAX-03](#tax-03) |
+| <a id="sn-09"></a>**SN-09** Nothing is ever lost: Data and configuration are backed up, the backups are proven to restore, and the whole stack can move to a new PC. | must | [AST-10](#ast-10), [AUT-04](#aut-04), [CNX-03](#cnx-03), [CST-05](#cst-05), [KNW-01](#knw-01), [KNW-11](#knw-11), [MEM-08](#mem-08), [MEM-12](#mem-12), [MEM-14](#mem-14), [MEM-17](#mem-17), [MEM-21](#mem-21), [MEM-35](#mem-35), [MEM-48](#mem-48), [PLT-12](#plt-12), [PLT-13](#plt-13), [PLT-14](#plt-14), [PLT-15](#plt-15), [PLT-16](#plt-16), [PLT-17](#plt-17), [PLT-33](#plt-33), [PLT-34](#plt-34), [PLT-38](#plt-38), [PLT-41](#plt-41), [SWM-30](#swm-30), [SWM-35](#swm-35), [SWM-36](#swm-36), [SWM-73](#swm-73), [SWM-76](#swm-76), [TAX-03](#tax-03), [TAX-11](#tax-11) |
 | <a id="sn-10"></a>**SN-10** Knowledge that grows and answers with sources: Everything the owner and his agents write becomes a searchable, linked knowledge base (vault, wikis, long-term memory) that answers questions with citations. | must | [APP-15](#app-15), [CHG-08](#chg-08), [CHG-09](#chg-09), [CRW-13](#crw-13), [KNW-01](#knw-01), [KNW-02](#knw-02), [KNW-03](#knw-03), [KNW-04](#knw-04), [KNW-05](#knw-05), [KNW-06](#knw-06), [KNW-08](#knw-08), [KNW-09](#knw-09), [KNW-10](#knw-10), [KNW-12](#knw-12), [KNW-13](#knw-13), [KNW-14](#knw-14), [KNW-15](#knw-15), [MEM-01](#mem-01), [MEM-02](#mem-02), [MEM-03](#mem-03), [MEM-04](#mem-04), [MEM-05](#mem-05), [MEM-06](#mem-06), [MEM-09](#mem-09), [MEM-10](#mem-10), [MEM-12](#mem-12), [MEM-14](#mem-14), [MEM-15](#mem-15), [MEM-16](#mem-16), [MEM-17](#mem-17), [MEM-18](#mem-18), [MEM-19](#mem-19), [MEM-20](#mem-20), [MEM-21](#mem-21), [MEM-22](#mem-22), [MEM-23](#mem-23), [MEM-24](#mem-24), [MEM-25](#mem-25), [MEM-26](#mem-26), [MEM-27](#mem-27), [MEM-28](#mem-28), [MEM-29](#mem-29), [MEM-33](#mem-33), [MEM-34](#mem-34), [MEM-35](#mem-35), [MEM-36](#mem-36), [MEM-37](#mem-37), [MEM-38](#mem-38), [MEM-40](#mem-40), [MEM-41](#mem-41), [MEM-45](#mem-45), [MEM-46](#mem-46), [MEM-48](#mem-48), [MEM-49](#mem-49), [MEM-50](#mem-50), [MEM-51](#mem-51), [MIS-01](#mis-01), [MIS-11](#mis-11), [MIS-18](#mis-18), [MIS-19](#mis-19), [MIS-21](#mis-21), [MIS-28](#mis-28), [SWM-66](#swm-66), [TSK-34](#tsk-34) |
 | <a id="sn-11"></a>**SN-11** Hands in the real world, under control: Agents can act through the AI phone, Gmail, shopping and the House (lights, plugs, Echos), each only within grants and approvals the owner controls, with Stop and a log. | should | [CNX-01](#cnx-01), [CNX-02](#cnx-02), [CRW-11](#crw-11), [CST-12](#cst-12), [HSE-01](#hse-01), [HSE-02](#hse-02), [HSE-03](#hse-03), [HSE-05](#hse-05), [HSE-06](#hse-06), [HSE-07](#hse-07), [MIS-17](#mis-17), [PHN-01](#phn-01), [PHN-02](#phn-02), [PHN-05](#phn-05), [PHN-13](#phn-13), [PHN-14](#phn-14), [PHN-17](#phn-17), [PHN-18](#phn-18), [PHN-19](#phn-19), [PHN-22](#phn-22), [PHN-23](#phn-23), [PLT-22](#plt-22), [SHP-01](#shp-01), [SHP-02](#shp-02), [SHP-03](#shp-03), [SHP-04](#shp-04), [SHP-11](#shp-11), [SHP-13](#shp-13), [SWM-26](#swm-26), [TAX-02](#tax-02), [TRL-16](#trl-16), [VOI-01](#voi-01), [VOI-02](#voi-02), [VOI-03](#voi-03), [VOI-04](#voi-04), [VOI-05](#voi-05), [VOI-06](#voi-06), [VOI-08](#voi-08) |
 | <a id="sn-12"></a>**SN-12** English everywhere: Chat, app, reports, wikis, Telegram, code, docs and commit messages are in English. | must | [CST-09](#cst-09), [MIS-12](#mis-12), [TSK-35](#tsk-35) |
-| <a id="sn-13"></a>**SN-13** Runs unattended for months: The stack keeps working through usage-limit pauses, restarts, deploys, reboots and power cuts, and recovers by itself; no work, approval or message is lost on a restart. | must | [APP-23](#app-23), [APP-24](#app-24), [AST-03](#ast-03), [AST-12](#ast-12), [BLD-03](#bld-03), [BLD-06](#bld-06), [BLD-09](#bld-09), [BLD-12](#bld-12), [CNX-06](#cnx-06), [CST-03](#cst-03), [CST-08](#cst-08), [CST-14](#cst-14), [GW-03](#gw-03), [GW-04](#gw-04), [GW-06](#gw-06), [GW-08](#gw-08), [MEM-05](#mem-05), [MEM-07](#mem-07), [MEM-08](#mem-08), [MEM-15](#mem-15), [MEM-16](#mem-16), [MEM-21](#mem-21), [MEM-34](#mem-34), [MEM-40](#mem-40), [MEM-41](#mem-41), [MEM-43](#mem-43), [MEM-51](#mem-51), [MIS-03](#mis-03), [MIS-04](#mis-04), [MIS-05](#mis-05), [MIS-10](#mis-10), [OBS-03](#obs-03), [OBS-04](#obs-04), [PHN-09](#phn-09), [PHN-10](#phn-10), [PHN-11](#phn-11), [PHN-14](#phn-14), [PHN-25](#phn-25), [PLT-04](#plt-04), [PLT-05](#plt-05), [PLT-06](#plt-06), [PLT-07](#plt-07), [PLT-08](#plt-08), [PLT-09](#plt-09), [PLT-10](#plt-10), [PLT-11](#plt-11), [PLT-13](#plt-13), [PLT-18](#plt-18), [PLT-21](#plt-21), [PLT-23](#plt-23), [PLT-27](#plt-27), [PLT-28](#plt-28), [PLT-29](#plt-29), [PLT-30](#plt-30), [PLT-31](#plt-31), [PLT-32](#plt-32), [PLT-35](#plt-35), [PLT-36](#plt-36), [PLT-37](#plt-37), [PLT-39](#plt-39), [PLT-40](#plt-40), [QA-17](#qa-17), [QA-27](#qa-27), [SHP-12](#shp-12), [SWM-12](#swm-12), [SWM-19](#swm-19), [SWM-31](#swm-31), [SWM-47](#swm-47), [SWM-52](#swm-52), [SWM-53](#swm-53), [SWM-63](#swm-63), [SWM-71](#swm-71), [SWM-72](#swm-72), [SWM-73](#swm-73), [SWM-76](#swm-76), [SWM-85](#swm-85), [SWM-87](#swm-87), [TSK-06](#tsk-06), [TSK-08](#tsk-08), [WFL-02](#wfl-02), [WFL-04](#wfl-04) |
-| <a id="sn-14"></a>**SN-14** Understand and change any codebase: The stack can study any repository (code graph, code map), answer questions about it, change the owner's own repositories through the builder, and check code against large specifications. | should | [APP-57](#app-57), [APP-58](#app-58), [APP-59](#app-59), [APP-60](#app-60), [APP-61](#app-61), [AST-09](#ast-09), [BLD-01](#bld-01), [BLD-11](#bld-11), [BLD-15](#bld-15), [BLD-17](#bld-17), [BLD-18](#bld-18), [BLD-19](#bld-19), [BLD-23](#bld-23), [BLD-25](#bld-25), [BLD-26](#bld-26), [BLD-27](#bld-27), [CHG-01](#chg-01), [CHG-02](#chg-02), [CHG-03](#chg-03), [CHG-04](#chg-04), [CHG-05](#chg-05), [CHG-06](#chg-06), [CHG-07](#chg-07), [CHG-08](#chg-08), [CHG-09](#chg-09), [CHG-10](#chg-10), [CHG-12](#chg-12), [CHG-13](#chg-13), [CHG-14](#chg-14), [CHG-16](#chg-16), [CHG-17](#chg-17), [CHG-18](#chg-18), [CHG-19](#chg-19), [CHG-20](#chg-20), [MEM-31](#mem-31), [MEM-32](#mem-32), [MEM-37](#mem-37), [QA-14](#qa-14) |
+| <a id="sn-13"></a>**SN-13** Runs unattended for months: The stack keeps working through usage-limit pauses, restarts, deploys, reboots and power cuts, and recovers by itself; no work, approval or message is lost on a restart. | must | [APP-23](#app-23), [APP-24](#app-24), [AST-03](#ast-03), [AST-12](#ast-12), [BLD-03](#bld-03), [BLD-06](#bld-06), [BLD-09](#bld-09), [BLD-12](#bld-12), [BLD-40](#bld-40), [CNX-06](#cnx-06), [CST-03](#cst-03), [CST-08](#cst-08), [CST-14](#cst-14), [GW-03](#gw-03), [GW-04](#gw-04), [GW-06](#gw-06), [GW-08](#gw-08), [MEM-05](#mem-05), [MEM-07](#mem-07), [MEM-08](#mem-08), [MEM-15](#mem-15), [MEM-16](#mem-16), [MEM-21](#mem-21), [MEM-34](#mem-34), [MEM-40](#mem-40), [MEM-41](#mem-41), [MEM-43](#mem-43), [MEM-51](#mem-51), [MIS-03](#mis-03), [MIS-04](#mis-04), [MIS-05](#mis-05), [MIS-10](#mis-10), [OBS-03](#obs-03), [OBS-04](#obs-04), [PHN-09](#phn-09), [PHN-10](#phn-10), [PHN-11](#phn-11), [PHN-14](#phn-14), [PHN-25](#phn-25), [PLT-04](#plt-04), [PLT-05](#plt-05), [PLT-06](#plt-06), [PLT-07](#plt-07), [PLT-08](#plt-08), [PLT-09](#plt-09), [PLT-10](#plt-10), [PLT-11](#plt-11), [PLT-13](#plt-13), [PLT-18](#plt-18), [PLT-21](#plt-21), [PLT-23](#plt-23), [PLT-27](#plt-27), [PLT-28](#plt-28), [PLT-29](#plt-29), [PLT-30](#plt-30), [PLT-31](#plt-31), [PLT-32](#plt-32), [PLT-35](#plt-35), [PLT-36](#plt-36), [PLT-37](#plt-37), [PLT-39](#plt-39), [PLT-40](#plt-40), [PLT-42](#plt-42), [PLT-43](#plt-43), [QA-17](#qa-17), [QA-27](#qa-27), [QA-28](#qa-28), [SHP-12](#shp-12), [SWM-12](#swm-12), [SWM-19](#swm-19), [SWM-31](#swm-31), [SWM-47](#swm-47), [SWM-52](#swm-52), [SWM-53](#swm-53), [SWM-63](#swm-63), [SWM-71](#swm-71), [SWM-72](#swm-72), [SWM-73](#swm-73), [SWM-76](#swm-76), [SWM-85](#swm-85), [SWM-87](#swm-87), [TSK-06](#tsk-06), [TSK-08](#tsk-08), [WFL-02](#wfl-02), [WFL-04](#wfl-04) |
+| <a id="sn-14"></a>**SN-14** Understand and change any codebase: The stack can study any repository (code graph, code map), answer questions about it, change the owner's own repositories through the builder, and check code against large specifications. | should | [APP-57](#app-57), [APP-58](#app-58), [APP-59](#app-59), [APP-60](#app-60), [APP-61](#app-61), [AST-09](#ast-09), [BLD-01](#bld-01), [BLD-11](#bld-11), [BLD-15](#bld-15), [BLD-17](#bld-17), [BLD-18](#bld-18), [BLD-19](#bld-19), [BLD-23](#bld-23), [BLD-25](#bld-25), [BLD-26](#bld-26), [BLD-27](#bld-27), [BLD-40](#bld-40), [CHG-01](#chg-01), [CHG-02](#chg-02), [CHG-03](#chg-03), [CHG-04](#chg-04), [CHG-05](#chg-05), [CHG-06](#chg-06), [CHG-07](#chg-07), [CHG-08](#chg-08), [CHG-09](#chg-09), [CHG-10](#chg-10), [CHG-12](#chg-12), [CHG-13](#chg-13), [CHG-14](#chg-14), [CHG-16](#chg-16), [CHG-17](#chg-17), [CHG-18](#chg-18), [CHG-19](#chg-19), [CHG-20](#chg-20), [MEM-31](#mem-31), [MEM-32](#mem-32), [MEM-37](#mem-37), [QA-14](#qa-14) |
 | <a id="sn-15"></a>**SN-15** A codebase AI agents can develop safely: The repository is organised for coding agents (rules per directory, checks, tests, docs that stay true), so that agents can change it without breaking it. | must | [APP-13](#app-13), [AST-07](#ast-07), [AST-11](#ast-11), [AUT-08](#aut-08), [CHG-07](#chg-07), [CRW-07](#crw-07), [CRW-08](#crw-08), [CST-08](#cst-08), [CST-13](#cst-13), [KNW-13](#knw-13), [MEM-31](#mem-31), [MEM-32](#mem-32), [PLT-24](#plt-24), [PLT-25](#plt-25), [PLT-26](#plt-26), [PLT-33](#plt-33), [QA-01](#qa-01), [QA-02](#qa-02), [QA-03](#qa-03), [QA-04](#qa-04), [QA-05](#qa-05), [QA-06](#qa-06), [QA-07](#qa-07), [QA-13](#qa-13), [QA-16](#qa-16), [QA-18](#qa-18), [QA-19](#qa-19), [QA-20](#qa-20), [QA-21](#qa-21), [QA-22](#qa-22), [SEC-15](#sec-15), [SWM-01](#swm-01), [SWM-16](#swm-16), [SWM-22](#swm-22), [SWM-28](#swm-28), [SWM-37](#swm-37), [SWM-41](#swm-41), [SWM-85](#swm-85), [SWM-88](#swm-88) |
 | <a id="sn-16"></a>**SN-16** Known, current and checkable requirements: What the stack must do is written down properly, kept current with every change, and contradictions between the parts are found and shown. | must | [APP-14](#app-14), [APP-18](#app-18), [MEM-02](#mem-02), [MEM-11](#mem-11), [MEM-13](#mem-13), [MEM-23](#mem-23), [MEM-47](#mem-47), [QA-06](#qa-06), [QA-08](#qa-08), [QA-09](#qa-09), [QA-10](#qa-10), [QA-11](#qa-11), [QA-12](#qa-12), [QA-13](#qa-13), [QA-14](#qa-14), [QA-15](#qa-15), [SWM-03](#swm-03), [SWM-20](#swm-20), [SWM-35](#swm-35), [SWM-55](#swm-55), [SWM-88](#swm-88), [TRL-02](#trl-02), [TRL-14](#trl-14), [TRL-17](#trl-17) |
 | <a id="sn-17"></a>**SN-17** Agents that work together over time: Agents keep working on the same topics over many runs, refine and reopen each other's work, see each other's artifacts and talk to each other directly, to groups or to all, with the owner reading along. | should | [APP-53](#app-53), [CHG-08](#chg-08), [CHG-10](#chg-10), [CHG-11](#chg-11), [CRW-05](#crw-05), [MEM-03](#mem-03), [MEM-24](#mem-24), [MEM-25](#mem-25), [MEM-28](#mem-28), [MEM-36](#mem-36), [MIS-18](#mis-18), [MIS-19](#mis-19), [MIS-20](#mis-20), [OBS-13](#obs-13), [SWM-01](#swm-01), [SWM-02](#swm-02), [SWM-03](#swm-03), [SWM-04](#swm-04), [SWM-05](#swm-05), [SWM-07](#swm-07), [SWM-08](#swm-08), [SWM-09](#swm-09), [SWM-10](#swm-10), [SWM-100](#swm-100), [SWM-101](#swm-101), [SWM-102](#swm-102), [SWM-103](#swm-103), [SWM-104](#swm-104), [SWM-105](#swm-105), [SWM-106](#swm-106), [SWM-107](#swm-107), [SWM-108](#swm-108), [SWM-109](#swm-109), [SWM-11](#swm-11), [SWM-110](#swm-110), [SWM-111](#swm-111), [SWM-112](#swm-112), [SWM-113](#swm-113), [SWM-114](#swm-114), [SWM-115](#swm-115), [SWM-12](#swm-12), [SWM-13](#swm-13), [SWM-16](#swm-16), [SWM-17](#swm-17), [SWM-18](#swm-18), [SWM-20](#swm-20), [SWM-21](#swm-21), [SWM-22](#swm-22), [SWM-27](#swm-27), [SWM-28](#swm-28), [SWM-32](#swm-32), [SWM-33](#swm-33), [SWM-34](#swm-34), [SWM-37](#swm-37), [SWM-41](#swm-41), [SWM-48](#swm-48), [SWM-49](#swm-49), [SWM-50](#swm-50), [SWM-51](#swm-51), [SWM-52](#swm-52), [SWM-54](#swm-54), [SWM-56](#swm-56), [SWM-60](#swm-60), [SWM-62](#swm-62), [SWM-63](#swm-63), [SWM-64](#swm-64), [SWM-65](#swm-65), [SWM-75](#swm-75), [SWM-86](#swm-86), [SWM-90](#swm-90), [SWM-97](#swm-97), [SWM-98](#swm-98), [SWM-99](#swm-99), [TRL-01](#trl-01), [TRL-07](#trl-07), [TSK-05](#tsk-05), [TSK-07](#tsk-07), [TSK-18](#tsk-18), [TSK-19](#tsk-19), [TSK-43](#tsk-43) |
 | <a id="sn-18"></a>**SN-18** Told once, not spammed: the owner hears about what needs him or went wrong once, on his phone, and is not flooded with repeats or noise. | should | [ACR-01](#acr-01), [APP-38](#app-38), [APP-54](#app-54), [AUT-05](#aut-05), [AUT-06](#aut-06), [CRW-12](#crw-12), [MIS-22](#mis-22), [OBS-10](#obs-10), [OBS-11](#obs-11), [OBS-12](#obs-12), [OBS-16](#obs-16), [OBS-17](#obs-17), [SHP-04](#shp-04), [SWM-100](#swm-100), [SWM-14](#swm-14), [SWM-39](#swm-39), [SWM-50](#swm-50), [SWM-56](#swm-56), [SWM-59](#swm-59), [SWM-71](#swm-71), [SWM-80](#swm-80) |
-| <a id="sn-19"></a>**SN-19** Give a task, the stack does the rest: The owner gives any task (coding, research, analysis, watching, errands) in one sentence, or with details preset when wanted; the stack works out what done means, plans it, chooses or creates the agents, models and harnesses, runs it once, on a schedule, on an event or after other work, for minutes or for months, and asks only the real decisions. | must | [APP-52](#app-52), [APP-63](#app-63), [CHG-01](#chg-01), [CHG-04](#chg-04), [MEM-33](#mem-33), [TAX-01](#tax-01), [TAX-07](#tax-07), [TAX-08](#tax-08), [TRL-01](#trl-01), [TRL-02](#trl-02), [TRL-03](#trl-03), [TRL-04](#trl-04), [TRL-05](#trl-05), [TRL-06](#trl-06), [TRL-07](#trl-07), [TRL-08](#trl-08), [TRL-09](#trl-09), [TRL-10](#trl-10), [TRL-11](#trl-11), [TRL-12](#trl-12), [TRL-13](#trl-13), [TSK-01](#tsk-01), [TSK-02](#tsk-02), [TSK-03](#tsk-03), [TSK-04](#tsk-04), [TSK-05](#tsk-05), [TSK-06](#tsk-06), [TSK-07](#tsk-07), [TSK-11](#tsk-11), [TSK-13](#tsk-13), [TSK-14](#tsk-14), [TSK-15](#tsk-15), [TSK-16](#tsk-16), [TSK-21](#tsk-21), [TSK-22](#tsk-22), [TSK-23](#tsk-23), [TSK-24](#tsk-24), [TSK-25](#tsk-25), [TSK-26](#tsk-26), [TSK-27](#tsk-27), [TSK-28](#tsk-28), [TSK-29](#tsk-29), [TSK-30](#tsk-30), [TSK-31](#tsk-31), [TSK-32](#tsk-32), [TSK-33](#tsk-33), [TSK-34](#tsk-34), [TSK-36](#tsk-36), [TSK-40](#tsk-40), [TSK-41](#tsk-41), [TSK-44](#tsk-44), [TSK-45](#tsk-45), [TSK-46](#tsk-46), [TSK-47](#tsk-47), [TSK-48](#tsk-48), [TSK-49](#tsk-49) |
+| <a id="sn-19"></a>**SN-19** Give a task, the stack does the rest: The owner gives any task (coding, research, analysis, watching, errands) in one sentence, or with details preset when wanted; the stack works out what done means, plans it, chooses or creates the agents, models and harnesses, runs it once, on a schedule, on an event or after other work, for minutes or for months, and asks only the real decisions. | must | [APP-52](#app-52), [APP-63](#app-63), [CHG-01](#chg-01), [CHG-04](#chg-04), [MEM-33](#mem-33), [TAX-01](#tax-01), [TAX-07](#tax-07), [TAX-08](#tax-08), [TAX-09](#tax-09), [TRL-01](#trl-01), [TRL-02](#trl-02), [TRL-03](#trl-03), [TRL-04](#trl-04), [TRL-05](#trl-05), [TRL-06](#trl-06), [TRL-07](#trl-07), [TRL-08](#trl-08), [TRL-09](#trl-09), [TRL-10](#trl-10), [TRL-11](#trl-11), [TRL-12](#trl-12), [TRL-13](#trl-13), [TSK-01](#tsk-01), [TSK-02](#tsk-02), [TSK-03](#tsk-03), [TSK-04](#tsk-04), [TSK-05](#tsk-05), [TSK-06](#tsk-06), [TSK-07](#tsk-07), [TSK-11](#tsk-11), [TSK-13](#tsk-13), [TSK-14](#tsk-14), [TSK-15](#tsk-15), [TSK-16](#tsk-16), [TSK-21](#tsk-21), [TSK-22](#tsk-22), [TSK-23](#tsk-23), [TSK-24](#tsk-24), [TSK-25](#tsk-25), [TSK-26](#tsk-26), [TSK-27](#tsk-27), [TSK-28](#tsk-28), [TSK-29](#tsk-29), [TSK-30](#tsk-30), [TSK-31](#tsk-31), [TSK-32](#tsk-32), [TSK-33](#tsk-33), [TSK-34](#tsk-34), [TSK-36](#tsk-36), [TSK-40](#tsk-40), [TSK-41](#tsk-41), [TSK-44](#tsk-44), [TSK-45](#tsk-45), [TSK-46](#tsk-46), [TSK-47](#tsk-47), [TSK-48](#tsk-48), [TSK-49](#tsk-49), [TSK-51](#tsk-51), [TSK-52](#tsk-52), [TSK-54](#tsk-54) |
 | <a id="sn-20"></a>**SN-20** Work that starts when the world changes: Tasks start by themselves when something happens, such as a news story breaking, mail arriving, code changing, a price moving, a device changing state or another task finishing. | should | [TSK-10](#tsk-10), [TSK-11](#tsk-11), [TSK-12](#tsk-12), [TSK-21](#tsk-21), [TSK-22](#tsk-22), [TSK-23](#tsk-23), [TSK-24](#tsk-24), [TSK-25](#tsk-25), [TSK-26](#tsk-26), [TSK-27](#tsk-27), [TSK-28](#tsk-28), [TSK-29](#tsk-29), [TSK-30](#tsk-30), [TSK-31](#tsk-31), [TSK-32](#tsk-32), [TSK-33](#tsk-33), [TSK-44](#tsk-44), [TSK-49](#tsk-49) |
 
 ## ACR AI change requests
@@ -2118,7 +2118,7 @@ The repo page shall hold its content under six tabs, Overview, Map, History, Hea
 
 **The Tasks tab is built around tasks** · must · functional · **implemented**
 
-The second tab shall be Tasks, with five views - Tasks (Active, Repeating and Done; the owner's or the stack's; a search), Activity, Team (the agents on the owner's tasks, the crew, their measured results), Network and Ideas - each task's row saying where it stands, its When, its last result and the agents on it, and New task one form for every task; the addresses of the old Agents tab, Tasks page and mission form shall go to their place on it.
+The second tab shall be Tasks, with five views - Tasks (every task in one list by what matters now, its areas as a filter, a search; TSK-51), Activity, Team (the agents on the owner's tasks, the crew, their measured results), Network and Ideas - each task's row saying where it stands, its When, its last result and the agents on it, and New task one form for every task; the addresses of the old Agents tab, Tasks page and mission form shall go to their place on it.
 
 - Parents: [SN-01](#sn-01), [SN-19](#sn-19)
 - Sources: [DEC-46](#dec-46), `owner 2026-11-08: What is the difference between task and mission? I feel like tasks is better term and we should streamline and unify. ... How long it runs should not define the term. ... I feel we should keep 6 tabs and integrate tasks in agents. But tasks are not an afterthought. ... I want to see how tasks and agents connect ... Can Agents run without tasks? ... I feel like these should just be a special kind of tasks.`
@@ -2979,6 +2979,18 @@ A section title the guide's or the analysis's prompt asks for, written by the mo
 - Sources: `docs/CODER-KNOWLEDGE.md`
 - Verified by: test: `tests/test_onboard.py::test_plain_text_section_titles_become_headings_and_a_good_guide_is_unchanged`
 - Trace: `ops/onboard.py`, `prompts/shared.md`
+
+### BLD-40
+
+**The code graphs are merged only when one changed, within a memory cap** · must · constraint · **implemented**
+
+The code graph job shall rebuild the merged cross-repository graph only when what goes into it changed (a repository's graph in content, its build stamp aside, or the set of repositories), never for a pull that changes no code; it shall run the merge in a container of at most 3 GB of RAM and 6 GB with swap; and a merge ended at that cap shall leave the served graph as it was, be logged with its reason once, and be tried again only when a graph changes.
+
+- Parents: [SN-13](#sn-13), [SN-14](#sn-14)
+- Sources: `docs/REVIEW-2026-11-10.md`, `owner 2026-11-11: Yes (to the review's recommended fixes, O9 and its memory cap among them)`
+- Verified by: test: `tests/test_graphify_sync.py::test_the_merge_runs_only_when_a_graph_changed_in_content_never_for_a_pull_that_changes_no_code`, `tests/test_graphify_sync.py::test_the_merge_runs_under_its_memory_cap_and_one_ended_there_keeps_the_old_graph_and_waits_for_a_change`
+- Trace: `ops/graphify-sync.sh`, `ops/graph_repos.py`
+- Rationale: 10 Nov 2026 WSL restarted under memory pressure (7.4 of 8.4 GB in use, 6.3 GB in swap) while graphify merge-graphs held 3 GB in a container without a limit; the job started every minute and merged again after every pull of the ai-stack mirror (20 merges of 2 to 7 minutes that day), though a pull that changes no code leaves the graph the same but for its built_at_commit stamp (three builds of one sympy commit, 8-9 Nov, equal but for it).
 
 ## CHG Change requests
 
@@ -4011,7 +4023,7 @@ A deployment shall load domain packs from folders or repositories outside the st
 
 - Parents: [SN-05](#sn-05)
 - Sources: `docs/AI-STACK.md`, [DEC-51](#dec-51)
-- Verified by: test: `tests/test_domain_packs.py::test_an_unapproved_pack_does_not_run_and_waits_in_the_queue_with_its_manifest_prompts_commands_and_diff`, `tests/test_domain_packs.py::test_an_approved_pack_adds_its_agents_skill_workflow_and_job_kind_from_a_read_only_checkout`, `tests/test_domain_packs.py::test_a_pack_that_clashes_or_names_no_commit_of_its_source_is_refused_with_the_reason`, `tests/test_domain_packs.py::test_two_packs_of_one_name_and_a_manifest_naming_another_pack_are_refused`, `tests/test_domain_packs.py::test_home_without_packs_is_unchanged`, `tests/test_domain_packs.py::test_a_pack_workflow_that_is_no_n8n_workflow_or_runs_a_shell_command_is_refused_with_the_reason`, `tests/test_domain_packs.py::test_packs_are_the_apps_and_the_queues`, `tests/test_domain_packs.py::test_the_app_sees_each_pack_s_workflows_and_agents_but_no_folder_or_file_path`, `tests/test_app_after_n8n.py::test_packs_and_trackers_are_one_section_of_the_stack_page_and_their_old_links_open_it`
+- Verified by: test: `tests/test_domain_packs.py::test_an_unapproved_pack_does_not_run_and_waits_in_the_queue_with_its_manifest_prompts_commands_and_diff`, `tests/test_domain_packs.py::test_an_approved_pack_adds_its_agents_skill_workflow_and_job_kind_from_a_read_only_checkout`, `tests/test_domain_packs.py::test_a_pack_that_clashes_or_names_no_commit_of_its_source_is_refused_with_the_reason`, `tests/test_domain_packs.py::test_two_packs_of_one_name_and_a_manifest_naming_another_pack_are_refused`, `tests/test_domain_packs.py::test_a_pack_with_a_link_is_refused_and_the_file_it_names_is_left_alone`, `tests/test_domain_packs.py::test_an_artifact_id_is_a_sha256_and_never_a_path`, `tests/test_domain_packs.py::test_home_without_packs_is_unchanged`, `tests/test_domain_packs.py::test_a_pack_workflow_that_is_no_n8n_workflow_or_runs_a_shell_command_is_refused_with_the_reason`, `tests/test_domain_packs.py::test_packs_are_the_apps_and_the_queues`, `tests/test_domain_packs.py::test_the_app_sees_each_pack_s_workflows_and_agents_but_no_folder_or_file_path`, `tests/test_app_after_n8n.py::test_packs_and_trackers_are_one_section_of_the_stack_page_and_their_old_links_open_it`
 - Acceptance: Test: a toy pack copied outside the repository adds agents, a skill, a workflow and a job kind; a name clash, an unapproved commit and a workflow that runs a shell command are refused with the reason; home without it is unchanged.
 - Trace: `ops/domain/packs.py`, `ops/domain/__init__.py`, `ops/decisions.py`, `ops/missions.py`, `images/mission-control/web/static/app.js`, `tests/fixtures/packs/toy/stack.yaml`, `tests/fixtures/packs/toy/workflows/bug.json`
 - Gap: A running pack's agents are not in the AI Stack step's list yet (WFL-06); its workflows reach n8n since 10 Nov 2026 (GEN-43).
@@ -4324,6 +4336,19 @@ In a customer-class deployment a pack's item workflow shall work with its item f
 - Acceptance: Test, against the stand-ins of GEN-44 with a stand-in n8n running the toy's item workflow: every step of the statement, the runner side reloaded and n8n restarted while the run waits and while its job runs, and none of the item's text, its comments or the triage in n8n's executions; with no reply the run reminds twice and ends.
 - Trace: `ops/flows.py`, `ops/runreg.py`, `ops/domain/trackers.py`, `ops/domain/forgework.py`, `ops/domain/places.py`, `tests/fixtures/packs/toy/workflows/ticket.json`, `tests/fixtures/packs/toy/jobs/soak.json`
 - Rationale: The CR of 10 Nov 2026 for tracker items a run can work with counts as done when this holds for the toy pack against stand-ins.
+
+### GEN-47
+
+**The CI runner only where Forgejo is** · must · constraint · **implemented**
+
+The CI runner (compose service ci-runner) shall be its own feature, forgejo-ci, not part of builder: a deployment with builder and without Forgejo shall start every builder service but the runner, and ops/deployment.py check shall refuse forgejo-ci with an empty FORGEJO_URL. The home deployment, which has Forgejo, shall switch forgejo-ci on and keep its runner.
+
+- Parents: [SN-05](#sn-05)
+- Sources: `docs/PLATFORM.md`, `CR 2026-11-10, G4 item 1: a site with builder and no Forgejo could not compose up`
+- Verified by: test: `tests/test_features.py::test_the_ci_runner_is_its_own_feature_on_only_where_forgejo_is`
+- Acceptance: Test: ci-runner's profile is forgejo-ci; home starts it and the work example (builder, no Forgejo) starts the builder and its package proxies without it and needs no Forgejo value; forgejo-ci without FORGEJO_URL is named by the check.
+- Trace: `ops/deployment.py`, `compose/apps.yaml`, `deployments/home/deployment.env`, `docs/PLATFORM.md`, `images/ci-runner/AGENTS.md`
+- Rationale: The first site update of 10 Nov 2026: the runner needs a registration from a Forgejo, so a site with builder and no Forgejo could not compose up.
 
 ## HSE House
 
@@ -5751,7 +5776,7 @@ Mission Control shall refuse approvals, time windows, grants, purchases and clea
 
 - Parents: [SN-05](#sn-05)
 - Sources: `images/mission-control/guide/17-ai-phone.md`
-- Verified by: test: `tests/test_server.py::test_the_ai_phone_is_known_by_the_address_the_proxy_wrote`, `tests/test_server.py::test_the_ai_phone_cannot_approve_its_own_actions`, `tests/test_phone_agents.py::test_approvals_are_refused_from_the_ai_phone`, `tests/test_server.py::test_the_ai_phone_can_ask_the_app_for_nothing_but_stop`
+- Verified by: test: `tests/test_server.py::test_the_ai_phone_is_known_by_the_address_the_proxy_wrote`, `tests/test_server.py::test_the_ai_phone_cannot_approve_its_own_actions`, `tests/test_phone_agents.py::test_approvals_are_refused_from_the_ai_phone`, `tests/test_server.py::test_the_ai_phone_can_ask_the_app_for_nothing_but_stop`, `tests/test_server.py::test_the_ai_phone_writes_nothing_through_share_uploads_or_push`, `tests/test_n8n_inapp.py::test_a_tools_own_policy_stays_a_workflows_page_is_sandboxed_and_the_ai_phone_is_kept_out`
 
 ### PHN-08
 
@@ -6048,7 +6073,7 @@ A Windows task shall check the WSL disk at logon and every 15 minutes and repair
 
 **Deploy rebuilds what changed** · must · functional · **implemented**
 
-When a change is deployed, ops/deploy.py shall rebuild the changed images, recreate their services, reconfigure the Hermes profiles, install changed units (enabling a timer it brings for the first time, and stopping, disabling and deleting a unit the repository dropped), restart the runner when one of its modules changed and the swarm service when the agent cards changed, and then run the health checks and the smoke test.
+When a change is deployed, ops/deploy.py shall rebuild the changed images, recreate their services, reconfigure the Hermes profiles, install changed units, restart the runner when one of its modules changed and the swarm service when the agent cards changed, and then run the health checks and the smoke test; when they pass, it shall enable a timer it brings for the first time and stop, disable and delete a unit the repository dropped (PLT-43).
 
 - Parents: [SN-08](#sn-08), [SN-13](#sn-13)
 - Sources: `docs/MISSION-CONTROL.md`
@@ -6264,7 +6289,7 @@ The app shall count which screens the owner opens (route, day, count, nothing el
 
 **The stack keeps a memory budget** · must · constraint · **partial**
 
-WSL shall have a swap of 16 GB on an SSD with room for it, so the memory of idle services moves to disk instead of crowding the work (the stack waits on model calls, not on memory); the services that grow while idle (qmd, Phoenix, Open WebUI) shall be restarted each night while the stack is idle, with their memory before and after logged; each container shall have a memory budget the doctor checks; and services only trials and builds use shall start on demand and stop when idle.
+WSL shall have a swap of 16 GB on an SSD with room for it, so the memory of idle services moves to disk instead of crowding the work (the stack waits on model calls, not on memory); the services that grow while idle (qmd, Phoenix, Open WebUI) shall be restarted each night while the stack is idle (no mission, task, build, trial, landing, backup, restore drill, vault ingest, crew job or code graph job running), with their memory before and after logged; each container shall have a memory budget the doctor checks; and services only trials and builds use shall start on demand and stop when idle.
 
 - Parents: [SN-13](#sn-13), [SN-03](#sn-03)
 - Sources: `chat 2026-11-02: you need to make due with small ram ... it forces us to optimize`, `chat 2026-11-02: Can we not use ssd memory as ram? ... We could make space in ssd and give generous capa. ... Do both.`, `docs/NEXT-PHASE.md`
@@ -6434,6 +6459,44 @@ Every loop of the host runner that keeps one database connection shall end each 
 - Acceptance: Test: a pass that leaves a write open is committed at its end and the log names the statement and the code that wrote it, after which another writer gets through; a plain connection is committed as well; every loop that keeps one connection pauses through that step; the lock report names the open write; the title repair of the tasks table commits what it changed.
 - Trace: `ops/missions.py`, `ops/tasks.py`, `ops/conductor.py`, `ops/staffing.py`, `ops/builds.py`, `ops/claude_tasks.py`, `ops/events.py`, `ops/history.py`, `ops/improve.py`, `ops/telemetry.py`
 - Rationale: 10 Nov 2026, 17:32 to 17:50: the Conductor's long-lived connection slept between passes inside a transaction a pass had opened and never committed. 224 writes failed on a lock, the home inbox's first issue waited 40 minutes for its answer, and steps of three tasks failed, until the runner was restarted; the answer was posted 35 s later.
+
+### PLT-41
+
+**A missing backup is heard once** · must · functional · **implemented**
+
+When the newest good backup is older than its schedule allows (the timer's daily start after it, or this boot when the PC came up later, plus the timer's random delay, the stack gate's slot and wait and the run's timeout, all read from the backup's units), the health board shall raise an alert on the Backup naming the newest backup and the one that did not arrive; the owner shall hear it once for the episode, also when it lasts for days, and a good backup shall end it.
+
+- Parents: [SN-09](#sn-09)
+- Sources: `docs/REVIEW-2026-11-10.md`, `docs/REVIEW-2026-11-07.md`
+- Verified by: test: `tests/test_recoverable.py::test_the_backups_schedule_is_read_from_its_units`, `tests/test_recoverable.py::test_a_missing_nights_backup_is_an_alert_on_the_backup_heard_once_per_episode`, `tests/test_recoverable.py::test_an_unreadable_backup_schedule_says_so_and_no_backup_logged_yet_is_quiet`
+- Trace: `ops/crew.py`, `images/mission-control/obs_core.py`, `ops/systemd/backup.timer`, `ops/systemd/backup.service`
+- Rationale: 10 Nov 2026 WSL died at 03:36 during the night's backup; the backup was lost and nothing said so. The 7 Nov review asked for this alarm (OPS-R4, second half); the job's own overdue check waits 2.5 days and counts runs, not good backups.
+
+### PLT-42
+
+**Image builds go through the deployment's build proxy** · must · functional · **implemented**
+
+When a deployment's deployment.env names a build proxy (BUILD_HTTP_PROXY, and BUILD_NO_PROXY for the hosts that go direct), ops/deploy.py shall hand it to each image build as Docker's proxy build arguments http_proxy, https_proxy, HTTP_PROXY, HTTPS_PROXY (and no_proxy, NO_PROXY), named by name with their values in the build's environment so the printed command shows no proxy address; without BUILD_HTTP_PROXY a build shall get no proxy argument.
+
+- Parents: [SN-05](#sn-05), [SN-13](#sn-13)
+- Sources: `docs/PLATFORM.md`, `CR 2026-11-10, G4 item 2: a plain docker build had a proxy only through ~/.docker/config.json`
+- Verified by: test: `tests/test_deploy.py::test_a_build_behind_the_deployments_proxy_names_dockers_proxy_arguments_and_keeps_their_values_off_the_command`
+- Acceptance: Test: no proxy gives the arguments of before; a proxy gives the six arguments by name, the values only in the environment build() runs docker with, and none in the command; the base pins stay.
+- Trace: `ops/deploy.py`, `docs/PLATFORM.md`, `deployments/example-work/deployment.env`
+- Rationale: The first site update of 10 Nov 2026: behind a proxy, a plain docker build reaches the internet only through the proxies of ~/.docker/config.json, which Docker also puts into every container it starts. Docker keeps its own proxy build arguments out of the image: on 11 Nov 2026 an image with an apt-get step, built through a stand-in proxy with no proxies in ~/.docker/config.json, made all 7 of its requests (package lists and the package) through the proxy, and docker history, docker image inspect and a container of the image showed neither the proxy's address nor its account.
+
+### PLT-43
+
+**A failed deploy and a rollback leave the timers enabled as they found them** · must · functional · **implemented**
+
+ops/deploy.py shall read the enabled user timers when it starts; a failed deploy shall enable no timer it brings and take off no unit the repository dropped, and when it fails while it enables its new timers, it shall disable the ones it enabled; a rollback (DEPLOY_ROLLBACK=1 from ops/update.py, or a new commit that is an ancestor of the old one) shall enable no timer of its diff and take off the units the newer commit added; both shall end with the timers of the diff enabled as the deploy found them, and timers outside the diff untouched.
+
+- Parents: [SN-05](#sn-05), [SN-13](#sn-13)
+- Sources: `docs/PLATFORM.md`, `CR 2026-11-10, G4 item 3: a rollback switched on timers the site never had`
+- Verified by: test: `tests/test_deploy_main.py::test_a_failed_deploy_leaves_the_same_timers_enabled_as_before_it`, `tests/test_deploy_main.py::test_a_good_deploy_enables_its_new_timers_and_takes_off_the_dropped_ones_after_the_checks`, `tests/test_deploy_main.py::test_a_rollback_enables_no_timer_of_its_diff_and_leaves_the_enabled_ones_as_it_found_them`, `tests/test_deploy_main.py::test_the_rollback_after_a_failed_update_tells_the_deploy_it_is_one`, `tests/test_deploy_main.py::test_putting_back_touches_only_the_diffs_timers_and_says_what_it_cannot`
+- Acceptance: Test, with a fake systemctl: a deploy whose smoke test fails, and one whose second new timer cannot be enabled, end with the same enabled timers as before and the dropped unit still installed; a good deploy enables its new timer and takes off the dropped one only after the smoke test; a rollback, good or failed, enables none of its diff, takes off the unit the newer commit added and ends with the timers it found; update.py's rollback says DEPLOY_ROLLBACK=1; putting back touches only the diff's timers.
+- Trace: `ops/deploy.py`, `ops/update.py`
+- Rationale: The first site update of 10 Nov 2026: the rollback after a failed update (ops/update.py runs deploy.py <new> <old>) enabled every timer of its diff with no installed copy, and so switched on graphify-sync, which the site never had.
 
 ## QA Quality and process
 
@@ -6740,6 +6803,18 @@ The checks shall run the whole test suite over worker processes (six by default,
 - Trace: `ops/check.sh`, `ops/publish.py`, `tests/conftest.py`, `tests/requirements.txt`
 - Gap: the builder image does not carry pytest-xdist yet (a rebuild from scratch after the build cache was pruned); it is installed in the running builder container, and the image takes it at its next rebuild.
 - Rationale: 10 Nov 2026 a landing took about 15 minutes, 12 to 14 of them for about 1,600 tests on one of eight cores; a lock file another user had left in /tmp failed one landing.
+
+### QA-28
+
+**A requirement id keeps its meaning** · must · process · **implemented**
+
+A landing on main (ops/land.sh) and a build's requirement proof shall stop when a requirement, decision, need or finding id that exists on the target branch is gone, or has another title without the old one kept in its titles_before, naming each such id and, for a title that moved, the id it moved to.
+
+- Parents: [SN-13](#sn-13)
+- Sources: `docs/REVIEW-2026-11-10.md`, `requirements/AGENTS.md`
+- Verified by: test: `tests/test_requirements.py::test_an_id_on_the_target_branch_may_be_added_to_or_deprecated_but_never_renumbered_reused_or_removed`, `tests/test_requirements.py::test_a_title_changes_in_words_only_with_the_old_one_kept_and_an_unreadable_branch_is_no_pass`, `tests/test_land_compose.py::test_a_landing_stops_when_a_requirement_id_of_main_changed_its_meaning`
+- Trace: `ops/req.py`, `ops/land.sh`
+- Rationale: Review of 10 Nov 2026 (D2, DOCS2-R5): ids were renumbered three times in a day (WFL-15..19 became 19..23, GEN-40/41, PLT-38 became 40) against "never renumbered", and commit trailers pointed at other requirements. Meaning is checked as the title: a program cannot judge meaning, a title is the requirement's name, and a reworded title must be written down (titles_before) where the reviewer sees it in the diff.
 
 ## RES Research
 
@@ -7068,7 +7143,87 @@ A commit or a push of the stack's repositories that holds what the deployment's 
 - Verified by: test: `tests/test_termguard.py::test_a_commit_holding_a_forbidden_term_is_refused_and_a_clean_one_passes`, `tests/test_termguard.py::test_a_push_of_a_commit_that_skipped_the_hooks_is_refused`, `tests/test_termguard.py::test_the_runners_own_push_is_guarded_and_a_removed_line_is_no_leak`, `tests/test_termguard.py::test_without_a_list_everything_passes`
 - Acceptance: Test: a commit with a forbidden term in a staged line or its message is refused, a push of a commit that skipped the commit hooks is refused, the runner's push guard refuses it too, a removed line and a term inside a longer word pass, and without a list everything passes.
 - Trace: `ops/termguard.py`, `ops/git-hooks/pre-commit`, `ops/git-hooks/commit-msg`, `ops/git-hooks/pre-push`, `ops/builds.py`, `ops/deploy.py`
-- Rationale: The owner, 9 Nov 2026: "From now into the future never can something Example specific reach git." The stack is a platform; one deployment's employer, products and projects stay out of every repository.
+- Rationale: The owner, 9 Nov 2026: "From now into the future never can something [the employer] specific reach git." The stack is a platform; one deployment's employer, products and projects stay out of every repository.
+
+### SEC-23
+
+**Nothing on the app's address runs another's script** · must · constraint · **implemented**
+
+Mission Control shall let no other site frame its pages (frame-ancestors 'self'); it shall serve a chat or shared file that a browser would run (a page, a script, an SVG) only as a download with a sandbox policy; and it shall keep the framed tools' (n8n's, Phoenix's) own Content-Security-Policy, all but its framing rule, and sandbox a page a workflow wrote itself (n8n's /webhook* and /form* answers).
+
+- Parents: [SN-05](#sn-05), [SN-06](#sn-06)
+- Sources: `docs/SECURITY.md`, `docs/REVIEW-2026-11-10.md`
+- Verified by: test: `tests/test_server.py::test_a_shared_page_or_script_only_downloads_and_no_other_site_frames_the_app`, `tests/test_n8n_inapp.py::test_a_tools_own_policy_stays_a_workflows_page_is_sandboxed_and_the_ai_phone_is_kept_out`
+- Trace: `images/mission-control/server.py`, `images/mission-control/server.share.py`, `images/mission-control/server.frames.py`
+- Rationale: Review of 7 Nov (S8) and 10 Nov (APP2-R2, R5, R6; SEC2-R4) - an .html attachment ran with the app's whole API, the app could be framed under a foreign page, and the frame proxy took n8n's and Phoenix's own policy away.
+
+### SEC-24
+
+**The app believes the owner only through its published port** · must · constraint · **partial**
+
+Mission Control's port 8090 shall answer only a connection that comes through its published port (its peer is the gateway of the container's default route, read from its own route table); with APP_TRUST on it shall refuse every other request (403), whatever identity header or host it names; with APP_TRUST log or any other value it shall refuse nothing and log each request it would refuse with what, the peer, the path and the published port's address.
+
+- Parents: [SN-05](#sn-05), [SN-06](#sn-06)
+- Sources: `docs/SECURITY.md`, `docs/REVIEW-2026-11-10.md`
+- Verified by: test: `tests/test_trust.py::test_the_gate_path_is_accepted_and_a_container_on_stepnet_or_backend_is_refused`, `tests/test_trust.py::test_log_mode_refuses_nothing_and_says_what_it_would_refuse`, `tests/test_trust.py::test_the_switch_is_one_deployment_setting_and_a_typo_only_logs`
+- Acceptance: Test: in on mode the gate path's request is the owner's, and the same request with the owner's header from n8n's, the backend's, LiteLLM's or the app's own address is refused, a write from n8n reaches no inbox, and the local gate takes no container that names the app's service; in log mode the request passes and its line names the peer and the path, and the gate path is never logged; only "on" switches it on; the journeys browser takes the published port.
+- Trace: `images/mission-control/server.trust.py`, `images/mission-control/server.py`, `compose/apps.yaml`, `ops/journeys.py`, `docs/SECURITY.md`
+- Gap: The home deployment runs in log mode until the lead switches APP_TRUST=on after a deploy in log mode (docs/SECURITY.md, "Switching the trust boundary on"); until then n8n, Phoenix and LiteLLM can still act as the owner.
+- Rationale: Review of 10 Nov (O1, APP2-R1, SEC2-R1, N8N2-R2): the app trusted the identity header from any container on its networks, n8n among them. Measured on 11 Nov 2026 (rootless Docker 29.9.2, docker-proxy): the WSL host, Windows' localhost, tailscale serve and a --network host container arrive from 172.27.0.1 (mcui's gateway, the default route); n8n from 172.30.128.3, Phoenix from 172.22.0.2, LiteLLM from 172.26.0.4. A wrong rule locks the owner out, hence the log mode first.
+
+### SEC-25
+
+**The step service answers only n8n's step node with its token** · must · constraint · **partial**
+
+Mission Control's step service (port 8099) shall answer only a request that carries its bearer token (AISTACK_STEP_TOKEN, sops), which n8n's AI Stack step node sends from n8n's environment on each step and each list it reads; with APP_TRUST on a request without it shall be refused (401) and nothing shall reach the runner, and with no token set no request shall pass; in log mode it shall be logged.
+
+- Parents: [SN-05](#sn-05)
+- Sources: `docs/SECURITY.md`, `docs/REVIEW-2026-11-10.md`
+- Verified by: test: `tests/test_trust.py::test_the_step_service_refuses_a_step_without_its_token`, `tests/test_trust.py::test_the_trust_keys_are_made_once_and_never_on_a_command_line`
+- Acceptance: Test: without the token, with a wrong one, or with none set, a step and the lists are refused and nothing is dropped for the runner; with it the step is dropped; the node sends it on both calls and compose gives both sides the same secret.
+- Trace: `images/mission-control/server.trust.py`, `images/mission-control/server.flows.py`, `n8n/custom/AistackStep.node.js`, `compose/core.yaml`, `compose/apps.yaml`, `ops/trust_keys.py`, `Makefile`
+- Gap: In log mode until the lead's switch (SEC-24). The step service still runs in the app's process (docs/SECURITY.md says why a container of its own would not take n8n off the app's networks).
+- Rationale: Review of 10 Nov (O2, N8N2-R1) - the step service had no token, so any container on the app's networks could post a step. Shown on a throwaway n8n 2.44.7 on 11 Nov 2026 (read-only root, no capabilities, N8N_BLOCK_ENV_ACCESS_IN_NODE on) - the node sent "Authorization Bearer" with the token from n8n's environment, and the step resumed.
+
+### SEC-26
+
+**The app's tools answer only the model gateway with their tokens** · must · constraint · **partial**
+
+Each of Mission Control's MCP servers (missions 8091, claude 8092, house 8094, files 8096, memory 8097, memorypublic 8098) shall answer only LiteLLM (its service name resolves to the peer, or Docker's DNS names the peer <project>-litellm-<n>) with that server's own bearer token (MCP_TOKEN_<SERVER>, sops), which LiteLLM sends (auth_type bearer_token); with APP_TRUST on any other call shall be refused (401), and in log mode logged.
+
+- Parents: [SN-05](#sn-05)
+- Sources: `docs/SECURITY.md`, `docs/REVIEW-2026-11-10.md`
+- Verified by: test: `tests/test_trust.py::test_an_mcp_server_answers_only_litellm_with_its_token`
+- Acceptance: Test: LiteLLM with the token passes, also from its other shared network; a wrong token, none, or the right token from n8n is refused; with no token set nothing passes; both gateway configs send each server's own token and compose gives it to both sides; all six servers are wrapped.
+- Trace: `images/mission-control/server.trust.py`, `images/mission-control/server.py`, `config/litellm/config.yaml`, `deployments/example-work/litellm.yaml`, `compose/core.yaml`, `compose/apps.yaml`
+- Gap: In log mode until the lead's switch (SEC-24). The servers still listen on every network of the app; the refusal is by peer and token (docs/SECURITY.md says why no bind).
+- Rationale: Review of 10 Nov (O1, DOM2-R16) - the house, memory (all class) and missions tools answered n8n, Phoenix and the swarm on the app's networks without a key.
+
+### SEC-27
+
+**n8n's webhooks take only the runner's header, and n8n sits off the flat network** · must · constraint · **partial**
+
+Every Webhook trigger of every workflow n8n runs (the repository's, a pack's, one exported from the canvas) shall require the header X-Aistack-Hook with the secret N8N_HOOK_TOKEN (n8n's Header Auth credential "AI Stack runner", written by every import before the workflows, and an import without the secret shall change nothing and fail); the runner shall send it when it starts an item's workflow; n8n shall be on its own internal network with Postgres (n8ndb), flows and stepnet only, never backend; and its tailnet port 8450 shall serve /webhook-waiting only.
+
+- Parents: [SN-05](#sn-05)
+- Sources: `docs/SECURITY.md`, `docs/REVIEW-2026-11-10.md`
+- Verified by: test: `tests/test_trust.py::test_every_webhook_asks_for_the_runners_header`, `tests/test_trust.py::test_the_webhooks_credential_is_written_from_the_secret_and_an_import_without_it_stops`, `tests/test_trust.py::test_the_runner_starts_an_item_workflow_with_its_header_and_says_why_not_without_it`, `tests/test_trust.py::test_n8n_is_off_the_flat_backend_hardened_and_its_tailnet_port_serves_resume_links_only`
+- Acceptance: Test: every webhook in git, a new job's Run now, a pack's and an exported one carry the credential; the credential is written from the secret on stdin, never a command line, and an import without it touches nothing; the runner's start carries the header and says why without the secret; n8n's networks are n8ndb, flows and stepnet, shared only with Postgres and n8n-db; the Windows setup serves /webhook-waiting alone on 8450.
+- Trace: `ops/n8n_gen.py`, `ops/n8n_sync.py`, `ops/runreg.py`, `ops/trust_keys.py`, `compose/core.yaml`, `ops/windows/host-setup.ps1`, `n8n/workflows/item-home-inbox.json`, `n8n/workflows/stack-self-test.json`
+- Gap: The 8450 change is an owner step on Windows (ops/windows/host-setup.ps1); until it runs, 8450 still serves n8n's whole root, now behind the webhook header and n8n's own login.
+- Rationale: Review of 10 Nov (O3, SEC2-R2, N8N2-R3): 31 workflows' webhooks took no authentication, n8n shared the flat backend with the builder's sandbox, and 8450 served n8n's root on the tailnet. Shown on a throwaway n8n 2.44.7 on 11 Nov 2026: a webhook with Header Auth answered 403 without the header and with a wrong one, 200 with it; the credential imported with its value in plain JSON (n8n encrypts it).
+
+### SEC-28
+
+**n8n runs hardened** · should · constraint · **implemented**
+
+n8n's container shall run with a read-only root filesystem (its /tmp and its compile cache /home/node/.cache in memory), every Linux capability dropped and no new privileges, and with its public API off (no API key accepted, no docs page).
+
+- Parents: [SN-05](#sn-05)
+- Sources: `docs/SECURITY.md`, `docs/REVIEW-2026-11-10.md`
+- Verified by: test: `tests/test_trust.py::test_n8n_is_off_the_flat_backend_hardened_and_its_tailnet_port_serves_resume_links_only`
+- Trace: `compose/core.yaml`
+- Rationale: Review of 10 Nov (O4, SEC2-R5, N8N2-R14). Shown on a throwaway n8n 2.44.7 on 11 Nov 2026: it started, restarted, imported, ran a webhook and resumed a waiting step this way; its cache needs mode 1777 (a plain tmpfs failed with EACCES on restart). Nothing of the stack uses n8n's public API (the runner uses its command line); on 2.44.7 N8N_PUBLIC_API_DISABLED refuses every API key while its routes stay, and its docs page stayed until N8N_PUBLIC_API_SWAGGERUI_DISABLED (read in n8n's own code, dist/public-api/index.js). The SSH and Git nodes stay on at home, and Postgres' superuser still owns n8n's database (docs/SECURITY.md).
 
 ## SHP Shopping
 
@@ -8726,7 +8881,7 @@ An agent's own write to another agent's artifact (evidence, a link from it, an u
 
 - Parents: [SN-17](#sn-17), [SN-05](#sn-05)
 - Sources: [DEC-30](#dec-30)
-- Verified by: test: `tests/test_lane_discipline.py::test_a_step_into_another_lane_names_why_its_owner_would_not_see_it`, `tests/test_lane_discipline.py::test_each_agent_steps_in_only_a_few_times_a_day`, `tests/test_lane_discipline.py::test_the_helped_agent_or_the_owner_judges_and_the_work_s_fate_does_otherwise`, `tests/test_lane_discipline.py::test_the_coach_turns_unhelpful_steps_into_an_agent_change_for_quiet`, `tests/test_lane_discipline.py::test_the_room_shows_why_and_lets_the_owner_judge`
+- Verified by: test: `tests/test_lane_discipline.py::test_a_step_into_another_lane_names_why_its_owner_would_not_see_it`, `tests/test_lane_discipline.py::test_each_agent_steps_in_only_a_few_times_a_day`, `tests/test_lane_discipline.py::test_the_helped_agent_or_the_owner_judges_and_the_work_s_fate_does_otherwise`, `tests/test_lane_discipline.py::test_the_coach_turns_unhelpful_steps_into_an_agent_change_for_quiet`, `tests/test_lane_discipline.py::test_the_room_shows_why_and_lets_the_owner_judge`, `tests/test_lane_discipline.py::test_private_help_never_reaches_an_owner_with_a_way_out`
 - Phase: 5 Improvement loop: replay sets, the evaluation gate, the Coach
 - Trace: `images/swarm/ledger.py`, `images/swarm/swarm.py`, `ops/coach.py`, `ops/swarm_client.py`, `images/mission-control/teamroom.py`, `images/mission-control/web/static/swarm.js`
 - Rationale: The owner's rule: each agent is responsible for its own lane first and for the team's goals, and gets involved in another's only with a clear, valuable contribution its owner would not see or has missed. Broadcast coordination costs every agent every message and the MAST study finds a third of multi-agent failures between agents; so a step in is rare, reasoned, new and judged, and an agent whose steps do not help learns to stay out.
@@ -8818,7 +8973,7 @@ Every tool server of the gateway shall say what a call to it means for the map, 
 | 6 | Every task a plan graph | [TSK-21](#tsk-21), [TSK-22](#tsk-22), [TSK-34](#tsk-34), [TSK-35](#tsk-35), [TSK-36](#tsk-36) |
 | 7 | Artifacts, map and telemetry | [TSK-23](#tsk-23), [TSK-24](#tsk-24), [TSK-25](#tsk-25), [TSK-26](#tsk-26), [TSK-27](#tsk-27) |
 | 8 | Customisation and UX | [TSK-28](#tsk-28), [TSK-29](#tsk-29), [TSK-30](#tsk-30), [TSK-31](#tsk-31), [TSK-32](#tsk-32) |
-| 9 | More reach | [TSK-33](#tsk-33), [TSK-40](#tsk-40), [TSK-41](#tsk-41), [TSK-42](#tsk-42), [TSK-43](#tsk-43), [TSK-44](#tsk-44), [TSK-46](#tsk-46), [TSK-47](#tsk-47), [TSK-48](#tsk-48), [TSK-49](#tsk-49), [TSK-50](#tsk-50) |
+| 9 | More reach | [TSK-33](#tsk-33), [TSK-40](#tsk-40), [TSK-41](#tsk-41), [TSK-42](#tsk-42), [TSK-43](#tsk-43), [TSK-44](#tsk-44), [TSK-46](#tsk-46), [TSK-47](#tsk-47), [TSK-48](#tsk-48), [TSK-49](#tsk-49), [TSK-50](#tsk-50), [TSK-51](#tsk-51), [TSK-52](#tsk-52), [TSK-53](#tsk-53), [TSK-54](#tsk-54), [TSK-55](#tsk-55) |
 
 ### Task kernel
 
@@ -9333,16 +9488,18 @@ The Conductor shall build its adapters, step owners, memory needs and waiting ha
 
 #### TSK-40
 
-**A task is yours or the stack's** · must · functional · **implemented**
+**A task is yours or the stack's** · must · functional · **deprecated**
 
 Every task shall have an owner, the stack for the work it gives itself (trials, probes, gates, the crew's duties, onboarding, and a question to Claude one of its crew asked) and otherwise the owner; the owner's lists shall show the owner's tasks, and the stack's shall be one filter away, never hidden.
 
 - Parents: [SN-02](#sn-02), [SN-19](#sn-19)
 - Sources: [DEC-46](#dec-46), `owner 2026-11-08: What is the difference between task and mission? I feel like tasks is better term and we should streamline and unify. ... How long it runs should not define the term. ... I feel we should keep 6 tabs and integrate tasks in agents. But tasks are not an afterthought. ... I want to see how tasks and agents connect ... Can Agents run without tasks? ... I feel like these should just be a special kind of tasks.`
-- Verified by: test: `tests/test_tasks_tab.py::test_a_task_is_yours_or_the_stack_s_by_who_gave_it`
+- Verified by: test: `tests/test_tasks_tab.py::test_a_task_is_yours_or_the_stack_s_by_who_gave_it`, `tests/test_tax_task.py::test_a_crew_duty_and_a_workflow_s_run_are_their_owner_s`
 - Phase: 9 More reach
 - Acceptance: Test: a task given in the app and one a rule started are the owner's; a trial's and the Health doctor's question are the stack's; tasks from before owners get theirs.
-- Trace: `ops/tasks.py`, `images/mission-control/web/static/app-tasks.js`
+- Trace: `ops/tasks.py`
+- Reason: The owner, 11 Nov 2026, found the split needlessly bisects the overview. Every task is in one list (TSK-51), labelled by its area (TSK-52); who asked stays as information on a task (owner_of), never a filter.
+- Superseded by: `T`, `S`, `K`, `-`, `5`, `1`
 
 #### TSK-41
 
@@ -9482,6 +9639,73 @@ When the Checker judges a run, it shall check a point of the definition of done 
 - Acceptance: Test: "runs every Monday at 08:00, starting November 2, 2026" is met from a Monday 08:00 workflow whose first run started on 2 Nov, never sent to the judge; Friday 09:00 on a switched-off workflow is not met with each reason; the judge's prompt holds the run's window and the e-mail's subject; a failed e-mail is said in the step's answer and pushed.
 - Trace: `ops/staffing.py`, `ops/desk_steps.py`, `ops/mission_extras.py`
 
+### Everything is a task
+
+#### TSK-51
+
+**Every task of the stack in one list** · must · functional · **implemented**
+
+The Tasks list shall show every task of the stack in one list, with no yours-or-the-stack's filter in the app or its data, in the order of what matters now - needs you, failed, running now, recent results, scheduled, and newest first within each - and each task shall say who asked for it (you, one of your rules, an outside agent, or the stack itself) as information on it, never as a filter.
+
+- Parents: [SN-02](#sn-02), [SN-19](#sn-19)
+- Sources: `owner 2026-11-11: I didnt like this rule to begin with. Does it actually make sense to use that split? It just needlessly bisects and makes overview difficult. Can you design this properly and make these exceptions not be exceptions anymore? I want the app to show me whats going on in stack.`, [DEC-46](#dec-46)
+- Verified by: test: `tests/test_tax_task.py::test_every_task_is_in_one_list_in_the_order_of_what_matters_now`
+- Phase: 9 More reach
+- Acceptance: Test: the list draws Needs you, Failed, Running now, Recent results and Scheduled in that order, newest first in each, with no owner filter; a task says who asked.
+- Trace: `ops/tasks.py`, `images/mission-control/web/static/app-tasks.js`, `images/mission-control/web/static/task.js`
+
+#### TSK-52
+
+**Each task has an area** · must · functional · **implemented**
+
+Each task shall have an area named for what it is for (Taxes, Mail, Briefings, Shopping, Research, Errands, Inbox, Phone, Code, Memory, Upkeep), declared by each crew job and each workflow file (the generator writes it, and a check fails on one without it), and for a task given in a sentence taken from its kind; the area shall be a visible label on the task and an optional filter (none picked shows all).
+
+- Parents: [SN-02](#sn-02), [SN-19](#sn-19)
+- Sources: `owner 2026-11-11: I didnt like this rule to begin with. Does it actually make sense to use that split? It just needlessly bisects and makes overview difficult. Can you design this properly and make these exceptions not be exceptions anymore? I want the app to show me whats going on in stack.`
+- Verified by: test: `tests/test_tax_task.py::test_every_workflow_and_crew_job_declares_its_area`, `tests/test_tax_task.py::test_a_task_s_area_comes_from_what_it_is_for`
+- Phase: 9 More reach
+- Acceptance: Test: every workflow file and crew job declares a known area, the generator writes it, and a task's area follows its door, workflow or kind.
+- Trace: `ops/areas.py`, `ops/crew.py`, `ops/n8n_gen.py`, `ops/n8n_jobs.py`, `ops/tasks.py`, `ops/flow_tasks.py`, `n8n/workflows/tax-desk.json`, `images/mission-control/web/static/app-tasks.js`
+
+#### TSK-53
+
+**Upkeep is one row with its health** · must · functional · **implemented**
+
+The tasks of the Upkeep area shall fold into one row of the list that says how many jobs there are, whether all are fine or which fail, how many run and when the last ran, and opens them as rows; a failing or waiting upkeep job shall also show on its own, and the row shall never be hidden. No other area folds.
+
+- Parents: [SN-02](#sn-02)
+- Sources: `owner 2026-11-11: I didnt like this rule to begin with. Does it actually make sense to use that split? It just needlessly bisects and makes overview difficult. Can you design this properly and make these exceptions not be exceptions anymore? I want the app to show me whats going on in stack.`
+- Verified by: test: `tests/test_tax_task.py::test_upkeep_is_one_row_with_its_health_and_a_failing_job_shows_alone`
+- Phase: 9 More reach
+- Acceptance: Test: 14 fine upkeep jobs are one row "14 jobs, all fine"; a failing one shows under Failed and in the row.
+- Trace: `images/mission-control/web/static/app-tasks.js`, `images/mission-control/web/static/app.css`
+
+#### TSK-54
+
+**One workflow, one task** · must · functional · **implemented**
+
+A workflow shall be one task - a crew job's workflow its crew duty, a task's workflow that task, any other workflow a task of its own - whose runs are its occurrences with its steps named for what they do, with Run now on the task, its n8n run and its agents on its page, and its result one tap away (its own view, the page that holds it, or its last result line). The task made for each run of a workflow's agent step shall not be listed on its own; its history shows as the workflow task's runs, and nothing is deleted.
+
+- Parents: [SN-02](#sn-02), [SN-19](#sn-19)
+- Sources: `owner 2026-11-11: I didnt like this rule to begin with. Does it actually make sense to use that split? It just needlessly bisects and makes overview difficult. Can you design this properly and make these exceptions not be exceptions anymore? I want the app to show me whats going on in stack.`, `owner 2026-11-11: Why do i not see agent and task for tax stuff? Did you create it in new system with n8n? Where can i see result?`
+- Verified by: test: `tests/test_tax_task.py::test_each_workflow_is_one_task_with_its_runs_and_result`, `tests/test_tax_task.py::test_older_runs_of_a_workflow_keep_their_history`, `tests/test_tax_task.py::test_your_taxes_is_one_task_with_the_workflow_s_runs_as_its_runs`
+- Phase: 9 More reach
+- Acceptance: Test: the tax desk, the home inbox and the self-test are one task each with their runs; a run older than the step records comes from its run task; the mail sorter's duty links to Your mail.
+- Trace: `ops/flow_tasks.py`, `ops/tasks.py`, `ops/crew.py`, `images/mission-control/web/static/task.js`, `images/mission-control/web/static/app-tasks.js`, `images/mission-control/runrecord.py`, `images/mission-control/server.a2a.py`
+
+#### TSK-55
+
+**Home shows what is going on in the stack** · must · functional · **implemented**
+
+Home shall show what is going on across every area of the stack - running now, waiting for you, failed and done today - each row opening its task, with the Upkeep jobs as one row with their health, and its Results shall hold every area's results, the Upkeep area's only when a job failed.
+
+- Parents: [SN-02](#sn-02)
+- Sources: `owner 2026-11-11: I didnt like this rule to begin with. Does it actually make sense to use that split? It just needlessly bisects and makes overview difficult. Can you design this properly and make these exceptions not be exceptions anymore? I want the app to show me whats going on in stack.`
+- Verified by: test: `tests/test_tax_task.py::test_home_shows_what_is_going_on_across_the_stack`
+- Phase: 9 More reach
+- Acceptance: Test: Home lists a running briefing, a task waiting for you, a failed upkeep job and one done today, each linking to its task, and folds the fine upkeep jobs into one row.
+- Trace: `images/mission-control/web/static/app-tasks.js`
+
 ## TAX Tax desk
 
 ### TAX-01
@@ -9571,6 +9795,50 @@ The tax desk's n8n workflow (n8n/workflows/tax-desk.json, made by ops/n8n_gen.py
 - Sources: `docs/TAX-DESK.md`
 - Verified by: test: `tests/test_tax.py::test_the_tax_desk_workflow_finds_reads_and_files_in_that_order`, `tests/test_tax.py::test_n8n_gen_makes_a_chain_of_steps`, `tests/test_tax.py::test_a_run_with_no_open_year_finds_nothing`
 - Trace: `ops/n8n_gen.py`, `deployments/home/workflows.yaml`, `ops/tax.py`
+
+### TAX-09
+
+**Your taxes is one task** · must · functional · **implemented**
+
+The tax desk's workflow shall be one task, "Your taxes" (area Taxes), whose When is the workflow's schedule and whose runs are the workflow's runs, one each, with the workflow's steps in order as each run's steps (their state, times and answer, the reader's own log one tap away) and the tax reader as its agent; Run now on it shall start the workflow through its Run now webhook, and say so when the workflow is switched off. The crew duties of its steps and the task made for each run of its reader shall not be listed as tasks of their own. A step's title shall say what it does.
+
+- Parents: [SN-05](#sn-05), [SN-19](#sn-19)
+- Sources: `owner 2026-11-11: Why do i not see agent and task for tax stuff? Did you create it in new system with n8n? Where can i see result?`, `docs/TAX-DESK.md`
+- Verified by: test: `tests/test_tax_task.py::test_your_taxes_is_one_task_with_the_workflow_s_runs_as_its_runs`, `tests/test_tax_task.py::test_the_desk_s_crew_duties_and_reader_tasks_leave_the_lists`, `tests/test_tax_task.py::test_run_now_on_your_taxes_starts_its_workflow`, `tests/test_tax.py::test_the_tax_desk_workflow_finds_reads_and_files_in_that_order`
+- Trace: `ops/flow_tasks.py`, `ops/tasks.py`, `ops/crew.py`, `n8n/workflows/tax-desk.json`, `images/mission-control/runrecord.py`, `images/mission-control/server.a2a.py`, `images/mission-control/web/static/task.js`, `images/mission-control/web/static/app-tasks.js`, `images/mission-control/web/static/app-workflows.js`
+
+### TAX-10
+
+**The result of each year is in the app** · must · functional · **implemented**
+
+The task's page shall show per year, below the draft's disclaimer, the papers found per form (counts), the sums per form line, what the earlier returns lead to expect that is missing, the open questions with the way to Needs you, the earlier return as the reader extracted it, and the year's files - the workbook as a page, Belege as a list with each paper's file name, the earlier return as a page - each with its path on the NAS share, built without a model and without the NAS from the desk's outputs on the PC after every filing run and every answer.
+
+- Parents: [SN-05](#sn-05)
+- Sources: `owner 2026-11-11: Where can i see result?`, `docs/TAX-DESK.md`
+- Verified by: test: `tests/test_tax_task.py::test_the_result_view_shows_each_year_from_the_desk_s_outputs`, `tests/test_tax_task.py::test_the_task_page_shows_the_result_and_its_files_as_pages`
+- Trace: `ops/tax_view.py`, `ops/tax.py`, `images/mission-control/server.tax.py`, `images/mission-control/web/static/tax.js`, `images/mission-control/web/index.html`, `images/mission-control/web/sw.js`, `images/mission-control/web/static/app.css`, `images/mission-control/guide/23-taxes.md`
+
+### TAX-11
+
+**The figures reach only the owner's signed-in session** · must · constraint · **implemented**
+
+The view of the tax figures shall be readable on the PC by the runner's user and the app's user alone (a folder of mode 700 and a file of mode 600, each with an access ACL entry for the app's user only), and none shall be written where that cannot be set. The app shall serve it only to the owner's signed-in session, never to the AI phone or the stack's own checks and previews, and never let a browser cache it; no figure shall go into the board's state, a task's page data, a log, a Home line, a push text or an n8n answer.
+
+- Parents: [SN-05](#sn-05), [SN-09](#sn-09)
+- Sources: `lead 2026-11-11: shown only to the owner's signed-in session (never the AI phone: PHN-07; never in logs, Home lines, push texts or n8n's execution data)`, `docs/TAX-DESK.md`
+- Verified by: test: `tests/test_tax_task.py::test_the_view_is_shared_with_the_app_s_user_alone`, `tests/test_tax_task.py::test_the_figures_reach_only_the_owner_s_signed_in_session`, `tests/test_tax_task.py::test_no_figure_reaches_the_board_or_its_pages`
+- Trace: `ops/tax_view.py`, `images/mission-control/server.tax.py`, `images/mission-control/server.py`, `ops/flow_tasks.py`
+
+### TAX-12
+
+**The tax reader shows where it belongs** · should · functional · **implemented**
+
+The tax card shall have the name Tax reader in the app, say on its card that it reads the papers of the Tax desk with ChatGPT only and no tools, and its page shall link to the workflow it is a step of and to the task it does steps for.
+
+- Parents: [SN-05](#sn-05)
+- Sources: `docs/TAX-DESK.md`
+- Verified by: test: `tests/test_tax_task.py::test_the_tax_reader_has_its_name_and_shows_where_it_belongs`
+- Trace: `config/agents.yaml`, `images/mission-control/web/static/app-runs.js`, `images/mission-control/web/static/swarm.js`, `ops/tasks.py`
 
 ## TRL Trials
 
@@ -10026,7 +10294,7 @@ Once no work runs on them, Temporal, the Conductor's scheduling, the block edito
 
 **Run now through n8n** · should · functional · **implemented**
 
-Every scheduled workflow of the repository shall have a second trigger, a webhook Run now (POST, path run/<its file's stem>, ids derived from the workflow's id) on the same AI Stack step, so a job can be started on demand through n8n as its schedule would start it; generating the workflows again adds it once and keeps each file's id, active state and canvas changes.
+Every scheduled workflow of the repository shall have a second trigger, a webhook Run now (POST, path run/<its file's stem>, ids derived from the workflow's id, taking only a call with the runner's header, SEC-27) on the same AI Stack step, so a job can be started on demand through n8n as its schedule would start it; generating the workflows again adds it once and keeps each file's id, active state and canvas changes.
 
 - Parents: [SN-05](#sn-05)
 - Sources: [DEC-51](#dec-51), `docs/N8N-MIGRATION.md`
@@ -10062,7 +10330,7 @@ Where a deployment has no tailnet, n8n's editor address shall be the app's on th
 
 **The app's gate follows the deployment** · must · constraint · **implemented**
 
-The app's front door shall admit by the deployment's gate: with the tailnet (APP_GATE tailnet, the default), only a request with Tailscale's identity header; without it (APP_GATE local), only a request that names the PC itself (127.0.0.1, localhost, ::1, or the app's service name), which shall be the owner's under one local login whatever Tailscale header it brings; under both, a write from another site shall be refused, and n8n inside the app shall be told the scheme the browser used.
+The app's front door shall admit by the deployment's gate: with the tailnet (APP_GATE tailnet, the default), only a request with Tailscale's identity header; without it (APP_GATE local), only a request that names the PC itself (127.0.0.1, localhost, ::1, or the app's service name), which shall be the owner's under one local login whatever Tailscale header it brings; under both, only a request through the app's published port shall count (SEC-24), a write from another site shall be refused, and n8n inside the app shall be told the scheme the browser used.
 
 - Parents: [SN-04](#sn-04)
 - Sources: [DEC-45](#dec-45), `docs/N8N-MIGRATION.md`
@@ -10173,11 +10441,11 @@ A changed workflow (a pack's new commit, a deploy) shall be imported in place un
 
 **An agent step reads its tracker item** · should · functional · **implemented**
 
-An agent step that names a tracker item (tracker and key) shall get, after its brief, the item as its tracker holds it when the step's task is made (its title, status and text, and every comment in order, the stack's own comments marked as its own and the others by their author, without the stack's write marks), its text kept from the start and its comments from the newest within the prompt's caps; an item that cannot be read shall fail the step with the reason, and a tracker the deployment does not have shall be refused before anything runs. The AI Stack step node shall offer the item for an agent step (Read the item of, Item).
+An agent step that names a tracker item (tracker and key) shall get, after its brief, the item as its tracker holds it when the step's task is made (its title, status and text, and every comment in order, the stack's own comments marked as its own and the others by their author, without the stack's write marks), its text kept from the start and its comments from the newest within the prompt's caps; an item that cannot be read shall fail the step with the reason, and a tracker the deployment does not have shall be refused before anything runs. The AI Stack step node shall offer the item for an agent step (Read the item of, Item). The item's text and comments shall reach the agent inside an untrusted label they cannot close (review of 10 Nov 2026, SEC2-R3).
 
 - Parents: [SN-05](#sn-05)
 - Sources: `docs/N8N-MIGRATION.md`, `docs/AI-STACK.md`
-- Verified by: test: `tests/test_domain_trackers.py::test_an_agent_step_reads_its_item_with_the_stacks_own_comments_marked_as_its_own`, `tests/test_home_inbox.py::test_an_agent_step_whose_item_cannot_be_read_fails_with_the_reason_and_an_unknown_tracker_is_refused`, `tests/test_home_inbox.py::test_the_node_lets_an_agent_step_read_its_item`, `tests/test_home_inbox.py::test_an_issue_in_the_inbox_is_answered_waits_for_the_owners_reply_and_is_closed`
+- Verified by: test: `tests/test_domain_trackers.py::test_an_agent_step_reads_its_item_with_the_stacks_own_comments_marked_as_its_own`, `tests/test_domain_trackers.py::test_an_items_text_reaches_an_agent_labelled_and_cannot_end_its_label`, `tests/test_home_inbox.py::test_an_agent_step_whose_item_cannot_be_read_fails_with_the_reason_and_an_unknown_tracker_is_refused`, `tests/test_home_inbox.py::test_the_node_lets_an_agent_step_read_its_item`, `tests/test_home_inbox.py::test_an_issue_in_the_inbox_is_answered_waits_for_the_owners_reply_and_is_closed`
 - Acceptance: Test: a stand-in item reads as its title, status, text and comments with the stack's own marked as yours and no write mark; an issue's agent steps get its title and text, then the whole conversation with the owner's reply; an item the forge does not have fails the step with the reason; an unknown tracker is refused; the node sends the item of an agent step.
 - Trace: `ops/flows.py`, `ops/domain/trackers.py`, `n8n/custom/AistackStep.node.js`
 
@@ -10355,6 +10623,7 @@ The step service shall post an answer to n8n's resume URL only while n8n's readi
 | <a id="dec-52"></a>**DEC-52** Temporal is removed; n8n is the one orchestrator | 2026-11-10 | What the owner asked: no technical debt, the repository in a clean state. So, after the runner went back to the Conductor for plans (10 Nov 2026, 10:40) and Temporal stood idle: Temporal's four services, its network, its databases' setup, its upgrade path, its SDK in the runner, the builder and the app, the graph runner, the bridge, the cutover, the codec, the preview, the graph template format, the block editor and its build are removed. What the n8n design keeps from DEC-50 stays, freed from Temporal, in ops/domain: packs (now bringing n8n workflows), places, trackers and the forge, roles, saved files and a run's record. The Conductor keeps its own plan checks and runs plans until their move to n8n (WFL-09). The app's Engine, Runs and Templates screens go in the app's own clean-up. | ['DEC-50'] |
 | <a id="dec-53"></a>**DEC-53** The app after n8n: one menu, one place for runs, a Stack page for the stack | 2026-11-10 | What the owner asked: the UX polished and updated, with no trace of technical debt (the target design's section 4). So: the Engine, Runs and Templates screens go, their old links landing on Workflows; packs and trackers are one section of the Stack page; a run is followed on its task's page (Where it runs, its steps, each step's log) and on Workflows, so the task map folds into the task page and Telemetry into the Stack page; the menu is Home, Tasks, Workflows (desk), Memory, Code, Chat, Stack; the Stack page holds health, services, resources, tools, costs and connections, and what is not the stack's moves to where it belongs; the connection state says what is true. Every old address keeps landing somewhere sensible. | - |
 | <a id="dec-54"></a>**DEC-54** A draft pull request goes out directly; the step service is the run register | 2026-11-10 | For the first work deployment (the CR of 10 Nov 2026), the owner: "Do it as the CR says directly." So: with FORGE_PUSH a coding change for an item is pushed and opened as a draft pull request at once, with no shadow step; it is the one stated exception to shadow mode for the stack's outside writes (GEN-25), because a draft changes nothing people use until they merge it, and the stack never merges. And the lead's design, accepted by the owner: the step service is the run register (WFL-23), holding the item-to-run map, the event ledger and every step's request, answer, files and times; a run's record is made from it, and n8n gives time and order only, never through its internal API. | - |
+| <a id="dec-55"></a>**DEC-55** The one rewrite of history: a work deployment's names out of git | 2026-11-09 | What the owner asked on 9 Nov 2026: no name of the employer or of a work deployment in any git history. So, as the one exception to AGENTS.md's "never rewrite history", both histories were rewritten that day (recorded on 11 Nov 2026, review D1): the private repository (13 of its 718 commits changed, so every commit after the first of them has a new hash) and the public snapshot on GitHub (its 5 snapshots replaced by one, 81df652, docs/PUBLISHING.md). Since then the never-in-git guard (SEC-22) refuses such a name in every commit and push. Hashes written before the rewrite (reviews, notes, trailers) may point at nothing. Measured on 11 Nov 2026: the live repository and its worktrees hold no commit older than 9 Nov outside the new history, and one quote in SEC-22's own rationale, written the same day, still named the employer; it is reworded, and its text stays in the history from 9 Nov on. What may still hold old commits, and what to do (the owner's steps, nothing done here): Forgejo on the NAS keeps each pull request's head (refs/pull/<n>/head), which a force push does not move, and old objects until its garbage collection: list the pull requests opened before 9 Nov, close and delete those whose heads are old commits, then run the repository's garbage collection from Forgejo's site administration; the NAS's nightly backups made before the rewrite hold the old history inside home.tar (the 14 newest are kept; the last of them, aistack-20261109-0330, leaves after 13 more good nights, about 24 Nov 2026), and so do OneDrive's copies of them: let them rotate out, or delete them earlier on the owner's word; the Bitbucket mirror's head d2b239d (24 Oct) is in no history here, so it holds the old one until its next sync replaces it and Bitbucket collects the rest; GitHub may serve a replaced snapshot by its hash until its own clean-up, which GitHub support can be asked to speed up. Another rewrite needs its own decision. | - |
 
 ## Test index
 
@@ -10661,6 +10930,7 @@ The step service shall post an answer to n8n's resume URL only while n8n's readi
 | `tests/test_decisions.py::test_the_shadow_records_once_and_then_the_owner_s_outcome` | [AUT-02](#aut-02) |
 | `tests/test_decisions.py::test_the_test_item_is_marked_and_changes_nothing_but_itself` | [TSK-32](#tsk-32) |
 | `tests/test_decisions.py::test_what_the_owner_must_answer_reaches_the_queue_and_a_state_does_not` | [AUT-05](#aut-05), [GEN-02](#gen-02) |
+| `tests/test_deploy.py::test_a_build_behind_the_deployments_proxy_names_dockers_proxy_arguments_and_keeps_their_values_off_the_command` | [PLT-42](#plt-42) |
 | `tests/test_deploy.py::test_a_card_change_restarts_the_swarm_service_so_the_agents_get_it` | [PLT-08](#plt-08), [SWM-102](#swm-102) |
 | `tests/test_deploy.py::test_a_change_of_the_agents_keys_sets_every_hermes_profile_up_again` | [SEC-07](#sec-07) |
 | `tests/test_deploy.py::test_a_deploy_is_recorded_with_its_source` | [BLD-20](#bld-20) |
@@ -10672,10 +10942,15 @@ The step service shall post an answer to n8n's resume URL only while n8n's readi
 | `tests/test_deploy.py::test_the_landing_script_checks_before_it_merges` | [BLD-20](#bld-20) |
 | `tests/test_deploy.py::test_the_lock_is_held_across_processes` | [PLT-10](#plt-10) |
 | `tests/test_deploy.py::test_the_runner_restarts_for_any_module_it_may_import_also_one_it_reaches_indirectly` | [OBS-11](#obs-11) |
+| `tests/test_deploy_main.py::test_a_failed_deploy_leaves_the_same_timers_enabled_as_before_it` | [PLT-43](#plt-43) |
 | `tests/test_deploy_main.py::test_a_failed_smoke_test_health_check_or_build_is_a_failed_deploy` | [BLD-20](#bld-20) |
+| `tests/test_deploy_main.py::test_a_good_deploy_enables_its_new_timers_and_takes_off_the_dropped_ones_after_the_checks` | [PLT-43](#plt-43) |
 | `tests/test_deploy_main.py::test_a_new_machine_builds_in_from_order_with_the_pins_and_stops_on_a_failure` | [PLT-17](#plt-17) |
+| `tests/test_deploy_main.py::test_a_rollback_enables_no_timer_of_its_diff_and_leaves_the_enabled_ones_as_it_found_them` | [PLT-43](#plt-43) |
 | `tests/test_deploy_main.py::test_a_whole_deploy_says_ok_and_runs_the_smoke_test` | [BLD-20](#bld-20) |
 | `tests/test_deploy_main.py::test_an_n8n_image_change_goes_ahead_while_runs_wait_and_waits_until_n8n_is_ready` | [PLT-39](#plt-39) |
+| `tests/test_deploy_main.py::test_putting_back_touches_only_the_diffs_timers_and_says_what_it_cannot` | [PLT-43](#plt-43) |
+| `tests/test_deploy_main.py::test_the_rollback_after_a_failed_update_tells_the_deploy_it_is_one` | [PLT-43](#plt-43) |
 | `tests/test_deployment.py::test_a_line_may_name_a_line_above_and_the_environment_wins` | [PLT-33](#plt-33) |
 | `tests/test_deployment.py::test_every_compose_call_reads_the_file_and_a_changed_file_is_applied` | [PLT-33](#plt-33) |
 | `tests/test_deployment.py::test_no_converted_value_is_hard_coded_in_running_code` | [PLT-33](#plt-33) |
@@ -10727,11 +11002,13 @@ The step service shall post an answer to n8n's resume URL only while n8n's readi
 | `tests/test_domain_packs.py::test_a_new_commit_replaces_its_workflows_in_place_and_a_refusal_unpublishes_them` | [GEN-43](#gen-43), [WFL-24](#wfl-24) |
 | `tests/test_domain_packs.py::test_a_pack_agent_gets_exactly_its_grants_and_a_server_off_the_egress_list_is_refused` | [GEN-30](#gen-30) |
 | `tests/test_domain_packs.py::test_a_pack_that_clashes_or_names_no_commit_of_its_source_is_refused_with_the_reason` | [GEN-21](#gen-21), [GEN-45](#gen-45) |
+| `tests/test_domain_packs.py::test_a_pack_with_a_link_is_refused_and_the_file_it_names_is_left_alone` | [GEN-21](#gen-21) |
 | `tests/test_domain_packs.py::test_a_pack_workflow_that_is_no_n8n_workflow_or_runs_a_shell_command_is_refused_with_the_reason` | [GEN-21](#gen-21), [GEN-42](#gen-42) |
 | `tests/test_domain_packs.py::test_a_pack_workflow_with_a_node_off_the_deployments_allowlist_is_refused_with_the_reason` | [GEN-42](#gen-42) |
 | `tests/test_domain_packs.py::test_a_proposal_goes_to_the_packs_own_repository_as_a_branch_and_a_draft_pull_request` | [GEN-43](#gen-43) |
 | `tests/test_domain_packs.py::test_an_approved_pack_adds_its_agents_skill_workflow_and_job_kind_from_a_read_only_checkout` | [GEN-21](#gen-21) |
 | `tests/test_domain_packs.py::test_an_approved_packs_workflows_reach_n8n_under_ids_from_their_names_and_leave_when_the_pack_goes` | [GEN-43](#gen-43) |
+| `tests/test_domain_packs.py::test_an_artifact_id_is_a_sha256_and_never_a_path` | [GEN-21](#gen-21) |
 | `tests/test_domain_packs.py::test_an_export_sends_a_packs_workflow_to_its_repository_never_into_the_stacks_git` | [GEN-43](#gen-43) |
 | `tests/test_domain_packs.py::test_an_unapproved_pack_does_not_run_and_waits_in_the_queue_with_its_manifest_prompts_commands_and_diff` | [GEN-21](#gen-21) |
 | `tests/test_domain_packs.py::test_home_without_packs_is_unchanged` | [GEN-21](#gen-21) |
@@ -10757,6 +11034,7 @@ The step service shall post an answer to n8n's resume URL only while n8n's readi
 | `tests/test_domain_trackers.py::test_a_trackers_entry_may_name_a_value_of_its_deployment_and_one_it_does_not_set_is_refused` | [GEN-45](#gen-45) |
 | `tests/test_domain_trackers.py::test_a_write_to_an_unknown_tracker_or_of_an_unknown_kind_is_refused_with_the_reason` | [GEN-25](#gen-25) |
 | `tests/test_domain_trackers.py::test_an_agent_step_reads_its_item_with_the_stacks_own_comments_marked_as_its_own` | [WFL-25](#wfl-25) |
+| `tests/test_domain_trackers.py::test_an_items_text_reaches_an_agent_labelled_and_cannot_end_its_label` | [WFL-25](#wfl-25) |
 | `tests/test_domain_trackers.py::test_attach_transition_and_label_are_done_once_whatever_the_retries` | [WFL-31](#wfl-31) |
 | `tests/test_domain_trackers.py::test_jira_and_pull_request_comments_follow_the_same_rule_on_one_account` | [WFL-26](#wfl-26) |
 | `tests/test_domain_trackers.py::test_jira_builds_its_query_without_an_empty_clause_and_refuses_one_with_its_own_order` | [GEN-41](#gen-41) |
@@ -10790,6 +11068,7 @@ The step service shall post an answer to n8n's resume URL only while n8n's readi
 | `tests/test_features.py::test_each_service_of_a_feature_names_it_as_its_profile_and_core_has_none` | [GEN-13](#gen-13) |
 | `tests/test_features.py::test_each_unit_names_a_known_feature_and_a_deployment_starts_only_its_timers` | [GEN-13](#gen-13) |
 | `tests/test_features.py::test_home_switches_every_feature_on_and_every_deployment_hands_its_features_to_compose` | [GEN-13](#gen-13) |
+| `tests/test_features.py::test_the_ci_runner_is_its_own_feature_on_only_where_forgejo_is` | [GEN-47](#gen-47) |
 | `tests/test_fetch_reader.py::test_a_gzip_page_rebuilt_from_decoded_bytes_reads_as_text` | [RES-03](#res-03) |
 | `tests/test_fetch_reader.py::test_the_reader_rebuilds_its_response_with_plain_headers` | [RES-03](#res-03) |
 | `tests/test_file_sizes.py::test_a_split_module_has_every_name_it_had` | [PLT-25](#plt-25) |
@@ -10834,6 +11113,8 @@ The step service shall post an answer to n8n's resume URL only while n8n's readi
 | `tests/test_forge.py::test_bitbucket_dc_opens_a_draft_comments_reads_state_and_ci_and_declines` | [GEN-04](#gen-04) |
 | `tests/test_forge.py::test_forgejo_is_home_as_before_and_no_token_means_no_call` | [GEN-04](#gen-04) |
 | `tests/test_forge.py::test_the_work_example_uses_bitbucket_and_never_merges_and_a_build_is_not_merged_there` | [GEN-04](#gen-04) |
+| `tests/test_graphify_sync.py::test_the_merge_runs_only_when_a_graph_changed_in_content_never_for_a_pull_that_changes_no_code` | [BLD-40](#bld-40) |
+| `tests/test_graphify_sync.py::test_the_merge_runs_under_its_memory_cap_and_one_ended_there_keeps_the_old_graph_and_waits_for_a_change` | [BLD-40](#bld-40) |
 | `tests/test_guide.py::test_chapters_are_well_formed` | [APP-13](#app-13) |
 | `tests/test_guide.py::test_every_app_screen_has_a_chapter` | [APP-13](#app-13) |
 | `tests/test_guide.py::test_every_assistant_tool_is_explained` | [AST-07](#ast-07) |
@@ -10953,9 +11234,11 @@ The step service shall post an answer to n8n's resume URL only while n8n's readi
 | `tests/test_keys_policy.py::test_models_are_served_by_the_gateway` | [CST-02](#cst-02), [GW-01](#gw-01) |
 | `tests/test_keys_policy.py::test_only_the_creation_script_writes_the_keys_table` | [SEC-07](#sec-07) |
 | `tests/test_keys_policy.py::test_update_keys_only_reads_the_table` | [SEC-07](#sec-07) |
+| `tests/test_land_compose.py::test_a_landing_stops_when_a_requirement_id_of_main_changed_its_meaning` | [QA-28](#qa-28) |
 | `tests/test_land_compose.py::test_a_landing_validates_its_compose_files_on_the_host_before_main_moves` | [BLD-20](#bld-20) |
 | `tests/test_lane_discipline.py::test_a_step_into_another_lane_names_why_its_owner_would_not_see_it` | [SWM-109](#swm-109) |
 | `tests/test_lane_discipline.py::test_each_agent_steps_in_only_a_few_times_a_day` | [SWM-109](#swm-109) |
+| `tests/test_lane_discipline.py::test_private_help_never_reaches_an_owner_with_a_way_out` | [SWM-109](#swm-109) |
 | `tests/test_lane_discipline.py::test_the_coach_turns_unhelpful_steps_into_an_agent_change_for_quiet` | [SWM-109](#swm-109) |
 | `tests/test_lane_discipline.py::test_the_helped_agent_or_the_owner_judges_and_the_work_s_fate_does_otherwise` | [SWM-109](#swm-109) |
 | `tests/test_lane_discipline.py::test_the_room_shows_why_and_lets_the_owner_judge` | [SWM-109](#swm-109) |
@@ -11110,6 +11393,7 @@ The step service shall post an answer to n8n's resume URL only while n8n's readi
 | `tests/test_n8n_inapp.py::test_a_question_waits_for_the_owner_and_old_runs_leave_the_view` | [WFL-11](#wfl-11) |
 | `tests/test_n8n_inapp.py::test_a_resume_url_stays_at_n8ns_root` | [WFL-14](#wfl-14) |
 | `tests/test_n8n_inapp.py::test_a_schedule_reads_in_words` | [WFL-11](#wfl-11) |
+| `tests/test_n8n_inapp.py::test_a_tools_own_policy_stays_a_workflows_page_is_sandboxed_and_the_ai_phone_is_kept_out` | [PHN-07](#phn-07), [SEC-23](#sec-23) |
 | `tests/test_n8n_inapp.py::test_compose_puts_n8n_under_n8n_with_live_updates_over_plain_http` | [WFL-14](#wfl-14), [WFL-15](#wfl-15) |
 | `tests/test_n8n_inapp.py::test_n8n_is_served_under_the_apps_address_behind_its_gate` | [APP-66](#app-66), [WFL-14](#wfl-14), [WFL-16](#wfl-16) |
 | `tests/test_n8n_inapp.py::test_n8ns_live_updates_stream_through_the_app` | [WFL-14](#wfl-14) |
@@ -11347,11 +11631,14 @@ The step service shall post an answer to n8n's resume URL only while n8n's readi
 | `tests/test_recoverable.py::test_a_container_cut_off_from_the_network_it_shares_is_an_alert_until_it_is_recreated` | [PLT-23](#plt-23) |
 | `tests/test_recoverable.py::test_a_container_on_another_build_than_its_tag_and_an_unlocked_image_are_named` | [PLT-20](#plt-20) |
 | `tests/test_recoverable.py::test_a_fault_the_checker_finds_is_an_alert_not_its_failed_run` | [SWM-80](#swm-80) |
+| `tests/test_recoverable.py::test_a_missing_nights_backup_is_an_alert_on_the_backup_heard_once_per_episode` | [PLT-41](#plt-41) |
 | `tests/test_recoverable.py::test_a_test_touches_no_folder_of_this_machine` | [QA-24](#qa-24) |
 | `tests/test_recoverable.py::test_an_ai_phone_down_for_half_an_hour_is_an_alert_unless_the_owner_stopped_it` | [SHP-07](#shp-07) |
+| `tests/test_recoverable.py::test_an_unreadable_backup_schedule_says_so_and_no_backup_logged_yet_is_quiet` | [PLT-41](#plt-41) |
 | `tests/test_recoverable.py::test_broad_catches_that_drop_the_error_can_only_become_fewer` | [QA-17](#qa-17) |
 | `tests/test_recoverable.py::test_full_swap_is_a_note_and_an_alert_when_ram_is_short_too` | [CST-14](#cst-14) |
 | `tests/test_recoverable.py::test_no_drill_for_eight_days_is_an_alert_and_a_recent_one_is_quiet` | [PLT-15](#plt-15) |
+| `tests/test_recoverable.py::test_the_backups_schedule_is_read_from_its_units` | [PLT-41](#plt-41) |
 | `tests/test_recoverable.py::test_the_ci_runner_has_an_init_that_reaps_what_its_jobs_leave_behind` | [QA-25](#qa-25) |
 | `tests/test_recycle.py::test_a_busy_hour_skips_the_night_without_restarting` | [PLT-27](#plt-27) |
 | `tests/test_recycle.py::test_an_idle_night_restarts_the_three_and_logs_memory_before_and_after` | [PLT-27](#plt-27) |
@@ -11454,6 +11741,8 @@ The step service shall post an answer to n8n's resume URL only while n8n's readi
 | `tests/test_repowiki.py::test_the_lint_finds_lines_without_evidence` | [CHG-09](#chg-09) |
 | `tests/test_repowiki.py::test_the_owner_s_review_stays_as_a_lesson_and_his_rule_as_a_convention` | [CHG-11](#chg-11) |
 | `tests/test_repowiki.py::test_the_profile_is_kept_in_the_vault_and_ai_stack_knows_its_own` | [CHG-08](#chg-08) |
+| `tests/test_requirements.py::test_a_title_changes_in_words_only_with_the_old_one_kept_and_an_unreadable_branch_is_no_pass` | [QA-28](#qa-28) |
+| `tests/test_requirements.py::test_an_id_on_the_target_branch_may_be_added_to_or_deprecated_but_never_renumbered_reused_or_removed` | [QA-28](#qa-28) |
 | `tests/test_requirements.py::test_an_unclaimed_test_is_refused_and_the_baseline_only_shrinks` | [QA-09](#qa-09) |
 | `tests/test_requirements.py::test_dangling_references_are_refused` | [QA-08](#qa-08) |
 | `tests/test_requirements.py::test_every_source_file_is_traced_or_listed_with_a_reason` | [QA-18](#qa-18) |
@@ -11523,6 +11812,7 @@ The step service shall post an answer to n8n's resume URL only while n8n's readi
 | `tests/test_screen_views.py::test_the_endpoint_takes_a_screen_s_name_only_and_skips_the_ai_phone` | [PLT-26](#plt-26) |
 | `tests/test_screen_views.py::test_views_are_counted_per_day_by_name_and_tab_and_old_days_roll_off` | [PLT-26](#plt-26) |
 | `tests/test_server.py::test_a_large_body_is_refused_before_it_is_read_and_the_page_knows_its_version` | [APP-03](#app-03) |
+| `tests/test_server.py::test_a_shared_page_or_script_only_downloads_and_no_other_site_frames_the_app` | [SEC-23](#sec-23) |
 | `tests/test_server.py::test_a_task_run_s_map_is_served_as_the_runner_wrote_it_and_the_newest_run_without_a_number` | [TSK-24](#tsk-24) |
 | `tests/test_server.py::test_a_write_from_another_site_is_refused_and_the_app_s_own_writes_pass` | [SEC-20](#sec-20) |
 | `tests/test_server.py::test_api_answers_are_never_cached` | [APP-09](#app-09) |
@@ -11544,6 +11834,7 @@ The step service shall post an answer to n8n's resume URL only while n8n's readi
 | `tests/test_server.py::test_the_ai_phone_can_ask_the_app_for_nothing_but_stop` | [PHN-07](#phn-07) |
 | `tests/test_server.py::test_the_ai_phone_cannot_approve_its_own_actions` | [PHN-07](#phn-07), [PHN-11](#phn-11) |
 | `tests/test_server.py::test_the_ai_phone_is_known_by_the_address_the_proxy_wrote` | [PHN-07](#phn-07) |
+| `tests/test_server.py::test_the_ai_phone_writes_nothing_through_share_uploads_or_push` | [PHN-07](#phn-07) |
 | `tests/test_server.py::test_the_link_says_starting_stopped_or_not_started_from_the_boot_and_the_runner_s_last_state` | [APP-65](#app-65) |
 | `tests/test_server.py::test_the_live_stream_carries_the_ai_phone` | [APP-17](#app-17) |
 | `tests/test_server.py::test_the_owner_keeps_the_phone_screen_on_for_an_hour_at_most` | [PHN-17](#phn-17) |
@@ -11751,8 +12042,25 @@ The step service shall post an answer to n8n's resume URL only while n8n's readi
 | `tests/test_tax.py::test_the_nas_helper_reads_the_index_read_only_and_never_a_body` | [TAX-01](#tax-01) |
 | `tests/test_tax.py::test_the_owner_s_corrections_in_belege_csv_win_on_every_run` | [TAX-04](#tax-04) |
 | `tests/test_tax.py::test_the_owner_s_own_rules_keep_and_ignore` | [TAX-01](#tax-01) |
-| `tests/test_tax.py::test_the_tax_desk_workflow_finds_reads_and_files_in_that_order` | [TAX-08](#tax-08) |
+| `tests/test_tax.py::test_the_tax_desk_workflow_finds_reads_and_files_in_that_order` | [TAX-08](#tax-08), [TAX-09](#tax-09) |
 | `tests/test_tax.py::test_the_workbook_starts_from_the_earlier_returns` | [TAX-05](#tax-05), [TAX-06](#tax-06), [TAX-07](#tax-07) |
+| `tests/test_tax_task.py::test_a_crew_duty_and_a_workflow_s_run_are_their_owner_s` | [TSK-40](#tsk-40) |
+| `tests/test_tax_task.py::test_a_task_s_area_comes_from_what_it_is_for` | [TSK-52](#tsk-52) |
+| `tests/test_tax_task.py::test_each_workflow_is_one_task_with_its_runs_and_result` | [TSK-54](#tsk-54) |
+| `tests/test_tax_task.py::test_every_task_is_in_one_list_in_the_order_of_what_matters_now` | [TSK-51](#tsk-51) |
+| `tests/test_tax_task.py::test_every_workflow_and_crew_job_declares_its_area` | [TSK-52](#tsk-52) |
+| `tests/test_tax_task.py::test_home_shows_what_is_going_on_across_the_stack` | [TSK-55](#tsk-55) |
+| `tests/test_tax_task.py::test_no_figure_reaches_the_board_or_its_pages` | [TAX-11](#tax-11) |
+| `tests/test_tax_task.py::test_older_runs_of_a_workflow_keep_their_history` | [TSK-54](#tsk-54) |
+| `tests/test_tax_task.py::test_run_now_on_your_taxes_starts_its_workflow` | [TAX-09](#tax-09) |
+| `tests/test_tax_task.py::test_the_desk_s_crew_duties_and_reader_tasks_leave_the_lists` | [TAX-09](#tax-09) |
+| `tests/test_tax_task.py::test_the_figures_reach_only_the_owner_s_signed_in_session` | [TAX-11](#tax-11) |
+| `tests/test_tax_task.py::test_the_result_view_shows_each_year_from_the_desk_s_outputs` | [TAX-10](#tax-10) |
+| `tests/test_tax_task.py::test_the_task_page_shows_the_result_and_its_files_as_pages` | [TAX-10](#tax-10) |
+| `tests/test_tax_task.py::test_the_tax_reader_has_its_name_and_shows_where_it_belongs` | [TAX-12](#tax-12) |
+| `tests/test_tax_task.py::test_the_view_is_shared_with_the_app_s_user_alone` | [TAX-11](#tax-11) |
+| `tests/test_tax_task.py::test_upkeep_is_one_row_with_its_health_and_a_failing_job_shows_alone` | [TSK-53](#tsk-53) |
+| `tests/test_tax_task.py::test_your_taxes_is_one_task_with_the_workflow_s_runs_as_its_runs` | [TAX-09](#tax-09), [TSK-54](#tsk-54) |
 | `tests/test_team_room.py::test_lines_mark_help_in_another_agent_s_lane_and_keep_every_text_whole` | [SWM-107](#swm-107) |
 | `tests/test_team_room.py::test_the_chatroom_is_the_team_room_with_its_filters` | [SWM-107](#swm-107) |
 | `tests/test_team_room.py::test_the_ledger_feed_has_events_and_messages_but_not_the_requirements_mirror` | [SWM-107](#swm-107) |
@@ -11807,6 +12115,16 @@ The step service shall post an answer to n8n's resume URL only while n8n's readi
 | `tests/test_truncation.py::test_the_app_wraps_text_and_shows_the_rest_of_a_list` | [APP-19](#app-19) |
 | `tests/test_truncation.py::test_the_image_copies_of_textcap_are_the_same_file` | [QA-16](#qa-16) |
 | `tests/test_truncation.py::test_the_owner_s_long_input_is_refused_with_its_limit_not_cut` | [APP-20](#app-20) |
+| `tests/test_trust.py::test_an_mcp_server_answers_only_litellm_with_its_token` | [SEC-26](#sec-26) |
+| `tests/test_trust.py::test_every_webhook_asks_for_the_runners_header` | [SEC-27](#sec-27) |
+| `tests/test_trust.py::test_log_mode_refuses_nothing_and_says_what_it_would_refuse` | [SEC-24](#sec-24) |
+| `tests/test_trust.py::test_n8n_is_off_the_flat_backend_hardened_and_its_tailnet_port_serves_resume_links_only` | [SEC-27](#sec-27), [SEC-28](#sec-28) |
+| `tests/test_trust.py::test_the_gate_path_is_accepted_and_a_container_on_stepnet_or_backend_is_refused` | [SEC-24](#sec-24) |
+| `tests/test_trust.py::test_the_runner_starts_an_item_workflow_with_its_header_and_says_why_not_without_it` | [SEC-27](#sec-27) |
+| `tests/test_trust.py::test_the_step_service_refuses_a_step_without_its_token` | [SEC-25](#sec-25) |
+| `tests/test_trust.py::test_the_switch_is_one_deployment_setting_and_a_typo_only_logs` | [SEC-24](#sec-24) |
+| `tests/test_trust.py::test_the_trust_keys_are_made_once_and_never_on_a_command_line` | [SEC-25](#sec-25) |
+| `tests/test_trust.py::test_the_webhooks_credential_is_written_from_the_secret_and_an_import_without_it_stops` | [SEC-27](#sec-27) |
 | `tests/test_ua_enrich.py::test_a_big_file_is_explained_in_parts_that_each_show_their_symbols` | [BLD-17](#bld-17) |
 | `tests/test_ua_enrich.py::test_a_resumed_pass_keeps_counting_its_cost` | [BLD-17](#bld-17) |
 | `tests/test_ua_enrich.py::test_a_usage_limit_stops_and_a_second_run_resumes` | [BLD-17](#bld-17) |

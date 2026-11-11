@@ -49,6 +49,7 @@ are hidden, its hosts are not on the egress list, and its scripts exit with "not
 |---|---|
 | `core` | LiteLLM, Postgres, Phoenix, the runner (always on) |
 | `builder` | the builder sandbox and its package proxy |
+| `forgejo-ci` | the Forgejo Actions runner (`ci-runner`); only where Forgejo is, since it needs a runner registration from it (GEN-47) |
 | `mission-control` | the app |
 | `memory` | Hindsight, qmd, the memory agent |
 | `home` | the NAS (backup, Forgejo on the NAS, the mail copy), Home Assistant, the router |
@@ -80,6 +81,7 @@ in `.invalid` counts as none. Other settings a deployment may give in its `deplo
 | `APP_GATE` | `tailnet` (the app needs a Tailscale login) or `local` (no tailnet: the app on this PC only, a loopback request is the owner's; WFL-16) | `tailnet` |
 | `N8N_EDITOR_URL`, `N8N_WEBHOOK_URL` | n8n's editor address and the base of its webhooks and resume URLs; without the tailnet `http://127.0.0.1:8090/n8n/` and `http://127.0.0.1:5678/` (WFL-15) | the tailnet's, ports 8447 and 8450 |
 | `N8N_NODES_INCLUDE` | the n8n nodes the deployment loads, a JSON list; customer data needs it, from `ops/dataguard.py` `N8N_NODES` (WFL-17) | empty: every node |
+| `BUILD_HTTP_PROXY`, `BUILD_NO_PROXY` | a proxy for image builds only: `ops/deploy.py` hands it to each `docker build` as Docker's proxy build arguments (`http_proxy`, `https_proxy`, `no_proxy`, lower and upper case), which reach every `RUN` and stay out of the image, so no container runs with it, unlike `~/.docker/config.json`'s `proxies` (PLT-42). Pulling the base images is the Docker daemon's own proxy setting | none: builds go out directly |
 | `UA_ENRICH_WORKERS` | explanation calls side by side (at most 8) | 1 |
 | `UA_JSON_MODE` | `1`: the explanation calls ask the model for a JSON object | off |
 
@@ -291,7 +293,8 @@ It passed on the home PC on 8 November 2026, run as the owner (the account separ
   `make release TAG=vYYYY.MM.DD` (the owner, with their own ssh signing key) signs the public snapshot's newest commit and
   pushes the tag; `make update TAG=...` on the work machine (`ops/update.py`) verifies the signature against the keys in
   its `deployments/<name>/allowed_signers`, runs the whole check on the tag's tree, moves the stack to it and deploys,
-  and goes back when the deploy fails. Tonight's landings ran without the privacy scan for hours; a signed tag is the
+  and goes back when the deploy fails; that rollback enables no timer and leaves the enabled timers as it found them
+  (PLT-43). Tonight's landings ran without the privacy scan for hours; a signed tag is the
   point where a person has looked.
 
 ## 8. Measuring a change

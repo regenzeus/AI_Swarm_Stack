@@ -1629,3 +1629,26 @@ body[data-page="workflows"] .pagehelp, body[data-page="traces"] .pagehelp { disp
 .section-h > .explain[open], .tool-head > .explain[open], .hero > .explain[open] { flex-basis: 100%; order: 9; }
 .section-h > .explain[open] > summary, .tool-head > .explain[open] > summary, .hero > .explain[open] > summary { position: static; }
 .section-h > .explain[open] > div, .tool-head > .explain[open] > div, .hero > .explain[open] > div { padding-top: 0; margin-top: 4px; }
+
+/* TAX-10: the tax desk's result per year (tax.js): rows with their sum on the right, whole paths on the NAS */
+.taxlist .num { font-weight: 600; white-space: nowrap; padding-left: var(--s-2); }
+.taxform + .taxform { margin-top: var(--s-3); }
+.taxform > .small { margin-bottom: var(--s-1); }
+.taxpath { display: flex; gap: var(--s-2); align-items: flex-start; margin-top: var(--s-1); min-width: 0; }
+.taxpath code { flex: 1; min-width: 0; font-size: var(--fs-2); overflow-wrap: anywhere; white-space: normal; }
+.taxpath .icon-btn { width: 32px; height: 32px; flex: none; }
+.taxfacts { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: var(--s-2) var(--s-3); margin-top: var(--s-2); }
+.taxfacts > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.taxyears { flex-wrap: wrap; }
+.taxyears button { flex: 0 1 auto; }
+.taxbelege .grow { min-width: 0; }
+
+/* TSK-52: one Tasks list in the order of what matters now, each task's area as a label; Upkeep as one row */
+.tchip.area { background: var(--surface-3); color: var(--text); font-weight: 600; }
+.tchip.area.a-upkeep { color: var(--muted); }
+.tgroup + .tgroup { margin-top: var(--s-5); }
+.tgroup .section-h { margin-bottom: var(--s-2); }
+.tupkeep > summary { display: flex; gap: var(--s-3); align-items: flex-start; padding: var(--s-3) var(--s-4); cursor: pointer; list-style: none; }
+.tupkeep > summary::-webkit-details-marker { display: none; }
+.tupkeep > .aglist { padding: 0 var(--s-2) var(--s-2); }
+.tfil .chips.tareas { flex-wrap: wrap; overflow: visible; width: 100%; }   /* every area in view: wrapped, never scrolled out of sight */

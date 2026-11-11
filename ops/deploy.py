@@ -7,7 +7,9 @@ What changed -> what happens:
   compose/, images, deployments/   docker compose up -d (recreates only services whose config or image changed)
   config/litellm/           restart LiteLLM          config/hermes/configure*.sh   re-run that profile's configure script
   prompts/<main|mission|builder|tax>.md              re-run the configure script that writes that SOUL text (SOUL_OF)
-  ops/systemd/              install units, daemon-reload, restart changed services/timers
+  ops/systemd/              install units, daemon-reload, restart changed services/timers; after the checks a good
+                            deploy enables its new timers and takes off the dropped units, and a failed deploy or a
+                            rollback leaves the diff's timers enabled as it found them (PLT-43)
   ops/keys.sh, agents.yaml  swarm identities (swarm_setup.py agents), key models/budgets/grants (update-keys.py), restart Hermes
   ops/missions.py etc., deployments/   restart the runner (RESTART_RUNNER)
 Then: smoke test (smoke/smoke.sh) and health of Hermes, LiteLLM and Mission Control.
@@ -97,8 +99,11 @@ def run(*cmd, timeout=1800, **kw):
 def runner_changed(changed):
     """Whether the runner must restart: any ops/ Python module (it imports most of them, many only through another, like
     crew.py -> observe.py) or obs_core.py, which ops/observe.py loads from the app's folder (FND-49), or its unit."""
-    return any((f.startswith("ops/") and f.count("/") == 1 and f.endswith(".py")) or f == "images/mission-control/obs_core.py"
-               or f == "ops/systemd/missions.service" or f.startswith("deployments/") for f in changed)
+    # review 10 Nov (RUNNER2-R3): ops/domain/ is the runner's too (flows.py alone imports it 21 times), and the runner's
+    # own environment (RUNNER2-R2) is rebuilt and then restarted into
+    return any((f.startswith("ops/") and f.endswith(".py") and not f.startswith(("ops/windows/", "ops/swarm-probes/")))
+               or f in ("images/mission-control/obs_core.py", "ops/systemd/missions.service", "ops/runner-requirements.lock",
+                        "ops/runner_env.sh") or f.startswith("deployments/") for f in changed)
 
 
 def image_tag(name):
@@ -153,6 +158,65 @@ def remove_units(gone, dest, sh=None):
     return out
 
 
+def enabled_timers():
+    """PLT-43: -> the names of the user timers enabled on this machine, or None when systemctl cannot say."""
+    try:
+        p = subprocess.run(["systemctl", "--user", "list-unit-files", "--type=timer", "--state=enabled", "--no-legend"],
+                           capture_output=True, text=True, timeout=60)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if p.returncode:
+        return None
+    return {w[0] for w in (ln.split() for ln in p.stdout.splitlines()) if w and w[0].endswith(".timer")}
+
+
+def rolls_back(old, new, env=os.environ):
+    """PLT-43: whether this deploy goes back: its caller says so (DEPLOY_ROLLBACK=1: ops/update.py's `deploy.py <new> <old>`
+    after a failed update, also when a site's own commit makes the two diverge), or new is an ancestor of old."""
+    return env.get("DEPLOY_ROLLBACK") == "1" or (old != new and subprocess.run(
+        ["git", "merge-base", "--is-ancestor", new, old], cwd=R, capture_output=True).returncode == 0)
+
+
+def put_back_timers(before, touched, dest, sh=None, now=None):
+    """PLT-43: the timers of the deploy's diff (touched) enabled again as the deploy found them (before): one it left
+    enabled is disabled and stopped, one it found enabled is enabled and started while its unit is installed. Timers
+    outside the diff are the owner's and stay as they are. -> the lines the deploy prints."""
+    sh = sh or run
+    now = enabled_timers() if now is None else now
+    if before is None or now is None:
+        return ["the enabled timers could not be read (systemctl --user list-unit-files): none put back"]
+    out = []
+    for n in sorted((now - before) & set(touched)):
+        sh("systemctl", "--user", "disable", "--now", n)
+        out.append(f"timer {n}: disabled again, as this deploy found it")
+    for n in sorted((before - now) & set(touched)):
+        if (Path(dest) / n).exists():
+            sh("systemctl", "--user", "enable", "--now", n)
+            out.append(f"timer {n}: enabled again, as this deploy found it")
+        else:
+            out.append(f"timer {n}: enabled when this deploy began, but its unit is gone: not enabled")
+    return out
+
+
+def settle_units(back, gone, fresh, before, touched, dest):
+    """PLT-43, after the checks. A good deploy and a rollback take the units the repository dropped off this machine
+    (WFL-12); only a good deploy that is no rollback enables the timers it brings first (PLT-08). A failed deploy and a
+    rollback then leave the timers of the diff enabled as the deploy found them. 10 Nov 2026: a site's rollback
+    (`deploy.py <new> <old>` after a failed update) enabled a timer of its diff that the site never had."""
+    if ok and not back:
+        for n in fresh:                                   # a new scheduled job runs without a hand step
+            run("systemctl", "--user", "enable", "--now", n)
+    if ok or back:                                        # after the enabling: one that failed keeps the dropped units
+        removed = remove_units(gone, dest)
+        for n in removed:
+            print(f"unit {n} removed: the repository no longer has it", flush=True)
+        if removed:
+            run("systemctl", "--user", "daemon-reload")
+    if back or not ok:
+        for line in put_back_timers(before, touched, dest):
+            print(line, flush=True)
+
+
 def unit_target(f, dest):
     """Where a file of ops/systemd goes: docker-<name>.conf is a drop-in for Docker (it takes effect at Docker's next start;
     a deploy never restarts Docker), the rest are units."""
@@ -168,8 +232,23 @@ def swarm_restart(changed):
     return "config/agents.yaml" in changed
 
 
-def build_args(name):
-    """The docker build of one image, its base pins from versions.env (builder, litellm, pricewatch), or None."""
+def build_proxy(values=None):
+    """PLT-42: the deployment's build proxy (BUILD_HTTP_PROXY, BUILD_NO_PROXY in its deployment.env) as Docker's own proxy
+    build arguments -> {name: value}, {} without one. Docker hands these to every RUN of the build and keeps them out of
+    the image and its history, so no container ever runs with them; ~/.docker/config.json's proxies would reach every
+    container instead."""
+    v = DEPLOY.VALUES if values is None else values
+    proxy, skip = (str(v.get(k) or "").strip() for k in ("BUILD_HTTP_PROXY", "BUILD_NO_PROXY"))
+    if not proxy:
+        return {}
+    names = ("http_proxy", "https_proxy", "HTTP_PROXY", "HTTPS_PROXY") + (("no_proxy", "NO_PROXY") if skip else ())
+    return {n: (skip if n.lower() == "no_proxy" else proxy) for n in names}
+
+
+def build_args(name, values=None):
+    """The docker build of one image, its base pins from versions.env (builder, litellm, pricewatch), or None. The build
+    proxy's arguments are named without their values, which docker takes from build()'s environment: the proxy may carry
+    an account, and run() prints the command."""
     tag = image_tag(name)
     if not tag or not (R / "images" / name / "Dockerfile").exists():
         return None
@@ -178,13 +257,22 @@ def build_args(name):
     for arg in re.findall(r"^ARG ([A-Z_]+_IMAGE)\b", (R / "images" / name / "Dockerfile").read_text(), re.M):
         if arg in pins:                                  # base images come from versions.env
             args += ["--build-arg", f"{arg}={pins[arg]}"]
+    for arg in build_proxy(values):
+        args += ["--build-arg", arg]
     return args + [f"images/{name}"]
+
+
+def build(name):
+    """Build one image as a deploy does, with the build proxy -> True when it built, False when it failed, None when the
+    image has no tag or no Dockerfile."""
+    args = build_args(name)
+    return run(*args, timeout=3600, env={**os.environ, **build_proxy()}) if args else None
 
 
 def build_all(names):
     """A new machine's images (ops/new-machine.sh): in FROM order, each like a deploy builds it. -> 0, or 1 on the first failure."""
     for name in build_order(sorted(names)):
-        if (args := build_args(name)) and not run(*args, timeout=3600):
+        if build(name) is False:
             print(f"image {name} did not build: stopped (review OPS-R6: a failed build once read as built)", flush=True)
             return 1
     return 0
@@ -253,10 +341,12 @@ def main(old, new):
         print(f"the never-in-git hooks were not installed: {e}", flush=True)
     changed = subprocess.run(["git", "diff", "--name-only", old, new], cwd=R, capture_output=True, text=True).stdout.split()
     print(f"{len(changed)} files changed {old[:8]}..{new[:8]}", flush=True)
+    before, back = enabled_timers(), rolls_back(old, new)          # PLT-43: what a failed deploy or a rollback leaves enabled
+    if back:
+        print(f"a rollback to {new[:8]}: it enables no timer and leaves the enabled ones as it found them", flush=True)
     images = sorted({f.split("/")[1] for f in changed if f.startswith("images/") and f.count("/") >= 2} | pinned_by(changed, old, new))
     for name in build_order(images):
-        if (args := build_args(name)):
-            run(*args, timeout=3600)
+        build(name)
     if images or any(f.startswith(COMPOSE_INPUTS) for f in changed):
         run(*COMPOSE, "up", "-d", "--remove-orphans")
     upgrade = n8n_upgrade(changed, old, new)
@@ -300,22 +390,16 @@ def main(old, new):
         run("docker", "restart", "aistack-hermes-1")
         # the dashboard and its gate live in Hermes' network namespace: a restarted Hermes leaves them without network
         run("docker", "restart", "aistack-hermes-dashboard-1", "aistack-gate-hermes-dashboard-1")
-    gone = remove_units(gone_units(changed), Path.home() / ".config/systemd/user")
-    for n in gone:
-        print(f"unit {n} removed: the repository no longer has it", flush=True)
+    dest = Path.home() / ".config/systemd/user"
+    gone = gone_units(changed)                            # taken off after the checks (settle_units), so a failed deploy keeps them
     units = [f for f in changed if f.startswith("ops/systemd/") and (R / f).exists()]
-    if gone and not units:
-        run("systemctl", "--user", "daemon-reload")
+    fresh = new_timers(units, dest)                       # enabled after the checks, by a good deploy only
     if units:
-        dest = Path.home() / ".config/systemd/user"
-        fresh = new_timers(units, dest)
         for f in units:
             target = unit_target(f, dest)
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_text((R / f).read_text())
         run("systemctl", "--user", "daemon-reload")
-        for n in fresh:                                           # a new scheduled job runs without a hand step
-            run("systemctl", "--user", "enable", "--now", n)
         for f in units:
             n = Path(f).name
             if n != "missions.service" and subprocess.run(["systemctl", "--user", "is-active", "-q", n]).returncode == 0:
@@ -323,6 +407,8 @@ def main(old, new):
     if any(f.startswith(("n8n/workflows/", "compose/", "deployments/")) for f in changed):   # WFL-08, PLT-38: the deployment's workflows into n8n
         healthy(N8N_READY)                                # not /healthz: it answers before the migrations and the workflows
         run("python3", "ops/n8n_sync.py", "import")
+    if any(f in ("ops/runner-requirements.lock", "ops/runner_env.sh") for f in changed):
+        run("bash", "ops/runner_env.sh", timeout=1800)   # the runner restarts into the environment its lock names (PLT-37); a failure is a failed deploy
     if runner_changed(changed):
         print("RESTART_RUNNER", flush=True)       # every module the runner may import (builds, cleanup, telemetry, ...)
     if any(f.startswith("ops/windows/") for f in changed):
@@ -337,6 +423,7 @@ def main(old, new):
     run("bash", "smoke/smoke.sh", timeout=900)
     if any(f.startswith(("images/litellm/", "config/litellm/", "versions.env")) for f in changed):
         run("python3", "ops/probe_tool_calls.py", timeout=600)   # the gateway changed: tool calls must keep their arguments
+    settle_units(back, gone, fresh, before, {Path(f).name for f in changed if f.startswith("ops/systemd/") and f.endswith(".timer")}, dest)
     print("DEPLOY OK" if ok else "DEPLOY FAILED", flush=True)
     record(old, new, ok, len(changed))
     return 0 if ok else 1

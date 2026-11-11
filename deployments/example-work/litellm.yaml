@@ -22,15 +22,21 @@ mcp_servers:
     description: 'Search the Obsidian vault: compiled wiki pages and raw sources (BM25 + vectors + rerank).'
   claude:
     url: http://mission-control:8092/mcp
+    auth_type: bearer_token
+    authentication_token: os.environ/MCP_TOKEN_CLAUDE
     transport: http
     timeout: 120
     description: 'Claude Code as a worker: code questions, reviews, analysing code or long documents, hard reasoning (read-only).'
   missions:
     url: http://mission-control:8091/mcp
+    auth_type: bearer_token
+    authentication_token: os.environ/MCP_TOKEN_MISSIONS
     transport: http
     description: 'Mission Control: list, start, change, pause or stop the owner''s missions (daily briefings, long-term agent tasks).'
   files:
     url: http://mission-control:8096/mcp
+    auth_type: bearer_token
+    authentication_token: os.environ/MCP_TOKEN_FILES
     transport: http
     description: 'A mission saves the files it was asked to deliver (Markdown, CSV, JSON, text): shown on its page, attached to its e-mail.'
   graphify:
@@ -39,11 +45,15 @@ mcp_servers:
     description: Query the code knowledge graph of the repos in ~/code (callers, paths, explanations).
   memory:
     url: http://mission-control:8097/mcp
+    auth_type: bearer_token
+    authentication_token: os.environ/MCP_TOKEN_MEMORY
     transport: http
     timeout: 120
     description: 'The stack''s memory: search everything you may read, open one entry whole, subscribe to a collection for your task, note a lesson, fact, failure or skill (it enters memory after a check).'
   memorypublic:
     url: http://mission-control:8098/mcp
+    auth_type: bearer_token
+    authentication_token: os.environ/MCP_TOKEN_MEMORYPUBLIC
     transport: http
     timeout: 120
     description: 'The stack''s memory without the owner''s facts, private wikis or journals: search, open, subscribe, note.'

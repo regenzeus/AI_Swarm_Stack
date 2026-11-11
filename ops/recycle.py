@@ -18,7 +18,9 @@ SERVICES = ("qmd", "phoenix", "openwebui")
 STATE = Path("/srv/ai/missions/public/state.json")
 LOG = Path("/srv/ai/state/recycle.jsonl")
 LIVE = ("running", "planning", "intake")
-BUSY_UNITS = ("trial-", "land-", "backup.service", "restore-drill.service", "vault-ingest.service", "crew-")
+# the heavy jobs: a trial, a landing, the backup and its drill, the vault ingest, the crew, the code graph (its merge holds
+# 3 GB, review O9)
+BUSY_UNITS = ("trial-", "land-", "backup.service", "restore-drill.service", "vault-ingest.service", "crew-", "graphify-sync.service")
 STALE_H = 6                                          # a task "running" untouched this long is a leftover, not work
 WAIT_S, EVERY_S = 3600, 600                          # busy at 03:50: look again every 10 min for an hour, then skip the night
 
@@ -31,7 +33,8 @@ def _ts(iso):
 
 
 def busy(state, units, now=None):
-    """Why the stack is not idle now, or "": a mission or task running, a build, a trial, a landing, a backup, a crew job."""
+    """Why the stack is not idle now, or "": a mission or task running, a build, a trial, a landing, a backup, a crew job,
+    the code graph."""
     now = now or time.time()
     if state.get("running"):
         return "a mission is running"

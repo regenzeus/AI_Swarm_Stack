@@ -706,6 +706,11 @@ def task_roots(c, tid, door=None, ref=None, since=None, occ=None):
         q, a = "select run from runs where agent=? and started>=?", (f"mission:{ref}", since or 0)
     elif door == "crew" and ref:                     # TSK-42: a crew duty's task: its runs of the last 30 days
         q, a = "select run from runs where agent=? and started>=?", (f"crew:{ref}", time.time() - 30 * 86400)
+    elif door == "flow":                             # TAX-09: a workflow that is the owner's task: its agent steps' own runs
+        held = [int(x) for x in ref or [] if str(x).isdigit()]
+        if not held:
+            return []
+        q, a = "select run from runs where " + " or ".join(["run like ?"] * len(held)), tuple(f"task:{x}:step:%" for x in held)
     elif occ:                                        # one run of a recurring task, and the planning it ran on
         q, a = "select run from runs where run=? or run like ?", (f"task:{tid}" if occ <= 1 else f"task:{tid}.{occ}", f"task-intake:{tid}-%")
     else:

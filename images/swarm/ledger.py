@@ -584,7 +584,10 @@ class Ledger(_LedgerWork):
             tos = [m[0] for m in moved]
             outcome = "moved on" if set(tos) & {"ready", "active", "checking", "done"} else "dropped" if set(tos) & {"declined", "gone"} else None
             useful = bool(v["useful"]) if v else True if outcome == "moved on" else False if outcome == "dropped" else None
+            art = self.db.execute("select label from artifacts where id=?", (e["artifact_id"],)).fetchone()
+            label = "private" if "private" in (p.get("label"), art["label"] if art else None) else (p.get("label") or "")
             out.append({"seq": e["seq"], "artifact_id": e["artifact_id"], "helper": e["actor"], "owner": p["help"].get("owner"), "kind": e["kind"],
+                        "label": label,                  # review 10 Nov (REST2-R1): the help's text keeps its label to the reader
                         "text": p.get("text") or e["reason"] or "", "unseen": p["help"].get("unseen", ""), "ts": e["ts"],
                         "verdict": None if not v else ("useful" if v["useful"] else "not useful"), "verdict_by": v["by"] if v else None,
                         "outcome": outcome, "useful": useful})
@@ -1176,7 +1179,8 @@ class Ledger(_LedgerWork):
         box = self.inbox(agent, mark=False)               # marked below, only what the pack keeps (review SWM-R14)
         judged = {r[0] for r in self.db.execute("select seq from help_verdicts where by=?", (agent,))}
         received = [{k: h[k] for k in ("seq", "artifact_id", "helper", "kind", "text", "unseen", "outcome")}
-                    for h in self.helps(14, owner=agent) if h["seq"] not in judged and h["useful"] is None]    # SWM-109: not judged, not settled
+                    for h in self.helps(14, owner=agent) if h["seq"] not in judged and h["useful"] is None    # SWM-109: not judged, not settled
+                    and self.sees(agent, h)]               # SWM-67: private help never reaches a card with a way out (REST2-R1)
         sections = [("owner_messages", [m for m in box["messages"] if m["sender_cls"] == O]),
                     ("open_requests", box["open_requests"] + [dict(m, expired=True) for m in box["expired"]]),
                     ("messages", [m for m in box["messages"] if m["sender_cls"] != O]),

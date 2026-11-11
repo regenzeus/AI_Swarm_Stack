@@ -12,6 +12,7 @@ import datetime as dt
 import hashlib
 import json
 import os
+import re
 import shutil
 from pathlib import Path
 
@@ -65,9 +66,13 @@ def records(aid):
 
 
 def path_of(aid):
+    """The stored file of an artifact id, or None. Only a sha-256 is an id: 'artifact:./../x' reached any file the runner
+    can read, which a tracker step could then attach to an item (review 10 Nov, DOM2-R2)."""
     sha = str(aid).removeprefix("artifact:")
+    if not re.fullmatch(r"[0-9a-f]{64}", sha):
+        return None
     p = root() / sha[:2] / sha
-    return p if p.is_file() else None
+    return p if p.is_file() and not p.is_symlink() else None
 
 
 def prune(now=None):

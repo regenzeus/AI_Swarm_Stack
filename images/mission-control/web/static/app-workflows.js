@@ -102,6 +102,7 @@ function wfCard(w, isOpen) {
 
 // ---------- Where it runs (a task's page, a crew job's page) and In workflows (an agent's page) ----------
 function wfWhereOf(t) {                                // a task the step service made names its workflow and run; a plan task moved to n8n is in the catalogue
+  if (t.door === "flow" && t.workflow) return { wid: t.workflow, ex: ((t.runs || []).find((r) => r.occ === t.occ) || t.runs?.[0])?.execution || "" };   // TSK-52: a workflow that is one task
   const m = t.door === "workflow" ? /^n8n:([^/]+)\/(.*)$/.exec(t.ref || "") : null;
   if (m) return { wid: m[1], ex: m[2] };
   const j = S?.workflows?.jobs?.[`task:${t.id}`];

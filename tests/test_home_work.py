@@ -12,7 +12,7 @@ MC = ROOT / "images/mission-control"
 APP_JS = webjs.app_js()
 GUIDE = (MC / "guide/01-welcome.md").read_text()
 FUNCS = ("needsRows", "needsRow", "needsHtml", "nowHtml", "upkeepHtml", "healthAlerts", "feedItems", "feedHtml", "workBuildRow", "statusPill", "runningCard", "stepsHtml", "dayOf")
-CONSTS = ("RKIND", "NOT_YOURS", "esc", "BSTATUS", "bcls", "VERDICT", "STATUS", "typeIcon", "toIso", "clockOf", "HOME_ICON", "homeMany", "CREW_IC", "TRIG", "firstLine", "firstSentence", "ctAsker", "ctTitle", "ideasWaiting",
+CONSTS = ("RKIND", "QUIET", "esc", "BSTATUS", "bcls", "VERDICT", "STATUS", "typeIcon", "toIso", "clockOf", "HOME_ICON", "homeMany", "CREW_IC", "TRIG", "firstLine", "firstSentence", "ctAsker", "ctTitle", "ideasWaiting",
           "IDEA_CLS", "yoursN", "ideasN")
 FORMAT = re.search(r"// ---------- formatting \(TSK-31\).*?// ---------- end of formatting ----------", APP_JS, re.S)[0]   # the app's own helpers
 
@@ -152,8 +152,8 @@ def test_home_s_results_are_one_card_per_outcome_named_by_what_it_is_about():
                        {"id": 120, "status": "done", "door": "plan", "source": "app", "kind": "analysis", "title": "Compare two NAS", "result": "tasks/120-nas.md", "updated": ts, "runs": [{"occ": 1, "ended": ts, "status": "done"}]},
                        {"id": 121, "status": "failed", "door": "plan", "source": "app", "kind": "research", "title": "Broken one", "error": "step 1 failed", "updated": ts, "runs": [{"occ": 1, "ended": ts, "status": "failed"}]},
                        {"id": 79, "status": "scheduled", "door": "plan", "source": "app", "kind": "briefing", "title": "China weekly", "result": "tasks/79-china-1.md", "updated": ts, "runs": [{"occ": 1, "ended": ts, "status": "done"}]},
-                       {"id": 115, "status": "done", "door": "plan", "source": "probe:p4", "title": "Hermes version", "updated": ts},
-                       {"id": 109, "status": "done", "door": "plan", "source": "trial:mustache", "title": "Mustache", "updated": ts},
+                       {"id": 115, "status": "done", "door": "plan", "source": "probe:p4", "area": "upkeep", "title": "Hermes version", "updated": ts},
+                       {"id": 109, "status": "done", "door": "plan", "source": "trial:mustache", "area": "code", "title": "Mustache", "updated": ts},
                        {"id": 12, "status": "done", "door": "mission", "source": "app", "title": "Copper mission", "updated": ts},
                        {"id": 130, "status": "running", "door": "plan", "source": "app", "title": "Busy one", "updated": "2099-01-01T00:00:00+00:00",
                         "steps": [{"status": "done", "agent": "scout"}, {"status": "running", "agent": "main"}]}],
@@ -169,7 +169,8 @@ def test_home_s_results_are_one_card_per_outcome_named_by_what_it_is_about():
     assert ["briefing", "Boss reports 359,000 lb", "#/read?path=topics%2Fcopper%2Freports%2F2026%2F10%2F2026-10-28.md&m=copper"] in items
     assert ["failed", "Did not finish: no answer", "#/mission/copper?tab=history"] in items
     heads = [h for _, h, _ in items]
-    for gone in ("Hermes version", "Mustache", "Copper mission", "Busy one", "Filed 2 of 37", "Deployed: Work section", "Journey checks: 4 failed", "Rule fired on Macusani: task #113"):
+    assert ["task", "Mustache", "#/task/109"] in items                                 # TSK-55: every area but upkeep, which shows when it fails
+    for gone in ("Hermes version", "Copper mission", "Busy one", "Filed 2 of 37", "Deployed: Work section", "Journey checks: 4 failed", "Rule fired on Macusani: task #113"):
         assert not any(gone in h for h in heads), gone
     when = json.loads(run(state, "JSON.stringify(feedItems().map((x) => +new Date(toIso(x.ts))))"))
     assert when == sorted(when, reverse=True)
@@ -178,7 +179,7 @@ def test_home_s_results_are_one_card_per_outcome_named_by_what_it_is_about():
     assert 'data-hf="alert"' in html and 'data-hf="housekeeping"' not in html and "<h2>Results</h2>" in html
     assert "Compare two NAS" not in run(state, "(homeFilter = 'alert', feedHtml())")
     now = run(state, "nowHtml()")
-    assert 'href="#/task/130"' in now and "1 of 2 steps done · main at work" in now   # a task at work is on Now
+    assert 'href="#/task/130"' not in now and "working" in now                    # a task at work is under In the stack (TSK-55)
 
 
 def test_home_holds_its_updates_while_you_scroll_or_touch():

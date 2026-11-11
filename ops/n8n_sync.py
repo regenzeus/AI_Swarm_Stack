@@ -14,6 +14,11 @@ A workflow the runner made or switched off for a task since the last export (ops
 newer word: an import publishes or unpublishes it as that word says, so a deploy never switches a cancelled task back on.
 Uses n8n's own command line inside its container (import:workflow, export:workflow), which the free edition has.
 
+Every Webhook trigger takes only a call with the runner's header (SEC-27, ops/n8n_gen.py hook_auth): the stack's files in
+git carry it, a pack's workflow and an export get it here, and every import writes n8n's credential for it first from the
+secret N8N_HOOK_TOKEN (sops; `make trust-keys` makes it once). Without the secret an import stops before it changes
+anything, so a deploy that lacks it fails and rolls back instead of leaving webhooks that nothing can call.
+
 Which of the repository's workflows a deployment runs (PLT-38): those its deployments/<name>/workflows.yaml names, and
 the tracker poller and the item workflows its trackers.yaml implies (ops/deployment.py workflow_names). The rest are
 not imported, and one imported earlier that the deployment no longer runs is unpublished (a run of it that waits still
@@ -58,6 +63,21 @@ def stable(wf):
     return out
 
 
+def hook_credential(run=subprocess.run, token=None):
+    """SEC-27: n8n's Header Auth credential of the runner's webhooks (ops/n8n_gen.py HOOK_CRED), written from the secret
+    N8N_HOOK_TOKEN through n8n's own import (it encrypts it with N8N_ENCRYPTION_KEY); the secret goes in on stdin into
+    n8n's /tmp (memory) and is removed. -> "" or why not."""
+    import n8n_gen as G
+    token = os.environ.get("N8N_HOOK_TOKEN", "") if token is None else token
+    if not token:
+        return "no N8N_HOOK_TOKEN in the environment (make trust-keys stores one in the secrets, SEC-27)"
+    cred = [{**G.HOOK_CRED, "type": "httpHeaderAuth", "data": {"name": G.HOOK_HEADER, "value": token}}]
+    p = run(["docker", "exec", "-i", "-u", "node", CONTAINER, "sh", "-c",
+             "umask 077 && cat > /tmp/hook.json && n8n import:credentials --input=/tmp/hook.json; s=$?; rm -f /tmp/hook.json; exit $s"],
+            input=json.dumps(cred), capture_output=True, text=True, timeout=300)
+    return "" if p.returncode == 0 else f"n8n did not take the webhooks' credential: {tail((p.stderr or p.stdout).strip(), 300)}"   # cap: preview, n8n's reason
+
+
 def import_chosen(files, run=subprocess.run):
     """The deployment's files of the repository's folder (mounted at /workflows) into n8n, unpublished: copied into a
     folder of their own inside the container, so n8n's folder import takes exactly these."""
@@ -81,6 +101,9 @@ def import_all(repo=REPO, run=subprocess.run, made=None, names=None):
     runs, then restarts n8n so its server loads them. The runner's newer word on a workflow (ops/n8n_jobs.py) decides
     over the repository's file."""
     import n8n_jobs as NJ
+    if why := hook_credential(run=run):
+        print(f"nothing imported: {why}")
+        return 1
     made = made or NJ.MADE
     names = NJ.chosen(repo) if names is None else names
     mine = NJ.workflows(repo, made, names)
@@ -149,7 +172,7 @@ def prepared(path):
     """A pack's workflow file as n8n gets it: the id from its name, node ids and webhook ids derived from the id and each
     node's name (a pack names none of them, so it can take no id of the stack's)."""
     import n8n_gen as G
-    wf = json.loads(Path(path).read_text(encoding="utf-8"))
+    wf = G.hook_auth(json.loads(Path(path).read_text(encoding="utf-8")))     # SEC-27: a pack's webhooks too
     w = pack_id(wf["name"])
     nodes = []
     for n in wf["nodes"]:
@@ -291,8 +314,9 @@ def write_stable(files, dest, packs=()):
     dest = Path(dest)
     dest.mkdir(parents=True, exist_ok=True)
     names = []
+    import n8n_gen as G
     for f in sorted(files):
-        wf = stable(json.loads(Path(f).read_text()))
+        wf = G.hook_auth(stable(json.loads(Path(f).read_text())))   # SEC-27: a webhook made on the canvas gets the runner's header
         if is_pack(wf, packs):
             continue
         (dest / file_name(wf)).write_text(json.dumps(wf, indent=2, ensure_ascii=False, sort_keys=True) + "\n")
@@ -361,6 +385,9 @@ def main(argv):
         return import_all()
     if cmd == "packs":
         from domain import packs as PK
+        if why := hook_credential():
+            print(f"nothing synced: {why}")
+            return 1
         for line in sync_packs(PK.load()) or ["the packs' workflows in n8n are as approved"]:
             print(line)
         return 0

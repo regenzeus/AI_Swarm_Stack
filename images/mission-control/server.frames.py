@@ -15,6 +15,18 @@ FRAME_HOP = {"connection", "keep-alive", "proxy-connection", "transfer-encoding"
 FRAME_SET_IN = {"x-forwarded-host", "x-forwarded-proto"}   # the app says these itself
 FRAME_DROP_OUT = FRAME_HOP | {"x-frame-options", "content-security-policy"}   # framing: the app's own pages only (set below)
 FRAME_RULE = "frame-ancestors 'self'"
+# Pages a workflow writes itself (a webhook's answer, a form) run in a sandbox: on this origin they would otherwise have the
+# app's whole API (review 10 Nov, SEC2-R4/APP2-R2). n8n's own form and webhook port (8450) is not this origin.
+FRAME_SANDBOXED = ("/webhook", "/form")
+
+
+def frame_csp(tool_csp, path):
+    """The tool's own Content-Security-Policy stays, all but its framing rule, which becomes the app's; a page a workflow
+    wrote is sandboxed too. Dropping the tool's policy whole took its own protection away."""
+    kept = [d.strip() for d in (tool_csp or "").split(";") if d.strip() and not d.strip().lower().startswith("frame-ancestors")]
+    if path.startswith(FRAME_SANDBOXED):
+        kept.append("sandbox allow-forms")
+    return "; ".join(kept + [FRAME_RULE])
 FRAME_CONNECT_TIMEOUT = 10                            # limit: stops, a tool that does not take the connection within 10 s is reported as not reachable
 _frame_transport = None                               # tests put a fake tool here
 
@@ -38,10 +50,11 @@ def frame_headers_in(request):
     return out + [("x-forwarded-proto", "http" if APP_GATE == "local" else "https")]   # tailscale serve speaks https; this PC, http
 
 
-def frame_headers_out(r, prefix):
+def frame_headers_out(r, prefix, path="/"):
     """The tool's answer headers for the browser: all of them (every Set-Cookie) but the hop ones and the framing rule,
     which becomes the app's own; a redirect to one of the tool's root paths stays under its prefix."""
     out = []
+    csp = ", ".join(v for k, v in r.headers.multi_items() if k.lower() == "content-security-policy")
     for k, v in r.headers.multi_items():
         lk = k.lower()
         if lk in FRAME_DROP_OUT:
@@ -49,13 +62,15 @@ def frame_headers_out(r, prefix):
         if lk == "location" and v.startswith("/") and not v.startswith((f"{prefix}/", "//")):
             v = prefix + v
         out.append((lk.encode("latin-1"), v.encode("latin-1")))
-    return out + [(b"content-security-policy", FRAME_RULE.encode())]
+    return out + [(b"content-security-policy", frame_csp(csp, path).encode("latin-1"))]
 
 
 async def frame_proxy(request):
     """/<tool>/... -> the tool's /...: the method, the query, the body, the cookies, and the answer as it comes."""
     name = request.url.path.split("/")[1]
     prefix = f"/{name}"
+    if from_ai_phone(request):                            # PHN-07: n8n starts work and Phoenix holds every trace (SEC2-R2)
+        return PlainTextResponse("Not from the AI phone: it may only press Stop.", status_code=403)
     if request.url.path == prefix:
         return RedirectResponse(f"{prefix}/", status_code=307)
     c = _frame_client(name)
@@ -72,7 +87,7 @@ async def frame_proxy(request):
         await r.aclose()
         await c.aclose()
     resp = StreamingResponse(r.aiter_raw(), status_code=r.status_code, background=BackgroundTask(close))
-    resp.raw_headers = frame_headers_out(r, prefix)
+    resp.raw_headers = frame_headers_out(r, prefix, request.url.path[len(prefix):])
     return resp
 
 

@@ -24,7 +24,8 @@ step "shell scripts (shellcheck)" shellcheck -S error ops/*.sh smoke/*.sh config
 step "python (syntax, undefined names, redefined names, unused imports)" ruff check --no-cache --select E9,F63,F7,F82,F401,F811 --extend-exclude tests/semgrep,images/mission-control/server.py,images/mission-control/server.*.py,ops/missions.py,ops/missions.*.py,ops/builds.py,ops/builds.*.py,images/swarm/ledger.py,images/swarm/ledger.*.py .
 step "python kept in parts, linted joined (ops/py_parts_lint.py, PLT-25)" python3 ops/py_parts_lint.py
 if command -v node >/dev/null 2>&1; then
-  step "app javascript parses" sh -c 'for f in images/mission-control/web/static/*.js; do node --check "$f" || exit 1; done'
+  # n8n's AI Stack step node too: a syntax error there passed every test and would stop every workflow (review QA2-R2)
+  step "app and n8n node javascript parses" sh -c 'for f in images/mission-control/web/static/*.js n8n/custom/*.js; do node --check "$f" || exit 1; done'
 else
   missing "app javascript parses" node
 fi
@@ -46,7 +47,8 @@ if command -v semgrep >/dev/null 2>&1; then           # the repo's own rules (.s
 else
   missing "security patterns (semgrep)" semgrep
 fi
-step "benchmark still frozen" sh -c 'test "$(sha256sum eval/bench-v1.yaml | cut -d" " -f1)" = "$(cut -d" " -f1 eval/FROZEN.sha256)"'
+# both files must be there: with both gone, two empty strings compared equal and the check passed (review QA2-R6)
+step "benchmark still frozen" sh -c 'test -s eval/bench-v1.yaml && test -s eval/FROZEN.sha256 && test "$(sha256sum eval/bench-v1.yaml | cut -d" " -f1)" = "$(cut -d" " -f1 eval/FROZEN.sha256)"'
 if docker compose version >/dev/null 2>&1; then
   step "compose files valid" bash ops/ci-compose-check.sh
 else

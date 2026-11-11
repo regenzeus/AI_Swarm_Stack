@@ -113,6 +113,30 @@ def test_a_pack_that_clashes_or_names_no_commit_of_its_source_is_refused_with_th
     assert got["packs"] == [] and got["pending"] == [] and words in got["refused"][0]["why"]
 
 
+def test_a_pack_with_a_link_is_refused_and_the_file_it_names_is_left_alone(home):
+    """Review 10 Nov (DOM2-R1): an unapproved pack's agent file linked to one of the stack's files; loading it made that
+    file read-only and put its text into the pending decision."""
+    target = home["tmp"] / "stack-state.json"
+    target.write_text('{"secret": true}')
+    mode = target.stat().st_mode
+    agent = next((home["src"] / "agents").glob("*.md"))
+    agent.unlink()
+    agent.symlink_to(target)
+    git(home["src"], "add", "-A")
+    git(home["src"], "commit", "-q", "-m", "link")
+    home["pin"](f"toy {home['src']} {home['head']()}")
+    got = PK.load()
+    assert got["packs"] == [] and got["pending"] == [] and "holds links" in got["refused"][0]["why"]
+    assert target.stat().st_mode == mode and '"secret"' not in json.dumps(got)
+
+
+def test_an_artifact_id_is_a_sha256_and_never_a_path():
+    """Review 10 Nov (DOM2-R2): 'artifact:./../x' reached a file outside the store, which a tracker step could attach."""
+    from domain import artifacts as AR
+    for bad in ("artifact:./../target.txt", "artifact:../../etc/passwd", "artifact:" + "a" * 63, "artifact:/etc/passwd"):
+        assert AR.path_of(bad) is None, bad
+
+
 def test_two_packs_of_one_name_and_a_manifest_naming_another_pack_are_refused(home):
     head = home["head"]()
     home["pin"](f"toy {home['src']} {head}", f"toy {home['src']} {head}")
@@ -415,9 +439,10 @@ def test_an_export_sends_a_packs_workflow_to_its_repository_never_into_the_stack
     assert "Answer with one word" in files["workflows/triage.json"]
 
 
-def test_a_deploy_syncs_the_running_packs_before_its_one_restart(home, n8n):
+def test_a_deploy_syncs_the_running_packs_before_its_one_restart(home, n8n, monkeypatch):
     """N1: `ops/n8n_sync.py import` (a deploy) imports the stack's workflows and then the running packs', and restarts
     n8n once."""
+    monkeypatch.setenv("N8N_HOOK_TOKEN", "hook-test")          # SEC-27: the webhooks' credential is written first
     NS, fake = n8n["NS"], n8n["fake"]
     head = home["head"]()
     home["pin"](f"toy {home['src']} {head}")

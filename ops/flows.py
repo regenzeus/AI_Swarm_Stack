@@ -765,8 +765,8 @@ def _job_spec(kind):
 
 
 def _place_worker(name):
-    """The wsl place's worker is a thread of the runner; the engine's bridge starts it when Temporal runs, the step
-    service when it does not."""
+    """The wsl place's worker is a thread of the runner, started by the step service (Temporal and its bridge are gone,
+    DEC-52)."""
     if name != "wsl" or M is None or any(t.name == "place-wsl" and t.is_alive() for t in threading.enumerate()):
         return
     from domain import places as PL

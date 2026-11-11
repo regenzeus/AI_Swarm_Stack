@@ -48,6 +48,8 @@ async def api_share(request):
 
 async def api_share_save(request):
     """Save a shared item into the knowledge base: the link's page, the text, and every document or picture."""
+    if (no := not_from_ai_phone(request)):
+        return no
     rec = share_rec(request.path_params["sid"])
     if not rec:
         return JSONResponse({"error": "not found"}, status_code=404)
@@ -92,10 +94,20 @@ def file_of(fid):
     return next(iter(FILES.glob(f"{fid}-*")), None)
 
 
+# A file that a browser would run as a page or script on this app's origin (review S8, APP2-R5) is only ever downloaded:
+# a shared or mailed .html would otherwise have the whole API.
+SCRIPTABLE = (".html", ".htm", ".xhtml", ".xml", ".svg", ".js", ".mjs")
+
+
 async def api_chat_file(request):
-    """A file attached to a chat."""
+    """A file attached to a chat: pictures, PDFs and text open; a page or script only downloads, never runs here."""
     f = file_of(request.path_params["fid"])
-    return FileResponse(f) if f else JSONResponse({"error": "not found"}, status_code=404)
+    if not f:
+        return JSONResponse({"error": "not found"}, status_code=404)
+    if f.suffix.lower() in SCRIPTABLE:
+        return FileResponse(f, media_type="application/octet-stream", filename=f.name.split("-", 1)[-1],
+                            headers={"X-Content-Type-Options": "nosniff", "Content-Security-Policy": "sandbox"})
+    return FileResponse(f, headers={"X-Content-Type-Options": "nosniff"})
 
 
 def to_hermes(m, current):
@@ -390,6 +402,8 @@ UPLOADS = DATA / "uploads"
 
 async def api_upload(request):
     """A file from the phone for the vault inbox (PDF, Word, text, markdown); the runner files it."""
+    if (no := not_from_ai_phone(request)):
+        return no
     name = re.sub(r"[^A-Za-z0-9._-]+", "-", request.headers.get("x-filename", "upload"))[-80:].lstrip(".-") or "upload"  # cap: id
     if not name.lower().endswith((".pdf", ".docx", ".md", ".txt", ".html", ".pptx", ".xlsx", ".csv", ".png", ".jpg")):
         return JSONResponse({"ok": False, "error": "file type not supported"}, status_code=400)

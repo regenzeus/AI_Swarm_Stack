@@ -640,8 +640,8 @@ items:
     verify: {method: test, by: [tests/test_repo_tabs.py::test_the_repo_page_has_seven_tabs_one_question_each, tests/test_repo_tabs.py::test_the_overview_says_what_it_is_and_the_map_folds_its_files, tests/test_repo_tabs.py::test_six_labels_fit_a_phone_and_nothing_is_ellipsed, tests/test_repo_tabs.py::test_a_tab_change_touches_no_page_and_a_live_redraw_keeps_the_tab_and_the_place, tests/test_repo_tabs.py::test_a_tab_loads_its_data_only_when_it_opens, tests/test_repo_tabs.py::test_every_feature_of_the_old_page_is_still_reachable, tests/test_repo_tabs.py::test_history_says_what_a_row_means_in_plain_words_most_telling_first, tests/test_repo_tabs.py::test_nothing_is_cut_every_row_shows_from_the_start, tests/test_repo_tabs.py::test_health_says_each_finding_and_its_reason_in_plain_words, tests/test_repo_tabs.py::test_a_repository_without_facts_says_so_and_offers_re_analyse, tests/test_repo_tabs.py::test_a_repository_whose_facts_failed_says_what_failed_where_it_failed, tests/test_repo_tabs.py::test_the_wiki_tab_lists_the_pages_and_opens_them_in_the_wiki_viewer]}
   - id: APP-52
     title: The Tasks tab is built around tasks
-    statement: The second tab shall be Tasks, with five views - Tasks (Active, Repeating and Done; the owner's or the
-      stack's; a search), Activity, Team (the agents on the owner's tasks, the crew, their measured results), Network and
+    statement: The second tab shall be Tasks, with five views - Tasks (every task in one list by what matters now, its
+      areas as a filter, a search; TSK-51), Activity, Team (the agents on the owner's tasks, the crew, their measured results), Network and
       Ideas - each task's row saying where it stands, its When, its last result and the agents on it, and New task one form
       for every task; the addresses of the old Agents tab, Tasks page and mission form shall go to their place on it.
     type: functional

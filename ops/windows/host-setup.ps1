@@ -27,7 +27,9 @@ Register-ScheduledTask -TaskName "ai-stack WSL keepalive" -Action $action -Trigg
 
 # 3) Publish Open WebUI on the tailnet only (Serve must be enabled once in the Tailscale admin).
 & "C:\Program Files\Tailscale\tailscale.exe" serve --bg --https=443 http://127.0.0.1:3080
-# n8n on its own tailnet port (WFL-01, docs/N8N-MIGRATION.md): webhooks at its root. The editor lives inside the app at
-# https://<pc>:8447/n8n/ (WFL-13); the second line is a direct fallback for when the app is down, at https://<pc>:8450/n8n/
-& "C:\Program Files\Tailscale\tailscale.exe" serve --bg --https=8450 http://127.0.0.1:5678
-& "C:\Program Files\Tailscale\tailscale.exe" serve --bg --https=8450 --set-path=/n8n http://127.0.0.1:5678
+# n8n's own tailnet port 8450 serves its resume links (/webhook-waiting/..., signed by n8n) and nothing else (SEC-27,
+# docs/SECURITY.md): no editor, no API, no webhooks there. The editor lives inside the app at https://<pc>:8447/n8n/
+# (WFL-13); the runner calls the webhooks on this PC (127.0.0.1:5678) with its header. The first line removes what an
+# earlier version of this script served on 8450 (n8n's whole root and /n8n); an error from it when nothing is there is fine.
+& "C:\Program Files\Tailscale\tailscale.exe" serve --https=8450 off
+& "C:\Program Files\Tailscale\tailscale.exe" serve --bg --https=8450 --set-path=/webhook-waiting http://127.0.0.1:5678/webhook-waiting

@@ -71,6 +71,21 @@ def test_each_agent_steps_in_only_a_few_times_a_day(L):
     L.add_evidence(TESTS, "d", ids[2], "slow test three", unseen=WHY)
 
 
+def test_private_help_never_reaches_an_owner_with_a_way_out(tmp_path):
+    """Review 10 Nov (REST2-R1): the help another agent gave came to its owner's context without its label, so private
+    evidence reached a card that holds a way out (SWM-67)."""
+    cards = [dict(c, tools=["fetch"]) if c["id"] == "doctor" else c for c in CARDS]          # this doctor can reach the web
+    L = Ledger(str(tmp_path / "swarm.db"), cards, now=Clock())
+    aid = idea(L)
+    L.add_evidence(TESTS, "p1", aid, "the owner's bank statement shows 412 euros for the backup disk", unseen=WHY, label="private")
+    [h] = L.helps(helper="tests")
+    assert h["label"] == "private" and L.context("doctor")["help_received"] == []
+    L.now.t += 90000                                                      # a day: the helper's budget is free again
+    other = idea(L, "other:y", "Backups stop on a locked file")          # an idea with nothing private on it
+    L.add_evidence(TESTS, "p2", other, "the pagination test takes 40 s since run 30", unseen=WHY)
+    assert [x["text"] for x in L.context("doctor")["help_received"]] == ["the pagination test takes 40 s since run 30"]
+
+
 def test_the_helped_agent_or_the_owner_judges_and_the_work_s_fate_does_otherwise(L):
     a, b, c = (idea(L, f"k{n}", ["Mail digests skip emoji senders", "The wiki compiler halts on one page", "Price alerts arrive twice"][n]) for n in range(3))
     for n, aid in enumerate((a, b, c)):

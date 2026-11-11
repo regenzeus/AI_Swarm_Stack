@@ -1,5 +1,6 @@
 {
   "active": true,
+  "area": "phone",
   "connections": {
     "On its schedule (0 10 * * 0)": {
       "main": [
@@ -65,10 +66,17 @@
       "webhookId": "ca5d1173-5680-e71e-096e-d749a6bccbaf"
     },
     {
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "aistackRunHook01",
+          "name": "AI Stack runner"
+        }
+      },
       "id": "f5314e0f-5780-4861-690f-549f4a465949",
       "name": "Run now",
       "notes": "Starts the job now, as its schedule would (POST).",
       "parameters": {
+        "authentication": "headerAuth",
         "httpMethod": "POST",
         "options": {},
         "path": "run/crew-phone-cleanup"

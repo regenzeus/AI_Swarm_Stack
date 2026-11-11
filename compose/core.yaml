@@ -10,6 +10,8 @@ networks:
   flows: {}               # n8n only: publishes its editor on 127.0.0.1 and reaches the integrations it is given
   stepnet:                # n8n <-> Mission Control only: its step service (8099, WFL-05) and n8n's editor inside the app (WFL-13)
     internal: true
+  n8ndb:                  # n8n <-> its database in Postgres only (SEC-27): n8n is off the flat backend, away from the builder's sandbox
+    internal: true
 
 volumes:
   pgdata: {}
@@ -31,7 +33,7 @@ services:
       POSTGRES_DB: litellm
       POSTGRES_PASSWORD: ${PG_PASSWORD:?run via make up}
     volumes: [pgdata:/var/lib/postgresql/data]
-    networks: [backend]
+    networks: [backend, n8ndb]   # n8ndb: n8n's database (its own role), the one thing n8n reaches there
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U litellm -d litellm"]
       interval: 10s
@@ -53,6 +55,13 @@ services:
       OTEL_SERVICE_NAME: litellm
       CHATGPT_TOKEN_DIR: /root/.config/litellm/chatgpt
       AISTACK_GATEWAY_TOKEN: ${AISTACK_GATEWAY_TOKEN:-}   # a gateway deployment's token, filled by make from models.yaml's name (GEN-05)
+      # SEC-26: the bearer token of each of Mission Control's MCP servers (sops, make trust-keys), sent by the gateway alone
+      MCP_TOKEN_MISSIONS: ${MCP_TOKEN_MISSIONS:-}
+      MCP_TOKEN_CLAUDE: ${MCP_TOKEN_CLAUDE:-}
+      MCP_TOKEN_HOUSE: ${MCP_TOKEN_HOUSE:-}
+      MCP_TOKEN_FILES: ${MCP_TOKEN_FILES:-}
+      MCP_TOKEN_MEMORY: ${MCP_TOKEN_MEMORY:-}
+      MCP_TOKEN_MEMORYPUBLIC: ${MCP_TOKEN_MEMORYPUBLIC:-}
     volumes:
       - ${LITELLM_CONFIG:-../config/litellm/config.yaml}:/app/config.yaml:ro   # a gateway deployment's own (GEN-05)
       - litellm-auth:/root/.config/litellm
@@ -105,7 +114,7 @@ services:
       PG_PASSWORD: ${PG_PASSWORD:?run via make up}
       N8N_DB_PASSWORD: ${N8N_DB_PASSWORD:?run via make up}
     volumes: [../config/n8n:/setup:ro]
-    networks: [backend]
+    networks: [n8ndb]
     restart: "no"
     logging: *logging
 
@@ -143,11 +152,25 @@ services:
       NODES_INCLUDE: ${N8N_NODES_INCLUDE:-}
       N8N_BLOCK_ENV_ACCESS_IN_NODE: "true"
       N8N_CUSTOM_EXTENSIONS: /home/node/custom   # WFL-06: the AI Stack step node (n8n/custom)
+      AISTACK_STEP_TOKEN: ${AISTACK_STEP_TOKEN:-}   # SEC-25: the step node's token for the step service (sops, make trust-keys)
+      # O4 (SEC-28): nothing of the stack uses n8n's public API (the runner uses its command line). On 2.44.7 this setting
+      # makes n8n refuse every API key (its routes stay and answer 401); the second one takes its docs page away
+      N8N_PUBLIC_API_DISABLED: "true"
+      N8N_PUBLIC_API_SWAGGERUI_DISABLED: "true"
       EXECUTIONS_DATA_PRUNE: "true"
       EXECUTIONS_DATA_MAX_AGE: "720"      # limit: drops, an execution's data after 30 days (WFL-04); the run's result stays on Home
-    volumes: [n8n:/home/node/.n8n, ../n8n/workflows:/workflows:ro, ../n8n/custom:/home/node/custom:ro]   # the repository's workflows (WFL-08) and the stack's node (WFL-06)
-    ports: ["127.0.0.1:5678:5678"]        # the runner (resume URLs) and tailscale serve's direct port 8450 (none without the tailnet); the editor itself is in the app
-    networks: [backend, flows, stepnet]   # stepnet: the step service, nothing else
+    volumes:
+      - n8n:/home/node/.n8n
+      - ../n8n/workflows:/workflows:ro    # the repository's workflows (WFL-08)
+      - ../n8n/custom:/home/node/custom:ro   # the stack's node (WFL-06)
+      - {type: tmpfs, target: /home/node/.cache, tmpfs: {mode: 01777}}   # n8n compiles its static assets here at each start
+    # O4 (SEC-28): a read-only root, no capabilities, no new privileges; tried on the pinned image, 11 Nov 2026
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    ports: ["127.0.0.1:5678:5678"]        # the runner (webhooks, resume URLs) and tailscale serve's port 8450 for /webhook-waiting only (none without the tailnet); the editor itself is in the app
+    networks: [n8ndb, flows, stepnet]     # n8ndb: its database; flows: the integrations it is given; stepnet: the step service, nothing else
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:5678/healthz || exit 1"]
       interval: 15s

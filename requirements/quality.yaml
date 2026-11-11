@@ -355,3 +355,21 @@ items:
       'tests/test_parallel_tests.py::test_each_test_process_has_a_temp_folder_of_its_own',
       'tests/test_parallel_tests.py::test_the_publish_runs_the_snapshots_tests_over_workers_too']}
     trace: [ops/check.sh, ops/publish.py, tests/conftest.py, tests/requirements.txt]
+  - id: QA-28
+    title: A requirement id keeps its meaning
+    statement: A landing on main (ops/land.sh) and a build's requirement proof shall stop when a requirement, decision,
+      need or finding id that exists on the target branch is gone, or has another title without the old one kept in its
+      titles_before, naming each such id and, for a title that moved, the id it moved to.
+    type: process
+    priority: must
+    status: implemented
+    parents: [SN-13]
+    sources: [docs/REVIEW-2026-11-10.md, requirements/AGENTS.md]
+    rationale: 'Review of 10 Nov 2026 (D2, DOCS2-R5): ids were renumbered three times in a day (WFL-15..19 became 19..23,
+      GEN-40/41, PLT-38 became 40) against "never renumbered", and commit trailers pointed at other requirements. Meaning is
+      checked as the title: a program cannot judge meaning, a title is the requirement''s name, and a reworded title must be
+      written down (titles_before) where the reviewer sees it in the diff.'
+    verify: {method: test, by: [tests/test_requirements.py::test_an_id_on_the_target_branch_may_be_added_to_or_deprecated_but_never_renumbered_reused_or_removed,
+      tests/test_requirements.py::test_a_title_changes_in_words_only_with_the_old_one_kept_and_an_unreadable_branch_is_no_pass,
+      tests/test_land_compose.py::test_a_landing_stops_when_a_requirement_id_of_main_changed_its_meaning]}
+    trace: [ops/req.py, ops/land.sh]

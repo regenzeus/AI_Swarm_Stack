@@ -478,4 +478,22 @@ items:
     sources: [docs/CODER-KNOWLEDGE.md]
     verify: {method: test, by: [tests/test_onboard.py::test_plain_text_section_titles_become_headings_and_a_good_guide_is_unchanged]}
     trace: [ops/onboard.py, prompts/shared.md]
+  - id: BLD-40
+    title: The code graphs are merged only when one changed, within a memory cap
+    statement: The code graph job shall rebuild the merged cross-repository graph only when what goes into it changed (a
+      repository's graph in content, its build stamp aside, or the set of repositories), never for a pull that changes no
+      code; it shall run the merge in a container of at most 3 GB of RAM and 6 GB with swap; and a merge ended at that cap
+      shall leave the served graph as it was, be logged with its reason once, and be tried again only when a graph changes.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-13, SN-14]
+    sources: [docs/REVIEW-2026-11-10.md, 'owner 2026-11-11: Yes (to the review''s recommended fixes, O9 and its memory cap among them)']
+    rationale: 10 Nov 2026 WSL restarted under memory pressure (7.4 of 8.4 GB in use, 6.3 GB in swap) while graphify
+      merge-graphs held 3 GB in a container without a limit; the job started every minute and merged again after every
+      pull of the ai-stack mirror (20 merges of 2 to 7 minutes that day), though a pull that changes no code leaves the
+      graph the same but for its built_at_commit stamp (three builds of one sympy commit, 8-9 Nov, equal but for it).
+    verify: {method: test, by: [tests/test_graphify_sync.py::test_the_merge_runs_only_when_a_graph_changed_in_content_never_for_a_pull_that_changes_no_code,
+      tests/test_graphify_sync.py::test_the_merge_runs_under_its_memory_cap_and_one_ended_there_keeps_the_old_graph_and_waits_for_a_change]}
+    trace: [ops/graphify-sync.sh, ops/graph_repos.py]
 

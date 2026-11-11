@@ -35,7 +35,8 @@ def test_the_n8n_image_is_pinned_by_digest():
 def test_n8n_is_reached_only_from_this_machine():
     assert all(p.startswith("127.0.0.1:") for p in S["n8n"]["ports"])
     assert "ports" not in S["n8n-db"]
-    assert CORE["networks"]["backend"].get("internal") is True and "backend" in S["n8n"]["networks"]
+    # SEC-27: its database on a network of its own (internal), never the flat backend with the builder's sandbox
+    assert CORE["networks"]["n8ndb"].get("internal") is True and "n8ndb" in S["n8n"]["networks"] and "backend" not in S["n8n"]["networks"]
     # the tailnet's https address by default; a deployment without it names its 127.0.0.1 one (WFL-15)
     assert env("n8n")["N8N_EDITOR_BASE_URL"].startswith("${N8N_EDITOR_URL:-https://") and env("n8n")["N8N_PROXY_HOPS"] == "1"
 

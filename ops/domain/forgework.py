@@ -15,22 +15,24 @@ the run register's routing (ops/runreg.py) as a tracker comment does; the key is
 import json
 import os
 import re
-import subprocess
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import statefile as SF  # noqa: E402
-import textcap as TC  # noqa: E402
 
 PREFIX = "ai/"
 
 
 def _git(clone, *args):
-    p = subprocess.run(["git", "-C", str(clone), *args], capture_output=True, text=True, timeout=300)
-    if p.returncode:
-        raise ValueError(f"git {args[0]}: {TC.cut((p.stderr or p.stdout).strip(), 300)}")   # cap: preview
-    return p.stdout.strip()
+    """git in the change's clone through the runner's one git (ops/builds.py): the clone is the builder's workbench, which
+    the sandbox writes, so hooks and fsmonitor stay off and a rigged clone is refused (SEC-21), and a push passes the
+    never-in-git guard (SEC-22). Review 10 Nov (RUNNER2-R1): this ran plain git, so a hook the sandbox planted ran here."""
+    import builds as B
+    try:
+        return B.git(clone, *args)
+    except RuntimeError as e:
+        raise ValueError(f"{e}") from e
 
 
 def branch_name(key, title):

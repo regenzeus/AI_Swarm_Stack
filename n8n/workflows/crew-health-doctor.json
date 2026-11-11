@@ -1,5 +1,6 @@
 {
   "active": true,
+  "area": "upkeep",
   "connections": {
     "On its schedule (0 */6 * * *)": {
       "main": [
@@ -65,10 +66,17 @@
       "webhookId": "c5717292-a0e5-e820-99dd-ea230e8872f6"
     },
     {
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "aistackRunHook01",
+          "name": "AI Stack runner"
+        }
+      },
       "id": "5d0d6cd3-68cc-0601-36ac-185ab5fba810",
       "name": "Run now",
       "notes": "Starts the job now, as its schedule would (POST).",
       "parameters": {
+        "authentication": "headerAuth",
         "httpMethod": "POST",
         "options": {},
         "path": "run/crew-health-doctor"

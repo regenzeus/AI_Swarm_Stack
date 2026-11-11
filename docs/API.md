@@ -51,7 +51,7 @@ Every `/api/` and `/share` route needs the `Tailscale-User-Login` header that `t
 | `/api/chats/{cid}/stop` | POST | Stops the answer that is being written in a chat. |
 | `/api/chats/{cid}/retry` | POST | Try a message that waits for the usage limit now, instead of at its next try (AST-12). |
 | `/api/chat/upload` | POST | An attachment for the next chat message: images go to Hermes as images, documents as extracted text. |
-| `/api/chat/files/{fid}` | GET | A file attached to a chat. |
+| `/api/chat/files/{fid}` | GET | A file attached to a chat: pictures, PDFs and text open; a page or script only downloads, never runs here. |
 | `/api/models` | GET | The chat's model choices and reasoning efforts, with the default. |
 | `/api/upload` | POST | A file from the phone for the vault inbox (PDF, Word, text, markdown); the runner files it. |
 | `/share` | POST | The PWA share target: keeps what was shared (link, text, pictures, files) for 14 days and opens it in the app (APP-15). |

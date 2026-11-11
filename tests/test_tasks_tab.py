@@ -73,7 +73,8 @@ def test_each_crew_duty_is_the_stack_s_repeating_task(K, monkeypatch):
     TK.discover_crew(K)                                                     # once per duty
     rows = {r["ref"]: dict(r) for r in K.execute("select ref, title, status, rhythm, owner, source from tasks where door='crew'")}
     want = {a["id"] for a in CR.CREW if not a.get("oneoff")}
-    assert set(rows) == want and all(r["owner"] == "stack" and r["status"] == "scheduled" and r["source"] == "crew" for r in rows.values())
+    assert set(rows) == want and all(r["status"] == "scheduled" and r["source"] == "crew" for r in rows.values())
+    assert all(r["owner"] == ("stack" if CR.BY_ID[k]["area"] == "upkeep" else "you") for k, r in rows.items())   # who asked: information (TSK-51)
     assert rows["memory"]["title"] == "Memory Keeper" and json.loads(rows["memory"]["rhythm"])["schedule"] == "daily 04:30"
     assert json.loads(rows["backup"]["rhythm"])["schedule"] == "on its workflow"       # a duty whose schedule is not read yet
     monkeypatch.setattr(CR, "status", lambda: [{"id": "memory", "schedule": "daily 03:30"}])
@@ -132,7 +133,7 @@ def test_the_tasks_tab_has_five_views_and_the_old_addresses_go_there():
     nav = re.search(r"^const NAV = .*?;$", JS, re.M | re.S)[0]
     assert '["tasks", "#/tasks", "Tasks", ic.tasks]' in nav and '"#/missions"' not in nav and len(re.findall(r'\["\w+", "#/', nav)) == 7   # Workflows (n8n inside the app, WFL-11) is the seventh
     assert re.search(r'const TVIEWS = \[\["tasks", "Tasks"\], \["activity", "Activity"\], \["team", "Team"\], \["network", "Network"\], \["ideas", "Ideas"\]\];', JS)
-    assert 'const TLISTS = [["active", "Active"], ["repeating", "Repeating"], ["done", "Done"]];' in JS and '[["you", "User"], ["stack", "Stack"], ["all", "All"]]' in JS and 'tasksOwner = "all"' in JS
+    assert 'const TGROUPS = [["needs", "Needs you"], ["failed", "Failed"], ["running", "Running now"], ["recent", "Recent results"], ["scheduled", "Scheduled"]];' in JS   # TSK-51: one list
     assert "missions: vMissionsGo" in JS and "new: vNewGo" in JS and "function vMissions()" not in JS and "function vNew()" not in JS
     go = JS.split("function vMissionsGo() {", 1)[1].split("\n}", 1)[0]
     assert '"#/tasks?v=team&p=crew"' in go and '"#/tasks?v=activity"' in go
@@ -140,9 +141,9 @@ def test_the_tasks_tab_has_five_views_and_the_old_addresses_go_there():
     assert 'swOn("activity")' in SWARM and 'route.name === "swarm" && swTab' not in SWARM            # the agents' views live in the Tasks tab now
     row = JS.split("function tRow(t) {", 1)[1].split("\n}", 1)[0]
     assert all(x in row for x in ("stateChip(t, A)", "whenChip(t)", "avatars(t)", "tHref(t)"))     # where it stands, its When, its agents
-    assert 'const tMine = (t) => t.door !== "chat" && (tasksOwner === "all" || (tasksOwner === "stack") === (t.owner === "stack"));' in JS
+    assert 'const tMine = (t) => t.door !== "chat";' in JS                               # every task but a chat, which lives on Chat
     assert "[\"agents\", \"Agents\"]" in JS and "taskAgentsInto(box, task.id)" in JS                # a mission's page is its task's page
-    assert '"Your task" : "The stack\'s task"' in JS and '#/tasks?v=team&p=crew" : "#/tasks"' in JS
+    assert '#/tasks?v=team&p=crew" : "#/tasks"' in JS
 
 
 def test_new_task_is_one_form_that_sends_only_what_was_set():

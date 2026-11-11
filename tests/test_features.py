@@ -71,6 +71,21 @@ def test_each_service_of_a_feature_names_it_as_its_profile_and_core_has_none():
     assert profiles["mission-control"] == ["mission-control"] and profiles["qmd"] == ["memory"]
 
 
+def test_the_ci_runner_is_its_own_feature_on_only_where_forgejo_is():
+    """GEN-47. The first work site's update, 10 Nov 2026: the CI runner came with builder, and a site with builder and no
+    Forgejo could not compose up, since the runner needs a registration from Forgejo. Its own feature forgejo-ci now
+    starts it; home has Forgejo and keeps it, a deployment with builder and no Forgejo starts every builder service but it."""
+    svc = services()
+    assert svc["ci-runner"]["profiles"] == ["forgejo-ci"] and "forgejo-ci" in DEPLOY.KNOWN
+    started = lambda values: {n for n, s in svc.items() if (s.get("profiles") or ["core"])[0] in DEPLOY.features(values)}
+    home, work = deployment("home"), deployment("example-work")
+    assert "ci-runner" in started(home) and {"builder", "forgejo-ci"} <= DEPLOY.features(home) and home["FORGEJO_URL"]
+    assert "builder" in DEPLOY.features(work) and not work["FORGEJO_URL"]
+    assert "ci-runner" not in started(work) and {"builder", "pkgproxy", "pkgproxy-builder"} <= started(work)
+    assert DEPLOY.missing(work) == []                                       # builder without Forgejo needs no Forgejo value
+    assert DEPLOY.missing({**work, "FEATURES": "builder,forgejo-ci"}) == ["FORGEJO_URL is empty, and forgejo-ci needs it"]
+
+
 def test_a_service_depends_only_on_what_its_deployments_start():
     svc = services()
     feature = {n: (s.get("profiles") or ["core"])[0] for n, s in svc.items()}

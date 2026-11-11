@@ -173,6 +173,10 @@ def task_page(tid, occ=None):
     except ValueError:
         since = None
     d["occ"] = occ
+    if d.get("door") == "flow":                        # TAX-09: its agent steps ran as the step service's tasks of each run
+        held = [x for r in runs if len(runs) == 1 or r["occ"] == occ for x in r.get("tasks") or []]
+        d["activity"] = RT.task_activity(tid, door="flow", ref=held)
+        return d
     d["activity"] = RT.task_activity(tid, door=d.get("door"), ref=d.get("ref"), since=since, occ=occ if len(runs) > 1 else None)
     d["prov"] = task_prov(tid, occ)
     result = (run or {}).get("result") if str((run or {}).get("result") or "").startswith("tasks/") else d.get("result")

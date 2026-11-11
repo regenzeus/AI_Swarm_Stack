@@ -75,10 +75,10 @@ items:
   - id: PLT-08
     title: Deploy rebuilds what changed
     statement: When a change is deployed, ops/deploy.py shall rebuild the changed images, recreate their services,
-      reconfigure the Hermes profiles, install changed units (enabling a timer it brings for the first time, and stopping,
-      disabling and deleting a unit the repository dropped), restart the runner when one of its modules changed
-      and the swarm service when the agent cards changed,
-      and then run the health checks and the smoke test.
+      reconfigure the Hermes profiles, install changed units, restart the runner when one of its modules changed
+      and the swarm service when the agent cards changed, and then run the health checks and the smoke test; when they
+      pass, it shall enable a timer it brings for the first time and stop, disable and delete a unit the repository
+      dropped (PLT-43).
     type: functional
     priority: must
     status: implemented
@@ -309,7 +309,8 @@ items:
     title: The stack keeps a memory budget
     statement: WSL shall have a swap of 16 GB on an SSD with room for it, so the memory of idle services moves to disk
       instead of crowding the work (the stack waits on model calls, not on memory); the services that grow while idle (qmd,
-      Phoenix, Open WebUI) shall be restarted each night while the stack is idle, with their memory before and after
+      Phoenix, Open WebUI) shall be restarted each night while the stack is idle (no mission, task, build, trial,
+      landing, backup, restore drill, vault ingest, crew job or code graph job running), with their memory before and after
       logged; each container shall have a memory budget the doctor checks; and services only trials and builds use shall
       start on demand and stop when idle.
     type: constraint
@@ -596,3 +597,69 @@ items:
       'tests/test_runner.py::test_the_title_repair_commits_what_it_changed']}
     trace: [ops/missions.py, ops/tasks.py, ops/conductor.py, ops/staffing.py, ops/builds.py, ops/claude_tasks.py, ops/events.py,
       ops/history.py, ops/improve.py, ops/telemetry.py]
+  - id: PLT-41
+    title: A missing backup is heard once
+    statement: When the newest good backup is older than its schedule allows (the timer's daily start after it, or this
+      boot when the PC came up later, plus the timer's random delay, the stack gate's slot and wait and the run's timeout,
+      all read from the backup's units), the health board shall raise an alert on the Backup naming the newest backup and
+      the one that did not arrive; the owner shall hear it once for the episode, also when it lasts for days, and a good
+      backup shall end it.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-09]
+    sources: [docs/REVIEW-2026-11-10.md, docs/REVIEW-2026-11-07.md]
+    rationale: 10 Nov 2026 WSL died at 03:36 during the night's backup; the backup was lost and nothing said so. The 7 Nov
+      review asked for this alarm (OPS-R4, second half); the job's own overdue check waits 2.5 days and counts runs, not
+      good backups.
+    verify: {method: test, by: [tests/test_recoverable.py::test_the_backups_schedule_is_read_from_its_units,
+      tests/test_recoverable.py::test_a_missing_nights_backup_is_an_alert_on_the_backup_heard_once_per_episode,
+      tests/test_recoverable.py::test_an_unreadable_backup_schedule_says_so_and_no_backup_logged_yet_is_quiet]}
+    trace: [ops/crew.py, images/mission-control/obs_core.py, ops/systemd/backup.timer, ops/systemd/backup.service]
+  - id: PLT-42
+    title: Image builds go through the deployment's build proxy
+    statement: "When a deployment's deployment.env names a build proxy (BUILD_HTTP_PROXY, and BUILD_NO_PROXY for the hosts
+      that go direct), ops/deploy.py shall hand it to each image build as Docker's proxy build arguments http_proxy,
+      https_proxy, HTTP_PROXY, HTTPS_PROXY (and no_proxy, NO_PROXY), named by name with their values in the build's
+      environment so the printed command shows no proxy address; without BUILD_HTTP_PROXY a build shall get no proxy
+      argument."
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-05, SN-13]
+    sources: [docs/PLATFORM.md, 'CR 2026-11-10, G4 item 2: a plain docker build had a proxy only through ~/.docker/config.json']
+    rationale: 'The first site update of 10 Nov 2026: behind a proxy, a plain docker build reaches the internet only through
+      the proxies of ~/.docker/config.json, which Docker also puts into every container it starts. Docker keeps its own
+      proxy build arguments out of the image: on 11 Nov 2026 an image with an apt-get step, built through a stand-in proxy
+      with no proxies in ~/.docker/config.json, made all 7 of its requests (package lists and the package) through the proxy, and docker history,
+      docker image inspect and a container of the image showed neither the proxy''s address nor its account.'
+    acceptance: 'Test: no proxy gives the arguments of before; a proxy gives the six arguments by name, the values only in
+      the environment build() runs docker with, and none in the command; the base pins stay.'
+    verify: {method: test, by: ['tests/test_deploy.py::test_a_build_behind_the_deployments_proxy_names_dockers_proxy_arguments_and_keeps_their_values_off_the_command']}
+    trace: [ops/deploy.py, docs/PLATFORM.md, deployments/example-work/deployment.env]
+  - id: PLT-43
+    title: A failed deploy and a rollback leave the timers enabled as they found them
+    statement: "ops/deploy.py shall read the enabled user timers when it starts; a failed deploy shall enable no timer it
+      brings and take off no unit the repository dropped, and when it fails while it enables its new timers, it shall disable
+      the ones it enabled; a rollback (DEPLOY_ROLLBACK=1 from ops/update.py, or a new commit that is an ancestor of the old one) shall
+      enable no timer of its diff and take off the units the newer commit added; both shall end with the timers of the
+      diff enabled as the deploy found them, and timers outside the diff untouched."
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-05, SN-13]
+    sources: [docs/PLATFORM.md, 'CR 2026-11-10, G4 item 3: a rollback switched on timers the site never had']
+    rationale: 'The first site update of 10 Nov 2026: the rollback after a failed update (ops/update.py runs deploy.py
+      <new> <old>) enabled every timer of its diff with no installed copy, and so switched on graphify-sync, which the
+      site never had.'
+    acceptance: 'Test, with a fake systemctl: a deploy whose smoke test fails, and one whose second new timer cannot be
+      enabled, end with the same enabled timers as before and the dropped unit still installed; a good deploy enables its
+      new timer and takes off the dropped one only after the smoke test; a rollback, good or failed, enables none of its
+      diff, takes off the unit the newer commit added and ends with the timers it found; update.py''s rollback says
+      DEPLOY_ROLLBACK=1; putting back touches only the diff''s timers.'
+    verify: {method: test, by: ['tests/test_deploy_main.py::test_a_failed_deploy_leaves_the_same_timers_enabled_as_before_it',
+      'tests/test_deploy_main.py::test_a_good_deploy_enables_its_new_timers_and_takes_off_the_dropped_ones_after_the_checks',
+      'tests/test_deploy_main.py::test_a_rollback_enables_no_timer_of_its_diff_and_leaves_the_enabled_ones_as_it_found_them',
+      'tests/test_deploy_main.py::test_the_rollback_after_a_failed_update_tells_the_deploy_it_is_one',
+      'tests/test_deploy_main.py::test_putting_back_touches_only_the_diffs_timers_and_says_what_it_cannot']}
+    trace: [ops/deploy.py, ops/update.py]

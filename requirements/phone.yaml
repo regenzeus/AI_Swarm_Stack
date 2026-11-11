@@ -78,7 +78,7 @@ items:
     status: implemented
     parents: [SN-05]
     sources: [images/mission-control/guide/17-ai-phone.md]
-    verify: {method: test, by: [tests/test_server.py::test_the_ai_phone_is_known_by_the_address_the_proxy_wrote, tests/test_server.py::test_the_ai_phone_cannot_approve_its_own_actions, tests/test_phone_agents.py::test_approvals_are_refused_from_the_ai_phone, tests/test_server.py::test_the_ai_phone_can_ask_the_app_for_nothing_but_stop]}
+    verify: {method: test, by: [tests/test_server.py::test_the_ai_phone_is_known_by_the_address_the_proxy_wrote, tests/test_server.py::test_the_ai_phone_cannot_approve_its_own_actions, tests/test_phone_agents.py::test_approvals_are_refused_from_the_ai_phone, tests/test_server.py::test_the_ai_phone_can_ask_the_app_for_nothing_but_stop, tests/test_server.py::test_the_ai_phone_writes_nothing_through_share_uploads_or_push, tests/test_n8n_inapp.py::test_a_tools_own_policy_stays_a_workflows_page_is_sandboxed_and_the_ai_phone_is_kept_out]}
   - id: PHN-08
     title: The phone service reaches one phone only
     statement: The AI phone service's firewall shall allow traffic only to the AI phone's tailnet address, no internet

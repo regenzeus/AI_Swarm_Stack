@@ -112,3 +112,58 @@ items:
     sources: [docs/TAX-DESK.md]
     verify: {method: test, by: [tests/test_tax.py::test_the_tax_desk_workflow_finds_reads_and_files_in_that_order, tests/test_tax.py::test_n8n_gen_makes_a_chain_of_steps, tests/test_tax.py::test_a_run_with_no_open_year_finds_nothing]}
     trace: [ops/n8n_gen.py, deployments/home/workflows.yaml, ops/tax.py]
+  - id: TAX-09
+    title: Your taxes is one task
+    statement: The tax desk's workflow shall be one task, "Your taxes" (area Taxes), whose When is the
+      workflow's schedule and whose runs are the workflow's runs, one each, with the workflow's steps in order as each
+      run's steps (their state, times and answer, the reader's own log one tap away) and the tax reader as its agent;
+      Run now on it shall start the workflow through its Run now webhook, and say so when the workflow is switched off.
+      The crew duties of its steps and the task made for each run of its reader shall not be listed as tasks of their
+      own. A step's title shall say what it does.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-05, SN-19]
+    sources: ["owner 2026-11-11: Why do i not see agent and task for tax stuff? Did you create it in new system with n8n? Where can i see result?", docs/TAX-DESK.md]
+    verify: {method: test, by: [tests/test_tax_task.py::test_your_taxes_is_one_task_with_the_workflow_s_runs_as_its_runs, tests/test_tax_task.py::test_the_desk_s_crew_duties_and_reader_tasks_leave_the_lists, tests/test_tax_task.py::test_run_now_on_your_taxes_starts_its_workflow, tests/test_tax.py::test_the_tax_desk_workflow_finds_reads_and_files_in_that_order]}
+    trace: [ops/flow_tasks.py, ops/tasks.py, ops/crew.py, n8n/workflows/tax-desk.json, images/mission-control/runrecord.py, images/mission-control/server.a2a.py, images/mission-control/web/static/task.js, images/mission-control/web/static/app-tasks.js, images/mission-control/web/static/app-workflows.js]
+  - id: TAX-10
+    title: The result of each year is in the app
+    statement: The task's page shall show per year, below the draft's disclaimer, the papers found per form (counts), the
+      sums per form line, what the earlier returns lead to expect that is missing, the open questions with the way to
+      Needs you, the earlier return as the reader extracted it, and the year's files - the workbook as a page, Belege as
+      a list with each paper's file name, the earlier return as a page - each with its path on the NAS share, built
+      without a model and without the NAS from the desk's outputs on the PC after every filing run and every answer.
+    type: functional
+    priority: must
+    status: implemented
+    parents: [SN-05]
+    sources: ["owner 2026-11-11: Where can i see result?", docs/TAX-DESK.md]
+    verify: {method: test, by: [tests/test_tax_task.py::test_the_result_view_shows_each_year_from_the_desk_s_outputs, tests/test_tax_task.py::test_the_task_page_shows_the_result_and_its_files_as_pages]}
+    trace: [ops/tax_view.py, ops/tax.py, images/mission-control/server.tax.py, images/mission-control/web/static/tax.js, images/mission-control/web/index.html, images/mission-control/web/sw.js, images/mission-control/web/static/app.css, images/mission-control/guide/23-taxes.md]
+  - id: TAX-11
+    title: The figures reach only the owner's signed-in session
+    statement: The view of the tax figures shall be readable on the PC by the runner's user and the app's user alone (a
+      folder of mode 700 and a file of mode 600, each with an access ACL entry for the app's user only), and none shall
+      be written where that cannot be set. The app shall serve it only to the owner's signed-in session, never to the AI
+      phone or the stack's own checks and previews, and never let a browser cache it; no figure shall go into the
+      board's state, a task's page data, a log, a Home line, a push text or an n8n answer.
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05, SN-09]
+    sources: ["lead 2026-11-11: shown only to the owner's signed-in session (never the AI phone: PHN-07; never in logs, Home lines, push texts or n8n's execution data)", docs/TAX-DESK.md]
+    verify: {method: test, by: [tests/test_tax_task.py::test_the_view_is_shared_with_the_app_s_user_alone, tests/test_tax_task.py::test_the_figures_reach_only_the_owner_s_signed_in_session, tests/test_tax_task.py::test_no_figure_reaches_the_board_or_its_pages]}
+    trace: [ops/tax_view.py, images/mission-control/server.tax.py, images/mission-control/server.py, ops/flow_tasks.py]
+  - id: TAX-12
+    title: The tax reader shows where it belongs
+    statement: The tax card shall have the name Tax reader in the app, say on its card that it reads the papers of the
+      Tax desk with ChatGPT only and no tools, and its page shall link to the workflow it is a step of and to the task
+      it does steps for.
+    type: functional
+    priority: should
+    status: implemented
+    parents: [SN-05]
+    sources: [docs/TAX-DESK.md]
+    verify: {method: test, by: [tests/test_tax_task.py::test_the_tax_reader_has_its_name_and_shows_where_it_belongs]}
+    trace: [config/agents.yaml, images/mission-control/web/static/app-runs.js, images/mission-control/web/static/swarm.js, ops/tasks.py]

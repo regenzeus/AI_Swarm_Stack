@@ -54,14 +54,17 @@ OUT = Path("/srv/ai/missions/crew")
 BUILDER, HERMES = "aistack-builder-1", "aistack-hermes-1"
 CI_IMAGE = "aistack/ci-runner:13.2.0"
 
+# TSK-52: each job's area says what it is for (ops/areas.py): Mail, Taxes, Phone, Code, Memory, or Upkeep for the
+# stack's own frequent small jobs, which fold into one row with their health on the Tasks list.
+# A job whose result lives on a page of its own names it ("result": the page and its name); the task links to it.
 CREW = [
-    {"id": "memory-review", "name": "Memory gatekeeper", "unit": "memory-review", "area": "memory",
+    {"id": "memory-review", "name": "Memory gatekeeper", "unit": "memory-review", "area": "upkeep",
      "what": "Checks every fact Hermes wants to remember: safe ones are kept, sensitive ones wait for your OK."},
     {"id": "memory", "name": "Memory Keeper", "unit": "crew-memory", "area": "memory", "agent": True,
      "what": "Every night, the Memory Keeper looks after every memory: in the long-term memory it retires duplicates, test noise and facts about agents' runs, puts facts into English and dates passing states (only while its trial passes; each change has an Undo), and asks you when two of your facts disagree; a contradiction on a wiki becomes a dispute that a research task settles with sources; it re-checks stale pages agents still read, folds old journal entries and cleans the search index. On Wednesdays it also tidies every wiki (the Librarian: duplicates merged, contradictions marked, hub pages) and checks the subjects wikis share. Nothing is deleted."},
-    {"id": "skills-sync", "name": "Skill keeper", "unit": "skills-sync", "area": "skills",
+    {"id": "skills-sync", "name": "Skill keeper", "unit": "skills-sync", "area": "upkeep",
      "what": "Mirrors Hermes' skills to Forgejo, tags what each one may do, and parks risky learned skills for your OK."},
-    {"id": "curator", "name": "Skill curator", "unit": "curate", "area": "skills",
+    {"id": "curator", "name": "Skill curator", "unit": "curate", "area": "memory",
      "what": "Weekly: merges and tidies skills, kept only if the benchmark stays as good (otherwise rolled back)."},
     {"id": "self-review", "name": "Self-review", "thread": "improve", "area": "code",
      "what": "Weekly: failures, errors, open work and new versions become small ideas in the swarm's Ledger (Agents → Ideas)."},
@@ -71,51 +74,51 @@ CREW = [
      "what": "Weekly: runs the tests three times for flaky ones, finds slow tests and untested functions. Proposals, no model."},
     {"id": "editor", "name": "Editor", "unit": "crew-editor", "area": "code", "agent": True,
      "what": "Daily: reads every open idea against the requirements, the decisions and your past reasons, and sorts each: into a would-be change request, held, covered by planned work, or dropped, with its reason. Changes nothing yet (DEC-47)."},
-    {"id": "doctor", "name": "Health doctor", "unit": "crew-doctor", "area": "ops", "agent": True,
+    {"id": "doctor", "name": "Health doctor", "unit": "crew-doctor", "area": "upkeep", "agent": True,
      "what": "Every 6 hours and after a new health alert: reviews each open issue with its logs; Claude Code tells expected, noise, external and real faults apart and proposes fixes. Changes nothing."},
-    {"id": "phone-cleanup", "name": "Phone cleanup", "unit": "crew-phone-cleanup", "area": "phone", "agent": True,
+    {"id": "phone-cleanup", "result": ("#/phone", "The AI phone"), "name": "Phone cleanup", "unit": "crew-phone-cleanup", "area": "phone", "agent": True,
      "what": "Weekly: turns the AI phone's storage into concrete steps (old files by year, unused apps, caches). Each one runs on the phone only after your Approve; it reports the space freed."},
     {"id": "phone-check", "name": "Phone check", "unit": "crew-phone-check", "area": "phone", "agent": True,
      "what": "Weekly: battery, storage, security patch, connection and the screen-awake loop of the AI phone. Raises an alert only for a real fault."},
-    {"id": "inbox", "name": "Inbox digest", "unit": "crew-inbox", "area": "memory", "agent": True,
+    {"id": "inbox", "name": "Inbox digest", "unit": "crew-inbox", "area": "mail", "agent": True,
      "what": "Daily, while you grant Gmail read: files the newsletters and updates worth keeping into your vault (the curator makes wiki pages). Never archives or deletes mail."},
-    {"id": "postmaster", "name": "Postmaster", "unit": "crew-postmaster", "area": "memory", "agent": True,
+    {"id": "postmaster", "result": ("#/mail", "Your mail"), "name": "Postmaster", "unit": "crew-postmaster", "area": "mail", "agent": True,
      "what": "Hourly: files the stack's own mail under the AI Stack label, and watches the copy of your Gmail on the NAS. Reads no message text, removes nothing."},
-    {"id": "mail-sort", "name": "Mail sorter", "unit": "crew-mail-sort", "area": "memory", "agent": True,
+    {"id": "mail-sort", "result": ("#/mail", "Your mail"), "name": "Mail sorter", "unit": "crew-mail-sort", "area": "mail", "agent": True,
      "what": "Weekly, and at once after your tap on Your mail: proposes the senders whose mail you could delete, from the headers alone, and sorts out the mail of the senders you approved under one label, out of the inbox. Starred, important, labelled, with attachments, in a thread you wrote in, younger than 30 days, bank and security mail stays. Nothing is deleted; every batch has an Undo."},
-    {"id": "tax-find", "name": "Tax desk: find papers", "unit": "crew-tax-find", "area": "memory", "agent": True,
+    {"id": "tax-find", "name": "Tax desk: find papers", "unit": "crew-tax-find", "area": "taxes", "agent": True,
      "what": "Monthly while a tax year is open, and on Run now: finds the tax papers in the copy of your mail by their headers and takes their text from the NAS for the tax desk's reader. No model; changes no mail."},
-    {"id": "tax-file", "name": "Tax desk: file and prepare", "unit": "crew-tax-file", "area": "memory", "agent": True,
+    {"id": "tax-file", "name": "Tax desk: file and prepare", "unit": "crew-tax-file", "area": "taxes", "agent": True,
      "what": "After the reader: copies each tax paper into Steuern on the NAS by year and form, keeps Belege and a draft workbook per year, and asks you what only you know. No model; never submits anything."},
-    {"id": "coach", "name": "Coach", "unit": "crew-coach", "area": "ops", "agent": True,
+    {"id": "coach", "name": "Coach", "unit": "crew-coach", "area": "upkeep", "agent": True,
      "what": "Monthly: reads every agent's scorecard and turns a real problem (many declined ideas, duplicates, refused writes) into an agent change with its evidence and a target score. Each change is replayed on the agent's past runs first; you tap Build it only after it passed."},
-    {"id": "journeys", "name": "Journey checks", "unit": "crew-journeys", "area": "ops", "agent": True,
+    {"id": "journeys", "name": "Journey checks", "unit": "crew-journeys", "area": "upkeep", "agent": True,
      "what": "Nightly, without a model: follows your journeys end to end. A task given in a sentence to its result (on replayed answers), a test item decided through the queue, every screen of the app at phone width, the newest briefing's e-mail on a phone, every make target dry-run. A failure is an alert here."},
-    {"id": "checker", "name": "Checker", "unit": "crew-checker", "area": "ops", "agent": True,
+    {"id": "checker", "name": "Checker", "unit": "crew-checker", "area": "upkeep", "agent": True,
      "what": "Every hour, without a model: checks whether each shipped idea worked (its health issue stays away, CI is green, a log line is gone) and marks it proved, or reopens it with the evidence. Starts ideas your autonomy rules allow, pauses an agent whose runs keep failing."},
-    {"id": "swarm-sync", "name": "Swarm sync", "unit": "swarm-sync", "area": "ops",
+    {"id": "swarm-sync", "name": "Swarm sync", "unit": "swarm-sync", "area": "upkeep",
      "what": "Every minute: puts the swarm's changes (ideas proposed, refined, decided, shipped) on your timeline and refreshes the ideas list in Code."},
-    {"id": "graphify-sync", "name": "Code graph", "unit": "graphify-sync", "area": "code",
+    {"id": "graphify-sync", "name": "Code graph", "unit": "graphify-sync", "area": "upkeep",
      "what": "Rebuilds the code graph of your repositories when they change."},
-    {"id": "repofacts-sync", "name": "Repository facts", "unit": "repofacts-sync", "area": "code",
+    {"id": "repofacts-sync", "name": "Repository facts", "unit": "repofacts-sync", "area": "upkeep",
      "what": "Rebuilds the facts of your repositories when they change: where they break, what changes together, who knows them, how healthy they are. Without a model, on a sealed copy."},
-    {"id": "upgrade-check", "name": "Upgrade check", "unit": "upgrade-check", "area": "ops",
+    {"id": "upgrade-check", "name": "Upgrade check", "unit": "upgrade-check", "area": "upkeep",
      "what": "Monthly: newer releases of every pinned component, for the self-review."},
-    {"id": "backup", "name": "Backup", "unit": "backup", "area": "ops",
+    {"id": "backup", "name": "Backup", "unit": "backup", "area": "upkeep",
      "what": "Nightly: encrypted backup of the stack's data to the NAS; the newest also goes to OneDrive."},
-    {"id": "restore-drill", "name": "Restore drill", "unit": "restore-drill", "area": "ops",
+    {"id": "restore-drill", "name": "Restore drill", "unit": "restore-drill", "area": "upkeep",
      "what": "Weekly: restores the latest backup into a scratch area and checks it is complete."},
-    {"id": "digest", "name": "Daily digest", "unit": "digest", "area": "ops",
+    {"id": "digest", "name": "Daily digest", "unit": "digest", "area": "upkeep",
      "what": "Every morning: what the stack did, what failed, what waits for you (Telegram)."},
-    {"id": "vault-ingest", "name": "Vault ingest", "unit": "vault-ingest", "area": "memory",
+    {"id": "vault-ingest", "name": "Vault ingest", "unit": "vault-ingest", "area": "upkeep",
      "what": "Every minute: converts the new files in your vault's inbox and adds them to the search index."},
-    {"id": "rotation", "name": "Trial rotation", "unit": "rotation", "area": "code",
+    {"id": "rotation", "name": "Trial rotation", "unit": "rotation", "area": "upkeep",
      "what": "Each night at 01:00 except Sunday: starts that night's trial of the weekly rotation once the stack is idle, or skips the night (TRL-14)."},
-    {"id": "recycle", "name": "Nightly restart", "unit": "recycle", "area": "ops",
+    {"id": "recycle", "name": "Nightly restart", "unit": "recycle", "area": "upkeep",
      "what": "Each night at 03:50: restarts the services that grow while idle (qmd, Phoenix, Open WebUI) once the stack is idle, so their memory does not pile up in swap (PLT-27)."},
-    {"id": "tracker-poll", "name": "Tracker poll", "unit": "tracker-poll", "area": "ops",
+    {"id": "tracker-poll", "name": "Tracker poll", "unit": "tracker-poll", "area": "upkeep",
      "what": "Asks the deployment's trackers for changed items every few minutes (5 unless the deployment says otherwise): a new item starts its workflow, a reply wakes the run that waits for it, each change counted once (WFL-19)."},
-    {"id": "token-probe", "name": "Token probe", "unit": "token-probe", "area": "ops", "oneoff": True,
+    {"id": "token-probe", "name": "Token probe", "unit": "token-probe", "area": "upkeep", "oneoff": True,
      "what": "One-off: measures whether the ChatGPT prompt cache hits after the token fixes."},
 ]
 BY_ID = {a["id"]: a for a in CREW}
@@ -463,7 +466,7 @@ def mission_health(c, m):
 # reviews count for the agent that started them. Alerts (push + Telegram, once per issue) only for what needs a
 # human; everything else is a note on the card and in the run log. A good next run clears an issue; Acknowledge
 # hides it until it happens again (health-ack.json, logged in the activity feed).
-ALERTS = {"failing", "overdue", "stalled", "limit-long", "drift", "over-limit", "app-error", "drill-old", "memory-low",
+ALERTS = {"failing", "overdue", "stalled", "limit-long", "drift", "over-limit", "app-error", "drill-old", "backup-old", "memory-low",
           "network-cut", "journey", "phone-down", "swarm-fault", "report-unknown", "check-unknown", "network-unknown"}
 CURATOR_ITEM = {"wiki-curator": "curator"}           # a memory store's curator -> its crew item (the vault lint runs in curate)
 ENGINES = {"main": "Hermes (chat)", "mission": "Hermes (tasks)", "scout": "Research (scout)", "curator": "Wiki curator",
@@ -716,6 +719,42 @@ def memory_alarms(items, inv=None, now=None):
 
 BACKUPS = Path("/srv/ai/state/backups.jsonl")
 DRILL_DAYS = 8                                        # a weekly drill, a day's grace
+BACKUP_UNITS = Path(__file__).resolve().parent / "systemd"
+
+
+def backup_due(units=BACKUP_UNITS):
+    """PLT-41: when the nightly backup starts and how long a run of it may take to end, from its units in the repository:
+    the timer's daily time, its random delay, the stack gate's slot after a boot and its wait, and the run's own timeout.
+    -> (hour, minute, seconds) or None when the timer is not a daily one this reads."""
+    timer, service = (units / "backup.timer").read_text(), (units / "backup.service").read_text()
+    cal = re.search(r"^OnCalendar=\*-\*-\* (\d\d):(\d\d)(?::\d\d)?\s*$", timer, re.M)
+    if not cal:
+        return None
+    def val(pat, text):
+        m = re.search(pat, text, re.M)
+        return m[1] if m else ""
+    window = ((seconds_of(val(r"^RandomizedDelaySec=(.+)$", timer)) or 0) + int(val(r"--slot (\d+)", service) or 0) * 60
+              + int(val(r"--wait (\d+)", service) or 0) + (seconds_of(val(r"^TimeoutStartSec=(.+)$", service)) or 0))
+    return int(cal[1]), int(cal[2]), window
+
+
+def backup_overdue(newest, now, due, up_since=0):
+    """PLT-41 (review 10 Nov 2026, O10; 7 Nov OPS-R4): the newest good backup is older than its schedule allows -> the
+    issue, else None. The first daily start after the newest backup (or this boot, when the PC came up after it: the timer
+    catches up then) plus the time a run may take is when the episode begins. That moment is the issue's `at`, the same
+    for the whole episode, so the owner hears it once and an Acknowledge holds until the next one; a backup ends it."""
+    h, m, window = due
+    slot = dt.datetime.fromtimestamp(newest["ts"]).replace(hour=h, minute=m, second=0, microsecond=0)
+    if slot.timestamp() <= newest["ts"]:
+        slot += dt.timedelta(days=1)                  # local wall clock, so a change to summer time keeps 03:30
+    at = max(slot.timestamp(), up_since or 0) + window
+    if now < at:
+        return None
+    return {"kind": "backup-old", "at": at, "once": True,
+            "text": f"no backup since {time.strftime('%d %b %H:%M', time.localtime(newest['ts']))} ({newest.get('size', '?')}): the one due "
+                    f"{slot.strftime('%d %b %H:%M')} did not arrive. Its log: journalctl --user -u backup; make backup makes one now"}
+
+
 _images = {"t": 0, "text": ""}
 
 
@@ -804,8 +843,9 @@ def phone_down(now, d=None):
     return {"kind": "phone-down", "at": now, "text": f"The AI phone: {why}; its page says what it needs"}
 
 
-def recovery_alarms(items, now=None, backups=None, meminfo=None, drift=None, nets=None, phone=None):
-    """FND-66, FND-67, FND-74: an alert on the Restore drill when no drill has passed for 8 days; a note on This PC when
+def recovery_alarms(items, now=None, backups=None, meminfo=None, drift=None, nets=None, phone=None, due=None, up_since=None):
+    """FND-66, FND-67, FND-74: an alert on the Restore drill when no drill has passed for 8 days; an alert on the Backup when
+    the newest backup is older than its schedule allows (PLT-41); a note on This PC when
     swap is over 90 % full (an alert when RAM is short too, CST-14) and when the running images drifted from their tags
     or the lock file; an alert on This PC when a container is cut off from the network it shares (PLT-23). What could not
     be read says so, in the same places (QA-26).
@@ -824,6 +864,19 @@ def recovery_alarms(items, now=None, backups=None, meminfo=None, drift=None, net
         it["issues"].append({"kind": "drill-old", "at": now, "text": (f"no restore drill has passed for {days} days" if days else "no restore drill has passed yet")
                              + (f"; the newest backup ({newest.get('size', '?')}, {time.strftime('%d %b', time.localtime(newest['ts']))}) is unproven" if newest else "")
                              + ": make restore-drill"})
+    bk = next((x for x in items if x.get("kind") == "crew" and x.get("id") == "backup"), None)
+    if bk is not None and newest:
+        try:
+            due = due or backup_due()
+        except (OSError, ValueError) as e:
+            due = f"{type(e).__name__}"
+        if not isinstance(due, tuple):
+            bk["issues"].append({"kind": "check-unknown", "at": 0, "text": "The backup's schedule could not be read from its timer"
+                                 + (f" ({due})" if due else "") + ", so whether the newest backup is too old is not known"})
+        else:
+            late = backup_overdue(newest, now, due, SG.booted() if up_since is None else up_since)
+            if late:
+                bk["issues"].append(late)
     pc = []
     try:
         mi = {ln.split(":")[0]: int(ln.split()[1]) for ln in (meminfo if meminfo is not None else open("/proc/meminfo").read()).splitlines()

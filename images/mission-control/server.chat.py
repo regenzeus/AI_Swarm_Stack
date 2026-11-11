@@ -349,6 +349,8 @@ async def body_within(request, mb):
 
 async def api_chat_upload(request):
     """An attachment for the next chat message: images go to Hermes as images, documents as extracted text."""
+    if (no := not_from_ai_phone(request)):
+        return no
     data, err = await body_within(request, ATTACH_MB)
     if err:
         return JSONResponse({"error": err}, status_code=400)

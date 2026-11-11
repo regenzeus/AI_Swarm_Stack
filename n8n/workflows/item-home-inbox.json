@@ -1,5 +1,6 @@
 {
   "active": true,
+  "area": "inbox",
   "connections": {
     "An issue arrives": {
       "main": [
@@ -101,10 +102,17 @@
   "name": "Item: home/inbox",
   "nodes": [
     {
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "aistackRunHook01",
+          "name": "AI Stack runner"
+        }
+      },
       "id": "f90ea895-d95e-5d6f-f0ec-8be88e443cc4",
       "name": "An issue arrives",
       "notes": "The tracker poller starts a run here for each new issue in the inbox repository, with {tracker, key, run, ref, comments}. It answers with the run's execution, so the stack knows the run from its start.",
       "parameters": {
+        "authentication": "headerAuth",
         "httpMethod": "POST",
         "options": {
           "responseData": "={{ JSON.stringify({execution: $execution.id}) }}"

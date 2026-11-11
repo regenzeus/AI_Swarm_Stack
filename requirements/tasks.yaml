@@ -700,13 +700,16 @@ items:
     show the owner's tasks, and the stack's shall be one filter away, never hidden.
   type: functional
   priority: must
-  status: implemented
+  status: deprecated
+  superseded_by: TSK-51
+  reason: The owner, 11 Nov 2026, found the split needlessly bisects the overview. Every task is in one list (TSK-51),
+    labelled by its area (TSK-52); who asked stays as information on a task (owner_of), never a filter.
   parents: [SN-02, SN-19]
   sources: [DEC-46, 'owner 2026-11-08: What is the difference between task and mission? I feel like tasks is better term and we should streamline and unify. ... How long it runs should not define the term. ... I feel we should keep 6 tabs and integrate tasks in agents. But tasks are not an afterthought. ... I want to see how tasks and agents connect ... Can Agents run without tasks? ... I feel like these should just be a special kind of tasks.']
   acceptance: 'Test: a task given in the app and one a rule started are the owner''s; a trial''s and the Health doctor''s
     question are the stack''s; tasks from before owners get theirs.'
-  verify: {method: test, by: ['tests/test_tasks_tab.py::test_a_task_is_yours_or_the_stack_s_by_who_gave_it']}
-  trace: [ops/tasks.py, images/mission-control/web/static/app-tasks.js]
+  verify: {method: test, by: ['tests/test_tasks_tab.py::test_a_task_is_yours_or_the_stack_s_by_who_gave_it', 'tests/test_tax_task.py::test_a_crew_duty_and_a_workflow_s_run_are_their_owner_s']}
+  trace: [ops/tasks.py]
 - id: TSK-41
   group: Everything is a task
   phase: 9
@@ -868,3 +871,86 @@ items:
   verify: {method: test, by: ['tests/test_staffing.py::test_a_point_about_when_a_task_runs_is_checked_against_its_schedule_not_its_report',
     'tests/test_conductor.py::test_every_research_and_writing_step_of_a_scheduled_run_gets_one_exact_window']}
   trace: [ops/staffing.py, ops/desk_steps.py, ops/mission_extras.py]
+- id: TSK-51
+  group: Everything is a task
+  phase: 9
+  title: Every task of the stack in one list
+  statement: The Tasks list shall show every task of the stack in one list, with no yours-or-the-stack's filter in the
+    app or its data, in the order of what matters now - needs you, failed, running now, recent results, scheduled, and
+    newest first within each - and each task shall say who asked for it (you, one of your rules, an outside agent, or
+    the stack itself) as information on it, never as a filter.
+  type: functional
+  priority: must
+  status: implemented
+  parents: [SN-02, SN-19]
+  sources: ['owner 2026-11-11: I didnt like this rule to begin with. Does it actually make sense to use that split? It just needlessly bisects and makes overview difficult. Can you design this properly and make these exceptions not be exceptions anymore? I want the app to show me whats going on in stack.', DEC-46]
+  acceptance: 'Test: the list draws Needs you, Failed, Running now, Recent results and Scheduled in that order, newest
+    first in each, with no owner filter; a task says who asked.'
+  verify: {method: test, by: ['tests/test_tax_task.py::test_every_task_is_in_one_list_in_the_order_of_what_matters_now']}
+  trace: [ops/tasks.py, images/mission-control/web/static/app-tasks.js, images/mission-control/web/static/task.js]
+- id: TSK-52
+  group: Everything is a task
+  phase: 9
+  title: Each task has an area
+  statement: Each task shall have an area named for what it is for (Taxes, Mail, Briefings, Shopping, Research, Errands,
+    Inbox, Phone, Code, Memory, Upkeep), declared by each crew job and each workflow file (the generator writes
+    it, and a check fails on one without it), and for a task given in a sentence taken from its kind; the area shall be
+    a visible label on the task and an optional filter (none picked shows all).
+  type: functional
+  priority: must
+  status: implemented
+  parents: [SN-02, SN-19]
+  sources: ['owner 2026-11-11: I didnt like this rule to begin with. Does it actually make sense to use that split? It just needlessly bisects and makes overview difficult. Can you design this properly and make these exceptions not be exceptions anymore? I want the app to show me whats going on in stack.']
+  acceptance: 'Test: every workflow file and crew job declares a known area, the generator writes it, and a task''s area
+    follows its door, workflow or kind.'
+  verify: {method: test, by: ['tests/test_tax_task.py::test_every_workflow_and_crew_job_declares_its_area', 'tests/test_tax_task.py::test_a_task_s_area_comes_from_what_it_is_for']}
+  trace: [ops/areas.py, ops/crew.py, ops/n8n_gen.py, ops/n8n_jobs.py, ops/tasks.py, ops/flow_tasks.py, n8n/workflows/tax-desk.json, images/mission-control/web/static/app-tasks.js]
+- id: TSK-53
+  group: Everything is a task
+  phase: 9
+  title: Upkeep is one row with its health
+  statement: The tasks of the Upkeep area shall fold into one row of the list that says how many jobs there are, whether
+    all are fine or which fail, how many run and when the last ran, and opens them as rows; a failing or waiting upkeep
+    job shall also show on its own, and the row shall never be hidden. No other area folds.
+  type: functional
+  priority: must
+  status: implemented
+  parents: [SN-02]
+  sources: ['owner 2026-11-11: I didnt like this rule to begin with. Does it actually make sense to use that split? It just needlessly bisects and makes overview difficult. Can you design this properly and make these exceptions not be exceptions anymore? I want the app to show me whats going on in stack.']
+  acceptance: 'Test: 14 fine upkeep jobs are one row "14 jobs, all fine"; a failing one shows under Failed and in the row.'
+  verify: {method: test, by: ['tests/test_tax_task.py::test_upkeep_is_one_row_with_its_health_and_a_failing_job_shows_alone']}
+  trace: [images/mission-control/web/static/app-tasks.js, images/mission-control/web/static/app.css]
+- id: TSK-54
+  group: Everything is a task
+  phase: 9
+  title: One workflow, one task
+  statement: A workflow shall be one task - a crew job's workflow its crew duty, a task's workflow that task, any other
+    workflow a task of its own - whose runs are its occurrences with its steps named for what they do, with Run now on
+    the task, its n8n run and its agents on its page, and its result one tap away (its own view, the page that holds it,
+    or its last result line). The task made for each run of a workflow's agent step shall not be listed on its own; its
+    history shows as the workflow task's runs, and nothing is deleted.
+  type: functional
+  priority: must
+  status: implemented
+  parents: [SN-02, SN-19]
+  sources: ['owner 2026-11-11: I didnt like this rule to begin with. Does it actually make sense to use that split? It just needlessly bisects and makes overview difficult. Can you design this properly and make these exceptions not be exceptions anymore? I want the app to show me whats going on in stack.', 'owner 2026-11-11: Why do i not see agent and task for tax stuff? Did you create it in new system with n8n? Where can i see result?']
+  acceptance: 'Test: the tax desk, the home inbox and the self-test are one task each with their runs; a run older than
+    the step records comes from its run task; the mail sorter''s duty links to Your mail.'
+  verify: {method: test, by: ['tests/test_tax_task.py::test_each_workflow_is_one_task_with_its_runs_and_result', 'tests/test_tax_task.py::test_older_runs_of_a_workflow_keep_their_history', 'tests/test_tax_task.py::test_your_taxes_is_one_task_with_the_workflow_s_runs_as_its_runs']}
+  trace: [ops/flow_tasks.py, ops/tasks.py, ops/crew.py, images/mission-control/web/static/task.js, images/mission-control/web/static/app-tasks.js, images/mission-control/runrecord.py, images/mission-control/server.a2a.py]
+- id: TSK-55
+  group: Everything is a task
+  phase: 9
+  title: Home shows what is going on in the stack
+  statement: Home shall show what is going on across every area of the stack - running now, waiting for you, failed and
+    done today - each row opening its task, with the Upkeep jobs as one row with their health, and its Results shall
+    hold every area's results, the Upkeep area's only when a job failed.
+  type: functional
+  priority: must
+  status: implemented
+  parents: [SN-02]
+  sources: ['owner 2026-11-11: I didnt like this rule to begin with. Does it actually make sense to use that split? It just needlessly bisects and makes overview difficult. Can you design this properly and make these exceptions not be exceptions anymore? I want the app to show me whats going on in stack.']
+  acceptance: 'Test: Home lists a running briefing, a task waiting for you, a failed upkeep job and one done today, each
+    linking to its task, and folds the fine upkeep jobs into one row.'
+  verify: {method: test, by: ['tests/test_tax_task.py::test_home_shows_what_is_going_on_across_the_stack']}
+  trace: [images/mission-control/web/static/app-tasks.js]

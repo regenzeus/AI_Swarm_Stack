@@ -264,7 +264,130 @@ items:
     acceptance: 'Test: a commit with a forbidden term in a staged line or its message is refused, a push of a commit that skipped the commit hooks is refused, the runner''s push guard refuses it too, a removed line and a term inside a longer word pass, and without a list everything passes.'
     parents: [SN-04, SN-05]
     sources: [docs/SECURITY.md]
-    rationale: 'The owner, 9 Nov 2026: "From now into the future never can something Example specific reach git." The stack is a platform; one deployment''s employer, products and projects stay out of every repository.'
+    rationale: 'The owner, 9 Nov 2026: "From now into the future never can something [the employer] specific reach git." The stack is a platform; one deployment''s employer, products and projects stay out of every repository.'
     verify: {method: test, by: [tests/test_termguard.py::test_a_commit_holding_a_forbidden_term_is_refused_and_a_clean_one_passes, tests/test_termguard.py::test_a_push_of_a_commit_that_skipped_the_hooks_is_refused, tests/test_termguard.py::test_the_runners_own_push_is_guarded_and_a_removed_line_is_no_leak, tests/test_termguard.py::test_without_a_list_everything_passes]}
     trace: [ops/termguard.py, ops/git-hooks/pre-commit, ops/git-hooks/commit-msg, ops/git-hooks/pre-push, ops/builds.py, ops/deploy.py]
 
+  - id: SEC-23
+    title: Nothing on the app's address runs another's script
+    statement: Mission Control shall let no other site frame its pages (frame-ancestors 'self'); it shall serve a chat or
+      shared file that a browser would run (a page, a script, an SVG) only as a download with a sandbox policy; and it
+      shall keep the framed tools' (n8n's, Phoenix's) own Content-Security-Policy, all but its framing rule, and sandbox
+      a page a workflow wrote itself (n8n's /webhook* and /form* answers).
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05, SN-06]
+    sources: [docs/SECURITY.md, docs/REVIEW-2026-11-10.md]
+    rationale: Review of 7 Nov (S8) and 10 Nov (APP2-R2, R5, R6; SEC2-R4) - an .html attachment ran with the app's whole API,
+      the app could be framed under a foreign page, and the frame proxy took n8n's and Phoenix's own policy away.
+    verify: {method: test, by: [tests/test_server.py::test_a_shared_page_or_script_only_downloads_and_no_other_site_frames_the_app, tests/test_n8n_inapp.py::test_a_tools_own_policy_stays_a_workflows_page_is_sandboxed_and_the_ai_phone_is_kept_out]}
+    trace: [images/mission-control/server.py, images/mission-control/server.share.py, images/mission-control/server.frames.py]
+  - id: SEC-24
+    title: The app believes the owner only through its published port
+    statement: Mission Control's port 8090 shall answer only a connection that comes through its published port (its peer
+      is the gateway of the container's default route, read from its own route table); with APP_TRUST on it shall refuse
+      every other request (403), whatever identity header or host it names; with APP_TRUST log or any other value it shall
+      refuse nothing and log each request it would refuse with what, the peer, the path and the published port's address.
+    type: constraint
+    priority: must
+    status: partial
+    gap: The home deployment runs in log mode until the lead switches APP_TRUST=on after a deploy in log mode
+      (docs/SECURITY.md, "Switching the trust boundary on"); until then n8n, Phoenix and LiteLLM can still act as the owner.
+    parents: [SN-05, SN-06]
+    sources: [docs/SECURITY.md, docs/REVIEW-2026-11-10.md]
+    rationale: 'Review of 10 Nov (O1, APP2-R1, SEC2-R1, N8N2-R2): the app trusted the identity header from any container
+      on its networks, n8n among them. Measured on 11 Nov 2026 (rootless Docker 29.9.2, docker-proxy): the WSL host,
+      Windows'' localhost, tailscale serve and a --network host container arrive from 172.27.0.1 (mcui''s gateway, the
+      default route); n8n from 172.30.128.3, Phoenix from 172.22.0.2, LiteLLM from 172.26.0.4. A wrong rule locks the
+      owner out, hence the log mode first.'
+    acceptance: 'Test: in on mode the gate path''s request is the owner''s, and the same request with the owner''s header
+      from n8n''s, the backend''s, LiteLLM''s or the app''s own address is refused, a write from n8n reaches no inbox, and
+      the local gate takes no container that names the app''s service; in log mode the request passes and its line names
+      the peer and the path, and the gate path is never logged; only "on" switches it on; the journeys browser takes the
+      published port.'
+    verify: {method: test, by: [tests/test_trust.py::test_the_gate_path_is_accepted_and_a_container_on_stepnet_or_backend_is_refused, tests/test_trust.py::test_log_mode_refuses_nothing_and_says_what_it_would_refuse, tests/test_trust.py::test_the_switch_is_one_deployment_setting_and_a_typo_only_logs]}
+    trace: [images/mission-control/server.trust.py, images/mission-control/server.py, compose/apps.yaml, ops/journeys.py, docs/SECURITY.md]
+  - id: SEC-25
+    title: The step service answers only n8n's step node with its token
+    statement: Mission Control's step service (port 8099) shall answer only a request that carries its bearer token
+      (AISTACK_STEP_TOKEN, sops), which n8n's AI Stack step node sends from n8n's environment on each step and each list it
+      reads; with APP_TRUST on a request without it shall be refused (401) and nothing shall reach the runner, and with no
+      token set no request shall pass; in log mode it shall be logged.
+    type: constraint
+    priority: must
+    status: partial
+    gap: In log mode until the lead's switch (SEC-24). The step service still runs in the app's process (docs/SECURITY.md
+      says why a container of its own would not take n8n off the app's networks).
+    parents: [SN-05]
+    sources: [docs/SECURITY.md, docs/REVIEW-2026-11-10.md]
+    rationale: Review of 10 Nov (O2, N8N2-R1) - the step service had no token, so any container on the app's networks
+      could post a step. Shown on a throwaway n8n 2.44.7 on 11 Nov 2026 (read-only root, no capabilities, N8N_BLOCK_ENV_ACCESS_IN_NODE
+      on) - the node sent "Authorization Bearer" with the token from n8n's environment, and the step resumed.
+    acceptance: 'Test: without the token, with a wrong one, or with none set, a step and the lists are refused and nothing
+      is dropped for the runner; with it the step is dropped; the node sends it on both calls and compose gives both sides
+      the same secret.'
+    verify: {method: test, by: [tests/test_trust.py::test_the_step_service_refuses_a_step_without_its_token, tests/test_trust.py::test_the_trust_keys_are_made_once_and_never_on_a_command_line]}
+    trace: [images/mission-control/server.trust.py, images/mission-control/server.flows.py, n8n/custom/AistackStep.node.js, compose/core.yaml, compose/apps.yaml, ops/trust_keys.py, Makefile]
+  - id: SEC-26
+    title: The app's tools answer only the model gateway with their tokens
+    statement: Each of Mission Control's MCP servers (missions 8091, claude 8092, house 8094, files 8096, memory 8097,
+      memorypublic 8098) shall answer only LiteLLM (its service name resolves to the peer, or Docker's DNS names the peer
+      <project>-litellm-<n>) with that server's own bearer token (MCP_TOKEN_<SERVER>, sops), which LiteLLM sends
+      (auth_type bearer_token); with APP_TRUST on any other call shall be refused (401), and in log mode logged.
+    type: constraint
+    priority: must
+    status: partial
+    gap: In log mode until the lead's switch (SEC-24). The servers still listen on every network of the app; the refusal
+      is by peer and token (docs/SECURITY.md says why no bind).
+    parents: [SN-05]
+    sources: [docs/SECURITY.md, docs/REVIEW-2026-11-10.md]
+    rationale: Review of 10 Nov (O1, DOM2-R16) - the house, memory (all class) and missions tools answered n8n, Phoenix
+      and the swarm on the app's networks without a key.
+    acceptance: 'Test: LiteLLM with the token passes, also from its other shared network; a wrong token, none, or the right
+      token from n8n is refused; with no token set nothing passes; both gateway configs send each server''s own token and
+      compose gives it to both sides; all six servers are wrapped.'
+    verify: {method: test, by: [tests/test_trust.py::test_an_mcp_server_answers_only_litellm_with_its_token]}
+    trace: [images/mission-control/server.trust.py, images/mission-control/server.py, config/litellm/config.yaml, deployments/example-work/litellm.yaml, compose/core.yaml, compose/apps.yaml]
+  - id: SEC-27
+    title: n8n's webhooks take only the runner's header, and n8n sits off the flat network
+    statement: Every Webhook trigger of every workflow n8n runs (the repository's, a pack's, one exported from the canvas)
+      shall require the header X-Aistack-Hook with the secret N8N_HOOK_TOKEN (n8n's Header Auth credential "AI Stack runner",
+      written by every import before the workflows, and an import without the secret shall change nothing and fail);
+      the runner shall send it when it starts an item's workflow; n8n shall be on its own internal network with Postgres
+      (n8ndb), flows and stepnet only, never backend; and its tailnet port 8450 shall serve /webhook-waiting only.
+    type: constraint
+    priority: must
+    status: partial
+    gap: The 8450 change is an owner step on Windows (ops/windows/host-setup.ps1); until it runs, 8450 still serves n8n's
+      whole root, now behind the webhook header and n8n's own login.
+    parents: [SN-05]
+    sources: [docs/SECURITY.md, docs/REVIEW-2026-11-10.md]
+    rationale: 'Review of 10 Nov (O3, SEC2-R2, N8N2-R3): 31 workflows'' webhooks took no authentication, n8n shared the
+      flat backend with the builder''s sandbox, and 8450 served n8n''s root on the tailnet. Shown on a throwaway n8n 2.44.7
+      on 11 Nov 2026: a webhook with Header Auth answered 403 without the header and with a wrong one, 200 with it; the
+      credential imported with its value in plain JSON (n8n encrypts it).'
+    acceptance: 'Test: every webhook in git, a new job''s Run now, a pack''s and an exported one carry the credential; the
+      credential is written from the secret on stdin, never a command line, and an import without it touches nothing; the
+      runner''s start carries the header and says why without the secret; n8n''s networks are n8ndb, flows and stepnet,
+      shared only with Postgres and n8n-db; the Windows setup serves /webhook-waiting alone on 8450.'
+    verify: {method: test, by: [tests/test_trust.py::test_every_webhook_asks_for_the_runners_header, tests/test_trust.py::test_the_webhooks_credential_is_written_from_the_secret_and_an_import_without_it_stops, tests/test_trust.py::test_the_runner_starts_an_item_workflow_with_its_header_and_says_why_not_without_it, tests/test_trust.py::test_n8n_is_off_the_flat_backend_hardened_and_its_tailnet_port_serves_resume_links_only]}
+    trace: [ops/n8n_gen.py, ops/n8n_sync.py, ops/runreg.py, ops/trust_keys.py, compose/core.yaml, ops/windows/host-setup.ps1, n8n/workflows/item-home-inbox.json, n8n/workflows/stack-self-test.json]
+  - id: SEC-28
+    title: n8n runs hardened
+    statement: n8n's container shall run with a read-only root filesystem (its /tmp and its compile cache /home/node/.cache
+      in memory), every Linux capability dropped and no new privileges, and with its public API off (no API key
+      accepted, no docs page).
+    type: constraint
+    priority: should
+    status: implemented
+    parents: [SN-05]
+    sources: [docs/SECURITY.md, docs/REVIEW-2026-11-10.md]
+    rationale: 'Review of 10 Nov (O4, SEC2-R5, N8N2-R14). Shown on a throwaway n8n 2.44.7 on 11 Nov 2026: it started,
+      restarted, imported, ran a webhook and resumed a waiting step this way; its cache needs mode 1777 (a plain tmpfs
+      failed with EACCES on restart). Nothing of the stack uses n8n''s public API (the runner uses its command line); on
+      2.44.7 N8N_PUBLIC_API_DISABLED refuses every API key while its routes stay, and its docs page stayed until
+      N8N_PUBLIC_API_SWAGGERUI_DISABLED (read in n8n''s own code, dist/public-api/index.js). The
+      SSH and Git nodes stay on at home, and Postgres'' superuser still owns n8n''s database (docs/SECURITY.md).'
+    verify: {method: test, by: [tests/test_trust.py::test_n8n_is_off_the_flat_backend_hardened_and_its_tailnet_port_serves_resume_links_only]}
+    trace: [compose/core.yaml]

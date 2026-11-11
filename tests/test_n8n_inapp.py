@@ -70,6 +70,21 @@ def test_n8n_is_served_under_the_apps_address_behind_its_gate(n8n):
     assert r.status_code == 502 and "not reachable" in r.text
 
 
+def test_a_tools_own_policy_stays_a_workflows_page_is_sandboxed_and_the_ai_phone_is_kept_out(n8n):
+    """Review 10 Nov (SEC2-R2, R4; APP2-R2): the proxy dropped the tool's own policy, served a workflow's own HTML on the
+    app's origin, and let the AI phone start workflows and read every trace."""
+    cl, seen, answer = n8n
+    answer["response"] = answer_of(200, [("content-type", "text/html"), ("content-security-policy", "default-src 'self'; frame-ancestors 'none'")], b"<html/>")
+    assert cl.get("/n8n/home", headers=GATE).headers["content-security-policy"] == "default-src 'self'; frame-ancestors 'self'"
+    for p in ("/n8n/webhook/run/x", "/n8n/webhook-waiting/1", "/n8n/form/abc"):
+        answer["response"] = answer_of(200, {"content-type": "text/html"}, b"<script>x</script>")
+        assert "sandbox" in cl.get(p, headers=GATE).headers["content-security-policy"], p
+    import server as S
+    n, phone = len(seen), {**GATE, "x-forwarded-for": S.AI_PHONE_IP}
+    assert cl.get("/n8n/home", headers=phone).status_code == 403 and cl.get("/phoenix/", headers=phone).status_code == 403
+    assert len(seen) == n                                                          # neither tool was asked
+
+
 def test_n8ns_live_updates_stream_through_the_app(n8n):
     cl, seen, answer = n8n
 

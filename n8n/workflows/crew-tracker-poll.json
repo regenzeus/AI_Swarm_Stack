@@ -1,5 +1,6 @@
 {
   "active": true,
+  "area": "upkeep",
   "connections": {
     "On its schedule (* * * * *)": {
       "main": [
@@ -65,10 +66,17 @@
       "webhookId": "8137f783-5441-86dd-6a97-7baae255ec09"
     },
     {
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "aistackRunHook01",
+          "name": "AI Stack runner"
+        }
+      },
       "id": "3e602ade-abcf-1c4e-260a-cdf8e7e20066",
       "name": "Run now",
       "notes": "Starts the job now, as its schedule would (POST).",
       "parameters": {
+        "authentication": "headerAuth",
         "httpMethod": "POST",
         "options": {},
         "path": "run/crew-tracker-poll"

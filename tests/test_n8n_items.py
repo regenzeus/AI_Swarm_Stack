@@ -6,6 +6,7 @@ whose review comment wakes the run; a question for a role says who may answer, r
 import json
 import subprocess
 import types
+import urllib.error
 from pathlib import Path
 
 import pytest
@@ -41,6 +42,7 @@ def W(tmp_path, monkeypatch):
     cfg = tmp_path / "trackers.yaml"
     cfg.write_text(f"shadow_needed: 2\npoll_minutes: 5\ntrackers:\n  - {{name: test, kind: standin, path: {store}, workflow: toy/ticket, start: 2026-01-01}}\n")
     monkeypatch.setenv("AISTACK_TRACKERS", str(cfg))
+    monkeypatch.setenv("N8N_HOOK_TOKEN", "hook-test")          # SEC-27: the runner's header for n8n's webhooks
     monkeypatch.setenv("AISTACK_TRACKER_STATE", str(tmp_path / "state"))
     monkeypatch.setenv("AISTACK_ARTIFACTS", str(tmp_path / "artifacts"))
     monkeypatch.setattr(RR, "ROOT", tmp_path / "register")
@@ -53,6 +55,8 @@ def W(tmp_path, monkeypatch):
     started, resumed = [], []
 
     def n8n(req, timeout=30):                       # n8n: a webhook starts a run, a resume URL takes an answer
+        if "/webhook/item/" in req.full_url and req.get_header("X-aistack-hook") != "hook-test":
+            raise urllib.error.HTTPError(req.full_url, 403, "Authorization data is wrong!", {}, None)   # n8n's Header Auth (SEC-27)
         (started if "/webhook/item/" in req.full_url else resumed).append((req.full_url, json.loads(req.data)))
         return Resp(body=json.dumps({"execution": str(40 + len(started))}).encode() if "/webhook/item/" in req.full_url else b"")
 

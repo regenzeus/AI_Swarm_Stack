@@ -25,7 +25,7 @@ The second tab, **Tasks**, has five views under its title, each answering one qu
 
 | View | The question | What it shows |
 |---|---|---|
-| **Tasks** | What am I having done? | your tasks: **Active** (needs you, running, being planned), **Repeating**, **Done** (the last 7 days); **Yours** or **The stack's**; a search |
+| **Tasks** | What is the stack doing? | every task in one list: **Needs you**, **Failed**, **Running now**, **Recent results**, **Scheduled**; each with its area (a filter if you want one); the stack's **Upkeep** as one row; a search |
 | **Activity** | What's happening now? | who works right now, then the room and the run timeline |
 | **Team** | Who does the work, and how well? | **On your tasks** (every agent, its role and scorecard), **Crew** (the stack's duties with their health), **Measured** (results per agent and kind, Telemetry, Trials) |
 | **Network** | Which agents work on which tasks? | tasks on the left, agents on the right, a line for every pair that worked together |
@@ -245,9 +245,14 @@ the routing by measured results never moves a step away from them.
 
 ## The list
 
-**Tasks** lists your tasks: **Active** (what needs you, then what runs, then what comes next), **Repeating** (each
-with its next run) and **Done** (the last seven days; every task keeps its page). Work started the other ways (a build,
-a Claude question, a chat) is a task too; a chat stays on **Chat**. Open a task to see its definition of done, its plan
+**Tasks** lists every task of the stack in one list, in the order of what matters now: **Needs you**, **Failed**,
+**Running now**, **Recent results** and **Scheduled**, the newest first in each (every open task and every task of the
+last seven days; each keeps its page). Each says its **area** (Taxes, Mail, Briefings, Shopping, Research, Errands,
+Inbox, Phone, Code, Memory, Upkeep) and who asked for it; tap an area to see only it. The stack's own small jobs (the
+code graph, the swarm sync, the nightly restart...) are one **Upkeep** row with their health, "15 jobs, all fine", and
+a tap opens them; one that fails also shows on its own under **Failed**. A workflow is one task: its runs are its
+history, Run now is on it. Work started the other ways (a build, a Claude question, a chat) is a task too; a chat
+stays on **Chat**. Open a task to see its definition of done, its plan
 with the agents, its mission, build or Claude task, and **How it was planned**: the intake's own run.
 
 **Cancel** stops a task that has not started yet; work it has already started stays on its own page, where you can
@@ -255,7 +260,7 @@ stop it.
 
 ## Rules: a new task each time something happens
 
-Under **Repeating**, **Rules** holds your rules. A rule says *when* (a source and what to look at), *only with these
+**Rules**, at the end of the list, holds your rules. A rule says *when* (a source and what to look at), *only with these
 words* (optional), *then the stack should* (a sentence, like any task), and *at most once every* so many minutes. The
 sources:
 
@@ -284,7 +289,7 @@ The first time a rule looks at something, it only notes what is already there, s
 ```try
 label: Get told when your repository moves
 open: "#/tasks"
-note: Under Repeating → Rules, add a rule: When "activity on a GitHub repository", regenzeus/AI_Swarm_Stack, then "Summarise {title} for me".
+note: Under Rules, at the end of the list, add a rule: When "activity on a GitHub repository", regenzeus/AI_Swarm_Stack, then "Summarise {title} for me".
 ```
 
 ## Breaking news

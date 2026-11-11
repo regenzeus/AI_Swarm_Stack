@@ -92,7 +92,7 @@ function taskPage(t) {
   <div class="aghead h-${["failed", "cancelled"].includes(t.status) ? "bad" : t.status === "done" ? "ok" : "warn"}"><div class="agic lg">${ic.target}</div><div class="grow" style="min-width:0">
     <h1 class="agh1">${esc(t.title)}</h1>
     <div class="row wrap small muted" style="gap:4px 8px;margin-top:6px"><span class="pill ${TPILL[t.status] || ""}">${LIVE_T.includes(t.status) && t.status !== "needs_answer" ? '<span class="dot run"></span>' : ""}${esc(tstat(t))}</span>
-      <span>#${t.id} · ${t.owner === "stack" ? "the stack's task" : "your task"}${t.kind ? ` · ${esc(TKINDS[t.kind] || t.kind)}` : ""} · ${esc(rhythmText(t.rhythm, t.after))}</span><span>${ic.clock}given ${rel(t.created)}${t.source === "app" ? " by you" : t.source ? ` · from ${esc(t.source)}` : ""}</span></div>
+      <span>#${t.id} · ${esc((typeof AREAS === "object" && AREAS[t.area]) || "Research")}${t.kind && (TKINDS[t.kind] || t.kind) !== (typeof AREAS === "object" && AREAS[t.area]) ? ` · ${esc(TKINDS[t.kind] || t.kind)}` : ""} · ${esc(rhythmText(t.rhythm, t.after))}</span>${t.agent ? `<span>its agent ${taskLink(taskAgentHref(t.agent), esc(taskWho(t.agent)))}</span>` : ""}<span>${ic.clock}given ${rel(t.created)}${t.source === "app" ? " by you" : t.source ? ` · from ${esc(t.source)}` : ""}</span></div>
     ${t.goal && t.goal !== t.title ? `<div class="small muted agwhat">${prose(t.goal)}</div>` : ""}
     <div data-tideas="${t.id}"></div>${(queueMicrotask(() => fillTaskIdeas($(`[data-tideas="${t.id}"]`), t.id)), "")}
   </div></div>
@@ -107,6 +107,7 @@ function taskPage(t) {
     ${t.door && t.ref && TDOOR[t.door] && t.door !== "plan" ? (([h, l]) => `<a class="btn" href="${h}">${ic.next}${esc(l)}</a>`)(TDOOR[t.door](t.ref)) : ""}
     ${t.status === "waiting_approval" && t.kind !== "change" ? `<button class="btn primary" data-tok="${t.id}">${ic.check}Start it</button>` : ""}
     ${t.door === "plan" && t.kind !== "change" && ["scheduled", "done", "failed"].includes(t.status) && (t.runs || []).length ? `<button class="btn" data-trun="${t.id}">${ic.play}Run again now</button>` : ""}
+    ${t.door === "flow" && t.status !== "running" ? `<button class="btn primary" data-tflow="${t.id}">${ic.play}Run now</button>` : ""}
     ${["failed", "cancelled"].includes(t.status) && t.door === "plan" && t.kind !== "change" ? `<button class="btn" data-tretry="${t.id}">${ic.repeat}Plan it again</button>` : ""}
     ${!["done", "failed", "cancelled"].includes(t.status) && (t.door === "plan" || !t.ref) ? `<button class="btn ghost danger" data-tcancel="${t.id}">${ic.x}Cancel</button>` : ""}</div>
   <div class="seg agtabs">${tabs.map(([k, l]) => `<button data-tt="${k}" class="${ttab === k ? "on" : ""}">${l}${k === "agents" ? ` · ${a.agents.length}` : k === "memory" ? ` · ${a.memory.read.length + a.memory.write.length}` : k === "sources" ? ` · ${(t.prov?.sources || []).filter((s) => s.kind !== "search").length}` : k === "runs" ? ` · ${t.runs.length}` : ""}</button>`).join("")}</div>
@@ -115,6 +116,7 @@ function taskPage(t) {
   $$("[data-tt]").forEach((b) => (b.onclick = () => { ttab = b.dataset.tt; history.replaceState(history.state, "", `#/task/${t.id}?tab=${ttab}`); taskPage(t); }));
   if ($("#tocc")) $("#tocc").onchange = (e) => { taskOcc[t.id] = +e.target.value; vTask(); };
   if (typeof bindTasks === "function") bindTasks();
+  $$("[data-tflow]").forEach((b) => (b.onclick = () => act({ action: "task_run", id: +b.dataset.tflow }, "Started: its steps show here as they run")));   // TAX-09: its workflow's Run now
   changeBind(t);
   if (wf) wfWhereInto($("#wfwhere"), wf.wid, wf.ex, null, keepWf); else keepWf?.remove();
   const body = $("#ttbody");
@@ -127,7 +129,7 @@ function taskStepList(steps) {
     <div class="sub ${s.status === "failed" ? "err-t" : s.status === "done" ? "" : "warn-t"}">${esc(SSTATE[s.status] || s.status)}${s.after?.length ? ` · after step ${s.after.join(", ")}` : ""}${s.started ? ` · ${clock(s.started)}${s.ended ? `–${clock(s.ended)}` : ""}` : ""}${s.waiting_for ? ` · ${esc(s.waiting_for)}` : ""}${s.attempts > 1 ? ` · attempt ${s.attempts}` : ""}</div>
     ${s.error && s.status !== "done" ? `<div class="${s.error.startsWith("blocked:") ? "err-t" : "faint"}">${esc(s.error)}</div>` : ""}
     ${s.output ? `<details class="tiny"><summary>Its result</summary><div class="md">${md(s.output)}</div></details>` : ""}
-    <a class="tiny" href="#/live/${encodeURIComponent(`task:${s.task}${(s.occ || 1) > 1 ? "." + s.occ : ""}:step:${s.idx}`)}">how it ran</a></li>`; }).join("")}</ol>`;
+    ${s.live || !s.href ? `<a class="tiny" href="#/live/${encodeURIComponent(s.live || `task:${s.task}${(s.occ || 1) > 1 ? "." + s.occ : ""}:step:${s.idx}`)}">how it ran</a>` : `<a class="tiny" href="${esc(s.href)}">its job and its runs</a>`}</li>`; }).join("")}</ol>`;
 }
 
 // ---------- who worked on it: the agents as bubbles, their part as colour, their own tokens as size ----------
@@ -315,7 +317,11 @@ function taskOverview(box, t, a, steps) {
   const words = (s) => (s.match(/\S+/g) || []).length;
   const body = (t.answer || "").replace(/^---[\s\S]*?---\s*/, "");
   const SITES = 6;                                 // cap: preview (the Sources tab lists every site and every source)
-  box.innerHTML = `${t.answer ? `<div class="card pad-l" id="tanswer"><div class="row between wrap" style="gap:8px"><h2>The answer${(t.runs || []).length > 1 ? ` · run ${t.occ}` : ""}</h2><a class="btn sm ghost" href="#/read?path=${encodeURIComponent(t.result)}">${ic.doc}Open as a page</a></div>
+  const last = (t.runs || []).find((r) => r.occ === t.occ) || t.runs?.[0];
+  box.innerHTML = `${t.result_view ? `<div class="card pad-l" id="tresult"><div class="skeleton" style="height:160px"></div></div>`
+    : t.result_href ? `<div class="card pad-l" id="tresult"><div class="row between wrap gap-2"><h2>Its result</h2><a class="btn sm primary" href="${esc(t.result_href)}">${ic.next}${esc(t.result_label || "Open it")}</a></div>
+        <div class="small muted wrap mt-2">${last?.result ? prose(last.result) : "No run yet: what each run did shows here."}</div></div>`
+    : t.answer ? `<div class="card pad-l" id="tanswer"><div class="row between wrap" style="gap:8px"><h2>The answer${(t.runs || []).length > 1 ? ` · run ${t.occ}` : ""}</h2><a class="btn sm ghost" href="#/read?path=${encodeURIComponent(t.result)}">${ic.doc}Open as a page</a></div>
         <div class="tfold${taskUnfold ? " open" : ""}" id="tfold"><div class="md" style="margin-top:8px">${md(body)}</div></div>
         <button class="btn sm ghost" id="tunfold" hidden>${taskUnfold ? "Fold it again" : `Show the whole answer · ${nf(words(body))} words`}</button></div>`
       : `<div class="card pad small muted">${LIVE_T.includes(t.status) ? "No answer yet: it comes when the last step is done." : t.status === "failed" ? "No answer: the task did not finish. Its problems and steps below say why." : "This task has no written answer."}</div>`}
@@ -353,6 +359,7 @@ function taskOverview(box, t, a, steps) {
     u.onclick = () => { taskUnfold = !taskUnfold; f.classList.toggle("open", taskUnfold); u.textContent = taskUnfold ? "Fold it again" : `Show the whole answer · ${nf(words(body))} words`; if (!taskUnfold) $("#tanswer").scrollIntoView({ block: "start" }); };
   }
   taskBubbles($("#tbubs", box), t, a, steps, Math.max(280, Math.min(380, 80 + 46 * a.agents.length)));
+  if (t.result_view === "tax" && typeof taxViewInto === "function") taxViewInto($("#tresult", box), t);   // TAX-10: its result, for the owner's eyes only
 }
 function taskSecs(t) {
   const r = (t.runs || []).find((x) => x.occ === t.occ) || t.runs?.[0];

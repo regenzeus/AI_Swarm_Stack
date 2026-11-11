@@ -1,5 +1,6 @@
 {
   "active": true,
+  "area": "upkeep",
   "connections": {
     "Self-test called": {
       "main": [
@@ -34,9 +35,16 @@
       "webhookId": "5e0c2d8e-2b77-4d0e-9a8f-0c6a1b7f2a13"
     },
     {
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "aistackRunHook01",
+          "name": "AI Stack runner"
+        }
+      },
       "id": "5e0c2d8e-2b77-4d0e-9a8f-0c6a1b7f2a02",
       "name": "Self-test called",
       "parameters": {
+        "authentication": "headerAuth",
         "httpMethod": "POST",
         "options": {},
         "path": "stack-self-test"

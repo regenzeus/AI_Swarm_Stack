@@ -133,7 +133,7 @@ left out, and the reason says where that is shown.
 | `ops/winjobs.py` | `MINUTES_MAX` | a job kind's time limit: a day at most; its own minutes stop it sooner |
 | `ops/winworker.py` | `FILES_KB` | a request's files (a patch) stay small: a patch past this is no change a person reviews |
 
-## stops (43)
+## stops (45)
 
 | Where | Limit | Why |
 |---|---|---|
@@ -161,7 +161,9 @@ left out, and the reason says where that is shown.
 | `ops/domain/trackers.py` | `FORGEJO_PAGES` | a pass that asked for 1,000 pages (50,000 changed issues) stops there; the cursor keeps what was handed on and the next pass goes on |
 | `ops/domain/trackers.py` | `FETCH_S` | a Forgejo attachment's download that takes over 10 minutes (50 MB at 85 KB/s) fails the step; a retry fetches again |
 | `ops/evals.py` | `--max-turns` | a replay is one answer, no tools |
+| `ops/flow_tasks.py` | `RUN_TIMEOUT_S` | n8n answers its Run now webhook at once; a silent n8n is said so |
 | `ops/flows.py` | `DELIVER_FOR_S` | after a day without n8n taking it the answer stays in done/ and the owner is told |
+| `ops/graphify-sync.sh` | `MERGE_MEM` | the merge may use 3 GB of RAM and 3 GB of swap and is ended beyond; WSL died under an unlimited one (review O9) |
 | `ops/journeys.py` | `DECIDE_TIMEOUT` | the decide journey gives the runner and the app this many seconds at each step; past it the journey fails and says which step |
 | `ops/journeys.py` | `BROWSER_TIMEOUT` | the browser's whole run: every screen twice at 375 px, then at nine more shapes (APP-60) |
 | `ops/missions.py` | `TASK_TIMEOUT` | one mission run past this counts as failed |

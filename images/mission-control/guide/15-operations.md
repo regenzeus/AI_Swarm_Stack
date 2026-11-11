@@ -40,6 +40,7 @@ decrypts the secrets it needs for itself and never prints them.
 | `make email-setup` | set up report e-mails with a Gmail app password |
 | `make secrets-edit` | add or change provider keys (encrypted) |
 | `make keys` | create each agent's gateway key |
+| `make trust-keys` | make the secrets of the app's and n8n's trust boundary once: the step service's, each tool server's, n8n's webhooks' (encrypted, never shown) |
 | `make pull-smoke-model` | download the tiny model the wiring test uses |
 | `make hindsight-models` | download the memory models (new machine) |
 | `make opencode-password` | show the OpenCode login in your terminal |

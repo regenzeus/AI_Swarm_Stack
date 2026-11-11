@@ -38,7 +38,8 @@ An agent's page and a crew job's page list every workflow they are a step of. Ea
 
 ## If the app is down
 
-n8n also answers on its own tailnet port, 8450, at `/n8n/`. Programs that call a workflow's webhook use that port too.
+The Workflows page needs the app. n8n's own tailnet port, 8450, only takes the answers to its waiting steps, and a
+workflow's webhook takes only a call from the stack itself on this PC: anything else is refused (SEC-27).
 
 ## The canvas
 

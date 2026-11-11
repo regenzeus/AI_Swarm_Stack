@@ -1,11 +1,12 @@
 """Mission Control: the web app (phone + desktop, installable as an app) and the mission tools for Hermes.
 
 Port 8090: the app and its API, published to 127.0.0.1 only; reached from your devices through `tailscale serve`
-(https://<pc>.ts.net:8447). Every /api call must carry Tailscale's identity header, which only tailscale serve sets.
+(https://<pc>.ts.net:8447). Every /api call must carry Tailscale's identity header, which only tailscale serve sets, and
+the port answers only what comes through its published port (SEC-24, server.trust.py; APP_TRUST log or on).
 A deployment without the tailnet sets APP_GATE=local: the app is reached on the PC itself (http://127.0.0.1:8090), and
 a request by a loopback address is the owner's (WFL-16).
 Port 8091: MCP tools (missions_overview, mission_create, mission_update, ...) for Hermes, reached only by LiteLLM on
-the internal "mcnet" network (granted per key in ops/keys.sh).
+the internal "mcnet" network (granted per key in ops/keys.sh), with the server's own bearer token (SEC-26).
 This container never starts anything itself: it reads the runner's state (/missions/public/state.json) and drops
 requests into /missions/inbox; ops/missions.py on the host validates and executes them. Chats are kept in
 /missions/app/chats (one JSON file each), so every device sees the same history. The wiki views read the vault.
@@ -97,12 +98,15 @@ def _part(name):
     exec(compile(p.read_text(), str(p), "exec"), globals())   # nosemgrep: python-eval-exec -- this module's own part file beside it (PLT-25), never data
 
 
+_part("server.trust.py")   # who may speak to the app: its published port, LiteLLM with the tools' tokens, n8n's step node (SEC-24..26)
+
 # ---------- app API ----------
 # WFL-16: the app's front door, by the deployment. tailnet (home): tailscale serve adds the owner's login to each
 # request. local (no tailnet, compose's APP_GATE): the port is published on 127.0.0.1 only, so the browser is on this PC;
-# the request must name a loopback address (or the app's service name, for the stack's own checks), which also keeps a
-# page of another site out by a DNS name that points here; it is then the owner's, under LOCAL_LOGIN. The write rule
-# below (SEC-20) holds for both.
+# the request must name a loopback address (or the app's service name), which also keeps a page of another site out by
+# a DNS name that points here; it is then the owner's, under LOCAL_LOGIN. Either way it must come through the published
+# port (SEC-24): a container that names the app by its service name is not this PC. The write rule below (SEC-20) holds
+# for both.
 APP_GATE = os.environ.get("APP_GATE", "tailnet")
 LOCAL_HOSTS = {"127.0.0.1", "localhost", "[::1]", "mission-control"}
 LOCAL_LOGIN = "owner@this-pc"
@@ -121,6 +125,10 @@ def local_owner(request):
 
 class TailnetOnly(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
+        # SEC-24: the owner's identity (the Tailscale header, the local gate) is believed only through the published port;
+        # nothing else may speak to this port (n8n, Phoenix, LiteLLM share networks with it). server.trust.py, APP_TRUST.
+        if not from_gate(request.scope) and trust_refuses("a request to the app's port from outside its published port", request.scope):
+            return JSONResponse({"error": "refused: the app answers only through its published port (SEC-24)"}, status_code=403)
         if APP_GATE == "local":
             if not local_owner(request):
                 return JSONResponse({"error": "only reachable on this PC, at http://127.0.0.1:8090"}, status_code=403)
@@ -133,6 +141,11 @@ class TailnetOnly(BaseHTTPMiddleware):
                 and request.headers.get("sec-fetch-site", "same-origin") not in ("same-origin", "none")):
             return JSONResponse({"error": "refused: a write request from another site (SEC-20)"}, status_code=403)
         response = await call_next(request)
+        # review APP2-R6: no other site may frame the app (its Approve and Buy buttons under a foreign page); the n8n and
+        # Phoenix frames set their own rule and keep it
+        if "content-security-policy" not in response.headers and "x-frame-options" not in response.headers:
+            response.headers["Content-Security-Policy"] = "frame-ancestors 'self'"
+            response.headers["X-Frame-Options"] = "SAMEORIGIN"
         if request.url.path.startswith("/static/") and "/vendor/" not in request.url.path:
             response.headers["Cache-Control"] = "no-cache"          # always revalidate: updates show up at once
         elif request.url.path.startswith("/api/") and "cache-control" not in response.headers:
@@ -666,6 +679,9 @@ _part("server.a2a.py")   # outside agents over A2A (PLT-25)
 _part("server.devices.py")   # push notifications, the AI phone, app connections and the House (PLT-25)
 
 
+_part("server.tax.py")   # the tax desk's result for the owner's own session (TAX-10, TAX-11)
+
+
 # ---------- static ----------
 def app_version():
     """Changes whenever the front end changes (a new image): open apps compare it and reload themselves."""
@@ -1090,6 +1106,7 @@ app = Starlette(routes=[
     Route("/api/state", api_state), Route("/api/stream", api_stream), Route("/api/version", api_version),
     Route("/api/request", api_request, methods=["POST"]), Route("/api/result/{rid}", api_result),
     *FRAME_ROUTES, Route("/api/workflows", api_workflows),   # WFL-13
+    *TAX_ROUTES,   # TAX-10: the owner's tax drafts
     Route("/api/file", api_file), Route("/api/runlog/{rid}", api_runlog), Route("/api/run/{rid}/timeline", api_run_timeline), Route("/api/rt/runs", api_rt_runs), Route("/api/task/{tid:int}", api_task),
     Route("/api/agent/{aid}/tasks", api_agent_tasks), Route("/api/trials", api_trials), Route("/api/usage", api_usage), Route("/api/rt/run/{run}", api_rt_run),
     Route("/api/rt/run/{run}/stream", api_rt_stream), Route("/api/crew/{cid}", api_crew_one), Route("/api/swarm", api_swarm, methods=["POST"]), Route("/api/swarm/tokens", api_swarm_tokens), Route("/api/swarm/now", api_swarm_now), Route("/api/swarm/timeline", api_swarm_timeline), Route("/api/swarm/interactions", api_swarm_interactions), Route("/api/swarm/delegations", api_swarm_delegations), Route("/api/swarm/room", api_swarm_room), Route("/api/health/issues", api_health_issues), Route("/api/claude/{tid}", api_claude_task), Route("/api/phoenix", api_phoenix), Route("/api/build/{bid}/{kind}", api_build_file),
@@ -1291,21 +1308,21 @@ async def main():
     close_interrupted_chats()
     await asyncio.gather(
         uvicorn.Server(uvicorn.Config(app, host="0.0.0.0", port=8090, log_level="warning", proxy_headers=False)).serve(),
-        uvicorn.Server(uvicorn.Config(mcp.streamable_http_app(transport_security=TransportSecuritySettings(
-            allowed_hosts=["mission-control:8091"], allowed_origins=[])),          # only LiteLLM, by service name
+        uvicorn.Server(uvicorn.Config(mcp_guard(mcp.streamable_http_app(transport_security=TransportSecuritySettings(
+            allowed_hosts=["mission-control:8091"], allowed_origins=[])), "missions"),   # only LiteLLM, by service name, with its token (SEC-26)
             host="0.0.0.0", port=8091, log_level="warning")).serve(),
-        uvicorn.Server(uvicorn.Config(claude_mcp.streamable_http_app(transport_security=TransportSecuritySettings(
-            allowed_hosts=["mission-control:8092"], allowed_origins=[])), host="0.0.0.0", port=8092, log_level="warning")).serve(),
-        uvicorn.Server(uvicorn.Config(house_mcp.streamable_http_app(transport_security=TransportSecuritySettings(
-            allowed_hosts=["mission-control:8094"], allowed_origins=[])), host="0.0.0.0", port=8094, log_level="warning")).serve(),
-        uvicorn.Server(uvicorn.Config(files_mcp.streamable_http_app(transport_security=TransportSecuritySettings(
-            allowed_hosts=["mission-control:8096"], allowed_origins=[])), host="0.0.0.0", port=8096, log_level="warning")).serve(),   # MIS-24
-        uvicorn.Server(uvicorn.Config(memory_mcp.streamable_http_app(transport_security=TransportSecuritySettings(
-            allowed_hosts=["mission-control:8097"], allowed_origins=[])), host="0.0.0.0", port=8097, log_level="warning")).serve(),   # MEM-28
-        uvicorn.Server(uvicorn.Config(memory_public_mcp.streamable_http_app(transport_security=TransportSecuritySettings(
-            allowed_hosts=["mission-control:8098"], allowed_origins=[])), host="0.0.0.0", port=8098, log_level="warning")).serve(),   # MEM-30
+        uvicorn.Server(uvicorn.Config(mcp_guard(claude_mcp.streamable_http_app(transport_security=TransportSecuritySettings(
+            allowed_hosts=["mission-control:8092"], allowed_origins=[])), "claude"), host="0.0.0.0", port=8092, log_level="warning")).serve(),
+        uvicorn.Server(uvicorn.Config(mcp_guard(house_mcp.streamable_http_app(transport_security=TransportSecuritySettings(
+            allowed_hosts=["mission-control:8094"], allowed_origins=[])), "house"), host="0.0.0.0", port=8094, log_level="warning")).serve(),
+        uvicorn.Server(uvicorn.Config(mcp_guard(files_mcp.streamable_http_app(transport_security=TransportSecuritySettings(
+            allowed_hosts=["mission-control:8096"], allowed_origins=[])), "files"), host="0.0.0.0", port=8096, log_level="warning")).serve(),   # MIS-24
+        uvicorn.Server(uvicorn.Config(mcp_guard(memory_mcp.streamable_http_app(transport_security=TransportSecuritySettings(
+            allowed_hosts=["mission-control:8097"], allowed_origins=[])), "memory"), host="0.0.0.0", port=8097, log_level="warning")).serve(),   # MEM-28
+        uvicorn.Server(uvicorn.Config(mcp_guard(memory_public_mcp.streamable_http_app(transport_security=TransportSecuritySettings(
+            allowed_hosts=["mission-control:8098"], allowed_origins=[])), "memorypublic"), host="0.0.0.0", port=8098, log_level="warning")).serve(),   # MEM-30
         uvicorn.Server(uvicorn.Config(rt_app, host="0.0.0.0", port=8093, log_level="warning")).serve(),   # runtime ingest
-        uvicorn.Server(uvicorn.Config(flows_app, host="0.0.0.0", port=8099, log_level="warning")).serve(),   # WFL-05: n8n only (stepnet)
+        uvicorn.Server(uvicorn.Config(flows_app, host="0.0.0.0", port=8099, log_level="warning")).serve(),   # WFL-05: n8n only (stepnet), with its token (SEC-25)
         uvicorn.Server(uvicorn.Config(voice_app, host="0.0.0.0", port=8095, log_level="warning")).serve(),  # the voice gateway (VOI-03)
         push_events(), push_phone(), push_conn(), rt_housekeeping(), limit_retrier(), made_watcher())
 

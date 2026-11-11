@@ -18,7 +18,8 @@ n8n starts every scheduled job. A unit keeps a `name.timer` only when it **must 
 Everything else (the crew, the syncs, the vault ingest, the trial rotation, the nightly restart of the services that
 grow while idle) is a service without a timer. `grep -rn "OnCalendar\|OnUnit\|OnBoot" ops/systemd` lists only the three
 above. A deploy removes the installed copy of a timer the repository dropped (stopped, disabled, deleted with its
-drop-ins; `ops/deploy.py` remove_units).
+drop-ins; `ops/deploy.py` remove_units) and enables a timer it brings first, both only after its checks pass; a
+failed deploy and a rollback leave the timers of their diff enabled as they found them (PLT-43).
 
 | Unit | Job |
 |---|---|

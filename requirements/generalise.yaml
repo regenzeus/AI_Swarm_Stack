@@ -242,6 +242,8 @@ items:
       'tests/test_domain_packs.py::test_an_approved_pack_adds_its_agents_skill_workflow_and_job_kind_from_a_read_only_checkout',
       'tests/test_domain_packs.py::test_a_pack_that_clashes_or_names_no_commit_of_its_source_is_refused_with_the_reason',
       'tests/test_domain_packs.py::test_two_packs_of_one_name_and_a_manifest_naming_another_pack_are_refused',
+      'tests/test_domain_packs.py::test_a_pack_with_a_link_is_refused_and_the_file_it_names_is_left_alone',
+      'tests/test_domain_packs.py::test_an_artifact_id_is_a_sha256_and_never_a_path',
       'tests/test_domain_packs.py::test_home_without_packs_is_unchanged',
       'tests/test_domain_packs.py::test_a_pack_workflow_that_is_no_n8n_workflow_or_runs_a_shell_command_is_refused_with_the_reason',
       'tests/test_domain_packs.py::test_packs_are_the_apps_and_the_queues',
@@ -619,3 +621,21 @@ items:
       'tests/test_work_deployment.py::test_the_toy_ticket_reminds_twice_and_then_stops_waiting']}
     trace: [ops/flows.py, ops/runreg.py, ops/domain/trackers.py, ops/domain/forgework.py, ops/domain/places.py,
       tests/fixtures/packs/toy/workflows/ticket.json, tests/fixtures/packs/toy/jobs/soak.json]
+  - id: GEN-47
+    title: The CI runner only where Forgejo is
+    statement: "The CI runner (compose service ci-runner) shall be its own feature, forgejo-ci, not part of builder: a
+      deployment with builder and without Forgejo shall start every builder service but the runner, and ops/deployment.py
+      check shall refuse forgejo-ci with an empty FORGEJO_URL. The home deployment, which has Forgejo, shall switch
+      forgejo-ci on and keep its runner."
+    type: constraint
+    priority: must
+    status: implemented
+    parents: [SN-05]
+    sources: [docs/PLATFORM.md, 'CR 2026-11-10, G4 item 1: a site with builder and no Forgejo could not compose up']
+    rationale: 'The first site update of 10 Nov 2026: the runner needs a registration from a Forgejo, so a site with builder
+      and no Forgejo could not compose up.'
+    acceptance: 'Test: ci-runner''s profile is forgejo-ci; home starts it and the work example (builder, no Forgejo) starts
+      the builder and its package proxies without it and needs no Forgejo value; forgejo-ci without FORGEJO_URL is named
+      by the check.'
+    verify: {method: test, by: ['tests/test_features.py::test_the_ci_runner_is_its_own_feature_on_only_where_forgejo_is']}
+    trace: [ops/deployment.py, compose/apps.yaml, deployments/home/deployment.env, docs/PLATFORM.md, images/ci-runner/AGENTS.md]

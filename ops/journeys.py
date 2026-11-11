@@ -53,7 +53,9 @@ DECIDE_TIMEOUT = 120
 VAULT = Path("/srv/vault")
 BROWSER, DESK = "aistack/browser:1", "aistack/desk:1"
 BROWSER_TIMEOUT = 3000   # limit: stops, the browser's whole run: every screen twice at 375 px, then at nine more shapes (APP-60)
-APP, NET = "http://mission-control:8090", "aistack_mcui"   # the app as Tailscale serve reaches it; the browser allows no other host
+# the app as Tailscale serve reaches it: through its published port, which is the one path the app believes (SEC-24); the
+# browser shares Docker's own network namespace for it (rootless: rootlesskit's) and allows no other host
+APP, NET = "http://127.0.0.1:8090", "host"
 PHONE = 375
 # the routes a sweep starts from; it follows every link it finds (two screens of each kind)
 SEEDS = ["#/", "#/home", "#/tasks", "#/missions", "#/new", "#/chat", "#/system", "#/wiki", "#/build", "#/guide", "#/share", "#/phone", "#/workflows", "#/traces",
@@ -418,7 +420,7 @@ def judge_routes(report):
 
 
 def browser(cfg, web=None, extra=(), run=subprocess.run):
-    """journeys.mjs in the browser image with cfg (and files to mount), on the app's network; its JSON report."""
+    """journeys.mjs in the browser image with cfg (and files to mount), at the app's published port; its JSON report."""
     with tempfile.TemporaryDirectory() as d:
         (Path(d) / "config.json").write_text(json.dumps({"base": APP, **cfg, **({"web": "/web"} if web else {})}))
         for name, text in extra:

@@ -59,9 +59,9 @@ packs, places, artifacts and the record of a run.
 - Core service on every deployment, image pinned by digest in `versions.env`, its own role and database in the
   stack's Postgres (made by the one-shot `n8n-db`, safe to repeat), so the nightly `pg_dumpall` backs it up.
 - Port 5678 on 127.0.0.1 only. The editor lives inside the app: the app serves it under `/n8n/` behind its own
-  gate (`N8N_PATH=/n8n/`, live updates over plain HTTP streaming, `N8N_PUSH_BACKEND=sse`; WFL-14). n8n's own tailnet
-  port (`tailscale serve --https=8450`) keeps webhooks and resume URLs at n8n's root and is the direct fallback when
-  the app is down. No public exposure. A deployment without the tailnet keeps all of it on the PC (§10).
+  gate (`N8N_PATH=/n8n/`, live updates over plain HTTP streaming, `N8N_PUSH_BACKEND=sse`; WFL-14). Webhooks and
+  resume URLs stay at n8n's root; its own tailnet port (`tailscale serve --https=8450`) serves only the resume links
+  (`/webhook-waiting`), and every webhook asks for the runner's header (SEC-27, docs/SECURITY.md). No public exposure. A deployment without the tailnet keeps all of it on the PC (§10).
 - Its own login: the owner creates the owner account once in the browser. Single sign-on is a paid feature.
 - Secrets `N8N_DB_PASSWORD` and `N8N_ENCRYPTION_KEY` in the sops file; n8n's stored credentials are encrypted with
   the key.
@@ -79,7 +79,10 @@ plus the change, shopping and desk steps) are exposed to n8n:
 - On finish it posts the result to the resume URL. After a restart the runner requeues interrupted steps
   (`requeue_interrupted`) and still calls back. n8n holds no long work in memory; a waiting execution survives an
   n8n restart.
-- The service listens on an internal port reachable only from n8n's network, with a shared token from sops.
+- The service listens on an internal port (8099) on `stepnet`, the network only n8n and the app share, and takes only the
+  Host `mission-control`. It has **no token**: the review of 10 Nov 2026 found that this line promised one that was never
+  built, and that every container on the app's networks can post a step. Adding one is the owner's decision
+  (docs/REVIEW-2026-11-10.md, N8N2-R1).
 
 ### 3.3 The stack's own node: the block palette (phase 2)
 One node, **AI Stack step** (`n8n/custom/AistackStep.node.js`, type `CUSTOM.aistackStep`, plain JavaScript loaded
@@ -108,8 +111,8 @@ the commands approved there, the repositories the builder may change).
 | Coding change for an item (`build` with `item`, `base`, `target`) | the branch `ai/<item>-<slug>` starts at the base ref or tag; with FORGE_PUSH a draft pull request into the target branch, directly (DEC-54); review comments wake the run | builds onto that branch, forgework.publish (GEN-26) | built |
 | Report | what Home shows for each step, with the n8n run | the step service itself (WFL-10) | built, not a block |
 
-Every scheduled workflow also has a **Run now** trigger (WFL-13): `POST <n8n>/webhook/run/<file stem>` starts it at
-once, while it is published.
+Every scheduled workflow also has a **Run now** trigger (WFL-13): `POST <n8n>/webhook/run/<file stem>` with the
+runner's header `X-Aistack-Hook` (SEC-27) starts it at once, while it is published.
 
 ### 3.4 Git stays the truth
 - Workflows live in `n8n/workflows/<name>.json`. A job exports changes made on the canvas (`n8n export:workflow
@@ -332,8 +335,8 @@ is reported as "X of Y moved".
 | 3. Move | Briefings and plans (5), then crew jobs (23) one switch each, then change requests, missions, event rules | 0 work left on the timers, the Conductor and Temporal |
 | 4. Remove | Temporal, the Conductor's scheduling, the editor and its screens, the timers; requirements rewritten | one scheduler; the app's menu as in §4.3 |
 
-Owner steps: `tailscale serve --bg --https=8450 http://127.0.0.1:5678` on Windows (once; and the fallback's
-`--set-path=/n8n` line in `ops/windows/host-setup.ps1`), the n8n owner account (once, in the app's Workflows page), a
+Owner steps: n8n's tailnet port 8450 for its resume links only (the two 8450 lines of `ops/windows/host-setup.ps1` on
+Windows, once; SEC-27), the n8n owner account (once, in the app's Workflows page), a
 look at each phase's result.
 
 ## 8. Status (10 Nov 2026)

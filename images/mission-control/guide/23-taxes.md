@@ -5,7 +5,7 @@ part: Everyday use
 icon: coin
 minutes: 4
 summary: The tax desk finds your German income tax papers in the copy of your mail, files a copy of each in Steuern on the NAS, and prepares a draft per year from your earlier returns. Only ChatGPT reads them; nothing is submitted.
-views: []
+views: [tax]
 ---
 The **tax desk** prepares your German income tax return, as a draft for you to enter in ELSTER yourself. It is not tax
 advice, and it never submits anything anywhere.
@@ -24,10 +24,20 @@ Once a month while a year is open, and whenever you start it:
 A paper counts for the year it concerns: a Lohnsteuerbescheinigung for 2025 that came in February 2026 is filed under 2025.
 Your Gmail and the mail copy never change; nothing is deleted.
 
+## Where to find it all
+
+- **Tasks → Your taxes** is the desk's one task. Its page shows **Your tax drafts** per year: the papers found per
+  form, the sums per form line, what is missing, the questions for you, your earlier return as read, and the files.
+  **Run now** on it starts the desk; each run shows there with its three steps.
+- **The workbook**, **Belege** and **your return as read** open as pages from the year's Files. Each shows where the
+  file lies on the NAS (`\\NAS\Shared_Data\Steuern\<year>\...`), copied with one tap for the Explorer.
+- **The Tax reader** is the desk's agent (Tasks → Team): ChatGPT only, no tools.
+- The figures show only on your own devices, signed in: never on the AI phone.
+
 ```try
-label: Start the tax desk now
-open: "#/workflows"
-note: Tax desk is one of the workflows; Run now starts it. Its steps show as they run.
+label: Open Your taxes
+open: "#/tasks"
+note: Your taxes is under Needs you while it has a question for you, then Running now, Recent results or Scheduled; tap Taxes to see only it.
 ```
 
 ## Your earlier returns are its base

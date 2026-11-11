@@ -44,6 +44,8 @@ async def api_push_key(request):
 
 async def api_push_sub(request):
     """Subscribes or (on /unsubscribe) unsubscribes a device for push."""
+    if (no := not_from_ai_phone(request)):
+        return no
     sub = await request.json()
     if not isinstance(sub, dict) or not str(sub.get("endpoint", "")).startswith("https://"):
         return JSONResponse({"ok": False}, status_code=400)
@@ -83,6 +85,8 @@ def send_push(title, body, url="/"):
 
 async def api_push_test(request):
     """Sends a test push to every subscribed device."""
+    if (no := not_from_ai_phone(request)):
+        return no
     await asyncio.to_thread(send_push, "Mission Control", "Notifications work.", "/#/system")
     return JSONResponse({"ok": True, "devices": len(subs())})
 
@@ -259,6 +263,14 @@ def client_ip(request):
 def from_ai_phone(request):
     """The AI phone must never approve its own actions (it could open this app in its own browser)."""
     return client_ip(request) == AI_PHONE_IP
+
+
+def not_from_ai_phone(request):
+    """PHN-07 for the routes that write without /api/request (share, uploads, push devices): None, or the refusal.
+    Review 10 Nov (APP2-R3): a page the AI phone visits could file into the vault or subscribe a device of its own."""
+    if from_ai_phone(request):
+        return JSONResponse({"ok": False, "error": "not from the AI phone: it may only press Stop"}, status_code=403)
+    return None
 
 
 async def api_forgejo_connect(request):

@@ -1,5 +1,6 @@
 {
   "active": true,
+  "area": "upkeep",
   "connections": {
     "On its schedule (*/10 * * * *)": {
       "main": [
@@ -65,10 +66,17 @@
       "webhookId": "3222c088-3ac8-43d4-6cd4-defad58ddcdb"
     },
     {
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "aistackRunHook01",
+          "name": "AI Stack runner"
+        }
+      },
       "id": "f9161b61-aa5a-8a78-29ec-0e4fa9d30108",
       "name": "Run now",
       "notes": "Starts the job now, as its schedule would (POST).",
       "parameters": {
+        "authentication": "headerAuth",
         "httpMethod": "POST",
         "options": {},
         "path": "run/crew-memory-gatekeeper"

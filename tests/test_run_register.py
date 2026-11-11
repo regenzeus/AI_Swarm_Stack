@@ -35,6 +35,7 @@ class Resp:
 
 @pytest.fixture
 def R(tmp_path, monkeypatch):
+    monkeypatch.setenv("N8N_HOOK_TOKEN", "hook-test")          # SEC-27: the runner's header for n8n's webhooks
     store = tmp_path / "standin.json"
     store.write_text(json.dumps({"items": {"T-1": {"updated": "2026-11-10T09:00:00", "comments": []}}}))
     (tmp_path / "trackers.yaml").write_text(f"trackers:\n  - {{name: test, kind: standin, path: {store}, workflow: toy/ticket}}\n")

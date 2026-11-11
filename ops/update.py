@@ -8,6 +8,7 @@ release tag the owner signed, never main and never a bare commit:
 The owner's sign-off is an ssh signature on the tag (git tag -s, with gpg.format=ssh): `make release TAG=vYYYY.MM.DD` in
 the public snapshot's clone, after a publish. The deployment names the keys it accepts in deployments/<name>/allowed_signers
 (git's format: "<principal> <key type> <key>"). Home updates by its own landings and has no such file."""
+import os
 import re
 import subprocess
 import sys
@@ -75,8 +76,13 @@ def builder_checks(repo):
 
 
 def deploy_with(repo):
+    done = []
+
     def run(old, new):
-        return subprocess.run([sys.executable, "ops/deploy.py", old, new], cwd=repo, timeout=7200).returncode == 0
+        back = (new, old) in done                         # the deploy before, reversed: apply()'s rollback (PLT-43)
+        done.append((old, new))
+        env = {**os.environ, **({"DEPLOY_ROLLBACK": "1"} if back else {})}
+        return subprocess.run([sys.executable, "ops/deploy.py", old, new], cwd=repo, timeout=7200, env=env).returncode == 0
     return run
 
 

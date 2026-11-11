@@ -2,7 +2,8 @@
 # Land an owner-supervised session's branch on main the way a build lands (BLD-20, FND-04):
 #   bash ops/land.sh <branch> "<the owner's approval, e.g. chat 2026-10-29: implement all now>"
 # 1. the checks (ops/check.sh, in the builder's image) on the exact commit that lands; any failure stops here
-#    and the privacy scan of the public copy (ops/publish.py, FND-124): nothing private gets near main, whenever a publish comes
+#    and the privacy scan of the public copy (ops/publish.py, FND-124): nothing private gets near main, whenever a publish comes,
+#    and every requirement id of main keeps its meaning (ops/req.py kept, QA-28)
 # 2. the land lock, fast-forward main to the branch, push
 # 3. ops/deploy.py (which takes the deploy lock and records the deploy with its source)
 # 4. the runner restarts when the deploy says so: at once when no run is going, otherwise as soon as it is idle
@@ -53,6 +54,33 @@ if ! CSAID=$(bash "$CTREE/ops/ci-compose-check.sh" 2>&1); then
 fi
 rm -rf "$CTREE"
 echo "   compose files valid (checked on the host)"
+
+# An id on main keeps its meaning (QA-28): added, deprecated or superseded, never removed, renumbered or reused. main's own
+# checker reads both commits, so a branch cannot loosen the rule for its own landing. Until main has the check (the landing
+# that brings it), the branch's own checker runs, and says so; main's older checker would only print its usage.
+if grep -q '"kept"' ops/req.py; then
+  KSAID=$(python3 ops/req.py kept --base main --head "$TIP" 2>&1); KOK=$?
+else
+  KCHECK=$(mktemp --suffix=.py)
+  git show "$TIP:ops/req.py" > "$KCHECK"
+  echo "   main has no requirement id check yet: the branch's own checker runs on this repository (QA-28)"
+  KSAID=$(python3 - "$KCHECK" "$TIP" <<'PY' 2>&1
+import runpy, sys
+from pathlib import Path
+problems = runpy.run_path(sys.argv[1])["kept"](Path(".").resolve(), "main", sys.argv[2])   # this repository, not the temp file's folder
+for p in problems:
+    print(f"   ID CHANGED: {p}")
+print("   every requirement id keeps its meaning" if not problems else f"   {len(problems)} requirement ids changed")
+sys.exit(1 if problems else 0)
+PY
+); KOK=$?
+  rm -f "$KCHECK"
+fi
+if [ "$KOK" -ne 0 ]; then
+  echo "$KSAID"
+  echo "NOT LANDED: a requirement id of main changed its meaning on $BRANCH; give the new requirement the next free id, keep the old id deprecated, or keep an old title in titles_before (requirements/AGENTS.md)" >&2
+  exit 1
+fi
 
 if ! SAID=$(python3 ops/publish.py scan "$TIP" 2>&1); then
   echo "$SAID" | tail -15                         # cap: list (it names file and line; the private term itself never shows)

@@ -15,6 +15,7 @@ secrets. The whole suite runs in under a minute.
 | `test_guide.py` | the in-app guide covers every tool, screen and `make` target; examples and live blocks are valid |
 | `semgrep/` | fixtures of deliberately bad code: `ops/semgrep_selftest.py` checks the `.semgrep.yml` rules still flag them |
 | `test_repo_docs.py` | every directory has an `AGENTS.md` listed in the root map; file headers exist |
+| `test_tax_task.py` | the tax desk as the owner's task Your taxes and its result in the app, on synthetic outputs only (TAX-09 to TAX-12) |
 | `test_new_machine_docs.py` | new-PC instructions and the rehearsal's manual checklist retain the five required setup topics |
 
 These are the core files. Every test file, every test and the requirement it proves are in

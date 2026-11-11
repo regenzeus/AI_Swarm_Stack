@@ -22,7 +22,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 # Every feature a deployment may switch on (docs/PLATFORM.md §3). core is always on and is not listed in FEATURES.
 KNOWN = {
-    "builder": "the builder sandbox, OpenCode, the code graph, the CI runner and their package proxies",
+    "builder": "the builder sandbox, OpenCode, the code graph and their package proxies",
+    "forgejo-ci": "the Forgejo Actions runner, which needs a runner registration from the deployment's Forgejo (GEN-47)",
     "mission-control": "the app and the Hermes dashboard",
     "memory": "Hindsight, qmd and the memory agent",
     "home": "the NAS (backup, the restore drill, the skills mirror), Home Assistant and the router",
@@ -99,7 +100,8 @@ def timers(root=ROOT):
 
 # The values a feature needs when it is on (compose takes them as optional, so a deployment without the feature needs
 # none: a work site, 9 Nov 2026, had to write "off.invalid" for every home host). A host ending in .invalid counts as none.
-NEEDS = {"home": ("NAS_HOST", "HA_URL", "ROUTER_URL"), "phone": ("PHONE_HOST",), "tailnet": ("PC_TAILNET_HOST",)}
+NEEDS = {"home": ("NAS_HOST", "HA_URL", "ROUTER_URL"), "phone": ("PHONE_HOST",), "tailnet": ("PC_TAILNET_HOST",),
+         "forgejo-ci": ("FORGEJO_URL",)}           # GEN-47: the runner registers with this Forgejo
 
 
 def missing(values=None):

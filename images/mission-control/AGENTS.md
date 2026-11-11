@@ -5,6 +5,8 @@
 | `server.py` | Starlette app: the API for the front end (port 8090) and the MCP tools for Hermes (port 8091); the runtime ingest (port 8093, `POST /ingest`, `GET /problems`, `GET /view/<run>` for the runner's journal entries) |
 | `server.frames.py` | part of `server.py` (WFL-14, APP-66): the stack's tools inside the app, each under the app's own address behind the `TailnetOnly` gate: n8n's editor at `/n8n/` (`http://n8n:5678` on `stepnet`), Phoenix at `/phoenix/` (`http://phoenix:6006` on `obs`); the prefix taken off for the tool, everything streamed (n8n's live updates are SSE), framing for the app's own pages only |
 | `server.n8n.py` | part of `server.py` (WFL-14): `GET /api/workflows` serves the runner's `public/workflows-runs.json` |
+| `server.tax.py` | part of `server.py` (TAX-10, TAX-11): `GET /api/tax` serves the tax desk's result (`/missions/tax/view.json`, shared with the app's user alone) to the owner's signed-in session only: never the AI phone or `*@stack.local`, never cached |
+| `server.trust.py` | part of `server.py` (SEC-24 to SEC-26): who may speak to the app: port 8090 only through its published port (the gateway of the container's default route), each MCP server only LiteLLM with its own token, the step service only with its token; `APP_TRUST` log (logs what it would refuse) or on (refuses) |
 | `runrecord.py` | the agent runtime record: SQLite `/missions/app/runtime.db`, ingest, the closed-run rule, watchdog, drift, what each run touched, retention (docs/OBSERVABILITY.md) |
 | `obs_core.py` | pure observability helpers shared with the runner (`ops/observe.py` re-exports them): files, stats, ledger, problems, health |
 | `web/` | the front end (vanilla JS PWA), see [web/AGENTS.md](web/AGENTS.md) |
@@ -22,7 +24,9 @@ the app talks to Hermes directly (server-side task + resumable SSE), and chats l
 ## Rules
 
 - Every `/api/*` route needs the `Tailscale-User-Login` header (middleware `TailnetOnly`), and so do `/share` and
-  each tool inside the app (`/n8n/`, `/phoenix/`: `FRAMES` in `server.frames.py`). Don't add exceptions.
+  each tool inside the app (`/n8n/`, `/phoenix/`: `FRAMES` in `server.frames.py`). Don't add exceptions. The header
+  counts only through the published port (SEC-24, `server.trust.py`): nothing in a container may call port 8090.
+- A new port gets its guard in `server.trust.py` (a peer and a token), never a bare `0.0.0.0` listener.
 - New request actions go into `ACTIONS` **and** are validated in the runner (`ops/missions.py` `handle`). Never
   trust the request here.
 - New MCP tools: a clear description (Hermes reads it), a mention in a guide chapter, and a plain-language line in

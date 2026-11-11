@@ -16,7 +16,7 @@ GW := $(if $(GATEWAY_TOKEN_NAME),AISTACK_GATEWAY_TOKEN=\$$$(GATEWAY_TOKEN_NAME) 
 # Run a compose command with secrets in its environment: $(call dc,<args>)
 dc = sops exec-env $(SECRETS) 'sops exec-env $(KEYS) "$(GW)$(COMPOSE) $(1)"'
 
-.PHONY: up down ps logs restart keys secrets-edit smoke claude-connect probe-tools req check lock pull-smoke-model chatgpt-login ingest-exports bench bench-gate retrieval curate vault-check skill-approve skills-restore-from-git backup restore-drill restore understand facts facts-image understand-dashboard upgrade-check digest forget hindsight-models desk email-setup wiki-rebuild ua-enrich mailvault-deploy mailvault-password publish-check publish tasks-gate conductor-gate journeys trial trial-check ha-deploy voice-deploy deploy-testrepo opencode-password
+.PHONY: up down ps logs restart keys trust-keys secrets-edit smoke claude-connect probe-tools req check lock pull-smoke-model chatgpt-login ingest-exports bench bench-gate retrieval curate vault-check skill-approve skills-restore-from-git backup restore-drill restore understand facts facts-image understand-dashboard upgrade-check digest forget hindsight-models desk email-setup wiki-rebuild ua-enrich mailvault-deploy mailvault-password publish-check publish tasks-gate conductor-gate journeys trial trial-check ha-deploy voice-deploy deploy-testrepo opencode-password
 
 up:               ## start core services
 	python3 ops/deployment.py check
@@ -39,6 +39,9 @@ secrets-edit:     ## add or change provider keys (opens an editor; values never 
 
 keys:             ## create per-agent LiteLLM virtual keys
 	sops exec-env $(SECRETS) 'bash ops/keys.sh'
+
+trust-keys:       ## make the trust boundary's secrets once (step service, MCP servers, n8n's webhooks; values never printed)
+	sops exec-env $(SECRETS) 'python3 ops/trust_keys.py'
 
 pull-smoke-model: ## fetch the tiny wiring-test model (Ollama gets internet only for the pull)
 	docker network connect aistack_edge aistack-ollama-1

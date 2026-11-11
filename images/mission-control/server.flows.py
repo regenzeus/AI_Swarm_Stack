@@ -1,5 +1,6 @@
 # part of server.py (WFL-05, docs/N8N-MIGRATION.md §3.2): the step service n8n calls. Port 8099, never published and
-# reached only on the stepnet network, which n8n and this app alone share. A step is dropped for the runner as
+# reached only on the stepnet network, which n8n and this app alone share, with its token (AISTACK_STEP_TOKEN, which the
+# AI Stack step node sends; SEC-25, server.trust.py). A step is dropped for the runner as
 # /missions/flows/pending/<id>.json, as the owner's actions go through the inbox (SEC-12); the runner checks it, runs it
 # (ops/flows.py) and posts the answer to the n8n execution that waits for it. GET /steps/<id> answers what is known.
 # GET /catalog gives the node's pickers their lists (WFL-06): agents, crew jobs, places, repositories and the kinds, as
@@ -51,5 +52,5 @@ async def catalog_get(request):
                              "kinds": [], "agents": [], "crew": [], "places": [], "repos": []})
 
 
-flows_app = Starlette(routes=[Route("/steps", steps_post, methods=["POST"]), Route("/steps/{rid}", steps_get), Route("/catalog", catalog_get)],
-                      middleware=[Middleware(TrustedHostMiddleware, allowed_hosts=["mission-control"])])   # only by service name
+flows_app = step_guard(Starlette(routes=[Route("/steps", steps_post, methods=["POST"]), Route("/steps/{rid}", steps_get), Route("/catalog", catalog_get)],
+                                 middleware=[Middleware(TrustedHostMiddleware, allowed_hosts=["mission-control"])]))   # only by service name, with its token (SEC-25)

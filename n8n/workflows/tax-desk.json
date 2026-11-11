@@ -1,12 +1,13 @@
 {
-  "active": false,
+  "active": true,
+  "area": "taxes",
   "connections": {
-    "Find tax papers": {
+    "Find the tax papers": {
       "main": [
         [
           {
             "index": 0,
-            "node": "Read them (Hermes, ChatGPT)",
+            "node": "Read the papers (ChatGPT)",
             "type": "main"
           }
         ]
@@ -17,18 +18,18 @@
         [
           {
             "index": 0,
-            "node": "Find tax papers",
+            "node": "Find the tax papers",
             "type": "main"
           }
         ]
       ]
     },
-    "Read them (Hermes, ChatGPT)": {
+    "Read the papers (ChatGPT)": {
       "main": [
         [
           {
             "index": 0,
-            "node": "File copies and prepare the drafts",
+            "node": "File the copies and prepare the drafts",
             "type": "main"
           }
         ]
@@ -39,7 +40,7 @@
         [
           {
             "index": 0,
-            "node": "Find tax papers",
+            "node": "Find the tax papers",
             "type": "main"
           }
         ]
@@ -70,13 +71,13 @@
       "typeVersion": 1.2
     },
     {
-      "id": "09026664-2984-57cb-ae48-1c2a8de8e253",
-      "name": "Find tax papers",
+      "id": "01496d29-bef1-0dd8-b887-e5a7c80ba6f3",
+      "name": "Find the tax papers",
       "notes": "The crew job tax-find (crew-tax-find.service), waited for.",
       "parameters": {
         "job": "tax-find",
         "kind": "crew",
-        "title": "Find tax papers"
+        "title": "Find the tax papers"
       },
       "position": [
         260,
@@ -84,17 +85,17 @@
       ],
       "type": "CUSTOM.aistackStep",
       "typeVersion": 1,
-      "webhookId": "18b9af54-e1db-4444-86a7-b728c0e5e400"
+      "webhookId": "32b2abba-4491-b81b-135f-6bd58da370f3"
     },
     {
-      "id": "7ad16bc9-9978-4f9b-96dd-b64af32e3444",
-      "name": "Read them (Hermes, ChatGPT)",
+      "id": "aae1b614-ab70-6303-e064-6f254ef9a6b5",
+      "name": "Read the papers (ChatGPT)",
       "notes": "The agent tax (hermes, gpt-sub) through the step service.",
       "parameters": {
         "agent": "tax",
-        "brief": "Reads the owner's tax papers from the mail copy and their earlier returns, one at a time, for the tax desk.",
+        "brief": "Reads the papers of the Tax desk, one at a time, and the owner's earlier returns. ChatGPT only, no tools.",
         "kind": "agent",
-        "title": "Read them (Hermes, ChatGPT)"
+        "title": "Read the papers (ChatGPT)"
       },
       "position": [
         520,
@@ -102,16 +103,16 @@
       ],
       "type": "CUSTOM.aistackStep",
       "typeVersion": 1,
-      "webhookId": "dde092ee-57bb-1049-bc6a-02fabe2be765"
+      "webhookId": "88e8b0e1-7f15-4934-f677-6a2240b2d327"
     },
     {
-      "id": "66f2bf69-6632-2321-c19d-41bcc2e98554",
-      "name": "File copies and prepare the drafts",
+      "id": "f05ba76c-d5e2-fb60-1f6a-9801cbca8e3d",
+      "name": "File the copies and prepare the drafts",
       "notes": "The crew job tax-file (crew-tax-file.service), waited for.",
       "parameters": {
         "job": "tax-file",
         "kind": "crew",
-        "title": "File copies and prepare the drafts"
+        "title": "File the copies and prepare the drafts"
       },
       "position": [
         780,
@@ -119,13 +120,20 @@
       ],
       "type": "CUSTOM.aistackStep",
       "typeVersion": 1,
-      "webhookId": "a200b271-bfc4-8ff1-2a9f-3051fc294a04"
+      "webhookId": "3635feea-5f16-a677-8774-8eead04deef4"
     },
     {
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "aistackRunHook01",
+          "name": "AI Stack runner"
+        }
+      },
       "id": "73bbaef5-f986-8637-0821-799e49b8dd33",
       "name": "Run now",
       "notes": "Starts the job now, as its schedule would (POST).",
       "parameters": {
+        "authentication": "headerAuth",
         "httpMethod": "POST",
         "options": {},
         "path": "run/tax-desk"

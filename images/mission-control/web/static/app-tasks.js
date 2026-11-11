@@ -2,16 +2,23 @@
 // ---------- the Tasks tab (DEC-46, 8 Nov 2026): what needs doing, and who does it ----------
 // Five views, one question each: Tasks (what am I having done?), Activity (what is happening now?), Team (who does the
 // work, and how well?), Network (which agents work on which tasks?) and Ideas (what could be better?). A task's When
-// (once, repeats, on an event, after another task) is a setting, never a kind of its own. A task is yours or the
-// stack's (TSK-40): the crew's duties are the stack's tasks, a filter away, never hidden. Agents show through their
-// work: on each task's row, who works on it (TSK-43).
+// (once, repeats, on an event, after another task) is a setting, never a kind of its own. Every task is in one list
+// (TSK-52), labelled by its area. Agents show through their work: on each task's row, who works on it (TSK-43).
 const TVIEWS = [["tasks", "Tasks"], ["activity", "Activity"], ["team", "Team"], ["network", "Network"], ["ideas", "Ideas"]];
-const TLISTS = [["active", "Active"], ["repeating", "Repeating"], ["done", "Done"]];
+// TSK-52: one list of every task of the stack (TSK-40's yours/stack split is gone: the owner, 11 Nov 2026, "It just
+// needlessly bisects and makes overview difficult ... I want the app to show me whats going on in stack"), in the order
+// of what matters now, each labelled with its area (ops/areas.py) and who asked. The area is an optional filter (none
+// picked: all). Upkeep, the stack's frequent small jobs, folds into one row with its health; a failing one also shows
+// on its own under Failed, and nothing is ever hidden.
+const TGROUPS = [["needs", "Needs you"], ["failed", "Failed"], ["running", "Running now"], ["recent", "Recent results"], ["scheduled", "Scheduled"]];
+const AREAS = { taxes: "Taxes", mail: "Mail", briefings: "Briefings", shopping: "Shopping", research: "Research", errands: "Errands", inbox: "Inbox",
+  phone: "Phone", code: "Code", memory: "Memory", upkeep: "Upkeep" };   // ops/areas.py
+const ASKED = { you: "you asked", rule: "one of your rules", agent: "an outside agent", stack: "the stack's own" };
 const TEAM_PARTS = [["tasks", "On your tasks"], ["crew", "Crew"], ["measured", "Measured"]];
 const TNEW_KINDS = [["", "The stack decides", "radar"], ["briefing", "Briefing", "news"], ["research", "Research", "doc"], ["shopping", "Shopping", "coin"], ["cleanup", "Cleanup", "trash"]];
 const TNEW_WHEN = [["schedule", "Repeats"], ["event", "On event"], ["after", "After a task"], ["once", "Once"]];
 const OLD_NEW_KIND = { briefing: "briefing", task: "research", shopping: "shopping", cleanup: "cleanup" };   // #/new?type= from before
-let tasksView = null, tasksList = "active", tasksOwner = "all", tasksQuery = "", teamPart = "tasks", netMode = "tasks", netOwner = "all", netDays = 7, netPick = null;
+let tasksView = null, tasksArea = "", tasksQuery = "", teamPart = "tasks", netMode = "tasks", netDays = 7, netPick = null;
 let netData = null, netAt = 0, netMap = new Map(), netTimer = null, tnewOpen = false, tasksSig = "";
 const NEEDS_T = ["needs_answer", "waiting_approval", "waiting_owner"], BUSY_T = ["intake", "planning", "planned", "running"];
 const tRepeats = (t) => ["schedule", "event"].includes(t.rhythm?.type);
@@ -21,16 +28,27 @@ function taskAgentOf(t) {                    // a mission's or a duty's own stat
   if (t.door === "crew") { const c = (S.crew || []).find((x) => x.id === t.ref); return c ? crewAgent(c) : null; }
   return null;
 }
-const tNeeds = (t, A) => NEEDS_T.includes(t.status) || !!A?.needs.length;
+const tNeeds = (t, A) => NEEDS_T.includes(t.status) || !!A?.needs.length || t.asks > 0;   // TAX-09: a workflow's task with questions in Needs you
+const asksText = (t) => (t.asks > 0 ? `${nf(t.asks)} question${t.asks === 1 ? "" : "s"} for you` : "");
 const tLive = (t, A) => !!A?.live || !!netMap.get(t.id)?.live || (BUSY_T.includes(t.status) && Date.now() - Date.parse(t.updated || 0) < 6 * 3600e3);   // APP-38: a leftover is not at work
 const tRepeating = (t, A) => tRepeats(t) && !["cancelled", "done"].includes(t.status) && !A?.archived;
-const T_IN = { active: (t, A) => !tOver(t) && (!tRepeating(t, A) || tNeeds(t, A) || tLive(t, A)), repeating: tRepeating, done: (t, A) => tOver(t) && !tRepeating(t, A) };
+const tFailed = (t, A) => t.status === "failed" || (t.status !== "cancelled" && t.last_run?.status === "failed") || (!!A && agentHealth(A) === "bad");
+const tWhen = (t, A) => Date.parse(t.last_run?.ended || t.last_run?.started || "") || (A?.last ? A.last * 1000 : 0) || Date.parse(t.updated || 0) || 0;
+const RECENT_MS = 86400e3;                    // a repeating task that ran within a day shows its result under Recent results
+function tGroup(t, A) {                       // what matters now: needs you, failed, running, recent results, scheduled
+  if (tNeeds(t, A)) return "needs";
+  if (tFailed(t, A)) return "failed";
+  if (tLive(t, A)) return "running";
+  if (tOver(t) || Date.now() - tWhen(t, A) < RECENT_MS && (t.last_run?.ended || A?.last)) return "recent";
+  return "scheduled";
+}
+const tArea = (t) => (AREAS[t.area] ? t.area : "research");
 const tHref = (t) => (t.door === "mission" && t.ref ? `#/mission/${encodeURIComponent(t.ref)}` : t.door === "crew" && t.ref ? `#/crew/${encodeURIComponent(t.ref)}` : `#/task/${t.id}`);
-const tMine = (t) => t.door !== "chat" && (tasksOwner === "all" || (tasksOwner === "stack") === (t.owner === "stack"));   // a chat is a task too: it lives on Chat; All (the default) is yours and the stack's
+const tMine = (t) => t.door !== "chat";        // a chat is a task too: it lives on Chat
 const tNext = (t, A) => t.next_run ? Date.parse(t.next_run) : A?.next ? A.next * 1000 : 9e15;
-const tRank = (t, A) => (tNeeds(t, A) ? 0 : tLive(t, A) ? 1 : BUSY_T.includes(t.status) || t.status === "after" ? 2 : 3);
-const KIND_IC = { briefing: "news", research: "doc", analysis: "doc", shopping: "coin", cleanup: "trash", change: "code", coding: "code", code_question: "code", watching: "radar", errand: "target" };
+const KIND_IC = { tax: "coin", briefing: "news", research: "doc", analysis: "doc", shopping: "coin", cleanup: "trash", change: "code", coding: "code", code_question: "code", watching: "radar", errand: "target" };
 const tIcon = (t, A) => A?.icon || ic[KIND_IC[t.kind] || (["build", "claude"].includes(t.door) ? "code" : t.door === "chat" ? "chat" : "target")];
+const tAsked = (t) => (t.asked === "you" ? `you asked ${day(t.created)}` : ASKED[t.asked] || "");
 
 function whenChip(t) {
   const r = t.rhythm || {};
@@ -41,9 +59,9 @@ function whenChip(t) {
 }
 function stateChip(t, A) {
   const st = t.steps || [];
-  if (tNeeds(t, A)) return `<span class="tchip warn">${esc(A?.needs[0] || TSTATUS[t.status] || t.status)}</span>`;
+  if (tNeeds(t, A)) return `<span class="tchip warn">${esc(A?.needs[0] || (NEEDS_T.includes(t.status) ? "" : asksText(t)) || TSTATUS[t.status] || t.status)}</span>`;
   if (tLive(t, A)) return `<span class="tchip run"><span class="dot run"></span>${st.length ? `step ${Math.min(st.length, st.filter((s) => s.status === "done").length + 1)} of ${st.length}` : esc(A?.step || TSTATUS[t.status] || "working")}</span>`;
-  if (t.status === "failed") return `<span class="tchip err">failed</span>`;
+  if (tFailed(t, A)) return `<span class="tchip err">failed${tWhen(t, A) ? ` ${esc(rel(new Date(tWhen(t, A)).toISOString()))}` : ""}</span>`;
   if (t.status === "cancelled") return `<span class="tchip">cancelled</span>`;
   if (tRepeating(t, A)) { const nx = tNext(t, A); return A?.off ? `<span class="tchip">paused</span>` : nx < 9e15 ? `<span class="tchip">next ${esc(rel(new Date(nx).toISOString()))}</span>` : ""; }
   if (t.status === "done") return `<span class="tchip ok">done ${esc(rel(t.updated))}</span>`;
@@ -56,43 +74,62 @@ function avatars(t) {                        // who works on it this week: its a
   return `<span class="tavs" title="${esc(who.join(", "))}">${n.agents.slice(0, 4).map((g, i) => `<i class="${g.live ? "live" : ""}">${esc((who[i][0] || "?").toUpperCase())}</i>`).join("")}${n.agents.length > 4 ? `<i class="more">+${n.agents.length - 4}</i>` : ""}</span>`;   /* cap: preview: the task's page lists every agent */
 }
 function tRow(t) {
-  const A = taskAgentOf(t), h = tNeeds(t, A) ? "needs" : tLive(t, A) ? "live" : t.status === "failed" ? "bad" : t.status === "done" ? "ok" : A && agentHealth(A) === "bad" ? "bad" : "idle";
-  const said = t.status === "failed" && t.error ? t.error : t.last_run?.summary || A?.result || "";
+  const A = taskAgentOf(t), g = tGroup(t, A), h = g === "needs" ? "needs" : g === "running" ? "live" : g === "failed" ? "bad" : t.status === "done" ? "ok" : "idle";
+  const said = tFailed(t, A) && t.error ? t.error : t.last_run?.summary || A?.result || "";
   const line = [TSTATUS[t.status], t.status, "running", "done"].includes(String(said).trim().toLowerCase()) ? "" : said;   // the chip says it already
   return `<a class="card agcard tkrow h-${h}" href="${tHref(t)}"><div class="agic">${tIcon(t, A)}</div><div class="agbody">
     <div class="agrow"><b class="agt">${esc(t.title)}</b></div>
-    <div class="tmeta">${stateChip(t, A)}${whenChip(t)}${avatars(t)}</div>
-    ${line ? `<div class="small agres ${t.status === "failed" ? "err-t" : ""}">${prose(firstLine(line))}</div>` : ""}</div></a>`;
+    <div class="tmeta"><span class="tchip area a-${tArea(t)}">${esc(AREAS[tArea(t)])}</span>${stateChip(t, A)}${whenChip(t)}${avatars(t)}</div>
+    ${line ? `<div class="small agres ${g === "failed" ? "err-t" : ""}">${prose(firstLine(line))}</div>` : ""}
+    ${tAsked(t) ? `<div class="tiny faint">${esc(tAsked(t))}</div>` : ""}</div></a>`;
+}
+// all tasks of the list with their state, grouped: [[group, [[t, A], ...]], ...], newest first in each
+function tasksGrouped(rows) {
+  const by = Object.fromEntries(TGROUPS.map(([k]) => [k, []]));
+  for (const [t, A] of rows) by[tGroup(t, A)].push([t, A]);
+  for (const k in by) by[k].sort(([a, A], [b, B]) => tWhen(b, B) - tWhen(a, A));
+  return TGROUPS.map(([k, l]) => [k, l, by[k]]);
+}
+// the Upkeep row: the stack's own small jobs as one row with their health; a tap opens them as rows
+function upkeepRowHtml(rows, open = false) {
+  if (!rows.length) return "";
+  const live = rows.filter(([t, A]) => tLive(t, A)).length, bad = rows.filter(([t, A]) => tFailed(t, A));
+  const last = Math.max(0, ...rows.map(([t, A]) => tWhen(t, A)));
+  const words = bad.length ? `<span class="err-t">${nf(bad.length)} failing: ${bad.map(([t]) => esc(t.title)).join(", ")}</span>` : "all fine";
+  return `<details class="card tupkeep" data-keep="tupkeep"${open ? " open" : ""}><summary><div class="agic">${ic.pulse}</div><div class="grow" style="min-width:0">
+      <div class="row between wrap gap-2"><b>Upkeep</b><span class="tchip area a-upkeep">${esc(AREAS.upkeep)}</span></div>
+      <div class="small wrap">${nf(rows.length)} jobs, ${words}${live ? `, ${nf(live)} running` : ""}${last ? `, last run ${esc(rel(new Date(last).toISOString()))}` : ""}</div></div></summary>
+    <div class="aglist mt-2">${rows.map(([t]) => tRow(t)).join("")}</div></details>`;
 }
 function tasksHeadHtml() {
-  const mine = (S.tasks || []).filter(tMine).map((t) => [t, taskAgentOf(t)]);   // the same tasks the list shows, yours or the stack's (a work site, 9 Nov 2026: "0 repeating" over a list with one)
-  const need = mine.filter(([t, A]) => tNeeds(t, A)).length, run = mine.filter(([t, A]) => tLive(t, A)).length, rep = mine.filter(([t, A]) => tRepeating(t, A)).length;
-  return `<p class="agtop" id="thead">${notConnected() ? `<b class="err-t">${esc(linkWords())}</b>` : need ? `<b class="warn-t">${need} need${need > 1 ? "" : "s"} you</b>` : "Nothing needs you"}${run ? ` · <span class="run-t">${run} running</span>` : ""} · ${rep} repeating${netData?.agents?.length ? ` · ${netData.agents.length} agents this week` : ""}</p>`;
+  const all = (S.tasks || []).filter(tMine).map((t) => [t, taskAgentOf(t)]);   // the same tasks the list shows
+  const n = (k) => all.filter(([t, A]) => tGroup(t, A) === k).length, need = n("needs"), run = n("running"), bad = n("failed");
+  return `<p class="agtop" id="thead">${notConnected() ? `<b class="err-t">${esc(linkWords())}</b>` : need ? `<b class="warn-t">${need} need${need > 1 ? "" : "s"} you</b>` : "Nothing needs you"}${bad ? ` · <span class="err-t">${bad} failed</span>` : ""}${run ? ` · <span class="run-t">${run} running</span>` : ""} · ${nf(all.length)} tasks${netData?.agents?.length ? ` · ${netData.agents.length} agents this week` : ""}</p>`;
 }
 function tasksListHtml() {
-  const all = (S.tasks || []).filter(tMine).map((t) => [t, taskAgentOf(t)]);
-  const by = Object.fromEntries(TLISTS.map(([k]) => [k, all.filter(([t, A]) => T_IN[k](t, A))]));
   const q = tasksQuery.trim().toLowerCase();
-  const list = by[tasksList].filter(([t]) => !q || `${t.title} ${t.goal || ""}`.toLowerCase().includes(q))
-    .sort(([a, A], [b, B]) => tasksList === "done" ? Date.parse(b.updated || 0) - Date.parse(a.updated || 0)
-      : tRank(a, A) - tRank(b, B) || tNext(a, A) - tNext(b, B) || Date.parse(b.updated || 0) - Date.parse(a.updated || 0)).map(([t]) => t);
-  const empty = q ? "No task matches." : tasksList === "active" ? (tasksOwner !== "stack" ? "Nothing is going on right now. Say what to do in New task, on Home or in Chat." : "The stack's duties are all waiting for their time.")
-    : tasksList === "repeating" ? "No task repeats yet: give one a When (daily, weekly, on news)." : "Nothing finished in the last 7 days.";
-  return `<div class="aglist" id="tlist">${list.map(tRow).join("") || `<div class="card pad small muted">${empty}</div>`}</div>
-    ${tasksList === "done" && list.length ? `<div class="tiny faint" style="margin-top:6px">Done in the last 7 days; every task keeps its page.</div>` : ""}`;
+  const all = (S.tasks || []).filter(tMine).filter((t) => (!tasksArea || tArea(t) === tasksArea) && (!q || `${t.title} ${t.goal || ""}`.toLowerCase().includes(q))).map((t) => [t, taskAgentOf(t)]);
+  const fold = !tasksArea && !q;               // Upkeep folds, unless you picked it or search
+  const upkeep = fold ? all.filter(([t]) => tArea(t) === "upkeep") : [];
+  const rest = all.filter((x) => !upkeep.includes(x) || ["needs", "failed"].includes(tGroup(...x)));   // a failing or waiting job also on its own
+  const groups = tasksGrouped(rest).filter(([, , xs]) => xs.length);
+  const empty = q || tasksArea ? "No task matches." : "Nothing is going on right now. Say what to do in New task, on Home or in Chat.";
+  return `<div id="tlist">${groups.map(([k, l, xs]) => `<div class="tgroup g-${k}"><div class="section-h"><h2>${esc(l)} <span class="hcount">${nf(xs.length)}</span></h2></div>
+      <div class="aglist">${xs.map(([t]) => tRow(t)).join("")}</div></div>`).join("")}
+    ${upkeep.length ? `<div class="tgroup g-upkeep">${upkeepRowHtml(upkeep)}</div>` : ""}
+    ${!groups.length && !upkeep.length ? `<div class="card pad small muted">${empty}</div>` : ""}</div>
+    <div class="tiny faint" style="margin-top:6px">Every open task and every task of the last 7 days; each keeps its page.</div>`;
 }
 function tasksBodyHtml() {
-  const all = (S.tasks || []).filter(tMine).map((t) => [t, taskAgentOf(t)]);
-  const n = (k) => all.filter(([t, A]) => T_IN[k](t, A)).length;
-  const rules = tasksList === "repeating" && tasksOwner !== "stack";
-  return `${tasksOwner !== "stack" ? phoneBanner() : ""}
+  const all = (S.tasks || []).filter(tMine);
+  const areas = Object.keys(AREAS).filter((k) => all.some((t) => tArea(t) === k));
+  return `${phoneBanner()}
     ${tnewOpen ? newTaskHtml() : ""}
-    <div class="tfil"><div class="chips">${TLISTS.map(([k, l]) => `<button type="button" class="fchip ${tasksList === k ? "on" : ""}" data-tl="${k}">${l}<span>${n(k)}</span></button>`).join("")}</div>
-      <div class="seg tow">${[["you", "User"], ["stack", "Stack"], ["all", "All"]].map(([k, l]) => `<button type="button" class="${tasksOwner === k ? "on" : ""}" data-to="${k}">${l}</button>`).join("")}</div></div>
+    <div class="tfil"><div class="chips tareas" role="group" aria-label="Areas">${areas.map((k) => `<button type="button" class="fchip ${tasksArea === k ? "on" : ""}" data-tarea="${k}">${esc(AREAS[k])}<span>${nf(all.filter((t) => tArea(t) === k).length)}</span></button>`).join("")}</div></div>
     <div class="wsearch tq">${ic.search}<input class="input" id="tq" placeholder="Find a task" value="${esc(tasksQuery)}" autocomplete="off"></div>
     <div id="tlistbox">${tasksListHtml()}</div>
-    ${rules ? `<details class="section card pad" data-keep="trules"><summary class="row between" style="gap:8px"><b>Rules · ${(S.bus?.rules || []).length}</b><span class="tiny faint">a new task each time something happens</span></summary>
-      <div id="trigboard" style="margin-top:10px">${trigBoardHtml()}</div>${ruleFormHtml()}</details>` : ""}`;
+    <details class="section card pad" data-keep="trules"><summary class="row between" style="gap:8px"><b>Rules · ${(S.bus?.rules || []).length}</b><span class="tiny faint">a new task each time something happens</span></summary>
+      <div id="trigboard" style="margin-top:10px">${trigBoardHtml()}</div>${ruleFormHtml()}</details>`;
 }
 
 // New task: one form for every task (the old mission wizard's kinds and options included). Only what you set is
@@ -167,14 +204,15 @@ function vTasks() {
   clearInterval(netTimer);
   const v = route.q.get("v");
   tasksView = TVIEWS.some(([k]) => k === v) ? v : tasksView || pref("mc-tasks-view", "tasks");
-  if (route.q.get("new") === "1") { tnewOpen = true; tasksView = "tasks"; tasksList = "active"; tasksOwner = "you"; }
+  if (route.q.get("new") === "1") { tnewOpen = true; tasksView = "tasks"; }
+  if (route.q.has("area")) tasksArea = AREAS[route.q.get("area")] ? route.q.get("area") : "";
   if (route.q.get("p")) teamPart = TEAM_PARTS.some(([k]) => k === route.q.get("p")) ? route.q.get("p") : teamPart;
   if (route.q.get("m")) netMode = route.q.get("m") === "team" ? "team" : "tasks";
   view.innerHTML = `<div class="hero"><div class="grow" style="min-width:0"><h1>Tasks</h1>${tasksHeadHtml()}</div><div class="row gap-2"><a class="btn phone-only" href="#/workflows">${ic.flow}Workflows</a><button class="btn primary" id="tnewb">${ic.plus}New task</button></div></div>
     <nav class="seg tviews" aria-label="Parts of Tasks">${TVIEWS.map(([k, l]) => `<button type="button" data-tv="${k}" class="${tasksView === k ? "on" : ""}">${l}</button>`).join("")}</nav>
     <div id="tvbody"></div>`;
   $("#tnewb").onclick = () => {
-    tnewOpen = true; tasksView = "tasks"; tasksList = "active"; tasksOwner = "you"; setPref("mc-tasks-view", "tasks");
+    tnewOpen = true; tasksView = "tasks"; setPref("mc-tasks-view", "tasks");
     history.replaceState(history.state, "", "#/tasks?v=tasks"); route.q = new URLSearchParams({ v: "tasks" });
     vTasks(); $("#tnew")?.scrollIntoView({ block: "start" });
   };
@@ -187,7 +225,7 @@ function tasksDraw(force = false) {           // the open view; a live update re
   const b = $("#tvbody");
   if (!b) return;
   if (tasksView === "tasks") {
-    const sig = JSON.stringify([tasksList, tasksOwner, tasksQuery, tnewOpen, (S.tasks || []).map((t) => [t.id, t.status, t.updated, t.next_run, t.owner]), [...netMap.values()].map((x) => [x.id, x.live, x.agents.length]),
+    const sig = JSON.stringify([tasksArea, tasksQuery, tnewOpen, (S.tasks || []).map((t) => [t.id, t.status, t.updated, t.next_run, t.area, t.last_run?.status, t.asks]), [...netMap.values()].map((x) => [x.id, x.live, x.agents.length]),
       (S.missions || []).map((m) => [m.slug, m.status, m.awaits, S.running?.slug === m.slug]), (S.crew || []).map((c) => [c.id, c.state]), S.bus?.rules]);
     if (!force && sig === tasksSig) return;
     if (!force && ((typing() && b.contains(document.activeElement)) || $("#tnew"))) {         // writing a task or searching: only the list
@@ -198,8 +236,7 @@ function tasksDraw(force = false) {           // the open view; a live update re
     const open = [...b.querySelectorAll("details[open][data-keep]")].map((d) => d.dataset.keep);
     b.innerHTML = tasksBodyHtml();
     for (const k of open) { const d = b.querySelector(`details[data-keep="${CSS.escape(k)}"]`); if (d) d.open = true; }
-    $$("[data-tl]", b).forEach((x) => (x.onclick = () => { tasksList = x.dataset.tl; tasksDraw(true); }));
-    $$("[data-to]", b).forEach((x) => (x.onclick = () => { tasksOwner = x.dataset.to; tasksDraw(true); }));
+    $$("[data-tarea]", b).forEach((x) => (x.onclick = () => { tasksArea = tasksArea === x.dataset.tarea ? "" : x.dataset.tarea; tasksDraw(true); }));
     const q = $("#tq", b);
     q.oninput = () => { tasksQuery = q.value; $("#tlistbox").innerHTML = tasksListHtml(); };
     bindNewTask();
@@ -261,8 +298,7 @@ function netDraw() {
   const box = $("#netbox");
   if (!box) return;
   const head = `<div class="netctl"><div class="seg">${[["tasks", "Tasks and agents"], ["team", "Agents together"]].map(([k, l]) => `<button type="button" data-nm="${k}" class="${netMode === k ? "on" : ""}">${l}</button>`).join("")}</div>
-    ${netMode === "tasks" ? `<div class="netctl2"><div class="seg">${[["you", "User"], ["stack", "Stack"], ["all", "All"]].map(([k, l]) => `<button type="button" data-no="${k}" class="${netOwner === k ? "on" : ""}">${l}</button>`).join("")}</div>
-      <select class="input" id="netdays" aria-label="Period">${[[1, "Today"], [7, "7 days"], [30, "30 days"], [90, "90 days"]].map(([d, l]) => `<option value="${d}" ${netDays === d ? "selected" : ""}>${l}</option>`).join("")}</select></div>` : ""}</div>`;
+    ${netMode === "tasks" ? `<div class="netctl2"><select class="input" id="netdays" aria-label="Period">${[[1, "Today"], [7, "7 days"], [30, "30 days"], [90, "90 days"]].map(([d, l]) => `<option value="${d}" ${netDays === d ? "selected" : ""}>${l}</option>`).join("")}</select></div>` : ""}</div>`;
   if (netMode === "team") {
     box.innerHTML = head + `<div id="netteam"></div>`;
     netBind(box);
@@ -270,7 +306,7 @@ function netDraw() {
     return;
   }
   const byId = new Map((S?.tasks || []).map((t) => [t.id, t]));
-  const rows = (netData?.tasks || []).filter((n) => byId.has(n.id) && n.agents.length && (netOwner === "all" || (netOwner === "stack") === (byId.get(n.id).owner === "stack")));
+  const rows = (netData?.tasks || []).filter((n) => byId.has(n.id) && n.agents.length);
   const shown = netAll ? rows : rows.slice(0, NET_TASKS);   /* cap: list: the busiest tasks; "Show all" names how many and draws every one */
   const ag = new Map();
   for (const n of shown) for (const g of n.agents) { const x = ag.get(g.agent) || { agent: g.agent, tasks: 0, runs: 0, live: false }; x.tasks++; x.runs += g.runs; x.live ||= g.live; ag.set(g.agent, x); }
@@ -306,7 +342,7 @@ function netDraw() {
   const out = Object.entries(netData?.outside || {}), outN = out.reduce((x, [, n]) => x + n, 0);
   box.innerHTML = head + (shown.length ? `<div class="card pad netcard"><svg class="netsvg tmapsvg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="Which agents worked on which tasks">${lines}${tnodes}${anodes}</svg>
 </div><div id="netinfo" style="margin-top:10px"></div>`
-      : `<div class="card pad small muted">No agent worked on ${netOwner === "stack" ? "the stack's" : netOwner === "all" ? "any" : "your"} tasks in this period.</div>`)
+      : `<div class="card pad small muted">No agent worked on a task in this period.</div>`)
     + (outN ? `<details class="card pad section"><summary class="small muted">Not on any task · ${nf(outN)} runs</summary><div class="tiny faint" style="margin-top:6px">${out.map(([a, n]) => `${esc(taskWho(a))} ${nf(n)}`).join(" · ")}</div></details>` : "");
   netBind(box);
   $$("[data-nt]", box).forEach((g) => (g.onclick = g.onkeydown = (e) => { if (e.type === "keydown" && e.key !== "Enter") return; const id = +g.dataset.nt; netPick = pickT === id ? null : { t: id }; netDraw(); }));
@@ -315,7 +351,6 @@ function netDraw() {
 }
 function netBind(box) {
   $$("[data-nm]", box).forEach((b) => (b.onclick = () => { netMode = b.dataset.nm; netDraw(); }));
-  $$("[data-no]", box).forEach((b) => (b.onclick = () => { netOwner = b.dataset.no; netPick = null; netDraw(); }));
   const d = $("#netdays", box);
   if (d) d.onchange = async () => { netDays = +d.value; netPick = null; await netLoad(true); netDraw(); };
 }
@@ -553,6 +588,34 @@ function upkeepHtml() {
     ${alerts ? `<a href="${href}"><div class="ic">${ic.pulse}</div><div class="grow" style="min-width:0"><div class="ttl">${alerts} health alert${alerts > 1 ? "s" : ""}</div><div class="sub wrap">${prose(bad.map((b) => `${b.name}: ${b.text}`).join(" · ") || "the Health doctor looks at them")}</div></div>${ic.next}</a>` : ""}</div>`;
 }
 
+// TSK-52: Home answers what is going on in the stack: running now, waiting for you, failed and done today, across every
+// area, each row opening its task; the stack's upkeep is one row with its health (a failing job also shows on its own).
+const HOME_GROUPS = [["running", "Running now"], ["needs", "Waiting for you"], ["failed", "Failed"], ["today", "Done today"]];
+const HOME_ROWS = 8;                          // cap: list (each part's newest; "more in Tasks" opens every one)
+function stackWords(t, A, g) {
+  const st = t.steps || [];
+  if (g === "running") return st.length ? `step ${Math.min(st.length, st.filter((s) => s.status === "done").length + 1)} of ${st.length}` : A?.step || "working";
+  if (g === "needs") return A?.needs[0] || asksText(t) || TSTATUS[t.status] || "waits for you";
+  const when = tWhen(t, A);
+  return `${g === "failed" ? "failed" : "done"}${when ? ` ${rel(new Date(when).toISOString())}` : ""}`;
+}
+function stackHtml() {
+  const all = (S.tasks || []).filter(tMine).map((t) => [t, taskAgentOf(t)]), today = new Date().toDateString();
+  const g = (t, A) => { const x = tGroup(t, A); return x === "recent" ? (new Date(tWhen(t, A)).toDateString() === today ? "today" : "") : x === "scheduled" ? "" : x; };
+  const upkeep = all.filter(([t]) => tArea(t) === "upkeep");
+  const parts = HOME_GROUPS.map(([k, l]) => [k, l, all.filter((x) => (!upkeep.includes(x) || ["needs", "failed"].includes(tGroup(...x))) && g(...x) === k).sort(([a, A], [b, B]) => tWhen(b, B) - tWhen(a, A))]).filter(([, , xs]) => xs.length);
+  const tone = { running: "run", needs: "warn", failed: "err", today: "ok" };
+  const row = (k) => ([t, A]) => `<a href="${tHref(t)}"><div class="ic ${tone[k]}">${tIcon(t, A)}</div><div class="grow" style="min-width:0"><div class="ttl wrap">${esc(t.title)}</div>
+      <div class="sub wrap">${esc(AREAS[tArea(t)])} · ${esc(stackWords(t, A, k))}</div></div>${ic.next}</a>`;
+  const bad = upkeep.filter(([t, A]) => tFailed(t, A)).length, live = upkeep.filter(([t, A]) => tLive(t, A)).length;
+  const last = Math.max(0, ...upkeep.map(([t, A]) => tWhen(t, A)));
+  return `<div id="homestack"><div class="section-h"><h2>In the stack</h2><a class="tiny" href="#/tasks">All tasks</a></div>
+    ${parts.map(([k, l, xs]) => `<div class="hsub">${esc(l)} · ${nf(xs.length)}</div><div class="card list">${xs.slice(0, HOME_ROWS /* cap: list: "more in Tasks" opens every one */).map(row(k)).join("")}${xs.length > HOME_ROWS ? `<a href="#/tasks"><div class="grow small muted">${nf(xs.length - HOME_ROWS)} more in Tasks</div>${ic.next}</a>` : ""}</div>`).join("")
+      || `<div class="card pad small muted">Nothing is running, waiting or failed, and nothing has finished yet today.</div>`}
+    ${upkeep.length ? `<div class="hsub">Upkeep</div><div class="card list"><a href="#/tasks?area=upkeep"><div class="ic ${bad ? "err" : live ? "run" : "ok"}">${ic.pulse}</div><div class="grow" style="min-width:0"><div class="ttl">${nf(upkeep.length)} jobs, ${bad ? `${nf(bad)} failing` : "all fine"}${live ? `, ${nf(live)} running` : ""}</div>
+      <div class="sub">${last ? `last run ${esc(rel(new Date(last).toISOString()))}` : "no run yet"}</div></div>${ic.next}</a></div>` : ""}</div>`;
+}
+
 function nowHtml() {
   const builds = (S.builds || []).filter((b) => ["working", "queued", "checking", "deploying", "approved", "recheck"].includes(b.status));
   const queued = (S.queue || []).filter((q) => q.status === "queued").map((q) => (S.missions || []).find((m) => m.slug === q.slug)).filter(Boolean);
@@ -560,14 +623,12 @@ function nowHtml() {
   const next = (S.missions || []).filter((m) => m.status === "active" && m.next_run).sort((a, b) => a.next_run.localeCompare(b.next_run)).slice(0, 3);
   const working = (S.tasks || []).filter((t) => ["running", "planning", "intake"].includes(t.status) && Date.now() - Date.parse(t.updated || 0) < 6 * 3600e3);   // APP-38: a task at work (a leftover is not)
   const busy = S.running || builds.length || tasks.length || working.length;
-  const rows = [...working.map((t) => { const st = t.steps || [], on = st.filter((s) => s.status === "running");
-      return `<a href="#/task/${t.id}"><div class="ic run">${ic.target}</div><div class="grow"><div class="ttl wrap">${esc(t.title)}</div><div class="sub wrap">Task #${t.id} · ${t.status === "running" ? `${st.filter((s) => s.status === "done").length} of ${st.length} steps done${on.length ? ` · ${on.map((s) => esc(taskWho(s.agent))).join(", ")} at work` : ""}` : "being planned"}</div></div><span class="pill running"><span class="dot run"></span>${t.status === "running" ? "Working" : "Planning"}</span></a>`; }),
-    ...builds.map(workBuildRow),
+  const rows = [...builds.map(workBuildRow),           // a task at work is under In the stack (TSK-52)
     ...queued.map((m) => `<a href="#/mission/${encodeURIComponent(m.slug)}"><div class="ic">${typeIcon(m.type)}</div><div class="grow"><div class="ttl wrap">${esc(m.title)}</div><div class="sub">waits for the run slot</div></div><span class="pill queued">Queued</span></a>`),
     ...tasks.map((t) => `<a href="#/build"><div class="ic ${t.status === "running" ? "run" : ""}">${ic.code}</div><div class="grow"><div class="ttl wrap">Claude task #${t.id}</div><div class="sub wrap">${esc(ctTitle(t))}</div></div><span class="pill ${t.status === "running" ? "running" : "queued"}">${t.status === "running" ? "Running" : "Queued"}</span></a>`)];
   return `<div id="homenow"><div class="section-h"><h2>Now</h2><span class="row" style="gap:10px">${busy ? `<span class="pill running"><span class="dot run"></span>working</span>` : `<span class="tiny faint">${typeof notConnected === "function" && notConnected() ? "not known" : "all quiet"}</span>`}<a class="tiny" href="#/tasks">All tasks</a></span></div>
     ${S.running ? runningCard() : ""}
-    ${rows.length ? `<div class="card list" ${S.running ? 'style="margin-top:10px"' : ""}>${rows.join("")}</div>` : S.running ? "" : `<div class="card pad small muted">No agent is working right now.</div>`}
+    ${rows.length ? `<div class="card list" ${S.running ? 'style="margin-top:10px"' : ""}>${rows.join("")}</div>` : S.running || working.length ? "" : `<div class="card pad small muted">No agent is working right now.</div>`}
     ${upkeepHtml()}
     ${next.length ? `<div class="hsub">Up next</div><div class="card list">${next.map((m) => `<a href="#/mission/${encodeURIComponent(m.slug)}"><div class="ic">${typeIcon(m.type)}</div><div class="grow"><div class="ttl wrap">${esc(m.title)}</div><div class="sub">${dt(m.next_run)}</div></div><div class="tiny faint">${rel(m.next_run)}</div></a>`).join("")}</div>` : ""}</div>`;
 }
@@ -580,8 +641,8 @@ function nowHtml() {
 // "Tasks", "Triggers" and "Agent health" cards, two cards for one outcome, and what is what hard to tell).
 const RKIND = { briefing: ["Briefing", "doc"], alert: ["Alert", "bolt"], task: ["Task", "target"], research: ["Research", "doc"],
   shopping: ["Shopping", "coin"], failed: ["Failed", "x"] };
-// a task the stack gave itself (a trial, a probe, a crew job, a gate): on its own pages, not in your results
-const NOT_YOURS = /^(trial|probe|crew|gate)/;
+// TSK-52: every area's results; the stack's upkeep only when a job failed (its runs every few minutes would bury the rest)
+const QUIET = (t) => t.area === "upkeep" && t.status !== "failed" && t.last_run?.status !== "failed";
 function feedItems() {
   const out = [];
   for (const m of S.missions || []) for (const r of m.runs || []) {
@@ -599,7 +660,7 @@ function feedItems() {
       out.push({ id: `p:${p.id}`, ts: p.updated || p.created, kind: "shopping", agent: p.mission || "Shopping", tone: p.status === "failed" ? "err" : "",
         head: `${p.item}: ${eur(p.total_eur)} · ${(SHOP_STATE[p.status] || [, p.status])[1]}`, href: `#/mission/${encodeURIComponent(p.slug)}?shop=${p.id}` });
   for (const t of S.tasks || []) {
-    if (t.door === "mission" || NOT_YOURS.test(t.source || "") || /^You are the Health doctor/.test(t.text || t.title || "")) continue;
+    if (t.door === "mission" || QUIET(t) || /^You are the Health doctor/.test(t.text || t.title || "")) continue;
     const run = (t.runs || [])[0], failed = t.status === "failed" || run?.status === "failed";
     if (!["done", "failed"].includes(t.status) && !(t.status === "scheduled" && run?.ended)) continue;   // still going: on Now
     const kind = failed ? "failed" : /^rule:/.test(t.source || "") ? "alert" : t.kind === "briefing" ? "briefing" : t.kind === "research" ? "research" : "task";
@@ -637,7 +698,7 @@ function feedHtml() {
     <div class="chips scroll-x" style="margin-bottom:6px">${kinds.map(([k, l]) => `<button type="button" class="tag hf ${homeFilter === k ? "on" : ""}" data-hf="${k}">${l}</button>`).join("")}</div>
     ${rows || `<div class="card empty small">Nothing here yet. A result shows up the moment an agent finishes.</div>`}
     ${mine.length > items.length ? `<button type="button" class="btn sm ghost" id="hfmore" style="margin-top:8px">Show older (${mine.length - items.length} more)</button>` : ""}
-    ${typeof explain === "function" ? explain("what-is-not-here-", `The stack's own work is not here: its health under Now, deploys under <a href="#/build">Code</a>, the agents' work under <a href="#/tasks?v=activity">Tasks → Activity</a>.`, "What is not here") : ""}</div>`;
+    ${typeof explain === "function" ? explain("what-is-not-here-", `Every area's results are here; the stack's upkeep shows only when a job fails (all of it is in <a href="#/tasks?area=upkeep">Tasks</a>). Deploys are under <a href="#/build">Code</a>, the agents' work under <a href="#/tasks?v=activity">Tasks → Activity</a>.`, "What is here") : ""}</div>`;
 }
 
 // the first lines of a result under its headline, fetched once per file
@@ -684,11 +745,11 @@ function vHome() {
     <form class="askbar" id="askbar"><input class="input" name="q" autocomplete="off" placeholder="Ask anything, or say what to do"><button class="btn primary" type="submit" aria-label="Send">${ic.send || ic.next}<span>Send</span></button></form>
   </div>
   <nav class="seg homeseg" aria-label="Parts of Home">${HOME_TABS.map(([k, l]) => `<button type="button" data-ht="${k}" class="${tab === k ? "on" : ""}">${l}</button>`).join("")}</nav>
-  <div class="home-pane home-today" data-hp="today" ${tab === "today" ? "" : "hidden"}>${needsHtml()}${nowHtml()}</div>
+  <div class="home-pane home-today" data-hp="today" ${tab === "today" ? "" : "hidden"}>${needsHtml()}${stackHtml()}${nowHtml()}</div>
   <div class="home-pane" data-hp="results" ${tab === "results" ? "" : "hidden"}>${feedHtml()}</div>
   <div class="home-pane home-overview" data-hp="overview" ${tab === "overview" ? "" : "hidden"}>${devicesHtml()}${houseCardHtml()}${sharedCardHtml()}${homeStatsHtml()}</div>
   </div>`;
-  for (const id of ["homehead", "homeneeds", "homenow", "homedev", "homehouse", "homeshared", "homestats", "homefeed"]) homeLast[id] = document.getElementById(id)?.outerHTML;
+  for (const id of ["homehead", "homeneeds", "homestack", "homenow", "homedev", "homehouse", "homeshared", "homestats", "homefeed"]) homeLast[id] = document.getElementById(id)?.outerHTML;
   bindHome();
 }
 
@@ -721,7 +782,7 @@ window.addEventListener("scroll", () => {                 // back at the top: wh
   if (window.scrollY < 60 && homeHeld) { homeHeld = false; if (route.name === "home") homeUpdate(true); }
 }, { passive: true });
 function homeUpdate(force) {
-  const parts = [["homehead", homeHeadHtml], ["homeneeds", needsHtml], ["homenow", nowHtml], ["homedev", devicesHtml], ["homehouse", houseCardHtml], ["homeshared", sharedCardHtml], ["homestats", homeStatsHtml], ["homefeed", feedHtml]];
+  const parts = [["homehead", homeHeadHtml], ["homeneeds", needsHtml], ["homestack", stackHtml], ["homenow", nowHtml], ["homedev", devicesHtml], ["homehouse", houseCardHtml], ["homeshared", sharedCardHtml], ["homestats", homeStatsHtml], ["homefeed", feedHtml]];
   const hold = !force && (window.scrollY > 120 || Date.now() - homeTouch < 2500);
   let held = false;
   for (const [id, fn] of parts) {
@@ -736,7 +797,7 @@ function homeUpdate(force) {
 }
 
 // ---------- the crew (ops/crew.py): the stack's housekeeping agents ----------
-const CREW_AREAS = [["memory", "Memory"], ["skills", "Skills"], ["code", "Code and tests"], ["phone", "AI phone"], ["ops", "Operations"]];
+const CREW_AREAS = Object.entries(AREAS);   // TSK-52: a crew job's area is a task area
 const CREW_STATE = { ok: ["ok", "OK"], failed: ["failed", "Failed"], running: ["running", "Running"], never: ["archived", "Not run yet"], waiting: ["paused", "Waiting"] };
 // Phone cleanup (ops/phone_agents.py): one step per item, each run on the AI phone only after its own Approve
 function phoneStepsHtml(c) {
@@ -797,7 +858,7 @@ const AGENT_TABS = [["now", "Overview"], ["history", "Runs"], ["memory", "Memory
 // a mission's or a crew duty's page is its task's page (DEC-46): its task, when there is one, adds who worked on it
 const taskOfPage = (kind, id) => (S?.tasks || []).find((t) => t.door === kind && t.ref === id);
 const OLD_TAB = { overview: "now", outputs: "history", runs: "history", tasks: "agents" };            // links from before the agent page
-const CREW_IC = { memory: "brain", skills: "tune", code: "code", ops: "pulse" };
+const CREW_IC = { memory: "brain", code: "code", upkeep: "pulse", mail: "mail", taxes: "coin", phone: "phone" };
 
 function missionAgent(m) {
   const h = (S.health?.items || []).find((i) => i.kind === "mission" && i.slug === m.slug);
@@ -813,6 +874,11 @@ function missionAgent(m) {
     last: last?.started ? Date.parse(last.started) / 1000 : null, lastOk: last ? last.status !== "failed" : null,
     step: steps?.length ? `step ${Math.min(steps.length, steps.filter((s) => s.status === "done").length + 1)}/${steps.length}` : "",
     result: last ? last.summary || STATUS[last.status] || last.status : "", issues: h?.issues || [], success: h?.success_7d, needs };
+}
+// TSK-52: a duty whose result lives on a page of its own (the mail sorter's Your mail) opens it from its page
+function crewResultHtml(id) {
+  const t = (S.tasks || []).find((x) => x.door === "crew" && x.ref === id);
+  return t?.result_href ? `<a class="btn" href="${esc(t.result_href)}">${ic.next}${esc(t.result_label || "Its result")}</a>` : "";
 }
 function crewAgent(a) {
   const n = a.suggestions?.length || 0;
@@ -922,13 +988,13 @@ function vAgent(kind, id) {
     ${m.status === "paused" || A.archived ? `<button class="btn" data-a="resume">${ic.play}Resume</button>` : ""}
     ${!A.archived ? `<button class="btn ghost danger" data-a="archive">${ic.archive}Archive</button>` : ""}
     `
-    : `<button class="btn primary" data-a="crew_run" ${A.live ? "disabled" : ""}>${ic.play}Run now</button>`;
+    : `<button class="btn primary" data-a="crew_run" ${A.live ? "disabled" : ""}>${ic.play}Run now</button>${crewResultHtml(c.id)}`;
   const keepWf = kind === "crew" ? wfKeepFrame() : null;                // WFL-11: n8n's run view keeps its state across a redraw
   const pill = kind === "mission" ? statusPill(m) : (([cls, l]) => `<span class="pill ${cls}">${A.live ? '<span class="dot run"></span>' : ""}${l}</span>`)(CREW_STATE[c.state] || ["archived", c.state]);
   view.innerHTML = `<a class="back" href="${kind === "crew" ? "#/tasks?v=team&p=crew" : "#/tasks"}">${ic.back}${kind === "crew" ? "Crew" : "Tasks"}</a>
   <div class="aghead h-${agentHealth(A)}"><div class="agic lg">${A.icon}</div><div class="grow" style="min-width:0">
     <h1 class="agh1">${esc(A.title)}</h1>${kind === "mission" ? fromChat("mission:" + m.slug) : ""}
-    <div class="row wrap small muted" style="gap:4px 8px;margin-top:6px">${pill}${kind === "mission" && m.files_asked?.length ? ((F) => `<a class="tag ${F.done < F.total ? "warn" : ""}" href="${A.href}?tab=payoff">${ic.doc}${F.done} of ${F.total} file${F.total > 1 ? "s" : ""} ready</a>`)(filesOf(m)) : ""}<span>${A.group === "yours" ? "Your task" : "The stack's task"} · ${esc(A.what)}</span><span>${ic.clock}${esc(A.schedule || "on request")}${A.next ? ` · next ${esc(when(A.next))}` : ""}</span></div>
+    <div class="row wrap small muted" style="gap:4px 8px;margin-top:6px">${pill}${kind === "mission" && m.files_asked?.length ? ((F) => `<a class="tag ${F.done < F.total ? "warn" : ""}" href="${A.href}?tab=payoff">${ic.doc}${F.done} of ${F.total} file${F.total > 1 ? "s" : ""} ready</a>`)(filesOf(m)) : ""}<span>${esc(A.what)}</span><span>${ic.clock}${esc(A.schedule || "on request")}${A.next ? ` · next ${esc(when(A.next))}` : ""}</span></div>
     <div class="small muted agwhat">${prose(kind === "mission" ? (m.goal || "").replace(/[#*_>`]/g, "").split("\n").find((l) => l.trim()) || "" : c.what)}</div>
     ${task ? `<div data-tideas="${task.id}"></div>` : ""}
     ${m?.triggers?.length ? `<div class="chips" style="margin-top:8px">${m.triggers.map((x) => `<span class="tag trig">${ic.bolt}${esc(x.text)}</span>`).join("")}</div>` : ""}

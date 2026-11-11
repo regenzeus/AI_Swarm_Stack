@@ -19,7 +19,10 @@ The engineered requirements of the AI stack (method: [README.md](README.md)). YA
 
 - **Change a requirement in the same commit as the behaviour**, and name its id in the commit body
   (`Requirements: MIS-05, PHN-11`). New behaviour gets a new requirement in its area file, with the next free
-  number; ids are never reused or renumbered.
+  number; ids are never reused or renumbered. A landing stops when an id of main is gone or has another title
+  (`python3 ops/req.py kept --base main`, QA-28): deprecate an id instead of removing it, and when only a title's
+  words change, keep the old title in the record's `titles_before`. A branch renumbers only its own new ids, before it
+  lands, when another branch took them first; then fix the `Requirements:` lines of its commits too.
 - **Write it with EARS** (README.md): one behaviour, a named subject from `glossary.md`, numbers with units, no vague
   words (`ops/req.py` lists them).
 - **Verification is evidence.** `implemented` needs `verify.by` that exists: a test as

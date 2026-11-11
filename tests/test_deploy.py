@@ -67,8 +67,10 @@ def test_a_unit_the_repository_dropped_goes_from_this_machine_with_the_next_depl
     assert calls == [("systemctl", "--user", "disable", "--now", "crew-coach.timer")]
     assert not any((tmp_path / n).exists() for n in ("crew-coach.timer", "crew-coach.timer.d", "docker.service.d/old.conf"))
     src = (deploy.R / "ops/deploy.py").read_text()
+    settle = src[src.index("def settle_units("):]                 # after the checks (PLT-43), then systemd reloads
+    assert settle.index("remove_units(gone, dest)") < settle.index('run("systemctl", "--user", "daemon-reload")')
     main = src[src.index("def main("):]
-    assert main.index("remove_units(gone_units(changed)") < main.index('run("systemctl", "--user", "daemon-reload")')
+    assert main.index("gone = gone_units(changed)") < main.index("smoke/smoke.sh") < main.index("settle_units(back, gone,")
 
 
 def test_a_card_change_restarts_the_swarm_service_so_the_agents_get_it():
@@ -88,6 +90,11 @@ def test_the_runner_restarts_for_any_module_it_may_import_also_one_it_reaches_in
     assert D.runner_changed(["images/mission-control/obs_core.py"]) and D.runner_changed(["ops/observe.py"])   # through crew.py (FND-49)
     assert D.runner_changed(["ops/missions.py"]) and D.runner_changed(["ops/systemd/missions.service"])
     assert not D.runner_changed(["ops/desk.sh", "ops/windows/x.py", "images/mission-control/server.py", "prompts/desk.md"])
+    # review 10 Nov (RUNNER2-R2, R3): the domain modules and the runner's own environment are the runner's too
+    assert D.runner_changed(["ops/domain/trackers.py"]) and D.runner_changed(["ops/runner-requirements.lock"])
+    assert not D.runner_changed(["ops/swarm-probes/x.py"])
+    src = (D.R / "ops/deploy.py").read_text()
+    assert 'run("bash", "ops/runner_env.sh"' in src and "bash ops/runner_env.sh" in (D.R / "ops/new-machine.sh").read_text()
 
 
 def test_an_image_is_built_after_the_image_it_is_built_from():
@@ -105,3 +112,31 @@ def test_a_change_of_the_agents_keys_sets_every_hermes_profile_up_again():
     every = D.configure_scripts([D.KEYS_FILE])
     assert "config/hermes/configure-tax.sh" in every and "config/hermes/configure.sh" in every and len(every) == 6
     assert D.configure_scripts(["ops/flows.py"]) == []
+
+
+def test_a_build_behind_the_deployments_proxy_names_dockers_proxy_arguments_and_keeps_their_values_off_the_command(monkeypatch):
+    """PLT-42. The first site update, 10 Nov 2026: a plain docker build reached a proxy only through ~/.docker/config.json,
+    which puts it into every container too. BUILD_HTTP_PROXY and BUILD_NO_PROXY of deployment.env are handed to each build
+    as Docker's own proxy build arguments (kept out of the image and its history: checked with docker history and inspect
+    on an apt-get build, 11 Nov 2026), by name, so the printed command never shows a proxy's account."""
+    import os
+    import deploy as D
+    px = {"BUILD_HTTP_PROXY": "http://acct:test@example.com:3128", "BUILD_NO_PROXY": "localhost,.lan"}
+    assert D.build_proxy({}) == {} and D.build_proxy({"BUILD_NO_PROXY": "localhost"}) == {}      # no proxy: a build as before
+    assert D.build_args("desk", {}) == D.build_args("desk", {"BUILD_HTTP_PROXY": " "}) == ["docker", "build", "-q", "-t", "aistack/desk:1", "images/desk"]
+    assert D.build_proxy(px) == {"http_proxy": px["BUILD_HTTP_PROXY"], "https_proxy": px["BUILD_HTTP_PROXY"], "HTTP_PROXY": px["BUILD_HTTP_PROXY"],
+                                 "HTTPS_PROXY": px["BUILD_HTTP_PROXY"], "no_proxy": "localhost,.lan", "NO_PROXY": "localhost,.lan"}
+    args = D.build_args("desk", px)
+    assert args == ["docker", "build", "-q", "-t", "aistack/desk:1", "--build-arg", "http_proxy", "--build-arg", "https_proxy",
+                    "--build-arg", "HTTP_PROXY", "--build-arg", "HTTPS_PROXY", "--build-arg", "no_proxy", "--build-arg", "NO_PROXY", "images/desk"]
+    assert "proxy.example" not in " ".join(args)
+    assert [a for a in D.build_args("desk", {"BUILD_HTTP_PROXY": "http://p:1"}) if a.lower() == "no_proxy"] == []
+    assert any(a.startswith("PRICEWATCH_IMAGE=") for a in D.build_args("pricewatch", px))        # the base pins stay
+    ran = []
+    monkeypatch.setattr(D.DEPLOY, "VALUES", {**D.DEPLOY.VALUES, **px})
+    monkeypatch.setattr(D, "run", lambda *cmd, **kw: ran.append((cmd, kw)) or True)
+    monkeypatch.setenv("HTTPS_PROXY", "http://somewhere-else:1")                 # the deploy's own environment does not win
+    assert D.build("desk") is True and D.build("no-such-image") is None
+    (cmd, kw), = ran
+    assert cmd == tuple(args) and kw["timeout"] == 3600 and kw["env"]["PATH"] == os.environ["PATH"]
+    assert {k: kw["env"][k] for k in D.build_proxy(px)} == D.build_proxy(px)

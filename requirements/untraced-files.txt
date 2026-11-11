@@ -6,7 +6,6 @@ ops/ci_yaml_check.py  # a helper of ops/check.sh that parses the workflow files
 ops/claude-connect.sh  # one-time Claude Code login for the builder (make claude-connect)
 ops/email-setup.sh  # one-time Gmail app password for report e-mails (make email-setup)
 ops/enable-chatgpt.py  # one-time ChatGPT login for the gateway (make chatgpt-login)
-ops/graph_repos.py  # lists the repositories for the code graph, a helper of graphify-sync.sh
 ops/hindsight-models.sh  # downloads Hindsight's local models once (make hindsight-models)
 ops/skills-restore.sh  # restores the skills from git by hand (make skills-restore-from-git)
 ops/swarm-probes/dupes.py  # swarm phase 0 probe, kept as evidence for SWM-86 (docs/SWARM-PHASE0.md)

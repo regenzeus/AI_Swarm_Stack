@@ -73,6 +73,30 @@ def test_the_ai_phone_can_ask_the_app_for_nothing_but_stop(app):
     assert not list(app.INBOX.glob("*.json"))              # Stop has its own route (test_the_ai_phone_cannot_approve_its_own_actions)
 
 
+def test_the_ai_phone_writes_nothing_through_share_uploads_or_push(app):
+    """Review 10 Nov (APP2-R3): these routes act without /api/request, so its one refusal never saw them."""
+    c = TestClient(app.app)
+    phone = {**H, "X-Forwarded-For": app.AI_PHONE_IP}
+    for path in ("/api/share/0123456789abcdef/save", "/api/upload", "/api/chat/upload", "/api/push/subscribe", "/api/push/unsubscribe", "/api/push/test"):
+        r = c.post(path, headers=phone, content=b"{}")
+        assert r.status_code == 403 and "Stop" in r.json()["error"], path
+    assert not list(app.INBOX.glob("*.json"))
+
+
+def test_a_shared_page_or_script_only_downloads_and_no_other_site_frames_the_app(app):
+    """Review S8 / APP2-R5: an .html attachment ran on the app's origin with its whole API. APP2-R6: no framing rule."""
+    c = TestClient(app.app)
+    (app.FILES / "0123456789abcdef-page.html").write_text("<script>fetch('/api/request')</script>")
+    (app.FILES / "fedcba9876543210-photo.png").write_bytes(b"\x89PNG\r\n")
+    r = c.get("/api/chat/files/0123456789abcdef", headers=H)
+    assert r.headers["content-type"] == "application/octet-stream" and "attachment" in r.headers["content-disposition"]
+    assert r.headers["content-security-policy"] == "sandbox" and r.headers["x-content-type-options"] == "nosniff"
+    img = c.get("/api/chat/files/fedcba9876543210", headers=H)
+    assert img.headers["content-type"].startswith("image/png") and "attachment" not in img.headers.get("content-disposition", "")
+    page = c.get("/api/state", headers=H)
+    assert page.headers["x-frame-options"] == "SAMEORIGIN" and page.headers["content-security-policy"] == "frame-ancestors 'self'"
+
+
 def test_vault_files_stay_inside_the_vault(app):
     c = TestClient(app.app)
     assert c.get("/api/file", headers=H, params={"path": "topics/u/reports/r.md"}).text == "# report"

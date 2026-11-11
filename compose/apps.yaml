@@ -284,7 +284,7 @@ services:
     logging: { driver: json-file, options: { max-size: "10m", max-file: "3" } }
 
   ci-runner:
-    profiles: [builder]          # its feature (deployments/, GEN-13)
+    profiles: [forgejo-ci]       # its feature (deployments/, GEN-13): only where Forgejo is, which registers it (GEN-47)
     # Forgejo Actions runner (CI for ai-stack, TestRepo, ...). Jobs run inside this container: no Docker socket,
     # no stack network, no secrets; registered once with a token from the NAS (see images/ci-runner).
     image: aistack/ci-runner:13.2.0
@@ -334,7 +334,8 @@ services:
     profiles: [mission-control]          # its feature (deployments/, GEN-13)
     # Mission Control: the app for phone and desktop (missions, live activity, costs, chat, approvals) on 8090,
     # reached only through `tailscale serve` (https://<pc>.ts.net:8447; every API call needs Tailscale's identity
-    # header), and the mission MCP tools for Hermes on 8091 (mcnet: LiteLLM only). It starts nothing itself:
+    # header, believed only through the published port: SEC-24), and the mission MCP tools for Hermes on 8091 (mcnet:
+    # LiteLLM only, with each server's token: SEC-26). It starts nothing itself:
     # requests go to /missions/inbox, where the host runner (ops/missions.py) validates and runs them.
     image: aistack/mission-control:1
     restart: unless-stopped
@@ -347,6 +348,16 @@ services:
       PC_TAILNET_HOST: ${PC_TAILNET_HOST:-}
       APP_NAME: ${APP_NAME:-AI Stack}                 # the app's name (APP-61)
       APP_GATE: ${APP_GATE:-tailnet}                  # WFL-16: tailnet (Tailscale's login) or local (this PC only, no tailnet)
+      # SEC-24..26: log (the default) refuses nothing and logs what it would refuse; on refuses it. The lead switches it on
+      # in the deployment's deployment.env after a deploy in log mode (docs/SECURITY.md, "Switching the trust boundary on")
+      APP_TRUST: ${APP_TRUST:-log}
+      AISTACK_STEP_TOKEN: ${AISTACK_STEP_TOKEN:-}     # SEC-25: the step service's token, which n8n's AI Stack step sends
+      MCP_TOKEN_MISSIONS: ${MCP_TOKEN_MISSIONS:-}     # SEC-26: each MCP server's own token, which LiteLLM sends
+      MCP_TOKEN_CLAUDE: ${MCP_TOKEN_CLAUDE:-}
+      MCP_TOKEN_HOUSE: ${MCP_TOKEN_HOUSE:-}
+      MCP_TOKEN_FILES: ${MCP_TOKEN_FILES:-}
+      MCP_TOKEN_MEMORY: ${MCP_TOKEN_MEMORY:-}
+      MCP_TOKEN_MEMORYPUBLIC: ${MCP_TOKEN_MEMORYPUBLIC:-}
       NAS_HOST: ${NAS_HOST:-}
       HA_URL: ${HA_URL:-}
       ROUTER_URL: ${ROUTER_URL:-}

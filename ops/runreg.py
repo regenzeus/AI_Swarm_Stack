@@ -38,6 +38,7 @@ import contextlib
 import fcntl
 import hashlib
 import json
+import os
 import re
 import subprocess
 import sys
@@ -292,8 +293,11 @@ def start(workflow, payload, post=None):
     shown on n8n 2.44.7 on 10 Nov 2026; else "", learnt from the run's first step that names its item)."""
     if not WORKFLOW.fullmatch(str(workflow or "")):
         return f"the tracker names no workflow <pack>/<name> to start (it says {workflow!r})", ""
+    import n8n_gen as G
+    if not os.environ.get("N8N_HOOK_TOKEN"):         # SEC-27: n8n refuses a webhook call without the runner's header
+        return "the runner has no N8N_HOOK_TOKEN for n8n's webhooks (make trust-keys, then restart the runner)", ""
     req = urllib.request.Request(f"{N8N}/webhook/item/{workflow}", data=json.dumps(payload, ensure_ascii=False).encode(),
-                                 headers={"Content-Type": "application/json"}, method="POST")
+                                 headers={"Content-Type": "application/json", G.HOOK_HEADER: os.environ["N8N_HOOK_TOKEN"]}, method="POST")
     try:
         with (post or urllib.request.urlopen)(req, timeout=30) as r:
             if not 200 <= r.status < 300:

@@ -22,6 +22,7 @@ ChatGPT engine (ops/swarm_client.py ENGINE). Log lines, Home lines and the step 
 amount or a paper's content. Gmail and the mail copy are never changed; nothing is deleted or sent anywhere.
 
   python3 ops/tax.py status          the desk's counts per year (no amounts)
+  python3 ops/tax_view.py            the result per year for the app, shared with the app's user only (TAX-10, TAX-11)
   python3 ops/tax.py count           the header rules on the real index: candidates per form and year, counts only
 """
 import base64
@@ -409,6 +410,17 @@ def prior_returns(prior_years):
     return out
 
 
+def papers(docs_raw, owner):
+    """The relevant papers with the owner's corrections (Belege.csv) and Needs you answers (keep, not a tax paper)
+    applied. -> (documents, kept mail ids, dropped mail ids)."""
+    all_ans = load("answers.json", {}) or {}
+    kept = {k.split(":doc:")[1] for k, v in all_ans.items() if ":doc:" in k and v["value"] == "keep"}
+    dropped = {k.split(":doc:")[1] for k, v in all_ans.items() if ":doc:" in k and v["value"] == "drop"}
+    docs = [x for x in BOOK.documents(docs_raw, None, owner.get("overrides") or {}, set(owner.get("removed") or []), kept)
+            if x["mail"] not in dropped]
+    return docs, kept, dropped
+
+
 def answers_of(year):
     return {k.split(":", 1)[1]: v["value"] for k, v in (load("answers.json", {}) or {}).items() if k.startswith(f"{year}:")}
 
@@ -484,10 +496,7 @@ def file(c=None, conf=None, call=nas, today=None):
             owner["order"][str(y)] = order
             written[f"{y}/Belege.csv"] = {**mine, "sha256": shas[rel]}   # taken in: the next version keeps every change of the owner's
     save("owner.json", owner)
-    all_ans = load("answers.json", {}) or {}
-    kept = {k.split(":doc:")[1] for k, v in all_ans.items() if ":doc:" in k and v["value"] == "keep"}
-    dropped = {k.split(":doc:")[1] for k, v in all_ans.items() if ":doc:" in k and v["value"] == "drop"}
-    docs = [x for x in BOOK.documents(docs_raw, None, owner["overrides"], set(owner["removed"]), kept) if x["mail"] not in dropped]
+    docs, kept, dropped = papers(docs_raw, owner)
     plan = copy_plan(docs, conf, filed, works)
     copied = call({"op": "copy", "root": share(), "vault": mailvault(), "items": plan})["copied"] if plan else []
     for r in copied:
@@ -538,7 +547,9 @@ def file(c=None, conf=None, call=nas, today=None):
     save("questions.json", all_q)
     rep = {"at": time.time(), "years": report, "copies": len(copied), "questions": len(all_q)}
     save("report.json", rep)
-    _report("tax-file", f"{len(copied)} new copies in Steuern. " + " · ".join(report))
+    import tax_view as VIEW                             # TAX-10: the result in the app, for the owner only (TAX-11)
+    shared = VIEW.refresh(conf, today)
+    _report("tax-file", f"{len(copied)} new copies in Steuern. " + " · ".join(report) + ("" if shared else " · the app's view was not written"))
     return len(copied)
 
 
@@ -591,6 +602,8 @@ def answer(req):
     ans[qid] = {"value": value, "at": time.time(), "by": req.get("who") or "owner"}
     save("answers.json", ans)
     save("questions.json", [x for x in load("questions.json", []) or [] if x["id"] != qid])
+    import tax_view as VIEW                             # the app's view drops the question at once (TAX-10)
+    VIEW.refresh()
     return {"message": "Kept: the tax desk's next run uses it"}
 
 

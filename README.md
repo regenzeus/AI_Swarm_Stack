@@ -98,7 +98,7 @@ start with [NEW-MACHINE.md](NEW-MACHINE.md). This public copy holds no personal 
 |---|---|
 | **What the stack shall do** (the source of truth for behaviour) | [requirements/](requirements/README.md), rendered in [REQUIREMENTS.md](requirements/REQUIREMENTS.md) |
 | Where the swarm goes next | [docs/SWARM-ROADMAP.md](docs/SWARM-ROADMAP.md), its requirements in [requirements/tasks.yaml](requirements/tasks.yaml) |
-| Status, findings and what is next | [the review of 7 November 2026](docs/REVIEW-2026-11-07.md) (the earlier ones are in [docs/README.md](docs/README.md)), and the open findings in [requirements/findings.yaml](requirements/findings.yaml) |
+| Status, findings and what is next | [the review of 10 November 2026](docs/REVIEW-2026-11-10.md) (the earlier ones are in [docs/README.md](docs/README.md)), and the open findings in [requirements/findings.yaml](requirements/findings.yaml) |
 | Every other document, current and historical | [docs/README.md](docs/README.md) |
 | Mission Control: how the app and the runner talk | [docs/MISSION-CONTROL.md](docs/MISSION-CONTROL.md), its HTTP API in [docs/API.md](docs/API.md) |
 | Security model and accepted risks | [docs/SECURITY.md](docs/SECURITY.md) |

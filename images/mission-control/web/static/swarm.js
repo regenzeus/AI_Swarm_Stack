@@ -282,7 +282,7 @@ function swGroupOf(id) {
   const c = (swCards || []).find((x) => x.id === id);
   return SW_ROLEG[(c?.roles || [])[0]] || "other";
 }
-const swName = (id) => (SW_LANE[id] ? SW_LANE[id][0] : id === "main" ? "main (your assistant)" : id);
+const swName = (id) => (SW_LANE[id] ? SW_LANE[id][0] : id === "main" ? "main (your assistant)" : (typeof cardName === "function" && cardName(id)) || id);
 const swAgo = (ts) => { const s = Date.now() / 1000 - ts; return s < 90 ? "just now" : s < 5400 ? `${Math.round(s / 60)} min ago` : s < 129600 ? `${Math.round(s / 3600)} h ago` : `${Math.round(s / 86400)} days ago`; };
 const swDur = (s) => dur(s);
 const SW_STATE = { done: ["var(--ok)", "done"], running: ["var(--run)", "running"], failed: ["var(--err)", "failed"], stalled: ["var(--err)", "stuck", true],
@@ -860,7 +860,7 @@ function swTile(a, x, link = true) {
   const starts = (x.it.edges || []).filter((e) => e.from === a.id), startedBy = (x.it.edges || []).filter((e) => e.to === a.id);
   const pct = (v) => (v == null ? "–" : Math.round(v * 100) + "%"), href = link ? swAgentHref(a.id) : "";
   return `<div class="swtile"${href ? ` data-href="${href}"` : ""} style="border-top:3px solid ${SW_GCOL[swGroupOf(a.id)]}">
-    <div class="row between wrap" style="gap:6px"><b>${href ? `<a href="${href}">${esc(a.id)}</a>` : esc(a.id)}</b><span>${isP ? `<span class="pill archived" style="padding:0 6px">paused</span> ` : ""}${n?.live ? `<span class="pill running" style="padding:0 6px">running</span>` : ""}${href ? `<span class="tiny faint">${ic.next}</span>` : ""}</span></div>
+    <div class="row between wrap" style="gap:6px"><b>${href ? `<a href="${href}">${esc(swName(a.id))}</a>` : esc(swName(a.id))}</b><span>${isP ? `<span class="pill archived" style="padding:0 6px">paused</span> ` : ""}${n?.live ? `<span class="pill running" style="padding:0 6px">running</span>` : ""}${href ? `<span class="tiny faint">${ic.next}</span>` : ""}</span></div>
     <div class="small" style="margin-top:4px">${esc(a.purpose || "")}</div>
     <div class="tiny faint" style="margin-top:4px">${esc(swHarness(a))} · ${esc(a.model)} · ${esc(a.schedule || "")} · ${esc(SW_WAKE[a.wake] || a.wake || "")}</div>
     <div class="tiny" style="margin-top:6px">${tools.length ? `Can reach: ${tools.map((t) => `<span class="tag" style="padding:1px 7px">${esc(SW_REACH[t] || t)}</span>`).join(" ")}` : "No tools of its own."}</div>

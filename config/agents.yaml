@@ -94,7 +94,8 @@ agents:
     tools: [memory, research, claude, mail, swarm, files]   # files: MIS-24, file_save
     autonomy: {}
   - id: tax
-    purpose: Reads the owner's tax papers from the mail copy and their earlier returns, one at a time, for the tax desk.
+    name: Tax reader                  # TAX-12: the name the app shows for it
+    purpose: Reads the papers of the Tax desk, one at a time, and the owner's earlier returns. ChatGPT only, no tools.
     responsibilities: [sort each paper by form and year as JSON, say when it is unsure, never guess a figure]
     owns: {}
     harness: hermes

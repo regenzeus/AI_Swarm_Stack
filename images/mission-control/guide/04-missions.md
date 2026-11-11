@@ -9,14 +9,15 @@ views: [mission, read, live, files, file]
 ---
 A **repeating task** is a standing job: a daily briefing, a long research project, a price watch. You describe it
 once, and its agents work on it on a schedule, on demand, or when something happens. Inside the stack it is still
-called a mission (its files are under `missions/`); in the app it is a task like any other, under **Tasks →
-Repeating**. Each run's results, cost, log and memory are tracked on its page.
+called a mission (its files are under `missions/`); in the app it is a task like any other, area Briefings, Research or
+Shopping. Each run's results, cost, log and memory are tracked on its page.
 
 ## In the Tasks list
 
-**Tasks → Repeating** lists your repeating tasks, each with its next run, its When and its last result; the ones that
-need you or run right now are under **Active** too. The crew's duties are the stack's own repeating tasks, under **The
-stack's** and **Team → Crew** (see the crew chapter).
+**Tasks** lists a repeating task under **Scheduled** with its next run, its When and its last result; under **Needs
+you**, **Running now** or **Recent results** when that is what matters now. The crew's duties are tasks of the same list
+by their area; the stack's small upkeep jobs are its one **Upkeep** row, and **Team → Crew** has them all (see the crew
+chapter).
 
 Health is the colour of a card's edge: green the last run went well, red it failed (or keeps failing), amber
 something to look at or something waiting for you, blue running now, grey not run yet or switched off. The card says

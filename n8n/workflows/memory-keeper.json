@@ -1,5 +1,6 @@
 {
   "active": true,
+  "area": "memory",
   "connections": {
     "Every night at 04:30": {
       "main": [
@@ -65,10 +66,17 @@
       "webhookId": "7a1d3c55-0f6e-4b8a-8d0e-3f2b9c4e1b13"
     },
     {
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "aistackRunHook01",
+          "name": "AI Stack runner"
+        }
+      },
       "id": "de30da64-dd3f-15e0-6510-14cf2553ddb4",
       "name": "Run now",
       "notes": "Starts the job now, as its schedule would (POST).",
       "parameters": {
+        "authentication": "headerAuth",
         "httpMethod": "POST",
         "options": {},
         "path": "run/memory-keeper"

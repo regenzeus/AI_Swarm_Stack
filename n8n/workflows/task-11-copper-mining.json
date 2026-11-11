@@ -1,5 +1,6 @@
 {
   "active": true,
+  "area": "briefings",
   "connections": {
     "On its schedule (30 6 * * *)": {
       "main": [
@@ -65,10 +66,17 @@
       "webhookId": "04cf6e5a-3cd4-5597-a6e7-17b0d1d52161"
     },
     {
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "aistackRunHook01",
+          "name": "AI Stack runner"
+        }
+      },
       "id": "74ed4ed0-0d74-13a8-e437-82915f41229b",
       "name": "Run now",
       "notes": "Starts the job now, as its schedule would (POST).",
       "parameters": {
+        "authentication": "headerAuth",
         "httpMethod": "POST",
         "options": {},
         "path": "run/task-11-copper-mining"

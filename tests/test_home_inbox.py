@@ -98,6 +98,7 @@ class Forgejo:
 
 @pytest.fixture
 def home(K, tmp_path, monkeypatch):
+    monkeypatch.setenv("N8N_HOOK_TOKEN", "hook-test")          # SEC-27: the runner's header for n8n's webhooks
     """Home's deployment as it is: its trackers.yaml and deployment.env, its data class (answers whole), the main
     agent; the stand-in Forgejo, the stand-in n8n holding the inbox workflow published, the step service and the run
     register on temp paths."""

@@ -219,7 +219,8 @@ runner restart, an activity event), never by hand. One logical change per commit
 it adds or changes (`Requirements: MIS-05, PHN-11`). A contradiction you notice goes into `requirements/findings.yaml`,
 not silently into the code. End with
 `Co-Authored-By: <agent> <noreply@…>` when an agent wrote it. Never push to `main` from a sandbox and never
-rewrite history.
+rewrite history (the one exception so far: DEC-55, a work deployment's names taken out on 9 Nov 2026; another
+needs the owner's own decision).
 
 ## Do not
 

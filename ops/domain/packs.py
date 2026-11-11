@@ -44,6 +44,7 @@ import datetime as dt
 import json
 import os
 import re
+import shutil
 import stat
 import subprocess
 import sys
@@ -200,6 +201,12 @@ def checkout(e, base=None):
         if arch.returncode:
             raise ValueError(f"pack {e['name']}: git archive: {TC.cut(arch.stderr.decode(errors='replace'), 300)}")   # cap: preview
         subprocess.run(["tar", "-x", "-C", str(tmp)], input=arch.stdout, check=True, timeout=GIT_S)
+        # A pack is someone else's code: a link in it would make the read below (and the chmod) reach the stack's own
+        # files, before anyone approved the commit (review 10 Nov, DOM2-R1). A pack holds plain files and folders only.
+        links = [str(p.relative_to(tmp)) for p in tmp.rglob("*") if p.is_symlink()]
+        if links:
+            shutil.rmtree(tmp, ignore_errors=True)
+            raise ValueError(f"pack {e['name']}: commit {full[:12]} holds links ({', '.join(sorted(links))}); a pack holds plain files only")
         for p in [tmp, *tmp.rglob("*")]:                 # read-only: what runs is what was approved
             p.chmod(p.stat().st_mode & ~(stat.S_IWUSR | stat.S_IWGRP | stat.S_IWOTH))
         tmp.rename(folder)

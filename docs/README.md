@@ -26,7 +26,7 @@ into `requirements/findings.yaml`.
 | [WORK-APPROVALS.md](WORK-APPROVALS.md) | What the owner gets signed off at work before a work deployment, by whom, what to show, and the answer the stack needs |
 | [GENERALISATION.md](GENERALISATION.md) | Generalising the stack: core, domains and deployment, from an audit of the code |
 | [N8N-MIGRATION.md](N8N-MIGRATION.md) | n8n as the stack's workflow pillar (DEC-51): what it replaces and what stays, the step service, the app's integration and what in it is outdated, how requirements and code change, the plan in five phases and where each stands |
-| [TAX-DESK.md](TAX-DESK.md) | The tax desk: German income tax papers from the mail copy, filed as copies in the NAS share Steuern and prepared per year as a draft for the owner's own ELSTER return; only Hermes with ChatGPT reads them; the figures the law sets for 2025 and 2026 with their sources (TAX-01 to TAX-08) |
+| [TAX-DESK.md](TAX-DESK.md) | The tax desk: German income tax papers from the mail copy, filed as copies in the NAS share Steuern and prepared per year as a draft for the owner's own ELSTER return; only Hermes with ChatGPT reads them; the figures the law sets for 2025 and 2026 with their sources; in the app the task Your taxes with its result per year, for the owner only (TAX-01 to TAX-12) |
 | [AI-STACK.md](AI-STACK.md) | How the AI Stack is built now: the app, n8n deciding what runs when, the step service, the workers, what a domain's work uses (packs, places, trackers, roles, saved files, the record), knowledge, models and the platform |
 | [MEMORY-TAB.md](MEMORY-TAB.md) | The memory concept: one home per kind of knowledge, the Memory tab, the leak in long-term memory, and what helps a coding task |
 | [MEMORY-STACK.md](MEMORY-STACK.md) | The memory stack, decided and built 7 November 2026 (DEC-44): sectors, layers and collections, subscriptions by role, the opening chosen for each task within a budget, one memory tool, the write gate, the autonomous memory agent, coding memory, the trials (MEM-22 to MEM-49) |
@@ -47,6 +47,7 @@ into `requirements/findings.yaml`.
 
 | Document | Date | What it records |
 |---|---|---|
+| [REVIEW-2026-11-10.md](REVIEW-2026-11-10.md) | 10 Nov 2026 | The second independent review, after the n8n update (nine themed reviewers): what the update broke or left open, what was fixed in branch review/2026-11-10, what waits for the owner |
 | [REVIEW-2026-11-07.md](REVIEW-2026-11-07.md) | 7 Nov 2026 | The independent review of the whole stack (ten themed reviewers): every finding verified, what was fixed in branch review/2026-11-07, and what waits for the owner's decision |
 | [REVIEW-2026-11-01.md](REVIEW-2026-11-01.md) | 1-2 Nov 2026 | The overnight polish: answers to the owner's questions, blind spots, the trials (Mustache, mqtt-trace) and what each found, what is left and why |
 | [REVIEW-2026-10-30.md](REVIEW-2026-10-30.md) | 30 Oct 2026 | The wide review: its method, five sweeps, the ranked findings and the batches that fixed them |

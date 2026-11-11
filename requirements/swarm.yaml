@@ -1940,7 +1940,8 @@ items:
     method: test
     by: ['tests/test_lane_discipline.py::test_a_step_into_another_lane_names_why_its_owner_would_not_see_it', 'tests/test_lane_discipline.py::test_each_agent_steps_in_only_a_few_times_a_day',
       'tests/test_lane_discipline.py::test_the_helped_agent_or_the_owner_judges_and_the_work_s_fate_does_otherwise', 'tests/test_lane_discipline.py::test_the_coach_turns_unhelpful_steps_into_an_agent_change_for_quiet',
-      'tests/test_lane_discipline.py::test_the_room_shows_why_and_lets_the_owner_judge']
+      'tests/test_lane_discipline.py::test_the_room_shows_why_and_lets_the_owner_judge',
+      'tests/test_lane_discipline.py::test_private_help_never_reaches_an_owner_with_a_way_out']
   trace: [images/swarm/ledger.py, images/swarm/swarm.py, ops/coach.py, ops/swarm_client.py, images/mission-control/teamroom.py, images/mission-control/web/static/swarm.js]
 - id: SWM-110
   group: Observability

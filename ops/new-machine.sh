@@ -35,6 +35,9 @@ bash ops/restore.sh apply ${file:+"$file"}
 echo "3/4 restored ${file:-newest backup from the NAS}"
 
 if [ -z "${REHEARSAL:-}" ]; then
+  # the runner's own Python (PLT-37) lives in ~/.local/share, which no backup holds: made here, before its units start
+  # (review 10 Nov, RUNNER2-R2: missions.service and tracker-poll failed "not found" on a new PC)
+  bash ops/runner_env.sh || { echo "4/4 the runner's environment could not be made (ops/runner_env.sh): stopped"; exit 1; }
   systemctl --user daemon-reload
   for t in $(python3 ops/deployment.py timers); do systemctl --user enable --now "$t" >/dev/null; done   # its features only (GEN-13)
   systemctl --user enable --now missions.service >/dev/null      # Mission Control runner (schedules briefings, missions)
